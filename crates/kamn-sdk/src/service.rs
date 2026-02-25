@@ -46,6 +46,12 @@ const REASON_CODE_LEGACY_UNAUTHORIZED: &str = "service_api_legacy_unauthorized";
 const REASON_CODE_LEGACY_CONFLICT: &str = "service_api_legacy_conflict";
 const REASON_CODE_LEGACY_BAD_REQUEST: &str = "service_api_legacy_bad_request";
 const REASON_CODE_LEGACY_UNKNOWN: &str = "service_api_legacy_error_unknown";
+const MAX_SERVICE_RESPONSE_BYTES: usize = 1_048_576;
+const MAX_SERVICE_RESPONSE_READ_ITERATIONS: usize = 8_192;
+const SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED: &str =
+    "service response payload exceeded maximum supported size";
+const SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED: &str =
+    "service response payload read exceeded bounded iteration budget";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ServiceScheme {
@@ -901,12 +907,11 @@ impl ServiceApiClient {
         let request = format!(
             "GET {route} HTTP/1.1\r\nHost: {authority}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: kamn-sdk-test-key\r\nSec-WebSocket-Version: 13\r\n{auth_headers}Content-Length: 0\r\n\r\n",
         );
-        stream.write_all(request.as_bytes()).map_err(|error| {
-            map_stream_write_error(&error, "failed to write service websocket request")
-        })?;
-        stream.flush().map_err(|error| {
-            map_stream_write_error(&error, "failed to write service websocket request")
-        })?;
+        write_and_flush_request(
+            &mut stream,
+            request.as_bytes(),
+            "failed to write service websocket request",
+        )?;
 
         let response_bytes = read_response_bytes(&mut stream)?;
         let header_end = response_bytes
@@ -979,16 +984,29 @@ impl ServiceApiClient {
             body.len(),
             body
         );
-        stream
-            .write_all(request.as_bytes())
-            .map_err(|error| map_stream_write_error(&error, "failed to write service request"))?;
-        stream
-            .flush()
-            .map_err(|error| map_stream_write_error(&error, "failed to write service request"))?;
+        write_and_flush_request(
+            &mut stream,
+            request.as_bytes(),
+            "failed to write service request",
+        )?;
 
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
     }
+}
+
+fn write_and_flush_request<W: Write>(
+    stream: &mut W,
+    payload: &[u8],
+    failure_reason: &'static str,
+) -> Result<(), SdkError> {
+    stream
+        .write_all(payload)
+        .map_err(|error| map_stream_write_error(&error, failure_reason))?;
+    stream
+        .flush()
+        .map_err(|error| map_stream_write_error(&error, failure_reason))?;
+    Ok(())
 }
 
 fn parse_host_port(authority: &str, default_port: u16) -> Result<(String, u16), SdkError> {
@@ -1139,10 +1157,24 @@ fn render_auth_headers(auth: Option<&ServiceRequestAuth>) -> Result<String, SdkE
 fn read_response_bytes<R: Read>(stream: &mut R) -> Result<Vec<u8>, SdkError> {
     let mut response = Vec::new();
     let mut chunk = [0_u8; 1024];
+    let mut read_iterations = 0_usize;
     loop {
+        if read_iterations >= MAX_SERVICE_RESPONSE_READ_ITERATIONS {
+            return Err(SdkError::TransportFailure(
+                SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED,
+            ));
+        }
         match stream.read(&mut chunk) {
             Ok(0) => break,
-            Ok(read_count) => response.extend_from_slice(&chunk[..read_count]),
+            Ok(read_count) => {
+                read_iterations = read_iterations.saturating_add(1);
+                response.extend_from_slice(&chunk[..read_count]);
+                if response.len() > MAX_SERVICE_RESPONSE_BYTES {
+                    return Err(SdkError::TransportFailure(
+                        SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
+                    ));
+                }
+            }
             Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
                 break;
             }
@@ -1348,4 +1380,192 @@ fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkE
         parsed.push(value.to_owned());
     }
     Ok(parsed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        read_response_bytes, write_and_flush_request, SdkError, MAX_SERVICE_RESPONSE_BYTES,
+        SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED, SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
+    };
+    use std::collections::VecDeque;
+    use std::io::{ErrorKind, Read, Write};
+
+    enum ReadStep {
+        Bytes(Vec<u8>),
+        Error(ErrorKind),
+        RepeatByte(u8),
+        Eof,
+    }
+
+    struct ScriptedReader {
+        steps: VecDeque<ReadStep>,
+    }
+
+    impl ScriptedReader {
+        fn new(steps: impl IntoIterator<Item = ReadStep>) -> Self {
+            Self {
+                steps: steps.into_iter().collect(),
+            }
+        }
+    }
+
+    impl Read for ScriptedReader {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            if buffer.is_empty() {
+                return Ok(0);
+            }
+            let Some(step) = self.steps.front_mut() else {
+                return Ok(0);
+            };
+            match step {
+                ReadStep::Bytes(bytes) => {
+                    let read_count = buffer.len().min(bytes.len());
+                    buffer[..read_count].copy_from_slice(&bytes[..read_count]);
+                    bytes.drain(..read_count);
+                    if bytes.is_empty() {
+                        let _ = self.steps.pop_front();
+                    }
+                    Ok(read_count)
+                }
+                ReadStep::Error(kind) => {
+                    let kind = *kind;
+                    let _ = self.steps.pop_front();
+                    Err(std::io::Error::from(kind))
+                }
+                ReadStep::RepeatByte(byte) => {
+                    buffer[0] = *byte;
+                    Ok(1)
+                }
+                ReadStep::Eof => {
+                    let _ = self.steps.pop_front();
+                    Ok(0)
+                }
+            }
+        }
+    }
+
+    struct RecordingWriter {
+        bytes: Vec<u8>,
+        flush_calls: u64,
+        fail_flush: bool,
+    }
+
+    impl RecordingWriter {
+        fn with_flush_failure(fail_flush: bool) -> Self {
+            Self {
+                bytes: Vec::new(),
+                flush_calls: 0,
+                fail_flush,
+            }
+        }
+    }
+
+    impl Write for RecordingWriter {
+        fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+            self.bytes.extend_from_slice(buffer);
+            Ok(buffer.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.flush_calls = self.flush_calls.saturating_add(1);
+            if self.fail_flush {
+                return Err(std::io::Error::new(
+                    ErrorKind::BrokenPipe,
+                    "synthetic flush failure",
+                ));
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn unit_write_and_flush_request_invokes_flush_on_success_path() {
+        let mut writer = RecordingWriter::with_flush_failure(false);
+        let payload = b"GET /healthz HTTP/1.1\r\n\r\n";
+        write_and_flush_request(&mut writer, payload, "failed to write service request")
+            .expect("write and flush should succeed");
+        assert_eq!(writer.bytes, payload);
+        assert_eq!(
+            writer.flush_calls, 1,
+            "flush should be invoked exactly once"
+        );
+    }
+
+    #[test]
+    fn regression_write_and_flush_request_propagates_flush_failure() {
+        // Regression: #5953
+        let mut writer = RecordingWriter::with_flush_failure(true);
+        let error = write_and_flush_request(&mut writer, b"{}", "failed to write service request")
+            .expect_err("flush failure should fail closed");
+        assert_eq!(
+            writer.flush_calls, 1,
+            "flush failure path must invoke flush"
+        );
+        assert_eq!(
+            error,
+            SdkError::TransportFailure("failed to write service request")
+        );
+    }
+
+    #[test]
+    fn regression_read_response_bytes_allows_partial_payload_before_unexpected_eof() {
+        // Regression: #5953
+        let payload = b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}";
+        let mut reader = ScriptedReader::new([
+            ReadStep::Bytes(payload.to_vec()),
+            ReadStep::Error(ErrorKind::UnexpectedEof),
+            ReadStep::Eof,
+        ]);
+        let response = read_response_bytes(&mut reader)
+            .expect("partial payload should be preserved across unexpected eof");
+        assert_eq!(response, payload);
+    }
+
+    #[test]
+    fn regression_read_response_bytes_rejects_unexpected_eof_without_payload() {
+        // Regression: #5953
+        let mut reader = ScriptedReader::new([ReadStep::Error(ErrorKind::UnexpectedEof)]);
+        let error = read_response_bytes(&mut reader)
+            .expect_err("unexpected eof without payload should fail closed");
+        assert_eq!(
+            error,
+            SdkError::TransportFailure("failed to read service response payload")
+        );
+    }
+
+    #[test]
+    fn regression_read_response_bytes_fails_closed_when_iteration_budget_exceeded() {
+        // Regression: #5953
+        let mut reader = ScriptedReader::new([ReadStep::RepeatByte(b'x')]);
+        let error = read_response_bytes(&mut reader)
+            .expect_err("pathological single-byte stream should exceed iteration budget");
+        assert_eq!(
+            error,
+            SdkError::TransportFailure(SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED)
+        );
+    }
+
+    #[test]
+    fn unit_read_response_bytes_accepts_payload_at_exact_size_limit() {
+        let payload = vec![b'a'; MAX_SERVICE_RESPONSE_BYTES];
+        let mut reader = ScriptedReader::new([ReadStep::Bytes(payload.clone()), ReadStep::Eof]);
+        let response =
+            read_response_bytes(&mut reader).expect("exact limit payload should be accepted");
+        assert_eq!(response.len(), MAX_SERVICE_RESPONSE_BYTES);
+        assert_eq!(response, payload);
+    }
+
+    #[test]
+    fn regression_read_response_bytes_rejects_payload_exceeding_size_limit() {
+        // Regression: #5953
+        let payload = vec![b'b'; MAX_SERVICE_RESPONSE_BYTES.saturating_add(1)];
+        let mut reader = ScriptedReader::new([ReadStep::Bytes(payload), ReadStep::Eof]);
+        let error = read_response_bytes(&mut reader)
+            .expect_err("payloads exceeding size limit should fail closed");
+        assert_eq!(
+            error,
+            SdkError::TransportFailure(SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED)
+        );
+    }
 }
