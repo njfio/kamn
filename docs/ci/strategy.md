@@ -197,6 +197,31 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - include the install failure stderr,
   - open a follow-up issue to restore mutation-gate execution before merge of the next slice.
 
+## Critical-Path Mutation and Coverage Gate (R65)
+- Purpose:
+  - enforce bounded mutation + coverage checks for high-risk runtime/security modules in pre-merge CI.
+- Coverage gate command:
+  - `bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json ci-critical-path-core-coverage.json --node-json ci-critical-path-node-coverage.json --output-json ci-critical-path-coverage-policy.json`
+- Mutation gate command:
+  - `bash scripts/ci/run_critical_path_mutation_gate.sh --output-json ci-critical-path-mutation-report.json --timeout-seconds 900`
+- Threshold source of truth:
+  - `.ci/critical-path-coverage-thresholds.json`
+- Coverage target set:
+  - `crates/kamn-core/src/direct_message_crypto.rs`
+  - `crates/kamn-core/src/group_channel_crypto.rs`
+  - `crates/kamn-core/src/kolme_runtime_commit/http_transport.rs`
+  - `crates/kamn-node/src/runtime_orchestration.rs`
+  - `crates/kamn-node/src/service_api_endpoint.rs`
+  - `crates/kamn-node/src/signer.rs`
+- Mutation slice contract:
+  - deterministic bounded selectors are enforced by `run_critical_path_mutation_gate.sh`.
+  - slice discovery count drift or escaped mutants fails closed.
+- Evidence artifacts:
+  - `ci-critical-path-core-coverage.json`
+  - `ci-critical-path-node-coverage.json`
+  - `ci-critical-path-coverage-policy.json`
+  - `ci-critical-path-mutation-report.json`
+
 ## Invariant/Fuzz/Concurrency CI Smoke Boundary Contract
 - Bounded CI-smoke contract lane command:
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`

@@ -53,3 +53,4 @@ This milestone closes production-readiness blockers across cryptography correctn
 
 ## Progress Notes
 - 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.
+- 2026-02-25: `#5939` adds bounded critical-path mutation/coverage gates in workspace pre-merge CI with deterministic report artifacts and fail-closed policies.

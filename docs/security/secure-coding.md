@@ -49,3 +49,17 @@
 - Evidence artifacts:
   - `cargo-audit-report.json`
   - `ci-cargo-audit-policy.json`
+
+## Critical-Path Mutation/Coverage Gate
+
+- CI security/runtime assurance commands:
+  - `bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json ci-critical-path-core-coverage.json --node-json ci-critical-path-node-coverage.json --output-json ci-critical-path-coverage-policy.json`
+  - `bash scripts/ci/run_critical_path_mutation_gate.sh --output-json ci-critical-path-mutation-report.json --timeout-seconds 900`
+- Policy behavior:
+  - coverage target file missing or below-threshold fails closed.
+  - mutation slice count drift, escaped mutants, unviable mutants, or timeout mutants fail closed.
+- Evidence artifacts:
+  - `ci-critical-path-core-coverage.json`
+  - `ci-critical-path-node-coverage.json`
+  - `ci-critical-path-coverage-policy.json`
+  - `ci-critical-path-mutation-report.json`
