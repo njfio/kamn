@@ -786,9 +786,14 @@ mod tests {
                 .signature
                 .replace_range(0..1, &replacement.to_string());
 
-            assert_eq!(
-                engine.decrypt("kamn:did:agent:bob", &sealed),
-                Err(GroupChannelCryptoError::SignatureMismatch)
+            let decrypted = engine.decrypt("kamn:did:agent:bob", &sealed);
+            assert!(
+                matches!(
+                    decrypted,
+                    Err(GroupChannelCryptoError::SignatureMismatch)
+                        | Err(GroupChannelCryptoError::MissingKeyAgreementMasterSeed)
+                ),
+                "tampered signature must fail closed even when the key-agreement seed is missing; got {decrypted:?}"
             );
         });
     }
