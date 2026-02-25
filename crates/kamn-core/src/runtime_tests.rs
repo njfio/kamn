@@ -14,6 +14,7 @@ use super::{
     WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
 };
 use crate::config::{NodeConfig, NodeRole, SyncMode};
+use crate::signature_profile::baseline_signature_for_fields;
 use std::time::Instant;
 
 #[path = "runtime_tests_network_fault.rs"]
@@ -589,6 +590,50 @@ fn functional_authenticated_peer_frame_roundtrips_wire_and_signature() {
         .verify_signature()
         .expect("signature verification should pass");
     assert_eq!(decoded, frame);
+}
+
+#[test]
+fn regression_authenticated_peer_frame_signed_uses_crypto_signature_profile() {
+    // Regression: #5916
+    let frame = AuthenticatedPeerFrame::signed(
+        "frame-crypto",
+        "kamn:did:agent:peer-a",
+        "kamn:did:agent:peer-b",
+        7,
+        "payload-crypto",
+    )
+    .expect("signed frame should build");
+
+    assert!(
+        frame.signature().starts_with("sig:secp256k1:baseline-v2:"),
+        "runtime peer frame signature must use cryptographic service-auth profile: {}",
+        frame.signature()
+    );
+}
+
+#[test]
+fn regression_authenticated_peer_frame_rejects_legacy_deterministic_signature_fixture() {
+    // Regression: #5916
+    let legacy_signature = baseline_signature_for_fields(
+        "kamn:did:agent:peer-a",
+        5,
+        "kamn:did:agent:peer-b",
+        "payload-legacy",
+    );
+    let frame = AuthenticatedPeerFrame::new(
+        "frame-legacy",
+        "kamn:did:agent:peer-a",
+        "kamn:did:agent:peer-b",
+        5,
+        "payload-legacy",
+        legacy_signature.as_str(),
+    )
+    .expect("legacy fixture frame should parse");
+
+    assert!(matches!(
+        frame.verify_signature(),
+        Err(AuthenticatedPeerFrameError::SignatureMismatch { .. })
+    ));
 }
 
 #[test]
