@@ -21,6 +21,8 @@ if [[ ! -f "$THRESHOLDS" ]]; then
   exit 1
 fi
 
+EXPECTED_REASON_CODES_CSV="combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid,combined_shell_surface_governance_commit_count_invalid,combined_shell_surface_governance_mitigation_issue_missing,combined_shell_surface_governance_non_merge_commit_count_invalid,combined_shell_surface_governance_ratio_fail_exceeded,combined_shell_surface_governance_ratio_invalid,combined_shell_surface_governance_ratio_mismatch,combined_shell_surface_governance_ratio_warn_reduction_contract_active,combined_shell_surface_governance_release_invalid,combined_shell_surface_governance_section_missing,combined_shell_surface_governance_status_invalid,combined_shell_surface_governance_target_ratio_invalid"
+
 report_file="$TMP_DIR/combined-shell-surface-trend-report.json"
 policy_file="$TMP_DIR/combined-shell-surface-trend-policy.json"
 
@@ -37,6 +39,19 @@ payload["current"]["shell_to_rust_ratio"] = 0.3
 payload["deltas"]["script_count"] = 0
 payload["deltas"]["shell_line_total"] = 0
 payload["deltas"]["shell_to_rust_ratio"] = 0.0
+payload["governance_structural_coupling"] = {
+    "release": 56,
+    "status": "within_target",
+    "target_ratio_max": 0.5,
+    "non_merge_commit_count": 20,
+    "governance_commit_count": 8,
+    "governance_commit_ratio": 0.4,
+    "delta_to_target_ratio_max": -0.1,
+    "policy_status_within": "within_target",
+    "policy_status_over": "active_reduction_contract",
+    "budget_status_marker": "within_target",
+    "mitigation_issue_marker": "none",
+}
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
@@ -53,6 +68,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^trend_status=within$'; then
   echo "expected combined shell-surface policy checker trend_status=within marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^governance_structural_coupling_status=within_target$'; then
+  echo "expected combined shell-surface policy checker governance_structural_coupling_status=within_target marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes=none$'; then
   echo "expected combined shell-surface policy checker reason_codes=none marker" >&2
   exit 1
@@ -65,17 +84,18 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.ci.
   echo "expected combined shell-surface policy checker reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid$'; then
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_codes_csv=$EXPECTED_REASON_CODES_CSV$"; then
   echo "expected combined shell-surface policy checker reason code taxonomy marker" >&2
   exit 1
 fi
 
-python3 - "$policy_file" <<'PY'
+python3 - "$policy_file" "$EXPECTED_REASON_CODES_CSV" <<'PY'
 import json
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected_reason_codes_csv = sys.argv[2]
 if payload.get("schema_version") != "kamn.ci.combined-shell-surface-trend-policy-report.v1":
     raise SystemExit("unexpected combined shell-surface policy schema")
 if payload.get("status") != "ok":
@@ -86,9 +106,11 @@ if payload.get("trend_status") != "within":
     raise SystemExit("expected trend_status=within")
 if payload.get("reason_codes") not in ([], None):
     raise SystemExit("expected empty reason_codes for passing policy")
+if payload.get("governance_structural_coupling_status") != "within_target":
+    raise SystemExit("expected governance_structural_coupling_status=within_target")
 if payload.get("reason_taxonomy_version") != "kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1":
     raise SystemExit("expected reason taxonomy version in passing combined shell-surface policy report")
-if payload.get("reason_codes_csv") != "combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid":
+if payload.get("reason_codes_csv") != expected_reason_codes_csv:
     raise SystemExit("expected deterministic reason_codes_csv marker in passing combined shell-surface policy report")
 if payload.get("reason_codes_value") != "none":
     raise SystemExit("expected reason_codes_value=none in passing combined shell-surface policy report")
@@ -245,6 +267,63 @@ if ! printf '%s\n' "$warn_output" | grep -q '^trend_status=warn$'; then
 fi
 if ! printf '%s\n' "$warn_output" | grep -q 'combined_shell_surface_script_count_delta_warn_exceeded'; then
   echo "expected deterministic script-count warn reason code in combined shell-surface policy output" >&2
+  exit 1
+fi
+
+governance_fail_report="$TMP_DIR/combined-shell-surface-trend-report.governance-fail.json"
+cp "$report_file" "$governance_fail_report"
+python3 - "$governance_fail_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["governance_structural_coupling"]["status"] = "over_target_unmitigated"
+payload["governance_structural_coupling"]["governance_commit_ratio"] = 0.65
+payload["governance_structural_coupling"]["governance_commit_count"] = 13
+payload["governance_structural_coupling"]["non_merge_commit_count"] = 20
+payload["governance_structural_coupling"]["mitigation_issue_marker"] = "none"
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+governance_fail_output="$(bash "$CHECKER" --report-file "$governance_fail_report" --threshold-file "$THRESHOLDS" --output-json "$TMP_DIR/governance-fail-policy.json" 2>&1)"
+governance_fail_code=$?
+set -e
+if [[ "$governance_fail_code" -eq 0 ]]; then
+  echo "expected governance over-target report without mitigation to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$governance_fail_output" | grep -q 'combined_shell_surface_governance_ratio_fail_exceeded'; then
+  echo "expected deterministic governance fail reason code for over-target unmitigated governance ratio" >&2
+  exit 1
+fi
+
+governance_warn_report="$TMP_DIR/combined-shell-surface-trend-report.governance-warn.json"
+cp "$report_file" "$governance_warn_report"
+python3 - "$governance_warn_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["governance_structural_coupling"]["status"] = "reduction_contract_active"
+payload["governance_structural_coupling"]["governance_commit_ratio"] = 0.6
+payload["governance_structural_coupling"]["governance_commit_count"] = 12
+payload["governance_structural_coupling"]["non_merge_commit_count"] = 20
+payload["governance_structural_coupling"]["mitigation_issue_marker"] = "5934"
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+governance_warn_output="$(bash "$CHECKER" --report-file "$governance_warn_report" --threshold-file "$THRESHOLDS" --output-json "$TMP_DIR/governance-warn-policy.json")"
+if ! printf '%s\n' "$governance_warn_output" | grep -q '^policy_decision=WARN$'; then
+  echo "expected governance reduction-contract over-target report to emit WARN decision" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$governance_warn_output" | grep -q 'combined_shell_surface_governance_ratio_warn_reduction_contract_active'; then
+  echo "expected deterministic governance WARN reason code when reduction-contract is active above target" >&2
   exit 1
 fi
 

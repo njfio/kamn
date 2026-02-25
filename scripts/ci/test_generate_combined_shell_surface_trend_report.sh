@@ -50,6 +50,7 @@ current = payload.get("current", {})
 baseline = payload.get("baseline", {})
 deltas = payload.get("deltas", {})
 script_budget = payload.get("script_budget", {})
+governance = payload.get("governance_structural_coupling", {})
 
 for key in ("script_count", "shell_line_total", "rust_line_total"):
     if not isinstance(current.get(key), int) or current.get(key) <= 0:
@@ -59,6 +60,14 @@ if not isinstance(current.get("shell_to_rust_ratio"), float):
     raise SystemExit("expected float current[shell_to_rust_ratio]")
 if script_budget.get("status") not in {"pass", "fail"}:
     raise SystemExit("expected script budget status to be pass/fail")
+if not isinstance(governance, dict):
+    raise SystemExit("expected governance_structural_coupling section in combined trend report")
+if governance.get("status") not in {"within_target", "reduction_contract_active", "over_target_unmitigated"}:
+    raise SystemExit("expected governance_structural_coupling.status marker in combined trend report")
+if not isinstance(governance.get("target_ratio_max"), (int, float)):
+    raise SystemExit("expected numeric governance_structural_coupling.target_ratio_max")
+if not isinstance(governance.get("governance_commit_ratio"), (int, float)):
+    raise SystemExit("expected numeric governance_structural_coupling.governance_commit_ratio")
 
 expected_delta_script_count = current["script_count"] - int(baseline["script_count"])
 expected_delta_shell_line_total = current["shell_line_total"] - int(baseline["shell_line_total"])

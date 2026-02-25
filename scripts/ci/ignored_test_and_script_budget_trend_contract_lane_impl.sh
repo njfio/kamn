@@ -158,6 +158,15 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$combined_within_report" <<'EOF
     "shell_line_total": 0,
     "shell_to_rust_ratio": -0.02
   },
+  "governance_structural_coupling": {
+    "release": 56,
+    "status": "within_target",
+    "target_ratio_max": 0.5,
+    "non_merge_commit_count": 20,
+    "governance_commit_count": 8,
+    "governance_commit_ratio": 0.4,
+    "mitigation_issue_marker": "none"
+  },
   "schema_version": "kamn.ci.combined-shell-surface-trend-report.v1",
   "script_budget": {
     "checker_exit_code": 0,
