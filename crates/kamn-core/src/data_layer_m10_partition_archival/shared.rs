@@ -1,4 +1,4 @@
-use crate::KamnDid;
+use crate::{data_layer_hashing::tagged_sha256, KamnDid};
 
 use super::*;
 
@@ -82,7 +82,8 @@ pub(super) fn deterministic_checksum_marker(
     partition_name: &str,
     partition_month_id: u32,
 ) -> String {
-    format!("sha256:{partition_name}:{partition_month_id}")
+    let canonical_payload = format!("{partition_name}:{partition_month_id}");
+    tagged_sha256(canonical_payload.as_str(), "sha256")
 }
 
 #[cfg(test)]
@@ -115,9 +116,11 @@ mod tests {
 
     #[test]
     fn unit_deterministic_checksum_marker_has_stable_shape() {
+        let marker = deterministic_checksum_marker("messages_2025_02", 202502);
         assert_eq!(
-            deterministic_checksum_marker("messages_2025_02", 202502),
-            "sha256:messages_2025_02:202502"
+            marker,
+            "sha256:436a53bb2b45f5bfe769623a94cefdd17c75bc18ceb4c6d985884933ab268a42"
         );
+        assert_ne!(marker, "sha256:messages_2025_02:202502");
     }
 }
