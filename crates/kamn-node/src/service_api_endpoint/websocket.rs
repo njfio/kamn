@@ -97,26 +97,27 @@ pub(super) fn validate_websocket_route_requirements(
 pub(super) fn validate_websocket_upgrade_headers(
     headers: &BTreeMap<String, String>,
 ) -> Result<(), ServiceApiReasonedError> {
-    let upgrade = super::header_value(headers, "upgrade").ok_or_else(|| {
+    let upgrade = super::auth::header_value(headers, "upgrade").ok_or_else(|| {
         ServiceApiReasonedError::new(
             REASON_CODE_WS_UPGRADE_HEADER_MISSING,
             "missing required websocket upgrade header",
         )
     })?;
-    let connection = super::header_value(headers, "connection").ok_or_else(|| {
+    let connection = super::auth::header_value(headers, "connection").ok_or_else(|| {
         ServiceApiReasonedError::new(
             REASON_CODE_WS_CONNECTION_HEADER_MISSING,
             "missing required websocket connection header",
         )
     })?;
-    let websocket_key = super::header_value(headers, "sec-websocket-key").ok_or_else(|| {
-        ServiceApiReasonedError::new(
-            REASON_CODE_WS_KEY_HEADER_MISSING,
-            "missing required websocket key header",
-        )
-    })?;
-    let websocket_version =
-        super::header_value(headers, "sec-websocket-version").ok_or_else(|| {
+    let websocket_key =
+        super::auth::header_value(headers, "sec-websocket-key").ok_or_else(|| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_WS_KEY_HEADER_MISSING,
+                "missing required websocket key header",
+            )
+        })?;
+    let websocket_version = super::auth::header_value(headers, "sec-websocket-version")
+        .ok_or_else(|| {
             ServiceApiReasonedError::new(
                 REASON_CODE_WS_VERSION_HEADER_MISSING,
                 "missing required websocket version header",
@@ -154,7 +155,7 @@ pub(super) fn project_websocket_event_payload(
     snapshot: &ServiceApiSnapshot,
     headers: &BTreeMap<String, String>,
 ) -> Result<String, ServiceApiReasonedError> {
-    let mode = super::header_value(headers, REQUEST_WS_EVENTS_MODE_HEADER)
+    let mode = super::auth::header_value(headers, REQUEST_WS_EVENTS_MODE_HEADER)
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or(WS_EVENTS_MODE_STATE_TRANSITION);
@@ -274,7 +275,7 @@ fn project_presence_mode_payload(
     )?
     .to_owned();
     let target_owner_did =
-        super::header_value(headers, REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER)
+        super::auth::header_value(headers, REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER)
             .map(str::trim)
             .filter(|value| !value.is_empty())
             .unwrap_or(owner_did.as_str())
@@ -285,7 +286,7 @@ fn project_presence_mode_payload(
         REASON_CODE_WS_PRESENCE_TARGET_AGENT_DID_HEADER_MISSING,
     )?
     .to_owned();
-    let gateway_node = super::header_value(headers, REQUEST_WS_PRESENCE_GATEWAY_NODE_HEADER)
+    let gateway_node = super::auth::header_value(headers, REQUEST_WS_PRESENCE_GATEWAY_NODE_HEADER)
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or(WS_PRESENCE_DEFAULT_GATEWAY_NODE)
@@ -350,7 +351,7 @@ fn required_presence_header<'a>(
     header_name: &str,
     reason_code: &'static str,
 ) -> Result<&'a str, ServiceApiReasonedError> {
-    super::header_value(headers, header_name)
+    super::auth::header_value(headers, header_name)
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
@@ -367,7 +368,7 @@ fn parse_presence_timestamp_header(
     reason_code: &'static str,
     default_value: u64,
 ) -> Result<u64, ServiceApiReasonedError> {
-    let Some(raw_value) = super::header_value(headers, header_name) else {
+    let Some(raw_value) = super::auth::header_value(headers, header_name) else {
         return Ok(default_value);
     };
     raw_value.trim().parse::<u64>().map_err(|_| {
@@ -382,7 +383,7 @@ fn parse_presence_capabilities(
     headers: &BTreeMap<String, String>,
 ) -> Result<Vec<String>, ServiceApiReasonedError> {
     let Some(raw_capabilities) =
-        super::header_value(headers, REQUEST_WS_PRESENCE_CAPABILITIES_HEADER)
+        super::auth::header_value(headers, REQUEST_WS_PRESENCE_CAPABILITIES_HEADER)
     else {
         return Ok(vec!["ws".to_owned()]);
     };
