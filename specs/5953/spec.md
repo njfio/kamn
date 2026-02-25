@@ -38,7 +38,7 @@ Out of scope:
 - C-04 (Conformance, AC-4): `cargo mutants --in-diff` for issue scope reports no missed or timeout mutants.
 
 ## Success Metrics / Observable Signals
-- New/updated tests in `crates/kamn-sdk/tests/service_api_client.rs` pass and are mutation-sensitive.
+- New/updated tests in `crates/kamn-sdk/src/service.rs` and `crates/kamn-sdk/tests/service_api_client.rs` pass and are mutation-sensitive.
 - Scoped mutation report for issue scope contains no `MISSED` and no `TIMEOUT` in touched paths.
 
 ## Required Test Categories

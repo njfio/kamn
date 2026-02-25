@@ -6,8 +6,8 @@
 - Last Updated: 2026-02-25
 
 ## Approach
-1. RED: Add/adjust tests in `crates/kamn-sdk/tests/service_api_client.rs` that expose the previously surviving/timeout mutants.
-2. Implement: Add bounded-progress safeguards in `crates/kamn-sdk/src/service.rs` so pathological reads fail fast deterministically.
+1. RED: Add/adjust tests in `crates/kamn-sdk/src/service.rs` and `crates/kamn-sdk/tests/service_api_client.rs` that expose the previously surviving/timeout mutants.
+2. Implement: Add bounded response-read safeguards in `crates/kamn-sdk/src/service.rs` so pathological reads fail fast deterministically.
 3. REGRESSION: Run targeted `kamn-sdk` tests covering `ServiceStream` and response reading semantics.
 4. VERIFY: Run scoped mutation for issue diff and confirm no `MISSED`/`TIMEOUT` mutants in touched paths.
 
