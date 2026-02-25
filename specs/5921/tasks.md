@@ -3,8 +3,8 @@
 - Issue: #5921
 - Spec: `specs/5921/spec.md`
 - Plan: `specs/5921/plan.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Ordered Tasks
 - T1 (RED / Conformance): derive failing tests from all C-xx conformance cases before implementation.

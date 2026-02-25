@@ -27,6 +27,7 @@ diagram references.
 ## Decision Records
 
 - `docs/architecture/adr-kamn-core-live-tls-transport.md`
+- `docs/architecture/adr-001-production-message-crypto-primitives.md`
 
 ## Diagram Catalog
 

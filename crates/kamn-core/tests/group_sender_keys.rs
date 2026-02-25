@@ -1,18 +1,21 @@
 use kamn_core::{GroupChannelCryptoEngine, GroupChannelCryptoError};
 use std::sync::OnceLock;
 
-const ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO";
+const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 
-fn enable_group_message_crypto_fixture_mode() {
-    static ENABLED: OnceLock<()> = OnceLock::new();
-    ENABLED.get_or_init(|| {
-        std::env::set_var(ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV, "1");
+fn ensure_key_agreement_master_seed() {
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        std::env::set_var(
+            KEY_AGREEMENT_MASTER_SEED_ENV,
+            "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+        );
     });
 }
 
 #[test]
 fn sender_key_distribution_allows_authorized_group_round_trip() {
-    enable_group_message_crypto_fixture_mode();
+    ensure_key_agreement_master_seed();
     let mut engine =
         GroupChannelCryptoEngine::new("channel:group:alpha").expect("engine should initialize");
 
@@ -39,7 +42,7 @@ fn sender_key_distribution_allows_authorized_group_round_trip() {
 
 #[test]
 fn sender_key_rotation_advances_generation() {
-    enable_group_message_crypto_fixture_mode();
+    ensure_key_agreement_master_seed();
     let mut engine =
         GroupChannelCryptoEngine::new("channel:group:beta").expect("engine should initialize");
 
@@ -69,7 +72,7 @@ fn sender_key_rotation_advances_generation() {
 
 #[test]
 fn integration_multiple_senders_are_isolated() {
-    enable_group_message_crypto_fixture_mode();
+    ensure_key_agreement_master_seed();
     let mut engine =
         GroupChannelCryptoEngine::new("channel:group:gamma").expect("engine should initialize");
 
@@ -111,7 +114,7 @@ fn integration_multiple_senders_are_isolated() {
 
 #[test]
 fn regression_unauthorized_recipient_cannot_decrypt() {
-    enable_group_message_crypto_fixture_mode();
+    ensure_key_agreement_master_seed();
     let mut engine =
         GroupChannelCryptoEngine::new("channel:group:delta").expect("engine should initialize");
 
@@ -140,7 +143,7 @@ fn regression_unauthorized_recipient_cannot_decrypt() {
 
 #[test]
 fn group_sender_keys_reject_invalid_sender_did_with_structured_marker() {
-    enable_group_message_crypto_fixture_mode();
+    ensure_key_agreement_master_seed();
     let mut engine =
         GroupChannelCryptoEngine::new("channel:group:epsilon").expect("engine should initialize");
 

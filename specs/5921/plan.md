@@ -2,8 +2,8 @@
 
 - Issue: #5921
 - Spec: `specs/5921/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5921/spec.md.

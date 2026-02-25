@@ -1,12 +1,12 @@
 # Spec: Issue #5921 - Task: Implement production DirectMessage/GroupChannel encryption (X25519 + XChaCha20-Poly1305)
 
 - Issue: #5921
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Area: security
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5916
 
 ## Problem Statement
@@ -50,4 +50,3 @@ Out of scope:
 
 ## Dependencies
 - #5916
-

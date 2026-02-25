@@ -9,12 +9,15 @@ use kamn_core::{
     CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
 };
 
-const ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO";
+const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 
-fn enable_direct_message_crypto_fixture_mode() {
-    static ENABLED: OnceLock<()> = OnceLock::new();
-    ENABLED.get_or_init(|| {
-        std::env::set_var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, "1");
+fn ensure_key_agreement_master_seed() {
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        std::env::set_var(
+            KEY_AGREEMENT_MASTER_SEED_ENV,
+            "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+        );
     });
 }
 
@@ -66,7 +69,7 @@ fn valid_request(
     message_id: &str,
     recipient_bindings: Vec<DataLayerPhase2RecipientEncryptionBinding>,
 ) -> DataLayerPhase2OperationalPipelineRequest {
-    enable_direct_message_crypto_fixture_mode();
+    ensure_key_agreement_master_seed();
     let mut blind_index_fields = BTreeMap::new();
     blind_index_fields.insert("channel_topic".to_owned(), "alpha".to_owned());
     blind_index_fields.insert("message_type".to_owned(), "request".to_owned());
