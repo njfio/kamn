@@ -2,20 +2,24 @@
 
 - Issue: #5923
 - Spec: `specs/5923/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5923/spec.md.
-2. Implement: Implement cryptographic auth signatures and verification aligned with supported signature profile.
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: Added `auth_roundtrip` conformance tests that failed against deterministic signing path:
+   - cryptographic contract equality mismatch,
+   - non-private-key signing material unexpectedly accepted,
+   - deterministic forgery collision,
+   - same-length tamper collision.
+2. Implemented cryptographic request-auth signing in `kamn-agent-lib/src/auth.rs` via new SDK helper `service_signature_for_state_hash_with_private_key`.
+3. Added SDK helper in `kamn-sdk/src/service.rs` (and re-export in `kamn-sdk/src/lib.rs`) to sign canonical service-auth payloads from explicit state hash + private key.
+4. REGRESSION/VERIFY: Ran targeted agent-lib and sdk suites plus format and strict clippy across touched crates.
 
 ## Affected Modules (Initial)
 - `crates/kamn-agent-lib/src/auth.rs`
-- `crates/kamn-agent-lib/src/lib.rs`
+- `crates/kamn-agent-lib/tests/auth_roundtrip.rs`
 - `crates/kamn-sdk/src/service.rs`
-- `crates/kamn-node/src/service_api_endpoint.rs`
+- `crates/kamn-sdk/src/lib.rs`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
@@ -32,3 +36,11 @@
 
 ## ADR Requirement
 - ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+
+## Verification Commands
+- `cargo test -p kamn-agent-lib --test auth_roundtrip -- --nocapture`
+- `cargo test -p kamn-agent-lib -- --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo fmt --check`
+- `cargo clippy --all-targets --all-features --manifest-path crates/kamn-agent-lib/Cargo.toml -- -D warnings`
+- `cargo clippy --all-targets --all-features --manifest-path crates/kamn-sdk/Cargo.toml -- -D warnings`
