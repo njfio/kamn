@@ -1,7 +1,7 @@
 # Spec: Issue #6000 - Replace content-storage FNV CIDs with SHA-256 integrity
 
 - Issue: #6000
-- Status: Reviewed
+- Status: Implemented
 - Type: story
 - Priority: P0
 - Area: security
