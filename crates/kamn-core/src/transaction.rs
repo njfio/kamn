@@ -1,5 +1,5 @@
 use crate::signature_profile::{
-    baseline_signature_for_fields, service_auth_public_key_hex_from_private_key_hex,
+    debug_fallback_signer_private_key_hex, service_auth_public_key_hex_from_private_key_hex,
     service_auth_sign_with_private_key_hex, service_auth_verify_with_public_key_hex,
     signature_matches_supported_profile_for_fields, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
     SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV,
@@ -68,7 +68,12 @@ impl BaselineTransaction {
                 &self.payload,
             );
         }
-        baseline_signature_for_fields(&self.sender, self.nonce, &self.state_hash, &self.payload)
+        signing_key_error_signature_for_fields(
+            &self.sender,
+            self.nonce,
+            &self.state_hash,
+            &self.payload,
+        )
     }
 
     fn validate_shape(&self) -> Result<(), TransactionGuardError> {
@@ -134,7 +139,7 @@ fn signer_legacy_baseline_v1_compat_enabled() -> bool {
     signer_legacy_baseline_v1_compat_enabled_for_mode(cfg!(debug_assertions))
 }
 
-fn resolve_transaction_signer_private_key_hex() -> Option<String> {
+fn resolve_transaction_signer_private_key_hex_for_mode(debug_assertions: bool) -> Option<String> {
     for env_name in [
         SIGNER_PRIVATE_KEY_ENV,
         SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
@@ -147,7 +152,17 @@ fn resolve_transaction_signer_private_key_hex() -> Option<String> {
         }
     }
 
+    if debug_assertions {
+        if let Some(private_key_hex) = debug_fallback_signer_private_key_hex() {
+            return Some(private_key_hex.to_owned());
+        }
+    }
+
     None
+}
+
+fn resolve_transaction_signer_private_key_hex() -> Option<String> {
+    resolve_transaction_signer_private_key_hex_for_mode(cfg!(debug_assertions))
 }
 
 fn resolve_transaction_signer_public_key_hex() -> Option<String> {
@@ -164,7 +179,7 @@ fn resolve_transaction_signer_public_key_hex() -> Option<String> {
     service_auth_public_key_hex_from_private_key_hex(private_key_hex.as_str()).ok()
 }
 
-fn signature_matches_transaction_contract(tx: &BaselineTransaction) -> bool {
+pub(crate) fn signature_matches_transaction_contract(tx: &BaselineTransaction) -> bool {
     if let Some(public_key_hex) = resolve_transaction_signer_public_key_hex() {
         if service_auth_verify_with_public_key_hex(
             tx.signature.as_str(),
@@ -425,7 +440,9 @@ impl std::error::Error for TransactionGuardError {}
 #[cfg(test)]
 mod tests {
     use super::{
-        resolve_transaction_signer_private_key_hex, signer_legacy_baseline_v1_compat_enabled,
+        resolve_transaction_signer_private_key_hex,
+        resolve_transaction_signer_private_key_hex_for_mode,
+        signer_legacy_baseline_v1_compat_enabled,
         signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value, BaselineTransaction,
         TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
         SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV,
@@ -513,7 +530,7 @@ mod tests {
         let _service_private_key_guard =
             EnvVarGuard::set(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, None);
         assert!(
-            resolve_transaction_signer_private_key_hex().is_none(),
+            resolve_transaction_signer_private_key_hex_for_mode(false).is_none(),
             "transaction key resolution must fail closed without explicit key env"
         );
     }
@@ -635,6 +652,28 @@ mod tests {
         assert!(
             expected.starts_with("sig:signing-key-invalid:baseline-v2:"),
             "invalid key material must not silently downgrade to deterministic baseline signature: {expected}"
+        );
+    }
+
+    #[test]
+    fn regression_expected_signature_fails_closed_without_signer_key_material() {
+        // Regression: #5916
+        let _lock = lock_signer_env();
+        let _key_guard = EnvVarGuard::set(SIGNER_PRIVATE_KEY_ENV, None);
+        let _service_key_guard = EnvVarGuard::set(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, None);
+        let tx = BaselineTransaction {
+            id: "tx-missing-key".to_owned(),
+            sender: "agent-a".to_owned(),
+            nonce: 1,
+            payload: "payload-missing-key".to_owned(),
+            state_hash: GENESIS_STATE_HASH.to_owned(),
+            signature: String::new(),
+        };
+
+        let expected = tx.expected_signature();
+        assert!(
+            !expected.starts_with("sig:deterministic-v1:baseline-v1:"),
+            "missing key material must not downgrade to deterministic baseline-v1 signatures: {expected}"
         );
     }
 

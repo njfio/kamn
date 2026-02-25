@@ -1222,26 +1222,28 @@ mod tests {
             })
         }
 
-        let backend = SecureSignerBackend::with_provider_client(
-            SignerProviderHandshakeMatrix::with_uniform_availability(true),
-            mismatched_provider_client,
-        );
-        let request = SigningRequest::new(
-            "secure:aws-kms:key-prod-1",
-            "agent-a",
-            1,
-            "payload-1",
-            "state:genesis",
-        )
-        .expect("request should be valid");
+        with_default_signer_key_env(|| {
+            let backend = SecureSignerBackend::with_provider_client(
+                SignerProviderHandshakeMatrix::with_uniform_availability(true),
+                mismatched_provider_client,
+            );
+            let request = SigningRequest::new(
+                "secure:aws-kms:key-prod-1",
+                "agent-a",
+                1,
+                "payload-1",
+                "state:genesis",
+            )
+            .expect("request should be valid");
 
-        assert_eq!(
-            backend.sign(&request),
-            Err(SignerBackendError::ProviderClientBackendMismatch {
-                expected_backend: "secure-aws-kms-emulator".to_owned(),
-                provided_backend: "secure-mock".to_owned(),
-                key_id: "secure:aws-kms:key-prod-1".to_owned(),
-            })
-        );
+            assert_eq!(
+                backend.sign(&request),
+                Err(SignerBackendError::ProviderClientBackendMismatch {
+                    expected_backend: "secure-aws-kms-emulator".to_owned(),
+                    provided_backend: "secure-mock".to_owned(),
+                    key_id: "secure:aws-kms:key-prod-1".to_owned(),
+                })
+            );
+        });
     }
 }

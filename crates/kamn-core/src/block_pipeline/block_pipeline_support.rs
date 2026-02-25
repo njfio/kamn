@@ -226,7 +226,7 @@ fn decode_transaction_record(
         state_hash: state_hash.to_owned(),
         signature: signature.to_owned(),
     };
-    if tx.signature != tx.expected_signature() {
+    if !crate::transaction::signature_matches_transaction_contract(&tx) {
         return Err(GossipIngressError::new(
             "p2p_ingress_tx_signature_invalid",
             format!(

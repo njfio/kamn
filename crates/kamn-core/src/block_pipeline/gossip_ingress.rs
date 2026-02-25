@@ -4,7 +4,7 @@ use super::{
 };
 use crate::config::NodeRole;
 use crate::p2p_transport::PeerGossipFrame;
-use crate::transaction::BaselineTransaction;
+use crate::transaction::{signature_matches_transaction_contract, BaselineTransaction};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -348,7 +348,7 @@ fn decode_transaction_record(
         state_hash: state_hash.to_owned(),
         signature: signature.to_owned(),
     };
-    if tx.signature != tx.expected_signature() {
+    if !signature_matches_transaction_contract(&tx) {
         return Err(GossipIngressError::new(
             "p2p_ingress_tx_signature_invalid",
             format!(

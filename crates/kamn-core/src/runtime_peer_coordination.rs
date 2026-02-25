@@ -3,9 +3,13 @@ use super::{
     RuntimeBackpressureError, RuntimeBackpressureInput,
 };
 use crate::config::{NodeConfig, NodeRole};
-use crate::signature_profile::baseline_signature_for_fields;
+use crate::signature_profile::{
+    debug_fallback_signer_private_key_hex, service_auth_public_key_hex_from_private_key_hex,
+    service_auth_sign_with_private_key_hex, service_auth_verify_with_public_key_hex,
+};
 use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
+use std::env;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -15,6 +19,9 @@ const RUNTIME_PEER_FRAME_INVALID_RECIPIENT_DID_REASON_CODE: &str =
     "runtime_peer_frame_invalid_recipient_did";
 const RUNTIME_PEER_FRAME_INVALID_LOCAL_PEER_DID_REASON_CODE: &str =
     "runtime_peer_frame_invalid_local_peer_did";
+const RUNTIME_PEER_FRAME_SIGNING_PRIVATE_KEY_ENV: &str =
+    "KAMN_RUNTIME_PEER_SIGNING_PRIVATE_KEY_HEX";
+const RUNTIME_PEER_FRAME_SIGNING_PUBLIC_KEY_ENV: &str = "KAMN_RUNTIME_PEER_SIGNING_PUBLIC_KEY_HEX";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Peer lifecycle state.
@@ -403,6 +410,10 @@ pub enum AuthenticatedPeerFrameError {
         /// Found.
         found: u64,
     },
+    /// Missing runtime peer signing key material.
+    MissingSigningKeyMaterial,
+    /// Runtime peer signing key material is malformed.
+    InvalidSigningKeyMaterial,
 }
 
 impl Display for AuthenticatedPeerFrameError {
@@ -456,6 +467,13 @@ impl Display for AuthenticatedPeerFrameError {
                 f,
                 "peer frame nonce replay for {sender_did}: last {last_nonce}, found {found}"
             ),
+            Self::MissingSigningKeyMaterial => write!(
+                f,
+                "runtime peer frame signing key material is missing; configure KAMN_RUNTIME_PEER_SIGNING_PRIVATE_KEY_HEX or KAMN_RUNTIME_PEER_SIGNING_PUBLIC_KEY_HEX"
+            ),
+            Self::InvalidSigningKeyMaterial => {
+                write!(f, "runtime peer frame signing key material is invalid")
+            }
         }
     }
 }
@@ -532,7 +550,7 @@ impl AuthenticatedPeerFrame {
         payload: &str,
     ) -> Result<Self, AuthenticatedPeerFrameError> {
         let signature =
-            expected_peer_frame_signature(sender_peer_did, recipient_peer_did, nonce, payload);
+            expected_peer_frame_signature(sender_peer_did, recipient_peer_did, nonce, payload)?;
         Self::new(
             frame_id,
             sender_peer_did,
@@ -575,15 +593,22 @@ impl AuthenticatedPeerFrame {
 
     /// Handles verify signature.
     pub fn verify_signature(&self) -> Result<(), AuthenticatedPeerFrameError> {
-        let expected = expected_peer_frame_signature(
-            &self.sender_peer_did,
-            &self.recipient_peer_did,
+        let expected_public_key = resolve_runtime_peer_frame_signing_public_key_hex()?;
+        if service_auth_verify_with_public_key_hex(
+            self.signature.as_str(),
+            self.sender_peer_did.as_str(),
             self.nonce,
-            &self.payload,
-        );
-        if self.signature != expected {
+            self.recipient_peer_did.as_str(),
+            self.payload.as_str(),
+            expected_public_key.as_str(),
+        )
+        .is_err()
+        {
             return Err(AuthenticatedPeerFrameError::SignatureMismatch {
-                expected,
+                expected: format!(
+                    "sig:secp256k1:baseline-v2:<recovery-id>:<signature-hex-for-{}>",
+                    self.sender_peer_did
+                ),
                 found: self.signature.clone(),
             });
         }
@@ -782,8 +807,45 @@ fn expected_peer_frame_signature(
     recipient_peer_did: &str,
     nonce: u64,
     payload: &str,
-) -> String {
-    baseline_signature_for_fields(sender_peer_did, nonce, recipient_peer_did, payload)
+) -> Result<String, AuthenticatedPeerFrameError> {
+    let private_key = resolve_runtime_peer_frame_signing_private_key_hex()?;
+    service_auth_sign_with_private_key_hex(
+        sender_peer_did,
+        nonce,
+        recipient_peer_did,
+        payload,
+        private_key.as_str(),
+    )
+    .map_err(|_| AuthenticatedPeerFrameError::InvalidSigningKeyMaterial)
+}
+
+fn resolve_runtime_peer_frame_signing_private_key_hex(
+) -> Result<String, AuthenticatedPeerFrameError> {
+    if let Ok(value) = env::var(RUNTIME_PEER_FRAME_SIGNING_PRIVATE_KEY_ENV) {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Ok(trimmed.to_owned());
+        }
+    }
+    if cfg!(debug_assertions) {
+        if let Some(debug_key) = debug_fallback_signer_private_key_hex() {
+            return Ok(debug_key.to_owned());
+        }
+    }
+    Err(AuthenticatedPeerFrameError::MissingSigningKeyMaterial)
+}
+
+fn resolve_runtime_peer_frame_signing_public_key_hex() -> Result<String, AuthenticatedPeerFrameError>
+{
+    if let Ok(value) = env::var(RUNTIME_PEER_FRAME_SIGNING_PUBLIC_KEY_ENV) {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Ok(trimmed.to_owned());
+        }
+    }
+    let private_key = resolve_runtime_peer_frame_signing_private_key_hex()?;
+    service_auth_public_key_hex_from_private_key_hex(private_key.as_str())
+        .map_err(|_| AuthenticatedPeerFrameError::InvalidSigningKeyMaterial)
 }
 
 fn ensure_peer_frame_wire_field(
