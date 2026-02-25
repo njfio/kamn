@@ -24,6 +24,10 @@ diagram references.
 - `docs/architecture/persistence-backends.md`
 - `docs/architecture/did-chain-adapter.md`
 
+## Reliability Contracts
+
+- `docs/architecture/helper-canonicalization.md`
+
 ## Decision Records
 
 - `docs/architecture/adr-kamn-core-live-tls-transport.md`

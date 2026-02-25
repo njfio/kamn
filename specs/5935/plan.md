@@ -2,8 +2,8 @@
 
 - Issue: #5935
 - Spec: `specs/5935/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5935/spec.md.
@@ -11,10 +11,22 @@
 3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
 
-## Affected Modules (Initial)
+## Affected Modules (Implemented)
 - `crates/kamn-kolme/src/`
 - `crates/kamn-mcp-server/src/protocol.rs`
-- `crates/kamn-core/src/data_layer_m0.rs` to `crates/kamn-core/src/data_layer_m5_vector_integration.rs`
+- `crates/kamn-mcp-server/src/dispatch.rs`
+- `crates/kamn-kolme/tests/provider_response_policy_contracts.rs`
+- `crates/kamn-kolme/tests/duplicate_helper_inventory_contracts.rs`
+- `crates/kamn-mcp-server/tests/duplicate_helper_inventory_contract.rs`
+- `docs/architecture/helper-canonicalization.md`
+- `docs/security/secure-coding.md`
+- `docs/architecture/README.md`
+
+## Delivery Notes
+1. Canonicalized JSON string parsing and percent-encoding for Kolme policies through shared internal helper module with unicode escape support.
+2. Canonicalized JSON escaping and nested field extraction for MCP protocol/dispatch through shared internal helper module.
+3. Added source-inventory regression tests to fail closed on helper re-duplication.
+4. Verified crate suites, strict clippy, formatting, and in-diff mutation testing.
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.

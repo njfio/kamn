@@ -53,3 +53,4 @@ This milestone closes production-readiness blockers across cryptography correctn
 
 ## Progress Notes
 - 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.
+- 2026-02-25: `#5935` deduplicates high-impact parser/helper classes through canonical shared modules in `kamn-kolme` and `kamn-mcp-server`, with unicode escape conformance tests and fail-closed duplicate inventory contracts.
