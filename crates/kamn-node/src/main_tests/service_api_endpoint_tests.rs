@@ -4982,6 +4982,206 @@ fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivere
 }
 
 #[test]
+fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart() {
+    // Regression: #5979
+    let _env = acquire_service_api_test_env();
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relayed-non-recipient-restart-state-{unique_suffix}.json"
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    std::fs::write(
+        state_file.as_path(),
+        r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-relayed-non-recipient-restart-1":{
+      "message_id":"msg-relayed-non-recipient-restart-1",
+      "status":"relayed",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender-relayed-restart",
+      "recipient_did":"kamn:did:agent:recipient-relayed-restart",
+      "body":"{\"recipient_did\":\"kamn:did:agent:recipient-relayed-restart\",\"message\":\"relay-restart\"}"
+    }
+  },
+  "channel_messages":{
+    "recipient:kamn:did:agent:recipient-relayed-restart":["msg-relayed-non-recipient-restart-1"]
+  },
+  "tasks":{},
+  "escrows":{}
+}"#,
+    )
+    .expect("state fixture should write");
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let non_recipient_did = "kamn:did:agent:recipient-relayed-restart-observer";
+    let message_path = "/v1/messages/msg-relayed-non-recipient-restart-1";
+
+    let first_report = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34115".to_owned(),
+        ])
+        .expect("first api args should parse"),
+    )
+    .expect("first api execution should succeed");
+    let first_snapshot = build_service_api_snapshot(&first_report);
+    let first_state_hash = format!(
+        "service-api:{}:{}",
+        first_snapshot.chain_id.as_str(),
+        first_snapshot.chain_version.as_str()
+    );
+
+    let first_bind_addr = reserve_loopback_addr();
+    let first_config = ServiceApiEndpointConfig {
+        bind_addr: first_bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let first_server_snapshot = first_snapshot.clone();
+    let first_server =
+        thread::spawn(move || serve_service_api_endpoint(&first_config, &first_server_snapshot));
+    wait_for_endpoint_ready(first_bind_addr.as_str());
+
+    let first_signature = service_api_request_signature_for_fields(
+        non_recipient_did,
+        81,
+        first_state_hash.as_str(),
+        "",
+    );
+    let first_response = send_http_request_with_headers(
+        first_bind_addr.as_str(),
+        "GET",
+        message_path,
+        "",
+        &[
+            ("X-KAMN-Sender-DID", non_recipient_did),
+            ("X-KAMN-Request-Nonce", "81"),
+            ("X-KAMN-Request-Signature", first_signature.as_str()),
+        ],
+    );
+    assert!(first_response.contains("HTTP/1.1 200 OK"));
+    let first_payload: Value =
+        parse_service_api_payload(extract_http_response_body(first_response.as_str()))
+            .expect("first non-recipient payload should deserialize");
+    assert_eq!(
+        first_payload["message_id"],
+        "msg-relayed-non-recipient-restart-1"
+    );
+    assert_eq!(
+        first_payload["status"], "relayed",
+        "non-recipient retrieval must keep relayed status before restart"
+    );
+
+    let first_server_result = first_server
+        .join()
+        .expect("first endpoint thread should complete");
+    assert!(
+        first_server_result.is_ok(),
+        "service api endpoint should stop cleanly after first non-recipient relay query"
+    );
+
+    let restart_report = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34116".to_owned(),
+        ])
+        .expect("restart api args should parse"),
+    )
+    .expect("restart api execution should succeed");
+    let restart_snapshot = build_service_api_snapshot(&restart_report);
+    let restart_state_hash = format!(
+        "service-api:{}:{}",
+        restart_snapshot.chain_id.as_str(),
+        restart_snapshot.chain_version.as_str()
+    );
+    let restart_bind_addr = reserve_loopback_addr();
+    let restart_config = ServiceApiEndpointConfig {
+        bind_addr: restart_bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let restart_server_snapshot = restart_snapshot.clone();
+    let restart_server = thread::spawn(move || {
+        serve_service_api_endpoint(&restart_config, &restart_server_snapshot)
+    });
+    wait_for_endpoint_ready(restart_bind_addr.as_str());
+
+    let restart_signature = service_api_request_signature_for_fields(
+        non_recipient_did,
+        82,
+        restart_state_hash.as_str(),
+        "",
+    );
+    let restart_response = send_http_request_with_headers(
+        restart_bind_addr.as_str(),
+        "GET",
+        message_path,
+        "",
+        &[
+            ("X-KAMN-Sender-DID", non_recipient_did),
+            ("X-KAMN-Request-Nonce", "82"),
+            ("X-KAMN-Request-Signature", restart_signature.as_str()),
+        ],
+    );
+    assert!(restart_response.contains("HTTP/1.1 200 OK"));
+    let restart_payload: Value =
+        parse_service_api_payload(extract_http_response_body(restart_response.as_str()))
+            .expect("restart non-recipient payload should deserialize");
+    assert_eq!(
+        restart_payload["message_id"],
+        "msg-relayed-non-recipient-restart-1"
+    );
+    assert_eq!(
+        restart_payload["status"], "relayed",
+        "non-recipient retrieval must remain relayed after restart"
+    );
+
+    let restart_server_result = restart_server
+        .join()
+        .expect("restart endpoint thread should complete");
+    assert!(
+        restart_server_result.is_ok(),
+        "service api endpoint should stop cleanly after restart non-recipient relay query"
+    );
+
+    let state_payload =
+        fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+    let state_json: Value =
+        serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+    assert_eq!(
+        state_json["messages"]["msg-relayed-non-recipient-restart-1"]["status"], "relayed",
+        "state file should retain relayed status for non-recipient queries across restart"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
 fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool() {
     let _env = acquire_service_api_test_env();
     let unique_suffix = format!(
