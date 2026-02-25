@@ -773,7 +773,18 @@ mod tests {
             let mut sealed = engine
                 .encrypt("kamn:did:agent:alice", "group payload", 37)
                 .expect("encrypt should succeed");
-            sealed.signature.push('0');
+            assert!(
+                !sealed.signature.is_empty(),
+                "signature fixture must be non-empty"
+            );
+            let replacement = if sealed.signature.starts_with('0') {
+                '1'
+            } else {
+                '0'
+            };
+            sealed
+                .signature
+                .replace_range(0..1, &replacement.to_string());
 
             assert_eq!(
                 engine.decrypt("kamn:did:agent:bob", &sealed),
