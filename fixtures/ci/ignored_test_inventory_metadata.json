@@ -95,15 +95,6 @@
       "owner": "team-sdk",
       "priority": "P2",
       "reason": "deep-lane-performance",
-      "source_file": "crates/kamn-sdk/tests/live_transport_agent.rs",
-      "test_name": "performance_live_transport_multi_client_deep_lane",
-      "tracking_issue": "#2843"
-    },
-    {
-      "disposition": "retained_deep_lane_opt_in_required",
-      "owner": "team-sdk",
-      "priority": "P2",
-      "reason": "deep-lane-performance",
       "source_file": "crates/kamn-sdk/tests/tcp_failover_matrix.rs",
       "test_name": "performance_tcp_failover_reconnect_matrix_deep_lane",
       "tracking_issue": "#2843"
