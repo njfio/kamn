@@ -84,3 +84,40 @@ pub(super) fn deterministic_checksum_marker(
 ) -> String {
     format!("sha256:{partition_name}:{partition_month_id}")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        add_months, deterministic_checksum_marker, month_distance, split_month_id,
+        validate_partition_month_id,
+    };
+    use crate::DataLayerM10PartitionLifecycleError;
+
+    #[test]
+    fn unit_split_month_id_and_validation_reject_invalid_ranges() {
+        assert_eq!(
+            validate_partition_month_id(196912),
+            Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(196912))
+        );
+        assert_eq!(
+            split_month_id(202513),
+            Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(202513))
+        );
+        assert_eq!(split_month_id(202512), Ok((2025, 12)));
+    }
+
+    #[test]
+    fn unit_month_arithmetic_handles_year_rollover_deterministically() {
+        assert_eq!(add_months(202512, 1), Ok(202601));
+        assert_eq!(add_months(202511, 3), Ok(202602));
+        assert_eq!(month_distance(202411, 202502), Ok(3));
+    }
+
+    #[test]
+    fn unit_deterministic_checksum_marker_has_stable_shape() {
+        assert_eq!(
+            deterministic_checksum_marker("messages_2025_02", 202502),
+            "sha256:messages_2025_02:202502"
+        );
+    }
+}

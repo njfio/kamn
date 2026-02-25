@@ -274,6 +274,9 @@ impl GroupChannelCryptoEngine {
                 actual: sealed.channel_id.clone(),
             });
         }
+        if sealed.nonce == 0 {
+            return Err(GroupChannelCryptoError::InvalidNonce(sealed.nonce));
+        }
 
         let record = self.sender_key_record(&sealed.sender_did, sealed.key_generation)?;
         if !record.recipient_allowlist.contains(recipient_did) {
@@ -632,7 +635,7 @@ mod tests {
         let _guard = ENV_LOCK
             .get_or_init(|| Mutex::new(()))
             .lock()
-            .expect("env lock should not be poisoned");
+            .unwrap_or_else(|error| error.into_inner());
 
         let previous = std::env::var(super::KEY_AGREEMENT_MASTER_SEED_ENV).ok();
         match value {
@@ -701,6 +704,116 @@ mod tests {
 
             assert!(!first_record.active);
             assert!(second_record.active);
+        });
+    }
+
+    #[test]
+    fn encrypt_decrypt_roundtrip_requires_authorized_recipient() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed");
+
+            let sealed = engine
+                .encrypt("kamn:did:agent:alice", "group payload", 33)
+                .expect("encrypt should succeed");
+
+            let plaintext = engine
+                .decrypt("kamn:did:agent:bob", &sealed)
+                .expect("authorized recipient should decrypt");
+            assert_eq!(plaintext, "group payload");
+        });
+    }
+
+    #[test]
+    fn decrypt_rejects_unauthorized_recipient() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            let distribution = engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed");
+            let sealed = engine
+                .encrypt("kamn:did:agent:alice", "group payload", 35)
+                .expect("encrypt should succeed");
+
+            assert_eq!(
+                engine.decrypt("kamn:did:agent:charlie", &sealed),
+                Err(GroupChannelCryptoError::RecipientNotAuthorized {
+                    recipient_did: "kamn:did:agent:charlie".to_owned(),
+                    sender_did: "kamn:did:agent:alice".to_owned(),
+                    key_generation: distribution.key_generation,
+                })
+            );
+        });
+    }
+
+    #[test]
+    fn decrypt_rejects_tampered_signature() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed");
+            let mut sealed = engine
+                .encrypt("kamn:did:agent:alice", "group payload", 37)
+                .expect("encrypt should succeed");
+            assert!(
+                !sealed.signature.is_empty(),
+                "signature fixture must be non-empty"
+            );
+            let replacement = if sealed.signature.starts_with('0') {
+                '1'
+            } else {
+                '0'
+            };
+            sealed
+                .signature
+                .replace_range(0..1, &replacement.to_string());
+
+            assert_eq!(
+                engine.decrypt("kamn:did:agent:bob", &sealed),
+                Err(GroupChannelCryptoError::SignatureMismatch)
+            );
+        });
+    }
+
+    #[test]
+    fn decrypt_rejects_zero_nonce_fail_closed() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed");
+            let mut sealed = engine
+                .encrypt("kamn:did:agent:alice", "group payload", 39)
+                .expect("encrypt should succeed");
+            sealed.nonce = 0;
+
+            assert_eq!(
+                engine.decrypt("kamn:did:agent:bob", &sealed),
+                Err(GroupChannelCryptoError::InvalidNonce(0))
+            );
         });
     }
 

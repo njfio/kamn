@@ -125,3 +125,99 @@ pub fn data_layer_m11_evaluate_closure_evidence(
         chaos_signoff_complete: input.chaos_signoff_complete,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        data_layer_m11_evaluate_closure_evidence, DataLayerM11ClosureAcceptanceDecision,
+        DataLayerM11ClosureEvidenceError, DataLayerM11ClosureEvidenceInput,
+        DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE,
+        DATA_LAYER_M11_CLOSURE_BLOCK_EVIDENCE_GAP_REASON_CODE,
+    };
+    use crate::{
+        DataLayerM11OperatorReadinessDecision, DataLayerM11OperatorReadinessReport,
+        DataLayerPrdCriticalScenarioConformanceDecision,
+        DataLayerPrdCriticalScenarioConformanceReport,
+    };
+
+    fn hardening_go_report() -> DataLayerM11OperatorReadinessReport {
+        DataLayerM11OperatorReadinessReport {
+            decision: DataLayerM11OperatorReadinessDecision::Go,
+            reason_codes: vec!["m11_operator_readiness_go"],
+            missing_required_scenario_ids: Vec::new(),
+            failing_critical_scenario_ids: Vec::new(),
+            total_required_scenarios: 2,
+            passed_required_scenarios: 2,
+        }
+    }
+
+    fn critical_conformant_report() -> DataLayerPrdCriticalScenarioConformanceReport {
+        DataLayerPrdCriticalScenarioConformanceReport {
+            decision: DataLayerPrdCriticalScenarioConformanceDecision::Conformant,
+            reason_codes: vec!["prd_critical_scenarios_conformant"],
+            missing_scenario_ids: Vec::new(),
+            failed_scenario_ids: Vec::new(),
+            shell_policy_violation_scenario_ids: Vec::new(),
+            total_required_scenarios: 10,
+            passed_required_scenarios: 10,
+        }
+    }
+
+    #[test]
+    fn unit_closure_evidence_accepts_when_all_gates_are_satisfied() {
+        let report = data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
+            release_marker: "r65-cutover".to_owned(),
+            hardening_report: hardening_go_report(),
+            critical_scenario_report: critical_conformant_report(),
+            performance_budget_met: true,
+            security_signoff_complete: true,
+            chaos_signoff_complete: true,
+        })
+        .expect("valid closure evidence should evaluate");
+
+        assert_eq!(
+            report.decision,
+            DataLayerM11ClosureAcceptanceDecision::Accepted
+        );
+        assert_eq!(
+            report.reason_codes,
+            vec![DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE]
+        );
+    }
+
+    #[test]
+    fn unit_closure_evidence_rejects_when_signoff_evidence_is_missing() {
+        let report = data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
+            release_marker: "r65-cutover".to_owned(),
+            hardening_report: hardening_go_report(),
+            critical_scenario_report: critical_conformant_report(),
+            performance_budget_met: true,
+            security_signoff_complete: false,
+            chaos_signoff_complete: true,
+        })
+        .expect("valid closure evidence shape should evaluate");
+
+        assert_eq!(
+            report.decision,
+            DataLayerM11ClosureAcceptanceDecision::Rejected
+        );
+        assert!(report
+            .reason_codes
+            .contains(&DATA_LAYER_M11_CLOSURE_BLOCK_EVIDENCE_GAP_REASON_CODE));
+    }
+
+    #[test]
+    fn unit_closure_evidence_rejects_empty_release_marker() {
+        assert_eq!(
+            data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
+                release_marker: " ".to_owned(),
+                hardening_report: hardening_go_report(),
+                critical_scenario_report: critical_conformant_report(),
+                performance_budget_met: true,
+                security_signoff_complete: true,
+                chaos_signoff_complete: true,
+            }),
+            Err(DataLayerM11ClosureEvidenceError::EmptyReleaseMarker)
+        );
+    }
+}

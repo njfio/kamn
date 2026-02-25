@@ -83,3 +83,77 @@ fn validate_archival_retry_policy(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        data_layer_m10_project_archival_retry_decision, DataLayerM10ArchivalFailureClass,
+        DataLayerM10ArchivalRecoveryAction, DataLayerM10ArchivalRetryPolicy,
+        DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
+        DATA_LAYER_M10_ARCHIVAL_RETRY_POLICY_INVALID_REASON_CODE,
+        DATA_LAYER_M10_ARCHIVAL_RETRY_SCHEDULED_REASON_CODE,
+    };
+    use crate::DataLayerM10PartitionLifecycleError;
+
+    #[test]
+    fn unit_retry_projection_rejects_invalid_policy_fields() {
+        let invalid_policy = DataLayerM10ArchivalRetryPolicy {
+            max_attempts: 0,
+            base_backoff_seconds: 30,
+            max_backoff_seconds: 300,
+        };
+        assert_eq!(
+            data_layer_m10_project_archival_retry_decision(
+                1_735_700_000,
+                1,
+                DataLayerM10ArchivalFailureClass::Transient,
+                invalid_policy
+            ),
+            Err(DataLayerM10PartitionLifecycleError::InvalidRetryPolicy {
+                field: "max_attempts",
+                reason_code: DATA_LAYER_M10_ARCHIVAL_RETRY_POLICY_INVALID_REASON_CODE,
+            })
+        );
+    }
+
+    #[test]
+    fn unit_retry_projection_schedules_transient_retry_then_exhausts() {
+        let policy = DataLayerM10ArchivalRetryPolicy {
+            max_attempts: 3,
+            base_backoff_seconds: 30,
+            max_backoff_seconds: 300,
+        };
+
+        let scheduled = data_layer_m10_project_archival_retry_decision(
+            1_735_700_000,
+            1,
+            DataLayerM10ArchivalFailureClass::Transient,
+            policy,
+        )
+        .expect("transient failure under max attempts should schedule retry");
+        assert_eq!(
+            scheduled.action,
+            DataLayerM10ArchivalRecoveryAction::RetryScheduled
+        );
+        assert_eq!(
+            scheduled.reason_code,
+            DATA_LAYER_M10_ARCHIVAL_RETRY_SCHEDULED_REASON_CODE
+        );
+
+        let exhausted = data_layer_m10_project_archival_retry_decision(
+            1_735_700_000,
+            3,
+            DataLayerM10ArchivalFailureClass::Transient,
+            policy,
+        )
+        .expect("transient failure at max attempts should fail closed");
+        assert_eq!(
+            exhausted.action,
+            DataLayerM10ArchivalRecoveryAction::FailClosed
+        );
+        assert_eq!(
+            exhausted.reason_code,
+            DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE
+        );
+    }
+}

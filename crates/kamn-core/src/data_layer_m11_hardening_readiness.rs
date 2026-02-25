@@ -317,3 +317,60 @@ fn validate_non_empty(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        validate_non_empty, DataLayerM11HardeningMatrix, DataLayerM11HardeningMatrixError,
+        DataLayerM11ScenarioDefinition, DataLayerM11ScenarioDomain,
+        DataLayerM11ScenarioOutcomeInput, DataLayerM11ScenarioSeverity, DataLayerM11ScenarioStatus,
+    };
+
+    #[test]
+    fn unit_validate_non_empty_rejects_whitespace_input() {
+        assert_eq!(
+            validate_non_empty(" \n", "scenario_id"),
+            Err(DataLayerM11HardeningMatrixError::EmptyField("scenario_id"))
+        );
+        assert!(validate_non_empty("scenario-1", "scenario_id").is_ok());
+    }
+
+    #[test]
+    fn unit_evaluate_operator_readiness_rejects_empty_catalog() {
+        let matrix = DataLayerM11HardeningMatrix::new();
+        assert_eq!(
+            matrix.evaluate_operator_readiness(),
+            Err(DataLayerM11HardeningMatrixError::EmptyScenarioCatalog)
+        );
+    }
+
+    #[test]
+    fn unit_record_outcome_is_idempotent_for_same_status() {
+        let mut matrix = DataLayerM11HardeningMatrix::new();
+        matrix
+            .register_scenario(DataLayerM11ScenarioDefinition {
+                scenario_id: "sec-001".to_owned(),
+                domain: DataLayerM11ScenarioDomain::Security,
+                severity: DataLayerM11ScenarioSeverity::Critical,
+                required: true,
+            })
+            .expect("scenario registration should succeed");
+
+        let first = matrix
+            .record_outcome(DataLayerM11ScenarioOutcomeInput {
+                scenario_id: "sec-001".to_owned(),
+                status: DataLayerM11ScenarioStatus::Passed,
+                evidence_marker: "evidence://run/1".to_owned(),
+            })
+            .expect("first outcome recording should succeed");
+        let second = matrix
+            .record_outcome(DataLayerM11ScenarioOutcomeInput {
+                scenario_id: "sec-001".to_owned(),
+                status: DataLayerM11ScenarioStatus::Passed,
+                evidence_marker: "evidence://run/1".to_owned(),
+            })
+            .expect("idempotent outcome update should succeed");
+
+        assert_eq!(first, second);
+    }
+}
