@@ -311,14 +311,6 @@ impl KolmeRuntimeCommitHttpTransport {
                 reason: "http response body is empty".to_owned(),
             });
         }
-        if let Some(metadata) = metadata {
-            if let Some(content_length) = metadata.content_length {
-                let total_length = metadata.header_end.saturating_add(content_length);
-                if response_bytes.len() >= total_length {
-                    response_bytes.truncate(total_length);
-                }
-            }
-        }
         Ok((response_bytes, false))
     }
 

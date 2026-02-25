@@ -1,7 +1,7 @@
 # Spec: Issue #5961 - Close escaped http_transport mutants from #5932 mutation gate
 
 - Issue: #5961
-- Status: Accepted (agent-authored, self-accepted under P2 single-module rule)
+- Status: Implemented
 - Type: task
 - Priority: P2
 - Area: qa
@@ -35,3 +35,13 @@ Out of scope:
 ## Success Metrics / Observable Signals
 - Escaped count for the #5961 mutant set drops from 8 to 0.
 - No regressions in existing `kamn-core` tests for runtime commit transport behavior.
+
+## Implementation Evidence (2026-02-25)
+- AC-1: Added regression tests in `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`:
+  - `regression_http_transport_partial_eq_requires_timeout_and_authorization_match`
+  - `regression_http_transport_parses_connection_header_before_content_length`
+  - `regression_http_transport_parses_chunked_headers_without_early_failure`
+- AC-2: Targeted mutant rerun command:
+  - `CARGO_BUILD_JOBS=1 cargo mutants --in-place -p kamn-core -f crates/kamn-core/src/kolme_runtime_commit/http_transport.rs -F 'http_transport\\.rs:(50:9|51:13|50:30|51:42|291:17|301:45|336:60)'`
+  - Result: `8 mutants tested in 11m: 8 caught` (`missed=0`, `unviable=0`, `timeout=0`)
+- AC-3: Mutation evidence is prepared for posting on PR/issue threads (`#5957`, `#5961`) with command, totals, and caught-mutant list.

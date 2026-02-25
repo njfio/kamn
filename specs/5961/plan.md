@@ -2,7 +2,7 @@
 
 - Issue: #5961
 - Spec: `specs/5961/spec.md`
-- Status: Draft
+- Status: Implemented
 - Last Updated: 2026-02-25
 
 ## Approach

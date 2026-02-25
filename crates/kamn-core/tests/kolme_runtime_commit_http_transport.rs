@@ -427,6 +427,30 @@ fn spawn_server_with_raw_response(
     format!("http://{addr}")
 }
 
+fn spawn_server_with_chunked_raw_response(
+    first_chunk: String,
+    second_chunk: String,
+    chunk_delay: Duration,
+    handler: impl Fn(String) + Send + 'static,
+) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let addr = listener.local_addr().expect("local addr should resolve");
+    thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("connection should be accepted");
+        let request = read_http_request(&mut stream);
+        handler(request);
+        stream
+            .write_all(first_chunk.as_bytes())
+            .expect("first response chunk should write");
+        stream.flush().expect("first response chunk should flush");
+        thread::sleep(chunk_delay);
+        stream
+            .write_all(second_chunk.as_bytes())
+            .expect("second response chunk should write");
+    });
+    format!("http://{addr}")
+}
+
 fn spawn_keep_alive_multi_request_server(
     response_body: String,
     status_line: &str,
@@ -498,6 +522,29 @@ fn unit_http_transport_rejects_zero_timeout_seconds() {
         ),
         "http transport timeout must be positive"
     );
+}
+
+#[test]
+fn regression_http_transport_partial_eq_requires_timeout_and_authorization_match() {
+    let transport_a = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let transport_b = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let transport_timeout_mismatch =
+        KolmeRuntimeCommitHttpTransport::new(3).expect("transport should build");
+    let transport_auth_alpha =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
+            .expect("transport should build");
+    let transport_auth_alpha_clone =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
+            .expect("transport should build");
+    let transport_auth_beta =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer beta")
+            .expect("transport should build");
+
+    assert_eq!(transport_a, transport_b);
+    assert_ne!(transport_a, transport_timeout_mismatch);
+    assert_ne!(transport_a, transport_auth_alpha);
+    assert_eq!(transport_auth_alpha, transport_auth_alpha_clone);
+    assert_ne!(transport_auth_alpha, transport_auth_beta);
 }
 
 #[test]
@@ -858,6 +905,76 @@ fn regression_http_transport_fails_closed_on_content_length_mismatch() {
             ),
         })
     );
+}
+
+#[test]
+fn regression_http_transport_parses_connection_header_before_content_length() {
+    let response_body = "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:ordered-headers\nfinality=final\n";
+    let raw_response = format!(
+        "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+        response_body.len(),
+        response_body
+    );
+    let base_url = spawn_server_with_raw_response(raw_response, |request| {
+        assert!(request.contains("POST /broadcast/runtime-commit HTTP/1.1"));
+    });
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit("operation_id=ordered\n", "idempotency-key-ordered")
+        .expect("response with connection header before content-length should parse");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:ordered-headers");
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
+}
+
+#[test]
+fn regression_http_transport_parses_chunked_headers_without_early_failure() {
+    let response_body =
+        "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:chunked\nfinality=final\n";
+    let first_chunk = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection",
+        response_body.len()
+    );
+    let second_chunk = format!(": close\r\n\r\n{response_body}");
+    let base_url = spawn_server_with_chunked_raw_response(
+        first_chunk,
+        second_chunk,
+        Duration::from_millis(25),
+        |request| {
+            assert!(request.contains("POST /broadcast/runtime-commit HTTP/1.1"));
+        },
+    );
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit("operation_id=chunked\n", "idempotency-key-chunked")
+        .expect("chunked headers should parse once header boundary is complete");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:chunked");
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
 }
 
 #[test]
