@@ -43,7 +43,9 @@ append_summary() {
     echo "- Approx. runner-minutes: ${RUNNER_MINUTES}"
     echo "- Job count: ${JOB_COUNT}"
     echo "- Warn threshold seconds: ${WARN_SECONDS}"
-    echo "- Max threshold seconds: ${MAX_SECONDS}"
+    echo "- Max threshold seconds: ${MAX_SECONDS_EFFECTIVE}"
+    echo "- Base max threshold seconds: ${MAX_SECONDS}"
+    echo "- Retry grace seconds: ${RETRY_GRACE_SECONDS}"
     echo "- Warn threshold runner-minutes: ${WARN_RUNNER_MINUTES}"
     echo "- Max threshold runner-minutes: ${MAX_RUNNER_MINUTES}"
     echo "- Test scope: ${TEST_SCOPE}"
@@ -163,12 +165,14 @@ case "$LANE" in
     WARN_PERCENT="${FAST_GATE_WARN_PERCENT}"
     MAX_RUNNER_MINUTES="${FAST_GATE_MAX_RUNNER_MINUTES}"
     MAX_JOB_COUNT="${FAST_GATE_MAX_JOB_COUNT}"
+    LANE_RETRY_GRACE_SECONDS="${FAST_GATE_RETRY_GRACE_SECONDS:-0}"
     ;;
   deep-validate)
     MAX_SECONDS="${DEEP_VALIDATE_MAX_SECONDS}"
     WARN_PERCENT="${DEEP_VALIDATE_WARN_PERCENT}"
     MAX_RUNNER_MINUTES="${DEEP_VALIDATE_MAX_RUNNER_MINUTES}"
     MAX_JOB_COUNT="${DEEP_VALIDATE_MAX_JOB_COUNT}"
+    LANE_RETRY_GRACE_SECONDS="${DEEP_VALIDATE_RETRY_GRACE_SECONDS:-0}"
     ;;
   *)
     echo "Unsupported lane: $LANE" >&2
@@ -181,7 +185,18 @@ if ! [[ "$MAX_SECONDS" =~ ^[0-9]+$ && "$WARN_PERCENT" =~ ^[0-9]+$ && "$MAX_RUNNE
   exit 2
 fi
 
-WARN_SECONDS=$(( MAX_SECONDS * WARN_PERCENT / 100 ))
+if ! [[ "$LANE_RETRY_GRACE_SECONDS" =~ ^[0-9]+$ ]]; then
+  echo "Invalid retry grace value in budget file: $BUDGET_FILE" >&2
+  exit 2
+fi
+
+RETRY_GRACE_SECONDS=0
+if [ "$RETRY_USED" = "true" ]; then
+  RETRY_GRACE_SECONDS="$LANE_RETRY_GRACE_SECONDS"
+fi
+
+MAX_SECONDS_EFFECTIVE=$(( MAX_SECONDS + RETRY_GRACE_SECONDS ))
+WARN_SECONDS=$(( MAX_SECONDS_EFFECTIVE * WARN_PERCENT / 100 ))
 WARN_RUNNER_MINUTES=$(( MAX_RUNNER_MINUTES * WARN_PERCENT / 100 ))
 
 ELAPSED_MINUTES="$(ceil_div "$ELAPSED_SECONDS" 60)"
@@ -193,8 +208,8 @@ BUDGET_NOTES=""
 warn_msgs=()
 fail_msgs=()
 
-if [ "$ELAPSED_SECONDS" -gt "$MAX_SECONDS" ]; then
-  fail_msgs+=("elapsed-seconds>${MAX_SECONDS}")
+if [ "$ELAPSED_SECONDS" -gt "$MAX_SECONDS_EFFECTIVE" ]; then
+  fail_msgs+=("elapsed-seconds>${MAX_SECONDS_EFFECTIVE}")
 elif [ "$ELAPSED_SECONDS" -ge "$WARN_SECONDS" ]; then
   warn_msgs+=("elapsed-seconds>=${WARN_SECONDS}")
 fi
@@ -217,7 +232,7 @@ elif [ "${#warn_msgs[@]}" -gt 0 ]; then
   STATUS="warn"
 fi
 
-MESSAGE="status=${STATUS}; lane=${LANE}; elapsed=${ELAPSED_SECONDS}s; runner_minutes=${RUNNER_MINUTES}; cache_hit=${CACHE_HIT}; retry_used=${RETRY_USED}"
+MESSAGE="status=${STATUS}; lane=${LANE}; elapsed=${ELAPSED_SECONDS}s; runner_minutes=${RUNNER_MINUTES}; cache_hit=${CACHE_HIT}; retry_used=${RETRY_USED}; retry_grace_seconds=${RETRY_GRACE_SECONDS}"
 if [ "${#warn_msgs[@]}" -gt 0 ]; then
   MESSAGE+="; warnings=$(IFS=,; echo "${warn_msgs[*]}")"
 fi
@@ -267,7 +282,9 @@ if [ -n "$OUTPUT_JSON" ]; then
   "retry_used": "$retry_json",
   "thresholds": {
     "warn_percent": $WARN_PERCENT,
-    "max_seconds": $MAX_SECONDS,
+    "base_max_seconds": $MAX_SECONDS,
+    "retry_grace_seconds": $RETRY_GRACE_SECONDS,
+    "max_seconds": $MAX_SECONDS_EFFECTIVE,
     "warn_seconds": $WARN_SECONDS,
     "max_runner_minutes": $MAX_RUNNER_MINUTES,
     "warn_runner_minutes": $WARN_RUNNER_MINUTES,

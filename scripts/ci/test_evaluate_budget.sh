@@ -31,6 +31,8 @@ run_expect_failure() {
 run_expect_status fast_pass pass --budget-file "$BUDGET_FILE" --lane fast-gate --elapsed-seconds 180 --test-scope targeted --changed-files 4 --job-count 1
 run_expect_status fast_warn warn --budget-file "$BUDGET_FILE" --lane fast-gate --elapsed-seconds 920 --test-scope full --changed-files 10 --job-count 1
 run_expect_failure fast_fail --budget-file "$BUDGET_FILE" --lane fast-gate --elapsed-seconds 1001 --test-scope full --changed-files 12 --job-count 1
+run_expect_status fast_retry_grace_pass warn --budget-file "$BUDGET_FILE" --lane fast-gate --elapsed-seconds 1193 --test-scope full --changed-files 33 --job-count 1 --retry-used true
+run_expect_failure fast_retry_grace_fail --budget-file "$BUDGET_FILE" --lane fast-gate --elapsed-seconds 1301 --test-scope full --changed-files 33 --job-count 1 --retry-used true
 run_expect_status deep_pass pass --budget-file "$BUDGET_FILE" --lane deep-validate --elapsed-seconds 900 --test-scope full --changed-files 0 --job-count 1
 run_expect_status deep_warn warn --budget-file "$BUDGET_FILE" --lane deep-validate --elapsed-seconds 7000 --test-scope full --changed-files 0 --job-count 1
 
