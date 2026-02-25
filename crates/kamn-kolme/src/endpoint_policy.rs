@@ -1,5 +1,6 @@
 //! Endpoint normalization and validation contracts for Kolme transports.
 
+use crate::json_scalar_policy::percent_encode_component as percent_encode;
 use std::error::Error;
 use std::fmt;
 
@@ -289,20 +290,6 @@ fn join_http_paths(base_path: &str, request_path: &str) -> String {
     } else {
         format!("{}/{}", base.trim_end_matches('/'), request)
     }
-}
-
-fn percent_encode(value: &str) -> String {
-    let mut encoded = String::new();
-    for byte in value.bytes() {
-        let ch = byte as char;
-        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | '~') {
-            encoded.push(ch);
-        } else {
-            encoded.push('%');
-            encoded.push_str(format!("{byte:02X}").as_str());
-        }
-    }
-    encoded
 }
 
 #[cfg(test)]
