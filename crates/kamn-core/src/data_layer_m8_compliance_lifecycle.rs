@@ -605,3 +605,68 @@ fn authorize_owner_scope(
     }
     Ok(owner_did)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        authorize_owner_scope, data_layer_m8_retention_window_seconds, validate_wrapped_keys,
+        DataLayerM8ComplianceError, DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
+        DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS, DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
+    };
+
+    #[test]
+    fn unit_validate_wrapped_keys_rejects_empty_duplicate_and_blank_wrapped_cek() {
+        assert_eq!(
+            validate_wrapped_keys(&[]),
+            Err(DataLayerM8ComplianceError::EmptyWrappedKeys)
+        );
+
+        let duplicate_inputs = vec![
+            DataLayerM8WrappedCekInput {
+                recipient_did: "kamn:did:agent:bob".to_owned(),
+                wrapped_cek: "cek-a".to_owned(),
+            },
+            DataLayerM8WrappedCekInput {
+                recipient_did: "kamn:did:agent:bob".to_owned(),
+                wrapped_cek: "cek-b".to_owned(),
+            },
+        ];
+        assert_eq!(
+            validate_wrapped_keys(&duplicate_inputs),
+            Err(DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient {
+                recipient_did: "kamn:did:agent:bob".to_owned()
+            })
+        );
+
+        let blank_wrapped_key = vec![DataLayerM8WrappedCekInput {
+            recipient_did: "kamn:did:agent:alice".to_owned(),
+            wrapped_cek: " ".to_owned(),
+        }];
+        assert_eq!(
+            validate_wrapped_keys(&blank_wrapped_key),
+            Err(DataLayerM8ComplianceError::InvalidWrappedKey("wrapped_cek"))
+        );
+    }
+
+    #[test]
+    fn unit_retention_windows_and_owner_scope_authorization_are_deterministic() {
+        assert_eq!(
+            data_layer_m8_retention_window_seconds(DataLayerM8RetentionClass::Standard),
+            Some(DATA_LAYER_M8_STANDARD_RETENTION_SECONDS)
+        );
+        assert_eq!(
+            data_layer_m8_retention_window_seconds(DataLayerM8RetentionClass::Ephemeral),
+            Some(DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS)
+        );
+        assert_eq!(
+            data_layer_m8_retention_window_seconds(DataLayerM8RetentionClass::LegalHold),
+            None
+        );
+
+        assert!(authorize_owner_scope("kamn:did:owner:alpha", "kamn:did:owner:alpha").is_ok());
+        assert!(matches!(
+            authorize_owner_scope("kamn:did:owner:alpha", "kamn:did:owner:beta"),
+            Err(DataLayerM8ComplianceError::OwnerScopeViolation { .. })
+        ));
+    }
+}

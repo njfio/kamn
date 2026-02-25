@@ -337,7 +337,7 @@ mod tests {
         let _guard = ENV_LOCK
             .get_or_init(|| Mutex::new(()))
             .lock()
-            .expect("env lock should not be poisoned");
+            .unwrap_or_else(|error| error.into_inner());
 
         let previous = std::env::var(super::KEY_AGREEMENT_MASTER_SEED_ENV).ok();
         match value {
@@ -384,6 +384,73 @@ mod tests {
             assert_eq!(
                 engine.decrypt(&sealed),
                 Err(DirectMessageCryptoError::AlgorithmMismatch)
+            );
+        });
+    }
+
+    #[test]
+    fn encrypt_decrypt_roundtrip_succeeds_for_valid_payload() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine = match DirectMessageCryptoEngine::new(
+                "kamn:did:agent:alice#key-agreement-1",
+                "kamn:did:agent:bob#key-agreement-1",
+            ) {
+                Ok(value) => value,
+                Err(error) => panic!("engine init failed: {error}"),
+            };
+            let sealed = match engine.encrypt("hello-secure-world", 7) {
+                Ok(value) => value,
+                Err(error) => panic!("encrypt failed: {error}"),
+            };
+
+            let plaintext = match engine.decrypt(&sealed) {
+                Ok(value) => value,
+                Err(error) => panic!("decrypt failed: {error}"),
+            };
+            assert_eq!(plaintext, "hello-secure-world");
+        });
+    }
+
+    #[test]
+    fn encrypt_rejects_nonce_reuse_for_same_engine_instance() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine = match DirectMessageCryptoEngine::new(
+                "kamn:did:agent:alice#key-agreement-1",
+                "kamn:did:agent:bob#key-agreement-1",
+            ) {
+                Ok(value) => value,
+                Err(error) => panic!("engine init failed: {error}"),
+            };
+            if let Err(error) = engine.encrypt("payload", 11) {
+                panic!("initial encrypt failed unexpectedly: {error}");
+            }
+
+            assert_eq!(
+                engine.encrypt("payload-2", 11),
+                Err(DirectMessageCryptoError::NonceReuse(11))
+            );
+        });
+    }
+
+    #[test]
+    fn decrypt_rejects_tampered_ciphertext_with_integrity_error() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine = match DirectMessageCryptoEngine::new(
+                "kamn:did:agent:alice#key-agreement-1",
+                "kamn:did:agent:bob#key-agreement-1",
+            ) {
+                Ok(value) => value,
+                Err(error) => panic!("engine init failed: {error}"),
+            };
+            let mut sealed = match engine.encrypt("payload", 13) {
+                Ok(value) => value,
+                Err(error) => panic!("encrypt failed: {error}"),
+            };
+            sealed.ciphertext.replace_range(..1, "f");
+
+            assert_eq!(
+                engine.decrypt(&sealed),
+                Err(DirectMessageCryptoError::IntegrityCheckFailed)
             );
         });
     }
