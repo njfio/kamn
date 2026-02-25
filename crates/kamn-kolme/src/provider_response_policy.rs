@@ -1,5 +1,6 @@
 //! Provider response parsing contracts for Kolme runtime-commit API calls.
 
+use crate::json_scalar_policy::parse_json_string_token as parse_json_string;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
@@ -167,37 +168,4 @@ fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>, &'static 
     }
     parts.push(current.trim().to_owned());
     Ok(parts)
-}
-
-fn parse_json_string(token: &str) -> Result<String, &'static str> {
-    let trimmed = token.trim();
-    if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
-        return Err("token must be a quoted string");
-    }
-    let mut output = String::new();
-    let mut escape = false;
-    for ch in trimmed[1..trimmed.len() - 1].chars() {
-        if escape {
-            let mapped = match ch {
-                '\\' => '\\',
-                '"' => '"',
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                _ => return Err("unsupported escape sequence"),
-            };
-            output.push(mapped);
-            escape = false;
-            continue;
-        }
-        if ch == '\\' {
-            escape = true;
-            continue;
-        }
-        output.push(ch);
-    }
-    if escape {
-        return Err("unterminated escape sequence");
-    }
-    Ok(output)
 }

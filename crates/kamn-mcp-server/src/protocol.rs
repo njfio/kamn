@@ -1,5 +1,8 @@
 use crate::dispatch_tool_request_json;
 use crate::invalid_request_response_json;
+use crate::json_helpers::{
+    escape_json, json_optional_string_field, json_optional_u64_field, json_required_string_field,
+};
 use crate::tools::build_tool_registry;
 use crate::McpToolBackend;
 use serde_json::Value;
@@ -74,7 +77,7 @@ fn process_framed_input<B: McpToolBackend>(
 fn process_jsonrpc_request<B: McpToolBackend>(backend: &B, request_json: &str) -> String {
     let id_token =
         json_optional_value_token(request_json, "id").unwrap_or_else(|| "null".to_owned());
-    let method = match json_string_field(request_json, "method") {
+    let method = match json_required_string_field(request_json, "method") {
         Ok(method) => method,
         Err(error) => {
             return jsonrpc_error_with_id(
@@ -125,7 +128,7 @@ fn process_tools_call<B: McpToolBackend>(
     request_json: &str,
     id_token: &str,
 ) -> String {
-    let tool_name = match json_string_field(request_json, "name") {
+    let tool_name = match json_required_string_field(request_json, "name") {
         Ok(name) => name,
         Err(_) => {
             return jsonrpc_error_with_id(
@@ -325,58 +328,16 @@ fn jsonrpc_error_with_id(id_token: &str, code: i32, message: &str) -> String {
     )
 }
 
-fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
-    let root = serde_json::from_str::<Value>(payload).ok()?;
-    let value = json_field_value(&root, key)?;
-    value.as_str().map(str::to_owned)
-}
-
-fn json_string_field(payload: &str, key: &str) -> Result<String, String> {
-    json_optional_string_field(payload, key).ok_or_else(|| format!("missing required field: {key}"))
-}
-
-fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
-    let root = serde_json::from_str::<Value>(payload).ok()?;
-    let value = json_field_value(&root, key)?;
-    if let Some(parsed) = value.as_u64() {
-        return Some(parsed);
-    }
-    value.as_str()?.parse::<u64>().ok()
-}
-
 fn json_optional_value_token(payload: &str, key: &str) -> Option<String> {
     let root = serde_json::from_str::<Value>(payload).ok()?;
     let value = root.get(key)?;
     serde_json::to_string(value).ok()
 }
 
-fn escape_json(input: &str) -> String {
-    match serde_json::to_string(input) {
-        Ok(serialized) => {
-            if serialized.starts_with('"') && serialized.ends_with('"') && serialized.len() >= 2 {
-                return serialized[1..serialized.len() - 1].to_owned();
-            }
-            serialized
-        }
-        Err(_) => String::new(),
-    }
-}
-
-fn json_field_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
-    root.get(key)
-        .or_else(|| root.get("params").and_then(|value| value.get(key)))
-        .or_else(|| {
-            root.get("params")
-                .and_then(|value| value.get("arguments"))
-                .and_then(|value| value.get(key))
-        })
-        .or_else(|| root.get("arguments").and_then(|value| value.get(key)))
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_framed_payloads, escape_json, json_optional_u64_field, json_string_field,
+        decode_framed_payloads, escape_json, json_optional_u64_field, json_required_string_field,
         normalize_id_for_dispatch, parse_content_length,
     };
 
@@ -485,12 +446,12 @@ mod tests {
     fn spec_c05_protocol_json_field_contract_handles_escaped_quotes_and_nested_key_noise() {
         let payload = r#"{"jsonrpc":"2.0","id":"req-5","method":"tools/call","params":{"name":"health","arguments":{"payload":"quoted value: \"alpha\" and nested key \"name\":\"noise\"","finality":"safe"}}}"#;
         assert_eq!(
-            json_string_field(payload, "name"),
+            json_required_string_field(payload, "name"),
             Ok("health".to_owned()),
             "tool name must come from params.name and not from nested string contents"
         );
         assert_eq!(
-            json_string_field(payload, "payload"),
+            json_required_string_field(payload, "payload"),
             Ok("quoted value: \"alpha\" and nested key \"name\":\"noise\"".to_owned()),
             "escaped quotes in nested payload values must round-trip without truncation"
         );

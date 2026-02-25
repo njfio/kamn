@@ -26,6 +26,10 @@ diagram references.
 - `docs/architecture/did-chain-adapter.md`
 - `docs/architecture/parser-protocol-assurance.md`
 
+## Reliability Contracts
+
+- `docs/architecture/helper-canonicalization.md`
+
 ## Decision Records
 
 - `docs/architecture/adr-kamn-core-live-tls-transport.md`
