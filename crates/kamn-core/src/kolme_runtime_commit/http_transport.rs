@@ -314,12 +314,9 @@ impl KolmeRuntimeCommitHttpTransport {
         if let Some(metadata) = metadata {
             if let Some(content_length) = metadata.content_length {
                 let total_length = metadata.header_end.saturating_add(content_length);
-                if response_bytes.len() < total_length {
-                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                        reason: "http response body is truncated".to_owned(),
-                    });
+                if response_bytes.len() >= total_length {
+                    response_bytes.truncate(total_length);
                 }
-                response_bytes.truncate(total_length);
             }
         }
         Ok((response_bytes, false))
