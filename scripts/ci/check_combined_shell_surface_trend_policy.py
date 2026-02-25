@@ -45,6 +45,12 @@ REASON_CODES_CSV = ",".join(
         "combined_shell_surface_governance_section_missing",
         "combined_shell_surface_governance_status_invalid",
         "combined_shell_surface_governance_target_ratio_invalid",
+        "combined_shell_surface_governance_runtime_test_ratio_fail_exceeded",
+        "combined_shell_surface_governance_runtime_test_ratio_invalid",
+        "combined_shell_surface_governance_runtime_test_ratio_warn_exceeded",
+        "combined_shell_surface_governance_runtime_test_section_missing",
+        "combined_shell_surface_governance_test_line_total_invalid",
+        "combined_shell_surface_runtime_test_line_total_invalid",
     ]
 )
 
@@ -115,6 +121,7 @@ def main() -> int:
     deltas = report.get("deltas", {})
     script_budget = report.get("script_budget", {})
     governance = report.get("governance_structural_coupling", {})
+    governance_runtime_test_ratio = report.get("governance_runtime_test_ratio", {})
 
     script_count = current.get("script_count")
     shell_line_total = current.get("shell_line_total")
@@ -131,11 +138,20 @@ def main() -> int:
     governance_commit_ratio = governance.get("governance_commit_ratio")
     governance_target_ratio_max = governance.get("target_ratio_max")
     governance_mitigation_issue_marker = str(governance.get("mitigation_issue_marker", "none")).strip()
+    governance_runtime_test_ratio_status = governance_runtime_test_ratio.get("status")
+    governance_test_line_total = governance_runtime_test_ratio.get("governance_test_line_total")
+    runtime_test_line_total = governance_runtime_test_ratio.get("runtime_test_line_total")
+    governance_test_ratio = governance_runtime_test_ratio.get("governance_test_ratio")
 
     if script_budget_status != "pass":
         add_reason(reason_codes, "combined_shell_surface_budget_status_fail")
     if not isinstance(governance, dict) or not governance:
         add_reason(reason_codes, "combined_shell_surface_governance_section_missing")
+    if (
+        not isinstance(governance_runtime_test_ratio, dict)
+        or not governance_runtime_test_ratio
+    ):
+        add_reason(reason_codes, "combined_shell_surface_governance_runtime_test_section_missing")
 
     warn_codes: list[str] = []
     fail_codes: list[str] = []
@@ -150,6 +166,8 @@ def main() -> int:
     fail_shell_to_rust_ratio_increase = 0.0
     warn_non_declining_window_days = 0
     fail_non_declining_window_days = 0
+    warn_governance_runtime_test_ratio = 0.0
+    fail_governance_runtime_test_ratio = 0.0
     threshold_max_age_days = 0
     threshold_refreshed_on = ""
 
@@ -164,6 +182,8 @@ def main() -> int:
         fail_shell_to_rust_ratio_increase = float(thresholds["fail_shell_to_rust_ratio_increase"])
         warn_non_declining_window_days = int(thresholds["warn_non_declining_window_days"])
         fail_non_declining_window_days = int(thresholds["fail_non_declining_window_days"])
+        warn_governance_runtime_test_ratio = float(thresholds["warn_governance_runtime_test_ratio"])
+        fail_governance_runtime_test_ratio = float(thresholds["fail_governance_runtime_test_ratio"])
         threshold_max_age_days = int(thresholds["threshold_max_age_days"])
         threshold_refreshed_on = str(thresholds["threshold_refreshed_on"])
     except Exception:
@@ -179,6 +199,12 @@ def main() -> int:
         add_reason(reason_codes, "combined_shell_surface_threshold_order_invalid")
     if warn_non_declining_window_days >= fail_non_declining_window_days:
         add_reason(reason_codes, "combined_shell_surface_threshold_order_invalid")
+    if warn_governance_runtime_test_ratio >= fail_governance_runtime_test_ratio:
+        add_reason(reason_codes, "combined_shell_surface_threshold_order_invalid")
+    if warn_governance_runtime_test_ratio <= 0 or fail_governance_runtime_test_ratio <= 0:
+        add_reason(reason_codes, "combined_shell_surface_threshold_value_invalid")
+    if warn_governance_runtime_test_ratio >= 1 or fail_governance_runtime_test_ratio >= 1:
+        add_reason(reason_codes, "combined_shell_surface_threshold_value_invalid")
 
     if not isinstance(script_count, int):
         add_reason(reason_codes, "combined_shell_surface_script_count_invalid")
@@ -218,6 +244,14 @@ def main() -> int:
         add_reason(reason_codes, "combined_shell_surface_governance_target_ratio_invalid")
     if governance_status not in {"within_target", "reduction_contract_active", "over_target_unmitigated"}:
         add_reason(reason_codes, "combined_shell_surface_governance_status_invalid")
+    if governance_runtime_test_ratio_status not in {"computed"}:
+        add_reason(reason_codes, "combined_shell_surface_governance_runtime_test_ratio_invalid")
+    if not isinstance(governance_test_line_total, int) or governance_test_line_total < 0:
+        add_reason(reason_codes, "combined_shell_surface_governance_test_line_total_invalid")
+    if not isinstance(runtime_test_line_total, int) or runtime_test_line_total < 0:
+        add_reason(reason_codes, "combined_shell_surface_runtime_test_line_total_invalid")
+    if not isinstance(governance_test_ratio, (int, float)):
+        add_reason(reason_codes, "combined_shell_surface_governance_runtime_test_ratio_invalid")
 
     if (
         isinstance(governance_non_merge_commit_count, int)
@@ -233,6 +267,31 @@ def main() -> int:
             add_reason(reason_codes, "combined_shell_surface_governance_ratio_mismatch")
     else:
         computed_governance_ratio = None
+
+    if (
+        isinstance(governance_test_line_total, int)
+        and governance_test_line_total >= 0
+        and isinstance(runtime_test_line_total, int)
+        and runtime_test_line_total >= 0
+        and isinstance(governance_test_ratio, (int, float))
+    ):
+        total_governance_runtime_test_lines = governance_test_line_total + runtime_test_line_total
+        if total_governance_runtime_test_lines <= 0:
+            add_reason(reason_codes, "combined_shell_surface_runtime_test_line_total_invalid")
+            computed_governance_runtime_test_ratio = None
+        else:
+            computed_governance_runtime_test_ratio = round(
+                governance_test_line_total / total_governance_runtime_test_lines,
+                4,
+            )
+            if (
+                float(governance_test_ratio) < 0
+                or float(governance_test_ratio) > 1
+                or abs(float(governance_test_ratio) - computed_governance_runtime_test_ratio) > 0.001
+            ):
+                add_reason(reason_codes, "combined_shell_surface_governance_runtime_test_ratio_invalid")
+    else:
+        computed_governance_runtime_test_ratio = None
 
     if today_override:
         try:
@@ -302,6 +361,11 @@ def main() -> int:
             else:
                 fail_codes.append("combined_shell_surface_governance_ratio_fail_exceeded")
 
+        if governance_test_ratio > fail_governance_runtime_test_ratio:
+            fail_codes.append("combined_shell_surface_governance_runtime_test_ratio_fail_exceeded")
+        elif governance_test_ratio > warn_governance_runtime_test_ratio:
+            warn_codes.append("combined_shell_surface_governance_runtime_test_ratio_warn_exceeded")
+
     all_reason_codes = reason_codes + fail_codes + warn_codes
 
     if reason_codes or fail_codes:
@@ -358,6 +422,8 @@ def main() -> int:
             "threshold_max_age_days": threshold_max_age_days,
             "warn_non_declining_window_days": warn_non_declining_window_days,
             "fail_non_declining_window_days": fail_non_declining_window_days,
+            "warn_governance_runtime_test_ratio": warn_governance_runtime_test_ratio,
+            "fail_governance_runtime_test_ratio": fail_governance_runtime_test_ratio,
             "threshold_age_days": threshold_age_days,
         },
         "governance_structural_coupling_status": governance_status,
@@ -370,6 +436,15 @@ def main() -> int:
             "computed_governance_commit_ratio": computed_governance_ratio,
             "target_ratio_max": governance_target_ratio_max,
             "mitigation_issue_marker": governance_mitigation_issue_marker,
+        },
+        "governance_runtime_test_ratio": {
+            "status": governance_runtime_test_ratio_status,
+            "governance_test_line_total": governance_test_line_total,
+            "runtime_test_line_total": runtime_test_line_total,
+            "governance_test_ratio": governance_test_ratio,
+            "computed_governance_test_ratio": computed_governance_runtime_test_ratio,
+            "warn_governance_runtime_test_ratio": warn_governance_runtime_test_ratio,
+            "fail_governance_runtime_test_ratio": fail_governance_runtime_test_ratio,
         },
     }
 
@@ -391,6 +466,9 @@ def main() -> int:
     print(f"delta_script_count={delta_script_count}")
     print(f"delta_shell_line_total={delta_shell_line_total}")
     print(f"delta_shell_to_rust_ratio={delta_shell_to_rust_ratio}")
+    print(f"governance_runtime_test_ratio={governance_test_ratio}")
+    print(f"governance_test_line_total={governance_test_line_total}")
+    print(f"runtime_test_line_total={runtime_test_line_total}")
     print(f"remediation={remediation}")
 
     if tmp_dir is not None:

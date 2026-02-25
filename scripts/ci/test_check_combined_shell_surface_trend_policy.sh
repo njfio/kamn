@@ -21,7 +21,7 @@ if [[ ! -f "$THRESHOLDS" ]]; then
   exit 1
 fi
 
-EXPECTED_REASON_CODES_CSV="combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid,combined_shell_surface_governance_commit_count_invalid,combined_shell_surface_governance_mitigation_issue_missing,combined_shell_surface_governance_non_merge_commit_count_invalid,combined_shell_surface_governance_ratio_fail_exceeded,combined_shell_surface_governance_ratio_invalid,combined_shell_surface_governance_ratio_mismatch,combined_shell_surface_governance_ratio_warn_reduction_contract_active,combined_shell_surface_governance_release_invalid,combined_shell_surface_governance_section_missing,combined_shell_surface_governance_status_invalid,combined_shell_surface_governance_target_ratio_invalid"
+EXPECTED_REASON_CODES_CSV="combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid,combined_shell_surface_governance_commit_count_invalid,combined_shell_surface_governance_mitigation_issue_missing,combined_shell_surface_governance_non_merge_commit_count_invalid,combined_shell_surface_governance_ratio_fail_exceeded,combined_shell_surface_governance_ratio_invalid,combined_shell_surface_governance_ratio_mismatch,combined_shell_surface_governance_ratio_warn_reduction_contract_active,combined_shell_surface_governance_release_invalid,combined_shell_surface_governance_section_missing,combined_shell_surface_governance_status_invalid,combined_shell_surface_governance_target_ratio_invalid,combined_shell_surface_governance_runtime_test_ratio_fail_exceeded,combined_shell_surface_governance_runtime_test_ratio_invalid,combined_shell_surface_governance_runtime_test_ratio_warn_exceeded,combined_shell_surface_governance_runtime_test_section_missing,combined_shell_surface_governance_test_line_total_invalid,combined_shell_surface_runtime_test_line_total_invalid"
 
 report_file="$TMP_DIR/combined-shell-surface-trend-report.json"
 policy_file="$TMP_DIR/combined-shell-surface-trend-policy.json"
@@ -51,6 +51,12 @@ payload["governance_structural_coupling"] = {
     "policy_status_over": "active_reduction_contract",
     "budget_status_marker": "within_target",
     "mitigation_issue_marker": "none",
+}
+payload["governance_runtime_test_ratio"] = {
+    "status": "computed",
+    "governance_test_line_total": 100,
+    "runtime_test_line_total": 300,
+    "governance_test_ratio": 0.25,
 }
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -444,6 +450,79 @@ if [[ "$invalid_today_code" -eq 0 ]]; then
 fi
 if ! printf '%s\n' "$invalid_today_output" | grep -q 'combined_shell_surface_today_override_invalid'; then
   echo "expected deterministic today-override-invalid reason code for malformed --today input" >&2
+  exit 1
+fi
+
+governance_runtime_thresholds="$TMP_DIR/combined-shell-surface-trend-thresholds.governance-runtime.json"
+cp "$THRESHOLDS" "$governance_runtime_thresholds"
+python3 - "$governance_runtime_thresholds" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["warn_governance_runtime_test_ratio"] = 0.40
+payload["fail_governance_runtime_test_ratio"] = 0.50
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+governance_runtime_fail_report="$TMP_DIR/combined-shell-surface-trend-report.governance-runtime-fail.json"
+cp "$report_file" "$governance_runtime_fail_report"
+python3 - "$governance_runtime_fail_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["governance_runtime_test_ratio"] = {
+    "status": "computed",
+    "governance_test_line_total": 110,
+    "runtime_test_line_total": 90,
+    "governance_test_ratio": 0.55,
+}
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+governance_runtime_fail_output="$(bash "$CHECKER" --report-file "$governance_runtime_fail_report" --threshold-file "$governance_runtime_thresholds" --output-json "$TMP_DIR/governance-runtime-fail-policy.json" 2>&1)"
+governance_runtime_fail_code=$?
+set -e
+if [[ "$governance_runtime_fail_code" -eq 0 ]]; then
+  echo "expected governance-runtime test ratio breach to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$governance_runtime_fail_output" | grep -q 'combined_shell_surface_governance_runtime_test_ratio_fail_exceeded'; then
+  echo "expected deterministic governance-runtime fail reason code for over-threshold governance test ratio" >&2
+  exit 1
+fi
+
+governance_runtime_warn_report="$TMP_DIR/combined-shell-surface-trend-report.governance-runtime-warn.json"
+cp "$report_file" "$governance_runtime_warn_report"
+python3 - "$governance_runtime_warn_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["governance_runtime_test_ratio"] = {
+    "status": "computed",
+    "governance_test_line_total": 90,
+    "runtime_test_line_total": 110,
+    "governance_test_ratio": 0.45,
+}
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+governance_runtime_warn_output="$(bash "$CHECKER" --report-file "$governance_runtime_warn_report" --threshold-file "$governance_runtime_thresholds" --output-json "$TMP_DIR/governance-runtime-warn-policy.json")"
+if ! printf '%s\n' "$governance_runtime_warn_output" | grep -q '^policy_decision=WARN$'; then
+  echo "expected WARN decision when governance-runtime test ratio exceeds warn threshold" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$governance_runtime_warn_output" | grep -q 'combined_shell_surface_governance_runtime_test_ratio_warn_exceeded'; then
+  echo "expected deterministic governance-runtime warn reason code for warn-threshold governance test ratio" >&2
   exit 1
 fi
 

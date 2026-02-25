@@ -51,6 +51,7 @@ baseline = payload.get("baseline", {})
 deltas = payload.get("deltas", {})
 script_budget = payload.get("script_budget", {})
 governance = payload.get("governance_structural_coupling", {})
+governance_runtime_test_ratio = payload.get("governance_runtime_test_ratio", {})
 
 for key in ("script_count", "shell_line_total", "rust_line_total"):
     if not isinstance(current.get(key), int) or current.get(key) <= 0:
@@ -68,6 +69,16 @@ if not isinstance(governance.get("target_ratio_max"), (int, float)):
     raise SystemExit("expected numeric governance_structural_coupling.target_ratio_max")
 if not isinstance(governance.get("governance_commit_ratio"), (int, float)):
     raise SystemExit("expected numeric governance_structural_coupling.governance_commit_ratio")
+if not isinstance(governance_runtime_test_ratio, dict):
+    raise SystemExit("expected governance_runtime_test_ratio section in combined trend report")
+if governance_runtime_test_ratio.get("status") != "computed":
+    raise SystemExit("expected governance_runtime_test_ratio.status=computed marker")
+if not isinstance(governance_runtime_test_ratio.get("governance_test_line_total"), int):
+    raise SystemExit("expected integer governance_runtime_test_ratio.governance_test_line_total")
+if not isinstance(governance_runtime_test_ratio.get("runtime_test_line_total"), int):
+    raise SystemExit("expected integer governance_runtime_test_ratio.runtime_test_line_total")
+if not isinstance(governance_runtime_test_ratio.get("governance_test_ratio"), (int, float)):
+    raise SystemExit("expected numeric governance_runtime_test_ratio.governance_test_ratio")
 
 expected_delta_script_count = current["script_count"] - int(baseline["script_count"])
 expected_delta_shell_line_total = current["shell_line_total"] - int(baseline["shell_line_total"])
