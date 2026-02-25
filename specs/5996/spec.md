@@ -1,7 +1,7 @@
 # Spec: Issue #5996 - Persist service-api channel creation state across restart
 
 - Issue: #5996
-- Status: Reviewed (agent-authored P1; implementation proceeding)
+- Status: Implemented
 - Type: story
 - Priority: P1
 - Area: backend
