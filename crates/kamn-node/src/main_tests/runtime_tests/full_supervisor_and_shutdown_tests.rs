@@ -523,6 +523,9 @@ fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
             line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\"")
                 && extract_json_string_field(line, "execution_id").as_deref()
                     == Some(expected_execution_id.as_str())
+                && extract_json_string_field(line, "daemon_completion_reason")
+                    .as_deref()
+                    .is_some_and(|value| value.starts_with("graceful-shutdown-timeout:signal@"))
         })
         .expect("full runtime should emit supervisor stop-complete marker");
     assert_eq!(

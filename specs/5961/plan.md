@@ -1,28 +1,28 @@
-# Plan: Issue #5961 - Close escaped http_transport mutants from #5932 mutation gate
+# Plan: Issue #5961 - Task: close escaped http_transport mutants from #5932 mutation gate
 
 - Issue: #5961
 - Spec: `specs/5961/spec.md`
-- Status: Implemented
+- Status: Draft
 - Last Updated: 2026-02-25
 
 ## Approach
-1. RED: add focused tests in `http_transport.rs` test module for the 8 escaped decision points.
-2. GREEN: keep implementation unchanged unless tests expose real behavior mismatch; adjust only assertions/fixtures as needed.
-3. VERIFY: run targeted `kamn-core` tests for new coverage.
-4. MUTATION: rerun mutation scope restricted to `http_transport.rs` and record totals.
-5. PROCESS: publish evidence comments on #5957 and #5961.
+1. RED: add spec-derived tests for equality and response parsing behavior tied to escaped mutants.
+2. GREEN: adjust tests/helpers only (no behavior redesign) until new tests pass.
+3. REGRESSION: run `cargo test -p kamn-core kolme_runtime_commit::http_transport`.
+4. VERIFY: run scoped mutation for touched module and confirm escaped mutant count reaches 0 for the 8 known points.
 
 ## Affected Modules
 - `crates/kamn-core/src/kolme_runtime_commit/http_transport.rs`
-- `specs/5961/spec.md`
-- `specs/5961/plan.md`
-- `specs/5961/tasks.md`
 
 ## Risks + Mitigations
-- Risk: mutation runtime is expensive.
-  - Mitigation: scope mutation run to `http_transport.rs` escaped set.
-- Risk: tests become overfitted to implementation details.
-  - Mitigation: assert external behavior/contract signals (status parsing, completion semantics) not line structure.
+- Risk: tests using sockets can become flaky.
+  - Mitigation: use loopback listener with deterministic payload ordering and short thread joins.
+- Risk: mutation reruns can be time-consuming.
+  - Mitigation: scope mutation run to touched file/function where supported and include deterministic evidence logs.
+
+## Interfaces / Contracts
+- No API or wire-format changes.
+- Contract source: `specs/5961/spec.md` and issue #5961 mutant list.
 
 ## ADR Requirement
-- Not required (test-surface hardening only).
+- None expected (no dependency/protocol/architecture change).

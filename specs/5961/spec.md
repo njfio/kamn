@@ -1,7 +1,7 @@
-# Spec: Issue #5961 - Close escaped http_transport mutants from #5932 mutation gate
+# Spec: Issue #5961 - Task: close escaped http_transport mutants from #5932 mutation gate
 
 - Issue: #5961
-- Status: Implemented
+- Status: Accepted (agent-authored + self-accepted under P2 single-module rule)
 - Type: task
 - Priority: P2
 - Area: qa
@@ -10,38 +10,43 @@
 - Parent: #5932
 
 ## Problem Statement
-Mutation evidence for #5932 reported 8 escaped mutants in `crates/kamn-core/src/kolme_runtime_commit/http_transport.rs`, indicating missing assertions around equality semantics and response parsing branch behavior.
+Mutation testing for `crates/kamn-core/src/kolme_runtime_commit/http_transport.rs` reported 8 escaped mutants in transport equality and HTTP response parsing logic.
 
 ## Scope
 In scope:
-- Add focused tests that fail for the 8 escaped mutants listed in #5961.
-- Keep production runtime behavior unchanged.
-- Re-run mutation scope for `http_transport.rs` and demonstrate these mutants are caught.
+- Add targeted unit/regression tests that kill the 8 escaped mutants reported for issue #5932.
+- Keep runtime behavior contract unchanged.
 
 Out of scope:
-- Broad refactors unrelated to escaped mutant points.
+- Functional redesign of HTTP transport.
+- New transport features beyond mutant-closing test coverage.
+
+## Risk Level
+`low`
 
 ## Acceptance Criteria
-- AC-1: New tests fail against each of the 8 escaped mutant transformations and pass on canonical code.
-- AC-2: Mutation rerun for `http_transport.rs` shows zero escaped mutants for the #5961 escaped set.
-- AC-3: Evidence is posted on #5957 and linked from #5961.
+- AC-1: Equality semantics test coverage rejects all escaped comparison/equality mutants in `PartialEq`.
+- AC-2: HTTP response read-path coverage rejects escaped control-flow and boundary-condition mutants in `read_http_response_bytes`.
+- AC-3: HTTP metadata parse-path coverage rejects escaped control-flow mutant in `parse_http_response_metadata`.
+- AC-4: Mutation rerun for the scoped file reports 0 escapes for the 8 listed mutants.
 
 ## Conformance Cases
-- C-01 (Conformance, AC-1): `PartialEq` behavior tests detect constant-true/constant-false and comparator-flip mutations in transport equality logic.
-- C-02 (Conformance, AC-1): response parser tests detect relaxed header/content invariants (`&& -> ||`, `>= -> <`) in `read_http_response_bytes` and `parse_http_response_metadata` paths.
-- C-03 (Conformance, AC-2): targeted mutation run on `http_transport.rs` reports zero missed mutants for the #5961 set.
-- C-04 (Functional, AC-3): PR evidence comment includes before/after escaped counts and links.
+- C-01 (Unit, AC-1): Transport equality depends on both timeout and authorization header values.
+- C-02 (Unit, AC-2): Fragmented HTTP headers are tolerated until boundary is present.
+- C-03 (Unit, AC-2): Content-length truncation happens only when full payload has been read.
+- C-04 (Unit, AC-3): `Content-Length` parse is only applied to the matching header key.
+- C-05 (Mutation, AC-4): Scoped mutation run for `http_transport.rs` has zero escapes for the eight reported mutation points.
 
 ## Success Metrics / Observable Signals
-- Escaped count for the #5961 mutant set drops from 8 to 0.
-- No regressions in existing `kamn-core` tests for runtime commit transport behavior.
+- All `spec_cxx_issue_5961_*` tests pass in `kamn-core` test runs.
+- Scoped mutation output for `http_transport.rs` shows no escapes at previously escaped points.
 
-## Implementation Evidence (2026-02-25)
-- AC-1: Added regression tests in `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`:
-  - `regression_http_transport_partial_eq_requires_timeout_and_authorization_match`
-  - `regression_http_transport_parses_connection_header_before_content_length`
-  - `regression_http_transport_parses_chunked_headers_without_early_failure`
-- AC-2: Targeted mutant rerun command:
-  - `CARGO_BUILD_JOBS=1 cargo mutants --in-place -p kamn-core -f crates/kamn-core/src/kolme_runtime_commit/http_transport.rs -F 'http_transport\\.rs:(50:9|51:13|50:30|51:42|291:17|301:45|336:60)'`
-  - Result: `8 mutants tested in 11m: 8 caught` (`missed=0`, `unviable=0`, `timeout=0`)
-- AC-3: Mutation evidence is prepared for posting on PR/issue threads (`#5957`, `#5961`) with command, totals, and caught-mutant list.
+## Required Test Categories
+- Unit: targeted deterministic tests for equality and parsing paths.
+- Conformance: test names map directly to C-01..C-04.
+- Mutation: scoped run proving C-05.
+- Regression: tagged tests for escaped mutant regressions.
+
+## Dependencies
+- #5932
+- #5958

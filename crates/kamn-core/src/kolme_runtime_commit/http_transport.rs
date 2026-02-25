@@ -596,3 +596,136 @@ impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTranspor
         self.execute_request(base_url, block_path.as_str(), "GET", None, &[])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::KolmeRuntimeCommitHttpTransport;
+    use std::fmt::Debug;
+    use std::io::Write;
+    use std::net::{SocketAddr, TcpListener, TcpStream};
+    use std::thread;
+    use std::time::Duration;
+
+    fn must_ok<T, E: Debug>(result: Result<T, E>) -> T {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("expected Ok(..), got error: {error:?}"),
+        }
+    }
+
+    fn must_join_ok<T>(join_result: thread::Result<T>) -> T {
+        match join_result {
+            Ok(value) => value,
+            Err(_) => panic!("server thread panicked"),
+        }
+    }
+
+    fn loopback_listener() -> (TcpListener, SocketAddr) {
+        let listener = must_ok(TcpListener::bind("127.0.0.1:0"));
+        let address = must_ok(listener.local_addr());
+        (listener, address)
+    }
+
+    fn stream_with_chunked_response(
+        chunks: Vec<Vec<u8>>,
+        delay_between_chunks: Duration,
+    ) -> (TcpStream, thread::JoinHandle<()>) {
+        let (listener, server_address) = loopback_listener();
+        let server_handle = thread::spawn(move || {
+            let (mut server_stream, _) = must_ok(listener.accept());
+            let total_chunks = chunks.len();
+            for (index, chunk) in chunks.into_iter().enumerate() {
+                must_ok(server_stream.write_all(chunk.as_slice()));
+                must_ok(server_stream.flush());
+                if index + 1 < total_chunks && !delay_between_chunks.is_zero() {
+                    thread::sleep(delay_between_chunks);
+                }
+            }
+        });
+        let client_stream = must_ok(TcpStream::connect(server_address));
+        must_ok(client_stream.set_read_timeout(Some(Duration::from_secs(2))));
+        must_ok(client_stream.set_write_timeout(Some(Duration::from_secs(2))));
+        (client_stream, server_handle)
+    }
+
+    #[test]
+    fn spec_c01_issue_5961_transport_equality_depends_on_timeout_and_authorization() {
+        let transport = must_ok(KolmeRuntimeCommitHttpTransport::new(5));
+        let same_transport = must_ok(KolmeRuntimeCommitHttpTransport::new(5));
+        let different_timeout = must_ok(KolmeRuntimeCommitHttpTransport::new(6));
+        let with_auth = must_ok(KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            5,
+            "Bearer alpha",
+        ));
+        let with_other_auth = must_ok(KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            5,
+            "Bearer beta",
+        ));
+        let with_auth_clone = must_ok(KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            5,
+            "Bearer alpha",
+        ));
+
+        assert_eq!(transport, same_transport);
+        assert_ne!(transport, different_timeout);
+        assert_ne!(transport, with_auth);
+        assert_ne!(with_auth, with_other_auth);
+        assert_eq!(with_auth, with_auth_clone);
+    }
+
+    #[test]
+    fn spec_c02_issue_5961_read_http_response_waits_for_header_boundary() {
+        let first_chunk =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: keep-alive\r\n".to_vec();
+        let second_chunk = b"\r\nhello".to_vec();
+        let expected =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: keep-alive\r\n\r\nhello".to_vec();
+        let (mut client_stream, server_handle) = stream_with_chunked_response(
+            vec![first_chunk, second_chunk],
+            Duration::from_millis(25),
+        );
+
+        let response_result =
+            KolmeRuntimeCommitHttpTransport::read_http_response_bytes(&mut client_stream);
+        must_join_ok(server_handle.join());
+        let (response_bytes, keep_alive) = must_ok(response_result);
+
+        assert_eq!(response_bytes, expected);
+        assert!(keep_alive);
+    }
+
+    #[test]
+    fn spec_c03_issue_5961_read_http_response_truncates_only_when_complete() {
+        let first_chunk = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhe".to_vec();
+        let second_chunk = b"lloTRAILING".to_vec();
+        let expected = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello".to_vec();
+        let (mut client_stream, server_handle) = stream_with_chunked_response(
+            vec![first_chunk, second_chunk],
+            Duration::from_millis(25),
+        );
+
+        let response_result =
+            KolmeRuntimeCommitHttpTransport::read_http_response_bytes(&mut client_stream);
+        must_join_ok(server_handle.join());
+        let (response_bytes, keep_alive) = must_ok(response_result);
+
+        assert_eq!(response_bytes, expected);
+        assert!(!keep_alive);
+    }
+
+    #[test]
+    fn spec_c04_issue_5961_content_length_is_parsed_only_from_matching_header() {
+        let response_bytes =
+            b"HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 4\r\n\r\ntest";
+        let metadata_result =
+            KolmeRuntimeCommitHttpTransport::parse_http_response_metadata(response_bytes);
+        let metadata = must_ok(metadata_result);
+
+        assert_eq!(metadata.content_length, Some(4));
+        assert!(metadata.connection_keep_alive);
+        assert_eq!(
+            metadata.header_end,
+            b"HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 4\r\n\r\n".len()
+        );
+    }
+}
