@@ -2,8 +2,8 @@
 
 - Issue: #5937
 - Spec: `specs/5937/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5937/spec.md.
@@ -12,9 +12,10 @@
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
 
 ## Affected Modules (Initial)
-- `crates/kamn-node/src/main_tests/`
-- `crates/kamn-sdk/tests/`
-- `kamn-e2e-harness/`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`
+- `crates/kamn-sdk/tests/service_api_client.rs`
+- `scripts/ci/select_targets.sh`
+- `.github/workflows/ci-fast-gate.yml`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
