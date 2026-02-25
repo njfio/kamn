@@ -2,14 +2,24 @@
 
 - Issue: #5925
 - Spec: `specs/5925/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5925/spec.md.
 2. Implement: Replace audit-chain hash with SHA-256/BLAKE3 and version marker migration.
 3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+
+## Delivered Implementation
+- `crates/kamn-core/src/key_lifecycle.rs`
+  - Replaced default audit hash emission with SHA-256 (`sha256:v1:` marker).
+  - Added compatibility verifier support for legacy v0 hash-chain records.
+- `crates/kamn-core/tests/key_lifecycle.rs`
+  - Added conformance tests `spec_c01`/`spec_c02`/`spec_c03`.
+  - Added regression `regression_issue_5925_rejects_unknown_record_hash_format`.
+- `docs/foundation/key-lifecycle-audit-trails.md`
+  - Documented v1 hash format and legacy migration behavior.
 
 ## Affected Modules (Initial)
 - `crates/kamn-core/src/key_lifecycle.rs`

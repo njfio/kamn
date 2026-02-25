@@ -3,7 +3,7 @@
 This document captures the first implementation slice for tamper-evident key lifecycle audit trails and verification checks.
 
 ## Scope Delivered
-- Added deterministic audit record construction in `crates/kamn-core/src/key_lifecycle.rs`:
+- Added versioned cryptographic audit record construction in `crates/kamn-core/src/key_lifecycle.rs`:
   - `KeyLifecycleAuditRecord` with `sequence`, `event_kind`, `event_payload`, `previous_hash`, and `record_hash`.
   - `KeyLifecycle::audit_records()` to materialize a hash-chained audit trail from lifecycle events.
   - `KeyLifecycle::verify_audit_trail()` and `KeyLifecycle::verify_audit_records(...)` for integrity validation.
@@ -18,11 +18,14 @@ This document captures the first implementation slice for tamper-evident key lif
   - event kind
   - canonical event payload
   - previous hash
+- New records use `sha256:v1:<64-lower-hex>` format.
+- Verification accepts both `sha256:v1:` and legacy v0 16-hex records for migration safety.
 - Verification fails when sequence continuity, chain links, or record hashes are inconsistent.
 
-## Limitations (First Slice)
-- Hashing currently uses a deterministic non-cryptographic fingerprint for low-dependency bootstrap compatibility.
-- A future slice can replace the digest with SHA-256/HMAC signing while preserving record format and verification semantics.
+## Migration Notes (Issue #5925)
+- Legacy key-lifecycle audit records created before issue #5925 can still be validated by `KeyLifecycle::verify_audit_records(...)`.
+- New records emitted by `KeyLifecycle::audit_records()` always use the versioned SHA-256 marker (`sha256:v1:`).
+- Operators can migrate historical records incrementally without breaking chain verification.
 
 ## DID Lifecycle Operator-Binding Audit Evidence Contract (Issue #890)
 Lifecycle-sensitive DID mutations must carry deterministic operator-binding authorization evidence and auditable export markers before CI policy gates can return `GO`.

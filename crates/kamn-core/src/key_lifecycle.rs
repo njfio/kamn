@@ -1,3 +1,5 @@
+use crate::data_layer_hashing::sha256_hex;
+
 /// Key lifecycle state for an agent signing key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyLifecycleState {
@@ -231,13 +233,13 @@ impl KeyLifecycle {
                 });
             }
 
-            let expected_hash = compute_audit_hash(
+            if !record_hash_matches_supported_version(
+                &record.record_hash,
                 record.sequence,
                 &record.event_kind,
                 &record.event_payload,
                 &record.previous_hash,
-            );
-            if record.record_hash != expected_hash {
+            ) {
                 return Err(KeyLifecycleAuditError::HashMismatch {
                     sequence: record.sequence,
                 });
@@ -328,6 +330,7 @@ impl KeyLifecycle {
 }
 
 const AUDIT_CHAIN_GENESIS: &str = "GENESIS";
+const AUDIT_CHAIN_HASH_VERSION_SHA256_V1_PREFIX: &str = "sha256:v1:";
 
 fn compute_audit_hash(
     sequence: u64,
@@ -335,16 +338,53 @@ fn compute_audit_hash(
     event_payload: &str,
     previous_hash: &str,
 ) -> String {
-    let canonical_payload = format!("{sequence}|{event_kind}|{event_payload}|{previous_hash}");
+    compute_audit_hash_sha256_v1(sequence, event_kind, event_payload, previous_hash)
+}
 
-    // First slice uses a deterministic non-cryptographic hash; this can be replaced by SHA-256 later.
+fn compute_audit_hash_sha256_v1(
+    sequence: u64,
+    event_kind: &str,
+    event_payload: &str,
+    previous_hash: &str,
+) -> String {
+    let canonical_payload = format!("{sequence}|{event_kind}|{event_payload}|{previous_hash}");
+    format!(
+        "{AUDIT_CHAIN_HASH_VERSION_SHA256_V1_PREFIX}{}",
+        sha256_hex(&canonical_payload)
+    )
+}
+
+fn compute_audit_hash_legacy_v0(
+    sequence: u64,
+    event_kind: &str,
+    event_payload: &str,
+    previous_hash: &str,
+) -> String {
+    let canonical_payload = format!("{sequence}|{event_kind}|{event_payload}|{previous_hash}");
     let mut hash = 0xcbf2_9ce4_8422_2325_u64;
     for byte in canonical_payload.bytes() {
         hash ^= u64::from(byte);
         hash = hash.wrapping_mul(0x0000_0100_0000_01b3_u64);
     }
-
     format!("{hash:016x}")
+}
+
+fn record_hash_matches_supported_version(
+    record_hash: &str,
+    sequence: u64,
+    event_kind: &str,
+    event_payload: &str,
+    previous_hash: &str,
+) -> bool {
+    let expected_sha256_v1 =
+        compute_audit_hash_sha256_v1(sequence, event_kind, event_payload, previous_hash);
+    if record_hash == expected_sha256_v1 {
+        return true;
+    }
+
+    let expected_legacy_v0 =
+        compute_audit_hash_legacy_v0(sequence, event_kind, event_payload, previous_hash);
+    record_hash == expected_legacy_v0
 }
 
 /// Errors emitted by key lifecycle transitions.
