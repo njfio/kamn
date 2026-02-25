@@ -3,16 +3,32 @@ use kamn_core::{
     service_auth_sign_with_private_key_hex, ServiceAuthSignatureError,
     SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
+use rustls::pki_types::ServerName;
+use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
 use serde_json::Value;
-use std::io::{ErrorKind, Read, Write};
-use std::net::TcpStream;
+use std::fs;
+use std::io::{Cursor, ErrorKind, Read, Write};
+use std::net::{IpAddr, TcpStream};
+use std::sync::Arc;
 use std::time::Duration;
 
 const REQUEST_TIMEOUT_SECONDS: u64 = 2;
+const SERVICE_TLS_CA_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CA_FILE";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
+const SERVICE_TLS_CA_FILE_FIELD: &str = "service.tls.ca_file";
+const SERVICE_TLS_CA_FILE_EMPTY_REASON: &str = "must not be empty when set";
+const SERVICE_TLS_CA_FILE_UTF8_REASON: &str = "must be valid utf-8 when set";
+const SERVICE_TLS_CA_FILE_READ_FAILED: &str = "service tls ca file read failed";
+const SERVICE_TLS_CA_FILE_PARSE_FAILED: &str = "service tls ca file parse failed";
+const SERVICE_TLS_CA_FILE_EMPTY_BUNDLE: &str =
+    "service tls ca file did not contain valid certificates";
+const SERVICE_TLS_CERTIFICATE_VERIFICATION_FAILED: &str =
+    "service tls certificate verification failed";
+const SERVICE_TLS_HANDSHAKE_FAILED: &str = "service tls handshake failed";
+const SERVICE_TLS_SERVER_NAME_INVALID: &str = "service tls server name was invalid";
 const SERVICE_WS_ROUTE: &str = "/v1/events/ws";
 const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
@@ -42,6 +58,36 @@ impl ServiceScheme {
         match self {
             Self::Http => 80,
             Self::Https => 443,
+        }
+    }
+}
+
+enum ServiceStream {
+    Tcp(TcpStream),
+    Tls(Box<StreamOwned<ClientConnection, TcpStream>>),
+}
+
+impl Read for ServiceStream {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            Self::Tcp(stream) => stream.read(buffer),
+            Self::Tls(stream) => stream.read(buffer),
+        }
+    }
+}
+
+impl Write for ServiceStream {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Self::Tcp(stream) => stream.write(buffer),
+            Self::Tls(stream) => stream.write(buffer),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Tcp(stream) => stream.flush(),
+            Self::Tls(stream) => stream.flush(),
         }
     }
 }
@@ -105,13 +151,7 @@ impl ServiceEndpoint {
         format!("{}{}", self.base_path, route)
     }
 
-    fn connect_stream(&self) -> Result<TcpStream, SdkError> {
-        if self.scheme == ServiceScheme::Https {
-            return Err(SdkError::NotImplemented(
-                "https transport is not yet supported by the std service client",
-            ));
-        }
-
+    fn connect_tcp_stream(&self) -> Result<TcpStream, SdkError> {
         let stream = TcpStream::connect((self.host.as_str(), self.port))
             .map_err(|_| SdkError::TransportFailure("failed to connect to service endpoint"))?;
         stream
@@ -122,6 +162,106 @@ impl ServiceEndpoint {
             .map_err(|_| SdkError::TransportFailure("failed to configure service write timeout"))?;
         Ok(stream)
     }
+
+    fn connect_stream(&self) -> Result<ServiceStream, SdkError> {
+        let tcp_stream = self.connect_tcp_stream()?;
+        if self.scheme == ServiceScheme::Http {
+            return Ok(ServiceStream::Tcp(tcp_stream));
+        }
+
+        let tls_client_config = resolve_tls_client_config()?;
+        let server_name = resolve_tls_server_name(self.host.as_str())?;
+        let connection = ClientConnection::new(tls_client_config, server_name)
+            .map_err(|_| SdkError::TransportFailure(SERVICE_TLS_HANDSHAKE_FAILED))?;
+        Ok(ServiceStream::Tls(Box::new(StreamOwned::new(
+            connection, tcp_stream,
+        ))))
+    }
+}
+
+fn resolve_tls_client_config() -> Result<Arc<ClientConfig>, SdkError> {
+    let mut root_store = RootCertStore::empty();
+    match std::env::var(SERVICE_TLS_CA_FILE_ENV) {
+        Ok(configured_ca_file) => {
+            let normalized_ca_file = configured_ca_file.trim();
+            if normalized_ca_file.is_empty() {
+                return Err(SdkError::InvalidInput {
+                    field: SERVICE_TLS_CA_FILE_FIELD,
+                    reason: SERVICE_TLS_CA_FILE_EMPTY_REASON,
+                });
+            }
+            let cert_bytes = fs::read(normalized_ca_file)
+                .map_err(|_| SdkError::TransportFailure(SERVICE_TLS_CA_FILE_READ_FAILED))?;
+            let mut cert_reader = Cursor::new(cert_bytes.as_slice());
+            let certificates = rustls_pemfile::certs(&mut cert_reader)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|_| SdkError::TransportFailure(SERVICE_TLS_CA_FILE_PARSE_FAILED))?;
+            let (added, _) = root_store.add_parsable_certificates(certificates);
+            if added == 0 {
+                return Err(SdkError::TransportFailure(SERVICE_TLS_CA_FILE_EMPTY_BUNDLE));
+            }
+        }
+        Err(std::env::VarError::NotPresent) => {
+            root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        }
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err(SdkError::InvalidInput {
+                field: SERVICE_TLS_CA_FILE_FIELD,
+                reason: SERVICE_TLS_CA_FILE_UTF8_REASON,
+            });
+        }
+    }
+
+    let config = ClientConfig::builder()
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+    Ok(Arc::new(config))
+}
+
+fn resolve_tls_server_name(host: &str) -> Result<ServerName<'static>, SdkError> {
+    if let Ok(ip_addr) = host.parse::<IpAddr>() {
+        return Ok(ServerName::IpAddress(ip_addr.into()));
+    }
+    ServerName::try_from(host.to_owned())
+        .map_err(|_| SdkError::TransportFailure(SERVICE_TLS_SERVER_NAME_INVALID))
+}
+
+fn classify_tls_io_error(error: &std::io::Error) -> &'static str {
+    if let Some(rustls_error) = error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<rustls::Error>())
+    {
+        return match rustls_error {
+            rustls::Error::InvalidCertificate(_) => SERVICE_TLS_CERTIFICATE_VERIFICATION_FAILED,
+            _ => SERVICE_TLS_HANDSHAKE_FAILED,
+        };
+    }
+    if matches!(error.kind(), std::io::ErrorKind::TimedOut) {
+        return "failed to read service response payload";
+    }
+    SERVICE_TLS_HANDSHAKE_FAILED
+}
+
+fn map_stream_write_error(error: &std::io::Error, default_reason: &'static str) -> SdkError {
+    if error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<rustls::Error>())
+        .is_some()
+    {
+        return SdkError::TransportFailure(classify_tls_io_error(error));
+    }
+    SdkError::TransportFailure(default_reason)
+}
+
+fn map_stream_read_error(error: &std::io::Error, default_reason: &'static str) -> SdkError {
+    if error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<rustls::Error>())
+        .is_some()
+    {
+        return SdkError::TransportFailure(classify_tls_io_error(error));
+    }
+    SdkError::TransportFailure(default_reason)
 }
 
 /// Request authentication envelope for service API routes.
@@ -761,9 +901,12 @@ impl ServiceApiClient {
         let request = format!(
             "GET {route} HTTP/1.1\r\nHost: {authority}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: kamn-sdk-test-key\r\nSec-WebSocket-Version: 13\r\n{auth_headers}Content-Length: 0\r\n\r\n",
         );
-        stream
-            .write_all(request.as_bytes())
-            .map_err(|_| SdkError::TransportFailure("failed to write service websocket request"))?;
+        stream.write_all(request.as_bytes()).map_err(|error| {
+            map_stream_write_error(&error, "failed to write service websocket request")
+        })?;
+        stream.flush().map_err(|error| {
+            map_stream_write_error(&error, "failed to write service websocket request")
+        })?;
 
         let response_bytes = read_response_bytes(&mut stream)?;
         let header_end = response_bytes
@@ -838,7 +981,10 @@ impl ServiceApiClient {
         );
         stream
             .write_all(request.as_bytes())
-            .map_err(|_| SdkError::TransportFailure("failed to write service request"))?;
+            .map_err(|error| map_stream_write_error(&error, "failed to write service request"))?;
+        stream
+            .flush()
+            .map_err(|error| map_stream_write_error(&error, "failed to write service request"))?;
 
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
@@ -990,7 +1136,7 @@ fn render_auth_headers(auth: Option<&ServiceRequestAuth>) -> Result<String, SdkE
     Ok(headers)
 }
 
-fn read_response_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, SdkError> {
+fn read_response_bytes<R: Read>(stream: &mut R) -> Result<Vec<u8>, SdkError> {
     let mut response = Vec::new();
     let mut chunk = [0_u8; 1024];
     loop {
@@ -1000,8 +1146,14 @@ fn read_response_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, SdkError> {
             Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
                 break;
             }
-            Err(_) => {
-                return Err(SdkError::TransportFailure(
+            Err(error)
+                if matches!(error.kind(), ErrorKind::UnexpectedEof) && !response.is_empty() =>
+            {
+                break;
+            }
+            Err(error) => {
+                return Err(map_stream_read_error(
+                    &error,
                     "failed to read service response payload",
                 ));
             }
@@ -1010,7 +1162,7 @@ fn read_response_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, SdkError> {
     Ok(response)
 }
 
-fn read_response_text(stream: &mut TcpStream) -> Result<String, SdkError> {
+fn read_response_text<R: Read>(stream: &mut R) -> Result<String, SdkError> {
     String::from_utf8(read_response_bytes(stream)?)
         .map_err(|_| SdkError::TransportFailure("service response payload was not utf-8"))
 }

@@ -1686,7 +1686,10 @@ name = "kamn-sdk"
 version = "0.1.0"
 dependencies = [
  "kamn-core",
+ "rustls",
+ "rustls-pemfile",
  "serde_json",
+ "webpki-roots 1.0.6",
 ]
 
 [[package]]
