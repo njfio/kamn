@@ -5,11 +5,11 @@ use kamn_core::{
     KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider,
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitRequest,
 };
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
@@ -427,6 +427,89 @@ fn spawn_server_with_raw_response(
     format!("http://{addr}")
 }
 
+fn spawn_server_with_chunked_raw_response(
+    first_chunk: String,
+    second_chunk: String,
+    chunk_delay: Duration,
+    handler: impl Fn(String) + Send + 'static,
+) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let addr = listener.local_addr().expect("local addr should resolve");
+    thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("connection should be accepted");
+        let request = read_http_request(&mut stream);
+        handler(request);
+        stream
+            .write_all(first_chunk.as_bytes())
+            .expect("first response chunk should write");
+        stream.flush().expect("first response chunk should flush");
+        thread::sleep(chunk_delay);
+        stream
+            .write_all(second_chunk.as_bytes())
+            .expect("second response chunk should write");
+    });
+    format!("http://{addr}")
+}
+
+type KeepAliveRequestLog = Arc<Mutex<Vec<String>>>;
+type KeepAliveServerHandle = thread::JoinHandle<(usize, usize)>;
+type KeepAliveServerSpawnResult = (String, KeepAliveRequestLog, KeepAliveServerHandle);
+
+fn spawn_keep_alive_multi_request_server(
+    response_body: String,
+    status_line: &str,
+    expected_requests: usize,
+) -> KeepAliveServerSpawnResult {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    listener
+        .set_nonblocking(true)
+        .expect("listener should allow nonblocking accepts");
+    let addr = listener.local_addr().expect("local addr should resolve");
+    let recorded_requests = Arc::new(Mutex::new(Vec::new()));
+    let recorded_requests_ref = Arc::clone(&recorded_requests);
+    let status_line = status_line.to_owned();
+    let handle = thread::spawn(move || {
+        let mut accepted_connections = 0_usize;
+        let mut handled_requests = 0_usize;
+        let deadline = Instant::now() + Duration::from_secs(4);
+        while handled_requests < expected_requests && Instant::now() < deadline {
+            match listener.accept() {
+                Ok((mut stream, _)) => {
+                    accepted_connections += 1;
+                    loop {
+                        let request = read_http_request(&mut stream);
+                        if request.is_empty() {
+                            break;
+                        }
+                        recorded_requests_ref
+                            .lock()
+                            .expect("request log mutex should lock")
+                            .push(request);
+                        handled_requests += 1;
+                        let response = format!(
+                            "{status_line}\r\nContent-Length: {}\r\nConnection: keep-alive\r\n\r\n{}",
+                            response_body.len(),
+                            response_body
+                        );
+                        stream
+                            .write_all(response.as_bytes())
+                            .expect("response should write");
+                        if handled_requests >= expected_requests {
+                            break;
+                        }
+                    }
+                }
+                Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                    thread::sleep(Duration::from_millis(5));
+                }
+                Err(error) => panic!("accept should succeed: {error}"),
+            }
+        }
+        (accepted_connections, handled_requests)
+    });
+    (format!("http://{addr}"), recorded_requests, handle)
+}
+
 #[test]
 fn unit_http_transport_rejects_zero_timeout_seconds() {
     assert!(
@@ -439,6 +522,29 @@ fn unit_http_transport_rejects_zero_timeout_seconds() {
         ),
         "http transport timeout must be positive"
     );
+}
+
+#[test]
+fn regression_http_transport_partial_eq_requires_timeout_and_authorization_match() {
+    let transport_a = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let transport_b = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let transport_timeout_mismatch =
+        KolmeRuntimeCommitHttpTransport::new(3).expect("transport should build");
+    let transport_auth_alpha =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
+            .expect("transport should build");
+    let transport_auth_alpha_clone =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
+            .expect("transport should build");
+    let transport_auth_beta =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer beta")
+            .expect("transport should build");
+
+    assert_eq!(transport_a, transport_b);
+    assert_ne!(transport_a, transport_timeout_mismatch);
+    assert_ne!(transport_a, transport_auth_alpha);
+    assert_eq!(transport_auth_alpha, transport_auth_alpha_clone);
+    assert_ne!(transport_auth_alpha, transport_auth_beta);
 }
 
 #[test]
@@ -509,6 +615,46 @@ fn integration_http_transport_fetch_next_nonce_query_and_parse() {
         .expect("nonce helper should succeed");
     assert_eq!(response.next_nonce, 42);
     assert_eq!(response.account_id.as_deref(), Some("acc-42"));
+}
+
+#[test]
+fn regression_http_transport_reuses_keep_alive_connection_pool_for_nonce_requests() {
+    // Regression: #5932
+    let nonce_request =
+        KolmeApiNextNonceRequest::new("pub:key/keepalive").expect("request should build");
+    let (base_url, requests, server_handle) = spawn_keep_alive_multi_request_server(
+        "{\"next_nonce\":42,\"account_id\":\"acc-42\"}".to_owned(),
+        "HTTP/1.1 200 OK",
+        2,
+    );
+
+    let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let first = transport
+        .fetch_next_nonce(base_url.as_str(), "/get-next-nonce", &nonce_request)
+        .expect("first nonce request should succeed");
+    let second = transport
+        .fetch_next_nonce(base_url.as_str(), "/get-next-nonce", &nonce_request)
+        .expect("second nonce request should succeed");
+    assert_eq!(first.next_nonce, 42);
+    assert_eq!(second.next_nonce, 42);
+
+    let (accepted_connections, handled_requests) = server_handle
+        .join()
+        .expect("keep-alive server thread should join");
+    assert_eq!(handled_requests, 2);
+    assert_eq!(
+        accepted_connections, 1,
+        "http transport should reuse a pooled keep-alive connection for repeated requests"
+    );
+
+    let recorded_requests = requests.lock().expect("request log mutex should lock");
+    assert_eq!(recorded_requests.len(), 2);
+    assert!(
+        recorded_requests
+            .iter()
+            .all(|request| request.contains("Connection: keep-alive")),
+        "pooled transport requests must advertise keep-alive semantics"
+    );
 }
 
 #[test]
@@ -759,6 +905,76 @@ fn regression_http_transport_fails_closed_on_content_length_mismatch() {
             ),
         })
     );
+}
+
+#[test]
+fn regression_http_transport_parses_connection_header_before_content_length() {
+    let response_body = "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:ordered-headers\nfinality=final\n";
+    let raw_response = format!(
+        "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+        response_body.len(),
+        response_body
+    );
+    let base_url = spawn_server_with_raw_response(raw_response, |request| {
+        assert!(request.contains("POST /broadcast/runtime-commit HTTP/1.1"));
+    });
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit("operation_id=ordered\n", "idempotency-key-ordered")
+        .expect("response with connection header before content-length should parse");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:ordered-headers");
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
+}
+
+#[test]
+fn regression_http_transport_parses_chunked_headers_without_early_failure() {
+    let response_body =
+        "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:chunked\nfinality=final\n";
+    let first_chunk = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection",
+        response_body.len()
+    );
+    let second_chunk = format!(": close\r\n\r\n{response_body}");
+    let base_url = spawn_server_with_chunked_raw_response(
+        first_chunk,
+        second_chunk,
+        Duration::from_millis(25),
+        |request| {
+            assert!(request.contains("POST /broadcast/runtime-commit HTTP/1.1"));
+        },
+    );
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit("operation_id=chunked\n", "idempotency-key-chunked")
+        .expect("chunked headers should parse once header boundary is complete");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:chunked");
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
 }
 
 #[test]

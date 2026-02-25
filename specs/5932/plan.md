@@ -2,8 +2,8 @@
 
 - Issue: #5932
 - Spec: `specs/5932/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5932/spec.md.
@@ -11,11 +11,13 @@
 3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
 
-## Affected Modules (Initial)
+## Affected Modules
 - `crates/kamn-node/src/service_api_endpoint.rs`
-- `crates/kamn-node/src/main.rs`
-- `crates/kamn-sdk/src/live.rs`
-- `crates/kamn-sdk/src/service.rs`
+- `crates/kamn-node/src/service_api_endpoint/tests.rs`
+- `crates/kamn-node/src/observability_endpoint.rs`
+- `crates/kamn-node/src/runtime_orchestration.rs`
+- `crates/kamn-core/src/kolme_runtime_commit/http_transport.rs`
+- `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.

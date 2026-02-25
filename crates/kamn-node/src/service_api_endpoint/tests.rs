@@ -1,7 +1,7 @@
 use super::{
     auth::map_anti_spam_rejection_to_reasoned_error, drain_service_api_relay_spool_entries,
-    project_service_api_relayed_message_statuses, AntiSpamRejection,
-    REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+    project_service_api_relayed_message_statuses, service_api_runtime_worker_threads_for_test,
+    AntiSpamRejection, REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
     REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
     REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
 };
@@ -20,6 +20,14 @@ fn anti_spam_rate_limit_rejection_maps_to_sender_rate_limit_reason_code() {
         REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED
     );
     assert!(error.message.contains("observed=3"));
+}
+
+#[test]
+fn unit_service_api_runtime_contract_uses_multi_thread_builder() {
+    assert!(
+        service_api_runtime_worker_threads_for_test() >= 2,
+        "service api runtime must provision at least two worker threads"
+    );
 }
 
 #[test]

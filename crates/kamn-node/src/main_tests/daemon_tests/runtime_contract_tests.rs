@@ -5,8 +5,11 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let chain_id = "daemon-transition-contract";
     let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
+        "--chain-id".to_owned(),
+        chain_id.to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
         "--runtime-mode".to_owned(),
@@ -27,10 +30,15 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("daemon execution should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    let expected_execution_id = format!("node-runtime:daemon:{chain_id}:processor");
 
     let start_line = captured_logs
         .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.start\""))
+        .find(|line| {
+            line.contains("\"event\":\"node.runtime.daemon.execute.start\"")
+                && extract_json_string_field(line, "execution_id").as_deref()
+                    == Some(expected_execution_id.as_str())
+        })
         .expect("daemon execution should emit structured start marker");
     assert_eq!(
         extract_json_string_field(start_line, "runtime_mode").as_deref(),
@@ -49,7 +57,11 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
 
     let complete_line = captured_logs
         .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .find(|line| {
+            line.contains("\"event\":\"node.runtime.daemon.execute.complete\"")
+                && extract_json_string_field(line, "execution_id").as_deref()
+                    == Some(expected_execution_id.as_str())
+        })
         .expect("daemon execution should emit structured completion marker");
     assert_eq!(
         extract_json_string_field(complete_line, "runtime_mode").as_deref(),
@@ -99,8 +111,11 @@ fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() 
         .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let chain_id = "daemon-graceful-contract";
     let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
+        "--chain-id".to_owned(),
+        chain_id.to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
         "--runtime-mode".to_owned(),
@@ -121,10 +136,15 @@ fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() 
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("daemon execution should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    let expected_execution_id = format!("node-runtime:daemon:{chain_id}:processor");
 
     let complete_line = captured_logs
         .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .find(|line| {
+            line.contains("\"event\":\"node.runtime.daemon.execute.complete\"")
+                && extract_json_string_field(line, "execution_id").as_deref()
+                    == Some(expected_execution_id.as_str())
+        })
         .expect("daemon execution should emit structured completion marker");
     assert_eq!(
         extract_json_string_field(complete_line, "completion_reason").as_deref(),
@@ -163,8 +183,11 @@ pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeou
         .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let chain_id = "daemon-timeout-contract";
     let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
+        "--chain-id".to_owned(),
+        chain_id.to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
         "--runtime-mode".to_owned(),
@@ -190,10 +213,15 @@ pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeou
     assert!(rendered.contains(
         "\"daemon_convergence_reason_code\":\"convergence_performance_budget_exceeded\""
     ));
+    let expected_execution_id = format!("node-runtime:daemon:{chain_id}:processor");
 
     let complete_line = captured_logs
         .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .find(|line| {
+            line.contains("\"event\":\"node.runtime.daemon.execute.complete\"")
+                && extract_json_string_field(line, "execution_id").as_deref()
+                    == Some(expected_execution_id.as_str())
+        })
         .expect("daemon execution should emit structured completion marker");
     assert_eq!(
         extract_json_string_field(complete_line, "completion_reason").as_deref(),

@@ -280,8 +280,20 @@ fn escape_json_string(input: &str) -> String {
 }
 
 #[cfg(test)]
-thread_local! {
-    static TEST_LOG_CAPTURE: std::cell::RefCell<Option<Vec<String>>> = const { std::cell::RefCell::new(None) };
+static TEST_LOG_CAPTURE: std::sync::Mutex<Option<Vec<String>>> = std::sync::Mutex::new(None);
+
+#[cfg(test)]
+fn with_test_log_capture_mut<T, F>(operation: F) -> T
+where
+    F: FnOnce(&mut Option<Vec<String>>) -> T,
+{
+    match TEST_LOG_CAPTURE.lock() {
+        Ok(mut guard) => operation(&mut guard),
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            operation(&mut guard)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -289,11 +301,9 @@ pub(crate) fn capture_test_logs<T, F>(operation: F) -> (T, Vec<String>)
 where
     F: FnOnce() -> T + std::panic::UnwindSafe,
 {
-    TEST_LOG_CAPTURE.with(|capture| {
-        *capture.borrow_mut() = Some(Vec::new());
-    });
+    with_test_log_capture_mut(|capture| *capture = Some(Vec::new()));
     let outcome = std::panic::catch_unwind(operation);
-    let logs = TEST_LOG_CAPTURE.with(|capture| capture.borrow_mut().take().unwrap_or_default());
+    let logs = with_test_log_capture_mut(|capture| capture.take().unwrap_or_default());
     match outcome {
         Ok(result) => (result, logs),
         Err(payload) => std::panic::resume_unwind(payload),
@@ -302,8 +312,8 @@ where
 
 #[cfg(test)]
 fn record_test_log_line(line: &str) {
-    TEST_LOG_CAPTURE.with(|capture| {
-        if let Some(lines) = capture.borrow_mut().as_mut() {
+    with_test_log_capture_mut(|capture| {
+        if let Some(lines) = capture.as_mut() {
             lines.push(line.to_owned());
         }
     });

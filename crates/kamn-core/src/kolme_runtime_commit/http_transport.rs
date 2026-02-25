@@ -23,22 +23,42 @@ use kamn_kolme::{
 };
 use rustls::pki_types::ServerName;
 use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Cursor, Read, Write};
 use std::net::IpAddr;
 use std::net::TcpStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
 
 type HttpScheme = KamnKolmeHttpScheme;
 
+const HTTP_CONNECTION_POOL_PER_ENDPOINT_CAPACITY: usize = 4;
+
 /// Deterministic HTTP/TLS transport implementation for runtime commit submit/finality calls.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct KolmeRuntimeCommitHttpTransport {
     timeout_seconds: u64,
     authorization_header: Option<String>,
+    http_connection_pool: Arc<Mutex<BTreeMap<String, Vec<TcpStream>>>>,
+}
+
+impl PartialEq for KolmeRuntimeCommitHttpTransport {
+    fn eq(&self, other: &Self) -> bool {
+        self.timeout_seconds == other.timeout_seconds
+            && self.authorization_header == other.authorization_header
+    }
+}
+
+impl Eq for KolmeRuntimeCommitHttpTransport {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct HttpResponseMetadata {
+    header_end: usize,
+    content_length: Option<usize>,
+    connection_keep_alive: bool,
 }
 
 impl KolmeRuntimeCommitHttpTransport {
@@ -53,6 +73,7 @@ impl KolmeRuntimeCommitHttpTransport {
         Ok(Self {
             timeout_seconds,
             authorization_header: None,
+            http_connection_pool: Arc::new(Mutex::new(BTreeMap::new())),
         })
     }
 
@@ -130,9 +151,13 @@ impl KolmeRuntimeCommitHttpTransport {
             }
         })?;
         let payload = body.unwrap_or("");
+        let connection_header = match endpoint.scheme {
+            HttpScheme::Http => "keep-alive",
+            HttpScheme::Https => "close",
+        };
         let mut request = format!(
-            "{method} {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n",
-            endpoint.target_path, endpoint.host_header
+            "{method} {} HTTP/1.1\r\nHost: {}\r\nConnection: {connection_header}\r\n",
+            endpoint.target_path, endpoint.host_header,
         );
         for (header_name, header_value) in headers {
             request.push_str(header_name);
@@ -173,26 +198,174 @@ impl KolmeRuntimeCommitHttpTransport {
         endpoint: ParsedHttpEndpoint,
         request: &[u8],
     ) -> Result<Vec<u8>, KolmeRuntimeCommitProviderError> {
-        let mut stream =
-            TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
-                KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
-            })?;
         let timeout = Duration::from_secs(self.timeout_seconds);
+        let pool_key = format!("{}:{}", endpoint.host, endpoint.port);
+        let mut stream =
+            if let Some(pooled_stream) = self.take_pooled_http_stream(pool_key.as_str()) {
+                pooled_stream
+            } else {
+                self.connect_http_stream(endpoint.host.as_str(), endpoint.port)?
+            };
+        Self::configure_http_stream_timeout(&stream, timeout)?;
+        stream.write_all(request).map_err(|error| {
+            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+        })?;
+
+        let (response_bytes, keep_alive) = Self::read_http_response_bytes(&mut stream)?;
+        if keep_alive {
+            self.return_pooled_http_stream(pool_key, stream);
+        }
+        Ok(response_bytes)
+    }
+
+    fn connect_http_stream(
+        &self,
+        host: &str,
+        port: u16,
+    ) -> Result<TcpStream, KolmeRuntimeCommitProviderError> {
+        TcpStream::connect((host, port)).map_err(|error| {
+            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+        })
+    }
+
+    fn configure_http_stream_timeout(
+        stream: &TcpStream,
+        timeout: Duration,
+    ) -> Result<(), KolmeRuntimeCommitProviderError> {
         stream.set_read_timeout(Some(timeout)).map_err(|error| {
             KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
         })?;
         stream.set_write_timeout(Some(timeout)).map_err(|error| {
             KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
         })?;
-        stream.write_all(request).map_err(|error| {
-            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
-        })?;
+        Ok(())
+    }
 
+    fn take_pooled_http_stream(&self, pool_key: &str) -> Option<TcpStream> {
+        let mut pool = self
+            .http_connection_pool
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut remove_key = false;
+        let stream = if let Some(endpoint_pool) = pool.get_mut(pool_key) {
+            let stream = endpoint_pool.pop();
+            remove_key = endpoint_pool.is_empty();
+            stream
+        } else {
+            None
+        };
+        if remove_key {
+            pool.remove(pool_key);
+        }
+        stream
+    }
+
+    fn return_pooled_http_stream(&self, pool_key: String, stream: TcpStream) {
+        let mut pool = self
+            .http_connection_pool
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let endpoint_pool = pool.entry(pool_key).or_default();
+        if endpoint_pool.len() < HTTP_CONNECTION_POOL_PER_ENDPOINT_CAPACITY {
+            endpoint_pool.push(stream);
+        }
+    }
+
+    fn read_http_response_bytes(
+        stream: &mut TcpStream,
+    ) -> Result<(Vec<u8>, bool), KolmeRuntimeCommitProviderError> {
         let mut response_bytes = Vec::new();
-        stream.read_to_end(&mut response_bytes).map_err(|error| {
-            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+        let mut buffer = [0_u8; 4096];
+        let mut metadata: Option<HttpResponseMetadata> = None;
+
+        loop {
+            let read_count = stream.read(&mut buffer).map_err(|error| {
+                KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+            })?;
+            if read_count == 0 {
+                break;
+            }
+            response_bytes.extend_from_slice(&buffer[..read_count]);
+
+            if metadata.is_none()
+                && Self::find_http_header_boundary(response_bytes.as_slice()).is_some()
+            {
+                metadata = Some(Self::parse_http_response_metadata(
+                    response_bytes.as_slice(),
+                )?);
+            }
+
+            if let Some(metadata) = metadata {
+                if let Some(content_length) = metadata.content_length {
+                    let total_length = metadata.header_end.saturating_add(content_length);
+                    if response_bytes.len() >= total_length {
+                        response_bytes.truncate(total_length);
+                        return Ok((response_bytes, metadata.connection_keep_alive));
+                    }
+                }
+            }
+        }
+
+        if response_bytes.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "http response body is empty".to_owned(),
+            });
+        }
+        Ok((response_bytes, false))
+    }
+
+    fn parse_http_response_metadata(
+        response_bytes: &[u8],
+    ) -> Result<HttpResponseMetadata, KolmeRuntimeCommitProviderError> {
+        let header_end = Self::find_http_header_boundary(response_bytes).ok_or_else(|| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "http response missing header/body separator".to_owned(),
+            }
         })?;
-        Ok(response_bytes)
+        let header_text = std::str::from_utf8(&response_bytes[..header_end]).map_err(|error| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("http response headers are not valid utf-8: {error}"),
+            }
+        })?;
+        let mut content_length = None;
+        let mut keep_alive = false;
+        for line in header_text.lines().skip(1) {
+            let Some((name, value)) = line.split_once(':') else {
+                continue;
+            };
+            if name.eq_ignore_ascii_case("Content-Length") && content_length.is_none() {
+                content_length = Some(value.trim().parse::<usize>().map_err(|_| {
+                    KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: "http response content-length is invalid".to_owned(),
+                    }
+                })?);
+            }
+            if name.eq_ignore_ascii_case("Connection") {
+                for token in value
+                    .split(',')
+                    .map(|token| token.trim().to_ascii_lowercase())
+                {
+                    if token == "keep-alive" {
+                        keep_alive = true;
+                    }
+                    if token == "close" {
+                        keep_alive = false;
+                    }
+                }
+            }
+        }
+        Ok(HttpResponseMetadata {
+            header_end,
+            content_length,
+            connection_keep_alive: keep_alive,
+        })
+    }
+
+    fn find_http_header_boundary(response_bytes: &[u8]) -> Option<usize> {
+        response_bytes
+            .windows(4)
+            .position(|window| window == b"\r\n\r\n")
+            .map(|index| index + 4)
     }
 
     fn execute_https_request(
@@ -421,5 +594,138 @@ impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTranspor
             }
         })?;
         self.execute_request(base_url, block_path.as_str(), "GET", None, &[])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KolmeRuntimeCommitHttpTransport;
+    use std::fmt::Debug;
+    use std::io::Write;
+    use std::net::{SocketAddr, TcpListener, TcpStream};
+    use std::thread;
+    use std::time::Duration;
+
+    fn must_ok<T, E: Debug>(result: Result<T, E>) -> T {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("expected Ok(..), got error: {error:?}"),
+        }
+    }
+
+    fn must_join_ok<T>(join_result: thread::Result<T>) -> T {
+        match join_result {
+            Ok(value) => value,
+            Err(_) => panic!("server thread panicked"),
+        }
+    }
+
+    fn loopback_listener() -> (TcpListener, SocketAddr) {
+        let listener = must_ok(TcpListener::bind("127.0.0.1:0"));
+        let address = must_ok(listener.local_addr());
+        (listener, address)
+    }
+
+    fn stream_with_chunked_response(
+        chunks: Vec<Vec<u8>>,
+        delay_between_chunks: Duration,
+    ) -> (TcpStream, thread::JoinHandle<()>) {
+        let (listener, server_address) = loopback_listener();
+        let server_handle = thread::spawn(move || {
+            let (mut server_stream, _) = must_ok(listener.accept());
+            let total_chunks = chunks.len();
+            for (index, chunk) in chunks.into_iter().enumerate() {
+                must_ok(server_stream.write_all(chunk.as_slice()));
+                must_ok(server_stream.flush());
+                if index + 1 < total_chunks && !delay_between_chunks.is_zero() {
+                    thread::sleep(delay_between_chunks);
+                }
+            }
+        });
+        let client_stream = must_ok(TcpStream::connect(server_address));
+        must_ok(client_stream.set_read_timeout(Some(Duration::from_secs(2))));
+        must_ok(client_stream.set_write_timeout(Some(Duration::from_secs(2))));
+        (client_stream, server_handle)
+    }
+
+    #[test]
+    fn spec_c01_issue_5961_transport_equality_depends_on_timeout_and_authorization() {
+        let transport = must_ok(KolmeRuntimeCommitHttpTransport::new(5));
+        let same_transport = must_ok(KolmeRuntimeCommitHttpTransport::new(5));
+        let different_timeout = must_ok(KolmeRuntimeCommitHttpTransport::new(6));
+        let with_auth = must_ok(KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            5,
+            "Bearer alpha",
+        ));
+        let with_other_auth = must_ok(KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            5,
+            "Bearer beta",
+        ));
+        let with_auth_clone = must_ok(KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            5,
+            "Bearer alpha",
+        ));
+
+        assert_eq!(transport, same_transport);
+        assert_ne!(transport, different_timeout);
+        assert_ne!(transport, with_auth);
+        assert_ne!(with_auth, with_other_auth);
+        assert_eq!(with_auth, with_auth_clone);
+    }
+
+    #[test]
+    fn spec_c02_issue_5961_read_http_response_waits_for_header_boundary() {
+        let first_chunk =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: keep-alive\r\n".to_vec();
+        let second_chunk = b"\r\nhello".to_vec();
+        let expected =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: keep-alive\r\n\r\nhello".to_vec();
+        let (mut client_stream, server_handle) = stream_with_chunked_response(
+            vec![first_chunk, second_chunk],
+            Duration::from_millis(25),
+        );
+
+        let response_result =
+            KolmeRuntimeCommitHttpTransport::read_http_response_bytes(&mut client_stream);
+        must_join_ok(server_handle.join());
+        let (response_bytes, keep_alive) = must_ok(response_result);
+
+        assert_eq!(response_bytes, expected);
+        assert!(keep_alive);
+    }
+
+    #[test]
+    fn spec_c03_issue_5961_read_http_response_truncates_only_when_complete() {
+        let first_chunk = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhe".to_vec();
+        let second_chunk = b"lloTRAILING".to_vec();
+        let expected = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello".to_vec();
+        let (mut client_stream, server_handle) = stream_with_chunked_response(
+            vec![first_chunk, second_chunk],
+            Duration::from_millis(25),
+        );
+
+        let response_result =
+            KolmeRuntimeCommitHttpTransport::read_http_response_bytes(&mut client_stream);
+        must_join_ok(server_handle.join());
+        let (response_bytes, keep_alive) = must_ok(response_result);
+
+        assert_eq!(response_bytes, expected);
+        assert!(!keep_alive);
+    }
+
+    #[test]
+    fn spec_c04_issue_5961_content_length_is_parsed_only_from_matching_header() {
+        let response_bytes =
+            b"HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 4\r\n\r\ntest";
+        let metadata_result =
+            KolmeRuntimeCommitHttpTransport::parse_http_response_metadata(response_bytes);
+        let metadata = must_ok(metadata_result);
+
+        assert_eq!(metadata.content_length, Some(4));
+        assert!(metadata.connection_keep_alive);
+        assert_eq!(
+            metadata.header_end,
+            b"HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 4\r\n\r\n".len()
+        );
     }
 }
