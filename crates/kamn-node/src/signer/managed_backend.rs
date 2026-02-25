@@ -23,11 +23,22 @@ use crate::{
     KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_ENV, KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY_ENV,
 };
 
+#[cfg(windows)]
+const MANAGED_SIGNER_CHILD_ENV_ALLOWLIST: &[&str] = &["PATH", "SYSTEMROOT", "WINDIR"];
+#[cfg(not(windows))]
+const MANAGED_SIGNER_CHILD_ENV_ALLOWLIST: &[&str] = &["PATH"];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ManagedExternalBackendSignature {
     signature_hex: String,
     recovery_id: u8,
     signer_public_key_hex: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ManagedSignerCommandSpec {
+    executable: String,
+    args: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +85,7 @@ fn resolve_optional_kolme_live_managed_signer_command() -> Result<Option<String>
                     "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must not be empty when present (managed_signer_backend_unavailable)"
                 )));
             }
+            parse_kolme_live_managed_signer_command_spec(trimmed)?;
             Ok(Some(trimmed.to_owned()))
         }
         Err(env::VarError::NotPresent) => Ok(None),
@@ -81,6 +93,73 @@ fn resolve_optional_kolme_live_managed_signer_command() -> Result<Option<String>
             "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must be valid utf-8 when present (managed_signer_backend_unavailable)"
         ))),
     }
+}
+
+fn parse_kolme_live_managed_signer_command_spec(
+    command: &str,
+) -> Result<ManagedSignerCommandSpec, ConfigError> {
+    let mut argv = Vec::new();
+    let mut current = String::new();
+    let mut in_single_quotes = false;
+    let mut in_double_quotes = false;
+    let mut escaping = false;
+
+    for character in command.chars() {
+        if escaping {
+            current.push(character);
+            escaping = false;
+            continue;
+        }
+
+        if in_single_quotes {
+            if character == '\'' {
+                in_single_quotes = false;
+            } else {
+                current.push(character);
+            }
+            continue;
+        }
+
+        if in_double_quotes {
+            match character {
+                '"' => in_double_quotes = false,
+                '\\' => escaping = true,
+                _ => current.push(character),
+            }
+            continue;
+        }
+
+        match character {
+            '\'' => in_single_quotes = true,
+            '"' => in_double_quotes = true,
+            '\\' => escaping = true,
+            character if character.is_whitespace() => {
+                if !current.is_empty() {
+                    argv.push(std::mem::take(&mut current));
+                }
+            }
+            _ => current.push(character),
+        }
+    }
+
+    if escaping || in_single_quotes || in_double_quotes {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} contains unterminated quoting or escaping (managed_signer_backend_unavailable)"
+        )));
+    }
+    if !current.is_empty() {
+        argv.push(current);
+    }
+    if argv.is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must contain at least one argv token (managed_signer_backend_unavailable)"
+        )));
+    }
+    let executable = argv.remove(0);
+    Ok(ManagedSignerCommandSpec {
+        executable,
+        args: argv,
+    })
 }
 
 pub(super) fn resolve_required_kolme_live_managed_signer_command() -> Result<String, ConfigError> {
@@ -350,22 +429,34 @@ fn execute_kolme_live_managed_signer_backend_command(
     canonical_message: &str,
 ) -> Result<ManagedExternalBackendSignature, ConfigError> {
     let nonce = signing_request.nonce.to_string();
-    let mut child = Command::new("sh")
-        .arg("-c")
-        .arg(command)
+    let command_spec = parse_kolme_live_managed_signer_command_spec(command)?;
+    let mut child_command = Command::new(command_spec.executable.as_str());
+    child_command.args(command_spec.args.iter().map(String::as_str));
+    child_command.env_clear();
+    for env_name in MANAGED_SIGNER_CHILD_ENV_ALLOWLIST {
+        if let Ok(value) = env::var(env_name) {
+            child_command.env(env_name, value);
+        }
+    }
+    child_command
         .env("KAMN_MANAGED_SIGNER_KEY_REFERENCE", key_reference)
-        .env("KAMN_MANAGED_SIGNER_ACTOR_DID", signing_request.sender.as_str())
+        .env(
+            "KAMN_MANAGED_SIGNER_ACTOR_DID",
+            signing_request.sender.as_str(),
+        )
         .env("KAMN_MANAGED_SIGNER_NONCE", nonce.as_str())
-        .env("KAMN_MANAGED_SIGNER_STATE_ROOT", signing_request.state_hash.as_str())
+        .env(
+            "KAMN_MANAGED_SIGNER_STATE_ROOT",
+            signing_request.state_hash.as_str(),
+        )
         .env("KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE", canonical_message)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| {
-            ConfigError::RuntimeKolmeLive(format!(
-                "managed-external signer backend unavailable: failed to spawn command from {KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV}: {error} (managed_signer_backend_unavailable)"
-            ))
-        })?;
+        .stderr(Stdio::piped());
+    let mut child = child_command.spawn().map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend unavailable: failed to spawn command from {KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV}: {error} (managed_signer_backend_unavailable)"
+        ))
+    })?;
     let mut stdout = child.stdout.take().ok_or_else(|| {
         ConfigError::RuntimeKolmeLive(
             "managed-external signer backend unavailable: stdout pipe was not configured (managed_signer_backend_unavailable)"
@@ -577,12 +668,17 @@ pub(crate) fn sign_kolme_live_managed_external_message(
 #[cfg(test)]
 mod tests {
     use std::env;
+    use std::fs;
+    use std::path::PathBuf;
     use std::sync::Mutex;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
-    use kamn_core::{KolmeRuntimeCommitRequest, SignerProviderHandshakeMatrix};
+    use kamn_core::{ConfigError, KolmeRuntimeCommitRequest, SignerProviderHandshakeMatrix};
 
     use super::{
-        KolmeLiveManagedKeySourceAdapter, KolmeLiveSignerSelection, ManagedExternalKeySourceAdapter,
+        parse_kolme_live_managed_signer_command_spec, sign_kolme_live_managed_external_message,
+        KolmeLiveManagedKeySourceAdapter, KolmeLiveSignerSelection,
+        ManagedExternalKeySourceAdapter,
     };
     use crate::signer::{build_kolme_live_managed_signing_key, encode_kolme_hex_lower};
 
@@ -591,8 +687,35 @@ mod tests {
     const TEST_CORE_SIGNER_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
+    fn managed_external_core_signer_env_guards() -> (EnvVarGuard, EnvVarGuard) {
+        (
+            EnvVarGuard::set(
+                "KAMN_SIGNER_PRIVATE_KEY_HEX",
+                Some(TEST_CORE_SIGNER_PRIVATE_KEY_HEX),
+            ),
+            EnvVarGuard::set(
+                "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+                Some(TEST_CORE_SIGNER_PRIVATE_KEY_HEX),
+            ),
+        )
+    }
+
     fn managed_backend_env_lock() -> &'static Mutex<()> {
         crate::signer_test_env_lock()
+    }
+
+    fn unique_temp_path(prefix: &str, suffix: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        env::temp_dir().join(format!("{prefix}-{}-{nanos}{suffix}", std::process::id()))
+    }
+
+    fn write_managed_signer_script(script_body: &str) -> PathBuf {
+        let script_path = unique_temp_path("managed-signer-script", ".sh");
+        fs::write(script_path.as_path(), script_body).expect("managed signer script should write");
+        script_path
     }
 
     struct EnvVarGuard {
@@ -706,5 +829,190 @@ mod tests {
             managed_lock, shared_lock,
             "managed backend tests must share signer env lock domain"
         );
+    }
+
+    #[test]
+    fn unit_managed_signer_command_parser_groups_double_quoted_tokens() {
+        let parsed = parse_kolme_live_managed_signer_command_spec("printf \"hello world\"")
+            .expect("double-quoted token should parse");
+        assert_eq!(parsed.executable, "printf");
+        assert_eq!(parsed.args, vec!["hello world"]);
+    }
+
+    #[test]
+    fn regression_managed_signer_command_parser_supports_escaped_double_quote_tokens() {
+        // Regression: #5931
+        let parsed = parse_kolme_live_managed_signer_command_spec("printf \"a\\\"b\"")
+            .expect("escaped double quote token should parse");
+        assert_eq!(parsed.executable, "printf");
+        assert_eq!(parsed.args, vec!["a\"b"]);
+    }
+
+    #[test]
+    fn regression_managed_signer_command_parser_supports_unquoted_backslash_whitespace_escape() {
+        // Regression: #5931
+        let parsed = parse_kolme_live_managed_signer_command_spec("printf hello\\ world")
+            .expect("unquoted backslash whitespace escape should parse");
+        assert_eq!(parsed.executable, "printf");
+        assert_eq!(parsed.args, vec!["hello world"]);
+    }
+
+    #[test]
+    fn regression_managed_signer_command_parser_rejects_unterminated_single_quote() {
+        // Regression: #5931
+        let error = parse_kolme_live_managed_signer_command_spec("printf 'unterminated")
+            .expect_err("unterminated single quote must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("unterminated quoting or escaping")),
+            "unterminated single quote failure must preserve deterministic reason marker"
+        );
+    }
+
+    #[test]
+    fn regression_managed_signer_command_parser_rejects_unterminated_double_quote() {
+        // Regression: #5931
+        let error = parse_kolme_live_managed_signer_command_spec("printf \"unterminated")
+            .expect_err("unterminated double quote must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("unterminated quoting or escaping")),
+            "unterminated double quote failure must preserve deterministic reason marker"
+        );
+    }
+
+    #[test]
+    fn regression_managed_external_backend_command_injection_payload_is_not_interpreted() {
+        // Regression: #5931
+        let _lock = managed_backend_env_lock()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let (_core_signer_key_guard, _core_service_key_guard) =
+            managed_external_core_signer_env_guards();
+
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-5931-injection",
+            "state:node-live-5931-injection",
+            "kamn:did:agent:node-live-5931-injection",
+            1,
+            "payload:node-live-5931-injection",
+        )
+        .expect("request should build");
+        let canonical_message = "{\"managed\":\"injection-contract\"}";
+        let signing_key =
+            build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
+                .expect("managed signing key should derive");
+        let managed_pubkey = encode_kolme_hex_lower(
+            signing_key
+                .verifying_key()
+                .to_encoded_point(true)
+                .as_bytes(),
+        );
+        let (backend_signature, backend_recovery_id) = signing_key
+            .sign_recoverable(canonical_message.as_bytes())
+            .expect("managed signing key should sign canonical message");
+        let signature_hex = encode_kolme_hex_lower(backend_signature.to_bytes().as_ref());
+
+        let script_body = format!(
+            "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'\n",
+            signature_hex,
+            backend_recovery_id.to_byte(),
+            managed_pubkey,
+        );
+        let script_path = write_managed_signer_script(script_body.as_str());
+        let marker_path = unique_temp_path("managed-signer-injection-marker", ".txt");
+        let _ = fs::remove_file(marker_path.as_path());
+        let backend_command = format!(
+            "/bin/sh {} ; touch {}",
+            script_path.display(),
+            marker_path.display()
+        );
+        let _backend_command_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
+            Some(backend_command.as_str()),
+        );
+        let _backend_timeout_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS", Some("3"));
+
+        let (observed_signature_hex, observed_recovery_id) =
+            sign_kolme_live_managed_external_message(
+                TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE,
+                &request,
+                1,
+                canonical_message,
+                SignerProviderHandshakeMatrix::with_uniform_availability(true),
+                managed_pubkey.as_str(),
+            )
+            .expect("managed backend command injection payload must not execute");
+        assert_eq!(observed_signature_hex, signature_hex);
+        assert_eq!(observed_recovery_id, backend_recovery_id.to_byte());
+        assert!(
+            !marker_path.exists(),
+            "shell injection payload must not be interpreted by managed backend command execution"
+        );
+
+        let _ = fs::remove_file(script_path.as_path());
+        let _ = fs::remove_file(marker_path.as_path());
+    }
+
+    #[test]
+    fn regression_managed_external_backend_scrubs_signer_secret_env_for_child_process() {
+        // Regression: #5931
+        let _lock = managed_backend_env_lock()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let (_core_signer_key_guard, _core_service_key_guard) =
+            managed_external_core_signer_env_guards();
+
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-5931-env-scrub",
+            "state:node-live-5931-env-scrub",
+            "kamn:did:agent:node-live-5931-env-scrub",
+            1,
+            "payload:node-live-5931-env-scrub",
+        )
+        .expect("request should build");
+        let canonical_message = "{\"managed\":\"env-scrub-contract\"}";
+        let signing_key =
+            build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
+                .expect("managed signing key should derive");
+        let managed_pubkey = encode_kolme_hex_lower(
+            signing_key
+                .verifying_key()
+                .to_encoded_point(true)
+                .as_bytes(),
+        );
+        let (backend_signature, backend_recovery_id) = signing_key
+            .sign_recoverable(canonical_message.as_bytes())
+            .expect("managed signing key should sign canonical message");
+        let signature_hex = encode_kolme_hex_lower(backend_signature.to_bytes().as_ref());
+
+        let script_body = format!(
+            "if [ -n \"$KAMN_SIGNER_PRIVATE_KEY_HEX\" ] || [ -n \"$KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX\" ]; then\n  echo 'managed signer secret env leaked' >&2\n  exit 91\nfi\nprintf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'\n",
+            signature_hex,
+            backend_recovery_id.to_byte(),
+            managed_pubkey,
+        );
+        let script_path = write_managed_signer_script(script_body.as_str());
+        let backend_command = format!("/bin/sh {}", script_path.display());
+        let _backend_command_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
+            Some(backend_command.as_str()),
+        );
+        let _backend_timeout_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS", Some("3"));
+
+        let (observed_signature_hex, observed_recovery_id) =
+            sign_kolme_live_managed_external_message(
+                TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE,
+                &request,
+                1,
+                canonical_message,
+                SignerProviderHandshakeMatrix::with_uniform_availability(true),
+                managed_pubkey.as_str(),
+            )
+            .expect("managed backend child process must not receive signer secret env values");
+        assert_eq!(observed_signature_hex, signature_hex);
+        assert_eq!(observed_recovery_id, backend_recovery_id.to_byte());
+
+        let _ = fs::remove_file(script_path.as_path());
     }
 }
