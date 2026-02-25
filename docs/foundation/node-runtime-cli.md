@@ -424,6 +424,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - fallback private-key env marker `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK` must remain unset across signer paths; when present runtime fails closed with `fallback_signer_secret_present_violation`
   - production-targeted strict contracts reject `--kolme-live-signer-key-source=env-local` with deterministic reason code `production_signer_key_source_env_local_forbidden` unless explicit local override `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true` is set
   - managed-external signer mode requires `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`; if absent, runtime fails closed with `managed_signer_backend_required_missing`
+  - managed-external backend command execution is argv-tokenized and spawned directly (no `sh -c` shell interpolation path)
   - managed-external compatibility marker parsing:
     - `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
     - invalid/empty values fail closed with `managed_signer_backend_required_invalid`
@@ -461,6 +462,9 @@ This document captures node-runtime productionization slices for machine-readabl
     - `managed_signer_provider_unavailable`
     - `managed_signer_provider_handshake_rejected`
     - `managed_signer_backend_error`
+  - managed-external child process env contract:
+    - runtime forwards an explicit allowlist (`PATH` plus platform-required loader vars) and signer request context markers only
+    - signer secret env markers (`KAMN_SIGNER_PRIVATE_KEY_HEX`, `KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX`) are not inherited by child process execution
 - Runtime reports:
   - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
   - signer-selection evidence markers:

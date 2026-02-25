@@ -2,19 +2,21 @@
 
 - Issue: #5931
 - Spec: `specs/5931/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5931/spec.md.
-2. Implement: Switch to argv-safe process execution and explicit env allowlist for child process.
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: added managed signer security regressions for shell-injection payload execution and signer-secret env leakage to `crates/kamn-node/src/signer/managed_backend.rs`.
+2. Implemented argv-tokenized command parsing and direct `Command::new` spawn path, removing shell interpolation from managed signer backend execution.
+3. Implemented child-process env scrubbing (`env_clear`) with explicit allowlist pass-through plus required signer request context markers.
+4. REGRESSION: ran managed-backend unit tests and signer integration matrix (`main_tests::signer_tests`).
+5. VERIFY: ran `cargo fmt --check`, strict `cargo clippy -p kamn-node --bin kamn-node -- -D warnings`, and signer/doc contract slices.
 
 ## Affected Modules (Initial)
-- `crates/kamn-core/src/signer_backend.rs`
-- `crates/kamn-core/src/transaction.rs`
-- `crates/kamn-node/src/main.rs`
+- `crates/kamn-node/src/signer/managed_backend.rs`
+- `docs/architecture/signer-lifecycle.md`
+- `docs/foundation/node-runtime-cli.md`
+- `docs/foundation/kolme-runtime-commit-client.md`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
@@ -30,4 +32,4 @@
 - Protocol/API/schema changes require explicit documentation updates and linked follow-up issues when out of scope.
 
 ## ADR Requirement
-- ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+- Not required (no new dependency or wire-format/protocol change).
