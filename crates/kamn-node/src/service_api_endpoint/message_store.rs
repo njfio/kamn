@@ -88,6 +88,15 @@ struct ServiceApiPersistedContentRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ServiceApiPersistedBridgeRecord {
+    bridge_id: String,
+    source_message_id: String,
+    bridge_status: String,
+    target_message_id: String,
+    forward_tx_hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct ServiceApiPersistedMessageStoreSnapshot {
     schema_version: String,
     messages: BTreeMap<String, ServiceApiPersistedMessageRecord>,
@@ -98,6 +107,8 @@ struct ServiceApiPersistedMessageStoreSnapshot {
     escrows: BTreeMap<String, ServiceApiPersistedEscrowRecord>,
     #[serde(default)]
     contents: BTreeMap<String, ServiceApiPersistedContentRecord>,
+    #[serde(default)]
+    bridges: BTreeMap<String, ServiceApiPersistedBridgeRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
@@ -109,6 +120,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             tasks: BTreeMap::new(),
             escrows: BTreeMap::new(),
             contents: BTreeMap::new(),
+            bridges: BTreeMap::new(),
         }
     }
 }
@@ -577,6 +589,105 @@ impl ServiceApiMessageStore {
         self.persist()?;
         Ok(Some(payload))
     }
+
+    pub(super) fn submit_bridge(
+        &mut self,
+        payload: &str,
+    ) -> Result<ServiceApiBridgeSubmitBody, String> {
+        self.refresh_from_disk()?;
+        let bridge_tag = deterministic_body_tag(payload.as_bytes());
+        let base = format!("bridge-local-{bridge_tag:016x}");
+        let mut bridge_id = base.clone();
+        let mut suffix = 1_u64;
+        while self.snapshot.bridges.contains_key(bridge_id.as_str()) {
+            bridge_id = format!("{base}-{suffix}");
+            suffix = suffix.saturating_add(1);
+        }
+        let source_message_id =
+            bridge_source_message_id_from_payload(payload, bridge_tag, bridge_id.as_str());
+        let target_message_id = format!("msg-bridge-target-{bridge_id}");
+        self.snapshot.bridges.insert(
+            bridge_id.clone(),
+            ServiceApiPersistedBridgeRecord {
+                bridge_id: bridge_id.clone(),
+                source_message_id: source_message_id.clone(),
+                bridge_status: "submitted".to_owned(),
+                target_message_id,
+                forward_tx_hash: String::new(),
+            },
+        );
+        self.persist()?;
+        Ok(ServiceApiBridgeSubmitBody {
+            bridge_id,
+            source_message_id,
+            bridge_status: "submitted".to_owned(),
+        })
+    }
+
+    pub(super) fn forward_bridge(
+        &mut self,
+        bridge_id: &str,
+    ) -> Result<Option<ServiceApiBridgeStatusBody>, String> {
+        self.refresh_from_disk()?;
+        let payload = {
+            let Some(record) = self.snapshot.bridges.get_mut(bridge_id) else {
+                return Ok(None);
+            };
+            record.bridge_status = "forwarded".to_owned();
+            if record.target_message_id.is_empty() {
+                record.target_message_id = format!("msg-bridge-target-{}", record.bridge_id);
+            }
+            record.forward_tx_hash = format!("sha256:bridge-forwarded-{}", record.bridge_id);
+            ServiceApiBridgeStatusBody {
+                bridge_id: record.bridge_id.clone(),
+                bridge_status: record.bridge_status.clone(),
+                target_message_id: record.target_message_id.clone(),
+                forward_tx_hash: record.forward_tx_hash.clone(),
+            }
+        };
+        self.persist()?;
+        Ok(Some(payload))
+    }
+
+    pub(super) fn get_bridge(
+        &mut self,
+        bridge_id: &str,
+    ) -> Result<Option<ServiceApiBridgeStatusBody>, String> {
+        self.refresh_from_disk()?;
+        let Some(record) = self.snapshot.bridges.get(bridge_id) else {
+            return Ok(None);
+        };
+        Ok(Some(ServiceApiBridgeStatusBody {
+            bridge_id: record.bridge_id.clone(),
+            bridge_status: record.bridge_status.clone(),
+            target_message_id: record.target_message_id.clone(),
+            forward_tx_hash: record.forward_tx_hash.clone(),
+        }))
+    }
+}
+
+fn bridge_source_message_id_from_payload(
+    payload: &str,
+    bridge_tag: u64,
+    bridge_id: &str,
+) -> String {
+    let default_value = format!("msg-bridge-source-{bridge_tag:016x}");
+    let parsed = match serde_json::from_str::<serde_json::Value>(payload) {
+        Ok(value) => value,
+        Err(_) => return default_value,
+    };
+    let Some(source_message_id) = parsed
+        .get("source_message_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return default_value;
+    };
+    if source_message_id == bridge_id {
+        return default_value;
+    }
+    source_message_id.to_owned()
 }
 
 fn recipient_mailbox_channel_id(recipient_did: &str) -> String {
