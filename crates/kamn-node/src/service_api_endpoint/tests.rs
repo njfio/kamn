@@ -320,6 +320,86 @@ fn service_api_relay_projection_does_not_rewrite_when_no_records_promoted() {
 }
 
 #[test]
+fn regression_message_store_refreshes_state_file_before_recipient_delivery_transition() {
+    // Regression: #5917
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-message-store-refresh-{unique_suffix}.json"
+    ));
+    let state_path = state_file.to_string_lossy().to_string();
+    std::fs::write(
+        state_file.as_path(),
+        r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-refresh-1":{
+      "message_id":"msg-refresh-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender-refresh",
+      "recipient_did":"kamn:did:agent:recipient-refresh",
+      "body":"{\"message\":\"refresh\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+    )
+    .expect("initial state fixture should write");
+
+    let mut store = ServiceApiMessageStore::from_optional_state_file(Some(state_path))
+        .expect("state-backed message store should initialize");
+
+    std::fs::write(
+        state_file.as_path(),
+        r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-refresh-1":{
+      "message_id":"msg-refresh-1",
+      "status":"relayed",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender-refresh",
+      "recipient_did":"kamn:did:agent:recipient-refresh",
+      "body":"{\"message\":\"refresh\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+    )
+    .expect("relayed state fixture should write");
+
+    let message_payload = store
+        .get_message_for_requester("msg-refresh-1", Some("kamn:did:agent:recipient-refresh"))
+        .expect("message query should succeed")
+        .expect("message payload should exist");
+    assert_eq!(
+        message_payload.status, "delivered",
+        "recipient query should observe daemon-projected relayed state and promote to delivered"
+    );
+
+    let persisted =
+        std::fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+    let state_json: Value = serde_json::from_str(persisted.as_str()).expect("state json parses");
+    assert_eq!(
+        state_json["messages"]["msg-refresh-1"]["status"], "delivered",
+        "delivery transition should persist after disk refresh"
+    );
+
+    let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
 fn integration_message_store_persists_data_layer_runtime_evidence_for_m0_to_m11() {
     let unique_suffix = format!(
         "{}-{}",

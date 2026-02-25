@@ -580,32 +580,48 @@ pub(super) async fn handle_service_api_http_route(
         if let Some(channel_id) =
             super::payload::channel_messages_path_id(context.parsed_request.path.as_str())
         {
-            let payload = {
-                let message_store = state.message_store.lock().await;
+            let channel_payload = {
+                let mut message_store = state.message_store.lock().await;
                 message_store.list_channel_messages(channel_id)
             };
-            return super::payload::contract_response(ServiceApiEndpointResponse {
-                status_code: 200,
-                content_type: "application/json",
-                body: super::serialize_service_api_json(&payload),
-            });
-        }
-        if let Some(task_id) = super::payload::task_path_id(context.parsed_request.path.as_str()) {
-            let task_payload = {
-                let message_store = state.message_store.lock().await;
-                message_store.get_task(task_id)
-            };
-            return match task_payload {
-                Some(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+            return match channel_payload {
+                Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
                 }),
-                None => super::payload::json_error_response(
+                Err(error) => super::payload::json_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    REASON_CODE_STATE_PERSISTENCE_FAILED,
+                    format!("service api channel query failed: {error}").as_str(),
+                ),
+            };
+        }
+        if let Some(task_id) = super::payload::task_path_id(context.parsed_request.path.as_str()) {
+            let task_payload = {
+                let mut message_store = state.message_store.lock().await;
+                message_store.get_task(task_id)
+            };
+            return match task_payload {
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     REASON_CODE_ROUTE_NOT_FOUND,
                     "not found",
+                ),
+                Err(error) => super::payload::json_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    REASON_CODE_STATE_PERSISTENCE_FAILED,
+                    format!("service api task query failed: {error}").as_str(),
                 ),
             };
         }
