@@ -2,8 +2,8 @@
 
 - Issue: #5936
 - Spec: `specs/5936/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5936/spec.md.
@@ -13,8 +13,17 @@
 
 ## Affected Modules (Initial)
 - `crates/kamn-core/src/data_layer_m0.rs` to `crates/kamn-core/src/data_layer_m11.rs`
-- `crates/kamn-node/src/service_api_endpoint.rs`
-- `crates/kamn-node/src/main.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store.rs`
+- `crates/kamn-node/src/service_api_endpoint/tests.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`
+- `docs/architecture/data-layer-runtime-wiring.md`
+- `docs/security/secure-coding.md`
+
+## Delivered Wiring
+1. Added fail-closed runtime evidence builder in Service API message-store create path.
+2. Persisted deterministic M0-M11 evidence markers per created message.
+3. Added unit + integration coverage proving send-path execution and persistence.
+4. Documented module-to-runtime boundaries and evidence schema.
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.

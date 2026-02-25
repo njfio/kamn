@@ -56,5 +56,6 @@ This milestone closes production-readiness blockers across cryptography correctn
   `crates/kamn-runtime-guards` and migrating runtime guard contracts behind
   `kamn-core` compatibility shims (`anti_spam`, `fairness_policy`,
   `quota_policy`, `message_delivery_guards`, `retention_engine`, `watchdog`).
+- 2026-02-25: `#5936` wires Service API message-send runtime through M0-M11 module contracts and persists deterministic `data_layer_runtime_evidence` markers for each created message.
 - 2026-02-25: `#5938` expands parser/protocol fuzz surfaces to signature-profile and Kolme API codec targets with deterministic corpus replay metadata and property invariants.
 - 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.
