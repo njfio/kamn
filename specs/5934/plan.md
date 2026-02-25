@@ -2,8 +2,8 @@
 
 - Issue: #5934
 - Spec: `specs/5934/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5934/spec.md.
@@ -12,10 +12,18 @@
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
 
 ## Affected Modules (Initial)
-- `scripts/`
-- `.github/workflows/`
-- `scripts/ci/check_shell_loc_hard_ceiling.sh`
-- `scripts/ci/check_governance_ratio.sh`
+- `scripts/ci/generate_combined_shell_surface_trend_report.sh`
+- `scripts/ci/check_combined_shell_surface_trend_policy.sh`
+- `scripts/ci/test_generate_combined_shell_surface_trend_report.sh`
+- `scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
+- `scripts/ci/ignored_test_and_script_budget_trend_contract_lane_impl.sh`
+- `fixtures/ci/ignored_test_inventory_baseline.json`
+- `fixtures/ci/ignored_test_inventory_metadata.json`
+
+## Delivery Notes
+1. Implemented governance structural-coupling extraction from review markers and policy-file parsing in combined shell-surface trend generation.
+2. Added fail-closed governance validations and deterministic WARN/NO-GO reason projection in combined trend policy evaluation.
+3. Refreshed ignored-test baseline fixtures and contract-lane fixtures to keep CI tool regression lanes converged with current repository state.
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
