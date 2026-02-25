@@ -134,17 +134,42 @@ fn run_full_supervisor_http_probe(
                         format!("bind_addr={bind_addr};path={path};write:{error}"),
                     )
                 })?;
-                let mut buffer = [0_u8; 128];
-                let read_count = stream.read(&mut buffer).map_err(|error| {
-                    full_supervisor_lane_error(
-                        reason_code,
-                        format!("bind_addr={bind_addr};path={path};read:{error}"),
-                    )
-                })?;
-                if read_count == 0 {
+                let mut response_bytes = Vec::new();
+                let mut buffer = [0_u8; 256];
+                loop {
+                    let read_count = stream.read(&mut buffer).map_err(|error| {
+                        full_supervisor_lane_error(
+                            reason_code,
+                            format!("bind_addr={bind_addr};path={path};read:{error}"),
+                        )
+                    })?;
+                    if read_count == 0 {
+                        break;
+                    }
+                    response_bytes.extend_from_slice(&buffer[..read_count]);
+                    if find_http_header_boundary(response_bytes.as_slice()).is_some()
+                        || response_bytes.len() >= 1024
+                    {
+                        break;
+                    }
+                }
+                if response_bytes.is_empty() {
                     return Err(full_supervisor_lane_error(
                         reason_code,
                         format!("bind_addr={bind_addr};path={path};empty_response"),
+                    ));
+                }
+                let status_code =
+                    parse_http_status_code(response_bytes.as_slice()).map_err(|detail| {
+                        full_supervisor_lane_error(
+                            reason_code,
+                            format!("bind_addr={bind_addr};path={path};{detail}"),
+                        )
+                    })?;
+                if !(200..300).contains(&status_code) {
+                    return Err(full_supervisor_lane_error(
+                        reason_code,
+                        format!("bind_addr={bind_addr};path={path};http_status:{status_code}"),
                     ));
                 }
                 return Ok(());
@@ -160,6 +185,34 @@ fn run_full_supervisor_http_probe(
             }
         }
     }
+}
+
+fn find_http_header_boundary(response_bytes: &[u8]) -> Option<usize> {
+    response_bytes
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .map(|index| index + 4)
+}
+
+fn parse_http_status_code(response_bytes: &[u8]) -> Result<u16, String> {
+    let header_end = find_http_header_boundary(response_bytes)
+        .ok_or_else(|| "response_missing_header_terminator".to_owned())?;
+    let header_text = std::str::from_utf8(&response_bytes[..header_end])
+        .map_err(|_| "response_header_not_utf8".to_owned())?;
+    let status_line = header_text
+        .lines()
+        .next()
+        .ok_or_else(|| "response_missing_status_line".to_owned())?;
+    let mut status_parts = status_line.split_whitespace();
+    let _http_version = status_parts
+        .next()
+        .ok_or_else(|| "response_missing_http_version".to_owned())?;
+    let raw_status = status_parts
+        .next()
+        .ok_or_else(|| "response_missing_status_code".to_owned())?;
+    raw_status
+        .parse::<u16>()
+        .map_err(|_| format!("response_invalid_status_code:{raw_status}"))
 }
 
 fn start_full_supervisor_service_api_lane(
@@ -1274,4 +1327,55 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
     );
 
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use std::net::TcpListener;
+    use std::thread;
+
+    fn spawn_full_supervisor_probe_server(status_line: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+        let bind_addr = listener.local_addr().expect("local addr should resolve");
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("probe connection should accept");
+            let mut read_buffer = [0_u8; 1024];
+            let _ = stream.read(&mut read_buffer);
+            let response =
+                format!("{status_line}\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok");
+            stream
+                .write_all(response.as_bytes())
+                .expect("probe response should write");
+        });
+        bind_addr.to_string()
+    }
+
+    #[test]
+    fn unit_full_supervisor_http_probe_accepts_success_status() {
+        let bind_addr = spawn_full_supervisor_probe_server("HTTP/1.1 200 OK");
+        run_full_supervisor_http_probe(
+            bind_addr.as_str(),
+            "/healthz",
+            "full_supervisor_probe_success_test",
+        )
+        .expect("full supervisor probe should accept success status code");
+    }
+
+    #[test]
+    fn regression_full_supervisor_http_probe_rejects_non_success_status() {
+        // Regression: #5932
+        let bind_addr = spawn_full_supervisor_probe_server("HTTP/1.1 503 Service Unavailable");
+        let error = run_full_supervisor_http_probe(
+            bind_addr.as_str(),
+            "/healthz",
+            "full_supervisor_probe_failure_test",
+        )
+        .expect_err("full supervisor probe must fail closed for non-success status");
+        assert!(
+            matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("http_status:503")),
+            "probe failure should include deterministic http_status classification: {error:?}"
+        );
+    }
 }

@@ -67,6 +67,7 @@ pub(crate) const DEFAULT_SERVICE_API_CONCURRENCY_LIMIT: u64 = 32;
 pub(crate) const DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND: u64 = 120;
 pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES: usize = 65_536;
 pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS: u64 = 900;
+const SERVICE_API_RUNTIME_WORKER_THREADS: usize = 2;
 
 const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
 const ROUTE_CHANNELS_CREATE: &str = "/v1/channels/create";
@@ -724,15 +725,25 @@ pub(crate) fn serve_service_api_endpoint(
         return Err("service api concurrency limit exceeds platform usize range".to_owned());
     }
 
-    let runtime = Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .map_err(|error| format!("service api runtime init failed: {error}"))?;
+    let runtime = build_service_api_runtime()?;
     runtime.block_on(serve_service_api_endpoint_async(
         config.clone(),
         snapshot.clone(),
     ))
+}
+
+fn build_service_api_runtime() -> Result<tokio::runtime::Runtime, String> {
+    Builder::new_multi_thread()
+        .worker_threads(SERVICE_API_RUNTIME_WORKER_THREADS)
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|error| format!("service api runtime init failed: {error}"))
+}
+
+#[cfg(test)]
+pub(crate) fn service_api_runtime_worker_threads_for_test() -> usize {
+    SERVICE_API_RUNTIME_WORKER_THREADS
 }
 
 async fn serve_service_api_endpoint_async(

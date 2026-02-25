@@ -17,6 +17,7 @@ pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH: &str = "/readyz"
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH: &str = "/metrics.stream";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS: u64 = 5_000;
+const OBSERVABILITY_RUNTIME_WORKER_THREADS: usize = 2;
 const OBSERVABILITY_HEALTH_SCHEMA_VERSION: &str = "kamn.runtime.observability.health.v1";
 const OBSERVABILITY_READINESS_SCHEMA_VERSION: &str = "kamn.runtime.observability.readiness.v1";
 const OBSERVABILITY_STREAM_SCHEMA_VERSION: &str = "kamn.runtime.observability.stream.v1";
@@ -216,15 +217,25 @@ pub(crate) fn serve_observability_endpoint(
         return Err("observability endpoint idle timeout must be greater than zero".to_owned());
     }
 
-    let runtime = Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .map_err(|error| format!("observability endpoint runtime init failed: {error}"))?;
+    let runtime = build_observability_runtime()?;
     runtime.block_on(endpoint_server::serve_observability_endpoint_async(
         config.clone(),
         snapshot.clone(),
     ))
+}
+
+fn build_observability_runtime() -> Result<tokio::runtime::Runtime, String> {
+    Builder::new_multi_thread()
+        .worker_threads(OBSERVABILITY_RUNTIME_WORKER_THREADS)
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|error| format!("observability endpoint runtime init failed: {error}"))
+}
+
+#[cfg(test)]
+pub(crate) fn observability_runtime_worker_threads_for_test() -> usize {
+    OBSERVABILITY_RUNTIME_WORKER_THREADS
 }
 
 fn render_observability_endpoint_response_with_paths(
@@ -285,8 +296,8 @@ fn render_observability_http_response(response: ObservabilityEndpointResponse) -
 #[cfg(test)]
 mod tests {
     use super::{
-        render_observability_endpoint_response, serve_observability_endpoint,
-        ObservabilityEndpointConfig, RuntimeObservabilitySnapshot,
+        observability_runtime_worker_threads_for_test, render_observability_endpoint_response,
+        serve_observability_endpoint, ObservabilityEndpointConfig, RuntimeObservabilitySnapshot,
     };
     use std::io::{Read, Write};
     use std::net::{TcpListener, TcpStream};
@@ -384,6 +395,14 @@ mod tests {
         assert!(response
             .body
             .contains("\"commit_dependency_status\":\"degraded\""));
+    }
+
+    #[test]
+    fn unit_observability_endpoint_runtime_contract_uses_multi_thread_builder() {
+        assert!(
+            observability_runtime_worker_threads_for_test() >= 2,
+            "observability endpoint runtime must provision at least two worker threads"
+        );
     }
 
     #[test]
