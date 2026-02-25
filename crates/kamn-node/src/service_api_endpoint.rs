@@ -70,6 +70,7 @@ pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS: u64 = 900;
 const SERVICE_API_RUNTIME_WORKER_THREADS: usize = 2;
 
 const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
+const ROUTE_MESSAGES_RELAY: &str = "/v1/messages/relay";
 const ROUTE_CHANNELS_CREATE: &str = "/v1/channels/create";
 const ROUTE_TASKS_CREATE: &str = "/v1/tasks/create";
 const ROUTE_ESCROW_FUND: &str = "/v1/escrow/fund";
@@ -117,6 +118,7 @@ const REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID: &str =
     "service_api_ingress_anti_spam_engine_invalid";
 const REASON_CODE_REQUEST_HEADER_UTF8_INVALID: &str = "service_api_request_header_utf8_invalid";
 const REASON_CODE_REQUEST_BODY_UTF8_INVALID: &str = "service_api_request_body_utf8_invalid";
+const REASON_CODE_RELAY_PAYLOAD_INVALID: &str = "service_api_relay_payload_invalid";
 const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
 const REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING: &str =
     "service_api_auth_sender_did_header_missing";
@@ -285,6 +287,12 @@ pub(crate) struct ServiceApiMessageCreateBody {
     pub(crate) message_id: String,
     pub(crate) status: String,
     pub(crate) runtime_mode: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiMessageRelayBody {
+    pub(crate) message_id: String,
+    pub(crate) status: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

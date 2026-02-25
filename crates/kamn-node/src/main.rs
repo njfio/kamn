@@ -446,6 +446,7 @@ struct DaemonRuntimeOptions {
     daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
     service_api_state_file: Option<String>,
     service_api_relay_spool_file: Option<String>,
+    service_api_signature_state_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

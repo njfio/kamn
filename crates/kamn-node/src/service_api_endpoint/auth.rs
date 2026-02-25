@@ -220,6 +220,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope>
     }
     let scope = match (method, path) {
         ("POST", ROUTE_MESSAGES_SEND) => ServiceApiScope::MessagesWrite,
+        ("POST", ROUTE_MESSAGES_RELAY) => ServiceApiScope::MessagesWrite,
         ("POST", ROUTE_CHANNELS_CREATE) => ServiceApiScope::ChannelsWrite,
         ("POST", ROUTE_TASKS_CREATE) => ServiceApiScope::TasksWrite,
         ("POST", _) if super::payload::task_accept_path_id(path).is_some() => {
@@ -282,6 +283,10 @@ mod tests {
     fn unit_required_scope_for_route_maps_known_route_contracts() {
         assert_eq!(
             required_scope_for_route("POST", ROUTE_MESSAGES_SEND),
+            Some(ServiceApiScope::MessagesWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", ROUTE_MESSAGES_RELAY),
             Some(ServiceApiScope::MessagesWrite)
         );
         assert_eq!(

@@ -224,6 +224,101 @@ impl ServiceApiMessageStore {
         })
     }
 
+    pub(super) fn upsert_relayed_message(
+        &mut self,
+        message_id: &str,
+        sender_did: Option<&str>,
+        recipient_did: &str,
+        body: &str,
+    ) -> Result<ServiceApiMessageRelayBody, String> {
+        self.refresh_from_disk()?;
+        let normalized_message_id = message_id.trim();
+        if normalized_message_id.is_empty() {
+            return Err("relay message id must not be empty".to_owned());
+        }
+        let normalized_recipient_did = recipient_did.trim();
+        if normalized_recipient_did.is_empty() {
+            return Err("relay recipient did must not be empty".to_owned());
+        }
+        let normalized_sender_did = sender_did.map(str::trim).filter(|value| !value.is_empty());
+
+        let mut mutated = false;
+        if let Some(record) = self.snapshot.messages.get_mut(normalized_message_id) {
+            if record.recipient_did.as_deref() != Some(normalized_recipient_did) {
+                return Err(format!(
+                    "relay recipient mismatch for {normalized_message_id}: expected={}, actual={normalized_recipient_did}",
+                    record.recipient_did.as_deref().unwrap_or("none")
+                ));
+            }
+            if record.body.as_deref() != Some(body) {
+                return Err(format!(
+                    "relay body mismatch for {normalized_message_id}: existing payload differs"
+                ));
+            }
+            if let Some(sender) = normalized_sender_did {
+                match record.sender_did.as_deref() {
+                    Some(existing) if existing != sender => {
+                        return Err(format!(
+                            "relay sender mismatch for {normalized_message_id}: expected={existing}, actual={sender}"
+                        ));
+                    }
+                    None => {
+                        record.sender_did = Some(sender.to_owned());
+                        mutated = true;
+                    }
+                    _ => {}
+                }
+            }
+            if record.status.as_str() == "created" {
+                record.status = "relayed".to_owned();
+                mutated = true;
+            }
+        } else {
+            self.snapshot.messages.insert(
+                normalized_message_id.to_owned(),
+                ServiceApiPersistedMessageRecord {
+                    message_id: normalized_message_id.to_owned(),
+                    status: "relayed".to_owned(),
+                    channel_id: None,
+                    sender_did: normalized_sender_did.map(str::to_owned),
+                    recipient_did: Some(normalized_recipient_did.to_owned()),
+                    body: Some(body.to_owned()),
+                    data_layer_runtime_evidence: None,
+                },
+            );
+            mutated = true;
+        }
+
+        let mailbox_channel_id = recipient_mailbox_channel_id(normalized_recipient_did);
+        let mailbox = self
+            .snapshot
+            .channel_messages
+            .entry(mailbox_channel_id)
+            .or_default();
+        if !mailbox
+            .iter()
+            .any(|candidate| candidate == normalized_message_id)
+        {
+            mailbox.push(normalized_message_id.to_owned());
+            mutated = true;
+        }
+
+        if mutated {
+            self.persist()?;
+        }
+
+        let status = self
+            .snapshot
+            .messages
+            .get(normalized_message_id)
+            .map(|record| record.status.clone())
+            .unwrap_or_else(|| "relayed".to_owned());
+        Ok(ServiceApiMessageRelayBody {
+            message_id: normalized_message_id.to_owned(),
+            status,
+        })
+    }
+
     pub(super) fn get_message_for_requester(
         &mut self,
         message_id: &str,
