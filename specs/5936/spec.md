@@ -1,12 +1,12 @@
 # Spec: Issue #5936 - Task: Wire Data Layer M0-M11 into service runtime paths with staged activation
 
 - Issue: #5936
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5919
 
 ## Problem Statement
@@ -40,6 +40,17 @@ Out of scope:
 - AC-3 verification tests pass in scoped CI runs.
 - AC-4 verification tests pass in scoped CI runs.
 
+## Implementation Notes
+- Runtime wiring is executed on `POST /v1/messages/send` through `ServiceApiMessageStore::create_message`.
+- Message persistence now includes `data_layer_runtime_evidence` with schema marker `kamn.runtime.service-api-data-layer-runtime-evidence.v1`.
+- M0-M11 module operations are executed before state write; errors fail closed and abort message creation.
+
+## Verification Evidence
+- `cargo test -p kamn-node data_layer_runtime_evidence_for_m0_to_m11`
+- `cargo test -p kamn-node service_api_endpoint`
+- `cargo fmt --check`
+- `cargo clippy -p kamn-node --tests -- -D warnings`
+
 
 ## Required Test Categories
 - Unit: module-level behavior tests
@@ -50,4 +61,3 @@ Out of scope:
 
 ## Dependencies
 - #5919
-
