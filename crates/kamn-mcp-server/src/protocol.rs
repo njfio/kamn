@@ -1,8 +1,8 @@
 use crate::dispatch_tool_request_json;
 use crate::invalid_request_response_json;
-use crate::json_helpers::{escape_json, json_field_value};
 #[cfg(test)]
-use crate::json_helpers::{json_optional_u64_field, json_required_string_field};
+use crate::json_helpers::json_required_string_field;
+use crate::json_helpers::{escape_json, json_field_value};
 use crate::tools::build_tool_registry;
 use crate::McpToolBackend;
 use serde_json::Value;
@@ -405,7 +405,7 @@ fn jsonrpc_error_with_id(id_token: &str, code: i32, message: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_framed_payloads, escape_json, json_optional_u64_field, json_required_string_field,
+        decode_framed_payloads, escape_json, json_optional_u64_value, json_required_string_field,
         normalize_id_for_dispatch, parse_content_length,
     };
 
@@ -483,22 +483,21 @@ mod tests {
 
     #[test]
     fn spec_c03_protocol_json_optional_u64_contract_supports_numeric_and_quoted_forms() {
-        assert_eq!(
-            json_optional_u64_field(r#"{"block_height":9}"#, "block_height"),
-            Some(9),
-        );
-        assert_eq!(
-            json_optional_u64_field(r#"{"block_height":"11"}"#, "block_height"),
-            Some(11),
-        );
-        assert_eq!(
-            json_optional_u64_field(r#"{"block_height":"x"}"#, "block_height"),
-            None,
-        );
-        assert_eq!(
-            json_optional_u64_field(r#"{"other":1}"#, "block_height"),
-            None,
-        );
+        let numeric = serde_json::from_str::<serde_json::Value>(r#"{"block_height":9}"#)
+            .expect("numeric payload should parse");
+        assert_eq!(json_optional_u64_value(&numeric, "block_height"), Some(9),);
+
+        let quoted = serde_json::from_str::<serde_json::Value>(r#"{"block_height":"11"}"#)
+            .expect("quoted numeric payload should parse");
+        assert_eq!(json_optional_u64_value(&quoted, "block_height"), Some(11),);
+
+        let invalid = serde_json::from_str::<serde_json::Value>(r#"{"block_height":"x"}"#)
+            .expect("invalid payload should parse");
+        assert_eq!(json_optional_u64_value(&invalid, "block_height"), None,);
+
+        let missing = serde_json::from_str::<serde_json::Value>(r#"{"other":1}"#)
+            .expect("payload should parse");
+        assert_eq!(json_optional_u64_value(&missing, "block_height"), None,);
     }
 
     #[test]
@@ -524,9 +523,12 @@ mod tests {
             "escaped quotes in nested payload values must round-trip without truncation"
         );
         assert_eq!(
-            json_optional_u64_field(
-                r#"{"params":{"arguments":{"block_height":"17"}}}"#,
-                "block_height"
+            json_optional_u64_value(
+                &serde_json::from_str::<serde_json::Value>(
+                    r#"{"params":{"arguments":{"block_height":"17"}}}"#
+                )
+                .expect("payload should parse"),
+                "block_height",
             ),
             Some(17),
             "quoted numeric arguments in nested payload must parse as u64"
