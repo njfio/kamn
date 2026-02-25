@@ -3,6 +3,7 @@
 //! This module defines in-memory reference behavior for storing content payloads,
 //! retrieving metadata, and verifying deterministic integrity tags.
 
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
@@ -10,9 +11,13 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const CID_PREFIX: &str = "kamn:cid:v1:";
+const CID_V1_PREFIX: &str = "kamn:cid:v1:";
+const CID_V2_PREFIX: &str = "kamn:cid:v2:";
 const CONTENT_URI_PREFIX: &str = "kamn:content:v1:";
-const CID_HASH_HEX_LEN: usize = 16;
+const CID_V1_HASH_HEX_LEN: usize = 16;
+const CID_V2_HASH_HEX_LEN: usize = 64;
+const INTEGRITY_TAG_V1_PREFIX: &str = "fnv1a64:";
+const INTEGRITY_TAG_V2_PREFIX: &str = "sha256:";
 const CONTENT_STORE_SCHEMA_VERSION: &str = "kamn.content.file-store.v1";
 
 /// Stored content payload and metadata returned by `get`.
@@ -135,8 +140,10 @@ impl ContentStorageAdapter for InMemoryContentAdapter {
             .get(cid)
             .ok_or_else(|| ContentStorageError::NotFound(cid.to_owned()))?;
 
-        let expected_cid = cid_for_payload(&object.payload);
-        let expected_integrity_tag = integrity_tag_for_payload(&object.payload);
+        let cid_version = parse_content_cid_version(cid)?;
+        let expected_cid = expected_cid_for_payload(&object.payload, cid_version);
+        let expected_integrity_tag =
+            expected_integrity_tag_for_payload(&object.payload, cid_version);
         if expected_cid != cid || expected_integrity_tag != object.integrity_tag {
             return Err(ContentStorageError::IntegrityMismatch {
                 cid: cid.to_owned(),
@@ -220,8 +227,10 @@ impl ContentStorageAdapter for FileContentAdapter {
             .get(cid)
             .ok_or_else(|| ContentStorageError::NotFound(cid.to_owned()))?;
 
-        let expected_cid = cid_for_payload(&object.payload);
-        let expected_integrity_tag = integrity_tag_for_payload(&object.payload);
+        let cid_version = parse_content_cid_version(cid)?;
+        let expected_cid = expected_cid_for_payload(&object.payload, cid_version);
+        let expected_integrity_tag =
+            expected_integrity_tag_for_payload(&object.payload, cid_version);
         if expected_cid != cid || expected_integrity_tag != object.integrity_tag {
             return Err(ContentStorageError::IntegrityMismatch {
                 cid: cid.to_owned(),
@@ -403,11 +412,13 @@ fn parse_content_store_payload(
         }
         let payload_bytes = decode_hex(payload_hex)
             .ok_or_else(|| ContentStorageError::InvalidPayload(line.to_owned()))?;
-        let expected_cid = cid_for_payload(&payload_bytes);
+        let cid_version = parse_content_cid_version(cid)?;
+        let expected_cid = expected_cid_for_payload(&payload_bytes, cid_version);
         if expected_cid != cid {
             return Err(ContentStorageError::InvalidPayload(line.to_owned()));
         }
-        let expected_integrity_tag = integrity_tag_for_payload(&payload_bytes);
+        let expected_integrity_tag =
+            expected_integrity_tag_for_payload(&payload_bytes, cid_version);
         if expected_integrity_tag != integrity_tag {
             return Err(ContentStorageError::InvalidPayload(line.to_owned()));
         }
@@ -458,22 +469,79 @@ fn decode_nibble(value: u8) -> Option<u8> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ContentCidVersion {
+    V1,
+    V2,
+}
+
 fn cid_for_payload(payload: &[u8]) -> String {
-    format!("{CID_PREFIX}{}", fnv1a_hex(payload))
+    format!("{CID_V2_PREFIX}{}", sha256_hex(payload))
+}
+
+fn legacy_cid_for_payload(payload: &[u8]) -> String {
+    format!("{CID_V1_PREFIX}{}", fnv1a_hex(payload))
 }
 
 fn integrity_tag_for_payload(payload: &[u8]) -> String {
-    format!("fnv1a64:{}", fnv1a_hex(payload))
+    format!("{INTEGRITY_TAG_V2_PREFIX}{}", sha256_hex(payload))
+}
+
+fn legacy_integrity_tag_for_payload(payload: &[u8]) -> String {
+    format!("{INTEGRITY_TAG_V1_PREFIX}{}", fnv1a_hex(payload))
+}
+
+fn expected_cid_for_payload(payload: &[u8], version: ContentCidVersion) -> String {
+    match version {
+        ContentCidVersion::V1 => legacy_cid_for_payload(payload),
+        ContentCidVersion::V2 => cid_for_payload(payload),
+    }
+}
+
+fn expected_integrity_tag_for_payload(payload: &[u8], version: ContentCidVersion) -> String {
+    match version {
+        ContentCidVersion::V1 => legacy_integrity_tag_for_payload(payload),
+        ContentCidVersion::V2 => integrity_tag_for_payload(payload),
+    }
+}
+
+fn parse_content_cid_version(cid: &str) -> Result<ContentCidVersion, ContentStorageError> {
+    if cid.starts_with(CID_V1_PREFIX) {
+        return Ok(ContentCidVersion::V1);
+    }
+    if cid.starts_with(CID_V2_PREFIX) {
+        return Ok(ContentCidVersion::V2);
+    }
+    Err(ContentStorageError::InvalidCid(cid.to_owned()))
 }
 
 fn validate_cid(cid: &str) -> Result<(), ContentStorageError> {
-    let Some(digest) = cid.strip_prefix(CID_PREFIX) else {
+    let (version, digest) = if let Some(digest) = cid.strip_prefix(CID_V1_PREFIX) {
+        (ContentCidVersion::V1, digest)
+    } else if let Some(digest) = cid.strip_prefix(CID_V2_PREFIX) {
+        (ContentCidVersion::V2, digest)
+    } else {
         return Err(ContentStorageError::InvalidCid(cid.to_owned()));
     };
-    if digest.len() != CID_HASH_HEX_LEN || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    let expected_len = match version {
+        ContentCidVersion::V1 => CID_V1_HASH_HEX_LEN,
+        ContentCidVersion::V2 => CID_V2_HASH_HEX_LEN,
+    };
+    if digest.len() != expected_len || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return Err(ContentStorageError::InvalidCid(cid.to_owned()));
     }
     Ok(())
+}
+
+fn sha256_hex(payload: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let digest = Sha256::digest(payload);
+    let mut output = String::with_capacity(64);
+    for byte in digest {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
 }
 
 fn fnv1a_hex(payload: &[u8]) -> String {
@@ -488,15 +556,39 @@ fn fnv1a_hex(payload: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        cid_for_payload, cid_from_content_uri, content_uri_for_cid, fnv1a_hex, validate_cid,
-        ContentStorageError,
+        cid_for_payload, cid_from_content_uri, content_uri_for_cid, fnv1a_hex,
+        legacy_integrity_tag_for_payload, parse_content_store_payload, validate_cid,
+        ContentStorageError, InMemoryContentAdapter, StoredObject,
     };
+    use crate::content_storage::ContentStorageAdapter;
+
+    const SHA256_ABC_HEX: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
     #[test]
     fn cid_for_payload_is_deterministic() {
         let first = cid_for_payload(b"payload");
         let second = cid_for_payload(b"payload");
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn red_issue_6000_put_uses_sha256_v2_cid_and_integrity_tag() {
+        // RED: #6000
+        let mut adapter = InMemoryContentAdapter::new();
+        let head = adapter
+            .put("text/plain", b"abc")
+            .expect("put should succeed");
+
+        assert_eq!(
+            head.cid,
+            format!("kamn:cid:v2:{SHA256_ABC_HEX}"),
+            "new writes must emit v2 sha256 CID"
+        );
+        assert_eq!(
+            head.integrity_tag,
+            format!("sha256:{SHA256_ABC_HEX}"),
+            "new writes must emit sha256 integrity tag"
+        );
     }
 
     #[test]
@@ -515,6 +607,50 @@ mod tests {
         let uri = content_uri_for_cid(&cid).expect("uri should be valid");
         let decoded = cid_from_content_uri(&uri).expect("uri should decode");
         assert_eq!(decoded, cid);
+    }
+
+    #[test]
+    fn red_issue_6000_validate_cid_accepts_v2_sha256_digest() {
+        // RED: #6000
+        let cid = format!("kamn:cid:v2:{SHA256_ABC_HEX}");
+        assert_eq!(validate_cid(cid.as_str()), Ok(()));
+    }
+
+    #[test]
+    fn regression_issue_6000_parse_payload_accepts_legacy_v1_rows() {
+        // Regression: #6000
+        let payload = "abc";
+        let cid = format!("kamn:cid:v1:{}", fnv1a_hex(payload.as_bytes()));
+        let media_type_hex = "746578742f706c61696e";
+        let payload_hex = "616263";
+        let line = format!(
+            "schema|kamn.content.file-store.v1\nobject|{cid}|{media_type_hex}|{payload_hex}|{}",
+            legacy_integrity_tag_for_payload(payload.as_bytes())
+        );
+
+        let parsed = parse_content_store_payload(line.as_str())
+            .expect("legacy v1 payload rows must remain accepted");
+        assert_eq!(parsed.len(), 1);
+    }
+
+    #[test]
+    fn regression_issue_6000_verify_accepts_legacy_v1_object_records() {
+        // Regression: #6000
+        let payload = b"legacy-record";
+        let cid = format!("kamn:cid:v1:{}", fnv1a_hex(payload));
+        let mut adapter = InMemoryContentAdapter::new();
+        adapter.objects.insert(
+            cid.clone(),
+            StoredObject {
+                media_type: "text/plain".to_owned(),
+                payload: payload.to_vec(),
+                integrity_tag: legacy_integrity_tag_for_payload(payload),
+            },
+        );
+
+        adapter
+            .verify(cid.as_str())
+            .expect("legacy v1 record should remain verifiable");
     }
 
     #[test]
