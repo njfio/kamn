@@ -126,12 +126,6 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
         "1".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
         "1".to_owned(),
-        "--daemon-shutdown-signal-tick".to_owned(),
-        "1".to_owned(),
-        "--daemon-shutdown-drain-ticks".to_owned(),
-        "1".to_owned(),
-        "--daemon-shutdown-timeout-ticks".to_owned(),
-        "1".to_owned(),
     ])
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");

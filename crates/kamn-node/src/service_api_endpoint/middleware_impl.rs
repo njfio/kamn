@@ -1,5 +1,12 @@
 use super::*;
 
+struct ServiceApiRelayIngestPayload {
+    message_id: String,
+    sender_did: Option<String>,
+    recipient_did: String,
+    body: String,
+}
+
 pub(super) async fn service_api_auth_middleware(
     State(state): State<Arc<ServiceApiRuntimeState>>,
     request: Request,
@@ -389,6 +396,43 @@ pub(super) async fn handle_service_api_http_route(
             ),
         };
     }
+    if context.parsed_request.method == "POST"
+        && context.parsed_request.path == ROUTE_MESSAGES_RELAY
+    {
+        let relay_payload = match parse_relay_ingest_payload(context.parsed_request.body.as_str()) {
+            Ok(payload) => payload,
+            Err(error) => {
+                return super::payload::json_error_response(
+                    StatusCode::BAD_REQUEST,
+                    "bad-request",
+                    error.reason_code,
+                    error.message.as_str(),
+                );
+            }
+        };
+        let relay_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.upsert_relayed_message(
+                relay_payload.message_id.as_str(),
+                relay_payload.sender_did.as_deref(),
+                relay_payload.recipient_did.as_str(),
+                relay_payload.body.as_str(),
+            )
+        };
+        return match relay_result {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 202,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api relay persistence failed: {error}").as_str(),
+            ),
+        };
+    }
     if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_MESSAGES_SEND
     {
         let channel_id = extract_channel_id_from_payload(context.parsed_request.body.as_str());
@@ -659,6 +703,62 @@ fn extract_recipient_did_from_payload(payload: &str) -> Option<String> {
         return Some(recipient_did.to_owned());
     }
     None
+}
+
+fn parse_relay_ingest_payload(
+    payload: &str,
+) -> Result<ServiceApiRelayIngestPayload, ServiceApiReasonedError> {
+    let parsed = serde_json::from_str::<serde_json::Value>(payload).map_err(|error| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_RELAY_PAYLOAD_INVALID,
+            format!("relay payload must be valid json: {error}"),
+        )
+    })?;
+
+    let message_id = parsed
+        .get("message_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_RELAY_PAYLOAD_INVALID,
+                "relay payload missing non-empty message_id",
+            )
+        })?;
+    let recipient_did = parsed
+        .get("recipient_did")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_RELAY_PAYLOAD_INVALID,
+                "relay payload missing non-empty recipient_did",
+            )
+        })?;
+    let body = parsed
+        .get("body")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_RELAY_PAYLOAD_INVALID,
+                "relay payload missing string body",
+            )
+        })?;
+    let sender_did = parsed
+        .get("sender_did")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned);
+
+    Ok(ServiceApiRelayIngestPayload {
+        message_id: message_id.to_owned(),
+        sender_did,
+        recipient_did: recipient_did.to_owned(),
+        body: body.to_owned(),
+    })
 }
 
 pub(super) async fn handle_service_api_websocket_route(

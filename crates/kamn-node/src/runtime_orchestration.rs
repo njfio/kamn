@@ -925,6 +925,11 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
         diagnostics_mode,
     } = cli;
     let execution_id = build_runtime_execution_id(runtime_mode, chain_id.as_str(), role.as_str());
+    let service_api_signature_state_hash = format!(
+        "service-api:{}:{}",
+        chain_id.as_str(),
+        chain_version.as_str()
+    );
 
     let config = NodeConfig {
         chain_id: chain_id.clone(),
@@ -1030,6 +1035,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_lifecycle_events,
                     service_api_state_file,
                     service_api_relay_spool_file,
+                    service_api_signature_state_hash: service_api_signature_state_hash.clone(),
                 },
             )?;
             RuntimeExecutionBundle {
@@ -1143,6 +1149,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_lifecycle_events,
                     service_api_state_file,
                     service_api_relay_spool_file,
+                    service_api_signature_state_hash: service_api_signature_state_hash.clone(),
                 },
             ) {
                 Ok(execution) => execution,

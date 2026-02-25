@@ -4726,6 +4726,376 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
 }
 
 #[test]
+fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
+    let _env = acquire_service_api_test_env();
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let sender_state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-cross-node-sender-state-{unique_suffix}.json"
+    ));
+    let sender_relay_spool_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-cross-node-sender-spool-{unique_suffix}.ndjson"
+    ));
+    let recipient_state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-cross-node-recipient-state-{unique_suffix}.json"
+    ));
+    let recipient_relay_spool_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-cross-node-recipient-spool-{unique_suffix}.ndjson"
+    ));
+    let sender_state_file_str = sender_state_file.to_string_lossy().to_string();
+    let sender_relay_spool_file_str = sender_relay_spool_file.to_string_lossy().to_string();
+    let recipient_state_file_str = recipient_state_file.to_string_lossy().to_string();
+    let recipient_relay_spool_file_str = recipient_relay_spool_file.to_string_lossy().to_string();
+
+    let _sender_state_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_STATE_FILE",
+        Some(sender_state_file_str.as_str()),
+    );
+    let _sender_relay_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+        Some(sender_relay_spool_file_str.as_str()),
+    );
+    let sender_bootstrap = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34115".to_owned(),
+        ])
+        .expect("sender api args should parse"),
+    )
+    .expect("sender api execution should succeed");
+    let sender_snapshot = build_service_api_snapshot(&sender_bootstrap);
+    let sender_state_hash = format!(
+        "service-api:{}:{}",
+        sender_snapshot.chain_id.as_str(),
+        sender_snapshot.chain_version.as_str()
+    );
+
+    let sender_bind_addr = reserve_loopback_addr();
+    let sender_endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: sender_bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let sender_server_snapshot = sender_snapshot.clone();
+    let sender_server = thread::spawn(move || {
+        serve_service_api_endpoint(&sender_endpoint_config, &sender_server_snapshot)
+    });
+    wait_for_endpoint_ready(sender_bind_addr.as_str());
+
+    let _recipient_state_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_STATE_FILE",
+        Some(recipient_state_file_str.as_str()),
+    );
+    let _recipient_relay_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+        Some(recipient_relay_spool_file_str.as_str()),
+    );
+    let recipient_bootstrap = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34116".to_owned(),
+        ])
+        .expect("recipient api args should parse"),
+    )
+    .expect("recipient api execution should succeed");
+    let recipient_snapshot = build_service_api_snapshot(&recipient_bootstrap);
+    let recipient_state_hash = format!(
+        "service-api:{}:{}",
+        recipient_snapshot.chain_id.as_str(),
+        recipient_snapshot.chain_version.as_str()
+    );
+
+    let recipient_bind_addr = reserve_loopback_addr();
+    let recipient_endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: recipient_bind_addr.clone(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let recipient_server_snapshot = recipient_snapshot.clone();
+    let recipient_server = thread::spawn(move || {
+        serve_service_api_endpoint(&recipient_endpoint_config, &recipient_server_snapshot)
+    });
+    wait_for_endpoint_ready(recipient_bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:cross-node-sender";
+    let recipient_did = "kamn:did:agent:cross-node-recipient";
+    let send_body =
+        r#"{"recipient_did":"kamn:did:agent:cross-node-recipient","message":"cross-node"}"#;
+    let send_signature = service_api_request_signature_for_fields(
+        sender_did,
+        81,
+        sender_state_hash.as_str(),
+        send_body,
+    );
+    let send_response = send_http_request_with_headers(
+        sender_bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        send_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "81"),
+            ("X-KAMN-Request-Signature", send_signature.as_str()),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("sender send payload should deserialize");
+    let sender_server_result = sender_server
+        .join()
+        .expect("sender endpoint thread should complete");
+    assert!(
+        sender_server_result.is_ok(),
+        "sender endpoint should stop cleanly after send request"
+    );
+    let sender_spool_seed = fs::read_to_string(sender_relay_spool_file.as_path())
+        .expect("sender relay spool file should remain readable before daemon run");
+    let sender_spool_seed_line = sender_spool_seed
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .expect("sender relay spool should include at least one relay entry");
+    fs::OpenOptions::new()
+        .append(true)
+        .open(sender_relay_spool_file.as_path())
+        .expect("sender relay spool file should open for idempotency duplication")
+        .write_all(format!("{sender_spool_seed_line}\n").as_bytes())
+        .expect("duplicated relay spool line should append");
+
+    {
+        let relay_route_map = format!(r#"{{"{recipient_did}":"{recipient_bind_addr}"}}"#);
+        let _daemon_sender_state_guard = EnvVarGuard::set(
+            "KAMN_SERVICE_API_STATE_FILE",
+            Some(sender_state_file_str.as_str()),
+        );
+        let _daemon_sender_spool_guard = EnvVarGuard::set(
+            "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+            Some(sender_relay_spool_file_str.as_str()),
+        );
+        let _relay_route_guard = EnvVarGuard::set(
+            "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON",
+            Some(relay_route_map.as_str()),
+        );
+        let _daemon_private_key_guard = EnvVarGuard::set(
+            "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+            Some(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX),
+        );
+
+        let daemon_report = execute(
+            parse_args(vec![
+                "kamn-node".to_owned(),
+                "--role".to_owned(),
+                "processor".to_owned(),
+                "--runtime-mode".to_owned(),
+                "daemon".to_owned(),
+                "--daemon-max-ticks".to_owned(),
+                "1".to_owned(),
+                "--daemon-tick-interval-ms".to_owned(),
+                "1".to_owned(),
+                "--daemon-shutdown-signal-tick".to_owned(),
+                "1".to_owned(),
+                "--daemon-shutdown-drain-ticks".to_owned(),
+                "1".to_owned(),
+                "--daemon-shutdown-timeout-ticks".to_owned(),
+                "1".to_owned(),
+            ])
+            .expect("daemon args should parse"),
+        )
+        .expect("daemon relay projection should succeed");
+        assert_eq!(daemon_report.runtime_mode, "daemon");
+    }
+
+    let recipient_mailbox_path = format!("/v1/channels/recipient:{recipient_did}/messages");
+    let recipient_mailbox_signature = service_api_request_signature_for_fields(
+        recipient_did,
+        82,
+        recipient_state_hash.as_str(),
+        "",
+    );
+    let recipient_mailbox_response = send_http_request_with_headers(
+        recipient_bind_addr.as_str(),
+        "GET",
+        recipient_mailbox_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Request-Nonce", "82"),
+            (
+                "X-KAMN-Request-Signature",
+                recipient_mailbox_signature.as_str(),
+            ),
+        ],
+    );
+    assert!(recipient_mailbox_response.contains("HTTP/1.1 200 OK"));
+    let recipient_mailbox_payload: ServiceApiChannelMessagesBody = parse_service_api_payload(
+        extract_http_response_body(recipient_mailbox_response.as_str()),
+    )
+    .expect("recipient mailbox payload should deserialize");
+    let relayed_count = recipient_mailbox_payload
+        .messages
+        .iter()
+        .filter(|message_id| *message_id == &send_payload.message_id)
+        .count();
+    assert_eq!(
+        relayed_count, 1,
+        "recipient mailbox should include the relayed sender message id exactly once"
+    );
+
+    let recipient_message_path = format!("/v1/messages/{}", send_payload.message_id);
+    let recipient_message_signature = service_api_request_signature_for_fields(
+        recipient_did,
+        83,
+        recipient_state_hash.as_str(),
+        "",
+    );
+    let recipient_message_response = send_http_request_with_headers(
+        recipient_bind_addr.as_str(),
+        "GET",
+        recipient_message_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Request-Nonce", "83"),
+            (
+                "X-KAMN-Request-Signature",
+                recipient_message_signature.as_str(),
+            ),
+        ],
+    );
+    assert!(recipient_message_response.contains("HTTP/1.1 200 OK"));
+    let recipient_message_payload: Value = parse_service_api_payload(extract_http_response_body(
+        recipient_message_response.as_str(),
+    ))
+    .expect("recipient message payload should deserialize");
+    assert_eq!(
+        recipient_message_payload["message_id"],
+        send_payload.message_id
+    );
+    assert_eq!(recipient_message_payload["status"], "delivered");
+    assert_eq!(recipient_message_payload["sender_did"], sender_did);
+    assert_eq!(recipient_message_payload["recipient_did"], recipient_did);
+    assert_eq!(recipient_message_payload["body"], send_body);
+
+    let recipient_server_result = recipient_server
+        .join()
+        .expect("recipient endpoint thread should complete");
+    assert!(
+        recipient_server_result.is_ok(),
+        "recipient endpoint should stop cleanly after relay(idempotent) + mailbox + message requests"
+    );
+
+    let restart_bootstrap = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34117".to_owned(),
+        ])
+        .expect("recipient restart api args should parse"),
+    )
+    .expect("recipient restart api execution should succeed");
+    let restart_snapshot = build_service_api_snapshot(&restart_bootstrap);
+    let restart_state_hash = format!(
+        "service-api:{}:{}",
+        restart_snapshot.chain_id.as_str(),
+        restart_snapshot.chain_version.as_str()
+    );
+    let restart_bind_addr = reserve_loopback_addr();
+    let restart_endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: restart_bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let restart_server_snapshot = restart_snapshot.clone();
+    let restart_server = thread::spawn(move || {
+        serve_service_api_endpoint(&restart_endpoint_config, &restart_server_snapshot)
+    });
+    wait_for_endpoint_ready(restart_bind_addr.as_str());
+
+    let restart_signature = service_api_request_signature_for_fields(
+        recipient_did,
+        84,
+        restart_state_hash.as_str(),
+        "",
+    );
+    let restart_response = send_http_request_with_headers(
+        restart_bind_addr.as_str(),
+        "GET",
+        recipient_message_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Request-Nonce", "84"),
+            ("X-KAMN-Request-Signature", restart_signature.as_str()),
+        ],
+    );
+    assert!(restart_response.contains("HTTP/1.1 200 OK"));
+    let restart_payload: Value =
+        parse_service_api_payload(extract_http_response_body(restart_response.as_str()))
+            .expect("restart recipient payload should deserialize");
+    assert_eq!(restart_payload["message_id"], send_payload.message_id);
+    assert_eq!(restart_payload["status"], "delivered");
+
+    let restart_server_result = restart_server
+        .join()
+        .expect("restart endpoint thread should complete");
+    assert!(
+        restart_server_result.is_ok(),
+        "restart endpoint should stop cleanly after durable recipient query"
+    );
+
+    let sender_state_payload = fs::read_to_string(sender_state_file.as_path())
+        .expect("sender state file should remain readable");
+    let sender_state_json: Value = serde_json::from_str(sender_state_payload.as_str())
+        .expect("sender state json should parse");
+    assert_eq!(
+        sender_state_json["messages"][send_payload.message_id.as_str()]["status"],
+        "relayed",
+        "sender state should project to relayed after successful cross-node forward"
+    );
+
+    let sender_relay_payload = fs::read_to_string(sender_relay_spool_file.as_path())
+        .expect("sender relay spool file should remain readable");
+    assert!(
+        sender_relay_payload.trim().is_empty(),
+        "sender relay spool should drain after successful cross-node forward"
+    );
+
+    let _ = fs::remove_file(sender_state_file);
+    let _ = fs::remove_file(sender_relay_spool_file);
+    let _ = fs::remove_file(recipient_state_file);
+    let _ = fs::remove_file(recipient_relay_spool_file);
+}
+
+#[test]
 fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery() {
     // Regression: #5867
     let _env = acquire_service_api_test_env();
