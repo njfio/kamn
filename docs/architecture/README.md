@@ -23,6 +23,7 @@ diagram references.
 - `docs/architecture/signer-lifecycle.md`
 - `docs/architecture/persistence-backends.md`
 - `docs/architecture/did-chain-adapter.md`
+- `docs/architecture/parser-protocol-assurance.md`
 
 ## Decision Records
 
