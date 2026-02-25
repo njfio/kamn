@@ -4333,6 +4333,13 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     )
     .expect("daemon runtime should project relay status");
     assert_eq!(daemon_report.runtime_mode, "daemon");
+    assert!(
+        daemon_report
+            .daemon_observability_throughput_tps
+            .unwrap_or(0)
+            > 0,
+        "daemon observability throughput should reflect relay projection work"
+    );
 
     let post_daemon_relay_contents = fs::read_to_string(relay_spool_file.as_path())
         .expect("relay spool file should remain readable after daemon projection");

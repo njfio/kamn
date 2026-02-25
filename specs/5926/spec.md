@@ -1,12 +1,12 @@
 # Spec: Issue #5926 - Task: Wire real end-to-end message delivery from /v1/messages/send to recipient state
 
 - Issue: #5926
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Area: messaging
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5917
 
 ## Problem Statement
@@ -29,16 +29,16 @@ Out of scope:
 - AC-4: Unit, Functional, Integration, and Regression tests are present and passing.
 
 ## Conformance Cases
-- C-01 (Functional, AC-1): Verify POST /v1/messages/send drives real recipient delivery state transitions.
-- C-02 (Functional, AC-2): Verify Delivery survives restart and is queryable via existing API surfaces.
-- C-03 (Functional, AC-3): Verify End-to-end integration tests run real processes and verify delivery semantics.
-- C-04 (Functional, AC-4): Verify Unit, Functional, Integration, and Regression tests are present and passing.
+- C-01 (Functional, AC-1): `main_tests::service_api_endpoint_tests::integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract` verifies `/v1/messages/send` -> relay spool -> daemon projection -> recipient delivery state transitions.
+- C-02 (Functional, AC-2): `main_tests::service_api_endpoint_tests::integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract` verifies relay/delivery state survives restart and remains queryable.
+- C-03 (Integration, AC-3): `main_tests::runtime_tests::integration_runtime_daemon_relay_drain_projects_message_state_to_relayed` and `main_tests::runtime_tests::integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop` verify real daemon/runtime processing against durable spool + state files.
+- C-04 (Verify, AC-4): `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract -- --exact`, `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery -- --exact`, `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::integration_runtime_daemon_relay_drain_projects_message_state_to_relayed -- --exact`, `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop -- --exact`, `cargo fmt --check`, and `cargo clippy -p kamn-node --bin kamn-node -- -D warnings` pass.
 
 ## Success Metrics / Observable Signals
-- AC-1 verification tests pass in scoped CI runs.
-- AC-2 verification tests pass in scoped CI runs.
-- AC-3 verification tests pass in scoped CI runs.
-- AC-4 verification tests pass in scoped CI runs.
+- `/v1/messages/send` produces durable relay entries and recipient mailbox linkage.
+- Daemon runtime drains relay spool entries and projects durable state from `created` -> `relayed`.
+- Recipient retrieval deterministically advances `relayed` -> `delivered` and preserves delivery status across restart.
+- Scoped verification commands pass with no conformance regressions.
 
 
 ## Required Test Categories
@@ -50,4 +50,3 @@ Out of scope:
 
 ## Dependencies
 - #5917
-

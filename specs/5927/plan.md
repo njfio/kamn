@@ -2,14 +2,20 @@
 
 - Issue: #5927
 - Spec: `specs/5927/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5927/spec.md.
 2. Implement: Implement queue polling, work dispatch, and lifecycle updates per tick.
 3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+
+## Delivered Implementation
+- Existing daemon runtime implementation on `main` already routes per-tick relay work through:
+  - `execute_daemon_service_api_relay_tick_loop` in `crates/kamn-node/src/runtime_orchestration/daemon_phase.rs`,
+  - durable spool + state projection helpers in `crates/kamn-node/src/service_api_endpoint/state_io.rs`.
+- Added stronger assertions in runtime/service-api integration tests to verify telemetry is derived from real processed relay work rather than zero/fabricated outputs.
 
 ## Affected Modules (Initial)
 - `crates/kamn-node/src/main.rs`

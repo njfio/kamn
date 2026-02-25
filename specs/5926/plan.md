@@ -2,14 +2,25 @@
 
 - Issue: #5926
 - Spec: `specs/5926/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5926/spec.md.
 2. Implement: Route API send requests through runtime queue/transport and persist lifecycle states through delivery.
 3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+
+## Delivered Implementation
+- Existing runtime/service-api implementation on `main` already provides:
+  - durable message persistence in `crates/kamn-node/src/service_api_endpoint/message_store.rs`,
+  - durable relay spool enqueue/drain + state projection in `crates/kamn-node/src/service_api_endpoint/state_io.rs`,
+  - `/v1/messages/send` to relay-spool wiring in `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs`,
+  - daemon relay tick-loop processing in `crates/kamn-node/src/runtime_orchestration/daemon_phase.rs`.
+- Added verification-strength assertions in:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`
+  - `crates/kamn-node/src/main_tests/runtime_tests/daemon_relay_projection_tests.rs`
+  to ensure observability values reflect non-zero processed work for real delivery flows.
 
 ## Affected Modules (Initial)
 - `crates/kamn-node/src/service_api_endpoint.rs`
