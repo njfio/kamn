@@ -1,18 +1,19 @@
 //! Group channel sender-key lifecycle and message protection contracts.
-//!
-//! The implementation models sender-key distribution and epoch rotation for
-//! group channels plus deterministic encryption/decryption verification paths.
 
 use crate::AgentDid;
+use chacha20poly1305::aead::{Aead, KeyInit, Payload};
+use chacha20poly1305::{XChaCha20Poly1305, XNonce};
+use sha2::{Digest, Sha256, Sha512};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fmt;
+use x25519_dalek::{PublicKey, StaticSecret};
 
 /// Key-derivation algorithm identifier stamped on group ciphertext envelopes.
-pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "SenderKey-v1";
-/// Deterministic cipher profile identifier for non-cryptographic group-message fixtures.
-pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "KAMN-Deterministic-XOR-v1";
-const ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO";
+pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "X25519";
+/// Cipher profile identifier stamped on group ciphertext envelopes.
+pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
+const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE: &str =
     "group_channel_crypto_invalid_sender_did";
 const GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE: &str =
@@ -52,9 +53,9 @@ pub struct GroupMessageCiphertext {
     pub nonce: u64,
     /// Hex-encoded encrypted payload bytes.
     pub ciphertext: String,
-    /// Integrity tag derived from shared secret, nonce, and ciphertext.
+    /// Hex-encoded 16-byte Poly1305 authentication tag.
     pub auth_tag: String,
-    /// Deterministic signature token for sender-key provenance checks.
+    /// Deterministic provenance signature token.
     pub signature: String,
 }
 
@@ -70,9 +71,6 @@ pub struct GroupChannelCryptoEngine {
 impl GroupChannelCryptoEngine {
     /// Constructs an engine for a specific channel identifier.
     pub fn new(channel_id: &str) -> Result<Self, GroupChannelCryptoError> {
-        if !insecure_group_message_crypto_enabled() {
-            return Err(GroupChannelCryptoError::InsecureCryptoDisabled);
-        }
         if channel_id.trim().is_empty() {
             return Err(GroupChannelCryptoError::EmptyChannelId);
         }
@@ -199,27 +197,46 @@ impl GroupChannelCryptoEngine {
             return Err(GroupChannelCryptoError::NonceReuse(nonce));
         }
 
-        let shared_secret = derive_sender_secret(
-            &self.channel_id,
-            &record.sender_key_ref,
+        let master_seed = load_key_agreement_master_seed()?;
+        let shared_secret = derive_group_shared_secret(
+            self.channel_id.as_str(),
+            record.sender_key_ref.as_str(),
+            record.key_generation,
+            &master_seed,
+        );
+        let aead_key = derive_group_aead_key(
+            &shared_secret,
+            self.channel_id.as_str(),
             record.key_generation,
         );
-        let plaintext_bytes = plaintext.as_bytes();
-        let keystream = derive_keystream(&shared_secret, nonce, plaintext_bytes.len());
-        let encrypted: Vec<u8> = plaintext_bytes
-            .iter()
-            .zip(keystream.iter())
-            .map(|(byte, mask)| byte ^ mask)
-            .collect();
-        let ciphertext = hex_encode(&encrypted);
 
-        let auth_tag = compute_auth_tag(&shared_secret, nonce, &ciphertext);
+        let aad: [u8; 0] = [];
+        let nonce_bytes = group_nonce_bytes(sender_did, record.key_generation, nonce);
+        let xnonce = XNonce::from(nonce_bytes);
+        let cipher = XChaCha20Poly1305::new((&aead_key).into());
+
+        let mut sealed = cipher
+            .encrypt(
+                &xnonce,
+                Payload {
+                    msg: plaintext.as_bytes(),
+                    aad: &aad,
+                },
+            )
+            .map_err(|_| GroupChannelCryptoError::EncryptionFailed)?;
+
+        let auth_tag = sealed.split_off(sealed.len() - 16);
+        let ciphertext_hex = hex_encode(&sealed);
+        let auth_tag_hex = hex_encode(&auth_tag);
+
         let signature = compute_signature(
-            &record.sender_key_ref,
+            &shared_secret,
             &self.channel_id,
+            sender_did,
             record.key_generation,
             nonce,
-            &ciphertext,
+            ciphertext_hex.as_str(),
+            auth_tag_hex.as_str(),
         );
 
         Ok(GroupMessageCiphertext {
@@ -229,8 +246,8 @@ impl GroupChannelCryptoEngine {
             sender_did: sender_did.to_owned(),
             key_generation: record.key_generation,
             nonce,
-            ciphertext,
-            auth_tag,
+            ciphertext: ciphertext_hex,
+            auth_tag: auth_tag_hex,
             signature,
         })
     }
@@ -267,34 +284,58 @@ impl GroupChannelCryptoEngine {
             });
         }
 
+        let master_seed = load_key_agreement_master_seed()?;
+        let shared_secret = derive_group_shared_secret(
+            self.channel_id.as_str(),
+            record.sender_key_ref.as_str(),
+            sealed.key_generation,
+            &master_seed,
+        );
+
         let expected_signature = compute_signature(
-            &record.sender_key_ref,
+            &shared_secret,
             &sealed.channel_id,
+            &sealed.sender_did,
             sealed.key_generation,
             sealed.nonce,
             &sealed.ciphertext,
+            &sealed.auth_tag,
         );
         if expected_signature != sealed.signature {
             return Err(GroupChannelCryptoError::SignatureMismatch);
         }
 
-        let shared_secret = derive_sender_secret(
-            &self.channel_id,
-            &record.sender_key_ref,
+        let ciphertext = hex_decode(&sealed.ciphertext)?;
+        let auth_tag = hex_decode(&sealed.auth_tag)
+            .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)?;
+
+        let mut combined = ciphertext;
+        combined.extend_from_slice(&auth_tag);
+
+        let aad: [u8; 0] = [];
+        let nonce_bytes = group_nonce_bytes(
+            sealed.sender_did.as_str(),
+            sealed.key_generation,
+            sealed.nonce,
+        );
+        let xnonce = XNonce::from(nonce_bytes);
+
+        let aead_key = derive_group_aead_key(
+            &shared_secret,
+            self.channel_id.as_str(),
             sealed.key_generation,
         );
-        let expected_tag = compute_auth_tag(&shared_secret, sealed.nonce, &sealed.ciphertext);
-        if expected_tag != sealed.auth_tag {
-            return Err(GroupChannelCryptoError::IntegrityCheckFailed);
-        }
+        let cipher = XChaCha20Poly1305::new((&aead_key).into());
 
-        let encrypted = hex_decode(&sealed.ciphertext)?;
-        let keystream = derive_keystream(&shared_secret, sealed.nonce, encrypted.len());
-        let plaintext: Vec<u8> = encrypted
-            .iter()
-            .zip(keystream.iter())
-            .map(|(byte, mask)| byte ^ mask)
-            .collect();
+        let plaintext = cipher
+            .decrypt(
+                &xnonce,
+                Payload {
+                    msg: &combined,
+                    aad: &aad,
+                },
+            )
+            .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)?;
 
         String::from_utf8(plaintext).map_err(|_| GroupChannelCryptoError::InvalidCiphertextEncoding)
     }
@@ -303,8 +344,12 @@ impl GroupChannelCryptoEngine {
 /// Error surface for group channel sender-key and ciphertext validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GroupChannelCryptoError {
-    /// Insecure deterministic group-message crypto is disabled by policy.
+    /// Compatibility marker retained for existing callers; no longer emitted.
     InsecureCryptoDisabled,
+    /// Required key-agreement seed is missing from the environment.
+    MissingKeyAgreementMasterSeed,
+    /// Required key-agreement seed format is invalid.
+    InvalidKeyAgreementMasterSeed,
     /// Channel identifier was empty.
     EmptyChannelId,
     /// Recipient allowlist was empty.
@@ -355,6 +400,8 @@ pub enum GroupChannelCryptoError {
     },
     /// Signature check failed for ciphertext provenance.
     SignatureMismatch,
+    /// Encryption failed.
+    EncryptionFailed,
     /// Integrity tag verification failed.
     IntegrityCheckFailed,
     /// Ciphertext encoding could not be decoded as valid hex.
@@ -364,9 +411,16 @@ pub enum GroupChannelCryptoError {
 impl fmt::Display for GroupChannelCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InsecureCryptoDisabled => write!(
+            Self::InsecureCryptoDisabled => {
+                write!(f, "legacy deterministic group-message crypto has been removed")
+            }
+            Self::MissingKeyAgreementMasterSeed => write!(
                 f,
-                "deterministic group-message crypto is disabled; use production cryptographic transport or set KAMN_ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO=1 for local-only fixtures"
+                "missing required key-agreement seed KAMN_KEY_AGREEMENT_MASTER_SEED_HEX"
+            ),
+            Self::InvalidKeyAgreementMasterSeed => write!(
+                f,
+                "invalid key-agreement seed KAMN_KEY_AGREEMENT_MASTER_SEED_HEX; expected 32-byte hex"
             ),
             Self::EmptyChannelId => write!(f, "channel_id must not be empty"),
             Self::EmptyRecipients => write!(f, "recipient allowlist must not be empty"),
@@ -402,6 +456,7 @@ impl fmt::Display for GroupChannelCryptoError {
                 write!(f, "group message channel mismatch, expected {expected}, got {actual}")
             }
             Self::SignatureMismatch => write!(f, "group message signature verification failed"),
+            Self::EncryptionFailed => write!(f, "group message encryption failed"),
             Self::IntegrityCheckFailed => write!(f, "group message integrity check failed"),
             Self::InvalidCiphertextEncoding => write!(f, "invalid ciphertext encoding"),
         }
@@ -409,16 +464,6 @@ impl fmt::Display for GroupChannelCryptoError {
 }
 
 impl std::error::Error for GroupChannelCryptoError {}
-
-fn insecure_group_message_crypto_enabled() -> bool {
-    match env::var(ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV) {
-        Ok(value) => matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        ),
-        Err(_) => false,
-    }
-}
 
 fn validate_did(
     value: &str,
@@ -437,6 +482,27 @@ fn validate_sender_key_ref(value: &str) -> Result<(), GroupChannelCryptoError> {
         return Err(GroupChannelCryptoError::InvalidSenderKeyRef);
     }
     Ok(())
+}
+
+fn load_key_agreement_master_seed() -> Result<[u8; 32], GroupChannelCryptoError> {
+    let seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
+        .map_err(|_| GroupChannelCryptoError::MissingKeyAgreementMasterSeed)?;
+    parse_fixed_hex_32(seed_hex.trim())
+}
+
+fn parse_fixed_hex_32(value: &str) -> Result<[u8; 32], GroupChannelCryptoError> {
+    if value.len() != 64 {
+        return Err(GroupChannelCryptoError::InvalidKeyAgreementMasterSeed);
+    }
+    let mut out = [0u8; 32];
+    for (index, chunk) in value.as_bytes().chunks_exact(2).enumerate() {
+        let encoded = std::str::from_utf8(chunk)
+            .map_err(|_| GroupChannelCryptoError::InvalidKeyAgreementMasterSeed)?;
+        let byte = u8::from_str_radix(encoded, 16)
+            .map_err(|_| GroupChannelCryptoError::InvalidKeyAgreementMasterSeed)?;
+        out[index] = byte;
+    }
+    Ok(out)
 }
 
 fn validate_recipients(
@@ -458,66 +524,80 @@ fn validate_recipients(
     Ok(allowlist)
 }
 
-fn derive_sender_secret(channel_id: &str, sender_key_ref: &str, generation: u64) -> String {
-    format!("senderkey:{channel_id}|{sender_key_ref}|{generation}")
+fn derive_group_shared_secret(
+    channel_id: &str,
+    sender_key_ref: &str,
+    generation: u64,
+    master_seed: &[u8; 32],
+) -> [u8; 32] {
+    let sender_private = derive_x25519_private_key(master_seed, sender_key_ref);
+    let channel_material_ref = format!("{channel_id}#group-key-material-{generation}");
+    let channel_public = derive_x25519_public_key(master_seed, channel_material_ref.as_str());
+    sender_private.diffie_hellman(&channel_public).to_bytes()
 }
 
-fn derive_keystream(secret: &str, nonce: u64, len: usize) -> Vec<u8> {
-    let secret_bytes = secret.as_bytes();
-    (0..len)
-        .map(|idx| {
-            let seed = secret_bytes[idx % secret_bytes.len()];
-            seed ^ (nonce as u8).wrapping_add((idx as u8).wrapping_mul(17))
-        })
-        .collect()
+fn derive_group_aead_key(shared_secret: &[u8; 32], channel_id: &str, generation: u64) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(b"kamn:group-message:aead-key:v1:");
+    hasher.update(shared_secret);
+    hasher.update(channel_id.as_bytes());
+    hasher.update(generation.to_le_bytes());
+    let digest = hasher.finalize();
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&digest[..32]);
+    key
 }
 
-fn compute_auth_tag(secret: &str, nonce: u64, ciphertext: &str) -> String {
-    let mut acc: u64 = 0xcbf29ce484222325;
-    for byte in secret.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in nonce.to_le_bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in ciphertext.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    format!("{acc:016x}")
+fn derive_x25519_private_key(master_seed: &[u8; 32], key_ref: &str) -> StaticSecret {
+    let mut hasher = Sha512::new();
+    hasher.update(b"kamn:x25519:key-ref:v1:");
+    hasher.update(master_seed);
+    hasher.update(key_ref.as_bytes());
+    let digest = hasher.finalize();
+    let mut key_bytes = [0u8; 32];
+    key_bytes.copy_from_slice(&digest[..32]);
+    StaticSecret::from(key_bytes)
+}
+
+fn derive_x25519_public_key(master_seed: &[u8; 32], key_ref: &str) -> PublicKey {
+    let private_key = derive_x25519_private_key(master_seed, key_ref);
+    PublicKey::from(&private_key)
+}
+
+fn group_nonce_bytes(sender_did: &str, generation: u64, nonce: u64) -> [u8; 24] {
+    let mut out = [0u8; 24];
+    out[..8].copy_from_slice(&nonce.to_le_bytes());
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"kamn:group-message:nonce:v1:");
+    hasher.update(sender_did.as_bytes());
+    hasher.update(generation.to_le_bytes());
+    hasher.update(nonce.to_le_bytes());
+    let digest = hasher.finalize();
+    out[8..].copy_from_slice(&digest[..16]);
+    out
 }
 
 fn compute_signature(
-    sender_key_ref: &str,
+    shared_secret: &[u8; 32],
     channel_id: &str,
+    sender_did: &str,
     generation: u64,
     nonce: u64,
     ciphertext: &str,
+    auth_tag: &str,
 ) -> String {
-    let mut acc: u64 = 0x84222325cbf29ce4;
-    for byte in sender_key_ref.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in channel_id.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in generation.to_le_bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in nonce.to_le_bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in ciphertext.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    format!("sig:{acc:016x}")
+    let mut hasher = Sha256::new();
+    hasher.update(b"kamn:group-message:signature:v2:");
+    hasher.update(shared_secret);
+    hasher.update(channel_id.as_bytes());
+    hasher.update(sender_did.as_bytes());
+    hasher.update(generation.to_le_bytes());
+    hasher.update(nonce.to_le_bytes());
+    hasher.update(ciphertext.as_bytes());
+    hasher.update(auth_tag.as_bytes());
+    let digest = hasher.finalize();
+    format!("sig:sha256:{}", hex_encode(&digest))
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -542,52 +622,42 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, GroupChannelCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{GroupChannelCryptoEngine, GroupChannelCryptoError};
-    use std::env;
     use std::sync::{Mutex, OnceLock};
 
-    fn with_group_message_crypto_env<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
+    const TEST_KEY_SEED_HEX: &str =
+        "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+
+    fn with_key_agreement_seed<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
         static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         let _guard = ENV_LOCK
             .get_or_init(|| Mutex::new(()))
             .lock()
             .expect("env lock should not be poisoned");
-        let previous = env::var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV).ok();
+
+        let previous = std::env::var(super::KEY_AGREEMENT_MASTER_SEED_ENV).ok();
         match value {
-            Some(value) => env::set_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV, value),
-            None => env::remove_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV),
+            Some(seed) => std::env::set_var(super::KEY_AGREEMENT_MASTER_SEED_ENV, seed),
+            None => std::env::remove_var(super::KEY_AGREEMENT_MASTER_SEED_ENV),
         }
         let output = run();
         match previous {
-            Some(value) => env::set_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV, value),
-            None => env::remove_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV),
+            Some(seed) => std::env::set_var(super::KEY_AGREEMENT_MASTER_SEED_ENV, seed),
+            None => std::env::remove_var(super::KEY_AGREEMENT_MASTER_SEED_ENV),
         }
         output
     }
 
     #[test]
-    fn regression_constructor_requires_explicit_opt_in_even_in_debug() {
-        // Regression: #5909
-        with_group_message_crypto_env(None, || {
-            assert_eq!(
-                GroupChannelCryptoEngine::new("channel:group:locked"),
-                Err(GroupChannelCryptoError::InsecureCryptoDisabled)
-            );
-        });
-    }
-
-    #[test]
     fn constructor_rejects_empty_channel_id() {
-        with_group_message_crypto_env(Some("1"), || {
-            assert_eq!(
-                GroupChannelCryptoEngine::new(""),
-                Err(GroupChannelCryptoError::EmptyChannelId)
-            );
-        });
+        assert_eq!(
+            GroupChannelCryptoEngine::new(""),
+            Err(GroupChannelCryptoError::EmptyChannelId)
+        );
     }
 
     #[test]
     fn distribution_rejects_empty_recipients() {
-        with_group_message_crypto_env(Some("1"), || {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
             let mut engine =
                 GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
             assert_eq!(
@@ -603,7 +673,7 @@ mod tests {
 
     #[test]
     fn rotate_marks_previous_generation_inactive() {
-        with_group_message_crypto_env(Some("1"), || {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
             let mut engine =
                 GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
             let first = engine
@@ -632,5 +702,42 @@ mod tests {
             assert!(!first_record.active);
             assert!(second_record.active);
         });
+    }
+
+    #[test]
+    fn regression_constructor_accepts_without_insecure_fixture_opt_in() {
+        // Regression: #5921
+        let result = GroupChannelCryptoEngine::new("channel:group:locked");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn encrypt_requires_key_agreement_seed() {
+        with_key_agreement_seed(None, || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed");
+
+            let result = engine.encrypt("kamn:did:agent:alice", "payload", 1);
+
+            assert_eq!(
+                result,
+                Err(GroupChannelCryptoError::MissingKeyAgreementMasterSeed)
+            );
+        });
+    }
+
+    #[test]
+    fn display_messages_remain_stable_for_reason_taxonomy() {
+        assert_eq!(
+            GroupChannelCryptoError::EmptyChannelId.to_string(),
+            "channel_id must not be empty"
+        );
     }
 }

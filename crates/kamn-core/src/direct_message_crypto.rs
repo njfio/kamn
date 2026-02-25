@@ -1,12 +1,16 @@
+use chacha20poly1305::aead::{Aead, KeyInit, Payload};
+use chacha20poly1305::{XChaCha20Poly1305, XNonce};
+use sha2::{Digest, Sha256, Sha512};
 use std::collections::BTreeSet;
 use std::env;
 use std::fmt;
+use x25519_dalek::{PublicKey, StaticSecret};
 
-/// Deterministic key-agreement profile identifier for non-cryptographic direct-message fixtures.
-pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "KAMN-Deterministic-KA-v1";
-/// Deterministic cipher profile identifier for non-cryptographic direct-message fixtures.
-pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "KAMN-Deterministic-XOR-v1";
-const ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO";
+/// Canonical direct-message key-agreement algorithm identifier.
+pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "X25519";
+/// Canonical direct-message cipher algorithm identifier.
+pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
+const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 
 /// Encrypted direct-message payload and metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,16 +27,16 @@ pub struct DirectMessageCiphertext {
     pub nonce: u64,
     /// Hex-encoded ciphertext bytes.
     pub ciphertext: String,
-    /// Integrity/authentication tag for ciphertext verification.
+    /// Hex-encoded 16-byte Poly1305 authentication tag.
     pub auth_tag: String,
 }
 
-/// Deterministic direct-message crypto engine with nonce reuse protection.
+/// Direct-message crypto engine with nonce reuse protection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectMessageCryptoEngine {
     sender_key_ref: String,
     recipient_key_ref: String,
-    shared_secret_fingerprint: String,
+    aead_key: [u8; 32],
     used_nonces: BTreeSet<u64>,
 }
 
@@ -42,19 +46,17 @@ impl DirectMessageCryptoEngine {
         sender_key_ref: &str,
         recipient_key_ref: &str,
     ) -> Result<Self, DirectMessageCryptoError> {
-        if !insecure_direct_message_crypto_enabled() {
-            return Err(DirectMessageCryptoError::InsecureCryptoDisabled);
-        }
         validate_key_ref("sender", sender_key_ref)?;
         validate_key_ref("recipient", recipient_key_ref)?;
+
+        let master_seed = load_key_agreement_master_seed()?;
+        let shared_secret =
+            derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
 
         Ok(Self {
             sender_key_ref: sender_key_ref.to_owned(),
             recipient_key_ref: recipient_key_ref.to_owned(),
-            shared_secret_fingerprint: derive_shared_secret_fingerprint(
-                sender_key_ref,
-                recipient_key_ref,
-            ),
+            aead_key: derive_direct_message_aead_key(&shared_secret),
             used_nonces: BTreeSet::new(),
         })
     }
@@ -75,19 +77,23 @@ impl DirectMessageCryptoEngine {
             return Err(DirectMessageCryptoError::NonceReuse(nonce));
         }
 
-        let plaintext_bytes = plaintext.as_bytes();
-        let keystream = derive_keystream(
-            &self.shared_secret_fingerprint,
+        let cipher = XChaCha20Poly1305::new((&self.aead_key).into());
+        let nonce_bytes = direct_message_nonce_bytes(nonce);
+        let xnonce = XNonce::from(nonce_bytes);
+        let aad = canonical_direct_message_aad(
+            self.sender_key_ref.as_str(),
+            self.recipient_key_ref.as_str(),
             nonce,
-            plaintext_bytes.len(),
         );
-        let encrypted: Vec<u8> = plaintext_bytes
-            .iter()
-            .zip(keystream.iter())
-            .map(|(byte, mask)| byte ^ mask)
-            .collect();
-        let ciphertext = hex_encode(&encrypted);
-        let auth_tag = compute_auth_tag(&self.shared_secret_fingerprint, nonce, &ciphertext);
+        let payload = Payload {
+            msg: plaintext.as_bytes(),
+            aad: aad.as_bytes(),
+        };
+
+        let mut sealed = cipher
+            .encrypt(&xnonce, payload)
+            .map_err(|_| DirectMessageCryptoError::EncryptionFailed)?;
+        let auth_tag = sealed.split_off(sealed.len() - 16);
 
         Ok(DirectMessageCiphertext {
             key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
@@ -95,8 +101,8 @@ impl DirectMessageCryptoEngine {
             sender_key_ref: self.sender_key_ref.clone(),
             recipient_key_ref: self.recipient_key_ref.clone(),
             nonce,
-            ciphertext,
-            auth_tag,
+            ciphertext: hex_encode(&sealed),
+            auth_tag: hex_encode(&auth_tag),
         })
     }
 
@@ -110,26 +116,35 @@ impl DirectMessageCryptoEngine {
         {
             return Err(DirectMessageCryptoError::AlgorithmMismatch);
         }
-        let expected_tag = compute_auth_tag(
-            &self.shared_secret_fingerprint,
-            sealed.nonce,
-            &sealed.ciphertext,
-        );
-        if expected_tag != sealed.auth_tag {
-            return Err(DirectMessageCryptoError::IntegrityCheckFailed);
+        if sealed.nonce == 0 {
+            return Err(DirectMessageCryptoError::InvalidNonce(sealed.nonce));
         }
 
-        let encrypted = hex_decode(&sealed.ciphertext)?;
-        let keystream = derive_keystream(
-            &self.shared_secret_fingerprint,
+        let ciphertext = hex_decode(&sealed.ciphertext)?;
+        let auth_tag = hex_decode(&sealed.auth_tag)
+            .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)?;
+
+        let mut combined = ciphertext;
+        combined.extend_from_slice(&auth_tag);
+
+        let cipher = XChaCha20Poly1305::new((&self.aead_key).into());
+        let nonce_bytes = direct_message_nonce_bytes(sealed.nonce);
+        let xnonce = XNonce::from(nonce_bytes);
+        let aad = canonical_direct_message_aad(
+            sealed.sender_key_ref.as_str(),
+            sealed.recipient_key_ref.as_str(),
             sealed.nonce,
-            encrypted.len(),
         );
-        let plaintext: Vec<u8> = encrypted
-            .iter()
-            .zip(keystream.iter())
-            .map(|(byte, mask)| byte ^ mask)
-            .collect();
+
+        let plaintext = cipher
+            .decrypt(
+                &xnonce,
+                Payload {
+                    msg: &combined,
+                    aad: aad.as_bytes(),
+                },
+            )
+            .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)?;
         String::from_utf8(plaintext)
             .map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
     }
@@ -138,8 +153,12 @@ impl DirectMessageCryptoEngine {
 /// Errors emitted by direct-message crypto construction and processing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectMessageCryptoError {
-    /// Insecure deterministic direct-message crypto is disabled by policy.
+    /// Compatibility marker retained for existing callers; no longer emitted.
     InsecureCryptoDisabled,
+    /// Required key-agreement seed is missing from the environment.
+    MissingKeyAgreementMasterSeed,
+    /// Required key-agreement seed format is invalid.
+    InvalidKeyAgreementMasterSeed,
     /// Key reference for role was empty.
     EmptyKeyRef(&'static str),
     /// Key reference for role did not match expected shape.
@@ -152,6 +171,8 @@ pub enum DirectMessageCryptoError {
     NonceReuse(u64),
     /// Ciphertext algorithm metadata did not match expected algorithms.
     AlgorithmMismatch,
+    /// Encryption failed.
+    EncryptionFailed,
     /// Ciphertext integrity verification failed.
     IntegrityCheckFailed,
     /// Ciphertext bytes were not valid hex or UTF-8 output.
@@ -163,7 +184,15 @@ impl fmt::Display for DirectMessageCryptoError {
         match self {
             Self::InsecureCryptoDisabled => write!(
                 f,
-                "deterministic direct-message crypto is disabled; use production cryptographic transport or set KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO=1 for local-only fixtures"
+                "legacy deterministic direct-message crypto has been removed"
+            ),
+            Self::MissingKeyAgreementMasterSeed => write!(
+                f,
+                "missing required key-agreement seed KAMN_KEY_AGREEMENT_MASTER_SEED_HEX"
+            ),
+            Self::InvalidKeyAgreementMasterSeed => write!(
+                f,
+                "invalid key-agreement seed KAMN_KEY_AGREEMENT_MASTER_SEED_HEX; expected 32-byte hex"
             ),
             Self::EmptyKeyRef(role) => write!(f, "{role} key reference must not be empty"),
             Self::InvalidKeyRef(role) => {
@@ -173,6 +202,7 @@ impl fmt::Display for DirectMessageCryptoError {
             Self::InvalidNonce(value) => write!(f, "nonce must be positive: {value}"),
             Self::NonceReuse(value) => write!(f, "nonce reuse detected: {value}"),
             Self::AlgorithmMismatch => write!(f, "direct message algorithm mismatch"),
+            Self::EncryptionFailed => write!(f, "direct message encryption failed"),
             Self::IntegrityCheckFailed => write!(f, "ciphertext integrity check failed"),
             Self::InvalidCiphertextEncoding => write!(f, "invalid ciphertext encoding"),
         }
@@ -180,16 +210,6 @@ impl fmt::Display for DirectMessageCryptoError {
 }
 
 impl std::error::Error for DirectMessageCryptoError {}
-
-fn insecure_direct_message_crypto_enabled() -> bool {
-    match env::var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV) {
-        Ok(value) => matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        ),
-        Err(_) => false,
-    }
-}
 
 fn validate_key_ref(role: &'static str, key_ref: &str) -> Result<(), DirectMessageCryptoError> {
     if key_ref.trim().is_empty() {
@@ -201,40 +221,88 @@ fn validate_key_ref(role: &'static str, key_ref: &str) -> Result<(), DirectMessa
     Ok(())
 }
 
-fn derive_shared_secret_fingerprint(sender: &str, recipient: &str) -> String {
-    let (left, right) = if sender <= recipient {
-        (sender, recipient)
-    } else {
-        (recipient, sender)
-    };
-    format!("deterministic-ka-v1:{left}|{right}")
+fn load_key_agreement_master_seed() -> Result<[u8; 32], DirectMessageCryptoError> {
+    let seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
+        .map_err(|_| DirectMessageCryptoError::MissingKeyAgreementMasterSeed)?;
+    parse_fixed_hex_32(seed_hex.trim())
 }
 
-fn derive_keystream(secret: &str, nonce: u64, len: usize) -> Vec<u8> {
-    let secret_bytes = secret.as_bytes();
-    (0..len)
-        .map(|idx| {
-            let seed = secret_bytes[idx % secret_bytes.len()];
-            seed ^ (nonce as u8).wrapping_add((idx as u8).wrapping_mul(31))
-        })
-        .collect()
+fn parse_fixed_hex_32(value: &str) -> Result<[u8; 32], DirectMessageCryptoError> {
+    if value.len() != 64 {
+        return Err(DirectMessageCryptoError::InvalidKeyAgreementMasterSeed);
+    }
+    let mut out = [0u8; 32];
+    for (index, chunk) in value.as_bytes().chunks_exact(2).enumerate() {
+        let encoded = std::str::from_utf8(chunk)
+            .map_err(|_| DirectMessageCryptoError::InvalidKeyAgreementMasterSeed)?;
+        let byte = u8::from_str_radix(encoded, 16)
+            .map_err(|_| DirectMessageCryptoError::InvalidKeyAgreementMasterSeed)?;
+        out[index] = byte;
+    }
+    Ok(out)
 }
 
-fn compute_auth_tag(secret: &str, nonce: u64, ciphertext: &str) -> String {
-    let mut acc: u64 = 0xcbf29ce484222325;
-    for byte in secret.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in nonce.to_le_bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    for byte in ciphertext.bytes() {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(byte);
-    }
-    format!("{acc:016x}")
+fn derive_x25519_shared_secret(
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    master_seed: &[u8; 32],
+) -> [u8; 32] {
+    let sender_private = derive_x25519_private_key(master_seed, sender_key_ref);
+    let recipient_public = derive_x25519_public_key(master_seed, recipient_key_ref);
+    sender_private.diffie_hellman(&recipient_public).to_bytes()
+}
+
+fn derive_x25519_private_key(master_seed: &[u8; 32], key_ref: &str) -> StaticSecret {
+    let mut hasher = Sha512::new();
+    hasher.update(b"kamn:x25519:key-ref:v1:");
+    hasher.update(master_seed);
+    hasher.update(key_ref.as_bytes());
+    let digest = hasher.finalize();
+    let mut key_bytes = [0u8; 32];
+    key_bytes.copy_from_slice(&digest[..32]);
+    StaticSecret::from(key_bytes)
+}
+
+fn derive_x25519_public_key(master_seed: &[u8; 32], key_ref: &str) -> PublicKey {
+    let private_key = derive_x25519_private_key(master_seed, key_ref);
+    PublicKey::from(&private_key)
+}
+
+fn derive_direct_message_aead_key(shared_secret: &[u8; 32]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(b"kamn:direct-message:aead-key:v1:");
+    hasher.update(shared_secret);
+    let digest = hasher.finalize();
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&digest[..32]);
+    key
+}
+
+fn direct_message_nonce_bytes(nonce: u64) -> [u8; 24] {
+    let mut out = [0u8; 24];
+    out[..8].copy_from_slice(&nonce.to_le_bytes());
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"kamn:direct-message:nonce:v1:");
+    hasher.update(nonce.to_le_bytes());
+    let digest = hasher.finalize();
+    out[8..].copy_from_slice(&digest[..16]);
+    out
+}
+
+fn canonical_direct_message_aad(
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    nonce: u64,
+) -> String {
+    format!(
+        "{}|{}|{}|{}|{}",
+        DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+        DIRECT_MESSAGE_CIPHER_ALGORITHM,
+        sender_key_ref,
+        recipient_key_ref,
+        nonce
+    )
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -259,45 +327,37 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, DirectMessageCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{DirectMessageCryptoEngine, DirectMessageCryptoError};
-    use std::env;
     use std::sync::{Mutex, OnceLock};
 
-    fn with_direct_message_crypto_env<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
+    const TEST_KEY_SEED_HEX: &str =
+        "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+
+    fn with_key_agreement_seed<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
         static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         let _guard = ENV_LOCK
             .get_or_init(|| Mutex::new(()))
             .lock()
             .expect("env lock should not be poisoned");
-        let previous = env::var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV).ok();
+
+        let previous = std::env::var(super::KEY_AGREEMENT_MASTER_SEED_ENV).ok();
         match value {
-            Some(value) => env::set_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, value),
-            None => env::remove_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV),
+            Some(seed) => std::env::set_var(super::KEY_AGREEMENT_MASTER_SEED_ENV, seed),
+            None => std::env::remove_var(super::KEY_AGREEMENT_MASTER_SEED_ENV),
         }
+
         let output = run();
+
         match previous {
-            Some(value) => env::set_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, value),
-            None => env::remove_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV),
+            Some(seed) => std::env::set_var(super::KEY_AGREEMENT_MASTER_SEED_ENV, seed),
+            None => std::env::remove_var(super::KEY_AGREEMENT_MASTER_SEED_ENV),
         }
+
         output
     }
 
     #[test]
-    fn regression_constructor_requires_explicit_opt_in_even_in_debug() {
-        // Regression: #5909
-        with_direct_message_crypto_env(None, || {
-            assert_eq!(
-                DirectMessageCryptoEngine::new(
-                    "kamn:did:agent:alice#key-agreement-1",
-                    "kamn:did:agent:bob#key-agreement-1",
-                ),
-                Err(DirectMessageCryptoError::InsecureCryptoDisabled)
-            );
-        });
-    }
-
-    #[test]
     fn constructor_rejects_invalid_key_reference() {
-        with_direct_message_crypto_env(Some("1"), || {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
             assert_eq!(
                 DirectMessageCryptoEngine::new("did:alice#keys-1", "did:bob#key-agreement-1"),
                 Err(DirectMessageCryptoError::InvalidKeyRef("sender"))
@@ -307,7 +367,7 @@ mod tests {
 
     #[test]
     fn decrypt_rejects_algorithm_mismatch() {
-        with_direct_message_crypto_env(Some("1"), || {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
             let mut engine = match DirectMessageCryptoEngine::new(
                 "did:alice#key-agreement-1",
                 "did:bob#key-agreement-1",
@@ -326,5 +386,40 @@ mod tests {
                 Err(DirectMessageCryptoError::AlgorithmMismatch)
             );
         });
+    }
+
+    #[test]
+    fn regression_constructor_accepts_without_insecure_fixture_opt_in() {
+        // Regression: #5921
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let result = DirectMessageCryptoEngine::new(
+                "kamn:did:agent:alice#key-agreement-1",
+                "kamn:did:agent:bob#key-agreement-1",
+            );
+            assert!(result.is_ok());
+        });
+    }
+
+    #[test]
+    fn constructor_requires_key_agreement_seed() {
+        with_key_agreement_seed(None, || {
+            let result = DirectMessageCryptoEngine::new(
+                "kamn:did:agent:alice#key-agreement-1",
+                "kamn:did:agent:bob#key-agreement-1",
+            );
+
+            assert_eq!(
+                result,
+                Err(DirectMessageCryptoError::MissingKeyAgreementMasterSeed)
+            );
+        });
+    }
+
+    #[test]
+    fn display_messages_remain_stable_for_reason_taxonomy() {
+        assert_eq!(
+            DirectMessageCryptoError::InvalidKeyRef("sender").to_string(),
+            "sender key reference must include #key-agreement"
+        );
     }
 }

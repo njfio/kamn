@@ -1626,6 +1626,7 @@ dependencies = [
 name = "kamn-core"
 version = "0.1.0"
 dependencies = [
+ "chacha20poly1305",
  "k256",
  "kamn-kolme",
  "libp2p",
@@ -1633,10 +1634,12 @@ dependencies = [
  "rusqlite",
  "rustls",
  "rustls-pemfile",
+ "sha2",
  "sqlx",
  "tokio",
  "tracing",
  "webpki-roots 1.0.6",
+ "x25519-dalek",
 ]
 
 [[package]]
