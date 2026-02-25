@@ -1,6 +1,10 @@
 use super::*;
+use kamn_core::{service_auth_sign_with_private_key_hex, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV};
 use std::collections::{BTreeMap, BTreeSet};
-use std::time::{Duration, Instant};
+use std::env;
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpStream};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
@@ -33,6 +37,13 @@ const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_ID_VIOLATION_REASON_CODE: &str =
     "live_postgres_selector_bundle_row_id_violation";
 const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_COUNT_MISMATCH_REASON_CODE: &str =
     "live_postgres_selector_bundle_row_count_mismatch";
+const SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV: &str =
+    "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON";
+const SERVICE_API_RELAY_FORWARD_PATH: &str = "/v1/messages/relay";
+const SERVICE_API_RELAY_FORWARD_SCOPE: &str = "messages:write";
+const SERVICE_API_RELAY_FORWARD_DEFAULT_SENDER_DID: &str = "kamn:did:agent:relay-daemon";
+const SERVICE_API_RELAY_FORWARD_CONNECT_TIMEOUT_MS: u64 = 500;
+const SERVICE_API_RELAY_FORWARD_IO_TIMEOUT_MS: u64 = 500;
 const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS: [(&str, &str); 6] = [
     (
         "b01_runtime_matrix_bundle",
@@ -471,6 +482,7 @@ pub(super) fn execute_daemon_runtime(
         daemon_lifecycle_events,
         service_api_state_file,
         service_api_relay_spool_file,
+        service_api_signature_state_hash,
     } = options;
     let max_ticks =
         daemon_max_ticks.ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
@@ -533,6 +545,7 @@ pub(super) fn execute_daemon_runtime(
         tick_interval_ms,
         service_api_state_file.as_deref(),
         service_api_relay_spool_file.as_deref(),
+        service_api_signature_state_hash.as_str(),
     )?;
     let daemon_observability = build_daemon_observability_telemetry(
         tick_interval_ms,
@@ -796,6 +809,7 @@ fn execute_daemon_service_api_relay_tick_loop(
     tick_interval_ms: u64,
     service_api_state_file: Option<&str>,
     service_api_relay_spool_file: Option<&str>,
+    service_api_signature_state_hash: &str,
 ) -> Result<crate::daemon_observability::DaemonRuntimeProcessingTelemetry, ConfigError> {
     let mut runtime_processing = crate::daemon_observability::DaemonRuntimeProcessingTelemetry {
         executed_ticks,
@@ -805,6 +819,14 @@ fn execute_daemon_service_api_relay_tick_loop(
     if executed_ticks == 0 {
         return Ok(runtime_processing);
     }
+    let relay_route_map = resolve_daemon_service_api_relay_recipient_route_map()?;
+    let relay_forwarding_enabled = !relay_route_map.is_empty();
+    let relay_signing_private_key_hex = if relay_forwarding_enabled {
+        Some(resolve_daemon_service_api_auth_private_key_hex()?)
+    } else {
+        None
+    };
+    let mut relay_nonce_counter = initial_daemon_relay_nonce_counter();
 
     let tick_duration = Duration::from_millis(tick_interval_ms.max(1));
     for tick in 0..executed_ticks {
@@ -817,10 +839,54 @@ fn execute_daemon_service_api_relay_tick_loop(
             runtime_processing.relay_drained_count = runtime_processing
                 .relay_drained_count
                 .saturating_add(relay_entries.len() as u64);
-            let relay_message_ids: Vec<String> = relay_entries
-                .iter()
-                .map(|entry| entry.message_id.clone())
-                .collect();
+            let mut relay_message_ids = Vec::new();
+            let mut failed_entries = Vec::new();
+            for relay_entry in relay_entries {
+                if !relay_forwarding_enabled {
+                    relay_message_ids.push(relay_entry.message_id.clone());
+                    continue;
+                }
+                let Some(signing_key_hex) = relay_signing_private_key_hex.as_deref() else {
+                    return Err(ConfigError::RuntimeDaemonLifecycle(
+                        "service api relay forwarding signer key was missing".to_owned(),
+                    ));
+                };
+                match forward_service_api_relay_entry(
+                    &relay_route_map,
+                    &relay_entry,
+                    service_api_signature_state_hash,
+                    signing_key_hex,
+                    &mut relay_nonce_counter,
+                ) {
+                    Ok(()) => relay_message_ids.push(relay_entry.message_id.clone()),
+                    Err(error) => {
+                        runtime_processing.processing_error_count =
+                            runtime_processing.processing_error_count.saturating_add(1);
+                        let error_message = error;
+                        let queued_at_label = relay_entry.queued_at_unix.to_string();
+                        log_info(
+                            "node.runtime.daemon.relay.forward.failed",
+                            &[
+                                ("message_id", relay_entry.message_id.as_str()),
+                                ("recipient_did", relay_entry.recipient_did.as_str()),
+                                ("queued_at_unix", queued_at_label.as_str()),
+                                ("error", error_message.as_str()),
+                            ],
+                        )
+                        .map_err(|logging_error| {
+                            ConfigError::RuntimeDaemonLifecycle(logging_error.to_string())
+                        })?;
+                        failed_entries.push(relay_entry);
+                    }
+                }
+            }
+            for relay_entry in failed_entries {
+                crate::service_api_endpoint::append_service_api_relay_spool_entry(
+                    service_api_relay_spool_file,
+                    &relay_entry,
+                )
+                .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            }
             let relay_projected_state_count =
                 crate::service_api_endpoint::project_service_api_relayed_message_statuses(
                     service_api_state_file,
@@ -851,6 +917,179 @@ fn execute_daemon_service_api_relay_tick_loop(
     Ok(runtime_processing)
 }
 
+fn resolve_daemon_service_api_relay_recipient_route_map(
+) -> Result<BTreeMap<String, String>, ConfigError> {
+    let raw = match env::var(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV) {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => return Ok(BTreeMap::new()),
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV} must be valid utf-8 when present"
+            )));
+        }
+    };
+    let normalized = raw.trim();
+    if normalized.is_empty() {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV} must not be empty when present"
+        )));
+    }
+    let parsed = serde_json::from_str::<BTreeMap<String, String>>(normalized).map_err(|error| {
+        ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV} must be a JSON object mapping recipient DID to relay address: {error}"
+        ))
+    })?;
+    let mut routes = BTreeMap::new();
+    for (recipient_did, relay_addr) in parsed {
+        let normalized_recipient_did = recipient_did.trim();
+        if normalized_recipient_did.is_empty() {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV} contains an empty recipient DID key"
+            )));
+        }
+        let normalized_relay_addr = relay_addr.trim();
+        if normalized_relay_addr.is_empty() {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV} contains an empty relay address value for recipient={normalized_recipient_did}"
+            )));
+        }
+        routes.insert(
+            normalized_recipient_did.to_owned(),
+            normalized_relay_addr.to_owned(),
+        );
+    }
+    Ok(routes)
+}
+
+fn resolve_daemon_service_api_auth_private_key_hex() -> Result<String, ConfigError> {
+    match env::var(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV) {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                    "{SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV} must not be empty when relay forwarding is enabled"
+                )));
+            }
+            Ok(normalized.to_owned())
+        }
+        Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV} is required when {SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV} is configured"
+        ))),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV} must be valid utf-8 when present"
+        ))),
+    }
+}
+
+fn initial_daemon_relay_nonce_counter() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| {
+            let micros = duration.as_micros().min(u128::from(u64::MAX));
+            micros as u64
+        })
+        .unwrap_or(1)
+}
+
+fn forward_service_api_relay_entry(
+    relay_route_map: &BTreeMap<String, String>,
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+    service_api_signature_state_hash: &str,
+    signing_private_key_hex: &str,
+    relay_nonce_counter: &mut u64,
+) -> Result<(), String> {
+    let relay_addr = relay_route_map
+        .get(relay_entry.recipient_did.as_str())
+        .ok_or_else(|| {
+            format!(
+                "relay recipient route missing for recipient_did={}",
+                relay_entry.recipient_did
+            )
+        })?;
+    let relay_payload = serde_json::json!({
+        "message_id": relay_entry.message_id.as_str(),
+        "sender_did": relay_entry.sender_did.as_deref(),
+        "recipient_did": relay_entry.recipient_did.as_str(),
+        "body": relay_entry.body.as_str(),
+        "queued_at_unix": relay_entry.queued_at_unix,
+    });
+    let relay_payload_body = serde_json::to_string(&relay_payload)
+        .map_err(|error| format!("relay payload serialization failed: {error}"))?;
+
+    let sender_did = relay_payload
+        .get("sender_did")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(SERVICE_API_RELAY_FORWARD_DEFAULT_SENDER_DID);
+    *relay_nonce_counter = relay_nonce_counter.saturating_add(1);
+    let relay_nonce = (*relay_nonce_counter).max(1);
+    let signature = service_auth_sign_with_private_key_hex(
+        sender_did,
+        relay_nonce,
+        service_api_signature_state_hash,
+        relay_payload_body.as_str(),
+        signing_private_key_hex,
+    )
+    .map_err(|error| format!("relay request signature generation failed: {error}"))?;
+
+    let request = format!(
+        "POST {SERVICE_API_RELAY_FORWARD_PATH} HTTP/1.1\r\nHost: {relay_addr}\r\nConnection: close\r\nContent-Type: application/json\r\nX-KAMN-Sender-DID: {sender_did}\r\nX-KAMN-Request-Nonce: {relay_nonce}\r\nX-KAMN-Request-Signature: {signature}\r\nX-KAMN-Authz-Scope: {SERVICE_API_RELAY_FORWARD_SCOPE}\r\nContent-Length: {}\r\n\r\n{}",
+        relay_payload_body.len(),
+        relay_payload_body
+    );
+    let relay_socket_addr = relay_addr.parse::<SocketAddr>().map_err(|error| {
+        format!("relay recipient address parse failed: addr={relay_addr}: {error}")
+    })?;
+    let mut stream = TcpStream::connect_timeout(
+        &relay_socket_addr,
+        Duration::from_millis(SERVICE_API_RELAY_FORWARD_CONNECT_TIMEOUT_MS),
+    )
+    .map_err(|error| format!("relay recipient connect failed: addr={relay_addr}: {error}"))?;
+    let timeout = Duration::from_millis(SERVICE_API_RELAY_FORWARD_IO_TIMEOUT_MS);
+    stream
+        .set_write_timeout(Some(timeout))
+        .map_err(|error| format!("relay recipient write-timeout set failed: {error}"))?;
+    stream
+        .set_read_timeout(Some(timeout))
+        .map_err(|error| format!("relay recipient read-timeout set failed: {error}"))?;
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("relay request write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("relay request flush failed: {error}"))?;
+    let mut response_bytes = Vec::new();
+    let mut buffer = [0_u8; 512];
+    loop {
+        let read_count = stream
+            .read(&mut buffer)
+            .map_err(|error| format!("relay response read failed: {error}"))?;
+        if read_count == 0 {
+            break;
+        }
+        response_bytes.extend_from_slice(&buffer[..read_count]);
+        if response_bytes
+            .windows(4)
+            .any(|window| window == b"\r\n\r\n")
+        {
+            break;
+        }
+    }
+    let response = String::from_utf8(response_bytes)
+        .map_err(|error| format!("relay response utf-8 parse failed: {error}"))?;
+    let status_line = response.lines().next().unwrap_or("");
+    if status_line.starts_with("HTTP/1.1 200")
+        || status_line.starts_with("HTTP/1.1 201")
+        || status_line.starts_with("HTTP/1.1 202")
+    {
+        return Ok(());
+    }
+    Err(format!(
+        "relay request returned non-success status: addr={relay_addr};status={status_line}"
+    ))
+}
+
 fn daemon_tick_remaining_sleep_duration(
     tick: u64,
     executed_ticks: u64,
@@ -869,13 +1108,45 @@ fn daemon_tick_remaining_sleep_duration(
 
 #[cfg(test)]
 mod tests {
-    use super::{daemon_tick_remaining_sleep_duration, execute_daemon_service_api_relay_tick_loop};
+    use super::{
+        daemon_tick_remaining_sleep_duration, execute_daemon_service_api_relay_tick_loop,
+        SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
+    };
+    use std::env;
+    use std::fs;
     use std::time::Duration;
+
+    struct TestEnvGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl TestEnvGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let previous = env::var(key).ok();
+            match value {
+                Some(value) => env::set_var(key, value),
+                None => env::remove_var(key),
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for TestEnvGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.as_deref() {
+                env::set_var(self.key, previous);
+            } else {
+                env::remove_var(self.key);
+            }
+        }
+    }
 
     #[test]
     fn unit_daemon_relay_tick_loop_sleeps_between_ticks_when_interval_budget_remains() {
         let runtime_processing =
-            execute_daemon_service_api_relay_tick_loop(3, 50, None, None).expect("tick loop");
+            execute_daemon_service_api_relay_tick_loop(3, 50, None, None, "service-api:test:v1")
+                .expect("tick loop");
         assert_eq!(runtime_processing.executed_ticks, 3);
         assert_eq!(runtime_processing.tick_processing_samples_ms.len(), 3);
         assert_eq!(
@@ -888,7 +1159,8 @@ mod tests {
     fn regression_daemon_relay_tick_loop_single_tick_never_sleeps() {
         // Regression: #5895
         let runtime_processing =
-            execute_daemon_service_api_relay_tick_loop(1, 50, None, None).expect("tick loop");
+            execute_daemon_service_api_relay_tick_loop(1, 50, None, None, "service-api:test:v1")
+                .expect("tick loop");
         assert_eq!(
             runtime_processing.tick_sleep_count, 0,
             "single-tick daemon loop must not execute sleep branch"
@@ -937,5 +1209,91 @@ mod tests {
             None,
             "last tick must not sleep"
         );
+    }
+
+    #[test]
+    fn regression_daemon_relay_tick_loop_requeues_failed_cross_node_forward_entries() {
+        // Regression: #5983
+        const TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX: &str =
+            "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-failed-forward-state-{unique_suffix}.json"
+        ));
+        let relay_spool_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-failed-forward-spool-{unique_suffix}.ndjson"
+        ));
+        fs::write(
+            state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-forward-failure-unit-1":{
+      "message_id":"msg-forward-failure-unit-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender",
+      "recipient_did":"kamn:did:agent:recipient",
+      "body":"{\"message\":\"unreachable\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("state file fixture should write");
+        fs::write(
+            relay_spool_file.as_path(),
+            r#"{"message_id":"msg-forward-failure-unit-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"unreachable\"}","queued_at_unix":1700000999}
+"#,
+        )
+        .expect("relay spool fixture should write");
+        let state_file_str = state_file.to_string_lossy().to_string();
+        let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+        let _route_guard = TestEnvGuard::set(
+            SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
+            Some(r#"{"kamn:did:agent:recipient":"127.0.0.1:9"}"#),
+        );
+        let _signer_guard = TestEnvGuard::set(
+            "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+            Some(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX),
+        );
+
+        let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+            1,
+            1,
+            Some(state_file_str.as_str()),
+            Some(relay_spool_file_str.as_str()),
+            "service-api:kamn-devnet:v0.1.0",
+        )
+        .expect("daemon relay tick loop should complete on forward failure");
+
+        assert_eq!(runtime_processing.relay_drained_count, 1);
+        assert_eq!(runtime_processing.relay_projected_state_count, 0);
+        assert_eq!(runtime_processing.processing_error_count, 1);
+
+        let state_payload =
+            fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+        let state_json: serde_json::Value =
+            serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+        assert_eq!(
+            state_json["messages"]["msg-forward-failure-unit-1"]["status"],
+            "created"
+        );
+
+        let relay_payload = fs::read_to_string(relay_spool_file.as_path())
+            .expect("relay spool file should remain readable");
+        assert!(relay_payload.contains("msg-forward-failure-unit-1"));
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_file(relay_spool_file);
     }
 }
