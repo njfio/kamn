@@ -20,9 +20,9 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 ### Messaging and Channel Control Plane
 
 - Modules:
-  - `message_envelope`, `message_lifecycle`, `message_delivery_guards`,
-    `channel_models`, `channel_policies`, `group_channel_crypto`,
-    `direct_message_crypto`, `anti_spam`, `instruction_verify`
+  - `message_envelope`, `message_lifecycle`, `channel_models`,
+    `channel_policies`, `group_channel_crypto`, `direct_message_crypto`,
+    `instruction_verify`
 - Ownership boundary:
   - Message schema validity, channel permissions, sender-key distribution, and
     delivery admission/rejection policy.
@@ -45,8 +45,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 ### Reputation and Abuse Response
 
 - Modules:
-  - `reputation_state`, `reputation_signals`, `trust_score`, `transaction`,
-    `retention_engine`
+  - `reputation_state`, `reputation_signals`, `trust_score`, `transaction`
 - Ownership boundary:
   - Reputation signal ingestion, weighted trust updates, and abuse/penalty
     routing.
@@ -59,7 +58,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 - Modules:
   - `runtime`, `state`, `bootstrap`, `migrations`, `namespaces`, `config`,
     `durable_guard_store`, `invariants`, `performance_targets`, `smoke`,
-    `validator_lifecycle`, `watchdog`, `upgrade_orchestration`
+    `validator_lifecycle`, `upgrade_orchestration`
 - Ownership boundary:
   - Runtime orchestration, state schema/version handling, invariant taxonomy,
     and resilience/failover controls.
@@ -132,6 +131,31 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - New runtime-commit submissions should target `kamn-kolme` contracts first,
     then map back to `kamn-core` compatibility paths only where migration is
     still in progress.
+
+### Runtime Guards Extraction Boundary (Issue #5933, Phase 1)
+
+- Crate/module surface:
+  - `crates/kamn-runtime-guards/src/anti_spam.rs`
+  - `crates/kamn-runtime-guards/src/fairness_policy.rs`
+  - `crates/kamn-runtime-guards/src/quota_policy.rs`
+  - `crates/kamn-runtime-guards/src/message_delivery_guards.rs`
+  - `crates/kamn-runtime-guards/src/retention_engine.rs`
+  - `crates/kamn-runtime-guards/src/watchdog.rs`
+  - `crates/kamn-core/src/anti_spam.rs` (compatibility shim)
+  - `crates/kamn-core/src/fairness_policy.rs` (compatibility shim)
+  - `crates/kamn-core/src/quota_policy.rs` (compatibility shim)
+  - `crates/kamn-core/src/message_delivery_guards.rs` (compatibility shim)
+  - `crates/kamn-core/src/retention_engine.rs` (compatibility shim)
+  - `crates/kamn-core/src/watchdog.rs` (compatibility shim)
+- Ownership boundary:
+  - `kamn-runtime-guards` owns deterministic runtime guard contracts
+    (anti-spam, quota/fairness policy, delivery replay guards, retention, and
+    watchdog classification). `kamn-core` preserves stable module paths through
+    re-export shims.
+- Runtime/data-flow ownership:
+  - Runtime guard decisions remain behavior-compatible while compile ownership
+    shifts to a focused crate that can evolve and test independently from the
+    full `kamn-core` surface.
 
 ### Cryptographic Signer and ZK Surface
 

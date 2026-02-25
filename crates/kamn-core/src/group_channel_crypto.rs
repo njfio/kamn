@@ -625,15 +625,12 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, GroupChannelCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{GroupChannelCryptoEngine, GroupChannelCryptoError};
-    use std::sync::{Mutex, OnceLock};
 
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
     fn with_key_agreement_seed<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
-        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        let _guard = ENV_LOCK
-            .get_or_init(|| Mutex::new(()))
+        let _guard = crate::crypto_test_env_lock::key_agreement_seed_env_lock()
             .lock()
             .unwrap_or_else(|error| error.into_inner());
 

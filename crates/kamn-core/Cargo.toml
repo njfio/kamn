@@ -14,6 +14,7 @@ libp2p-live-transport = ["dep:libp2p", "dep:tokio"]
 
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
+kamn-runtime-guards = { path = "../kamn-runtime-guards" }
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["postgres", "runtime-tokio-rustls"] }
 tracing = "0.1.41"

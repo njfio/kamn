@@ -4,7 +4,9 @@ const FAIRNESS_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/starvation_fairness_fixture_matrix.txt");
 const DELETION_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/deletion_proof_artifact_fixture_matrix.txt");
-const FAIRNESS_POLICY_SOURCE: &str = include_str!("../src/fairness_policy.rs");
+const FAIRNESS_POLICY_SOURCE: &str =
+    include_str!("../../kamn-runtime-guards/src/fairness_policy.rs");
+const FAIRNESS_POLICY_SHIM_SOURCE: &str = include_str!("../src/fairness_policy.rs");
 const SERVICE_API_ENDPOINT_SOURCE: &str =
     include_str!("../../kamn-node/src/service_api_endpoint.rs");
 const SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE: &str =
@@ -2629,6 +2631,9 @@ fn doc_contains_fairness_docs_parity_and_remediation_markers() {
 
 #[test]
 fn doc_enforces_fairness_docs_parity_source_taxonomy_markers_remain_deterministic() {
+    assert!(
+        FAIRNESS_POLICY_SHIM_SOURCE.contains("pub use kamn_runtime_guards::fairness_policy::*;")
+    );
     assert!(FAIRNESS_POLICY_SOURCE
         .contains("pub const FAIRNESS_POLICY_REASON_TAXONOMY_VERSION: &str ="));
     assert!(FAIRNESS_POLICY_SOURCE.contains("pub const FAIRNESS_POLICY_REASON_CODES_CSV: &str ="));

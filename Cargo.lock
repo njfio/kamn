@@ -1629,6 +1629,7 @@ dependencies = [
  "chacha20poly1305",
  "k256",
  "kamn-kolme",
+ "kamn-runtime-guards",
  "libp2p",
  "proptest",
  "rusqlite",
@@ -1680,6 +1681,10 @@ dependencies = [
  "tokio",
  "zeroize",
 ]
+
+[[package]]
+name = "kamn-runtime-guards"
+version = "0.1.0"
 
 [[package]]
 name = "kamn-sdk"
