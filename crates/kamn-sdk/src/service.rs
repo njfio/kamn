@@ -1,6 +1,7 @@
 use crate::{AgentDid, SdkError};
 use kamn_core::{
-    service_auth_sign_with_private_key_hex, ServiceAuthSignatureError,
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+    service_auth_verify_with_public_key_hex, ServiceAuthSignatureError,
     SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
 use rustls::pki_types::ServerName;
@@ -386,6 +387,63 @@ pub fn service_signature_for_state_hash_with_private_key(
         private_key_hex,
     )
     .map_err(map_service_auth_error_to_sdk)
+}
+
+/// Derives compressed secp256k1 public key hex from private key material.
+pub fn service_public_key_for_private_key(private_key_hex: &str) -> Result<String, SdkError> {
+    service_auth_public_key_hex_from_private_key_hex(private_key_hex).map_err(|error| match error {
+        ServiceAuthSignatureError::EmptyField("private_key_hex")
+        | ServiceAuthSignatureError::InvalidPrivateKeyHex => SdkError::InvalidInput {
+            field: "service.request_auth.private_key",
+            reason: "must be valid secp256k1 private key hex",
+        },
+        _ => SdkError::InvalidInput {
+            field: "service.request_auth.private_key",
+            reason: "failed to derive secp256k1 signer public key",
+        },
+    })
+}
+
+/// Verifies a service signature against canonical state-hash fields and signer public key.
+pub fn service_verify_signature_with_public_key(
+    sender_did: &AgentDid,
+    nonce: u64,
+    state_hash: &str,
+    body: &str,
+    signature: &str,
+    signer_public_key_hex: &str,
+) -> Result<(), SdkError> {
+    service_auth_verify_with_public_key_hex(
+        signature,
+        sender_did.as_str(),
+        nonce,
+        state_hash,
+        body,
+        signer_public_key_hex,
+    )
+    .map_err(|error| match error {
+        ServiceAuthSignatureError::EmptyField("expected_public_key_hex")
+        | ServiceAuthSignatureError::InvalidPublicKeyHex => SdkError::InvalidInput {
+            field: "service.request_auth.expected_public_key",
+            reason: "must be valid compressed secp256k1 public key hex",
+        },
+        ServiceAuthSignatureError::EmptyField("state_hash") => SdkError::InvalidInput {
+            field: "service.request_auth.state_hash",
+            reason: "must not be empty",
+        },
+        ServiceAuthSignatureError::EmptyField("signature") => SdkError::InvalidInput {
+            field: "service.request_auth.signature",
+            reason: "must not be empty",
+        },
+        ServiceAuthSignatureError::InvalidNonce => SdkError::InvalidInput {
+            field: "service.request_auth.nonce",
+            reason: "must be greater than zero",
+        },
+        _ => SdkError::InvalidInput {
+            field: "service.request_auth.signature",
+            reason: "failed cryptographic signature verification",
+        },
+    })
 }
 
 fn map_service_auth_error_to_sdk(error: ServiceAuthSignatureError) -> SdkError {
@@ -1385,9 +1443,13 @@ fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkE
 #[cfg(test)]
 mod tests {
     use super::{
-        read_response_bytes, write_and_flush_request, SdkError, MAX_SERVICE_RESPONSE_BYTES,
-        SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED, SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
+        read_response_bytes, service_public_key_for_private_key,
+        service_signature_for_state_hash_with_private_key,
+        service_verify_signature_with_public_key, write_and_flush_request, SdkError,
+        MAX_SERVICE_RESPONSE_BYTES, SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED,
+        SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
     };
+    use crate::AgentDid;
     use std::collections::VecDeque;
     use std::io::{ErrorKind, Read, Write};
 
@@ -1566,6 +1628,217 @@ mod tests {
         assert_eq!(
             error,
             SdkError::TransportFailure(SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED)
+        );
+    }
+
+    const TEST_PRIVATE_KEY_HEX: &str =
+        "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
+    #[test]
+    fn unit_service_public_key_for_private_key_derives_compressed_hex_key() {
+        let public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
+            .expect("valid private key should derive signer public key");
+        assert_eq!(public_key.len(), 66);
+        assert!(
+            public_key.starts_with("02") || public_key.starts_with("03"),
+            "compressed secp256k1 key should start with 02 or 03"
+        );
+    }
+
+    #[test]
+    fn regression_service_public_key_for_private_key_rejects_invalid_private_key_hex() {
+        // Regression: #5977
+        let error = service_public_key_for_private_key("not-a-private-key")
+            .expect_err("invalid key material must fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_auth.private_key",
+                reason: "must be valid secp256k1 private key hex",
+            }
+        );
+    }
+
+    #[test]
+    fn unit_service_verify_signature_with_public_key_accepts_valid_signature() {
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let state_hash = "service-api:kamn-sdk:1";
+        let body = r#"{"message":"hello"}"#;
+        let signature = service_signature_for_state_hash_with_private_key(
+            &sender_did,
+            7,
+            state_hash,
+            body,
+            TEST_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should be produced");
+        let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
+            .expect("public key should be derived");
+        service_verify_signature_with_public_key(
+            &sender_did,
+            7,
+            state_hash,
+            body,
+            signature.as_str(),
+            signer_public_key.as_str(),
+        )
+        .expect("valid signature should verify");
+    }
+
+    #[test]
+    fn regression_service_verify_signature_with_public_key_rejects_invalid_public_key_hex() {
+        // Regression: #5977
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let signature = service_signature_for_state_hash_with_private_key(
+            &sender_did,
+            8,
+            "service-api:kamn-sdk:1",
+            "{}",
+            TEST_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should be produced");
+        let error = service_verify_signature_with_public_key(
+            &sender_did,
+            8,
+            "service-api:kamn-sdk:1",
+            "{}",
+            signature.as_str(),
+            "invalid-public-key",
+        )
+        .expect_err("invalid public key should fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_auth.expected_public_key",
+                reason: "must be valid compressed secp256k1 public key hex",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_service_verify_signature_with_public_key_rejects_empty_state_hash() {
+        // Regression: #5977
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
+            .expect("public key should be derived");
+        let signature = service_signature_for_state_hash_with_private_key(
+            &sender_did,
+            9,
+            "service-api:kamn-sdk:1",
+            "{}",
+            TEST_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should be produced");
+        let error = service_verify_signature_with_public_key(
+            &sender_did,
+            9,
+            "",
+            "{}",
+            signature.as_str(),
+            signer_public_key.as_str(),
+        )
+        .expect_err("empty state hash should fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_auth.state_hash",
+                reason: "must not be empty",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_service_verify_signature_with_public_key_rejects_empty_signature() {
+        // Regression: #5977
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
+            .expect("public key should be derived");
+        let error = service_verify_signature_with_public_key(
+            &sender_did,
+            10,
+            "service-api:kamn-sdk:1",
+            "{}",
+            "",
+            signer_public_key.as_str(),
+        )
+        .expect_err("empty signature should fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_auth.signature",
+                reason: "must not be empty",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_service_verify_signature_with_public_key_rejects_non_positive_nonce() {
+        // Regression: #5977
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
+            .expect("public key should be derived");
+        let signature = service_signature_for_state_hash_with_private_key(
+            &sender_did,
+            1,
+            "service-api:kamn-sdk:1",
+            "{}",
+            TEST_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should be produced");
+        let error = service_verify_signature_with_public_key(
+            &sender_did,
+            0,
+            "service-api:kamn-sdk:1",
+            "{}",
+            signature.as_str(),
+            signer_public_key.as_str(),
+        )
+        .expect_err("non-positive nonce should fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_auth.nonce",
+                reason: "must be greater than zero",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_service_verify_signature_with_public_key_rejects_tampered_signature() {
+        // Regression: #5977
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
+            .expect("public key should be derived");
+        let mut signature = service_signature_for_state_hash_with_private_key(
+            &sender_did,
+            11,
+            "service-api:kamn-sdk:1",
+            "{}",
+            TEST_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should be produced");
+        signature.push('f');
+        let error = service_verify_signature_with_public_key(
+            &sender_did,
+            11,
+            "service-api:kamn-sdk:1",
+            "{}",
+            signature.as_str(),
+            signer_public_key.as_str(),
+        )
+        .expect_err("tampered signature should fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_auth.signature",
+                reason: "failed cryptographic signature verification",
+            }
         );
     }
 }
