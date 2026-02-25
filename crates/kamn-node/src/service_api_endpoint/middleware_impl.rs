@@ -109,9 +109,11 @@ pub(super) async fn service_api_auth_middleware(
 
     {
         let mut replay_guard = state.replay_guard.lock().await;
-        if let Err(error) =
-            super::authorize_service_api_request(state.as_ref(), &parsed_request, &mut replay_guard)
-        {
+        if let Err(error) = super::auth::authorize_service_api_request(
+            state.as_ref(),
+            &parsed_request,
+            &mut replay_guard,
+        ) {
             let (status_code, error_label, auth_error, outcome) = match error {
                 RequestAuthFailure::Unauthorized(reasoned_error) => (
                     StatusCode::UNAUTHORIZED,
@@ -159,7 +161,7 @@ pub(super) async fn service_api_auth_middleware(
         .await;
     }
 
-    if let Err(error) = super::enforce_sender_anti_spam(&state, &parsed_request).await {
+    if let Err(error) = super::auth::enforce_sender_anti_spam(&state, &parsed_request).await {
         let projection = service_api_lifecycle_rejection_policy(error.reason_code).unwrap_or(
             ServiceApiLifecycleRejectionPolicy {
                 rejection_class: LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION,
@@ -220,9 +222,10 @@ pub(super) async fn service_api_auth_middleware(
         }
     }
 
-    if let Err(error) =
-        super::validate_websocket_route_requirements(is_websocket_route, &parsed_request.headers)
-    {
+    if let Err(error) = super::websocket::validate_websocket_route_requirements(
+        is_websocket_route,
+        &parsed_request.headers,
+    ) {
         return service_api_middleware_error_response(
             &state,
             request_started_at,
@@ -319,7 +322,7 @@ pub(super) async fn service_api_middleware_error_response(
     request_started_at: Instant,
     error: ServiceApiMiddlewareError<'_>,
 ) -> Response {
-    let response = super::json_error_response(
+    let response = super::payload::json_error_response(
         error.status_code,
         error.error_label,
         error.reason_code,
@@ -354,12 +357,12 @@ pub(super) async fn handle_service_api_http_route(
             message_store.create_task(context.parsed_request.body.as_str())
         };
         return match create_result {
-            Ok(payload) => super::contract_response(ServiceApiEndpointResponse {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                 status_code: 201,
                 content_type: "application/json",
                 body: super::serialize_service_api_json(&payload),
             }),
-            Err(error) => super::json_error_response(
+            Err(error) => super::payload::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -373,12 +376,12 @@ pub(super) async fn handle_service_api_http_route(
             message_store.fund_escrow(context.parsed_request.body.as_str())
         };
         return match fund_result {
-            Ok(payload) => super::contract_response(ServiceApiEndpointResponse {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
                 body: super::serialize_service_api_json(&payload),
             }),
-            Err(error) => super::json_error_response(
+            Err(error) => super::payload::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -391,7 +394,7 @@ pub(super) async fn handle_service_api_http_route(
         let channel_id = extract_channel_id_from_payload(context.parsed_request.body.as_str());
         let recipient_did =
             extract_recipient_did_from_payload(context.parsed_request.body.as_str());
-        let sender_did = super::header_value(
+        let sender_did = super::auth::header_value(
             &context.parsed_request.headers,
             REQUEST_AUTH_SENDER_DID_HEADER,
         );
@@ -423,7 +426,7 @@ pub(super) async fn handle_service_api_http_route(
                         state.relay_spool_file.as_deref(),
                         &relay_entry,
                     ) {
-                        return super::json_error_response(
+                        return super::payload::json_error_response(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             "internal",
                             REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -437,13 +440,13 @@ pub(super) async fn handle_service_api_http_route(
                     recipient_did.as_deref(),
                     channel_id.as_deref(),
                 );
-                super::contract_response(ServiceApiEndpointResponse {
+                super::payload::contract_response(ServiceApiEndpointResponse {
                     status_code: 202,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
                 })
             }
-            Err(error) => super::json_error_response(
+            Err(error) => super::payload::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -460,18 +463,20 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.transition_task(task_id, "accepted")
             };
             return match transition_result {
-                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
-                    status_code: 200,
-                    content_type: "application/json",
-                    body: super::serialize_service_api_json(&payload),
-                }),
-                Ok(None) => super::json_error_response(
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     REASON_CODE_ROUTE_NOT_FOUND,
                     "not found",
                 ),
-                Err(error) => super::json_error_response(
+                Err(error) => super::payload::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
                     REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -487,18 +492,20 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.transition_task(task_id, "completed")
             };
             return match transition_result {
-                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
-                    status_code: 200,
-                    content_type: "application/json",
-                    body: super::serialize_service_api_json(&payload),
-                }),
-                Ok(None) => super::json_error_response(
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     REASON_CODE_ROUTE_NOT_FOUND,
                     "not found",
                 ),
-                Err(error) => super::json_error_response(
+                Err(error) => super::payload::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
                     REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -514,18 +521,20 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.release_escrow(escrow_id)
             };
             return match release_result {
-                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
-                    status_code: 200,
-                    content_type: "application/json",
-                    body: super::serialize_service_api_json(&payload),
-                }),
-                Ok(None) => super::json_error_response(
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     REASON_CODE_ROUTE_NOT_FOUND,
                     "not found",
                 ),
-                Err(error) => super::json_error_response(
+                Err(error) => super::payload::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
                     REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -538,7 +547,7 @@ pub(super) async fn handle_service_api_http_route(
         if let Some(message_id) =
             super::payload::message_path_id(context.parsed_request.path.as_str())
         {
-            let requester_did = super::header_value(
+            let requester_did = super::auth::header_value(
                 &context.parsed_request.headers,
                 REQUEST_AUTH_SENDER_DID_HEADER,
             );
@@ -547,18 +556,20 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.get_message_for_requester(message_id, requester_did)
             };
             return match message_result {
-                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
-                    status_code: 200,
-                    content_type: "application/json",
-                    body: super::serialize_service_api_json(&payload),
-                }),
-                Ok(None) => super::json_error_response(
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     REASON_CODE_ROUTE_NOT_FOUND,
                     "not found",
                 ),
-                Err(error) => super::json_error_response(
+                Err(error) => super::payload::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
                     REASON_CODE_STATE_PERSISTENCE_FAILED,
@@ -573,7 +584,7 @@ pub(super) async fn handle_service_api_http_route(
                 let message_store = state.message_store.lock().await;
                 message_store.list_channel_messages(channel_id)
             };
-            return super::contract_response(ServiceApiEndpointResponse {
+            return super::payload::contract_response(ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
                 body: super::serialize_service_api_json(&payload),
@@ -585,12 +596,12 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.get_task(task_id)
             };
             return match task_payload {
-                Some(payload) => super::contract_response(ServiceApiEndpointResponse {
+                Some(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
                 }),
-                None => super::json_error_response(
+                None => super::payload::json_error_response(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     REASON_CODE_ROUTE_NOT_FOUND,
@@ -607,7 +618,7 @@ pub(super) async fn handle_service_api_http_route(
         context.parsed_request.path.as_str(),
         context.parsed_request.body.as_str(),
     );
-    super::contract_response(rendered)
+    super::payload::contract_response(rendered)
 }
 
 fn extract_channel_id_from_payload(payload: &str) -> Option<String> {
@@ -640,10 +651,16 @@ pub(super) async fn handle_service_api_websocket_route(
     upgrade: WebSocketUpgrade,
 ) -> Response {
     let _ = context.correlation_id.as_str();
-    match super::project_websocket_event_payload(&state.snapshot, &context.parsed_request.headers) {
+    match super::websocket::project_websocket_event_payload(
+        &state.snapshot,
+        &context.parsed_request.headers,
+    ) {
         Ok(event_payload) => {
-            let mut response =
-                super::websocket_upgrade_response(upgrade, event_payload, &state.websocket_events);
+            let mut response = super::websocket::websocket_upgrade_response(
+                upgrade,
+                event_payload,
+                &state.websocket_events,
+            );
             response
                 .extensions_mut()
                 .insert(ServiceApiRequestOutcome("websocket-upgrade"));
@@ -651,8 +668,8 @@ pub(super) async fn handle_service_api_websocket_route(
         }
         Err(error) => {
             let (status_code, error_label, outcome) =
-                super::project_websocket_error_response(&error);
-            let mut response = super::json_error_response(
+                super::websocket::project_websocket_error_response(&error);
+            let mut response = super::payload::json_error_response(
                 status_code,
                 error_label,
                 error.reason_code,
@@ -687,8 +704,8 @@ pub(super) fn log_service_api_event_warn(
 pub(super) fn service_api_request_correlation_id(request: &ParsedRequest) -> String {
     let method = request.method.to_ascii_lowercase();
     if let (Some(sender_did), Some(nonce)) = (
-        super::header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER),
-        super::header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER),
+        super::auth::header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER),
+        super::auth::header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER),
     ) {
         return format!("service-api:{method}:{}:{sender_did}:{nonce}", request.path);
     }
