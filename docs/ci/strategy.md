@@ -2092,6 +2092,24 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Regression: #4030
 - Regression: #4031
 
+## Cargo-Audit Dependency Vulnerability Gate Contract (Issue #5941)
+- PR and deep-validate gate commands:
+  - `cargo audit --json > cargo-audit-report.json`
+  - `python3 scripts/ci/check_cargo_audit_policy.py --audit-json cargo-audit-report.json --waiver-file .ci/cargo-audit-waivers.json --threshold-max-severity moderate --output-json ci-cargo-audit-policy.json`
+  - `bash scripts/ci/test_check_cargo_audit_policy.sh`
+- Deterministic policy markers:
+  - `cargo_audit_policy_schema_version=kamn.ci.cargo-audit-policy-report.v1`
+  - `cargo_audit_waiver_schema_version=kamn.ci.cargo-audit-waiver.v1`
+  - `cargo_audit_policy_reason_taxonomy_version=kamn.ci.cargo-audit-policy-reason-taxonomy.v1`
+  - `cargo_audit_policy_reason_codes_csv=cargo_audit_report_missing,cargo_audit_report_invalid,cargo_audit_report_schema_invalid,cargo_audit_threshold_invalid,cargo_audit_waiver_file_missing,cargo_audit_waiver_invalid,cargo_audit_waiver_schema_invalid,cargo_audit_waiver_tracking_issue_invalid,cargo_audit_waiver_expired,cargo_audit_advisory_id_missing,cargo_audit_advisory_severity_unknown,cargo_audit_advisory_threshold_exceeded_unwaived,cargo_audit_advisory_threshold_exceeded_waived`
+- Fail-closed and waiver policy:
+  - unwaived advisories above `moderate` (`high`, `critical`) fail the gate.
+  - waiver entries must include `advisory_id`, `reason`, `tracking_issue` (`#<issue-id>`), and non-expired `expires_on`.
+  - waiver application remains visible through `review_required=true` and archived gate artifacts.
+- Required archived artifacts:
+  - `cargo-audit-report.json`
+  - `ci-cargo-audit-policy.json`
+
 ## Kolme Live Retry Coverage
 - Runtime commit submit/finality retry behavior must remain deterministic and bounded.
 - Fast-gate coverage commands:

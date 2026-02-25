@@ -1,12 +1,12 @@
 # Spec: Issue #5941 - Task: Add cargo-audit dependency vulnerability scanning to required CI gates
 
 - Issue: #5941
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: devops
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5916
 
 ## Problem Statement
@@ -40,6 +40,15 @@ Out of scope:
 - AC-3 verification tests pass in scoped CI runs.
 - AC-4 verification tests pass in scoped CI runs.
 
+## Implementation Evidence (2026-02-25)
+- AC-1: required CI jobs now run `cargo audit --json` and fail closed via `scripts/ci/check_cargo_audit_policy.py` when unwaived severity exceeds `moderate`.
+- AC-2: waiver schema `.ci/cargo-audit-waivers.json` is enforced (`schema_version=kamn.ci.cargo-audit-waiver.v1`) with mandatory `reason`, `tracking_issue`, and non-expired `expires_on`.
+- AC-3: workflows archive `cargo-audit-report.json` and `ci-cargo-audit-policy.json` artifacts for auditability.
+- AC-4: checker regression suite added and passing:
+  - `bash scripts/ci/test_check_cargo_audit_policy.sh`
+  - `python3 -m py_compile scripts/ci/check_cargo_audit_policy.py`
+  - `cargo fmt --check`
+
 
 ## Required Test Categories
 - Unit: CI script policy checks
@@ -50,4 +59,3 @@ Out of scope:
 
 ## Dependencies
 - #5916
-

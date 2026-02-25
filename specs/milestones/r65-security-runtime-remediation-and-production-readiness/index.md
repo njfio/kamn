@@ -50,3 +50,6 @@ This milestone closes production-readiness blockers across cryptography correctn
 2. Each child task is delivered via TDD evidence and mapped AC verification.
 3. Critical findings are closed with merged task PRs and traceable regression coverage.
 4. Security and runtime gates are enforced in CI for sustained non-regression.
+
+## Progress Notes
+- 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.

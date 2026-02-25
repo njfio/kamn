@@ -29,6 +29,7 @@ diagram references.
 - `docs/architecture/adr-kamn-core-live-tls-transport.md`
 - `docs/architecture/adr-kamn-sdk-service-https-transport.md`
 - `docs/architecture/adr-001-production-message-crypto-primitives.md`
+- `docs/architecture/adr-cargo-audit-ci-gate.md`
 
 ## Diagram Catalog
 
