@@ -2,19 +2,18 @@
 
 - Issue: #5924
 - Spec: `specs/5924/spec.md`
-- Status: Draft
+- Status: Implemented
 - Last Updated: 2026-02-24
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5924/spec.md.
-2. Implement: Use zeroize or equivalent guaranteed erasure primitive in signature_profile key material paths.
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: added regression contracts around `wipe_bytes` zeroization semantics and secret-safe failure output.
+2. Implemented `zeroize`-backed erasure in `crates/kamn-core/src/signature_profile.rs` via `bytes.zeroize()`.
+3. Added integration round-trip regression to confirm service-auth sign/verify behavior stability after refactor.
+4. Verified with targeted tests, `cargo fmt --check`, and strict `kamn-core` clippy.
 
-## Affected Modules (Initial)
+## Affected Modules
 - `crates/kamn-core/src/signature_profile.rs`
-- `crates/kamn-core/src/transaction.rs`
-- `crates/kamn-core/tests/`
+- `crates/kamn-core/tests/signature_profile_zeroization_contract.rs`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
@@ -30,4 +29,4 @@
 - Protocol/API/schema changes require explicit documentation updates and linked follow-up issues when out of scope.
 
 ## ADR Requirement
-- ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+- Not required (no dependency or protocol/wire-format change).
