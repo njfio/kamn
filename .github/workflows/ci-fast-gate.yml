@@ -29,6 +29,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Reclaim runner disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup || true
+          sudo apt-get clean || true
+          sudo docker system prune -af || true
+          df -h
+
       - name: Mark start timestamp
         id: started
         run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
@@ -584,6 +592,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Reclaim runner disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup || true
+          sudo apt-get clean || true
+          sudo docker system prune -af || true
+          df -h
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
