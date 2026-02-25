@@ -247,6 +247,36 @@ impl ServiceApiMessageStore {
         })
     }
 
+    pub(super) fn create_channel(
+        &mut self,
+        payload: &str,
+    ) -> Result<ServiceApiChannelCreateBody, String> {
+        self.refresh_from_disk()?;
+        let base = format!(
+            "channel-local-{:016x}",
+            deterministic_body_tag(payload.as_bytes())
+        );
+        let mut channel_id = base.clone();
+        let mut suffix = 1_u64;
+        while self
+            .snapshot
+            .channel_messages
+            .contains_key(channel_id.as_str())
+        {
+            channel_id = format!("{base}-{suffix}");
+            suffix = suffix.saturating_add(1);
+        }
+        self.snapshot
+            .channel_messages
+            .entry(channel_id.clone())
+            .or_default();
+        self.persist()?;
+        Ok(ServiceApiChannelCreateBody {
+            channel_id,
+            status: "created".to_owned(),
+        })
+    }
+
     pub(super) fn upsert_relayed_message(
         &mut self,
         message_id: &str,

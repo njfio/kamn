@@ -357,6 +357,27 @@ pub(super) async fn handle_service_api_http_route(
     Extension(context): Extension<ServiceApiRequestContext>,
 ) -> Response {
     let _ = context.correlation_id.as_str();
+    if context.parsed_request.method == "POST"
+        && context.parsed_request.path == ROUTE_CHANNELS_CREATE
+    {
+        let create_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.create_channel(context.parsed_request.body.as_str())
+        };
+        return match create_result {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 201,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api channel persistence failed: {error}").as_str(),
+            ),
+        };
+    }
     if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_TASKS_CREATE
     {
         let create_result = {
