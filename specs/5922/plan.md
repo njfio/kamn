@@ -2,22 +2,24 @@
 
 - Issue: #5922
 - Spec: `specs/5922/spec.md`
-- Status: Draft
+- Status: Implemented
 - Last Updated: 2026-02-24
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5922/spec.md.
-2. Implement: Introduce shared digest utility backed by sha2::Sha256; migrate M0-M5 call sites.
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: added failing contract tests for M3 fixed-vector SHA-256 output and M0-M5 pseudo-digest helper removal.
+2. Implemented shared digest utility in `crates/kamn-core/src/data_layer_hashing.rs` using `k256::sha2::Sha256`.
+3. Migrated M0-M5 tagged digest call sites to shared `tagged_sha256` and removed local `deterministic_digest_256_hex` implementations.
+4. Verified with issue contract tests, M0-M5 integration suites, `cargo fmt --check`, and strict `kamn-core` clippy.
 
-## Affected Modules (Initial)
+## Affected Modules
+- `crates/kamn-core/src/data_layer_hashing.rs`
 - `crates/kamn-core/src/data_layer_m0.rs`
 - `crates/kamn-core/src/data_layer_m1.rs`
 - `crates/kamn-core/src/data_layer_m2_gateway_access.rs`
 - `crates/kamn-core/src/data_layer_m3_blind_index_search.rs`
 - `crates/kamn-core/src/data_layer_m4_escrow_integration.rs`
 - `crates/kamn-core/src/data_layer_m5_vector_integration.rs`
+- `crates/kamn-core/tests/data_layer_sha256_contract.rs`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
@@ -33,4 +35,4 @@
 - Protocol/API/schema changes require explicit documentation updates and linked follow-up issues when out of scope.
 
 ## ADR Requirement
-- ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+- Not required (no dependency or protocol/wire-format change).

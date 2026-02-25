@@ -1,7 +1,7 @@
 # Spec: Issue #5922 - Task: Replace fake SHA-256 labels with real sha2::Sha256 in data layer M0-M5
 
 - Issue: #5922
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Area: security
@@ -29,16 +29,17 @@ Out of scope:
 - AC-4: Unit, Functional, Integration, and Regression tests are present and passing.
 
 ## Conformance Cases
-- C-01 (Functional, AC-1): Verify All M0-M5 digest outputs are computed with real SHA-256.
-- C-02 (Functional, AC-2): Verify Duplicate deterministic_digest_256_hex implementations are removed.
-- C-03 (Functional, AC-3): Verify Compatibility/regression tests verify expected digest format and deterministic outputs for fixed vectors.
-- C-04 (Functional, AC-4): Verify Unit, Functional, Integration, and Regression tests are present and passing.
+- C-01 (Functional, AC-1): `regression_issue_5922_m3_blind_index_digest_matches_real_sha256_vector` verifies M3 blind-index digest output matches canonical SHA-256 vector.
+- C-02 (Regression, AC-2): `regression_issue_5922_m0_m5_remove_custom_digest_mixers` verifies M0-M5 removed `deterministic_digest_256_hex` and route through shared `tagged_sha256`.
+- C-03 (Unit/Functional, AC-3): `data_layer_hashing::tests::regression_issue_5922_sha256_hex_matches_known_test_vectors` verifies fixed SHA-256 vectors and compatibility output format.
+- C-04 (Integration, AC-4): `data_layer_m0_contract`, `data_layer_m1_anchoring_orchestrator`, `data_layer_m2_gateway_access`, `data_layer_m3_blind_index_search`, `data_layer_m4_escrow_integration`, and `data_layer_m5_vector_integration` suites pass.
+- C-05 (Verify, AC-4): `cargo fmt --check` and strict `kamn-core` clippy pass for touched modules.
 
 ## Success Metrics / Observable Signals
-- AC-1 verification tests pass in scoped CI runs.
-- AC-2 verification tests pass in scoped CI runs.
-- AC-3 verification tests pass in scoped CI runs.
-- AC-4 verification tests pass in scoped CI runs.
+- All M0-M5 tagged digests are computed via shared SHA-256 helper (`data_layer_hashing::tagged_sha256`).
+- Legacy pseudo-digest helper duplication is removed across M0-M5 modules.
+- SHA-256 fixed-vector tests and data-layer integration suites pass.
+- Scoped formatting and strict clippy checks pass.
 
 
 ## Required Test Categories
@@ -50,4 +51,3 @@ Out of scope:
 
 ## Dependencies
 - #5916
-

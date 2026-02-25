@@ -8,7 +8,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use crate::{AgentDid, AgentDidError, ContentLifecycleManager, ContentRetentionClass, KamnDid};
+use crate::{
+    data_layer_hashing::tagged_sha256, AgentDid, AgentDidError, ContentLifecycleManager,
+    ContentRetentionClass, KamnDid,
+};
 
 /// Hash algorithm label used by M5 deterministic record digests.
 pub const DATA_LAYER_M5_HASH_ALGORITHM: &str = "sha256";
@@ -1066,32 +1069,5 @@ fn vector_marker(value: Option<&[f32]>) -> String {
 }
 
 fn tagged_digest(value: &str) -> String {
-    format!(
-        "{DATA_LAYER_M5_HASH_ALGORITHM}:{}",
-        deterministic_digest_256_hex(value)
-    )
-}
-
-fn deterministic_digest_256_hex(value: &str) -> String {
-    const SEEDS: [u64; 4] = [
-        0x243f6a8885a308d3,
-        0x13198a2e03707344,
-        0xa4093822299f31d0,
-        0x082efa98ec4e6c89,
-    ];
-    let mut output = String::with_capacity(64);
-    for (index, seed) in SEEDS.iter().enumerate() {
-        let mut acc = *seed ^ (index as u64).wrapping_mul(0x9e3779b97f4a7c15);
-        for (offset, byte) in value.as_bytes().iter().enumerate() {
-            let mix = ((*byte as u64) << ((offset % 8) * 8))
-                ^ ((offset as u64).wrapping_mul(0x100000001b3));
-            acc ^= mix;
-            acc = acc.rotate_left(((offset + index) % 63 + 1) as u32);
-            acc = acc.wrapping_mul(0x100000001b3);
-            acc ^= acc >> 29;
-            acc = acc.wrapping_add(0x9e3779b97f4a7c15 ^ (index as u64));
-        }
-        output.push_str(format!("{acc:016x}").as_str());
-    }
-    output
+    tagged_sha256(value, DATA_LAYER_M5_HASH_ALGORITHM)
 }
