@@ -10,6 +10,7 @@ import sys
 from typing import Any
 
 REGISTRY_SCHEMA_VERSION = "kamn.framework.lane-registry.v1"
+SUPERSEDED_DELETION_MANIFEST_REL = "fixtures/ci/superseded_script_deletion_manifest.json"
 
 
 def fail(message: str) -> int:
@@ -80,11 +81,33 @@ def _validate_wrapper_entry(entry: Any) -> tuple[str, str, str]:
     return wrapper_relpath, wrapper_name, link_target
 
 
+def _load_superseded_deleted_wrappers(repo_root: Path) -> set[str]:
+    manifest_path = repo_root / SUPERSEDED_DELETION_MANIFEST_REL
+    if not manifest_path.is_file():
+        return set()
+    payload = load_json(manifest_path)
+    if not isinstance(payload, dict):
+        return set()
+    deletions = payload.get("deletions")
+    if not isinstance(deletions, list):
+        return set()
+
+    deleted_paths: set[str] = set()
+    for entry in deletions:
+        if not isinstance(entry, dict):
+            continue
+        script_path = entry.get("script_path")
+        if isinstance(script_path, str) and script_path:
+            deleted_paths.add(script_path)
+    return deleted_paths
+
+
 def run_check(
     repo_root: Path,
     manifest_entries: list[tuple[str, dict[str, Any]]],
     wrapper_entries: list[tuple[str, str, str]],
 ) -> int:
+    superseded_deleted_wrappers = _load_superseded_deleted_wrappers(repo_root)
     manifest_drift = 0
     for relpath, expected_payload in manifest_entries:
         manifest_path = repo_root / relpath
@@ -101,6 +124,8 @@ def run_check(
     for wrapper_relpath, _wrapper_name, link_target in wrapper_entries:
         wrapper_path = repo_root / wrapper_relpath
         if not wrapper_path.exists():
+            if wrapper_relpath in superseded_deleted_wrappers:
+                continue
             return fail(f"wrapper not found: {wrapper_relpath}")
         if not wrapper_path.is_symlink():
             return fail(f"wrapper is not symlink: {wrapper_relpath}")

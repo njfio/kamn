@@ -2,8 +2,8 @@
 
 - Issue: #5939
 - Spec: `specs/5939/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5939/spec.md.
@@ -32,3 +32,12 @@
 
 ## ADR Requirement
 - ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+
+## Delivered
+- Added bounded critical-path coverage gate + thresholds + policy report artifacts.
+- Added bounded critical-path mutation gate across runtime/API/network/security slices.
+- Added CI-tool regression contracts for new gates.
+- Updated workspace pre-merge workflow to enforce both gates on PRs.
+- Added ADR documenting rationale/tradeoffs: `docs/architecture/adr-critical-path-assurance-gates.md`.
+- Post-mainline stabilization: aligned legacy contract-lane tests with manifest-dispatch + superseded-wrapper deletion policy (Kolme, governance, canary).
+- Post-mainline stabilization: updated Service API serde/reason-code live validators to follow split source modules (`service_api_endpoint.rs` + `service_api_endpoint/payload.rs` + middleware mappings).

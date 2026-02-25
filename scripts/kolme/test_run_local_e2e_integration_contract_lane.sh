@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNNER="$ROOT_DIR/scripts/kolme/run_local_e2e_integration_contract_lane.sh"
+LEGACY_RUNNER="$ROOT_DIR/scripts/kolme/run_local_e2e_integration_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_e2e_integration_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_e2e_integration_contract_lane.py"
@@ -12,18 +13,18 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
 
-if [ ! -x "$RUNNER" ]; then
-  echo "expected local e2e integration contract lane runner to be executable" >&2
+if [ -e "$LEGACY_RUNNER" ]; then
+  echo "expected superseded local e2e integration contract lane wrapper to be deleted" >&2
+  exit 1
+fi
+
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest lane runner to be executable" >&2
   exit 1
 fi
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected local e2e integration policy checker to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected local e2e integration contract lane to dispatch through manifest wrapper" >&2
   exit 1
 fi
 
@@ -89,7 +90,11 @@ if ! grep -q "Regression: #1682" "$DOC_FILE"; then
   exit 1
 fi
 
-bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
+bash "$MANIFEST_RUNNER" \
+  --manifest "$MANIFEST" \
+  --phase contract \
+  --output-json "$TMP_REPORT" \
+  --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json

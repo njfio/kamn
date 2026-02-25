@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
+PAYLOAD_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/payload.rs"
 TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs"
 
 output_json=""
@@ -38,6 +39,10 @@ if [ ! -f "$SOURCE_FILE" ]; then
   echo "expected service api endpoint source file: $SOURCE_FILE" >&2
   exit 1
 fi
+if [ ! -f "$PAYLOAD_SOURCE_FILE" ]; then
+  echo "expected service api endpoint payload source file: $PAYLOAD_SOURCE_FILE" >&2
+  exit 1
+fi
 if [ ! -f "$TEST_FILE" ]; then
   echo "expected service api endpoint test file: $TEST_FILE" >&2
   exit 1
@@ -47,6 +52,11 @@ start_epoch="$(date +%s)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+source_has_marker() {
+  local marker="$1"
+  grep -Fq "$marker" "$SOURCE_FILE" || grep -Fq "$marker" "$PAYLOAD_SOURCE_FILE"
+}
+
 for source_marker in \
   "use serde::de::DeserializeOwned;" \
   "use serde::{Deserialize, Serialize};" \
@@ -55,7 +65,7 @@ for source_marker in \
   "fn serialize_service_api_json<T: Serialize>(" \
   "serde_json::from_str(payload)" \
   "serde_json::to_string(payload)"; do
-  if ! grep -Fq "$source_marker" "$SOURCE_FILE"; then
+  if ! source_has_marker "$source_marker"; then
     echo "missing required serde source marker: $source_marker" >&2
     exit 1
   fi
@@ -72,7 +82,7 @@ for dto_marker in \
   "ServiceApiTaskGetBody" \
   "ServiceApiAgentGetBody" \
   "ServiceApiWebsocketStateTransitionBody"; do
-  if ! grep -Fq "$dto_marker" "$SOURCE_FILE"; then
+  if ! source_has_marker "$dto_marker"; then
     echo "missing required serde dto marker: $dto_marker" >&2
     exit 1
   fi
@@ -82,7 +92,7 @@ for decode_reason in \
   "service_api_payload_json_syntax_invalid" \
   "service_api_payload_structure_invalid" \
   "service_api_payload_io_error"; do
-  if ! grep -Fq "$decode_reason" "$SOURCE_FILE"; then
+  if ! source_has_marker "$decode_reason"; then
     echo "missing required serde decode reason marker: $decode_reason" >&2
     exit 1
   fi

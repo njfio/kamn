@@ -44,6 +44,8 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
   bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_cargo_audit_policy.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_critical_path_coverage.sh"
+  bash "$ROOT_DIR/scripts/ci/test_run_critical_path_mutation_gate.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"

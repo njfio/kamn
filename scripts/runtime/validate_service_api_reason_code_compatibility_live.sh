@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
+PAYLOAD_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/payload.rs"
+MIDDLEWARE_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/middleware_impl.rs"
 TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs"
 CORPUS_FILE="$ROOT_DIR/fixtures/runtime/service_api_structured_error_regression_corpus.json"
 RUST_SDK_SOURCE="$ROOT_DIR/crates/kamn-sdk/src/service.rs"
@@ -43,6 +45,14 @@ if [ ! -f "$SOURCE_FILE" ]; then
   echo "expected service api endpoint source file: $SOURCE_FILE" >&2
   exit 1
 fi
+if [ ! -f "$PAYLOAD_SOURCE_FILE" ]; then
+  echo "expected service api endpoint payload source file: $PAYLOAD_SOURCE_FILE" >&2
+  exit 1
+fi
+if [ ! -f "$MIDDLEWARE_SOURCE_FILE" ]; then
+  echo "expected service api endpoint middleware source file: $MIDDLEWARE_SOURCE_FILE" >&2
+  exit 1
+fi
 if [ ! -f "$TEST_FILE" ]; then
   echo "expected service api endpoint test file: $TEST_FILE" >&2
   exit 1
@@ -72,6 +82,13 @@ start_epoch="$(date +%s)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+source_has_marker() {
+  local marker="$1"
+  grep -Fq "$marker" "$SOURCE_FILE" \
+    || grep -Fq "$marker" "$PAYLOAD_SOURCE_FILE" \
+    || grep -Fq "$marker" "$MIDDLEWARE_SOURCE_FILE"
+}
+
 for reason_code_marker in \
   "service_api_auth_sender_did_header_missing" \
   "service_api_auth_replay_nonce_detected" \
@@ -80,7 +97,7 @@ for reason_code_marker in \
   "service_api_payload_json_syntax_invalid" \
   "service_api_payload_structure_invalid" \
   "service_api_payload_io_error"; do
-  if ! grep -Fq "$reason_code_marker" "$SOURCE_FILE"; then
+  if ! source_has_marker "$reason_code_marker"; then
     echo "missing required reason-code marker in source: $reason_code_marker" >&2
     exit 1
   fi
@@ -89,7 +106,7 @@ done
 for envelope_marker in \
   "pub(crate) reason_code: String" \
   "pub(crate) message: String"; do
-  if ! grep -Fq "$envelope_marker" "$SOURCE_FILE"; then
+  if ! source_has_marker "$envelope_marker"; then
     echo "missing required error-envelope marker in source: $envelope_marker" >&2
     exit 1
   fi
@@ -121,7 +138,7 @@ for mapping_marker in \
   "validate_websocket_route_requirements" \
   "reason_code: error.reason_code" \
   "message: error.message.as_str()"; do
-  if ! grep -Fq "$mapping_marker" "$SOURCE_FILE"; then
+  if ! source_has_marker "$mapping_marker"; then
     echo "missing required error-mapping marker in source: $mapping_marker" >&2
     exit 1
   fi
@@ -157,16 +174,17 @@ done
 
 corpus_selectors_file="$TMP_DIR/service-api-structured-error-regression-selectors.txt"
 corpus_metadata_file="$TMP_DIR/service-api-structured-error-regression-metadata.json"
-python3 - "$CORPUS_FILE" "$SOURCE_FILE" "$TEST_FILE" "$corpus_selectors_file" "$corpus_metadata_file" <<'PY'
+python3 - "$CORPUS_FILE" "$SOURCE_FILE" "$PAYLOAD_SOURCE_FILE" "$TEST_FILE" "$corpus_selectors_file" "$corpus_metadata_file" <<'PY'
 import json
 import pathlib
 import sys
 
 corpus_file = pathlib.Path(sys.argv[1])
 source_file = pathlib.Path(sys.argv[2])
-test_file = pathlib.Path(sys.argv[3])
-selectors_file = pathlib.Path(sys.argv[4])
-metadata_file = pathlib.Path(sys.argv[5])
+payload_source_file = pathlib.Path(sys.argv[3])
+test_file = pathlib.Path(sys.argv[4])
+selectors_file = pathlib.Path(sys.argv[5])
+metadata_file = pathlib.Path(sys.argv[6])
 
 payload = json.loads(corpus_file.read_text(encoding="utf-8"))
 if payload.get("schema_version") != "kamn.runtime.service-api-structured-error-regression-corpus.v1":
@@ -182,6 +200,8 @@ seen_ids = set()
 selectors = []
 
 source_text = source_file.read_text(encoding="utf-8")
+payload_source_text = payload_source_file.read_text(encoding="utf-8")
+all_source_text = f"{source_text}\n{payload_source_text}"
 test_text = test_file.read_text(encoding="utf-8")
 
 for scenario in scenarios:
@@ -201,7 +221,7 @@ for scenario in scenarios:
     seen_classes.add(scenario_class)
     if not isinstance(reason_code, str) or not reason_code.strip():
         raise SystemExit(f"structured error regression scenario reason_code missing: {scenario_id}")
-    if reason_code not in source_text:
+    if reason_code not in all_source_text:
         raise SystemExit(
             "structured error regression corpus reason_code missing from source: "
             f"{reason_code}"

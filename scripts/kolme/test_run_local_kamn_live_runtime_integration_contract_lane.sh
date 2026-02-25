@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh"
+LEGACY_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json"
 RUNTIME_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
@@ -28,18 +29,18 @@ COMPOSITE_GATE_REASON_CODES_CSV="dry_run_no_commands_executed,live_runtime_integ
 KEY_SOURCE_REASON_TAXONOMY_VERSION="kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1"
 KEY_SOURCE_REASON_CODES_CSV="runtime_signer_key_source_contract_version_missing,runtime_signer_key_source_contract_version_mismatch,runtime_signer_key_source_contract_version_contract_mismatch,runtime_signer_key_source_missing,runtime_signer_key_source_invalid,runtime_signer_key_source_profile_pair_disallowed,runtime_signer_key_source_contract_mismatch,runtime_commit_signer_key_source_marker_missing,runtime_commit_fallback_private_key_command_marker_detected,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation"
 
-if [ ! -x "$RUNNER" ]; then
-  echo "expected local KAMN live runtime integration contract lane runner to be executable" >&2
+if [ -e "$LEGACY_RUNNER" ]; then
+  echo "expected superseded local KAMN live runtime integration contract lane wrapper to be deleted" >&2
+  exit 1
+fi
+
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest lane runner to be executable" >&2
   exit 1
 fi
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected local KAMN live runtime integration policy checker to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected local KAMN live runtime integration contract lane to dispatch through manifest wrapper" >&2
   exit 1
 fi
 
@@ -418,7 +419,11 @@ if ! grep -q "Regression: #1489" "$DOC_FILE"; then
   exit 1
 fi
 
-bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
+bash "$MANIFEST_RUNNER" \
+  --manifest "$MANIFEST" \
+  --phase contract \
+  --output-json "$TMP_REPORT" \
+  --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json

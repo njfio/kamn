@@ -8,6 +8,11 @@
 - [ ] Relevant local checks passed.
 - [ ] CI fast-gate checks expected to pass.
 
+## Critical-Path Assurance Evidence
+- Mutation gate status:
+- Coverage gate status:
+- Critical-path report artifact(s):
+
 ## CI Impact Declaration
 - [ ] No CI scope impact.
 - [ ] CI scope impact present (explain below).

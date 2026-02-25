@@ -1,12 +1,12 @@
 # Spec: Issue #5939 - Task: Expand mutation and coverage gates (llvm-cov) for critical runtime/security paths
 
 - Issue: #5939
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: qa
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5920
 
 ## Problem Statement
@@ -51,3 +51,21 @@ Out of scope:
 ## Dependencies
 - #5920
 
+## Implementation Notes
+- Added critical-path coverage thresholds: `.ci/critical-path-coverage-thresholds.json`.
+- Added fail-closed coverage policy checker + runner:
+  - `scripts/ci/check_critical_path_coverage.py`
+  - `scripts/ci/run_critical_path_coverage_gate.sh`
+- Added fail-closed bounded mutation runner:
+  - `scripts/ci/run_critical_path_mutation_gate.sh`
+- Added CI-tool regression tests:
+  - `scripts/ci/test_check_critical_path_coverage.sh`
+  - `scripts/ci/test_run_critical_path_mutation_gate.sh`
+- Wired workspace pre-merge CI gate + report artifacts in `.github/workflows/ci-fast-gate.yml`.
+- Added PR evidence section to `.github/pull_request_template.md` for mutation/coverage reporting.
+- Added architecture decision record:
+  - `docs/architecture/adr-critical-path-assurance-gates.md`
+
+## Verification Snapshot
+- Mutation gate: `slice_count=6`, `tested_mutants=10`, `caught_mutants=10`, `missed=0`, `unviable=0`, `timeout=0`.
+- Coverage gate: `target_count=6`, `failed_targets=0`, `final_decision=GO`.
