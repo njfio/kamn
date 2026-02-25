@@ -398,6 +398,26 @@ pub(super) async fn handle_service_api_http_route(
             ),
         };
     }
+    if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_BRIDGE_SUBMIT
+    {
+        let submit_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.submit_bridge(context.parsed_request.body.as_str())
+        };
+        return match submit_result {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 202,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api bridge persistence failed: {error}").as_str(),
+            ),
+        };
+    }
     if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_ESCROW_FUND {
         let fund_result = {
             let mut message_store = state.message_store.lock().await;
@@ -665,6 +685,35 @@ pub(super) async fn handle_service_api_http_route(
                 ),
             };
         }
+        if let Some(bridge_id) =
+            super::payload::bridge_forward_path_id(context.parsed_request.path.as_str())
+        {
+            let forward_result = {
+                let mut message_store = state.message_store.lock().await;
+                message_store.forward_bridge(bridge_id)
+            };
+            return match forward_result {
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
+                    StatusCode::NOT_FOUND,
+                    "not-found",
+                    REASON_CODE_ROUTE_NOT_FOUND,
+                    "not found",
+                ),
+                Err(error) => super::payload::json_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    REASON_CODE_STATE_PERSISTENCE_FAILED,
+                    format!("service api bridge persistence failed: {error}").as_str(),
+                ),
+            };
+        }
     }
     if context.parsed_request.method == "GET" {
         if let Some(message_id) =
@@ -774,6 +823,35 @@ pub(super) async fn handle_service_api_http_route(
                     "internal",
                     REASON_CODE_STATE_PERSISTENCE_FAILED,
                     format!("service api content query failed: {error}").as_str(),
+                ),
+            };
+        }
+        if let Some(bridge_id) =
+            super::payload::bridge_path_id(context.parsed_request.path.as_str())
+        {
+            let bridge_payload = {
+                let mut message_store = state.message_store.lock().await;
+                message_store.get_bridge(bridge_id)
+            };
+            return match bridge_payload {
+                Ok(Some(payload)) => {
+                    super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    })
+                }
+                Ok(None) => super::payload::json_error_response(
+                    StatusCode::NOT_FOUND,
+                    "not-found",
+                    REASON_CODE_ROUTE_NOT_FOUND,
+                    "not found",
+                ),
+                Err(error) => super::payload::json_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    REASON_CODE_STATE_PERSISTENCE_FAILED,
+                    format!("service api bridge query failed: {error}").as_str(),
                 ),
             };
         }

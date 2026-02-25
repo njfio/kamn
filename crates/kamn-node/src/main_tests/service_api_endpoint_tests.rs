@@ -4638,6 +4638,223 @@ fn integration_service_api_endpoint_persists_content_lifecycle_state_across_rest
 }
 
 #[test]
+fn integration_service_api_endpoint_persists_bridge_state_across_restart() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-bridge-restart-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34115".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let caller_did = "kamn:did:agent:test-client-bridge-restart";
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let submit_payload = r#"{"source_message_id":"msg-bridge-restart-source"}"#;
+    let submit_signature = service_api_request_signature_for_fields(
+        caller_did,
+        101,
+        state_hash.as_str(),
+        submit_payload,
+    );
+    let submit_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/bridge/submit",
+        submit_payload,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "101"),
+            ("X-KAMN-Request-Signature", submit_signature.as_str()),
+        ],
+    );
+    assert!(submit_response.contains("HTTP/1.1 202 Accepted"));
+    let submit_json: Value =
+        parse_service_api_payload(extract_http_response_body(submit_response.as_str()))
+            .expect("bridge submit payload should deserialize");
+    let bridge_id = submit_json["bridge_id"]
+        .as_str()
+        .expect("bridge id should be string")
+        .to_owned();
+    assert_eq!(submit_json["bridge_status"], "submitted");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after bridge submit phase"
+    );
+
+    let restart_report = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34116".to_owned(),
+        ])
+        .expect("restart api args should parse"),
+    )
+    .expect("restart api execution should succeed");
+    let restart_snapshot = build_service_api_snapshot(&restart_report);
+    let restart_state_hash = format!(
+        "service-api:{}:{}",
+        restart_snapshot.chain_id.as_str(),
+        restart_snapshot.chain_version.as_str()
+    );
+    let restart_bind_addr = reserve_loopback_addr();
+    let restart_endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: restart_bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let restart_server_snapshot = restart_snapshot.clone();
+    let restart_server = thread::spawn(move || {
+        serve_service_api_endpoint(&restart_endpoint_config, &restart_server_snapshot)
+    });
+    wait_for_endpoint_ready(restart_bind_addr.as_str());
+
+    let forward_path = format!("/v1/bridge/{bridge_id}/forward");
+    let forward_signature =
+        service_api_request_signature_for_fields(caller_did, 102, restart_state_hash.as_str(), "");
+    let forward_response = send_http_request_with_headers(
+        restart_bind_addr.as_str(),
+        "POST",
+        forward_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "102"),
+            ("X-KAMN-Request-Signature", forward_signature.as_str()),
+        ],
+    );
+    assert!(forward_response.contains("HTTP/1.1 200 OK"));
+    let forward_json: Value =
+        parse_service_api_payload(extract_http_response_body(forward_response.as_str()))
+            .expect("bridge forward payload should deserialize");
+    assert_eq!(forward_json["bridge_id"], bridge_id);
+    assert_eq!(forward_json["bridge_status"], "forwarded");
+    assert_eq!(
+        forward_json["target_message_id"],
+        format!("msg-bridge-target-{bridge_id}")
+    );
+
+    let query_path = format!("/v1/bridge/{bridge_id}");
+    let query_signature =
+        service_api_request_signature_for_fields(caller_did, 103, restart_state_hash.as_str(), "");
+    let query_response = send_http_request_with_headers(
+        restart_bind_addr.as_str(),
+        "GET",
+        query_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "103"),
+            ("X-KAMN-Request-Signature", query_signature.as_str()),
+        ],
+    );
+    assert!(query_response.contains("HTTP/1.1 200 OK"));
+    let query_json: Value =
+        parse_service_api_payload(extract_http_response_body(query_response.as_str()))
+            .expect("bridge query payload should deserialize");
+    assert_eq!(query_json["bridge_id"], bridge_id);
+    assert_eq!(query_json["bridge_status"], "forwarded");
+    assert_eq!(
+        query_json["target_message_id"],
+        format!("msg-bridge-target-{bridge_id}")
+    );
+
+    let missing_caller_did = "kamn:did:agent:test-client-bridge-missing";
+    let missing_signature = service_api_request_signature_for_fields(
+        missing_caller_did,
+        104,
+        restart_state_hash.as_str(),
+        "",
+    );
+    let missing_response = send_http_request_with_headers(
+        restart_bind_addr.as_str(),
+        "GET",
+        "/v1/bridge/bridge-missing-104",
+        "",
+        &[
+            ("X-KAMN-Sender-DID", missing_caller_did),
+            ("X-KAMN-Request-Nonce", "104"),
+            ("X-KAMN-Request-Signature", missing_signature.as_str()),
+        ],
+    );
+    assert!(missing_response.contains("HTTP/1.1 404 Not Found"));
+    let missing_payload = parse_error_envelope_from_http_response(missing_response.as_str());
+    assert_eq!(missing_payload.error, "not-found");
+    assert_eq!(missing_payload.reason_code, "service_api_route_not_found");
+
+    let restart_server_result = restart_server
+        .join()
+        .expect("restart endpoint thread should complete");
+    assert!(
+        restart_server_result.is_ok(),
+        "service api endpoint should stop cleanly after bridge restart phase"
+    );
+
+    let state_payload =
+        fs::read_to_string(state_file.as_path()).expect("bridge state file should remain readable");
+    let state_json: Value =
+        serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+    assert_eq!(
+        state_json["bridges"][bridge_id.as_str()]["bridge_status"],
+        "forwarded"
+    );
+    assert_eq!(
+        state_json["bridges"][bridge_id.as_str()]["target_message_id"],
+        format!("msg-bridge-target-{bridge_id}")
+    );
+    assert_eq!(
+        state_json["bridges"][bridge_id.as_str()]["forward_tx_hash"],
+        format!("sha256:bridge-forwarded-{bridge_id}")
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
 fn regression_service_api_endpoint_rejects_unknown_task_and_escrow_resource_transitions() {
     // Regression: #5866
     let _env = acquire_service_api_test_env();

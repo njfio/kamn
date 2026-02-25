@@ -1,7 +1,7 @@
 # Spec: Issue #5994 - Persist service-api bridge lifecycle state across restart
 
 - Issue: #5994
-- Status: Reviewed (agent-authored P1; implementation proceeding)
+- Status: Implemented
 - Type: story
 - Priority: P1
 - Area: backend
