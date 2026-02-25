@@ -39,3 +39,5 @@
 - Added CI-tool regression contracts for new gates.
 - Updated workspace pre-merge workflow to enforce both gates on PRs.
 - Added ADR documenting rationale/tradeoffs: `docs/architecture/adr-critical-path-assurance-gates.md`.
+- Post-mainline stabilization: aligned legacy contract-lane tests with manifest-dispatch + superseded-wrapper deletion policy (Kolme, governance, canary).
+- Post-mainline stabilization: updated Service API serde/reason-code live validators to follow split source modules (`service_api_endpoint.rs` + `service_api_endpoint/payload.rs` + middleware mappings).
