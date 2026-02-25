@@ -45,6 +45,14 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
+        "daemon observability throughput should reflect projected relay work"
+    );
+    assert!(
+        report.daemon_observability_latency_p50_ms.unwrap_or(0) > 0,
+        "daemon observability latency should reflect measured tick processing"
+    );
 
     let relay_contents = std::fs::read_to_string(relay_spool_file.as_path())
         .expect("relay spool should remain readable after daemon execution");
@@ -128,6 +136,14 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
+        "daemon observability throughput should reflect delayed relay processing work"
+    );
+    assert!(
+        report.daemon_observability_latency_p50_ms.unwrap_or(0) > 0,
+        "daemon observability latency should reflect measured delayed tick processing"
+    );
 
     let state_payload = std::fs::read_to_string(state_file.as_path())
         .expect("state file should remain readable after daemon execution");

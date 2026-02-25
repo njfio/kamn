@@ -1,12 +1,12 @@
 # Spec: Issue #5927 - Task: Replace synthetic daemon tick loop behavior with real queue processing
 
 - Issue: #5927
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Area: backend
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5917
 
 ## Problem Statement
@@ -29,16 +29,16 @@ Out of scope:
 - AC-4: Unit, Functional, Integration, and Regression tests are present and passing.
 
 ## Conformance Cases
-- C-01 (Functional, AC-1): Verify Tick loop processes queued message work and updates durable state.
-- C-02 (Functional, AC-2): Verify Telemetry reflects real processed work, not fabricated counters.
-- C-03 (Functional, AC-3): Verify Runtime tests prove processing continues across ticks and restart boundaries.
-- C-04 (Functional, AC-4): Verify Unit, Functional, Integration, and Regression tests are present and passing.
+- C-01 (Functional, AC-1): `main_tests::runtime_tests::integration_runtime_daemon_relay_drain_projects_message_state_to_relayed` verifies daemon tick loop drains queue entries and updates durable state.
+- C-02 (Functional, AC-2): `main_tests::runtime_tests::integration_runtime_daemon_relay_drain_projects_message_state_to_relayed` and `main_tests::runtime_tests::integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop` assert daemon observability throughput/latency are non-zero for real relay work.
+- C-03 (Integration, AC-3): `main_tests::runtime_tests::integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop` verifies continued processing across ticks; `main_tests::service_api_endpoint_tests::integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract` verifies restart boundary behavior with projected delivery state.
+- C-04 (Verify, AC-4): `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::integration_runtime_daemon_relay_drain_projects_message_state_to_relayed -- --exact`, `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop -- --exact`, `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract -- --exact`, `cargo fmt --check`, and `cargo clippy -p kamn-node --bin kamn-node -- -D warnings` pass.
 
 ## Success Metrics / Observable Signals
-- AC-1 verification tests pass in scoped CI runs.
-- AC-2 verification tests pass in scoped CI runs.
-- AC-3 verification tests pass in scoped CI runs.
-- AC-4 verification tests pass in scoped CI runs.
+- Daemon tick loop consumes relay spool queue entries and applies durable state projections.
+- Observability metrics report non-zero throughput/latency when relay work is processed.
+- Relay processing continues across multi-tick runs and remains coherent across runtime restart boundaries.
+- Scoped verification commands pass without regressions.
 
 
 ## Required Test Categories
@@ -50,4 +50,3 @@ Out of scope:
 
 ## Dependencies
 - #5917
-
