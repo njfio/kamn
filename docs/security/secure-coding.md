@@ -36,3 +36,16 @@
 
 - Replace panic-style control flow with typed error propagation and deterministic error markers.
 - Replace unsafe fallback defaults with explicit fail-closed validation and actionable diagnostics.
+
+## Dependency Vulnerability Gate
+
+- CI security-gate command:
+  - `cargo audit --json > cargo-audit-report.json`
+  - `python3 scripts/ci/check_cargo_audit_policy.py --audit-json cargo-audit-report.json --waiver-file .ci/cargo-audit-waivers.json --threshold-max-severity moderate --output-json ci-cargo-audit-policy.json`
+- Gate behavior:
+  - unwaived `high`/`critical` advisories fail closed.
+  - unknown advisory severities fail closed.
+  - waivers are allowed only with explicit reason, tracked issue (`#<id>`), and non-expired date.
+- Evidence artifacts:
+  - `cargo-audit-report.json`
+  - `ci-cargo-audit-policy.json`

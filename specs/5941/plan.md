@@ -2,8 +2,8 @@
 
 - Issue: #5941
 - Spec: `specs/5941/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5941/spec.md.
@@ -14,7 +14,11 @@
 ## Affected Modules (Initial)
 - `.github/workflows/`
 - `scripts/ci/`
-- `Cargo.lock`
+- `.ci/`
+- `docs/ci/strategy.md`
+- `docs/security/secure-coding.md`
+- `docs/architecture/`
+- `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
