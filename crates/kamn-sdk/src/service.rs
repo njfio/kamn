@@ -1,5 +1,8 @@
 use crate::{AgentDid, SdkError};
-use kamn_core::{service_auth_sign_with_private_key_hex, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV};
+use kamn_core::{
+    service_auth_sign_with_private_key_hex, ServiceAuthSignatureError,
+    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+};
 use serde_json::Value;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
@@ -212,17 +215,53 @@ pub fn service_signature_for_fields(
         }
     })?;
     let state_hash = format!("service-api:{chain_id}:{chain_version}");
-    service_auth_sign_with_private_key_hex(
-        sender_did.as_str(),
+    service_signature_for_state_hash_with_private_key(
+        sender_did,
         nonce,
         state_hash.as_str(),
         body,
         private_key_hex.as_str(),
     )
-    .map_err(|_| SdkError::InvalidInput {
-        field: "service.request_auth.signature",
-        reason: "failed to produce cryptographic service signature",
-    })
+}
+
+/// Cryptographic request signature builder for canonical service state-hash fields.
+pub fn service_signature_for_state_hash_with_private_key(
+    sender_did: &AgentDid,
+    nonce: u64,
+    state_hash: &str,
+    body: &str,
+    private_key_hex: &str,
+) -> Result<String, SdkError> {
+    service_auth_sign_with_private_key_hex(
+        sender_did.as_str(),
+        nonce,
+        state_hash,
+        body,
+        private_key_hex,
+    )
+    .map_err(map_service_auth_error_to_sdk)
+}
+
+fn map_service_auth_error_to_sdk(error: ServiceAuthSignatureError) -> SdkError {
+    match error {
+        ServiceAuthSignatureError::EmptyField("private_key_hex")
+        | ServiceAuthSignatureError::InvalidPrivateKeyHex => SdkError::InvalidInput {
+            field: "service.request_auth.private_key",
+            reason: "must be valid secp256k1 private key hex",
+        },
+        ServiceAuthSignatureError::EmptyField("state_hash") => SdkError::InvalidInput {
+            field: "service.request_auth.state_hash",
+            reason: "must not be empty",
+        },
+        ServiceAuthSignatureError::InvalidNonce => SdkError::InvalidInput {
+            field: "service.request_auth.nonce",
+            reason: "must be greater than zero",
+        },
+        _ => SdkError::InvalidInput {
+            field: "service.request_auth.signature",
+            reason: "failed to produce cryptographic service signature",
+        },
+    }
 }
 
 /// Parsed response for `POST /v1/messages/send`.

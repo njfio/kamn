@@ -1,7 +1,7 @@
 use crate::errors::AgentLibError;
-use kamn_sdk::{signature_for_fields, AgentDid};
+use kamn_sdk::{service_signature_for_state_hash_with_private_key, AgentDid, SdkError};
 
-/// Deterministic auth header bundle for Service API requests.
+/// Cryptographic auth header bundle for Service API requests.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KamnAuthHeaders {
     /// `x-kamn-sender-did` header value.
@@ -15,7 +15,7 @@ pub struct KamnAuthHeaders {
 }
 
 impl KamnAuthHeaders {
-    /// Builds deterministic auth headers from canonical signature fields.
+    /// Builds cryptographic auth headers from canonical signature fields.
     pub fn build(
         sender_did: &str,
         signing_key: &str,
@@ -48,7 +48,23 @@ impl KamnAuthHeaders {
             field: "body",
             reason: "must be utf-8".to_owned(),
         })?;
-        let signature = signature_for_fields(sender_did.as_str(), nonce, state_hash, body_str);
+        let signature = service_signature_for_state_hash_with_private_key(
+            &sender_did,
+            nonce,
+            state_hash,
+            body_str,
+            signing_key,
+        )
+        .map_err(|error| match error {
+            SdkError::InvalidInput {
+                field: "service.request_auth.private_key",
+                ..
+            } => AgentLibError::InvalidInput {
+                field: "signing_key",
+                reason: "must be valid secp256k1 private key hex".to_owned(),
+            },
+            _ => AgentLibError::Sdk(error),
+        })?;
 
         Ok(Self {
             sender_did_header: sender_did.to_string(),
