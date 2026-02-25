@@ -27,3 +27,17 @@ path = "fuzz_targets/did_parser.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "signature_profile_parser"
+path = "fuzz_targets/signature_profile_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kolme_api_codec_parser"
+path = "fuzz_targets/kolme_api_codec_parser.rs"
+test = false
+doc = false
+bench = false

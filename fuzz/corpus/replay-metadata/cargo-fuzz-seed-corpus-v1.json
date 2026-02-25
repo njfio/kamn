@@ -1,6 +1,6 @@
 {
   "schema": "kamn.runtime.cargo-fuzz-seed-corpus.v1",
-  "generated_at": "2026-02-19T00:00:00Z",
+  "generated_at": "2026-02-25T00:00:00Z",
   "seed_provenance_version": "kamn.runtime.cargo-fuzz-seed-provenance.v1",
   "targets": [
     {
@@ -35,6 +35,40 @@
         "invalid agent did prefix",
         "invalid kamn did prefix",
         "invalid characters"
+      ]
+    },
+    {
+      "name": "signature_profile_parser",
+      "seed_dir": "fuzz/corpus/signature_profile_parser",
+      "seed_files": [
+        "seed-0001-baseline-signature.txt",
+        "seed-0002-malformed-signature.txt"
+      ],
+      "parser_surface": "parse_signature_profile_metadata",
+      "deterministic_seed_replay_key": "cargo_fuzz_seed_replay:signature_profile_parser:v1",
+      "seed_budget_ci_smoke_max_seconds": 120,
+      "seed_budget_local_heavy_max_seconds": 900,
+      "failure_taxonomy_markers": [
+        "missing sig prefix",
+        "empty algorithm segment",
+        "empty payload segments"
+      ]
+    },
+    {
+      "name": "kolme_api_codec_parser",
+      "seed_dir": "fuzz/corpus/kolme_api_codec_parser",
+      "seed_files": [
+        "seed-0001-valid-next-nonce-response.json",
+        "seed-0002-malformed-broadcast-response.json"
+      ],
+      "parser_surface": "KolmeApiNextNonceResponse::parse_json|KolmeApiBroadcastResponse::parse_json",
+      "deterministic_seed_replay_key": "cargo_fuzz_seed_replay:kolme_api_codec_parser:v1",
+      "seed_budget_ci_smoke_max_seconds": 120,
+      "seed_budget_local_heavy_max_seconds": 900,
+      "failure_taxonomy_markers": [
+        "missing required field: next_nonce",
+        "missing required field: txhash",
+        "field must be positive"
       ]
     }
   ]
