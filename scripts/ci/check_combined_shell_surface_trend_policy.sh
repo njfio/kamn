@@ -92,6 +92,17 @@ REASON_CODES_CSV = ",".join(
         "combined_shell_surface_threshold_schema_mismatch",
         "combined_shell_surface_threshold_value_invalid",
         "combined_shell_surface_today_override_invalid",
+        "combined_shell_surface_governance_commit_count_invalid",
+        "combined_shell_surface_governance_mitigation_issue_missing",
+        "combined_shell_surface_governance_non_merge_commit_count_invalid",
+        "combined_shell_surface_governance_ratio_fail_exceeded",
+        "combined_shell_surface_governance_ratio_invalid",
+        "combined_shell_surface_governance_ratio_mismatch",
+        "combined_shell_surface_governance_ratio_warn_reduction_contract_active",
+        "combined_shell_surface_governance_release_invalid",
+        "combined_shell_surface_governance_section_missing",
+        "combined_shell_surface_governance_status_invalid",
+        "combined_shell_surface_governance_target_ratio_invalid",
     ]
 )
 
@@ -119,6 +130,7 @@ if thresholds.get("schema_version") != "kamn.ci.combined-shell-surface-trend-thr
 current = report.get("current", {})
 deltas = report.get("deltas", {})
 script_budget = report.get("script_budget", {})
+governance = report.get("governance_structural_coupling", {})
 
 script_count = current.get("script_count")
 shell_line_total = current.get("shell_line_total")
@@ -128,9 +140,18 @@ delta_script_count = deltas.get("script_count")
 delta_shell_line_total = deltas.get("shell_line_total")
 delta_shell_to_rust_ratio = deltas.get("shell_to_rust_ratio")
 script_budget_status = script_budget.get("status")
+governance_release = governance.get("release")
+governance_status = governance.get("status")
+governance_non_merge_commit_count = governance.get("non_merge_commit_count")
+governance_commit_count = governance.get("governance_commit_count")
+governance_commit_ratio = governance.get("governance_commit_ratio")
+governance_target_ratio_max = governance.get("target_ratio_max")
+governance_mitigation_issue_marker = str(governance.get("mitigation_issue_marker", "none")).strip()
 
 if script_budget_status != "pass":
     add_reason("combined_shell_surface_budget_status_fail")
+if not isinstance(governance, dict) or not governance:
+    add_reason("combined_shell_surface_governance_section_missing")
 
 warn_codes: list[str] = []
 fail_codes: list[str] = []
@@ -190,6 +211,45 @@ if not isinstance(delta_shell_line_total, int):
     add_reason("combined_shell_surface_delta_shell_line_total_invalid")
 if not isinstance(delta_shell_to_rust_ratio, (int, float)):
     add_reason("combined_shell_surface_delta_ratio_invalid")
+if not isinstance(governance_release, int) or governance_release <= 0:
+    add_reason("combined_shell_surface_governance_release_invalid")
+if not isinstance(governance_non_merge_commit_count, int) or governance_non_merge_commit_count <= 0:
+    add_reason("combined_shell_surface_governance_non_merge_commit_count_invalid")
+if (
+    not isinstance(governance_commit_count, int)
+    or governance_commit_count < 0
+    or (
+        isinstance(governance_non_merge_commit_count, int)
+        and governance_non_merge_commit_count > 0
+        and governance_commit_count > governance_non_merge_commit_count
+    )
+):
+    add_reason("combined_shell_surface_governance_commit_count_invalid")
+if not isinstance(governance_commit_ratio, (int, float)):
+    add_reason("combined_shell_surface_governance_ratio_invalid")
+if (
+    not isinstance(governance_target_ratio_max, (int, float))
+    or governance_target_ratio_max <= 0
+    or governance_target_ratio_max >= 1
+):
+    add_reason("combined_shell_surface_governance_target_ratio_invalid")
+if governance_status not in {"within_target", "reduction_contract_active", "over_target_unmitigated"}:
+    add_reason("combined_shell_surface_governance_status_invalid")
+
+if (
+    isinstance(governance_non_merge_commit_count, int)
+    and governance_non_merge_commit_count > 0
+    and isinstance(governance_commit_count, int)
+    and isinstance(governance_commit_ratio, (int, float))
+):
+    computed_governance_ratio = round(
+        governance_commit_count / governance_non_merge_commit_count,
+        4,
+    )
+    if abs(float(governance_commit_ratio) - computed_governance_ratio) > 0.001:
+        add_reason("combined_shell_surface_governance_ratio_mismatch")
+else:
+    computed_governance_ratio = None
 
 if today_override:
     try:
@@ -247,6 +307,17 @@ if not reason_codes:
             fail_codes.append("combined_shell_surface_decline_window_fail_exceeded")
         elif threshold_age_days > warn_non_declining_window_days:
             warn_codes.append("combined_shell_surface_decline_window_warn_exceeded")
+
+    if governance_commit_ratio > governance_target_ratio_max + 0.001:
+        if governance_status == "reduction_contract_active":
+            if governance_mitigation_issue_marker in {"", "none", "unknown"}:
+                fail_codes.append("combined_shell_surface_governance_mitigation_issue_missing")
+            else:
+                warn_codes.append(
+                    "combined_shell_surface_governance_ratio_warn_reduction_contract_active"
+                )
+        else:
+            fail_codes.append("combined_shell_surface_governance_ratio_fail_exceeded")
 
 all_reason_codes = reason_codes + fail_codes + warn_codes
 
@@ -306,6 +377,17 @@ policy_report = {
         "fail_non_declining_window_days": fail_non_declining_window_days,
         "threshold_age_days": threshold_age_days,
     },
+    "governance_structural_coupling_status": governance_status,
+    "governance_structural_coupling": {
+        "release": governance_release,
+        "status": governance_status,
+        "non_merge_commit_count": governance_non_merge_commit_count,
+        "governance_commit_count": governance_commit_count,
+        "governance_commit_ratio": governance_commit_ratio,
+        "computed_governance_commit_ratio": computed_governance_ratio,
+        "target_ratio_max": governance_target_ratio_max,
+        "mitigation_issue_marker": governance_mitigation_issue_marker,
+    },
 }
 
 output_path.write_text(json.dumps(policy_report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -318,6 +400,7 @@ print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
 print(f"reason_codes_csv={REASON_CODES_CSV}")
 print(f"reason_codes={reason_marker}")
 print(f"reason_codes_value={reason_marker}")
+print(f"governance_structural_coupling_status={governance_status}")
 print(f"script_count={script_count}")
 print(f"shell_line_total={shell_line_total}")
 print(f"rust_line_total={rust_line_total}")
