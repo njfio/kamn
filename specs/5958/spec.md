@@ -1,7 +1,7 @@
 # Spec: Issue #5958 - Task: complete full mutation gate for #5932 networking hardening
 
 - Issue: #5958
-- Status: Reviewed (agent-authored; multi-module P2 task flagged for human review in PR)
+- Status: Implemented
 - Type: task
 - Priority: P2
 - Area: qa
@@ -40,6 +40,12 @@ Out of scope:
 - Mutation command completes and outputs deterministic totals.
 - Escaped mutants count is reduced or explicitly dispositioned.
 - PR #5957 has a visible mutation evidence update comment.
+
+## Implementation Notes
+- Full non-sharded mutation run executed for `kamn-core` + `kamn-node` on #5932 diff.
+- Outcome totals: `55 tested`, `42 caught`, `8 missed`, `5 unviable`, `0 timeout`.
+- Evidence posted on PR #5957: https://github.com/njfio/kamn/pull/5957#issuecomment-3957045611
+- Escaped mutant follow-up issue: #5961
 
 ## Required Test Categories
 - Mutation: required for this issue scope.
