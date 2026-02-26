@@ -761,6 +761,8 @@ pub(super) fn execute_daemon_runtime(
         tick_interval_ms,
         executed_ticks: daemon_completion.executed_ticks,
         completion_reason: daemon_completion.completion_reason,
+        service_api_relay_drained_count: runtime_processing.relay_drained_count,
+        service_api_relay_projected_state_count: runtime_processing.relay_projected_state_count,
         observability_latency_p50_ms: daemon_observability.latency_p50_ms,
         observability_latency_p99_ms: daemon_observability.latency_p99_ms,
         observability_throughput_tps: daemon_observability.throughput_tps,
@@ -1209,6 +1211,85 @@ mod tests {
             None,
             "last tick must not sleep"
         );
+    }
+
+    #[test]
+    fn unit_daemon_relay_tick_loop_reports_deterministic_projection_counters() {
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-projection-state-{unique_suffix}.json"
+        ));
+        let relay_spool_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-projection-spool-{unique_suffix}.ndjson"
+        ));
+        fs::write(
+            state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-daemon-projection-unit-1":{
+      "message_id":"msg-daemon-projection-unit-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender",
+      "recipient_did":"kamn:did:agent:recipient",
+      "body":"{\"message\":\"project\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("state file fixture should write");
+        fs::write(
+            relay_spool_file.as_path(),
+            r#"{"message_id":"msg-daemon-projection-unit-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"project\"}","queued_at_unix":1700000888}
+"#,
+        )
+        .expect("relay spool fixture should write");
+        let state_file_str = state_file.to_string_lossy().to_string();
+        let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+        let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV, None);
+
+        let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+            1,
+            1,
+            Some(state_file_str.as_str()),
+            Some(relay_spool_file_str.as_str()),
+            "service-api:kamn-devnet:v0.1.0",
+        )
+        .expect("daemon relay tick loop should project local relayed state");
+
+        assert_eq!(runtime_processing.relay_drained_count, 1);
+        assert_eq!(runtime_processing.relay_projected_state_count, 1);
+        assert_eq!(runtime_processing.processing_error_count, 0);
+
+        let state_payload =
+            fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+        let state_json: serde_json::Value =
+            serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+        assert_eq!(
+            state_json["messages"]["msg-daemon-projection-unit-1"]["status"],
+            "relayed"
+        );
+
+        let relay_payload = fs::read_to_string(relay_spool_file.as_path())
+            .expect("relay spool file should remain readable");
+        assert!(
+            relay_payload.trim().is_empty(),
+            "relay spool should be drained after deterministic projection"
+        );
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_file(relay_spool_file);
     }
 
     #[test]

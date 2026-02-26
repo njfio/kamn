@@ -46,6 +46,14 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
     assert!(
+        report.daemon_service_api_relay_drained_count.is_some(),
+        "daemon runtime output must expose drained relay entry counters"
+    );
+    assert!(
+        report.daemon_service_api_relay_projected_state_count.is_some(),
+        "daemon runtime output must expose projected relay state counters"
+    );
+    assert!(
         report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
         "daemon observability throughput should reflect projected relay work"
     );
@@ -130,6 +138,14 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_service_api_relay_drained_count.is_some(),
+        "daemon runtime output must expose drained relay entry counters for state projection"
+    );
+    assert!(
+        report.daemon_service_api_relay_projected_state_count.is_some(),
+        "daemon runtime output must expose projected relay state counters for state projection"
+    );
     assert!(
         report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
         "daemon observability throughput should reflect delayed relay processing work"
@@ -372,6 +388,14 @@ fn integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop(
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_service_api_relay_drained_count.is_some(),
+        "daemon runtime output must expose drained relay entry counters for delayed arrivals"
+    );
+    assert!(
+        report.daemon_service_api_relay_projected_state_count.is_some(),
+        "daemon runtime output must expose projected relay state counters for delayed arrivals"
+    );
     relay_writer
         .join()
         .expect("relay append worker should complete successfully");
