@@ -200,6 +200,8 @@ const SERVICE_API_TLS_KEY_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_KEY_FILE";
 const SERVICE_API_TLS_MODE_DISABLED: &str = "disabled";
 const SERVICE_API_TLS_MODE_REQUIRE: &str = "require";
 const SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV: &str = "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX";
+const SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV: &str =
+    "KAMN_SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON";
 const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
 pub(crate) const SERVICE_API_RELAY_SPOOL_FILE_ENV: &str = "KAMN_SERVICE_API_RELAY_SPOOL_FILE";
 pub(crate) use models::*;
@@ -306,6 +308,7 @@ struct ServiceApiRuntimeState {
     ingress_rate_window: Arc<Mutex<ServiceApiIngressRateWindow>>,
     sender_anti_spam: Arc<Mutex<AntiSpamEngine>>,
     auth_public_key_hex: Option<String>,
+    auth_public_keys_by_did: Option<BTreeMap<String, String>>,
     message_store: Arc<Mutex<ServiceApiMessageStore>>,
     relay_spool_file: Option<String>,
 }
