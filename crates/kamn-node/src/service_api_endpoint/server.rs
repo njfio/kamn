@@ -86,8 +86,15 @@ fn resolve_service_api_replay_guard_state_file(state_file: Option<&str>) -> Opti
     state_file.map(super::default_service_api_replay_guard_state_file_path_from_state_file)
 }
 
-pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String> {
-    match env::var(SERVICE_API_TLS_MODE_ENV) {
+pub(super) fn resolve_service_api_tls_mode(bind_addr: &str) -> Result<ServiceApiTlsMode, String> {
+    resolve_service_api_tls_mode_from_env(env::var(SERVICE_API_TLS_MODE_ENV), bind_addr)
+}
+
+fn resolve_service_api_tls_mode_from_env(
+    env_value: Result<String, env::VarError>,
+    bind_addr: &str,
+) -> Result<ServiceApiTlsMode, String> {
+    match env_value {
         Ok(value) => {
             let mode = value.trim().to_ascii_lowercase();
             if mode.is_empty() {
@@ -135,11 +142,32 @@ pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String
                 )),
             }
         }
-        Err(env::VarError::NotPresent) => Ok(ServiceApiTlsMode::Disabled),
+        Err(env::VarError::NotPresent) => {
+            if service_api_bind_addr_is_loopback(bind_addr) {
+                Ok(ServiceApiTlsMode::Disabled)
+            } else {
+                Err(format!(
+                    "service api tls mode must be explicitly configured for non-loopback bind address {bind_addr}: set {SERVICE_API_TLS_MODE_ENV}={SERVICE_API_TLS_MODE_DISABLED}|{SERVICE_API_TLS_MODE_REQUIRE}"
+                ))
+            }
+        }
         Err(env::VarError::NotUnicode(_)) => Err(format!(
             "service api tls mode env must be utf-8: {SERVICE_API_TLS_MODE_ENV}"
         )),
     }
+}
+
+fn service_api_bind_addr_is_loopback(bind_addr: &str) -> bool {
+    if let Ok(socket_addr) = bind_addr.parse::<SocketAddr>() {
+        return socket_addr.ip().is_loopback();
+    }
+    let host = bind_addr
+        .rsplit_once(':')
+        .map(|(host, _)| host)
+        .unwrap_or(bind_addr)
+        .trim();
+    let normalized = host.trim_start_matches('[').trim_end_matches(']');
+    normalized.eq_ignore_ascii_case("localhost") || normalized == "127.0.0.1" || normalized == "::1"
 }
 
 pub(super) fn validate_service_api_tls_materials(
@@ -179,7 +207,18 @@ pub(super) async fn serve_service_api_endpoint_async(
     config: ServiceApiEndpointConfig,
     snapshot: ServiceApiSnapshot,
 ) -> Result<(), String> {
-    let tls_mode = resolve_service_api_tls_mode()?;
+    let tls_mode = resolve_service_api_tls_mode(config.bind_addr.as_str())?;
+    if matches!(tls_mode, ServiceApiTlsMode::Disabled)
+        && !service_api_bind_addr_is_loopback(config.bind_addr.as_str())
+    {
+        let _ = log_warn(
+            "service.api.tls.disabled.non_loopback",
+            &[
+                ("bind_addr", config.bind_addr.as_str()),
+                ("tls_mode_env", SERVICE_API_TLS_MODE_ENV),
+            ],
+        );
+    }
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
     let state_file = resolve_service_api_state_file(&config)?;
     let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
@@ -389,5 +428,26 @@ mod tests {
             resolved,
             Some("/tmp/state-store.json.relay.ndjson".to_owned())
         );
+    }
+
+    #[test]
+    fn regression_service_api_tls_mode_missing_env_allows_loopback_default_only() {
+        // Regression: #6069
+        let loopback_mode = resolve_service_api_tls_mode_from_env(
+            Err(env::VarError::NotPresent),
+            "127.0.0.1:34079",
+        )
+        .expect("loopback bind should keep dev default");
+        assert!(matches!(loopback_mode, ServiceApiTlsMode::Disabled));
+    }
+
+    #[test]
+    fn regression_service_api_tls_mode_missing_env_rejects_non_loopback_bind() {
+        // Regression: #6069
+        let error =
+            resolve_service_api_tls_mode_from_env(Err(env::VarError::NotPresent), "0.0.0.0:34079")
+                .expect_err("non-loopback bind must require explicit TLS mode");
+        assert!(error.contains(SERVICE_API_TLS_MODE_ENV));
+        assert!(error.contains("non-loopback"));
     }
 }
