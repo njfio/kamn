@@ -372,6 +372,23 @@ fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
         reason,
         Some("full_supervisor_stop_graceful_status_mismatch")
     );
+
+    let execution_id =
+        crate::build_runtime_execution_id(RuntimeMode::full(), "kamn-local", "processor");
+    assert!(
+        execution_id.starts_with("node-runtime:full:kamn-local:processor"),
+        "runtime execution id should preserve runtime-mode and role prefix"
+    );
+
+    let bootstrap_contract_reason = crate::classify_full_bootstrap_component_contract_violation(&[
+        "daemon",
+        "transport",
+        "api",
+    ]);
+    assert_eq!(
+        bootstrap_contract_reason,
+        Some("full_supervisor_bootstrap_component_count_mismatch")
+    );
 }
 
 #[test]
