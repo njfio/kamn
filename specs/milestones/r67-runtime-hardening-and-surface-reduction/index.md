@@ -20,7 +20,7 @@ The repository currently has no open issues, but the next highest-impact risk re
 - #6086: (story issue; lifecycle tracked in issue thread)
 - #6087: `specs/6087/spec.md`, `specs/6087/plan.md`, `specs/6087/tasks.md`
 - #6088: `specs/6088/spec.md`, `specs/6088/plan.md`, `specs/6088/tasks.md`
-- #6089: (pending artifacts)
+- #6089: `specs/6089/spec.md`, `specs/6089/plan.md`, `specs/6089/tasks.md`
 
 ## Exit Criteria
 1. All three lanes are merged in dependency order.
