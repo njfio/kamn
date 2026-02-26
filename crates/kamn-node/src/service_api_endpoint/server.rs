@@ -19,6 +19,60 @@ fn resolve_service_api_auth_public_key_hex() -> Result<Option<String>, String> {
     }
 }
 
+fn resolve_service_api_auth_public_keys_by_did() -> Result<Option<BTreeMap<String, String>>, String>
+{
+    resolve_service_api_auth_public_keys_by_did_from_env(env::var(
+        SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV,
+    ))
+}
+
+fn resolve_service_api_auth_public_keys_by_did_from_env(
+    env_value: Result<String, env::VarError>,
+) -> Result<Option<BTreeMap<String, String>>, String> {
+    match env_value {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(format!(
+                    "service api auth did key map env must not be empty: {SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV}"
+                ));
+            }
+            let parsed = serde_json::from_str::<BTreeMap<String, String>>(normalized).map_err(
+                |error| {
+                    format!(
+                        "service api auth did key map env must be valid JSON object: {SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV}: {error}"
+                    )
+                },
+            )?;
+            if parsed.is_empty() {
+                return Err(format!(
+                    "service api auth did key map env must contain at least one sender entry: {SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV}"
+                ));
+            }
+            let mut normalized_map = BTreeMap::new();
+            for (sender_did, public_key_hex) in parsed {
+                AgentDid::parse(sender_did.as_str()).map_err(|error| {
+                    format!(
+                        "service api auth did key map has invalid sender did in {SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV}: {sender_did}: {error}"
+                    )
+                })?;
+                let public_key_hex = public_key_hex.trim();
+                if public_key_hex.is_empty() {
+                    return Err(format!(
+                        "service api auth did key map has empty public key for sender {sender_did}: {SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV}"
+                    ));
+                }
+                normalized_map.insert(sender_did, public_key_hex.to_owned());
+            }
+            Ok(Some(normalized_map))
+        }
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotUnicode(_)) => Err(format!(
+            "service api auth did key map env must be utf-8: {SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV}"
+        )),
+    }
+}
+
 fn resolve_service_api_state_file(
     config: &ServiceApiEndpointConfig,
 ) -> Result<Option<String>, String> {
@@ -181,6 +235,7 @@ pub(super) async fn serve_service_api_endpoint_async(
 ) -> Result<(), String> {
     let tls_mode = resolve_service_api_tls_mode()?;
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
+    let auth_public_keys_by_did = resolve_service_api_auth_public_keys_by_did()?;
     let state_file = resolve_service_api_state_file(&config)?;
     let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
     let replay_guard_state_file =
@@ -211,6 +266,7 @@ pub(super) async fn serve_service_api_endpoint_async(
         ))),
         sender_anti_spam: Arc::new(Mutex::new(sender_anti_spam)),
         auth_public_key_hex,
+        auth_public_keys_by_did,
         message_store: Arc::new(Mutex::new(message_store)),
         relay_spool_file,
     });
@@ -389,5 +445,26 @@ mod tests {
             resolved,
             Some("/tmp/state-store.json.relay.ndjson".to_owned())
         );
+    }
+
+    #[test]
+    fn unit_service_api_auth_did_key_map_resolution_parses_valid_json_map() {
+        let resolved = resolve_service_api_auth_public_keys_by_did_from_env(Ok(
+            r#"{"kamn:did:agent:alice":"02aa","kamn:did:agent:bob":"03bb"}"#.to_owned(),
+        ))
+        .expect("valid did key map should resolve");
+        let map = resolved.expect("did key map should be present");
+        assert_eq!(map.get("kamn:did:agent:alice"), Some(&"02aa".to_owned()));
+        assert_eq!(map.get("kamn:did:agent:bob"), Some(&"03bb".to_owned()));
+    }
+
+    #[test]
+    fn unit_service_api_auth_did_key_map_resolution_rejects_invalid_sender_did() {
+        let error = resolve_service_api_auth_public_keys_by_did_from_env(Ok(
+            r#"{"not-a-did":"02aa"}"#.to_owned(),
+        ))
+        .expect_err("invalid sender did must fail did key map resolution");
+        assert!(error.contains(SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV));
+        assert!(error.contains("invalid sender did"));
     }
 }

@@ -57,9 +57,12 @@ pub(super) fn authorize_service_api_request(
             ))
         })?;
     let state_hash = service_api_signature_state_hash(&state.snapshot);
-    let crypto_verified = state
-        .auth_public_key_hex
-        .as_deref()
+    let selected_public_key_hex = select_service_api_auth_public_key_for_sender(
+        sender_did,
+        state.auth_public_keys_by_did.as_ref(),
+        state.auth_public_key_hex.as_deref(),
+    );
+    let crypto_verified = selected_public_key_hex
         .map(|public_key_hex| {
             service_auth_verify_with_public_key_hex(
                 signature,
@@ -87,6 +90,17 @@ pub(super) fn authorize_service_api_request(
         )));
     }
     Ok(())
+}
+
+fn select_service_api_auth_public_key_for_sender<'a>(
+    sender_did: &str,
+    auth_public_keys_by_did: Option<&'a BTreeMap<String, String>>,
+    fallback_auth_public_key_hex: Option<&'a str>,
+) -> Option<&'a str> {
+    if let Some(public_keys_by_did) = auth_public_keys_by_did {
+        return public_keys_by_did.get(sender_did).map(String::as_str);
+    }
+    fallback_auth_public_key_hex
 }
 
 pub(super) fn enforce_request_scope_policy(
@@ -556,5 +570,48 @@ mod tests {
         ));
 
         let _ = fs::remove_file(state_file.as_str());
+    }
+
+    #[test]
+    fn unit_select_service_api_auth_public_key_falls_back_to_single_key_when_map_absent() {
+        let selected = select_service_api_auth_public_key_for_sender(
+            "kamn:did:agent:alice",
+            None,
+            Some("single-shared-key"),
+        );
+        assert_eq!(selected, Some("single-shared-key"));
+    }
+
+    #[test]
+    fn unit_select_service_api_auth_public_key_returns_sender_specific_key_when_mapped() {
+        let mut keys_by_did = BTreeMap::new();
+        keys_by_did.insert(
+            "kamn:did:agent:alice".to_owned(),
+            "alice-key-hex".to_owned(),
+        );
+        keys_by_did.insert("kamn:did:agent:bob".to_owned(), "bob-key-hex".to_owned());
+
+        let selected = select_service_api_auth_public_key_for_sender(
+            "kamn:did:agent:bob",
+            Some(&keys_by_did),
+            Some("fallback-shared-key"),
+        );
+        assert_eq!(selected, Some("bob-key-hex"));
+    }
+
+    #[test]
+    fn unit_select_service_api_auth_public_key_rejects_unknown_sender_when_map_configured() {
+        let mut keys_by_did = BTreeMap::new();
+        keys_by_did.insert(
+            "kamn:did:agent:alice".to_owned(),
+            "alice-key-hex".to_owned(),
+        );
+
+        let selected = select_service_api_auth_public_key_for_sender(
+            "kamn:did:agent:charlie",
+            Some(&keys_by_did),
+            Some("fallback-shared-key"),
+        );
+        assert_eq!(selected, None);
     }
 }
