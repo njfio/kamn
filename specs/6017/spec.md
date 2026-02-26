@@ -1,7 +1,7 @@
 # Spec: Issue #6017 - Add M0 data-layer invariant unit tests
 
 - Issue: #6017
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
