@@ -1,7 +1,7 @@
 # Spec: Issue #6043 - Add server-side WebSocket heartbeat and stale-session timeout
 
 - Issue: #6043
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: networking

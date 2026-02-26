@@ -1,6 +1,7 @@
 use super::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::broadcast;
+use tokio::time::{Duration, Instant, MissedTickBehavior};
 
 const WS_EVENTS_MODE_STATE_TRANSITION: &str = "state-transition";
 const WS_EVENTS_MODE_PRESENCE: &str = "presence";
@@ -8,6 +9,8 @@ const WS_PRESENCE_DEFAULT_GATEWAY_NODE: &str = "service-api-gateway";
 const WS_PRESENCE_DEFAULT_CONNECTED_SINCE_EPOCH_SECONDS: u64 = 1_709_000_000;
 const WS_EVENT_BUFFER_CAPACITY: usize = 256;
 const WS_EVENT_MESSAGE_CREATED: &str = "service-api.message.created";
+const WS_HEARTBEAT_PING_INTERVAL: Duration = Duration::from_millis(1_000);
+const WS_HEARTBEAT_STALE_TIMEOUT: Duration = Duration::from_millis(3_000);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct ServiceApiWebsocketPresenceBody {
@@ -219,8 +222,22 @@ pub(super) async fn stream_websocket_event(
         return;
     }
 
+    let mut heartbeat_interval = tokio::time::interval(WS_HEARTBEAT_PING_INTERVAL);
+    heartbeat_interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    heartbeat_interval.tick().await;
+    let mut last_inbound_activity = Instant::now();
+
     loop {
         tokio::select! {
+            _ = heartbeat_interval.tick() => {
+                if last_inbound_activity.elapsed() >= WS_HEARTBEAT_STALE_TIMEOUT {
+                    let _ = socket.send(Message::Close(None)).await;
+                    return;
+                }
+                if socket.send(Message::Ping(Vec::new().into())).await.is_err() {
+                    return;
+                }
+            }
             result = websocket_events.recv() => {
                 match result {
                     Ok(event_payload) => {
@@ -233,6 +250,7 @@ pub(super) async fn stream_websocket_event(
                 }
             }
             incoming = socket.recv() => {
+                last_inbound_activity = Instant::now();
                 match incoming {
                     Some(Ok(Message::Close(_))) | None => return,
                     Some(Ok(Message::Ping(payload))) => {
