@@ -1,7 +1,7 @@
 # Spec: Issue #6019 - Add M1 data-layer invariant unit tests
 
 - Issue: #6019
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
