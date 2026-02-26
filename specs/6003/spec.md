@@ -1,12 +1,12 @@
 # Spec: Issue #6003 - Add fail-closed full-supervisor lane liveness monitoring
 
 - Issue: #6003
-- Status: Reviewed
+- Status: Implemented
 - Type: story
 - Priority: P0
 - Area: infra
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-25
+- Last Updated: 2026-02-26
 - Parent: #5917
 
 ## Problem Statement
