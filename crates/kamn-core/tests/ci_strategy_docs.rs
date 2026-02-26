@@ -2034,6 +2034,9 @@ fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {
     assert!(DOC.contains(
         "bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json"
     ));
+    assert!(
+        DOC.contains("cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used")
+    );
     assert!(DOC.contains("bash scripts/ci/test_check_no_production_expect.sh"));
     assert!(DOC.contains("kamn.ci.production-panic-replacement-reason-taxonomy.v1"));
     assert!(DOC.contains(
@@ -2043,6 +2046,8 @@ fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {
         "runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
     ));
     assert!(DOC.contains("panic_path_policy_scope_root=crates/kamn-node/src"));
+    assert!(DOC.contains("panic_path_policy_production_target_scope=lib+bins"));
+    assert!(DOC.contains("panic_path_policy_test_target_exclusion=tests-benches-excluded"));
     assert!(DOC.contains("panic_path_policy_ci_smoke_max_seconds=30"));
     assert!(DOC.contains("panic_path_policy_remediation_steps_version=v1"));
     assert!(DOC.contains(

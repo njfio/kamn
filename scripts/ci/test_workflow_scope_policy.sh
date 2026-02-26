@@ -80,6 +80,21 @@ if ! grep -Fq "if: steps.scope.outputs.run_script_surface_budget_checks == 'true
   exit 1
 fi
 
+if ! grep -Fq "Production-target expect() gate" "$FAST_WORKFLOW"; then
+  echo "expected production-target expect gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used" "$FAST_WORKFLOW"; then
+  echo "expected production-target expect gate to enforce cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used" >&2
+  exit 1
+fi
+
+if grep -Fq -- "--all-targets -- -D warnings -D clippy::expect_used" "$FAST_WORKFLOW"; then
+  echo "production-target expect gate must not widen scope to --all-targets" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/ci/check_script_duplication_budget.sh" "$FAST_WORKFLOW"; then
   echo "expected script-surface budget checker command in ci-fast-gate.yml" >&2
   exit 1

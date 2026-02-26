@@ -492,6 +492,10 @@ jobs:
         if: steps.scope.outputs.run_rust == 'true'
         run: ${{ steps.scope.outputs.clippy_cmd }}
 
+      - name: Production-target expect() gate
+        if: steps.scope.outputs.run_rust == 'true'
+        run: cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used
+
       - name: Test (bounded retry)
         id: tests
         if: steps.scope.outputs.run_rust == 'true'
