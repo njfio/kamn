@@ -3012,3 +3012,25 @@ fn doc_enforces_performance_ci_smoke_docs_remediation_markers_cover_reason_codes
         );
     }
 }
+
+#[test]
+fn doc_contains_governance_feature_commit_ratio_gate_markers() {
+    assert!(DOC.contains("## Governance/Feature Commit-Ratio Fast Gate"));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_check_governance_feature_commit_ratio.sh"));
+    assert!(DOC.contains("git log --no-merges --pretty=format:%s <base_sha>..<head_sha>"));
+    assert!(DOC.contains("ci-governance-feature-commit-ratio.json"));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded"
+    ));
+    assert!(DOC.contains("governance_feature_commit_ratio_threshold_max=0.50"));
+    assert!(DOC.contains("governance_feature_commit_ratio_non_merge_only=true"));
+}

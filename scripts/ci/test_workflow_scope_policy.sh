@@ -95,6 +95,31 @@ if grep -Fq -- "--all-targets -- -D warnings -D clippy::expect_used" "$FAST_WORK
   exit 1
 fi
 
+if ! grep -Fq "Governance/feature commit ratio gate" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "git log --no-merges --pretty=format:%s" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to source non-merge commit subjects" >&2
+  exit 1
+fi
+
+if ! grep -Fq "python3 scripts/ci/check_governance_feature_commit_ratio.py" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to run checker script" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--max-governance-ratio 0.50" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to enforce max ratio 0.50" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-governance-feature-commit-ratio.json" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/ci/check_script_duplication_budget.sh" "$FAST_WORKFLOW"; then
   echo "expected script-surface budget checker command in ci-fast-gate.yml" >&2
   exit 1

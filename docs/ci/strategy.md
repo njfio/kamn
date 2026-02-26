@@ -288,6 +288,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `panic_path_policy_remediation_step_2=rerun_checker_until_status_ok`
   - `panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr`
 
+## Governance/Feature Commit-Ratio Fast Gate
+- For governance ratio policy changes, keep PR validation on deterministic commit-subject checker commands:
+  - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json`
+  - `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
+- Checker wiring contract:
+  - PR workflow must source subjects from non-merge commits:
+    - `git log --no-merges --pretty=format:%s <base_sha>..<head_sha>`
+  - checker output artifact:
+    - `ci-governance-feature-commit-ratio.json`
+- Deterministic governance ratio taxonomy markers:
+  - `governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1`
+  - `governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1`
+  - `governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded`
+  - `governance_feature_commit_ratio_threshold_max=0.50`
+  - `governance_feature_commit_ratio_non_merge_only=true`
+
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
   - `cargo test -p kamn-node graceful_shutdown`

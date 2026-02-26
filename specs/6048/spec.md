@@ -1,7 +1,7 @@
 # Spec: Issue #6048 - Add fail-closed governance/feature commit-ratio CI gate
 
 - Issue: #6048
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: governance
