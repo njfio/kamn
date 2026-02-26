@@ -217,10 +217,82 @@ fn tracked_source_files() -> Vec<PathBuf> {
         if trimmed.ends_with("_tests.rs") {
             continue;
         }
+        if is_test_only_source_path(trimmed) {
+            continue;
+        }
         files.push(repo_path(trimmed));
     }
     files.sort();
     files
+}
+
+fn is_test_only_source_path(relative_path: &str) -> bool {
+    if relative_path.starts_with("crates/kamn-e2e-harness/") {
+        return true;
+    }
+    if relative_path
+        .split('/')
+        .any(|component| component == "main_tests")
+    {
+        return true;
+    }
+    let Some(file_name) = Path::new(relative_path)
+        .file_name()
+        .and_then(|value| value.to_str())
+    else {
+        return false;
+    };
+    if !file_name.ends_with(".rs") {
+        return false;
+    }
+    let stem = &file_name[..file_name.len().saturating_sub(3)];
+    stem == "tests"
+        || stem.starts_with("test_")
+        || stem.starts_with("runtime_tests")
+        || stem.contains("_tests")
+}
+
+fn brace_delta(line: &str) -> i64 {
+    let opens = line.chars().filter(|character| *character == '{').count() as i64;
+    let closes = line.chars().filter(|character| *character == '}').count() as i64;
+    opens - closes
+}
+
+fn count_expect_occurrences_excluding_cfg_test(raw: &str) -> i64 {
+    let mut expect_count = 0_i64;
+    let mut pending_cfg_test = false;
+    let mut skip_depth = 0_i64;
+
+    for line in raw.lines() {
+        if skip_depth > 0 {
+            skip_depth += brace_delta(line);
+            if skip_depth <= 0 {
+                skip_depth = 0;
+            }
+            continue;
+        }
+
+        let trimmed = line.trim();
+        if trimmed.starts_with("#[cfg(test)]") {
+            pending_cfg_test = true;
+            continue;
+        }
+
+        if pending_cfg_test {
+            if trimmed.is_empty() || trimmed.starts_with("#[") {
+                continue;
+            }
+            if line.contains('{') {
+                skip_depth = brace_delta(line).max(0);
+            }
+            pending_cfg_test = false;
+            continue;
+        }
+
+        expect_count += line.matches(".expect(").count() as i64;
+    }
+
+    expect_count
 }
 
 fn current_surface() -> CurrentSurface {
@@ -234,7 +306,7 @@ fn current_surface() -> CurrentSurface {
                 &format!("failed to read source file {}: {}", file.display(), error),
             )
         });
-        production_expect_count += raw.match_indices(".expect(").count() as i64;
+        production_expect_count += count_expect_occurrences_excluding_cfg_test(&raw);
     }
     if production_rs_file_count < 0 || production_expect_count < 0 {
         fail(
@@ -323,18 +395,64 @@ fn functional_production_expect_surface_non_regression_gate() {
 #[test]
 fn regression_expect_surface_policy_fails_when_delta_exceeds_threshold() {
     let current = current_surface();
-    assert!(
-        current.production_expect_count > 0,
-        "expected at least one expect() call in current production census for regression fixture"
-    );
     let baseline = Baseline {
         production_rs_file_count: current.production_rs_file_count,
-        production_expect_count: current.production_expect_count - 1,
+        production_expect_count: current.production_expect_count,
+    };
+    let simulated_current = CurrentSurface {
+        production_rs_file_count: current.production_rs_file_count,
+        production_expect_count: current.production_expect_count + 1,
     };
     let thresholds = Thresholds {
         allowed_expect_delta_max: 0,
     };
-    let evaluation = evaluate_policy(&baseline, &thresholds, &current);
+    let evaluation = evaluate_policy(&baseline, &thresholds, &simulated_current);
     assert_eq!(evaluation.final_decision, "NO-GO");
     assert!(evaluation.reason_codes.contains(&"expect_delta_exceeded"));
+}
+
+#[test]
+fn regression_cfg_test_expect_calls_are_excluded_from_census() {
+    let fixture = r#"
+fn production_path() {
+    let _ = Some(1).expect("count me");
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn unit_only() {
+        let _ = Some(2).expect("do not count me");
+    }
+}
+
+#[cfg(test)]
+fn helper_only() {
+    let _ = Some(3).expect("do not count me");
+}
+"#;
+    assert_eq!(count_expect_occurrences_excluding_cfg_test(fixture), 1);
+}
+
+#[test]
+fn regression_test_only_source_paths_are_excluded_from_census() {
+    assert!(is_test_only_source_path(
+        "crates/kamn-e2e-harness/src/drivers/sdk_direct.rs"
+    ));
+    assert!(is_test_only_source_path(
+        "crates/kamn-node/src/main_tests/runtime_tests.rs"
+    ));
+    assert!(is_test_only_source_path(
+        "crates/kamn-core/src/runtime_tests_snapshot_store.rs"
+    ));
+    assert!(is_test_only_source_path(
+        "crates/kamn-node/src/service_api_endpoint/tests.rs"
+    ));
+    assert!(is_test_only_source_path(
+        "crates/kamn-node/src/service_api_endpoint/test_fixture.rs"
+    ));
+    assert!(is_test_only_source_path(
+        "crates/kamn-node/src/service_api_endpoint/foo_tests.rs"
+    ));
+    assert!(!is_test_only_source_path("crates/kamn-sdk/src/service.rs"));
 }
