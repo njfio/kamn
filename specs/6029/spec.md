@@ -1,7 +1,7 @@
 # Spec: Issue #6029 - Add core invariants unit tests for data_layer_m9_gateway_bridge
 
 - Issue: #6029
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
