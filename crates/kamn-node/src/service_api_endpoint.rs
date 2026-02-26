@@ -58,6 +58,7 @@ use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use state_io::{
     append_service_api_relay_spool_entry,
     default_service_api_relay_spool_file_path_from_state_file,
+    default_service_api_replay_guard_state_file_path_from_state_file,
     default_service_api_state_file_path_for_bind_addr, drain_service_api_relay_spool_entries,
     project_service_api_relayed_message_statuses,
 };
@@ -71,6 +72,8 @@ pub(crate) const DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND: u64 = 120;
 pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES: usize = 65_536;
 pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS: u64 = 900;
 const SERVICE_API_RUNTIME_WORKER_THREADS: usize = 2;
+const SERVICE_API_REPLAY_GUARD_STATE_SCHEMA_VERSION: &str =
+    "kamn.runtime.service-api-replay-guard.v1";
 
 const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
 const ROUTE_MESSAGES_RELAY: &str = "/v1/messages/relay";
@@ -318,8 +321,17 @@ struct ServiceApiIngressRateWindow {
 struct ServiceApiReplayGuard {
     entries: BTreeSet<(String, u64)>,
     insertion_order: VecDeque<(String, u64, Instant)>,
+    sender_nonce_floor: BTreeMap<String, u64>,
+    state_file: Option<String>,
     max_entries: usize,
     ttl: Duration,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ServiceApiReplayGuardPersistedState {
+    schema_version: String,
+    #[serde(default)]
+    sender_nonce_floor: BTreeMap<String, u64>,
 }
 
 impl ServiceApiReplayGuard {
@@ -327,19 +339,60 @@ impl ServiceApiReplayGuard {
         Self {
             entries: BTreeSet::new(),
             insertion_order: VecDeque::new(),
+            sender_nonce_floor: BTreeMap::new(),
+            state_file: None,
             max_entries: max_entries.max(1),
             ttl,
         }
     }
 
+    fn from_state_file(
+        max_entries: usize,
+        ttl: Duration,
+        state_file: Option<&str>,
+    ) -> Result<Self, String> {
+        let state_file = state_file.map(str::to_owned);
+        let sender_nonce_floor = load_replay_guard_nonce_floor(state_file.as_deref())?;
+        let mut replay_guard = Self::new(max_entries, ttl);
+        replay_guard.sender_nonce_floor = sender_nonce_floor;
+        replay_guard.state_file = state_file;
+        Ok(replay_guard)
+    }
+
     fn record_nonce_if_fresh(&mut self, sender_did: &str, nonce: u64, now: Instant) -> bool {
         self.evict_expired(now);
+        if self.state_file.is_some()
+            && self
+                .sender_nonce_floor
+                .get(sender_did)
+                .is_some_and(|seen_nonce| nonce <= *seen_nonce)
+        {
+            return false;
+        }
         let entry = (sender_did.to_owned(), nonce);
         if self.entries.contains(&entry) {
             return false;
         }
         self.entries.insert(entry.clone());
-        self.insertion_order.push_back((entry.0, entry.1, now));
+        self.insertion_order
+            .push_back((entry.0.clone(), entry.1, now));
+        let previous_floor = self.sender_nonce_floor.insert(sender_did.to_owned(), nonce);
+        if persist_replay_guard_nonce_floor(
+            self.state_file.as_deref(),
+            self.sender_nonce_floor.clone(),
+        )
+        .is_err()
+        {
+            if let Some(previous_floor) = previous_floor {
+                self.sender_nonce_floor
+                    .insert(sender_did.to_owned(), previous_floor);
+            } else {
+                self.sender_nonce_floor.remove(sender_did);
+            }
+            self.entries.remove(&entry);
+            let _ = self.insertion_order.pop_back();
+            return false;
+        }
         self.evict_over_capacity();
         true
     }
@@ -368,6 +421,44 @@ impl ServiceApiReplayGuard {
             self.entries.remove(&(sender_did, nonce));
         }
     }
+}
+
+fn load_replay_guard_nonce_floor(
+    state_file: Option<&str>,
+) -> Result<BTreeMap<String, u64>, String> {
+    let Some(path) = state_file else {
+        return Ok(BTreeMap::new());
+    };
+    let payload = match fs::read_to_string(path) {
+        Ok(payload) => payload,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
+        Err(error) => {
+            return Err(format!(
+                "service api replay guard state read failed: {path}: {error}"
+            ));
+        }
+    };
+    let persisted = serde_json::from_str::<ServiceApiReplayGuardPersistedState>(payload.as_str())
+        .map_err(|error| {
+        format!("service api replay guard state parse failed: {path}: {error}")
+    })?;
+    Ok(persisted.sender_nonce_floor)
+}
+
+fn persist_replay_guard_nonce_floor(
+    state_file: Option<&str>,
+    sender_nonce_floor: BTreeMap<String, u64>,
+) -> Result<(), String> {
+    let Some(path) = state_file else {
+        return Ok(());
+    };
+    let payload = serde_json::to_string_pretty(&ServiceApiReplayGuardPersistedState {
+        schema_version: SERVICE_API_REPLAY_GUARD_STATE_SCHEMA_VERSION.to_owned(),
+        sender_nonce_floor,
+    })
+    .map_err(|error| format!("service api replay guard state serialization failed: {error}"))?;
+    fs::write(path, payload)
+        .map_err(|error| format!("service api replay guard state write failed: {path}: {error}"))
 }
 
 #[derive(Debug, Clone)]

@@ -82,6 +82,10 @@ fn resolve_service_api_relay_spool_file_from_env(
     }
 }
 
+fn resolve_service_api_replay_guard_state_file(state_file: Option<&str>) -> Option<String> {
+    state_file.map(super::default_service_api_replay_guard_state_file_path_from_state_file)
+}
+
 pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String> {
     match env::var(SERVICE_API_TLS_MODE_ENV) {
         Ok(value) => {
@@ -179,16 +183,22 @@ pub(super) async fn serve_service_api_endpoint_async(
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
     let state_file = resolve_service_api_state_file(&config)?;
     let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
+    let replay_guard_state_file =
+        resolve_service_api_replay_guard_state_file(state_file.as_deref());
     let message_store = ServiceApiMessageStore::from_optional_state_file(state_file)?;
     let sender_anti_spam = build_service_api_sender_anti_spam_engine()
         .map_err(|error| format!("service api anti-spam init failed: {error}"))?;
 
     let runtime_state = Arc::new(ServiceApiRuntimeState {
         snapshot,
-        replay_guard: Arc::new(Mutex::new(ServiceApiReplayGuard::new(
-            DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES,
-            Duration::from_secs(DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS),
-        ))),
+        replay_guard: Arc::new(Mutex::new(
+            ServiceApiReplayGuard::from_state_file(
+                DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES,
+                Duration::from_secs(DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS),
+                replay_guard_state_file.as_deref(),
+            )
+            .map_err(|error| format!("service api replay guard init failed: {error}"))?,
+        )),
         request_budget: Arc::new(ServiceApiRequestBudget::new(config.max_requests)),
         websocket_events: ServiceApiWebsocketEventFanout::new(),
         runtime_observability: Arc::new(Mutex::new(ServiceApiRuntimeObservability::new(
