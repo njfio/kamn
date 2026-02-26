@@ -1,6 +1,7 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
+    parse_service_api_payload, project_service_api_lifecycle_rejection, route_requires_auth,
+    service_api_runtime_worker_threads_for_test, ServiceApiAgentGetBody,
     ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
     ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
     ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
@@ -1510,16 +1511,16 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
     );
 
     assert!(
-        crate::service_api_endpoint::route_requires_auth("POST", "/v1/messages/send"),
-        "message send route must require auth"
+        route_requires_auth("POST", "/v1/messages/send"),
+        "message send route should require auth"
     );
     assert!(
-        !crate::service_api_endpoint::route_requires_auth("GET", "/healthz"),
-        "health route must remain public"
+        !route_requires_auth("GET", "/healthz"),
+        "health route should remain unauthenticated"
     );
     assert!(
-        crate::service_api_endpoint::service_api_runtime_worker_threads_for_test() >= 1,
-        "service-api runtime worker thread count must be at least one"
+        service_api_runtime_worker_threads_for_test() >= 2,
+        "service api runtime worker thread contract must remain multi-threaded"
     );
 }
 
