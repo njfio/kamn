@@ -845,7 +845,7 @@ fn execute_daemon_service_api_relay_tick_loop(
             let mut failed_entries = Vec::new();
             for relay_entry in relay_entries {
                 if !relay_forwarding_enabled {
-                    relay_message_ids.push(relay_entry.message_id.clone());
+                    failed_entries.push(relay_entry);
                     continue;
                 }
                 let Some(signing_key_hex) = relay_signing_private_key_hex.as_deref() else {
@@ -1373,6 +1373,88 @@ mod tests {
         let relay_payload = fs::read_to_string(relay_spool_file.as_path())
             .expect("relay spool file should remain readable");
         assert!(relay_payload.contains("msg-forward-failure-unit-1"));
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_file(relay_spool_file);
+    }
+
+    #[test]
+    fn regression_daemon_relay_tick_loop_without_route_map_preserves_pending_relay_entries() {
+        // Regression: #6077
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-no-route-state-{unique_suffix}.json"
+        ));
+        let relay_spool_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-no-route-spool-{unique_suffix}.ndjson"
+        ));
+        fs::write(
+            state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-no-route-unit-1":{
+      "message_id":"msg-no-route-unit-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender",
+      "recipient_did":"kamn:did:agent:recipient",
+      "body":"{\"message\":\"pending\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("state file fixture should write");
+        fs::write(
+            relay_spool_file.as_path(),
+            r#"{"message_id":"msg-no-route-unit-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"pending\"}","queued_at_unix":1700001001}
+"#,
+        )
+        .expect("relay spool fixture should write");
+        let state_file_str = state_file.to_string_lossy().to_string();
+        let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+        let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV, None);
+
+        let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+            1,
+            1,
+            Some(state_file_str.as_str()),
+            Some(relay_spool_file_str.as_str()),
+            "service-api:kamn-devnet:v0.1.0",
+        )
+        .expect("daemon relay tick loop should complete when route map is not configured");
+
+        assert_eq!(runtime_processing.relay_drained_count, 1);
+        assert_eq!(
+            runtime_processing.relay_projected_state_count, 0,
+            "relay state must not project when no recipient forwarding map is configured"
+        );
+
+        let state_payload =
+            fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+        let state_json: serde_json::Value =
+            serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+        assert_eq!(
+            state_json["messages"]["msg-no-route-unit-1"]["status"],
+            "created"
+        );
+
+        let relay_payload = fs::read_to_string(relay_spool_file.as_path())
+            .expect("relay spool file should remain readable");
+        assert!(
+            relay_payload.contains("msg-no-route-unit-1"),
+            "entry must remain durable for retry when no route map exists"
+        );
 
         let _ = fs::remove_file(state_file);
         let _ = fs::remove_file(relay_spool_file);
