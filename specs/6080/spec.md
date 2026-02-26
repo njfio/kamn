@@ -1,7 +1,7 @@
 # Spec: Issue #6080 - Mark #6075/#6076 specs Implemented
 
 - Issue: #6080
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P2
 - Area: governance
