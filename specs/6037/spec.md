@@ -1,7 +1,7 @@
 # Spec: Issue #6037 - Add core invariants unit tests for data_layer_m11_closure_evidence
 
 - Issue: #6037
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend

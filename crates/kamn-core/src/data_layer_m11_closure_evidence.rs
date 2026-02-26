@@ -132,7 +132,9 @@ mod tests {
         data_layer_m11_evaluate_closure_evidence, DataLayerM11ClosureAcceptanceDecision,
         DataLayerM11ClosureEvidenceError, DataLayerM11ClosureEvidenceInput,
         DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE,
+        DATA_LAYER_M11_CLOSURE_BLOCK_CRITICAL_SCENARIO_REASON_CODE,
         DATA_LAYER_M11_CLOSURE_BLOCK_EVIDENCE_GAP_REASON_CODE,
+        DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE,
     };
     use crate::{
         DataLayerM11OperatorReadinessDecision, DataLayerM11OperatorReadinessReport,
@@ -160,6 +162,29 @@ mod tests {
             shell_policy_violation_scenario_ids: Vec::new(),
             total_required_scenarios: 10,
             passed_required_scenarios: 10,
+        }
+    }
+
+    fn hardening_block_report() -> DataLayerM11OperatorReadinessReport {
+        DataLayerM11OperatorReadinessReport {
+            decision: DataLayerM11OperatorReadinessDecision::NoGo,
+            reason_codes: vec!["m11_operator_readiness_hold"],
+            missing_required_scenario_ids: vec!["S-07".to_owned()],
+            failing_critical_scenario_ids: vec!["S-10".to_owned()],
+            total_required_scenarios: 2,
+            passed_required_scenarios: 1,
+        }
+    }
+
+    fn critical_non_conformant_report() -> DataLayerPrdCriticalScenarioConformanceReport {
+        DataLayerPrdCriticalScenarioConformanceReport {
+            decision: DataLayerPrdCriticalScenarioConformanceDecision::NonConformant,
+            reason_codes: vec!["prd_critical_scenarios_missing_required"],
+            missing_scenario_ids: vec![63],
+            failed_scenario_ids: vec![71],
+            shell_policy_violation_scenario_ids: Vec::new(),
+            total_required_scenarios: 10,
+            passed_required_scenarios: 8,
         }
     }
 
@@ -219,5 +244,42 @@ mod tests {
             }),
             Err(DataLayerM11ClosureEvidenceError::EmptyReleaseMarker)
         );
+    }
+
+    #[test]
+    fn conformance_closure_evidence_rejection_reasons_are_deterministic_and_projected() {
+        let report = data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
+            release_marker: "r66-cutover".to_owned(),
+            hardening_report: hardening_block_report(),
+            critical_scenario_report: critical_non_conformant_report(),
+            performance_budget_met: false,
+            security_signoff_complete: true,
+            chaos_signoff_complete: false,
+        })
+        .expect("valid closure evidence shape should evaluate");
+
+        assert_eq!(
+            report.decision,
+            DataLayerM11ClosureAcceptanceDecision::Rejected
+        );
+        assert_eq!(
+            report.reason_codes,
+            vec![
+                DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE,
+                DATA_LAYER_M11_CLOSURE_BLOCK_CRITICAL_SCENARIO_REASON_CODE,
+                DATA_LAYER_M11_CLOSURE_BLOCK_EVIDENCE_GAP_REASON_CODE,
+            ]
+        );
+        assert_eq!(
+            report.hardening_decision,
+            DataLayerM11OperatorReadinessDecision::NoGo
+        );
+        assert_eq!(
+            report.critical_scenario_decision,
+            DataLayerPrdCriticalScenarioConformanceDecision::NonConformant
+        );
+        assert!(!report.performance_budget_met);
+        assert!(report.security_signoff_complete);
+        assert!(!report.chaos_signoff_complete);
     }
 }
