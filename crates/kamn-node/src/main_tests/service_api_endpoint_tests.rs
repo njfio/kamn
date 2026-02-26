@@ -1501,6 +1501,26 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
     assert_eq!(not_found_payload.error, "not-found");
     assert_eq!(not_found_payload.reason_code, "service_api_route_not_found");
     assert!(not_found_payload.message.contains("not found"));
+
+    let metrics = render_service_api_endpoint_response(&snapshot, "GET", "/metrics", "");
+    assert_eq!(metrics.status_code, 200);
+    assert!(
+        metrics.body.contains("kamn_service_api_health"),
+        "metrics route should include health gauge payload"
+    );
+
+    assert!(
+        crate::service_api_endpoint::route_requires_auth("POST", "/v1/messages/send"),
+        "message send route must require auth"
+    );
+    assert!(
+        !crate::service_api_endpoint::route_requires_auth("GET", "/healthz"),
+        "health route must remain public"
+    );
+    assert!(
+        crate::service_api_endpoint::service_api_runtime_worker_threads_for_test() >= 1,
+        "service-api runtime worker thread count must be at least one"
+    );
 }
 
 #[test]
