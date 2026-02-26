@@ -374,9 +374,13 @@ fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
     );
 
     let execution_id =
+        crate::build_runtime_execution_id(RuntimeMode::full(), "kamn-mainnet", "sequencer");
+    assert_eq!(execution_id, "node-runtime:full:kamn-mainnet:sequencer");
+
+    let local_execution_id =
         crate::build_runtime_execution_id(RuntimeMode::full(), "kamn-local", "processor");
     assert!(
-        execution_id.starts_with("node-runtime:full:kamn-local:processor"),
+        local_execution_id.starts_with("node-runtime:full:kamn-local:processor"),
         "runtime execution id should preserve runtime-mode and role prefix"
     );
 
@@ -388,6 +392,19 @@ fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
     assert_eq!(
         bootstrap_contract_reason,
         Some("full_supervisor_bootstrap_component_count_mismatch")
+    );
+
+    assert!(
+        crate::should_use_os_signal_shutdown(RuntimeMode::daemon(), true, &[]),
+        "daemon runtime should honor explicit os signal shutdown enablement"
+    );
+    assert!(
+        !crate::should_use_os_signal_shutdown(RuntimeMode::full(), true, &[1]),
+        "configured signal ticks disable os-signal shutdown mode"
+    );
+    assert!(
+        !crate::should_use_os_signal_shutdown(RuntimeMode::api(), true, &[]),
+        "api runtime should not enable daemon/full os-signal shutdown path"
     );
 }
 
