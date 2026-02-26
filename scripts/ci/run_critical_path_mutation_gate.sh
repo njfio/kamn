@@ -203,6 +203,7 @@ run_slice "core-direct-message-crypto" 2 \
   cargo mutants -p kamn-core \
     --file crates/kamn-core/src/direct_message_crypto.rs \
     --re "direct_message_crypto\\.rs:(73:18|115:13):" \
+    --output "$tmp_dir/core-direct-message-crypto" \
     --copy-vcs true \
     --cargo-test-arg --lib \
     --cargo-test-arg direct_message_crypto::tests::decrypt_rejects_algorithm_mismatch \
@@ -212,6 +213,7 @@ run_slice "core-group-channel-crypto" 1 \
   cargo mutants -p kamn-core \
     --file crates/kamn-core/src/group_channel_crypto.rs \
     --re "group_channel_crypto\\.rs:(186:18):" \
+    --output "$tmp_dir/core-group-channel-crypto" \
     --copy-vcs true \
     --cargo-test-arg --lib \
     --cargo-test-arg group_channel_crypto::tests::encrypt_requires_key_agreement_seed \
@@ -221,6 +223,7 @@ run_slice "core-http-transport" 3 \
   cargo mutants -p kamn-core \
     --file crates/kamn-core/src/kolme_runtime_commit/http_transport.rs \
     --re "http_transport\\.rs:(50:9|291:17):" \
+    --output "$tmp_dir/core-http-transport" \
     --copy-vcs true \
     --cargo-test-arg --lib \
     --cargo-test-arg spec_c0 \
@@ -230,6 +233,7 @@ run_slice "node-runtime-orchestration" 1 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/runtime_orchestration.rs \
     --re "runtime_orchestration\\.rs:(768:34):" \
+    --output "$tmp_dir/node-runtime-orchestration" \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
@@ -240,6 +244,7 @@ run_slice "node-service-api-endpoint" 2 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/service_api_endpoint.rs \
     --re "service_api_endpoint\\.rs:(336:9):" \
+    --output "$tmp_dir/node-service-api-endpoint" \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
@@ -250,6 +255,7 @@ run_slice "node-signer" 1 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/signer.rs \
     --re "signer\\.rs:(198:33):" \
+    --output "$tmp_dir/node-signer" \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
