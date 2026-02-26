@@ -278,6 +278,22 @@ fn parse_scope(scope: &str) -> Result<ServiceApiScope, ServiceApiReasonedError> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::process;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn replay_guard_temp_state_file(label: &str) -> String {
+        let mut path = std::env::temp_dir();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        path.push(format!(
+            "kamn-replay-guard-{label}-{}-{nanos}.json",
+            process::id()
+        ));
+        path.to_string_lossy().to_string()
+    }
 
     #[test]
     fn unit_required_scope_for_route_maps_known_route_contracts() {
@@ -471,5 +487,74 @@ mod tests {
             9,
             start + Duration::from_secs(3)
         ));
+    }
+
+    #[test]
+    fn regression_replay_guard_rejects_nonce_after_restart_when_state_file_is_shared() {
+        // Regression: #6060
+        let state_file = replay_guard_temp_state_file("restart-replay");
+        let _ = fs::remove_file(state_file.as_str());
+        let start = Instant::now();
+
+        let mut first = ServiceApiReplayGuard::from_state_file(
+            8,
+            Duration::from_secs(300),
+            Some(state_file.as_str()),
+        )
+        .expect("first guard init");
+        assert!(first.record_nonce_if_fresh("kamn:did:agent:alice", 42, start));
+        drop(first);
+
+        let mut restarted = ServiceApiReplayGuard::from_state_file(
+            8,
+            Duration::from_secs(300),
+            Some(state_file.as_str()),
+        )
+        .expect("restarted guard init");
+        assert!(!restarted.record_nonce_if_fresh(
+            "kamn:did:agent:alice",
+            42,
+            start + Duration::from_secs(1)
+        ));
+        assert!(restarted.record_nonce_if_fresh(
+            "kamn:did:agent:alice",
+            43,
+            start + Duration::from_secs(2)
+        ));
+
+        let _ = fs::remove_file(state_file.as_str());
+    }
+
+    #[test]
+    fn regression_replay_guard_rejects_non_monotonic_nonce_progression() {
+        // Regression: #6060
+        let state_file = replay_guard_temp_state_file("monotonic-floor");
+        let _ = fs::remove_file(state_file.as_str());
+        let start = Instant::now();
+        let mut guard = ServiceApiReplayGuard::from_state_file(
+            8,
+            Duration::from_secs(300),
+            Some(state_file.as_str()),
+        )
+        .expect("guard init");
+
+        assert!(guard.record_nonce_if_fresh("kamn:did:agent:bob", 5, start));
+        assert!(!guard.record_nonce_if_fresh(
+            "kamn:did:agent:bob",
+            5,
+            start + Duration::from_secs(1)
+        ));
+        assert!(!guard.record_nonce_if_fresh(
+            "kamn:did:agent:bob",
+            4,
+            start + Duration::from_secs(2)
+        ));
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:bob",
+            6,
+            start + Duration::from_secs(3)
+        ));
+
+        let _ = fs::remove_file(state_file.as_str());
     }
 }

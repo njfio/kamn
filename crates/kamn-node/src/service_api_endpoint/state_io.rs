@@ -109,6 +109,12 @@ pub(crate) fn default_service_api_relay_spool_file_path_from_state_file(
     format!("{state_file}.relay.ndjson")
 }
 
+pub(crate) fn default_service_api_replay_guard_state_file_path_from_state_file(
+    state_file: &str,
+) -> String {
+    format!("{state_file}.replay-guard.json")
+}
+
 pub(crate) fn append_service_api_relay_spool_entry(
     relay_spool_file: Option<&str>,
     entry: &ServiceApiRelaySpoolEntry,
