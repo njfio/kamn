@@ -257,3 +257,220 @@ fn build_presence_audit_tag(
         connect_request.last_heartbeat_epoch_seconds
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        data_layer_m9_gateway_project_dispatch_event, data_layer_m9_gateway_project_presence_event,
+        DataLayerM9GatewayBridgeError, DataLayerM9GatewayDispatchProjectionRequest,
+        DataLayerM9GatewayPresenceProjectionRequest, DataLayerM9GatewayTransportProfile,
+        DATA_LAYER_M9_GATEWAY_DISPATCH_EVENT_LABEL, DATA_LAYER_M9_GATEWAY_PRESENCE_EVENT_LABEL,
+        DATA_LAYER_M9_GATEWAY_PRESENCE_NOT_FOUND_REASON_CODE,
+        DATA_LAYER_M9_GATEWAY_PRESENCE_VISIBLE_REASON_CODE,
+        DATA_LAYER_M9_GATEWAY_UNSUPPORTED_TRANSPORT_REASON_CODE,
+    };
+    use crate::{
+        AntiSpamConfig, AntiSpamEngine, ChannelStore, DataLayerM9DispatchAckStatus,
+        DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery,
+        DataLayerM9RealtimeDeliveryRegistry, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE,
+    };
+
+    fn owner_did() -> &'static str {
+        "kamn:did:owner:owner-6029"
+    }
+
+    fn sender_agent_did() -> &'static str {
+        "kamn:did:agent:sender-6029"
+    }
+
+    fn recipient_agent_did() -> &'static str {
+        "kamn:did:agent:recipient-6029"
+    }
+
+    fn build_channel_store() -> ChannelStore {
+        let mut store = ChannelStore::new();
+        store
+            .create_direct("channel-6029", sender_agent_did(), recipient_agent_did())
+            .expect("fixture must create deterministic direct channel");
+        store
+    }
+
+    fn build_anti_spam_engine() -> AntiSpamEngine {
+        let mut anti_spam = AntiSpamEngine::new(AntiSpamConfig::default())
+            .expect("fixture anti-spam config must be valid");
+        anti_spam
+            .set_deposit(sender_agent_did(), 10)
+            .expect("fixture sender deposit must be accepted");
+        anti_spam
+    }
+
+    fn dispatch_request(message_id: &str) -> DataLayerM9DispatchRequest {
+        DataLayerM9DispatchRequest {
+            requester_owner_did: owner_did().to_owned(),
+            owner_did: owner_did().to_owned(),
+            sender_agent_did: sender_agent_did().to_owned(),
+            recipient_agent_did: recipient_agent_did().to_owned(),
+            message_id: message_id.to_owned(),
+            dispatched_at_epoch_seconds: 1_701_000_001,
+        }
+    }
+
+    #[test]
+    fn regression_m9_gateway_rejects_unsupported_transport_profile_fail_closed() {
+        let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
+        let channel_store = build_channel_store();
+        let mut anti_spam = build_anti_spam_engine();
+
+        let result = data_layer_m9_gateway_project_dispatch_event(
+            &mut registry,
+            &channel_store,
+            &mut anti_spam,
+            DataLayerM9GatewayDispatchProjectionRequest {
+                channel_id: "channel-6029".to_owned(),
+                dispatch_request: dispatch_request("msg-unsupported"),
+                transport_profile: "mqtt".to_owned(),
+            },
+        );
+
+        assert!(matches!(
+            result,
+            Err(DataLayerM9GatewayBridgeError::UnsupportedTransport {
+                reason_code: DATA_LAYER_M9_GATEWAY_UNSUPPORTED_TRANSPORT_REASON_CODE,
+                transport_profile,
+            }) if transport_profile == "mqtt"
+        ));
+    }
+
+    #[test]
+    fn unit_m9_gateway_dispatch_projection_maps_ack_contract_fields() {
+        let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
+        let channel_store = build_channel_store();
+        let mut anti_spam = build_anti_spam_engine();
+
+        let projection = data_layer_m9_gateway_project_dispatch_event(
+            &mut registry,
+            &channel_store,
+            &mut anti_spam,
+            DataLayerM9GatewayDispatchProjectionRequest {
+                channel_id: "channel-6029".to_owned(),
+                dispatch_request: dispatch_request("msg-dispatch"),
+                transport_profile: " WS ".to_owned(),
+            },
+        )
+        .expect("dispatch projection should succeed for valid fixtures");
+
+        assert_eq!(projection.event, DATA_LAYER_M9_GATEWAY_DISPATCH_EVENT_LABEL);
+        assert_eq!(
+            projection.transport_profile,
+            DataLayerM9GatewayTransportProfile::Websocket
+        );
+        assert_eq!(projection.channel_id, "channel-6029");
+        assert_eq!(projection.sender_agent_did, sender_agent_did());
+        assert_eq!(projection.recipient_agent_did, recipient_agent_did());
+        assert_eq!(projection.ack_status, DataLayerM9DispatchAckStatus::Queued);
+        assert_eq!(projection.pending_queue_depth, 1);
+        assert_eq!(projection.deferred_count, 0);
+        assert_eq!(projection.reason_code, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE);
+        assert!(!projection.backpressure_warning_event);
+        assert!(!projection.escrow_timeout_extension_recommended);
+    }
+
+    #[test]
+    fn unit_m9_gateway_presence_projection_emits_visible_and_not_found_contracts() {
+        let mut visible_registry = DataLayerM9RealtimeDeliveryRegistry::new();
+        let visible_projection = data_layer_m9_gateway_project_presence_event(
+            &mut visible_registry,
+            DataLayerM9GatewayPresenceProjectionRequest {
+                connect_request: DataLayerM9PresenceConnectRequest {
+                    requester_owner_did: owner_did().to_owned(),
+                    owner_did: owner_did().to_owned(),
+                    agent_did: "kamn:did:agent:presence-target-6029".to_owned(),
+                    connected_since_epoch_seconds: 1_701_000_010,
+                    last_heartbeat_epoch_seconds: 1_701_000_020,
+                    gateway_node: "gateway-1".to_owned(),
+                    capabilities_active: vec!["ws".to_owned(), "sse".to_owned()],
+                },
+                query: DataLayerM9PresenceQuery {
+                    requester_owner_did: owner_did().to_owned(),
+                    owner_did: owner_did().to_owned(),
+                    requester_agent_did: "kamn:did:agent:presence-target-6029".to_owned(),
+                    target_agent_did: "kamn:did:agent:presence-target-6029".to_owned(),
+                },
+                transport_profile: "server-sent-events".to_owned(),
+            },
+        )
+        .expect("presence projection should return visible target when connected");
+
+        assert_eq!(
+            visible_projection.event,
+            DATA_LAYER_M9_GATEWAY_PRESENCE_EVENT_LABEL
+        );
+        assert_eq!(
+            visible_projection.transport_profile,
+            DataLayerM9GatewayTransportProfile::ServerSentEvents
+        );
+        assert!(visible_projection.visible);
+        assert_eq!(
+            visible_projection.target_gateway_node.as_deref(),
+            Some("gateway-1")
+        );
+        assert_eq!(
+            visible_projection.target_last_heartbeat_epoch_seconds,
+            Some(1_701_000_020)
+        );
+        assert_eq!(
+            visible_projection.reason_code,
+            DATA_LAYER_M9_GATEWAY_PRESENCE_VISIBLE_REASON_CODE
+        );
+        assert_eq!(
+            visible_projection.audit_record_tag,
+            "m9_presence:kamn:did:owner:owner-6029:kamn:did:agent:presence-target-6029:kamn:did:agent:presence-target-6029:kamn:did:agent:presence-target-6029:1701000020"
+        );
+
+        let mut not_found_registry = DataLayerM9RealtimeDeliveryRegistry::new();
+        let not_found_projection = data_layer_m9_gateway_project_presence_event(
+            &mut not_found_registry,
+            DataLayerM9GatewayPresenceProjectionRequest {
+                connect_request: DataLayerM9PresenceConnectRequest {
+                    requester_owner_did: owner_did().to_owned(),
+                    owner_did: owner_did().to_owned(),
+                    agent_did: "kamn:did:agent:connected-6029".to_owned(),
+                    connected_since_epoch_seconds: 1_701_000_100,
+                    last_heartbeat_epoch_seconds: 1_701_000_101,
+                    gateway_node: "gateway-2".to_owned(),
+                    capabilities_active: vec!["ws".to_owned()],
+                },
+                query: DataLayerM9PresenceQuery {
+                    requester_owner_did: owner_did().to_owned(),
+                    owner_did: owner_did().to_owned(),
+                    requester_agent_did: "kamn:did:agent:offline-6029".to_owned(),
+                    target_agent_did: "kamn:did:agent:offline-6029".to_owned(),
+                },
+                transport_profile: "sse".to_owned(),
+            },
+        )
+        .expect("presence projection should return deterministic not-found envelope");
+
+        assert_eq!(
+            not_found_projection.event,
+            DATA_LAYER_M9_GATEWAY_PRESENCE_EVENT_LABEL
+        );
+        assert_eq!(
+            not_found_projection.transport_profile,
+            DataLayerM9GatewayTransportProfile::ServerSentEvents
+        );
+        assert!(!not_found_projection.visible);
+        assert!(not_found_projection.target_gateway_node.is_none());
+        assert!(not_found_projection
+            .target_last_heartbeat_epoch_seconds
+            .is_none());
+        assert_eq!(
+            not_found_projection.reason_code,
+            DATA_LAYER_M9_GATEWAY_PRESENCE_NOT_FOUND_REASON_CODE
+        );
+        assert_eq!(
+            not_found_projection.audit_record_tag,
+            "m9_presence:kamn:did:owner:owner-6029:kamn:did:agent:connected-6029:kamn:did:agent:offline-6029:kamn:did:agent:offline-6029:1701000101"
+        );
+    }
+}
