@@ -1,8 +1,100 @@
 use super::ServiceApiRelaySpoolEntry;
+use kamn_core::SqliteStoreBackend;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
+
+pub(crate) const SERVICE_API_STATE_SQLITE_NAMESPACE: &str = "service_api_state";
+pub(crate) const SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY: &str = "message_store_snapshot";
+
+enum ServiceApiStateStorageBackend<'a> {
+    JsonFile(&'a str),
+    SqliteFile(&'a str),
+}
+
+fn service_api_state_storage_backend(
+    state_file: Option<&str>,
+) -> Option<ServiceApiStateStorageBackend<'_>> {
+    let path = state_file?;
+    if path.trim().is_empty() {
+        return None;
+    }
+    if service_api_state_file_is_sqlite(path) {
+        return Some(ServiceApiStateStorageBackend::SqliteFile(path));
+    }
+    Some(ServiceApiStateStorageBackend::JsonFile(path))
+}
+
+fn service_api_state_file_is_sqlite(path: &str) -> bool {
+    let normalized = path.trim().to_ascii_lowercase();
+    normalized.ends_with(".sqlite")
+        || normalized.ends_with(".sqlite3")
+        || normalized.ends_with(".db")
+}
+
+pub(super) fn load_service_api_state_payload(
+    state_file: Option<&str>,
+) -> Result<Option<String>, String> {
+    let Some(backend) = service_api_state_storage_backend(state_file) else {
+        return Ok(None);
+    };
+    match backend {
+        ServiceApiStateStorageBackend::JsonFile(path) => match fs::read_to_string(path) {
+            Ok(payload) => Ok(Some(payload)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(format!(
+                "service api state file read failed: {path}: {error}"
+            )),
+        },
+        ServiceApiStateStorageBackend::SqliteFile(path) => {
+            let backend = SqliteStoreBackend::open(Path::new(path)).map_err(|error| {
+                format!("service api sqlite state open failed: {path}: {error}")
+            })?;
+            let maybe_payload = backend
+                .get(
+                    SERVICE_API_STATE_SQLITE_NAMESPACE,
+                    SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY,
+                )
+                .map_err(|error| {
+                    format!("service api sqlite state read failed: {path}: {error}")
+                })?;
+            if let Some(payload) = maybe_payload {
+                let rendered = String::from_utf8(payload).map_err(|error| {
+                    format!("service api sqlite state payload utf-8 decode failed: {path}: {error}")
+                })?;
+                return Ok(Some(rendered));
+            }
+            Ok(None)
+        }
+    }
+}
+
+pub(super) fn persist_service_api_state_payload(
+    state_file: Option<&str>,
+    payload: &str,
+) -> Result<(), String> {
+    let Some(backend) = service_api_state_storage_backend(state_file) else {
+        return Ok(());
+    };
+    match backend {
+        ServiceApiStateStorageBackend::JsonFile(path) => fs::write(path, payload)
+            .map_err(|error| format!("service api state file write failed: {path}: {error}")),
+        ServiceApiStateStorageBackend::SqliteFile(path) => {
+            let mut backend = SqliteStoreBackend::open(Path::new(path)).map_err(|error| {
+                format!("service api sqlite state open failed: {path}: {error}")
+            })?;
+            backend
+                .put(
+                    SERVICE_API_STATE_SQLITE_NAMESPACE,
+                    SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY,
+                    payload.as_bytes(),
+                )
+                .map_err(|error| format!("service api sqlite state write failed: {path}: {error}"))
+        }
+    }
+}
 
 pub(crate) fn default_service_api_state_file_path_for_bind_addr(bind_addr: &str) -> String {
     let mut path = env::temp_dir();
@@ -77,29 +169,22 @@ pub(crate) fn project_service_api_relayed_message_statuses(
     state_file: Option<&str>,
     message_ids: &[String],
 ) -> Result<usize, String> {
-    let Some(path) = state_file else {
-        return Ok(0);
-    };
     if message_ids.is_empty() {
         return Ok(0);
     }
-    let state_payload = match fs::read_to_string(path) {
-        Ok(payload) => payload,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
-        Err(error) => {
-            return Err(format!(
-                "service api state file read failed: {path}: {error}"
-            ));
-        }
+    let state_payload = match load_service_api_state_payload(state_file)? {
+        Some(payload) => payload,
+        None => return Ok(0),
     };
+    let path_label = state_file.unwrap_or("<none>");
     let mut state_json: serde_json::Value = serde_json::from_str(state_payload.as_str())
-        .map_err(|error| format!("service api state file parse failed: {path}: {error}"))?;
+        .map_err(|error| format!("service api state file parse failed: {path_label}: {error}"))?;
     let Some(messages) = state_json
         .get_mut("messages")
         .and_then(serde_json::Value::as_object_mut)
     else {
         return Err(format!(
-            "service api state file parse failed: {path}: missing messages object"
+            "service api state file parse failed: {path_label}: missing messages object"
         ));
     };
 
@@ -125,8 +210,7 @@ pub(crate) fn project_service_api_relayed_message_statuses(
     if projected_count > 0 {
         let rendered = serde_json::to_string_pretty(&state_json)
             .map_err(|error| format!("service api state serialization failed: {error}"))?;
-        fs::write(path, rendered)
-            .map_err(|error| format!("service api state file write failed: {path}: {error}"))?;
+        persist_service_api_state_payload(state_file, rendered.as_str())?;
     }
     Ok(projected_count)
 }

@@ -149,21 +149,13 @@ pub(super) struct ServiceApiRelayProgressCounts {
 
 impl ServiceApiMessageStore {
     pub(super) fn from_optional_state_file(state_file: Option<String>) -> Result<Self, String> {
-        let snapshot = if let Some(path) = state_file.as_deref() {
-            match fs::read_to_string(path) {
-                Ok(contents) => serde_json::from_str::<ServiceApiPersistedMessageStoreSnapshot>(
-                    contents.as_str(),
-                )
-                .map_err(|error| format!("service api state file parse failed: {path}: {error}"))?,
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                    ServiceApiPersistedMessageStoreSnapshot::default()
-                }
-                Err(error) => {
-                    return Err(format!(
-                        "service api state file read failed: {path}: {error}"
-                    ));
-                }
-            }
+        let state_payload = super::state_io::load_service_api_state_payload(state_file.as_deref())?;
+        let snapshot = if let Some(payload) = state_payload {
+            let path_label = state_file.as_deref().unwrap_or("<none>");
+            serde_json::from_str::<ServiceApiPersistedMessageStoreSnapshot>(payload.as_str())
+                .map_err(|error| {
+                    format!("service api state file parse failed: {path_label}: {error}")
+                })?
         } else {
             ServiceApiPersistedMessageStoreSnapshot::default()
         };
@@ -174,31 +166,26 @@ impl ServiceApiMessageStore {
     }
 
     fn persist(&self) -> Result<(), String> {
-        let Some(path) = self.state_file.as_deref() else {
-            return Ok(());
-        };
         let payload = serde_json::to_string_pretty(&self.snapshot)
             .map_err(|error| format!("service api state serialization failed: {error}"))?;
-        fs::write(path, payload)
-            .map_err(|error| format!("service api state file write failed: {path}: {error}"))
+        super::state_io::persist_service_api_state_payload(
+            self.state_file.as_deref(),
+            payload.as_str(),
+        )
     }
 
     fn refresh_from_disk(&mut self) -> Result<(), String> {
-        let Some(path) = self.state_file.as_deref() else {
-            return Ok(());
-        };
-        let payload = match fs::read_to_string(path) {
-            Ok(contents) => contents,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-            Err(error) => {
-                return Err(format!(
-                    "service api state file read failed: {path}: {error}"
-                ));
-            }
-        };
+        let payload =
+            match super::state_io::load_service_api_state_payload(self.state_file.as_deref())? {
+                Some(contents) => contents,
+                None => return Ok(()),
+            };
         let snapshot =
             serde_json::from_str::<ServiceApiPersistedMessageStoreSnapshot>(payload.as_str())
-                .map_err(|error| format!("service api state file parse failed: {path}: {error}"))?;
+                .map_err(|error| {
+                    let path_label = self.state_file.as_deref().unwrap_or("<none>");
+                    format!("service api state file parse failed: {path_label}: {error}")
+                })?;
         self.snapshot = snapshot;
         Ok(())
     }

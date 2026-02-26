@@ -1,13 +1,16 @@
 use super::{
-    auth::map_anti_spam_rejection_to_reasoned_error, build_service_api_runtime,
-    deterministic_body_tag, drain_service_api_relay_spool_entries,
-    message_store::ServiceApiMessageStore, project_service_api_relayed_message_statuses,
-    service_api_runtime_worker_threads_for_test, AntiSpamRejection,
-    REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+    auth::map_anti_spam_rejection_to_reasoned_error,
+    build_service_api_runtime, deterministic_body_tag, drain_service_api_relay_spool_entries,
+    message_store::ServiceApiMessageStore,
+    project_service_api_relayed_message_statuses, service_api_runtime_worker_threads_for_test,
+    state_io::{SERVICE_API_STATE_SQLITE_NAMESPACE, SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY},
+    AntiSpamRejection, REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
     REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
     REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
 };
+use kamn_core::SqliteStoreBackend;
 use serde_json::Value;
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[test]
@@ -242,6 +245,151 @@ fn unit_message_store_relay_progress_counts_project_live_message_states() {
     assert_eq!(counts.relayed_message_count, 1);
     assert_eq!(counts.delivered_message_count, 1);
     let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_message_store_persists_and_recovers_messages_with_sqlite_state_backend() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let sqlite_state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-message-store-{unique_suffix}.sqlite"
+    ));
+    let sqlite_state_path = sqlite_state_file.to_string_lossy().to_string();
+
+    let created_message_id = {
+        let mut store =
+            ServiceApiMessageStore::from_optional_state_file(Some(sqlite_state_path.clone()))
+                .expect("sqlite-backed message store should initialize");
+        let created = store
+            .create_message(
+                r#"{"recipient_did":"kamn:did:agent:sqlite-recipient","message":"sqlite-store"}"#,
+                "api",
+                None,
+                Some("kamn:did:agent:sqlite-sender"),
+                Some("kamn:did:agent:sqlite-recipient"),
+            )
+            .expect("sqlite-backed message creation should persist");
+        created.message_id
+    };
+
+    let sqlite_backend = SqliteStoreBackend::open(Path::new(sqlite_state_path.as_str()))
+        .expect("sqlite state file should be a valid sqlite database");
+    let sqlite_keys = sqlite_backend
+        .list_keys(SERVICE_API_STATE_SQLITE_NAMESPACE)
+        .expect("sqlite state namespace should be queryable");
+    assert_eq!(
+        sqlite_keys,
+        vec![SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY.to_owned()]
+    );
+    let sqlite_payload = sqlite_backend
+        .get(
+            SERVICE_API_STATE_SQLITE_NAMESPACE,
+            SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY,
+        )
+        .expect("sqlite snapshot read should succeed")
+        .expect("sqlite snapshot row should exist");
+    let sqlite_json: Value =
+        serde_json::from_slice(sqlite_payload.as_slice()).expect("sqlite snapshot should be json");
+    assert!(
+        sqlite_json["messages"]
+            .get(created_message_id.as_str())
+            .is_some(),
+        "sqlite snapshot should include created message id"
+    );
+
+    let mut reloaded = ServiceApiMessageStore::from_optional_state_file(Some(sqlite_state_path))
+        .expect("sqlite-backed message store should reload");
+    let reloaded_payload = reloaded
+        .get_message_for_requester(created_message_id.as_str(), None)
+        .expect("sqlite-backed message query should succeed")
+        .expect("sqlite-backed message should exist");
+    assert_eq!(reloaded_payload.message_id, created_message_id);
+    assert_eq!(reloaded_payload.status, "created");
+    assert_eq!(
+        reloaded_payload.sender_did.as_deref(),
+        Some("kamn:did:agent:sqlite-sender")
+    );
+    assert_eq!(
+        reloaded_payload.recipient_did.as_deref(),
+        Some("kamn:did:agent:sqlite-recipient")
+    );
+
+    let _ = std::fs::remove_file(sqlite_state_file);
+}
+
+#[test]
+fn service_api_relay_projection_marks_created_messages_as_relayed_for_sqlite_state_backend() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let sqlite_state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-projection-{unique_suffix}.sqlite"
+    ));
+    let sqlite_state_path = sqlite_state_file.to_string_lossy().to_string();
+
+    let created_message_id = {
+        let mut store =
+            ServiceApiMessageStore::from_optional_state_file(Some(sqlite_state_path.clone()))
+                .expect("sqlite-backed message store should initialize");
+        let created = store
+            .create_message(
+                r#"{"recipient_did":"kamn:did:agent:sqlite-projection-recipient","message":"sqlite-projection"}"#,
+                "api",
+                None,
+                Some("kamn:did:agent:sqlite-projection-sender"),
+                Some("kamn:did:agent:sqlite-projection-recipient"),
+            )
+            .expect("sqlite-backed message creation should persist");
+        created.message_id
+    };
+
+    let projected_count = project_service_api_relayed_message_statuses(
+        Some(sqlite_state_path.as_str()),
+        &[created_message_id.clone()],
+    )
+    .expect("sqlite-backed relay projection should succeed");
+    assert_eq!(projected_count, 1);
+
+    let sqlite_backend = SqliteStoreBackend::open(Path::new(sqlite_state_path.as_str()))
+        .expect("sqlite state file should be a valid sqlite database");
+    let sqlite_payload = sqlite_backend
+        .get(
+            SERVICE_API_STATE_SQLITE_NAMESPACE,
+            SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY,
+        )
+        .expect("sqlite snapshot read should succeed")
+        .expect("sqlite snapshot row should exist");
+    let sqlite_json: Value =
+        serde_json::from_slice(sqlite_payload.as_slice()).expect("sqlite snapshot should be json");
+    assert_eq!(
+        sqlite_json["messages"][created_message_id.as_str()]["status"],
+        "relayed",
+        "sqlite snapshot should persist projected created->relayed transition"
+    );
+
+    let mut reloaded = ServiceApiMessageStore::from_optional_state_file(Some(sqlite_state_path))
+        .expect("sqlite-backed message store should reload");
+    let reloaded_payload = reloaded
+        .get_message_for_requester(created_message_id.as_str(), None)
+        .expect("sqlite-backed message query should succeed")
+        .expect("sqlite-backed message should exist");
+    assert_eq!(
+        reloaded_payload.status, "relayed",
+        "sqlite-backed relay projection should promote created->relayed"
+    );
+
+    let _ = std::fs::remove_file(sqlite_state_file);
 }
 
 #[test]
