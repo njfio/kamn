@@ -1,7 +1,7 @@
 # Spec: Issue #6077 - Implement durable send-to-recipient delivery execution path
 
 - Issue: #6077
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: networking
