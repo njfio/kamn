@@ -508,3 +508,210 @@ fn canonical_aad_payload(
 fn tagged_digest(value: &str) -> String {
     tagged_sha256(value, DATA_LAYER_M0_HASH_ALGORITHM)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        AttachmentRef, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata, EnvelopeProof,
+    };
+    use std::collections::BTreeMap;
+
+    fn fixture_envelope(message_id: &str, nonce: u64) -> CanonicalMessageEnvelope {
+        let mut body = BTreeMap::new();
+        body.insert("operation".to_owned(), "store".to_owned());
+        body.insert("payload".to_owned(), format!("payload-{message_id}"));
+
+        CanonicalMessageEnvelope {
+            envelope: EnvelopeMetadata {
+                id: message_id.to_owned(),
+                type_name: crate::CANONICAL_MESSAGE_ENVELOPE_TYPE.to_owned(),
+                from: "kamn:did:agent:sender-1".to_owned(),
+                to: vec![
+                    "kamn:did:agent:recipient-2".to_owned(),
+                    "kamn:did:agent:recipient-1".to_owned(),
+                ],
+                created: "2026-02-07T20:15:30.123Z".to_owned(),
+                expires: "2026-02-07T20:45:30.123Z".to_owned(),
+                thread_id: Some("urn:uuid:thread-1".to_owned()),
+                parent_id: None,
+                nonce,
+            },
+            header: EnvelopeHeader {
+                message_type: "Request".to_owned(),
+                priority: "Elevated".to_owned(),
+                content_type: "application/json".to_owned(),
+                encryption: EnvelopeEncryption {
+                    algorithm: crate::CANONICAL_ENCRYPTION_ALGORITHM.to_owned(),
+                    recipient_keys: vec![
+                        "kamn:did:agent:recipient-2#key-agreement-1".to_owned(),
+                        "kamn:did:agent:recipient-1#key-agreement-1".to_owned(),
+                    ],
+                },
+            },
+            body,
+            attachments: vec![AttachmentRef {
+                id: "attachment-1".to_owned(),
+                media_type: "application/json".to_owned(),
+                uri: "ipfs://Qm123".to_owned(),
+            }],
+            proof: EnvelopeProof {
+                type_name: "Ed25519Signature2020".to_owned(),
+                created: "2026-02-07T20:15:30.123Z".to_owned(),
+                verification_method: "kamn:did:agent:sender-1#keys-1".to_owned(),
+                proof_purpose: crate::CANONICAL_PROOF_PURPOSE.to_owned(),
+                proof_value: "z58proof".to_owned(),
+            },
+        }
+    }
+
+    fn fixture_ciphertext(nonce: u64) -> DirectMessageCiphertext {
+        DirectMessageCiphertext {
+            key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
+            cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
+            sender_key_ref: "kamn:did:agent:sender-1#key-agreement-1".to_owned(),
+            recipient_key_ref: "kamn:did:agent:recipient-1#key-agreement-1".to_owned(),
+            nonce,
+            ciphertext: format!("cipher-{nonce}"),
+            auth_tag: format!("auth-{nonce}"),
+        }
+    }
+
+    fn fixture_input(message_id: &str, nonce: u64) -> DataLayerM0RecordInput {
+        DataLayerM0RecordInput {
+            envelope: fixture_envelope(message_id, nonce),
+            ciphertext: fixture_ciphertext(nonce),
+            wrapped_keys: vec![
+                DataLayerM0WrappedKey {
+                    did: "kamn:did:agent:recipient-2".to_owned(),
+                    wrapped_cek: "cek-b".to_owned(),
+                },
+                DataLayerM0WrappedKey {
+                    did: "kamn:did:agent:recipient-1".to_owned(),
+                    wrapped_cek: "cek-a".to_owned(),
+                },
+            ],
+            compression_codec: DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD.to_owned(),
+            compression_dict_id: Some(7),
+            content_size_bytes: 128,
+            compressed_size_bytes: 96,
+        }
+    }
+
+    #[test]
+    fn unit_append_builds_expected_chain_links_and_sorts_projection_fields() {
+        let mut ledger = DataLayerM0AppendOnlyLedger::new();
+        let first = ledger
+            .append(fixture_input("urn:uuid:msg-1", 41))
+            .expect("first append should succeed");
+        let second = ledger
+            .append(fixture_input("urn:uuid:msg-2", 42))
+            .expect("second append should succeed");
+
+        assert_eq!(first.hash_chain_prev, DATA_LAYER_M0_HASH_CHAIN_GENESIS);
+        assert_eq!(second.hash_chain_prev, first.content_hash);
+        assert_eq!(
+            first.recipient_dids,
+            vec![
+                "kamn:did:agent:recipient-1".to_owned(),
+                "kamn:did:agent:recipient-2".to_owned()
+            ]
+        );
+        assert_eq!(
+            first.wrapped_keys,
+            vec![
+                DataLayerM0WrappedKey {
+                    did: "kamn:did:agent:recipient-1".to_owned(),
+                    wrapped_cek: "cek-a".to_owned(),
+                },
+                DataLayerM0WrappedKey {
+                    did: "kamn:did:agent:recipient-2".to_owned(),
+                    wrapped_cek: "cek-b".to_owned(),
+                }
+            ]
+        );
+        assert_eq!(ledger.verify_hash_chain(), Ok(()));
+    }
+
+    #[test]
+    fn regression_append_rejects_duplicate_message_id() {
+        let mut ledger = DataLayerM0AppendOnlyLedger::new();
+        let _ = ledger
+            .append(fixture_input("urn:uuid:msg-1", 41))
+            .expect("first append should succeed");
+        let duplicate = ledger.append(fixture_input("urn:uuid:msg-1", 99));
+        assert_eq!(
+            duplicate,
+            Err(DataLayerM0Error::DuplicateMessageId(
+                "urn:uuid:msg-1".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_verify_hash_chain_detects_tampered_previous_link() {
+        let mut ledger = DataLayerM0AppendOnlyLedger::new();
+        let first = ledger
+            .append(fixture_input("urn:uuid:msg-1", 41))
+            .expect("first append should succeed");
+        let _second = ledger
+            .append(fixture_input("urn:uuid:msg-2", 42))
+            .expect("second append should succeed");
+
+        ledger
+            .replace_content_hash_unchecked("urn:uuid:msg-1", "sha256:deadbeef")
+            .expect("tamper helper should succeed");
+
+        assert_eq!(
+            ledger.verify_hash_chain(),
+            Err(DataLayerM0Error::InvalidHashChainLink {
+                position: 1,
+                expected_prev: "sha256:deadbeef".to_owned(),
+                found_prev: first.content_hash,
+            })
+        );
+    }
+
+    #[test]
+    fn unit_conformance_matrix_projects_stable_and_drift_decisions() {
+        let stable_cases = vec![
+            DataLayerM0ConformanceMatrixCase {
+                case_id: "c-01".to_owned(),
+                invariant: DataLayerM0ConformanceInvariant::EnvelopeCryptoDeterministic,
+                observed_passed: true,
+                expected_passed: true,
+            },
+            DataLayerM0ConformanceMatrixCase {
+                case_id: "c-02".to_owned(),
+                invariant: DataLayerM0ConformanceInvariant::AppendOnlyDuplicateRejected,
+                observed_passed: false,
+                expected_passed: false,
+            },
+        ];
+        let stable_report =
+            evaluate_data_layer_m0_conformance_matrix(&stable_cases).expect("stable report");
+        assert_eq!(
+            stable_report.decision,
+            DataLayerM0ConformanceMatrixDecision::Stable {
+                reason_code: DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE,
+            }
+        );
+
+        let drift_cases = vec![DataLayerM0ConformanceMatrixCase {
+            case_id: "c-03".to_owned(),
+            invariant: DataLayerM0ConformanceInvariant::HashChainTamperDetected,
+            observed_passed: false,
+            expected_passed: true,
+        }];
+        let drift_report =
+            evaluate_data_layer_m0_conformance_matrix(&drift_cases).expect("drift report");
+        assert_eq!(
+            drift_report.decision,
+            DataLayerM0ConformanceMatrixDecision::DriftDetected {
+                reason_code: DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
+            }
+        );
+        assert_eq!(drift_report.evidence.len(), 1);
+        assert!(drift_report.evidence[0].mismatch);
+    }
+}
