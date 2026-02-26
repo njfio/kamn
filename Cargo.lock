@@ -1629,6 +1629,7 @@ dependencies = [
  "chacha20poly1305",
  "k256",
  "kamn-kolme",
+ "kamn-live-probe-matrix",
  "kamn-runtime-guards",
  "libp2p",
  "proptest",
@@ -1655,6 +1656,13 @@ dependencies = [
 [[package]]
 name = "kamn-kolme"
 version = "0.1.0"
+
+[[package]]
+name = "kamn-live-probe-matrix"
+version = "0.1.0"
+dependencies = [
+ "tracing",
+]
 
 [[package]]
 name = "kamn-mcp-server"
