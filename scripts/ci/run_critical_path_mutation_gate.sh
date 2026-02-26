@@ -243,7 +243,7 @@ run_slice "node-runtime-orchestration" 1 \
 run_slice "node-service-api-endpoint" 2 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/service_api_endpoint.rs \
-    --re "service_api_endpoint\\.rs:(336:9):" \
+    --re "service_api_endpoint\\.rs:(363:9):" \
     --output "$tmp_dir/node-service-api-endpoint" \
     --copy-vcs true \
     --cargo-test-arg --bin \
