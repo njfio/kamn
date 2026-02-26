@@ -1,7 +1,7 @@
 # Spec: Issue #6033 - Add core invariants unit tests for data_layer_m10_partition_archival
 
 - Issue: #6033
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
