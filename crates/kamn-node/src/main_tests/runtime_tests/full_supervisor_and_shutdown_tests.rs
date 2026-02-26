@@ -172,15 +172,29 @@ fn integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_sto
 
     let endpoint_start_idx = captured_logs
         .iter()
-        .position(|line| line.contains("\"event\":\"node.runtime.service_api.endpoint.start\""))
+        .position(|line| {
+            line.contains("\"event\":\"node.runtime.service_api.endpoint.start\"")
+                && line.contains("\"bind_addr\":\"127.0.0.1:19086\"")
+        })
         .expect("full supervisor should emit service-api endpoint start marker");
     let supervisor_stop_complete_idx = captured_logs
         .iter()
-        .position(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .enumerate()
+        .skip(endpoint_start_idx)
+        .find(|(_, line)| {
+            line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\"")
+        })
+        .map(|(index, _)| index)
         .expect("full supervisor should emit stop-complete marker");
     let endpoint_complete_idx = captured_logs
         .iter()
-        .position(|line| line.contains("\"event\":\"node.runtime.service_api.endpoint.complete\""))
+        .enumerate()
+        .skip(endpoint_start_idx)
+        .find(|(_, line)| {
+            line.contains("\"event\":\"node.runtime.service_api.endpoint.complete\"")
+                && line.contains("\"bind_addr\":\"127.0.0.1:19086\"")
+        })
+        .map(|(index, _)| index)
         .expect("full supervisor should emit service-api endpoint complete marker");
     assert!(
         endpoint_start_idx < supervisor_stop_complete_idx,
@@ -226,15 +240,29 @@ fn integration_runtime_full_supervisor_starts_observability_lane_before_daemon_s
 
     let endpoint_start_idx = captured_logs
         .iter()
-        .position(|line| line.contains("\"event\":\"node.runtime.observability.endpoint.start\""))
+        .position(|line| {
+            line.contains("\"event\":\"node.runtime.observability.endpoint.start\"")
+                && line.contains("\"bind_addr\":\"127.0.0.1:19091\"")
+        })
         .expect("full supervisor should emit observability endpoint start marker");
     let supervisor_stop_complete_idx = captured_logs
         .iter()
-        .position(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .enumerate()
+        .skip(endpoint_start_idx)
+        .find(|(_, line)| {
+            line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\"")
+        })
+        .map(|(index, _)| index)
         .expect("full supervisor should emit stop-complete marker");
     let endpoint_complete_idx = captured_logs
         .iter()
-        .position(|line| line.contains("\"event\":\"node.runtime.observability.endpoint.complete\""))
+        .enumerate()
+        .skip(endpoint_start_idx)
+        .find(|(_, line)| {
+            line.contains("\"event\":\"node.runtime.observability.endpoint.complete\"")
+                && line.contains("\"bind_addr\":\"127.0.0.1:19091\"")
+        })
+        .map(|(index, _)| index)
         .expect("full supervisor should emit observability endpoint complete marker");
     assert!(
         endpoint_start_idx < supervisor_stop_complete_idx,
@@ -301,6 +329,117 @@ fn regression_runtime_full_supervisor_rejects_observability_lane_max_requests_dr
     assert!(
         matches!(error, ConfigError::RuntimeDaemonLifecycle(message) if message.contains("full_supervisor_observability_lane_max_requests_contract_violation")),
         "observability lane max-request drift must emit deterministic full-supervisor reason code"
+    );
+}
+
+fn spawn_delayed_http_health_request(
+    bind_addr: &'static str,
+    path: &'static str,
+    delay_ms: u64,
+) -> std::thread::JoinHandle<bool> {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(750);
+        let request = format!(
+            "GET {path} HTTP/1.1\r\nHost: {bind_addr}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+        );
+
+        loop {
+            match std::net::TcpStream::connect(bind_addr) {
+                Ok(mut stream) => {
+                    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(200)));
+                    let _ = stream.set_write_timeout(Some(std::time::Duration::from_millis(200)));
+                    if std::io::Write::write_all(&mut stream, request.as_bytes()).is_ok() {
+                        let mut buffer = [0_u8; 128];
+                        let _ = std::io::Read::read(&mut stream, &mut buffer);
+                        return true;
+                    }
+                    return false;
+                }
+                Err(_) => {
+                    if std::time::Instant::now() >= deadline {
+                        return false;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+            }
+        }
+    })
+}
+
+#[test]
+fn regression_runtime_full_supervisor_service_api_lane_early_exit_fails_with_liveness_reason() {
+    let request_trigger = spawn_delayed_http_health_request("127.0.0.1:19095", "/healthz", 50);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "250".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "2".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19095".to_owned(),
+        "--api-idle-timeout-ms".to_owned(),
+        "500".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let error = execute(parsed).expect_err(
+        "full supervisor must fail closed when service-api lane exits before daemon completion",
+    );
+    let request_dispatched = request_trigger
+        .join()
+        .expect("service-api trigger thread should join");
+    assert!(
+        request_dispatched,
+        "service-api trigger request should be dispatched during daemon execution"
+    );
+    assert!(
+        matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("full_supervisor_service_api_lane_liveness_failed")),
+        "service-api lane early-exit path must emit deterministic liveness reason code: {error:?}"
+    );
+}
+
+#[test]
+fn regression_runtime_full_supervisor_observability_lane_early_exit_fails_with_liveness_reason() {
+    let request_trigger = spawn_delayed_http_health_request("127.0.0.1:19096", "/healthz", 50);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "250".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "2".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19097".to_owned(),
+        "--api-idle-timeout-ms".to_owned(),
+        "500".to_owned(),
+        "--observability-endpoint-bind".to_owned(),
+        "127.0.0.1:19096".to_owned(),
+        "--observability-endpoint-idle-timeout-ms".to_owned(),
+        "500".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let error = execute(parsed).expect_err(
+        "full supervisor must fail closed when observability lane exits before daemon completion",
+    );
+    let request_dispatched = request_trigger
+        .join()
+        .expect("observability trigger thread should join");
+    assert!(
+        request_dispatched,
+        "observability trigger request should be dispatched during daemon execution"
+    );
+    assert!(
+        matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("full_supervisor_observability_lane_liveness_failed")),
+        "observability lane early-exit path must emit deterministic liveness reason code: {error:?}"
     );
 }
 
