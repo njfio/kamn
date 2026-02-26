@@ -304,6 +304,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `governance_feature_commit_ratio_threshold_max=0.50`
   - `governance_feature_commit_ratio_non_merge_only=true`
 
+## Review-Document Freeze Fast Gate
+- For post-publication freeze policy changes, keep PR validation on deterministic changed-file checker commands:
+  - `python3 scripts/ci/check_review_document_freeze.py --changed-files-file /tmp/pr-changed-files.txt --freeze-manifest docs/review/review-document-freeze.manifest --output-json /tmp/review-document-freeze-report.json`
+  - `bash scripts/ci/test_check_review_document_freeze.sh`
+- Checker wiring contract:
+  - PR workflow must source changed files from pull-request base/head delta:
+    - `git diff --name-only <base_sha>..<head_sha>`
+  - checker output artifact:
+    - `ci-review-document-freeze.json`
+- Deterministic review-document freeze taxonomy markers:
+  - `review_document_freeze_schema_version=kamn.ci.review-document-freeze-gate-report.v1`
+  - `review_document_freeze_reason_taxonomy_version=kamn.ci.review-document-freeze-gate-reason-taxonomy.v1`
+  - `review_document_freeze_reason_codes_csv=review_document_freeze_changed_files_missing,review_document_freeze_manifest_missing,review_document_freeze_manifest_invalid,review_document_freeze_violation_detected`
+  - `review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest`
+  - `review_document_freeze_scope=docs/review/gaps-and-issues-r*.md`
+
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
   - `cargo test -p kamn-node graceful_shutdown`
