@@ -504,6 +504,13 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
             SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT,
         websocket_reason_taxonomy_version,
         websocket_reason_code_count,
+        relay_created_message_count: 0,
+        relay_relayed_message_count: 0,
+        relay_delivered_message_count: 0,
+        relay_drained_count: report.daemon_service_api_relay_drained_count.unwrap_or(0),
+        relay_projected_state_count: report
+            .daemon_service_api_relay_projected_state_count
+            .unwrap_or(0),
         observability_source: observability.source,
         observability_latency_p50_ms: observability.latency_p50_ms,
         observability_latency_p99_ms: observability.latency_p99_ms,

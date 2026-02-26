@@ -5460,7 +5460,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     let restart_bind_addr = reserve_loopback_addr();
     let restart_config = ServiceApiEndpointConfig {
         bind_addr: restart_bind_addr.clone(),
-        max_requests: 1,
+        max_requests: 2,
         idle_timeout_ms: 2_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
@@ -5471,6 +5471,27 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         serve_service_api_endpoint(&restart_config, &restart_server_snapshot)
     });
     wait_for_endpoint_ready(restart_bind_addr.as_str());
+
+    let metrics_response = send_http_request(restart_bind_addr.as_str(), "GET", "/metrics", "");
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    let relayed_count_metric = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_relay_relayed_message_count",
+    )
+    .expect("relay relayed metric should be present");
+    assert_eq!(
+        relayed_count_metric, 1,
+        "metrics should expose one relayed message after daemon relay projection"
+    );
+    let delivered_count_metric = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_relay_delivered_message_count",
+    )
+    .expect("relay delivered metric should be present");
+    assert_eq!(
+        delivered_count_metric, 0,
+        "metrics should expose zero delivered messages before recipient retrieval"
+    );
 
     let message_path = format!("/v1/messages/{}", send_payload.message_id);
     let message_signature = service_api_request_signature_for_fields(

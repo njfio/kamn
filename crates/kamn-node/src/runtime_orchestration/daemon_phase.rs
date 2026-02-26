@@ -761,6 +761,8 @@ pub(super) fn execute_daemon_runtime(
         tick_interval_ms,
         executed_ticks: daemon_completion.executed_ticks,
         completion_reason: daemon_completion.completion_reason,
+        service_api_relay_drained_count: runtime_processing.relay_drained_count,
+        service_api_relay_projected_state_count: runtime_processing.relay_projected_state_count,
         observability_latency_p50_ms: daemon_observability.latency_p50_ms,
         observability_latency_p99_ms: daemon_observability.latency_p99_ms,
         observability_throughput_tps: daemon_observability.throughput_tps,

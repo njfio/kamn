@@ -45,6 +45,16 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert_eq!(
+        report.daemon_service_api_relay_drained_count,
+        Some(2),
+        "daemon runtime output must report drained relay entries"
+    );
+    assert_eq!(
+        report.daemon_service_api_relay_projected_state_count,
+        Some(0),
+        "daemon runtime output must report projected relay state updates deterministically"
+    );
     assert!(
         report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
         "daemon observability throughput should reflect projected relay work"
@@ -130,6 +140,16 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert_eq!(
+        report.daemon_service_api_relay_drained_count,
+        Some(1),
+        "daemon runtime output must report drained relay entries for state projection"
+    );
+    assert_eq!(
+        report.daemon_service_api_relay_projected_state_count,
+        Some(1),
+        "daemon runtime output must report projected relay state updates for created->relayed"
+    );
     assert!(
         report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
         "daemon observability throughput should reflect delayed relay processing work"
@@ -372,6 +392,17 @@ fn integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop(
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_service_api_relay_drained_count.unwrap_or(0) >= 1,
+        "daemon runtime output must report at least one drained relay entry for delayed arrivals"
+    );
+    assert!(
+        report
+            .daemon_service_api_relay_projected_state_count
+            .unwrap_or(0)
+            >= 1,
+        "daemon runtime output must report at least one projected relay state for delayed arrivals"
+    );
     relay_writer
         .join()
         .expect("relay append worker should complete successfully");

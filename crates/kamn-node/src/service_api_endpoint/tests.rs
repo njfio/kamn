@@ -186,6 +186,48 @@ fn service_api_relay_projection_is_idempotent_for_relayed_messages() {
 }
 
 #[test]
+fn unit_message_store_relay_progress_counts_project_live_message_states() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-progress-counts-{unique_suffix}.json"
+    ));
+    std::fs::write(
+        state_file.as_path(),
+        r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-progress-created-1":{"message_id":"msg-progress-created-1","status":"created","channel_id":null,"sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"created\"}"},
+    "msg-progress-relayed-1":{"message_id":"msg-progress-relayed-1","status":"relayed","channel_id":null,"sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"relayed\"}"},
+    "msg-progress-delivered-1":{"message_id":"msg-progress-delivered-1","status":"delivered","channel_id":null,"sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"delivered\"}"},
+    "msg-progress-ignored-1":{"message_id":"msg-progress-ignored-1","status":"ignored","channel_id":null,"sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"ignored\"}"}
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+    )
+    .expect("relay progress state fixture should write");
+    let mut store = ServiceApiMessageStore::from_optional_state_file(Some(
+        state_file.to_string_lossy().to_string(),
+    ))
+    .expect("state-backed message store should initialize");
+    let counts = store
+        .relay_progress_counts()
+        .expect("relay progress counts should read from state");
+    assert_eq!(counts.created_message_count, 1);
+    assert_eq!(counts.relayed_message_count, 1);
+    assert_eq!(counts.delivered_message_count, 1);
+    let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
 fn service_api_relay_spool_drain_errors_for_non_not_found_paths() {
     let unique_suffix = format!(
         "{}-{}",

@@ -17,6 +17,8 @@ fn functional_json_render_is_deterministic() {
         daemon_tick_interval_ms: None,
         daemon_executed_ticks: None,
         daemon_completion_reason: None,
+        daemon_service_api_relay_drained_count: None,
+        daemon_service_api_relay_projected_state_count: None,
         daemon_observability_latency_p50_ms: None,
         daemon_observability_latency_p99_ms: None,
         daemon_observability_throughput_tps: None,
