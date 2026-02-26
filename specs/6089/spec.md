@@ -1,4 +1,4 @@
-# Spec: Issue #6089 - Shell-Surface Reduction Wave 1 (Non-Kolme Wrapper Dedup)
+# Spec: Issue #6089 - Shell-Surface Reduction Wave 1 (Wave Wrapper Contract Harness Consolidation)
 
 - Issue: #6089
 - Status: Reviewed
@@ -10,35 +10,40 @@
 - Parent: #6086
 
 ## Problem Statement
-The shell surface remains above the hard ceiling and contains heavy duplication. A single duplicated wrapper family contributes disproportionate LOC: 105 shell scripts are exact copies of `scripts/framework/run_non_kolme_contract_lane_dispatch.sh` (about 12.7K duplicate lines), inflating maintenance cost without increasing capability.
+Shell surface remains oversized, and two shared wave-wrapper contract harness implementations are long shell scripts with substantial assertion/mutation boilerplate:
+- `scripts/ci/test_wave_wrapper_family_budget_trend_impl.sh`
+- `scripts/ci/test_wave_wrapper_family_baseline_contract_impl.sh`
+
+This surface can be reduced without changing command entrypoints by keeping the `.sh` scripts as compatibility wrappers and moving implementation bodies to Python.
 
 ## Scope
 In scope:
-- Replace duplicated non-kolme dispatch wrappers with thin delegating wrappers that preserve command-path compatibility.
-- Preserve wrapper invocation behavior and manifest resolution behavior.
-- Measure and report shell/rust ratio delta markers in PR and closure.
+- Keep existing `.sh` entrypoints and argument contracts for wave-wrapper harnesses.
+- Move the two large implementation bodies above into Python counterparts.
+- Preserve behavior parity for representative wave wrappers and runner-contract checks.
+- Report shell-surface delta markers.
 
 Out of scope:
-- Removing wrapper paths from command surface.
-- Rewriting the manifest resolver/dispatcher semantics.
-- Additional shell families beyond this duplicate set.
+- Changing wrapper filenames/dispatch entrypoints.
+- Reworking non-wave shell families.
 
 ## Risk Level
 `med`
 
 ## Acceptance Criteria
-- AC-1: The identified duplicate wrapper family is reduced to thin compatibility wrappers while preserving wrapper filenames/entrypoints.
-- AC-2: Dispatcher resolution behavior remains unchanged for migrated wrappers.
-- AC-3: Shell LOC decreases measurably and closure reports actual shell/rust ratio markers.
-- AC-4: Stale-reference and wrapper parity checks pass for the migrated surface.
+- AC-1: `scripts/ci/test_wave_wrapper_family_budget_trend_impl.sh` remains an entrypoint and delegates to Python implementation with equivalent behavior.
+- AC-2: `scripts/ci/test_wave_wrapper_family_baseline_contract_impl.sh` remains an entrypoint and delegates to Python implementation with equivalent behavior.
+- AC-3: Wave-wrapper trend and baseline harness checks pass for representative waves after migration.
+- AC-4: Shell LOC decreases measurably and closure reports shell-surface markers.
 
 ## Conformance Cases
-- C-01 (Conformance, AC-1): all files in the migrated duplicate family delegate to `scripts/framework/run_non_kolme_contract_lane_dispatch.sh --lane-wrapper <basename>`.
-- C-02 (Functional, AC-2): representative wrappers resolve and dispatch successfully with unchanged manifest lookup behavior.
-- C-03 (Conformance/Regression, AC-3): measured post-change markers include `shell_loc_delta_actual < 0`, `rust_loc_delta_actual >= 0`, and explicit ratio delta reporting.
-- C-04 (Regression, AC-4): stale-reference and wrapper-parity policy lanes pass for migrated wrappers.
+- C-01 (Conformance, AC-1): `bash scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh` passes.
+- C-02 (Conformance, AC-1): `bash scripts/ci/test_check_non_kolme_wave10_wrapper_family_budget_trend.sh` passes.
+- C-03 (Conformance, AC-2): `bash scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh` passes.
+- C-04 (Conformance, AC-2): `bash scripts/ci/test_non_kolme_wave10_wrapper_family_baseline_contract.sh` passes.
+- C-05 (Regression, AC-3): `bash scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh` and `bash scripts/ci/test_non_kolme_wave_budget_trend_runner_contract.sh` pass.
+- C-06 (Conformance, AC-4): git diff shows net negative shell LOC and no wrapper entrypoint removals for the migrated pair.
 
 ## Success Metrics / Observable Signals
-- Net shell LOC decreases by at least 10K in wave 1 from this family.
-- No wrapper path removals are required for callers/CI workflows.
-- Shell-surface DoD markers are present and internally consistent.
+- Net shell LOC decreases for this bounded wave-wrapper harness slice.
+- Existing wave wrapper command paths and runner contract checks remain stable.

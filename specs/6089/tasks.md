@@ -1,15 +1,21 @@
 # Tasks: Issue #6089
 
 ## Ordered Tasks
-- T1 (RED/Conformance): Capture baseline duplicate-family inventory and shell LOC; add parity assertion that fails if wrappers still embed dispatcher body.
-- T2 (Implementation): Rewrite bounded duplicate wrapper family to thin delegating wrappers with unchanged filenames.
-- T3 (Verification): Run wrapper parity + stale-reference checks for migrated family.
-- T4 (Verification): Compute and record `shell_loc_delta_actual`, `rust_loc_delta_actual`, `shell_to_rust_ratio_delta_actual`, and `shell_surface_ratio_target_status`.
-- T5 (Closure): Publish shell-surface DoD markers with mitigation linkage if ratio regresses.
+- T1 (Implementation): Add Python implementations for trend and baseline wave-wrapper harnesses.
+- T2 (Implementation): Convert existing `.sh` impl scripts to thin compatibility wrappers that delegate to Python.
+- T3 (Verification): Run representative wave harness checks:
+  - `bash scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh`
+  - `bash scripts/ci/test_check_non_kolme_wave10_wrapper_family_budget_trend.sh`
+  - `bash scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh`
+  - `bash scripts/ci/test_non_kolme_wave10_wrapper_family_baseline_contract.sh`
+- T4 (Regression): Run runner-contract checks:
+  - `bash scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh`
+  - `bash scripts/ci/test_non_kolme_wave_budget_trend_runner_contract.sh`
+- T5 (Closure): Record shell-surface delta markers in PR/issue closure.
 
 ## Tier Mapping
 - Functional: T3
-- Regression: T3
-- Conformance: T1, T4, T5
-- Unit: N/A (shell-surface change)
+- Regression: T4
+- Conformance: T3, T5
+- Unit: N/A (script/harness migration)
 - Integration: N/A (no runtime integration surface change)

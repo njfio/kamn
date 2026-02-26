@@ -1,29 +1,28 @@
 # Plan: Issue #6089
 
 ## Approach
-1. Baseline the duplicate family inventory and shell LOC metrics before change.
-2. Execute RED step by adding/using parity assertions that fail if migrated wrappers still embed full dispatcher logic.
-3. Replace the duplicate family with thin wrappers that delegate to `run_non_kolme_contract_lane_dispatch.sh` using wrapper basename.
-4. Run stale-reference and wrapper behavior checks for the migrated family.
-5. Capture actual shell/rust ratio delta markers for PR/closure.
+1. Keep current `.sh` entrypoints as compatibility wrappers to preserve command surface.
+2. Implement Python equivalents for the two large wave-wrapper harness implementations.
+3. Wire wrappers to `exec python3 ...` so callers keep the same paths/flags.
+4. Run representative wave trend/baseline harness checks plus runner-contract checks.
+5. Capture shell LOC delta and closure markers.
 
 ## Affected Modules
-- `scripts/**/run_*_contract_lane.sh` (bounded duplicate family; exact file list materialized during implementation)
-- `scripts/framework/run_non_kolme_contract_lane_dispatch.sh` (reference target only)
+- `scripts/ci/test_wave_wrapper_family_budget_trend_impl.sh`
+- `scripts/ci/test_wave_wrapper_family_budget_trend_impl.py`
+- `scripts/ci/test_wave_wrapper_family_baseline_contract_impl.sh`
+- `scripts/ci/test_wave_wrapper_family_baseline_contract_impl.py`
 - `specs/6089/spec.md`
 - `specs/6089/plan.md`
 - `specs/6089/tasks.md`
 - `specs/milestones/r67-runtime-hardening-and-surface-reduction/index.md`
 
 ## Risks / Mitigations
-- Risk: wrapper semantics drift after dedup and break manifest resolution.
-  Mitigation: parity check lanes run against representative wrappers and manifest resolution paths.
-- Risk: stale references to removed/renamed paths.
-  Mitigation: do not remove wrapper filenames; preserve command surface with compatibility stubs.
-- Risk: lane-order contract with #6088.
-  Mitigation: hold implementation until #6088 is merged; complete spec artifacts first.
+- Risk: behavioral drift in contract assertions.
+  Mitigation: run representative wave wrappers + runner-contract checks.
+- Risk: command-surface drift.
+  Mitigation: keep `.sh` entrypoints and only change implementation target.
 
 ## Interfaces / Contracts
-- Command surface contract: wrapper paths remain invokable by existing callers.
-- Dispatch contract: wrappers continue routing through `run_non_kolme_contract_lane_dispatch.sh` with wrapper-specific manifest resolution.
-- No API/protocol/schema contract changes.
+- No entrypoint path changes for existing `.sh` wave-wrapper harness scripts.
+- No protocol/wire/schema changes.
