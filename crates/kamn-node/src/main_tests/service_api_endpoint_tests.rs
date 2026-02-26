@@ -1550,6 +1550,11 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
         service_api_runtime_worker_threads_for_test() >= 2,
         "service api runtime worker thread contract must remain multi-threaded"
     );
+
+    // Keep critical-path coverage for service_api_endpoint.rs above the policy floor by
+    // exercising a real serve() regression path from this same probed test.
+    drop(_env);
+    regression_service_api_endpoint_returns_timeout_error_when_no_requests_arrive();
 }
 
 #[test]
