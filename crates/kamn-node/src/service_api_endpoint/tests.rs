@@ -1,5 +1,6 @@
 use super::{
-    auth::map_anti_spam_rejection_to_reasoned_error, drain_service_api_relay_spool_entries,
+    auth::map_anti_spam_rejection_to_reasoned_error, build_service_api_runtime,
+    deterministic_body_tag, drain_service_api_relay_spool_entries,
     message_store::ServiceApiMessageStore, project_service_api_relayed_message_statuses,
     service_api_runtime_worker_threads_for_test, AntiSpamRejection,
     REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
@@ -29,6 +30,22 @@ fn unit_service_api_runtime_contract_uses_multi_thread_builder() {
         service_api_runtime_worker_threads_for_test() >= 2,
         "service api runtime must provision at least two worker threads"
     );
+}
+
+#[test]
+fn unit_service_api_runtime_builder_initializes_runtime() {
+    let runtime = build_service_api_runtime()
+        .expect("service api runtime builder should initialize tokio runtime");
+    runtime.block_on(async {});
+}
+
+#[test]
+fn unit_service_api_deterministic_body_tag_is_stable_and_input_sensitive() {
+    let stable_a = deterministic_body_tag(br#"{"message":"hello"}"#);
+    let stable_b = deterministic_body_tag(br#"{"message":"hello"}"#);
+    let different = deterministic_body_tag(br#"{"message":"goodbye"}"#);
+    assert_eq!(stable_a, stable_b);
+    assert_ne!(stable_a, different);
 }
 
 #[test]
