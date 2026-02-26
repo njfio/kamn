@@ -229,7 +229,7 @@ run_slice "core-http-transport" 3 \
 run_slice "node-runtime-orchestration" 1 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/runtime_orchestration.rs \
-    --re "runtime_orchestration\\.rs:(615:26):" \
+    --re "runtime_orchestration\\.rs:(768:34):" \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
@@ -239,7 +239,7 @@ run_slice "node-runtime-orchestration" 1 \
 run_slice "node-service-api-endpoint" 2 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/service_api_endpoint.rs \
-    --re "service_api_endpoint\\.rs:(509:9):" \
+    --re "service_api_endpoint\\.rs:(336:9):" \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
