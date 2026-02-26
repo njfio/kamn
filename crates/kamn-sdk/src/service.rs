@@ -135,6 +135,9 @@ impl ServiceEndpoint {
             ),
             None => (suffix, String::new()),
         };
+        if !base_path.is_empty() {
+            validate_request_path(base_path.as_str())?;
+        }
         if authority.trim().is_empty() {
             return Err(SdkError::InvalidInput {
                 field: "service.endpoint",
@@ -1443,11 +1446,11 @@ fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkE
 #[cfg(test)]
 mod tests {
     use super::{
-        read_response_bytes, service_public_key_for_private_key,
+        normalize_route_segment, read_response_bytes, service_public_key_for_private_key,
         service_signature_for_state_hash_with_private_key,
         service_verify_signature_with_public_key, write_and_flush_request, SdkError,
-        MAX_SERVICE_RESPONSE_BYTES, SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED,
-        SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
+        ServiceApiClient, ServiceRequestAuth, MAX_SERVICE_RESPONSE_BYTES,
+        SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED, SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
     };
     use crate::AgentDid;
     use std::collections::VecDeque;
@@ -1840,5 +1843,99 @@ mod tests {
                 reason: "failed cryptographic signature verification",
             }
         );
+    }
+
+    #[test]
+    fn regression_service_api_client_connect_rejects_control_chars_in_base_path() {
+        // Regression: #6057
+        let error = ServiceApiClient::connect("http://127.0.0.1:8080/base\r\nx-injected:true")
+            .expect_err("connect should fail closed for control-byte base paths");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_path",
+                reason: "contains invalid path characters",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_service_request_auth_rejects_crlf_signature_header_value() {
+        // Regression: #6057
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let error = ServiceRequestAuth::new_with_scope(
+            sender_did,
+            17,
+            "sig:ok\r\nx-injected:true".to_owned(),
+            None,
+        )
+        .expect_err("signature header values with CRLF must fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "request_auth.signature",
+                reason: "contains invalid http header characters",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_service_request_auth_rejects_crlf_scope_header_value() {
+        // Regression: #6057
+        let sender_did =
+            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
+        let error = ServiceRequestAuth::new_with_scope(
+            sender_did,
+            18,
+            "sig:ok".to_owned(),
+            Some("messages:write\r\nx-injected:true"),
+        )
+        .expect_err("scope header values with CRLF must fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "request_auth.scope",
+                reason: "contains invalid http header characters",
+            }
+        );
+    }
+
+    #[test]
+    fn regression_normalize_route_segment_rejects_delimiter_and_control_injection_payloads() {
+        // Regression: #6057
+        let invalid_cases = [
+            (
+                "segment/slash",
+                "contains characters not allowed in route segment",
+            ),
+            (
+                "segment?query",
+                "contains characters not allowed in route segment",
+            ),
+            (
+                "segment#fragment",
+                "contains characters not allowed in route segment",
+            ),
+            (
+                "segment with space",
+                "contains characters not allowed in route segment",
+            ),
+            (
+                "segment\r\nx-injected:true",
+                "contains characters not allowed in route segment",
+            ),
+        ];
+        for (value, expected_reason) in invalid_cases {
+            let error = normalize_route_segment("message_id", value)
+                .expect_err("invalid segment must fail closed");
+            assert_eq!(
+                error,
+                SdkError::InvalidInput {
+                    field: "message_id",
+                    reason: expected_reason,
+                }
+            );
+        }
     }
 }
