@@ -613,8 +613,51 @@ fn resolve_limit(limit: Option<usize>) -> Result<usize, DataLayerM6GraphIntegrat
 #[cfg(test)]
 mod tests {
     use super::{
-        resolve_limit, validate_non_empty, validate_weight, DataLayerM6GraphIntegrationError,
+        resolve_limit, validate_non_empty, validate_weight, DataLayerM6GraphEdgeInput,
+        DataLayerM6GraphEdgeRelation, DataLayerM6GraphIntegrationError, DataLayerM6GraphNodeInput,
+        DataLayerM6GraphNodeKind, DataLayerM6GraphRegistry, DataLayerM6TrustPropagationQuery,
+        DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE, DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE,
+        DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE, DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
+        DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED,
     };
+
+    const OWNER_A: &str = "kamn:did:owner:owner-a-6031";
+    const OWNER_B: &str = "kamn:did:owner:owner-b-6031";
+
+    fn register_agent_node(
+        registry: &mut DataLayerM6GraphRegistry,
+        owner_did: &str,
+        node_id: &str,
+    ) {
+        registry
+            .register_node(DataLayerM6GraphNodeInput {
+                owner_did: owner_did.to_owned(),
+                node_id: node_id.to_owned(),
+                kind: DataLayerM6GraphNodeKind::Agent,
+                label: format!("label-{node_id}"),
+            })
+            .expect("fixture node registration must succeed");
+    }
+
+    fn edge_input(
+        owner_did: &str,
+        edge_id: &str,
+        relation: DataLayerM6GraphEdgeRelation,
+        from_node_id: &str,
+        to_node_id: &str,
+        weight: f32,
+        observed_at_epoch_seconds: u64,
+    ) -> DataLayerM6GraphEdgeInput {
+        DataLayerM6GraphEdgeInput {
+            owner_did: owner_did.to_owned(),
+            edge_id: edge_id.to_owned(),
+            relation,
+            from_node_id: from_node_id.to_owned(),
+            to_node_id: to_node_id.to_owned(),
+            weight,
+            observed_at_epoch_seconds,
+        }
+    }
 
     #[test]
     fn unit_validate_weight_rejects_non_finite_and_out_of_range_values() {
@@ -650,5 +693,212 @@ mod tests {
             Err(DataLayerM6GraphIntegrationError::EmptyField("node_id"))
         );
         assert!(validate_non_empty("node-a", "node_id").is_ok());
+    }
+
+    #[test]
+    fn unit_m6_graph_registry_registers_deterministic_sequences_and_sorted_projections() {
+        let mut registry = DataLayerM6GraphRegistry::new();
+
+        let source = registry
+            .register_node(DataLayerM6GraphNodeInput {
+                owner_did: OWNER_A.to_owned(),
+                node_id: "agent-source".to_owned(),
+                kind: DataLayerM6GraphNodeKind::Agent,
+                label: "Agent Source".to_owned(),
+            })
+            .expect("source node should register");
+        let target = registry
+            .register_node(DataLayerM6GraphNodeInput {
+                owner_did: OWNER_A.to_owned(),
+                node_id: "agent-target".to_owned(),
+                kind: DataLayerM6GraphNodeKind::Agent,
+                label: "Agent Target".to_owned(),
+            })
+            .expect("target node should register");
+        assert_eq!(source.sequence, 1);
+        assert_eq!(target.sequence, 2);
+
+        let edge_two = registry
+            .register_edge(edge_input(
+                OWNER_A,
+                "edge-2",
+                DataLayerM6GraphEdgeRelation::Trusts,
+                "agent-source",
+                "agent-target",
+                0.8,
+                1_701_100_001,
+            ))
+            .expect("first edge should register");
+        let edge_one = registry
+            .register_edge(edge_input(
+                OWNER_A,
+                "edge-1",
+                DataLayerM6GraphEdgeRelation::Messaged,
+                "agent-target",
+                "agent-source",
+                0.6,
+                1_701_100_002,
+            ))
+            .expect("second edge should register");
+        assert_eq!(edge_two.sequence, 1);
+        assert_eq!(edge_one.sequence, 2);
+
+        let nodes = registry
+            .nodes_for_owner(OWNER_A)
+            .expect("owner nodes should be queryable");
+        assert_eq!(nodes.len(), 2);
+        let edges = registry
+            .edges_for_owner(OWNER_A)
+            .expect("owner edges should be queryable");
+        assert_eq!(edges.len(), 2);
+
+        let projection = registry
+            .export_portable_edge_projection(OWNER_A)
+            .expect("portable projection should export");
+        assert_eq!(
+            projection
+                .iter()
+                .map(|row| row.edge_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["edge-1", "edge-2"]
+        );
+        assert!(projection
+            .iter()
+            .all(|row| row.graph_engine_marker == DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE));
+        assert!(projection
+            .iter()
+            .all(|row| row.portability_profile == DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE));
+        assert_eq!(projection[0].relation_marker, "MESSAGED");
+        assert_eq!(projection[1].relation_marker, "TRUSTS");
+    }
+
+    #[test]
+    fn regression_m6_graph_registry_rejects_cross_owner_and_duplicate_edge_ids() {
+        let mut registry = DataLayerM6GraphRegistry::new();
+        register_agent_node(&mut registry, OWNER_A, "agent-a1");
+        register_agent_node(&mut registry, OWNER_A, "agent-a2");
+        register_agent_node(&mut registry, OWNER_B, "agent-b1");
+
+        let cross_owner_edge = registry.register_edge(edge_input(
+            OWNER_A,
+            "edge-cross-owner",
+            DataLayerM6GraphEdgeRelation::Trusts,
+            "agent-a1",
+            "agent-b1",
+            0.9,
+            1_701_100_010,
+        ));
+        assert!(matches!(
+            cross_owner_edge,
+            Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
+                reason_code: DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
+            })
+        ));
+
+        registry
+            .register_edge(edge_input(
+                OWNER_A,
+                "edge-dup",
+                DataLayerM6GraphEdgeRelation::Trusts,
+                "agent-a1",
+                "agent-a2",
+                0.7,
+                1_701_100_020,
+            ))
+            .expect("first edge-dup registration should succeed");
+        assert_eq!(
+            registry.register_edge(edge_input(
+                OWNER_A,
+                "edge-dup",
+                DataLayerM6GraphEdgeRelation::Messaged,
+                "agent-a2",
+                "agent-a1",
+                0.65,
+                1_701_100_021,
+            )),
+            Err(DataLayerM6GraphIntegrationError::DuplicateEdgeId(
+                "edge-dup".to_owned()
+            ))
+        );
+
+        assert!(matches!(
+            registry.export_portable_edge_projection_scoped(OWNER_B, OWNER_A),
+            Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
+                reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
+            })
+        ));
+    }
+
+    #[test]
+    fn unit_m6_graph_registry_trust_propagation_is_ranked_and_limited() {
+        let mut registry = DataLayerM6GraphRegistry::new();
+        register_agent_node(&mut registry, OWNER_A, "agent-source");
+        register_agent_node(&mut registry, OWNER_A, "agent-a");
+        register_agent_node(&mut registry, OWNER_A, "agent-b");
+        register_agent_node(&mut registry, OWNER_A, "agent-c");
+
+        registry
+            .register_edge(edge_input(
+                OWNER_A,
+                "trust-sa",
+                DataLayerM6GraphEdgeRelation::Trusts,
+                "agent-source",
+                "agent-a",
+                0.9,
+                1_701_100_100,
+            ))
+            .expect("source->a trust edge should register");
+        registry
+            .register_edge(edge_input(
+                OWNER_A,
+                "trust-sb",
+                DataLayerM6GraphEdgeRelation::Trusts,
+                "agent-source",
+                "agent-b",
+                0.7,
+                1_701_100_101,
+            ))
+            .expect("source->b trust edge should register");
+        registry
+            .register_edge(edge_input(
+                OWNER_A,
+                "trust-ac",
+                DataLayerM6GraphEdgeRelation::Trusts,
+                "agent-a",
+                "agent-c",
+                1.0,
+                1_701_100_102,
+            ))
+            .expect("a->c trust edge should register");
+
+        let results = registry
+            .query_trust_propagation(DataLayerM6TrustPropagationQuery {
+                requester_owner_did: OWNER_A.to_owned(),
+                owner_did: OWNER_A.to_owned(),
+                source_agent_node_id: "agent-source".to_owned(),
+                max_depth: 3,
+                attenuation_factor: 0.8,
+                limit: Some(2),
+            })
+            .expect("trust propagation should succeed for valid graph");
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].target_agent_node_id, "agent-a");
+        assert!((results[0].trust_score - 0.72).abs() < 0.000_001);
+        assert_eq!(results[0].hops, 1);
+        assert_eq!(
+            results[0].reason_code,
+            DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED
+        );
+        assert_eq!(results[1].target_agent_node_id, "agent-c");
+        assert!((results[1].trust_score - 0.576).abs() < 0.000_001);
+        assert_eq!(results[1].hops, 2);
+        assert_eq!(
+            results[1].reason_code,
+            DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED
+        );
+        assert!(results
+            .iter()
+            .all(|row| row.target_agent_node_id != "agent-b"));
     }
 }
