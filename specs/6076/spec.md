@@ -1,7 +1,7 @@
 # Spec: Issue #6076 - Story: Send API performs real durable recipient delivery
 
 - Issue: #6076
-- Status: Reviewed
+- Status: Implemented
 - Type: story
 - Priority: P1
 - Area: networking

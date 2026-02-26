@@ -25,6 +25,7 @@ R57 deep review identified structural gaps. Current `main` resolved several high
 - #6075: `specs/6075/spec.md`, `specs/6075/plan.md`, `specs/6075/tasks.md`
 - #6076: `specs/6076/spec.md`, `specs/6076/plan.md`, `specs/6076/tasks.md`
 - #6077: `specs/6077/spec.md`, `specs/6077/plan.md`, `specs/6077/tasks.md`
+- #6080: `specs/6080/spec.md`, `specs/6080/plan.md`, `specs/6080/tasks.md`
 
 ## Exit Criteria
 1. Residual R57 gaps are closed with merged task PRs and AC/test traceability.
