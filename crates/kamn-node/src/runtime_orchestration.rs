@@ -148,8 +148,13 @@ fn execute_full_supervisor_daemon_runtime(
     service_api_lane: Option<&FullSupervisorServiceApiLane>,
     observability_lane: Option<&FullSupervisorObservabilityLane>,
 ) -> Result<DaemonExecution, ConfigError> {
+    #[cfg(test)]
+    let os_signal_test_triggers =
+        super::daemon_shutdown::take_configured_os_signal_test_triggers_for_current_thread();
     let execution_id_owned = execution_id.to_owned();
     let daemon_handle = thread::spawn(move || {
+        #[cfg(test)]
+        configure_os_signal_test_triggers(os_signal_test_triggers);
         execute_daemon_runtime(runtime_mode, execution_id_owned.as_str(), options)
     });
 
@@ -174,6 +179,26 @@ fn full_supervisor_lane_idle_timeout_floor_ms(
         .unwrap_or(0)
         .saturating_mul(daemon_tick_interval_ms.unwrap_or(0));
     expected_daemon_runtime_ms.saturating_add(FULL_SUPERVISOR_LANE_IDLE_TIMEOUT_CONTENTION_GUARD_MS)
+}
+
+fn request_full_supervisor_lane_shutdown_probes(
+    service_api_lane: Option<&FullSupervisorServiceApiLane>,
+    observability_lane: Option<&FullSupervisorObservabilityLane>,
+) {
+    if let Some(lane) = service_api_lane {
+        let _ = run_full_supervisor_http_probe(
+            lane.config.bind_addr.as_str(),
+            "/healthz",
+            FULL_SUPERVISOR_SERVICE_API_LANE_PROBE_FAILED,
+        );
+    }
+    if let Some(lane) = observability_lane {
+        let _ = run_full_supervisor_http_probe(
+            lane.config.bind_addr.as_str(),
+            lane.config.health_path.as_str(),
+            FULL_SUPERVISOR_OBSERVABILITY_LANE_PROBE_FAILED,
+        );
+    }
 }
 
 fn run_full_supervisor_http_probe(
@@ -1309,6 +1334,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;
+            request_full_supervisor_lane_shutdown_probes(
+                service_api_lane.as_ref(),
+                observability_lane.as_ref(),
+            );
             let service_api_lane_result = if let Some(lane) = service_api_lane {
                 finish_full_supervisor_service_api_lane(lane, execution_id.as_str())
             } else {
