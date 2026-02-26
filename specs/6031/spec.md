@@ -1,7 +1,7 @@
 # Spec: Issue #6031 - Add core invariants unit tests for data_layer_m6_graph_integration
 
 - Issue: #6031
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
