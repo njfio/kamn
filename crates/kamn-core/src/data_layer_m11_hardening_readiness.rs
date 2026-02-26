@@ -322,9 +322,41 @@ fn validate_non_empty(
 mod tests {
     use super::{
         validate_non_empty, DataLayerM11HardeningMatrix, DataLayerM11HardeningMatrixError,
-        DataLayerM11ScenarioDefinition, DataLayerM11ScenarioDomain,
-        DataLayerM11ScenarioOutcomeInput, DataLayerM11ScenarioSeverity, DataLayerM11ScenarioStatus,
+        DataLayerM11OperatorReadinessDecision, DataLayerM11ScenarioDefinition,
+        DataLayerM11ScenarioDomain, DataLayerM11ScenarioOutcomeInput, DataLayerM11ScenarioSeverity,
+        DataLayerM11ScenarioStatus, DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE,
+        DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
+        DATA_LAYER_M11_READINESS_GO_REASON_CODE,
     };
+
+    fn register_required_scenario(
+        matrix: &mut DataLayerM11HardeningMatrix,
+        scenario_id: &str,
+        severity: DataLayerM11ScenarioSeverity,
+    ) {
+        matrix
+            .register_scenario(DataLayerM11ScenarioDefinition {
+                scenario_id: scenario_id.to_owned(),
+                domain: DataLayerM11ScenarioDomain::Security,
+                severity,
+                required: true,
+            })
+            .expect("scenario registration should succeed");
+    }
+
+    fn record_outcome(
+        matrix: &mut DataLayerM11HardeningMatrix,
+        scenario_id: &str,
+        status: DataLayerM11ScenarioStatus,
+    ) {
+        matrix
+            .record_outcome(DataLayerM11ScenarioOutcomeInput {
+                scenario_id: scenario_id.to_owned(),
+                status,
+                evidence_marker: format!("evidence://{scenario_id}"),
+            })
+            .expect("scenario outcome recording should succeed");
+    }
 
     #[test]
     fn unit_validate_non_empty_rejects_whitespace_input() {
@@ -372,5 +404,122 @@ mod tests {
             .expect("idempotent outcome update should succeed");
 
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn conformance_readiness_critical_failure_reason_precedence_over_incomplete() {
+        let mut matrix = DataLayerM11HardeningMatrix::new();
+        register_required_scenario(
+            &mut matrix,
+            "sec-critical-1",
+            DataLayerM11ScenarioSeverity::Critical,
+        );
+        register_required_scenario(
+            &mut matrix,
+            "sec-critical-2",
+            DataLayerM11ScenarioSeverity::Critical,
+        );
+
+        record_outcome(
+            &mut matrix,
+            "sec-critical-1",
+            DataLayerM11ScenarioStatus::Failed,
+        );
+
+        let report = matrix
+            .evaluate_operator_readiness()
+            .expect("readiness evaluation should succeed");
+
+        assert_eq!(report.decision, DataLayerM11OperatorReadinessDecision::NoGo);
+        assert_eq!(
+            report.reason_codes,
+            vec![DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE]
+        );
+        assert_eq!(
+            report.failing_critical_scenario_ids,
+            vec!["sec-critical-1".to_owned()]
+        );
+        assert_eq!(
+            report.missing_required_scenario_ids,
+            vec!["sec-critical-2".to_owned()]
+        );
+        assert_eq!(report.total_required_scenarios, 2);
+        assert_eq!(report.passed_required_scenarios, 0);
+    }
+
+    #[test]
+    fn unit_readiness_incomplete_without_critical_failure_returns_incomplete_reason() {
+        let mut matrix = DataLayerM11HardeningMatrix::new();
+        register_required_scenario(
+            &mut matrix,
+            "ops-required-1",
+            DataLayerM11ScenarioSeverity::High,
+        );
+        register_required_scenario(
+            &mut matrix,
+            "ops-required-2",
+            DataLayerM11ScenarioSeverity::Medium,
+        );
+
+        record_outcome(
+            &mut matrix,
+            "ops-required-1",
+            DataLayerM11ScenarioStatus::Passed,
+        );
+
+        let report = matrix
+            .evaluate_operator_readiness()
+            .expect("readiness evaluation should succeed");
+        assert_eq!(report.decision, DataLayerM11OperatorReadinessDecision::NoGo);
+        assert_eq!(
+            report.reason_codes,
+            vec![DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE]
+        );
+        assert_eq!(
+            report.missing_required_scenario_ids,
+            vec!["ops-required-2".to_owned()]
+        );
+        assert!(report.failing_critical_scenario_ids.is_empty());
+        assert_eq!(report.total_required_scenarios, 2);
+        assert_eq!(report.passed_required_scenarios, 1);
+    }
+
+    #[test]
+    fn regression_readiness_go_when_all_required_scenarios_pass() {
+        let mut matrix = DataLayerM11HardeningMatrix::new();
+        register_required_scenario(
+            &mut matrix,
+            "perf-required-1",
+            DataLayerM11ScenarioSeverity::High,
+        );
+        register_required_scenario(
+            &mut matrix,
+            "perf-required-2",
+            DataLayerM11ScenarioSeverity::Critical,
+        );
+
+        record_outcome(
+            &mut matrix,
+            "perf-required-1",
+            DataLayerM11ScenarioStatus::Passed,
+        );
+        record_outcome(
+            &mut matrix,
+            "perf-required-2",
+            DataLayerM11ScenarioStatus::Passed,
+        );
+
+        let report = matrix
+            .evaluate_operator_readiness()
+            .expect("readiness evaluation should succeed");
+        assert_eq!(report.decision, DataLayerM11OperatorReadinessDecision::Go);
+        assert_eq!(
+            report.reason_codes,
+            vec![DATA_LAYER_M11_READINESS_GO_REASON_CODE]
+        );
+        assert!(report.missing_required_scenario_ids.is_empty());
+        assert!(report.failing_critical_scenario_ids.is_empty());
+        assert_eq!(report.total_required_scenarios, 2);
+        assert_eq!(report.passed_required_scenarios, 2);
     }
 }
