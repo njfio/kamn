@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -73,6 +74,7 @@ EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE = (
 EXPECTED_NO_SHARED_STATE_UNEXPECTED_DELIVERY_REASON_CODE = (
     "no_shared_state_unexpected_delivery_detected"
 )
+SMOKE_TARGET_DIR_NAME = "libp2p-convergence-process-isolated-smoke-target"
 
 SMOKE_TESTS: list[tuple[str, list[str]]] = [
     (
@@ -293,8 +295,30 @@ def _run_lane(args: argparse.Namespace) -> int:
     execution_reason_code = "dry_run_no_commands_executed"
 
     if mode == "run" and lane_profile == "smoke":
+        smoke_target_dir = artifact_dir / SMOKE_TARGET_DIR_NAME
+        if smoke_target_dir.exists():
+            shutil.rmtree(smoke_target_dir)
+        smoke_rustflags = os.environ.get("RUSTFLAGS", "").strip()
+        if "-Cdebuginfo=0" not in smoke_rustflags:
+            smoke_rustflags = (
+                f"{smoke_rustflags} -Cdebuginfo=0".strip()
+                if smoke_rustflags
+                else "-Cdebuginfo=0"
+            )
+        smoke_env = {
+            **os.environ,
+            "CARGO_TARGET_DIR": str(smoke_target_dir),
+            "CARGO_INCREMENTAL": "0",
+            "RUSTFLAGS": smoke_rustflags,
+        }
         for _, command in SMOKE_TESTS:
-            commands.append(_run_command(command, timeout_seconds=command_max_seconds))
+            commands.append(
+                _run_command(
+                    command,
+                    timeout_seconds=command_max_seconds,
+                    env=smoke_env,
+                )
+            )
         execution_reason_code = "run_mode_smoke_commands_executed"
 
     if mode == "run" and lane_profile == "deep":
