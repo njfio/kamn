@@ -356,7 +356,7 @@ fn service_api_relay_projection_marks_created_messages_as_relayed_for_sqlite_sta
 
     let projected_count = project_service_api_relayed_message_statuses(
         Some(sqlite_state_path.as_str()),
-        &[created_message_id.clone()],
+        std::slice::from_ref(&created_message_id),
     )
     .expect("sqlite-backed relay projection should succeed");
     assert_eq!(projected_count, 1);
