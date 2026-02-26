@@ -1,7 +1,7 @@
 # Spec: Issue #6075 - Epic: Runtime message delivery end-to-end integration
 
 - Issue: #6075
-- Status: Reviewed
+- Status: Implemented
 - Type: epic
 - Priority: P1
 - Area: networking
