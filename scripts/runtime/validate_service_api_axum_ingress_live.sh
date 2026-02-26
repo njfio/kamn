@@ -81,7 +81,11 @@ payload_source_file = source_file.parent / "service_api_endpoint" / "payload.rs"
 if not payload_source_file.is_file():
     raise SystemExit(f"expected service api payload source file: {payload_source_file}")
 payload_source_text = payload_source_file.read_text(encoding="utf-8")
-marker_source_text = source_text + "\n" + payload_source_text
+models_source_file = source_file.parent / "service_api_endpoint" / "models.rs"
+if not models_source_file.is_file():
+    raise SystemExit(f"expected service api models source file: {models_source_file}")
+models_source_text = models_source_file.read_text(encoding="utf-8")
+marker_source_text = source_text + "\n" + payload_source_text + "\n" + models_source_text
 
 def parse_u64_const(name: str) -> int:
     match = re.search(rf"pub\(crate\)\s+const\s+{name}:\s*u64\s*=\s*([^;]+);", source_text)
