@@ -1,7 +1,7 @@
 # Spec: Issue #6035 - Add core invariants unit tests for data_layer_m8_compliance_lifecycle
 
 - Issue: #6035
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
