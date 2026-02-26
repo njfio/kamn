@@ -295,4 +295,74 @@ RS
 python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
 rm -rf "$TMP_DIR/src"
 
+CLIPPY_FIXTURE_DIR="$TMP_DIR/clippy_expect_scope_fixture"
+mkdir -p "$CLIPPY_FIXTURE_DIR/src" "$CLIPPY_FIXTURE_DIR/tests"
+cat <<'EOF' > "$CLIPPY_FIXTURE_DIR/Cargo.toml"
+[package]
+name = "clippy_expect_scope_fixture"
+version = "0.1.0"
+edition = "2021"
+publish = false
+EOF
+
+cat <<'RS' > "$CLIPPY_FIXTURE_DIR/src/lib.rs"
+pub fn parse_positive_or_default(input: &str) -> u32 {
+    input
+        .parse::<u32>()
+        .ok()
+        .expect("production path expect should fail under clippy expect_used")
+}
+RS
+
+cat <<'RS' > "$CLIPPY_FIXTURE_DIR/src/main.rs"
+fn main() {
+    let _value = clippy_expect_scope_fixture::parse_positive_or_default("7");
+}
+RS
+
+set +e
+clippy_fail_output="$(
+  CARGO_TARGET_DIR="$TMP_DIR/cargo-target" cargo clippy \
+    --manifest-path "$CLIPPY_FIXTURE_DIR/Cargo.toml" \
+    --lib --bins \
+    -- -D warnings -D clippy::expect_used 2>&1
+)"
+clippy_fail_code=$?
+set -e
+
+if [ "$clippy_fail_code" -eq 0 ]; then
+  echo "expected production-target clippy gate to fail when lib/bin contains expect()" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$clippy_fail_output" | grep -Eq 'expect_used|called `expect\(\)`'; then
+  echo "expected production-target clippy gate failure output to include expect lint marker" >&2
+  exit 1
+fi
+
+cat <<'RS' > "$CLIPPY_FIXTURE_DIR/src/lib.rs"
+pub fn parse_positive(input: &str) -> Result<u32, String> {
+    input.parse::<u32>().map_err(|error| error.to_string())
+}
+RS
+
+cat <<'RS' > "$CLIPPY_FIXTURE_DIR/src/main.rs"
+fn main() {
+    let _result = clippy_expect_scope_fixture::parse_positive("7");
+}
+RS
+
+cat <<'RS' > "$CLIPPY_FIXTURE_DIR/tests/test_only_expect.rs"
+#[test]
+fn allows_expect_in_test_targets_outside_lib_bins_scope() {
+    let value = Some(9).expect("test-only expect should not be evaluated by --lib --bins clippy gate");
+    assert_eq!(value, 9);
+}
+RS
+
+CARGO_TARGET_DIR="$TMP_DIR/cargo-target" cargo clippy \
+  --manifest-path "$CLIPPY_FIXTURE_DIR/Cargo.toml" \
+  --lib --bins \
+  -- -D warnings -D clippy::expect_used >/dev/null
+
 echo "production expect checker tests passed."

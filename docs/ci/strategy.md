@@ -270,6 +270,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Panic-Path Policy Checker Fast Lane
 - For panic-policy checker changes, keep PR validation on deterministic checker harness commands:
   - `bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json`
+  - `cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used`
   - `bash scripts/ci/test_check_no_production_expect.sh`
 - Deterministic checker contracts:
   - reason taxonomy marker: `kamn.ci.production-panic-replacement-reason-taxonomy.v1`
@@ -277,6 +278,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - runtime evidence output marker: `runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv`
 - Boundary markers:
   - `panic_path_policy_scope_root=crates/kamn-node/src`
+  - `panic_path_policy_production_target_scope=lib+bins`
+  - `panic_path_policy_test_target_exclusion=tests-benches-excluded`
   - `panic_path_policy_ci_lane_profile=low-cost`
   - `panic_path_policy_ci_smoke_max_seconds=30`
 - Remediation parity markers:

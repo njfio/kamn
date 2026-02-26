@@ -110,6 +110,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_daemon_os_signal_stress_policy.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_no_production_expect.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh"'
