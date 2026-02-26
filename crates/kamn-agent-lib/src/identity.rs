@@ -1,5 +1,8 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{service_public_key_for_private_key, AgentDid};
+use std::env;
+
+const DETERMINISTIC_IDENTITY_ALLOW_ENV: &str = "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
 
 /// Agent identity material used by phase-1 authenticated operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -11,15 +14,13 @@ pub struct AgentIdentity {
 
 impl AgentIdentity {
     /// Builds deterministic identity material from an agent name.
+    ///
+    /// # Security Warning
+    /// Deterministic identities are intended for non-production workflows.
+    /// Production builds deny this path by default unless
+    /// `KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY` is explicitly enabled.
     pub fn from_agent_name(name: &str) -> Result<Self, AgentLibError> {
-        let normalized_name = normalize_agent_name(name)?;
-        let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
-        let did = AgentDid::parse(format!("kamn:did:agent:{normalized_name}"))?;
-        Ok(Self {
-            did,
-            signing_key,
-            encryption_key: format!("x25519:{normalized_name}:encryption"),
-        })
+        agent_identity_from_name_with_policy(name, deterministic_identity_allowed())
     }
 
     /// Builds identity material from explicit DID and signing-key inputs.
@@ -51,6 +52,52 @@ impl AgentIdentity {
     /// Returns deterministic encryption-key material.
     pub fn encryption_key(&self) -> &str {
         self.encryption_key.as_str()
+    }
+}
+
+fn agent_identity_from_name_with_policy(
+    name: &str,
+    deterministic_identity_allowed: bool,
+) -> Result<AgentIdentity, AgentLibError> {
+    let normalized_name = normalize_agent_name(name)?;
+    if !deterministic_identity_allowed {
+        return Err(AgentLibError::InvalidInput {
+            field: "agent_name",
+            reason: format!(
+                "deterministic identity derivation is disabled by default for production builds; use AgentIdentity::from_did_and_signing_key or set {DETERMINISTIC_IDENTITY_ALLOW_ENV}=1 to opt in explicitly"
+            ),
+        });
+    }
+    let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
+    let did = AgentDid::parse(format!("kamn:did:agent:{normalized_name}"))?;
+    Ok(AgentIdentity {
+        did,
+        signing_key,
+        encryption_key: format!("x25519:{normalized_name}:encryption"),
+    })
+}
+
+fn deterministic_identity_allowed() -> bool {
+    deterministic_identity_allowed_with_env(
+        cfg!(debug_assertions),
+        env::var(DETERMINISTIC_IDENTITY_ALLOW_ENV),
+    )
+}
+
+fn deterministic_identity_allowed_with_env(
+    debug_assertions_enabled: bool,
+    env_value: Result<String, env::VarError>,
+) -> bool {
+    if debug_assertions_enabled {
+        return true;
+    }
+    match env_value {
+        Ok(value) => {
+            let normalized = value.trim().to_ascii_lowercase();
+            matches!(normalized.as_str(), "1" | "true" | "yes")
+        }
+        Err(env::VarError::NotPresent) => false,
+        Err(env::VarError::NotUnicode(_)) => false,
     }
 }
 
@@ -120,6 +167,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::AgentIdentity;
+    use std::env;
 
     #[test]
     fn unit_agent_identity_from_name_builds_expected_did_and_keys() {
@@ -152,5 +200,47 @@ mod tests {
         let error = AgentIdentity::from_agent_name("alice space")
             .expect_err("invalid characters must be rejected");
         assert!(error.to_string().contains("agent_name"));
+    }
+
+    #[test]
+    fn unit_deterministic_identity_policy_denies_production_without_override() {
+        assert!(!super::deterministic_identity_allowed_with_env(
+            false,
+            Err(env::VarError::NotPresent)
+        ));
+    }
+
+    #[test]
+    fn unit_deterministic_identity_policy_allows_debug_without_override() {
+        assert!(super::deterministic_identity_allowed_with_env(
+            true,
+            Err(env::VarError::NotPresent)
+        ));
+    }
+
+    #[test]
+    fn unit_deterministic_identity_policy_allows_explicit_production_override() {
+        assert!(super::deterministic_identity_allowed_with_env(
+            false,
+            Ok("1".to_owned())
+        ));
+        assert!(super::deterministic_identity_allowed_with_env(
+            false,
+            Ok("TRUE".to_owned())
+        ));
+        assert!(super::deterministic_identity_allowed_with_env(
+            false,
+            Ok(" yes ".to_owned())
+        ));
+    }
+
+    #[test]
+    fn regression_agent_identity_from_name_rejects_when_policy_disables_deterministic_identity() {
+        // Regression: #6064
+        let error = super::agent_identity_from_name_with_policy("alice", false)
+            .expect_err("deterministic identity should be blocked");
+        let rendered = error.to_string();
+        assert!(rendered.contains("deterministic identity derivation is disabled"));
+        assert!(rendered.contains("from_did_and_signing_key"));
     }
 }
