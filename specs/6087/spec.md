@@ -1,7 +1,7 @@
 # Spec: Issue #6087 - Enforce production panic-surface checker in fast gate
 
 - Issue: #6087
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
