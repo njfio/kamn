@@ -1,7 +1,7 @@
 # Spec: Issue #6041 - Cache node log config to avoid per-log env lookups
 
 - Issue: #6041
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend

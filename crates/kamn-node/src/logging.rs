@@ -1,5 +1,6 @@
 use kamn_core::ConfigError;
 use std::env;
+use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const KAMN_NODE_LOG_LEVEL_ENV: &str = "KAMN_NODE_LOG_LEVEL";
@@ -55,6 +56,8 @@ impl NodeLogConfig {
     }
 }
 
+static LOG_CONFIG_CACHE: RwLock<Option<NodeLogConfig>> = RwLock::new(None);
+
 pub(crate) fn resolve_log_config_from_env() -> Result<NodeLogConfig, ConfigError> {
     let level_value = read_env_var(KAMN_NODE_LOG_LEVEL_ENV)?;
     let format_value = read_env_var(KAMN_NODE_LOG_FORMAT_ENV)?;
@@ -97,7 +100,7 @@ pub(crate) fn emit_log_event(
     event: &str,
     fields: &[(&str, &str)],
 ) -> Result<(), ConfigError> {
-    let config = resolve_log_config_from_env()?;
+    let config = resolve_cached_log_config()?;
     if !config.allows(level) {
         return Ok(());
     }
@@ -105,6 +108,50 @@ pub(crate) fn emit_log_event(
     record_test_log_line(line.as_str());
     eprintln!("{line}");
     Ok(())
+}
+
+fn resolve_cached_log_config() -> Result<NodeLogConfig, ConfigError> {
+    if let Some(config) = read_cached_log_config() {
+        return Ok(config);
+    }
+
+    let resolved = resolve_log_config_from_env()?;
+    write_cached_log_config_if_absent(resolved);
+    Ok(read_cached_log_config().unwrap_or(resolved))
+}
+
+fn read_cached_log_config() -> Option<NodeLogConfig> {
+    match LOG_CONFIG_CACHE.read() {
+        Ok(guard) => *guard,
+        Err(poisoned) => *poisoned.into_inner(),
+    }
+}
+
+fn write_cached_log_config_if_absent(config: NodeLogConfig) {
+    match LOG_CONFIG_CACHE.write() {
+        Ok(mut guard) => {
+            if guard.is_none() {
+                *guard = Some(config);
+            }
+        }
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            if guard.is_none() {
+                *guard = Some(config);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn reset_cached_log_config_for_tests() {
+    match LOG_CONFIG_CACHE.write() {
+        Ok(mut guard) => *guard = None,
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            *guard = None;
+        }
+    }
 }
 
 pub(crate) fn render_log_event_line(
@@ -321,3 +368,134 @@ fn record_test_log_line(line: &str) {
 
 #[cfg(not(test))]
 fn record_test_log_line(_line: &str) {}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        capture_test_logs, emit_log_event, reset_cached_log_config_for_tests, NodeLogLevel,
+        KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
+    };
+    use std::env;
+    use std::sync::Mutex;
+
+    static LOG_ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn spec_c01_emit_log_event_uses_cached_config_until_reset() {
+        let _guard = lock_log_env_test_guard();
+        reset_cached_log_config_for_tests();
+        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("error"));
+        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("text"));
+
+        let (first_result, first_logs) =
+            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-check-1", &[]));
+        assert!(first_result.is_ok(), "first log emission should not error");
+        assert!(
+            first_logs.is_empty(),
+            "error level should suppress info event before cache change check"
+        );
+
+        env::set_var(KAMN_NODE_LOG_LEVEL_ENV, "trace");
+        let (second_result, second_logs) =
+            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-check-2", &[]));
+        assert!(
+            second_result.is_ok(),
+            "second log emission should not error"
+        );
+        assert!(
+            second_logs.is_empty(),
+            "cached config should remain in effect until explicit reset"
+        );
+    }
+
+    #[test]
+    fn regression_cached_log_config_reset_applies_updated_env() {
+        let _guard = lock_log_env_test_guard();
+        reset_cached_log_config_for_tests();
+        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("error"));
+        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("text"));
+
+        let (initial_result, initial_logs) =
+            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-reset-1", &[]));
+        assert!(
+            initial_result.is_ok(),
+            "initial log emission should not error"
+        );
+        assert!(
+            initial_logs.is_empty(),
+            "error level should suppress info before cache reset"
+        );
+
+        env::set_var(KAMN_NODE_LOG_LEVEL_ENV, "trace");
+        reset_cached_log_config_for_tests();
+        let (after_reset_result, after_reset_logs) =
+            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-reset-2", &[]));
+        assert!(
+            after_reset_result.is_ok(),
+            "post-reset log emission should not error"
+        );
+        assert_eq!(
+            after_reset_logs.len(),
+            1,
+            "info event should emit after cache reset"
+        );
+        assert!(
+            after_reset_logs[0].contains("event=cache-reset-2"),
+            "rendered line should include emitted event"
+        );
+    }
+
+    #[test]
+    fn unit_cached_log_config_preserves_json_format_rendering() {
+        let _guard = lock_log_env_test_guard();
+        reset_cached_log_config_for_tests();
+        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("info"));
+        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("json"));
+
+        let (result, logs) =
+            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "json-format", &[]));
+        assert!(result.is_ok(), "json-format log emission should not error");
+        assert_eq!(logs.len(), 1, "json format path should emit one log line");
+        assert!(
+            logs[0].starts_with("{\"ts_unix_ms\":"),
+            "json format must keep json payload structure"
+        );
+        assert!(
+            logs[0].contains("\"event\":\"json-format\""),
+            "json log line should include event field"
+        );
+    }
+
+    fn lock_log_env_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        LOG_ENV_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
+
+    struct EnvVarTestGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarTestGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let previous = env::var(key).ok();
+            match value {
+                Some(value) => env::set_var(key, value),
+                None => env::remove_var(key),
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarTestGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.as_deref() {
+                env::set_var(self.key, previous);
+            } else {
+                env::remove_var(self.key);
+            }
+            reset_cached_log_config_for_tests();
+        }
+    }
+}

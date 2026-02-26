@@ -30,8 +30,9 @@ pub(crate) use daemon_shutdown::{
 use daemon_shutdown::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
 #[cfg(test)]
 use logging::{
-    capture_test_logs, render_log_event_line, resolve_log_config_from_inputs, NodeLogConfig,
-    NodeLogFormat, NodeLogLevel,
+    capture_test_logs, render_log_event_line, reset_cached_log_config_for_tests,
+    resolve_log_config_from_inputs, NodeLogConfig, NodeLogFormat, NodeLogLevel,
+    KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
 };
 use logging::{log_error, log_info};
 #[cfg(test)]
