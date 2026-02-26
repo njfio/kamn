@@ -1266,10 +1266,10 @@ mod tests {
             Some(relay_spool_file_str.as_str()),
             "service-api:kamn-devnet:v0.1.0",
         )
-        .expect("daemon relay tick loop should project local relayed state");
+        .expect("daemon relay tick loop should complete without synthetic projection");
 
         assert_eq!(runtime_processing.relay_drained_count, 1);
-        assert_eq!(runtime_processing.relay_projected_state_count, 1);
+        assert_eq!(runtime_processing.relay_projected_state_count, 0);
         assert_eq!(runtime_processing.processing_error_count, 0);
 
         let state_payload =
@@ -1278,14 +1278,14 @@ mod tests {
             serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
         assert_eq!(
             state_json["messages"]["msg-daemon-projection-unit-1"]["status"],
-            "relayed"
+            "created"
         );
 
         let relay_payload = fs::read_to_string(relay_spool_file.as_path())
             .expect("relay spool file should remain readable");
         assert!(
-            relay_payload.trim().is_empty(),
-            "relay spool should be drained after deterministic projection"
+            relay_payload.contains("msg-daemon-projection-unit-1"),
+            "relay spool entry should be retained for retry when no route map is configured"
         );
 
         let _ = fs::remove_file(state_file);
