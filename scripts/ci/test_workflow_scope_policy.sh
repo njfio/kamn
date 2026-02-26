@@ -95,6 +95,21 @@ if grep -Fq -- "--all-targets -- -D warnings -D clippy::expect_used" "$FAST_WORK
   exit 1
 fi
 
+if ! grep -Fq "Production panic-surface gate" "$FAST_WORKFLOW"; then
+  echo "expected production panic-surface gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/check_no_production_expect.sh --output-json ci-no-production-expect-report.json" "$FAST_WORKFLOW"; then
+  echo "expected production panic-surface gate to run no-production-expect checker with deterministic report output path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-no-production-expect-report.json" "$FAST_WORKFLOW"; then
+  echo "expected production panic-surface report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "Governance/feature commit ratio gate" "$FAST_WORKFLOW"; then
   echo "expected governance/feature commit ratio gate step in ci-fast-gate.yml" >&2
   exit 1

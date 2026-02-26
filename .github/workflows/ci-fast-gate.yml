@@ -530,6 +530,18 @@ jobs:
         if: steps.scope.outputs.run_rust == 'true'
         run: cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used
 
+      - name: Production panic-surface gate
+        if: steps.scope.outputs.run_rust == 'true'
+        run: bash scripts/ci/check_no_production_expect.sh --output-json ci-no-production-expect-report.json
+
+      - name: Upload production panic-surface report
+        if: always() && hashFiles('ci-no-production-expect-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-no-production-expect-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-no-production-expect-report.json
+          if-no-files-found: error
+
       - name: Test (bounded retry)
         id: tests
         if: steps.scope.outputs.run_rust == 'true'
