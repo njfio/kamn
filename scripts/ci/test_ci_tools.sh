@@ -22,6 +22,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_no_production_expect.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_governance_feature_commit_ratio.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_review_document_freeze.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"

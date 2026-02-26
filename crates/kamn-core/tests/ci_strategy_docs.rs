@@ -3034,3 +3034,27 @@ fn doc_contains_governance_feature_commit_ratio_gate_markers() {
     assert!(DOC.contains("governance_feature_commit_ratio_threshold_max=0.50"));
     assert!(DOC.contains("governance_feature_commit_ratio_non_merge_only=true"));
 }
+
+#[test]
+fn doc_contains_review_document_freeze_gate_markers() {
+    assert!(DOC.contains("## Review-Document Freeze Fast Gate"));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_review_document_freeze.py --changed-files-file /tmp/pr-changed-files.txt --freeze-manifest docs/review/review-document-freeze.manifest --output-json /tmp/review-document-freeze-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_check_review_document_freeze.sh"));
+    assert!(DOC.contains("git diff --name-only <base_sha>..<head_sha>"));
+    assert!(DOC.contains("ci-review-document-freeze.json"));
+    assert!(DOC.contains(
+        "review_document_freeze_schema_version=kamn.ci.review-document-freeze-gate-report.v1"
+    ));
+    assert!(DOC.contains(
+        "review_document_freeze_reason_taxonomy_version=kamn.ci.review-document-freeze-gate-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "review_document_freeze_reason_codes_csv=review_document_freeze_changed_files_missing,review_document_freeze_manifest_missing,review_document_freeze_manifest_invalid,review_document_freeze_violation_detected"
+    ));
+    assert!(DOC.contains(
+        "review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest"
+    ));
+    assert!(DOC.contains("review_document_freeze_scope=docs/review/gaps-and-issues-r*.md"));
+}

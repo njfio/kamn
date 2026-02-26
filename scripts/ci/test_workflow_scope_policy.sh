@@ -120,6 +120,26 @@ if ! grep -Fq "ci-governance-feature-commit-ratio.json" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
+if ! grep -Fq "Review document freeze gate" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "python3 scripts/ci/check_review_document_freeze.py" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze gate to run checker script" >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/review/review-document-freeze.manifest" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze gate to reference freeze manifest path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-review-document-freeze.json" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/ci/check_script_duplication_budget.sh" "$FAST_WORKFLOW"; then
   echo "expected script-surface budget checker command in ci-fast-gate.yml" >&2
   exit 1
