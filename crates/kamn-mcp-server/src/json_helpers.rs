@@ -39,17 +39,6 @@ pub(crate) fn json_required_string_field(payload: &str, key: &str) -> Result<Str
     json_optional_string_field(payload, key).ok_or_else(|| format!("missing required field: {key}"))
 }
 
-/// Parses one payload and reads an optional `u64` from either number or string token.
-pub(crate) fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
-    let root = serde_json::from_str::<Value>(payload).ok()?;
-    let value = json_field_value(&root, key)?;
-    match value {
-        Value::Number(number) => number.as_u64(),
-        Value::String(raw) => raw.parse::<u64>().ok(),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{escape_json, json_field_value};
