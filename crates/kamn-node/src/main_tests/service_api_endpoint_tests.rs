@@ -665,9 +665,25 @@ fn send_websocket_upgrade_request_with_version_close_observation(
     websocket_version: &str,
     headers: &[(&str, &str)],
 ) -> (Vec<u8>, bool) {
+    send_websocket_upgrade_request_with_version_close_observation_timeout(
+        addr,
+        path,
+        websocket_version,
+        headers,
+        Duration::from_secs(2),
+    )
+}
+
+fn send_websocket_upgrade_request_with_version_close_observation_timeout(
+    addr: &str,
+    path: &str,
+    websocket_version: &str,
+    headers: &[(&str, &str)],
+    read_timeout: Duration,
+) -> (Vec<u8>, bool) {
     let mut stream = TcpStream::connect(addr).expect("endpoint should accept websocket connection");
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(read_timeout))
         .expect("websocket read timeout should be configurable");
     let enriched_headers = enrich_signed_headers_with_scope("GET", path, headers);
     let mut header_lines = String::new();
@@ -776,7 +792,7 @@ fn read_single_http_response(stream: &mut TcpStream) -> String {
     String::from_utf8(response).expect("http response should be utf-8")
 }
 
-fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
+fn parse_websocket_response_frame_records(response: &[u8]) -> (String, Vec<(u8, Vec<u8>)>) {
     let header_end = response
         .windows(4)
         .position(|window| window == b"\r\n\r\n")
@@ -839,18 +855,30 @@ fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
         let payload_slice = &frame_bytes[payload_index..payload_index + payload_len];
         frame_index = payload_index + payload_len;
 
+        frames.push((opcode, payload_slice.to_vec()));
         if opcode == 0x8 {
             break;
         }
-        if opcode == 0x1 {
-            frames.push(
-                std::str::from_utf8(payload_slice)
-                    .expect("websocket payload should be utf-8")
-                    .to_owned(),
-            );
-        }
     }
 
+    (header, frames)
+}
+
+fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
+    let (header, frame_records) = parse_websocket_response_frame_records(response);
+    let frames = frame_records
+        .into_iter()
+        .filter_map(|(opcode, payload)| {
+            if opcode != 0x1 {
+                return None;
+            }
+            Some(
+                std::str::from_utf8(payload.as_slice())
+                    .expect("websocket payload should be utf-8")
+                    .to_owned(),
+            )
+        })
+        .collect::<Vec<_>>();
     (header, frames)
 }
 
@@ -7501,6 +7529,162 @@ fn integration_service_api_endpoint_websocket_upgrade_keeps_connection_open_afte
     assert!(
         ended_cleanly_or_timeout,
         "websocket keep-open test should end via request budget completion or idle-timeout fail-close: {server_result:?}"
+    );
+}
+
+#[test]
+fn conformance_service_api_endpoint_websocket_stream_emits_server_ping_heartbeat() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34067".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 5_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-heartbeat-client";
+    let nonce = 81_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let (response, _peer_closed) =
+        send_websocket_upgrade_request_with_version_close_observation_timeout(
+            bind_addr.as_str(),
+            "/v1/events/ws",
+            "13",
+            &[
+                ("X-KAMN-Sender-DID", sender_did),
+                ("X-KAMN-Request-Nonce", "81"),
+                ("X-KAMN-Request-Signature", signature.as_str()),
+            ],
+            Duration::from_millis(2_200),
+        );
+    let (_header, frame_records) = parse_websocket_response_frame_records(response.as_slice());
+    let ping_count = frame_records
+        .iter()
+        .filter(|(opcode, _payload)| *opcode == 0x9)
+        .count();
+    assert!(
+        ping_count >= 1,
+        "websocket stream should include at least one server heartbeat ping frame"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    let ended_cleanly_or_timeout = match &server_result {
+        Ok(()) => true,
+        Err(error) => error.contains("service api timed out after"),
+    };
+    assert!(
+        ended_cleanly_or_timeout,
+        "service api endpoint should end via request budget completion or idle-timeout fail-close after heartbeat conformance request: {server_result:?}"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_stream_closes_stale_connection_after_timeout() {
+    // Regression: #6043
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34069".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 7_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-stale-client";
+    let nonce = 83_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let read_start = Instant::now();
+    let (response, peer_closed) =
+        send_websocket_upgrade_request_with_version_close_observation_timeout(
+            bind_addr.as_str(),
+            "/v1/events/ws",
+            "13",
+            &[
+                ("X-KAMN-Sender-DID", sender_did),
+                ("X-KAMN-Request-Nonce", "83"),
+                ("X-KAMN-Request-Signature", signature.as_str()),
+            ],
+            Duration::from_millis(5_500),
+        );
+    let read_elapsed = read_start.elapsed();
+
+    let (_header, frame_records) = parse_websocket_response_frame_records(response.as_slice());
+    let ping_count = frame_records
+        .iter()
+        .filter(|(opcode, _payload)| *opcode == 0x9)
+        .count();
+    assert!(
+        ping_count >= 1,
+        "stale websocket stream should observe heartbeat pings before closure"
+    );
+    assert!(
+        peer_closed,
+        "stale websocket connection should be closed by server"
+    );
+    assert!(
+        read_elapsed >= Duration::from_millis(2_800),
+        "stale websocket close should not happen before heartbeat timeout window: elapsed={read_elapsed:?}"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    let ended_cleanly_or_timeout = match &server_result {
+        Ok(()) => true,
+        Err(error) => error.contains("service api timed out after"),
+    };
+    assert!(
+        ended_cleanly_or_timeout,
+        "service api endpoint should end via request budget completion or idle-timeout fail-close after stale websocket close regression: {server_result:?}"
     );
 }
 
