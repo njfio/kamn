@@ -22,6 +22,8 @@ R57 deep review identified structural gaps. Current `main` resolved several high
 - #5977: `specs/5977/spec.md`, `specs/5977/plan.md`, `specs/5977/tasks.md`
 - #5978: `specs/5978/spec.md`, `specs/5978/plan.md`, `specs/5978/tasks.md`
 - #5979: `specs/5979/spec.md`, `specs/5979/plan.md`, `specs/5979/tasks.md`
+- #6075: `specs/6075/spec.md`, `specs/6075/plan.md`, `specs/6075/tasks.md`
+- #6076: `specs/6076/spec.md`, `specs/6076/plan.md`, `specs/6076/tasks.md`
 - #6077: `specs/6077/spec.md`, `specs/6077/plan.md`, `specs/6077/tasks.md`
 
 ## Exit Criteria
