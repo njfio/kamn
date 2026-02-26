@@ -25,6 +25,7 @@ diagram references.
 - `docs/architecture/persistence-backends.md`
 - `docs/architecture/did-chain-adapter.md`
 - `docs/architecture/parser-protocol-assurance.md`
+- `docs/architecture/service-api-delivery-flow.md`
 
 ## Reliability Contracts
 

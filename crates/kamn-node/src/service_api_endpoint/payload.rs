@@ -1,18 +1,18 @@
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ServiceApiBridgeSubmitBody {
-    bridge_id: String,
-    source_message_id: String,
-    bridge_status: String,
+pub(crate) struct ServiceApiBridgeSubmitBody {
+    pub(crate) bridge_id: String,
+    pub(crate) source_message_id: String,
+    pub(crate) bridge_status: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ServiceApiBridgeStatusBody {
-    bridge_id: String,
-    bridge_status: String,
-    target_message_id: String,
-    forward_tx_hash: String,
+pub(crate) struct ServiceApiBridgeStatusBody {
+    pub(crate) bridge_id: String,
+    pub(crate) bridge_status: String,
+    pub(crate) target_message_id: String,
+    pub(crate) forward_tx_hash: String,
 }
 
 pub(super) fn render_service_api_endpoint_response(
