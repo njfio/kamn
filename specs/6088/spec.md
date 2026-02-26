@@ -1,7 +1,7 @@
 # Spec: Issue #6088 - Extract kamn-core Phase-1 Live Probe Matrix Slice
 
 - Issue: #6088
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
