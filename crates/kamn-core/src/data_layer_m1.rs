@@ -778,3 +778,139 @@ fn anchor_outcome_kind(outcome: &DataLayerM1AnchorOutcome) -> DataLayerM1AnchorO
         DataLayerM1AnchorOutcome::Rejected { .. } => DataLayerM1AnchorOutcomeKind::Rejected,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture_leaf(
+        message_id: &str,
+        leaf_index: u32,
+        digest_suffix: &str,
+    ) -> DataLayerM1MerkleLeaf {
+        DataLayerM1MerkleLeaf {
+            message_id: message_id.to_owned(),
+            leaf_index,
+            content_hash: format!("sha256:{digest_suffix}"),
+        }
+    }
+
+    fn fixture_submitted_result(
+        batch_id: &str,
+        retry_class: DataLayerM1AnchorRetryClass,
+    ) -> DataLayerM1AnchorResult {
+        DataLayerM1AnchorResult {
+            batch_id: batch_id.to_owned(),
+            idempotency_key: format!("idem-{batch_id}"),
+            retry_class,
+            outcome: DataLayerM1AnchorOutcome::Submitted(DataLayerM1AnchorReceipt {
+                provider: "kolme".to_owned(),
+                transaction_id: format!("tx-{batch_id}"),
+                finality: KolmeCommitReceiptFinality::Final,
+            }),
+        }
+    }
+
+    #[test]
+    fn unit_assemble_and_inclusion_proof_verifies_and_evaluates_valid() {
+        let batch = DataLayerM1MerkleBatch::assemble(vec![
+            fixture_leaf("urn:uuid:msg-2", 1, "bbb"),
+            fixture_leaf("urn:uuid:msg-1", 0, "aaa"),
+        ])
+        .expect("batch should assemble");
+
+        assert_eq!(batch.message_count, 2);
+        assert_eq!(batch.first_message_id, "urn:uuid:msg-1");
+        assert_eq!(batch.last_message_id, "urn:uuid:msg-2");
+        assert_eq!(batch.leaves()[0].message_id, "urn:uuid:msg-1");
+        assert_eq!(batch.leaves()[1].message_id, "urn:uuid:msg-2");
+
+        let proof = batch
+            .inclusion_proof("urn:uuid:msg-2")
+            .expect("proof should project");
+        assert_eq!(verify_data_layer_m1_inclusion_proof(&proof), Ok(()));
+        assert_eq!(
+            evaluate_data_layer_m1_inclusion_proof(&proof),
+            DataLayerM1ProofVerificationDecision::Valid {
+                reason_code: DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE,
+            }
+        );
+    }
+
+    #[test]
+    fn regression_assemble_rejects_invalid_content_hash() {
+        let error = DataLayerM1MerkleBatch::assemble(vec![DataLayerM1MerkleLeaf {
+            message_id: "urn:uuid:msg-1".to_owned(),
+            leaf_index: 0,
+            content_hash: "invalid-hash".to_owned(),
+        }])
+        .expect_err("invalid content hash must fail");
+        assert_eq!(
+            error,
+            DataLayerM1Error::InvalidContentHash("invalid-hash".to_owned())
+        );
+    }
+
+    #[test]
+    fn regression_tampered_inclusion_proof_evaluates_invalid() {
+        let batch = DataLayerM1MerkleBatch::assemble(vec![
+            fixture_leaf("urn:uuid:msg-1", 0, "aaa"),
+            fixture_leaf("urn:uuid:msg-2", 1, "bbb"),
+        ])
+        .expect("batch should assemble");
+
+        let mut proof = batch
+            .inclusion_proof("urn:uuid:msg-1")
+            .expect("proof should project");
+        proof.merkle_root = "sha256:tampered-root".to_owned();
+
+        assert_eq!(
+            verify_data_layer_m1_inclusion_proof(&proof),
+            Err(DataLayerM1Error::InvalidMerkleProof("proof root mismatch"))
+        );
+        assert_eq!(
+            evaluate_data_layer_m1_inclusion_proof(&proof),
+            DataLayerM1ProofVerificationDecision::Invalid {
+                reason_code: DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE,
+                error: DataLayerM1Error::InvalidMerkleProof("proof root mismatch"),
+            }
+        );
+    }
+
+    #[test]
+    fn unit_anchor_failure_matrix_projects_stable_and_drift_decisions() {
+        let stable_cases = vec![DataLayerM1AnchorFailureMatrixCase {
+            case_id: "c-01".to_owned(),
+            result: fixture_submitted_result("batch-1", DataLayerM1AnchorRetryClass::NewSubmission),
+            expected_retry_class: DataLayerM1AnchorRetryClass::NewSubmission,
+            expected_outcome_kind: DataLayerM1AnchorOutcomeKind::Submitted,
+        }];
+        let stable_report = evaluate_data_layer_m1_anchor_failure_matrix(&stable_cases)
+            .expect("stable matrix should evaluate");
+        assert_eq!(
+            stable_report.decision,
+            DataLayerM1AnchorFailureMatrixDecision::Stable {
+                reason_code: DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE,
+            }
+        );
+        assert_eq!(stable_report.evidence.len(), 1);
+        assert!(!stable_report.evidence[0].mismatch);
+
+        let drift_cases = vec![DataLayerM1AnchorFailureMatrixCase {
+            case_id: "c-02".to_owned(),
+            result: fixture_submitted_result("batch-2", DataLayerM1AnchorRetryClass::NewSubmission),
+            expected_retry_class: DataLayerM1AnchorRetryClass::FinalizedNoRetry,
+            expected_outcome_kind: DataLayerM1AnchorOutcomeKind::Submitted,
+        }];
+        let drift_report = evaluate_data_layer_m1_anchor_failure_matrix(&drift_cases)
+            .expect("drift matrix should evaluate");
+        assert_eq!(
+            drift_report.decision,
+            DataLayerM1AnchorFailureMatrixDecision::DriftDetected {
+                reason_code: DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
+            }
+        );
+        assert_eq!(drift_report.evidence.len(), 1);
+        assert!(drift_report.evidence[0].mismatch);
+    }
+}
