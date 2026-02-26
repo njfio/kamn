@@ -668,3 +668,167 @@ fn sort_results_deterministically(results: &mut [DataLayerM3MessageMetadataRecor
 fn tagged_digest(value: &str) -> String {
     tagged_sha256(value, DATA_LAYER_M3_HASH_ALGORITHM)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    fn metadata_record(
+        message_id: &str,
+        owner_did: &str,
+        token: &str,
+        created_at_epoch_seconds: u64,
+    ) -> DataLayerM3MessageMetadataRecord {
+        let mut blind_indexes = BTreeMap::new();
+        blind_indexes.insert("email".to_owned(), token.to_owned());
+        DataLayerM3MessageMetadataRecord {
+            message_id: message_id.to_owned(),
+            owner_did: owner_did.to_owned(),
+            sender_did: "kamn:did:agent:sender-1".to_owned(),
+            recipient_did: "kamn:did:agent:recipient-1".to_owned(),
+            session_id: Some("session-1".to_owned()),
+            escrow_id: None,
+            message_type: "direct_message".to_owned(),
+            created_at_epoch_seconds,
+            blind_indexes,
+        }
+    }
+
+    #[test]
+    fn unit_search_blind_index_exact_match_orders_results_deterministically() {
+        let owner_did = "kamn:did:owner:owner-1";
+        let token = data_layer_m3_compute_blind_index("m3-key", "email", "alice@example.com")
+            .expect("blind-index token derivation must succeed");
+
+        let mut catalog = DataLayerM3SearchCatalog::new();
+        catalog
+            .register_record(metadata_record("msg-b", owner_did, token.as_str(), 200))
+            .expect("record registration should succeed");
+        catalog
+            .register_record(metadata_record("msg-a", owner_did, token.as_str(), 200))
+            .expect("record registration should succeed");
+        catalog
+            .register_record(metadata_record("msg-c", owner_did, token.as_str(), 100))
+            .expect("record registration should succeed");
+        catalog
+            .register_record(metadata_record(
+                "msg-foreign",
+                "kamn:did:owner:other-owner-1",
+                token.as_str(),
+                999,
+            ))
+            .expect("foreign owner fixture registration should succeed");
+
+        let results = catalog
+            .search_blind_index(DataLayerM3BlindIndexQuery {
+                owner_did: owner_did.to_owned(),
+                field_name: "EMAIL".to_owned(),
+                token: token.clone(),
+                mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
+                limit: None,
+            })
+            .expect("exact-match search should succeed");
+        let ordered_message_ids = results
+            .iter()
+            .map(|record| record.message_id.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(ordered_message_ids, vec!["msg-a", "msg-b", "msg-c"]);
+    }
+
+    #[test]
+    fn regression_blind_index_rejects_duplicate_message_id_and_invalid_token() {
+        let owner_did = "kamn:did:owner:owner-2";
+        let token = data_layer_m3_compute_blind_index("m3-key", "email", "bob@example.com")
+            .expect("blind-index token derivation must succeed");
+
+        let mut catalog = DataLayerM3SearchCatalog::new();
+        catalog
+            .register_record(metadata_record("msg-dup", owner_did, token.as_str(), 300))
+            .expect("first registration should succeed");
+        let duplicate_error = catalog
+            .register_record(metadata_record("msg-dup", owner_did, token.as_str(), 301))
+            .expect_err("duplicate message id must be rejected");
+        assert_eq!(
+            duplicate_error,
+            DataLayerM3SearchError::DuplicateMessageId("msg-dup".to_owned())
+        );
+
+        let invalid_token_error = catalog
+            .search_blind_index(DataLayerM3BlindIndexQuery {
+                owner_did: owner_did.to_owned(),
+                field_name: "email".to_owned(),
+                token: "not-a-blind-index-token".to_owned(),
+                mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
+                limit: None,
+            })
+            .expect_err("invalid token queries must fail closed");
+        assert_eq!(
+            invalid_token_error,
+            DataLayerM3SearchError::InvalidBlindIndexToken {
+                field_name: "email".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn unit_blind_index_determinism_projects_stable_and_drift_decisions() {
+        let owner_did = "kamn:did:owner:owner-3";
+        let token = data_layer_m3_compute_blind_index("m3-key", "email", "carol@example.com")
+            .expect("blind-index token derivation must succeed");
+
+        let mut catalog = DataLayerM3SearchCatalog::new();
+        catalog
+            .register_record(metadata_record("msg-a", owner_did, token.as_str(), 500))
+            .expect("record registration should succeed");
+        catalog
+            .register_record(metadata_record("msg-b", owner_did, token.as_str(), 400))
+            .expect("record registration should succeed");
+
+        let stable_report = catalog
+            .evaluate_blind_index_determinism(DataLayerM3BlindIndexDeterminismInput {
+                owner_did: owner_did.to_owned(),
+                field_name: "email".to_owned(),
+                token: token.clone(),
+                baseline_ordered_message_ids: vec!["msg-a".to_owned(), "msg-b".to_owned()],
+                limit: None,
+            })
+            .expect("stable determinism evaluation should succeed");
+        assert_eq!(
+            stable_report.decision,
+            DataLayerM3BlindIndexDeterminismDecision::Stable
+        );
+        assert_eq!(
+            stable_report.reason_code,
+            DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE
+        );
+        assert!(stable_report.missing_message_ids.is_empty());
+        assert!(stable_report.unexpected_message_ids.is_empty());
+        assert!(stable_report.out_of_order_message_ids.is_empty());
+
+        let drift_report = catalog
+            .evaluate_blind_index_determinism(DataLayerM3BlindIndexDeterminismInput {
+                owner_did: owner_did.to_owned(),
+                field_name: "email".to_owned(),
+                token,
+                baseline_ordered_message_ids: vec!["msg-b".to_owned(), "msg-a".to_owned()],
+                limit: None,
+            })
+            .expect("drift determinism evaluation should succeed");
+        assert_eq!(
+            drift_report.decision,
+            DataLayerM3BlindIndexDeterminismDecision::Drifted
+        );
+        assert_eq!(
+            drift_report.reason_code,
+            DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE
+        );
+        assert!(drift_report.missing_message_ids.is_empty());
+        assert!(drift_report.unexpected_message_ids.is_empty());
+        assert_eq!(
+            drift_report.out_of_order_message_ids,
+            vec!["msg-b".to_owned(), "msg-a".to_owned()]
+        );
+    }
+}
