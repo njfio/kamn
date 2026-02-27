@@ -162,7 +162,6 @@ pub mod signature_profile;
 pub mod signer_backend;
 /// Deterministic triadic runtime smoke simulation contracts.
 pub mod smoke;
-pub(crate) mod snapshot_journal;
 /// Legacy file snapshot to sqlite migration parity-check contracts.
 pub mod snapshot_migration;
 /// Sqlite backend bootstrap/versioning and namespace-key-value persistence contracts.
