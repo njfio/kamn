@@ -1,4 +1,8 @@
 use crate::{
+    snapshot_journal::{
+        decode_journal_hex, encode_journal_hex, parse_snapshot_journal_record,
+        snapshot_journal_path,
+    },
     AgentDid, ProcessorProofAdmissionEvaluator, ProcessorProofAdmissionInput,
     ProcessorProofArtifact, SqliteStoreBackend, SqliteStoreBackendError, ZkDesignError,
 };
@@ -851,9 +855,7 @@ const MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX: &str =
     "message_lifecycle_snapshot_journal_corrupt_tail";
 
 fn message_lifecycle_snapshot_journal_path(path: &Path) -> PathBuf {
-    let mut journal = path.as_os_str().to_os_string();
-    journal.push(".journal");
-    PathBuf::from(journal)
+    snapshot_journal_path(path)
 }
 
 fn read_message_lifecycle_snapshot_file(
@@ -907,7 +909,8 @@ fn replay_message_lifecycle_snapshot_journal(
             continue;
         }
 
-        let payload_hex = parse_message_lifecycle_snapshot_journal_record(trimmed, index + 1)?;
+        let payload_hex = parse_snapshot_journal_record(trimmed)
+            .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
         let payload_bytes = decode_journal_hex(payload_hex)
             .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
         let payload = String::from_utf8(payload_bytes)
@@ -924,67 +927,12 @@ fn replay_message_lifecycle_snapshot_journal(
     Ok(latest)
 }
 
-fn parse_message_lifecycle_snapshot_journal_record(
-    line: &str,
-    index: usize,
-) -> Result<&str, MessageLifecycleSnapshotStoreError> {
-    let mut parts = line.split('|');
-    let Some(prefix) = parts.next() else {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    };
-    let Some(version) = parts.next() else {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    };
-    let Some(payload_hex) = parts.next() else {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    };
-    if prefix != "entry" || version != "1" || payload_hex.is_empty() || parts.next().is_some() {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    }
-    Ok(payload_hex)
-}
-
 fn message_lifecycle_snapshot_journal_corrupt_tail(
     index: usize,
 ) -> MessageLifecycleSnapshotStoreError {
     MessageLifecycleSnapshotStoreError::InvalidPayload(format!(
         "{MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX}:{index}"
     ))
-}
-
-fn encode_journal_hex(bytes: &[u8]) -> String {
-    let mut encoded = String::with_capacity(bytes.len() * 2);
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    for byte in bytes {
-        encoded.push(HEX[(byte >> 4) as usize] as char);
-        encoded.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    encoded
-}
-
-fn decode_journal_hex(value: &str) -> Option<Vec<u8>> {
-    if !value.len().is_multiple_of(2) {
-        return None;
-    }
-    let bytes = value.as_bytes();
-    let mut decoded = Vec::with_capacity(bytes.len() / 2);
-    let mut index = 0usize;
-    while index < bytes.len() {
-        let high = decode_journal_nibble(bytes[index])?;
-        let low = decode_journal_nibble(bytes[index + 1])?;
-        decoded.push((high << 4) | low);
-        index += 2;
-    }
-    Some(decoded)
-}
-
-fn decode_journal_nibble(value: u8) -> Option<u8> {
-    match value {
-        b'0'..=b'9' => Some(value - b'0'),
-        b'a'..=b'f' => Some(value - b'a' + 10),
-        b'A'..=b'F' => Some(value - b'A' + 10),
-        _ => None,
-    }
 }
 
 fn is_valid_transition(from: MessageStatus, to: MessageStatus) -> bool {
