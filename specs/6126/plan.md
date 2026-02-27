@@ -8,7 +8,12 @@
 5. Update docs/spec/task artifacts and finalize closure evidence.
 
 ## Affected Modules
-- Target module(s) identified by issue #6126 scope and test evidence.
+- `crates/kamn-core/src/channel_models.rs` (snapshot serde encode/decode + legacy parser fallback)
+- `crates/kamn-core/src/task_operations.rs` (snapshot serde encode/decode + legacy parser fallback)
+- `crates/kamn-core/src/message_lifecycle.rs` (snapshot serde encode/decode + legacy parser fallback)
+- `crates/kamn-core/src/runtime_snapshot_store.rs` + `crates/kamn-core/src/runtime_tests_snapshot_store.rs` (JSON-lines snapshot writes with legacy parser fallback)
+- `crates/kamn-core/src/durable_guard_store.rs` (bundle serde encode/decode + legacy parser fallback)
+- `crates/kamn-core/Cargo.toml` / `Cargo.lock` (`serde` + `serde_json` for snapshot payload serialization)
 - `specs/6126/spec.md`
 - `specs/6126/plan.md`
 - `specs/6126/tasks.md`

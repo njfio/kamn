@@ -7,6 +7,7 @@ use crate::{
     },
     AgentDid, SqliteStoreBackend, SqliteStoreBackendError,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
@@ -1220,42 +1221,74 @@ fn parse_metadata_snapshot_value(
     }
 }
 
-fn ensure_snapshot_token(value: &str, field: &str) -> Result<(), ChannelSnapshotStoreError> {
-    if value.contains('|') || value.contains('\n') || value.contains('\r') || value.contains(',') {
-        return Err(ChannelSnapshotStoreError::InvalidPayload(format!(
-            "{field} contains unsupported delimiter characters"
-        )));
-    }
-    Ok(())
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ChannelRecordSnapshotWire {
+    channel_id: String,
+    channel_type: String,
+    metadata: String,
+    members: Vec<String>,
+    admins: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ChannelSnapshotWire {
+    schema_version: u16,
+    records: Vec<ChannelRecordSnapshotWire>,
 }
 
 fn serialize_channel_snapshot(
     snapshot: &ChannelSnapshot,
 ) -> Result<String, ChannelSnapshotStoreError> {
-    let mut payload = format!("schema|{}\n", snapshot.schema_version);
-    for record in &snapshot.records {
-        ensure_snapshot_token(&record.channel_id, "channel_id")?;
-        let metadata_value = metadata_snapshot_value(&record.metadata);
-        ensure_snapshot_token(metadata_value, "metadata")?;
-        for member in &record.members {
-            ensure_snapshot_token(member, "member")?;
-        }
-        for admin in &record.admins {
-            ensure_snapshot_token(admin, "admin")?;
-        }
-        payload.push_str(&format!(
-            "record|{}|{}|{}|{}|{}\n",
-            record.channel_id,
-            channel_type_code(record.channel_type),
-            metadata_value,
-            record.members.join(","),
-            record.admins.join(",")
-        ));
-    }
-    Ok(payload)
+    let wire = ChannelSnapshotWire {
+        schema_version: snapshot.schema_version,
+        records: snapshot
+            .records
+            .iter()
+            .map(|record| ChannelRecordSnapshotWire {
+                channel_id: record.channel_id.clone(),
+                channel_type: channel_type_code(record.channel_type).to_owned(),
+                metadata: metadata_snapshot_value(&record.metadata).to_owned(),
+                members: record.members.clone(),
+                admins: record.admins.clone(),
+            })
+            .collect(),
+    };
+    serde_json::to_string(&wire)
+        .map_err(|error| ChannelSnapshotStoreError::InvalidPayload(error.to_string()))
 }
 
 fn parse_channel_snapshot_payload(
+    payload: &str,
+) -> Result<ChannelSnapshot, ChannelSnapshotStoreError> {
+    if let Ok(wire) = serde_json::from_str::<ChannelSnapshotWire>(payload) {
+        let records = wire
+            .records
+            .into_iter()
+            .map(|record| {
+                let channel_type = parse_channel_type_code(record.channel_type.as_str())
+                    .ok_or_else(|| {
+                        ChannelSnapshotStoreError::InvalidPayload(record.channel_type.clone())
+                    })?;
+                let metadata =
+                    parse_metadata_snapshot_value(channel_type, record.metadata.as_str())?;
+                Ok(ChannelRecordSnapshot {
+                    channel_id: record.channel_id,
+                    channel_type,
+                    metadata,
+                    members: record.members,
+                    admins: record.admins,
+                })
+            })
+            .collect::<Result<Vec<_>, ChannelSnapshotStoreError>>()?;
+        return Ok(ChannelSnapshot {
+            schema_version: wire.schema_version,
+            records,
+        });
+    }
+    parse_channel_snapshot_payload_legacy(payload)
+}
+
+fn parse_channel_snapshot_payload_legacy(
     payload: &str,
 ) -> Result<ChannelSnapshot, ChannelSnapshotStoreError> {
     let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
@@ -1570,6 +1603,37 @@ mod tests {
         file_store
             .write(snapshot.clone())
             .expect("write should succeed");
+        assert_eq!(
+            file_store.read_latest().expect("read should succeed"),
+            Some(snapshot)
+        );
+
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
+    }
+
+    #[test]
+    fn regression_file_channel_snapshot_store_roundtrips_delimiter_rich_metadata() {
+        // Regression: #6126
+        let path = temp_channel_snapshot_path("delimiter-rich-metadata");
+        let journal_path = temp_channel_snapshot_journal_path(&path);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
+
+        let mut store = ChannelStore::new();
+        store
+            .create_broadcast(
+                "channel:broadcast:delimiter-rich",
+                "kamn:did:agent:owner",
+                "alerts|west,coast\nv2",
+                vec!["kamn:did:agent:owner".to_owned()],
+                vec!["kamn:did:agent:owner".to_owned()],
+            )
+            .expect("broadcast should be created");
+        let snapshot = store.export_snapshot();
+
+        let mut file_store = FileChannelSnapshotStore::new(path.clone()).expect("store");
+        assert!(file_store.write(snapshot.clone()).is_ok());
         assert_eq!(
             file_store.read_latest().expect("read should succeed"),
             Some(snapshot)

@@ -8,6 +8,7 @@ use crate::{
     AgentDid, SqliteStoreBackend, SqliteStoreBackendError, TaskLifecycle, TaskLifecycleError,
     TaskState, TaskTransition,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
@@ -1170,64 +1171,100 @@ fn parse_task_notice_code(raw: &str) -> Option<TaskOperationNoticeKind> {
     }
 }
 
-fn ensure_snapshot_token(
-    value: &str,
-    field: &str,
-    allow_comma: bool,
-) -> Result<(), TaskOperationSnapshotStoreError> {
-    let has_comma = !allow_comma && value.contains(',');
-    if value.contains('|') || value.contains('\n') || value.contains('\r') || has_comma {
-        return Err(TaskOperationSnapshotStoreError::InvalidPayload(format!(
-            "{field} contains unsupported delimiter characters"
-        )));
-    }
-    Ok(())
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct TaskOperationRecordSnapshotWire {
+    task_id: String,
+    requester: String,
+    assignee: Option<String>,
+    description: String,
+    lifecycle_history: Vec<String>,
+    dependencies: Vec<String>,
+    notices: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct TaskOperationSnapshotWire {
+    schema_version: u16,
+    tasks: Vec<TaskOperationRecordSnapshotWire>,
 }
 
 fn serialize_task_operation_snapshot(
     snapshot: &TaskOperationSnapshot,
 ) -> Result<String, TaskOperationSnapshotStoreError> {
-    let mut payload = format!("schema|{}\n", snapshot.schema_version);
-    for task in &snapshot.tasks {
-        ensure_snapshot_token(&task.task_id, "task_id", false)?;
-        ensure_snapshot_token(&task.requester, "requester", false)?;
-        if let Some(assignee) = &task.assignee {
-            ensure_snapshot_token(assignee, "assignee", false)?;
-        }
-        ensure_snapshot_token(&task.description, "description", true)?;
-        for dependency in &task.dependencies {
-            ensure_snapshot_token(dependency, "dependency", false)?;
-        }
-
-        let assignee = task.assignee.clone().unwrap_or_default();
-        let history = task
-            .lifecycle_history
+    let wire = TaskOperationSnapshotWire {
+        schema_version: snapshot.schema_version,
+        tasks: snapshot
+            .tasks
             .iter()
-            .map(|state| task_state_code(*state))
-            .collect::<Vec<_>>()
-            .join(",");
-        let dependencies = task.dependencies.join(",");
-        let notices = task
-            .notices
-            .iter()
-            .map(|notice| task_notice_code(*notice))
-            .collect::<Vec<_>>()
-            .join(",");
-        payload.push_str(&format!(
-            "task|{}|{}|{}|{}|{}|{}|{}\n",
-            task.task_id,
-            task.requester,
-            assignee,
-            task.description,
-            history,
-            dependencies,
-            notices
-        ));
-    }
-    Ok(payload)
+            .map(|task| TaskOperationRecordSnapshotWire {
+                task_id: task.task_id.clone(),
+                requester: task.requester.clone(),
+                assignee: task.assignee.clone(),
+                description: task.description.clone(),
+                lifecycle_history: task
+                    .lifecycle_history
+                    .iter()
+                    .map(|state| task_state_code(*state).to_owned())
+                    .collect(),
+                dependencies: task.dependencies.clone(),
+                notices: task
+                    .notices
+                    .iter()
+                    .map(|notice| task_notice_code(*notice).to_owned())
+                    .collect(),
+            })
+            .collect(),
+    };
+    serde_json::to_string(&wire)
+        .map_err(|error| TaskOperationSnapshotStoreError::InvalidPayload(error.to_string()))
 }
 
 fn parse_task_operation_snapshot_payload(
+    payload: &str,
+) -> Result<TaskOperationSnapshot, TaskOperationSnapshotStoreError> {
+    if let Ok(wire) = serde_json::from_str::<TaskOperationSnapshotWire>(payload) {
+        let tasks = wire
+            .tasks
+            .into_iter()
+            .map(|task| {
+                let lifecycle_history = task
+                    .lifecycle_history
+                    .into_iter()
+                    .map(|raw| {
+                        parse_task_state_code(raw.as_str()).ok_or_else(|| {
+                            TaskOperationSnapshotStoreError::InvalidPayload(raw.clone())
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let notices = task
+                    .notices
+                    .into_iter()
+                    .map(|raw| {
+                        parse_task_notice_code(raw.as_str()).ok_or_else(|| {
+                            TaskOperationSnapshotStoreError::InvalidPayload(raw.clone())
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(TaskOperationRecordSnapshot {
+                    task_id: task.task_id,
+                    requester: task.requester,
+                    assignee: task.assignee,
+                    description: task.description,
+                    lifecycle_history,
+                    dependencies: task.dependencies,
+                    notices,
+                })
+            })
+            .collect::<Result<Vec<_>, TaskOperationSnapshotStoreError>>()?;
+        return Ok(TaskOperationSnapshot {
+            schema_version: wire.schema_version,
+            tasks,
+        });
+    }
+    parse_task_operation_snapshot_payload_legacy(payload)
+}
+
+fn parse_task_operation_snapshot_payload_legacy(
     payload: &str,
 ) -> Result<TaskOperationSnapshot, TaskOperationSnapshotStoreError> {
     let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
@@ -1487,6 +1524,35 @@ mod tests {
         file_store
             .write(snapshot.clone())
             .expect("write should pass");
+        assert_eq!(
+            file_store.read_latest().expect("read should pass"),
+            Some(snapshot)
+        );
+
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
+    }
+
+    #[test]
+    fn regression_file_task_operation_snapshot_store_roundtrips_delimiter_rich_description() {
+        // Regression: #6126
+        let path = temp_task_operation_snapshot_path("delimiter-rich-description");
+        let journal_path = temp_task_operation_snapshot_journal_path(&path);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
+
+        let mut engine = TaskOperationEngine::new();
+        engine
+            .submit(
+                "task-delimiter-rich",
+                "kamn:did:agent:requester-1",
+                "triage|priority,high\nline-2",
+            )
+            .expect("submit should pass");
+        let snapshot = engine.export_snapshot();
+
+        let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        assert!(file_store.write(snapshot.clone()).is_ok());
         assert_eq!(
             file_store.read_latest().expect("read should pass"),
             Some(snapshot)
