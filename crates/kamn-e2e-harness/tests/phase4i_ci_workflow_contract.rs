@@ -120,3 +120,16 @@ fn spec_c17_workflow_applies_fail_closed_run_output_validation_for_all_modes() {
     assert_eq!(fail_closed_status_marker_count, 3);
     assert_eq!(fail_closed_scenario_marker_count, 3);
 }
+
+#[test]
+fn spec_c18_workflow_sets_explicit_tls_mode_for_all_live_lanes() {
+    let root = repo_root();
+    let workflow = std::fs::read_to_string(root.join(".github/workflows/e2e-live.yml"))
+        .expect("e2e-live workflow should exist");
+
+    let tls_disable_marker_count = workflow.matches("KAMN_SERVICE_API_TLS_MODE=disable").count();
+    assert_eq!(
+        tls_disable_marker_count, 3,
+        "workflow must set explicit disable mode for all three live lanes"
+    );
+}
