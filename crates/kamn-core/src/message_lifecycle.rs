@@ -2,10 +2,10 @@ use crate::{
     AgentDid, ProcessorProofAdmissionEvaluator, ProcessorProofAdmissionInput,
     ProcessorProofArtifact, SqliteStoreBackend, SqliteStoreBackendError, ZkDesignError,
 };
-use serde::{Deserialize, Serialize};
 use kamn_snapshot_journal::{
     decode_journal_hex, encode_journal_hex, parse_snapshot_journal_record, snapshot_journal_path,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
