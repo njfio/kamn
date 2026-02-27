@@ -1,9 +1,10 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
+    parse_service_api_payload, project_service_api_lifecycle_rejection,
+    upsert_service_api_relayed_message_from_daemon, ServiceApiAgentGetBody,
     ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
     ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
-    ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+    ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
     DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
@@ -1501,6 +1502,72 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
     assert_eq!(not_found_payload.error, "not-found");
     assert_eq!(not_found_payload.reason_code, "service_api_route_not_found");
     assert!(not_found_payload.message.contains("not found"));
+
+    let baseline_config = ServiceApiEndpointConfig {
+        bind_addr: "127.0.0.1:0".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 1,
+        body_limit_bytes: 1,
+        concurrency_limit: 1,
+        rate_limit_per_second: 1,
+    };
+
+    let mut max_requests_zero = baseline_config.clone();
+    max_requests_zero.max_requests = 0;
+    let max_requests_error = serve_service_api_endpoint(&max_requests_zero, &snapshot)
+        .expect_err("max_requests=0 must fail closed");
+    assert_eq!(
+        max_requests_error,
+        "service api max requests must be greater than zero"
+    );
+
+    let mut idle_timeout_zero = baseline_config.clone();
+    idle_timeout_zero.idle_timeout_ms = 0;
+    let idle_timeout_error = serve_service_api_endpoint(&idle_timeout_zero, &snapshot)
+        .expect_err("idle_timeout_ms=0 must fail closed");
+    assert_eq!(
+        idle_timeout_error,
+        "service api idle timeout must be greater than zero"
+    );
+
+    let mut body_limit_zero = baseline_config.clone();
+    body_limit_zero.body_limit_bytes = 0;
+    let body_limit_error = serve_service_api_endpoint(&body_limit_zero, &snapshot)
+        .expect_err("body_limit_bytes=0 must fail closed");
+    assert_eq!(
+        body_limit_error,
+        "service api body limit bytes must be greater than zero"
+    );
+
+    let mut concurrency_limit_zero = baseline_config.clone();
+    concurrency_limit_zero.concurrency_limit = 0;
+    let concurrency_limit_error = serve_service_api_endpoint(&concurrency_limit_zero, &snapshot)
+        .expect_err("concurrency_limit=0 must fail closed");
+    assert_eq!(
+        concurrency_limit_error,
+        "service api concurrency limit must be greater than zero"
+    );
+
+    let mut rate_limit_zero = baseline_config;
+    rate_limit_zero.rate_limit_per_second = 0;
+    let rate_limit_error = serve_service_api_endpoint(&rate_limit_zero, &snapshot)
+        .expect_err("rate_limit_per_second=0 must fail closed");
+    assert_eq!(
+        rate_limit_error,
+        "service api rate limit per second must be greater than zero"
+    );
+
+    let relay_entry = ServiceApiRelaySpoolEntry {
+        message_id: "msg-test-relay".to_owned(),
+        sender_did: Some("kamn:did:agent:sender".to_owned()),
+        recipient_did: "kamn:did:agent:recipient".to_owned(),
+        body: "{\"message\":\"relay\"}".to_owned(),
+        queued_at_unix: 1,
+    };
+    let relayed = upsert_service_api_relayed_message_from_daemon(None, &relay_entry)
+        .expect("daemon relay upsert should succeed without a state file");
+    assert_eq!(relayed.message_id, "msg-test-relay");
+    assert_eq!(relayed.status, "relayed");
 }
 
 #[test]
