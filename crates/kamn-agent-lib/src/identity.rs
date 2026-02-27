@@ -3,6 +3,9 @@ use kamn_sdk::{service_public_key_for_private_key, AgentDid};
 use std::env;
 
 const DETERMINISTIC_IDENTITY_ALLOW_ENV: &str = "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
+const FNV_OFFSET_BASIS_64: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV_PRIME_64: u64 = 0x0000_0100_0000_01b3;
+const NAME_SEED_INDEX_SALT_XOR: u64 = 0x9e37_79b9_7f4a_7c15;
 
 /// Agent identity material used by phase-1 authenticated operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -140,18 +143,24 @@ fn derive_deterministic_service_signing_key_hex(
 }
 
 fn derive_name_seed_bytes(normalized_name: &str) -> [u8; 32] {
-    let mut state: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut state = FNV_OFFSET_BASIS_64;
     let input = normalized_name.as_bytes();
     let mut output = [0u8; 32];
     for (index, slot) in output.iter_mut().enumerate() {
-        let source = input[index % input.len()];
-        state ^= (source as u64).wrapping_add(((index as u64) << 8) ^ 0x9e37_79b9_7f4a_7c15);
-        state = state.wrapping_mul(0x0000_0100_0000_01b3);
+        state = fnv1a64_round(state, input[index % input.len()]);
+        let index_salt = (((index as u64) << 8) ^ NAME_SEED_INDEX_SALT_XOR).to_le_bytes();
+        for byte in index_salt {
+            state = fnv1a64_round(state, byte);
+        }
         *slot = (state >> ((index % 8) * 8)) as u8;
     }
     // Ensure non-zero scalar candidate.
     output[0] |= 0x01;
     output
+}
+
+fn fnv1a64_round(state: u64, byte: u8) -> u64 {
+    (state ^ (byte as u64)).wrapping_mul(FNV_PRIME_64)
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -169,13 +178,37 @@ mod tests {
     use super::AgentIdentity;
     use std::env;
 
+    fn derive_name_seed_bytes_reference_fnv1a(normalized_name: &str) -> [u8; 32] {
+        let input = normalized_name.as_bytes();
+        let mut state = super::FNV_OFFSET_BASIS_64;
+        let mut output = [0u8; 32];
+        for (index, slot) in output.iter_mut().enumerate() {
+            state = super::fnv1a64_round(state, input[index % input.len()]);
+            let index_salt =
+                (((index as u64) << 8) ^ super::NAME_SEED_INDEX_SALT_XOR).to_le_bytes();
+            for byte in index_salt {
+                state = super::fnv1a64_round(state, byte);
+            }
+            *slot = (state >> ((index % 8) * 8)) as u8;
+        }
+        output[0] |= 0x01;
+        output
+    }
+
+    #[test]
+    fn spec_c01_derive_name_seed_bytes_matches_explicit_fnv1a_round_reference() {
+        let derived = super::derive_name_seed_bytes("alice");
+        let expected = derive_name_seed_bytes_reference_fnv1a("alice");
+        assert_eq!(derived, expected);
+    }
+
     #[test]
     fn unit_agent_identity_from_name_builds_expected_did_and_keys() {
         let identity = AgentIdentity::from_agent_name("Alice").expect("identity should build");
         assert_eq!(identity.did().as_str(), "kamn:did:agent:alice");
         assert_eq!(
             identity.signing_key(),
-            "094cf4e1f3d974bbf3e72233e2c2937e8fdb094740e0f017e010aa47ac1201ac"
+            "3d8a1dbfd141e25f472298086ae0ce64b7057017ee110ad5fee6aba21dd89fb3"
         );
         assert!(identity
             .signing_key()
