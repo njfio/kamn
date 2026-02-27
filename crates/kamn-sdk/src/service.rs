@@ -995,28 +995,8 @@ impl ServiceApiClient {
         }
 
         let frame = &response_bytes[header_end..];
-        if frame.len() < 2 {
-            return Err(SdkError::TransportFailure(
-                "service websocket response missing event frame",
-            ));
-        }
-        if frame[0] != 0x81 {
-            return Err(SdkError::TransportFailure(
-                "service websocket response frame opcode unsupported",
-            ));
-        }
-        if frame[1] & 0x80 != 0 {
-            return Err(SdkError::TransportFailure(
-                "service websocket response frame unexpectedly masked",
-            ));
-        }
-        let payload_len = (frame[1] & 0x7f) as usize;
-        if frame.len() < payload_len + 2 {
-            return Err(SdkError::TransportFailure(
-                "service websocket response frame payload truncated",
-            ));
-        }
-        let payload = String::from_utf8(frame[2..2 + payload_len].to_vec())
+        let payload = parse_service_websocket_response_frame_payload(frame)?;
+        let payload = String::from_utf8(payload.to_vec())
             .map_err(|_| SdkError::TransportFailure("service websocket event payload not utf-8"))?;
         Ok(ServiceRouteEvent {
             event: json_string_field(payload.as_str(), "event")?,
@@ -1054,6 +1034,64 @@ impl ServiceApiClient {
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
     }
+}
+
+fn parse_service_websocket_response_frame_payload(frame: &[u8]) -> Result<&[u8], SdkError> {
+    if frame.len() < 2 {
+        return Err(SdkError::TransportFailure(
+            "service websocket response missing event frame",
+        ));
+    }
+    if frame[0] != 0x81 {
+        return Err(SdkError::TransportFailure(
+            "service websocket response frame opcode unsupported",
+        ));
+    }
+    if frame[1] & 0x80 != 0 {
+        return Err(SdkError::TransportFailure(
+            "service websocket response frame unexpectedly masked",
+        ));
+    }
+    let payload_len_marker = frame[1] & 0x7f;
+    let (payload_len, payload_offset) = match payload_len_marker {
+        0..=125 => (payload_len_marker as usize, 2usize),
+        126 => {
+            if frame.len() < 4 {
+                return Err(SdkError::TransportFailure(
+                    "service websocket response frame extended length truncated",
+                ));
+            }
+            (u16::from_be_bytes([frame[2], frame[3]]) as usize, 4usize)
+        }
+        127 => {
+            if frame.len() < 10 {
+                return Err(SdkError::TransportFailure(
+                    "service websocket response frame extended length truncated",
+                ));
+            }
+            let payload_len = u64::from_be_bytes([
+                frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
+            ]);
+            let payload_len = usize::try_from(payload_len).map_err(|_| {
+                SdkError::TransportFailure(
+                    "service websocket response frame payload length overflow",
+                )
+            })?;
+            (payload_len, 10usize)
+        }
+        _ => unreachable!("payload length marker is masked to 7 bits"),
+    };
+    let payload_end = payload_offset
+        .checked_add(payload_len)
+        .ok_or(SdkError::TransportFailure(
+            "service websocket response frame payload length overflow",
+        ))?;
+    if frame.len() < payload_end {
+        return Err(SdkError::TransportFailure(
+            "service websocket response frame payload truncated",
+        ));
+    }
+    Ok(&frame[payload_offset..payload_end])
 }
 
 fn write_and_flush_request<W: Write>(
@@ -1446,7 +1484,8 @@ fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkE
 #[cfg(test)]
 mod tests {
     use super::{
-        normalize_route_segment, read_response_bytes, service_public_key_for_private_key,
+        normalize_route_segment, parse_service_websocket_response_frame_payload,
+        read_response_bytes, service_public_key_for_private_key,
         service_signature_for_state_hash_with_private_key,
         service_verify_signature_with_public_key, write_and_flush_request, SdkError,
         ServiceApiClient, ServiceRequestAuth, MAX_SERVICE_RESPONSE_BYTES,
@@ -1631,6 +1670,69 @@ mod tests {
         assert_eq!(
             error,
             SdkError::TransportFailure(SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED)
+        );
+    }
+
+    #[test]
+    fn unit_parse_service_websocket_response_frame_payload_accepts_inline_length() {
+        let payload = br#"{"event":"state-transition","sequence":1}"#;
+        let mut frame = vec![0x81, payload.len() as u8];
+        frame.extend_from_slice(payload);
+        let parsed = parse_service_websocket_response_frame_payload(frame.as_slice())
+            .expect("inline length frame should parse");
+        assert_eq!(parsed, payload);
+    }
+
+    #[test]
+    fn regression_parse_service_websocket_response_frame_payload_accepts_u16_extended_length() {
+        // Regression: #6111
+        let payload = vec![b'a'; 200];
+        let payload_len = payload.len() as u16;
+        let mut frame = vec![0x81, 126, (payload_len >> 8) as u8, payload_len as u8];
+        frame.extend_from_slice(payload.as_slice());
+        let parsed = parse_service_websocket_response_frame_payload(frame.as_slice())
+            .expect("u16 extended length frame should parse");
+        assert_eq!(parsed, payload.as_slice());
+    }
+
+    #[test]
+    fn regression_parse_service_websocket_response_frame_payload_accepts_u64_extended_length() {
+        // Regression: #6111
+        let payload = vec![b'b'; 130];
+        let payload_len = payload.len() as u64;
+        let mut frame = vec![0x81, 127];
+        frame.extend_from_slice(payload_len.to_be_bytes().as_slice());
+        frame.extend_from_slice(payload.as_slice());
+        let parsed = parse_service_websocket_response_frame_payload(frame.as_slice())
+            .expect("u64 extended length frame should parse");
+        assert_eq!(parsed, payload.as_slice());
+    }
+
+    #[test]
+    fn regression_parse_service_websocket_response_frame_payload_rejects_truncated_extended_header()
+    {
+        // Regression: #6111
+        let frame = vec![0x81, 126, 0x00];
+        let error = parse_service_websocket_response_frame_payload(frame.as_slice())
+            .expect_err("truncated u16 extended header should fail closed");
+        assert_eq!(
+            error,
+            SdkError::TransportFailure(
+                "service websocket response frame extended length truncated"
+            )
+        );
+    }
+
+    #[test]
+    fn regression_parse_service_websocket_response_frame_payload_rejects_u64_length_overflow() {
+        // Regression: #6111
+        let mut frame = vec![0x81, 127];
+        frame.extend_from_slice(u64::MAX.to_be_bytes().as_slice());
+        let error = parse_service_websocket_response_frame_payload(frame.as_slice())
+            .expect_err("u64 payload length overflow should fail closed");
+        assert_eq!(
+            error,
+            SdkError::TransportFailure("service websocket response frame payload length overflow")
         );
     }
 
