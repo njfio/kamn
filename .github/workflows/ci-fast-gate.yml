@@ -172,6 +172,21 @@ jobs:
           path: ci-shell-loc-hard-ceiling.json
           if-no-files-found: error
 
+      - name: Check docs-contract test-file budget
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_docs_contract_test_file_budget.sh \
+            --threshold-file .ci/docs-contract-test-file-budget.env \
+            --output-json ci-docs-contract-test-file-budget.json
+
+      - name: Upload docs-contract test-file budget telemetry
+        if: always() && hashFiles('ci-docs-contract-test-file-budget.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-docs-contract-test-file-budget-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-docs-contract-test-file-budget.json
+          if-no-files-found: error
+
       - name: Check shell-surface threshold ratchet
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |
