@@ -11,6 +11,8 @@ pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "X25519";
 /// Canonical direct-message cipher algorithm identifier.
 pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
+const DIRECT_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-salt:v2";
+const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-info:v2";
 
 /// Encrypted direct-message payload and metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,6 +39,7 @@ pub struct DirectMessageCryptoEngine {
     sender_key_ref: String,
     recipient_key_ref: String,
     aead_key: [u8; 32],
+    legacy_aead_key: [u8; 32],
     used_nonces: BTreeSet<u64>,
 }
 
@@ -57,6 +60,7 @@ impl DirectMessageCryptoEngine {
             sender_key_ref: sender_key_ref.to_owned(),
             recipient_key_ref: recipient_key_ref.to_owned(),
             aead_key: derive_direct_message_aead_key(&shared_secret),
+            legacy_aead_key: derive_direct_message_aead_key_legacy(&shared_secret),
             used_nonces: BTreeSet::new(),
         })
     }
@@ -127,7 +131,6 @@ impl DirectMessageCryptoEngine {
         let mut combined = ciphertext;
         combined.extend_from_slice(&auth_tag);
 
-        let cipher = XChaCha20Poly1305::new((&self.aead_key).into());
         let nonce_bytes = direct_message_nonce_bytes(sealed.nonce);
         let xnonce = XNonce::from(nonce_bytes);
         let aad = canonical_direct_message_aad(
@@ -136,15 +139,27 @@ impl DirectMessageCryptoEngine {
             sealed.nonce,
         );
 
-        let plaintext = cipher
-            .decrypt(
-                &xnonce,
-                Payload {
-                    msg: &combined,
-                    aad: aad.as_bytes(),
-                },
-            )
-            .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)?;
+        let decrypt_with_key = |key: &[u8; 32]| {
+            XChaCha20Poly1305::new(key.into())
+                .decrypt(
+                    &xnonce,
+                    Payload {
+                        msg: &combined,
+                        aad: aad.as_bytes(),
+                    },
+                )
+                .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)
+        };
+
+        // Compatibility policy: encrypt with HKDF-v2 key, but continue accepting
+        // legacy SHA-256-v1 derived ciphertext on decrypt.
+        let plaintext = match decrypt_with_key(&self.aead_key) {
+            Ok(value) => Ok(value),
+            Err(DirectMessageCryptoError::IntegrityCheckFailed) => {
+                decrypt_with_key(&self.legacy_aead_key)
+            }
+            Err(other) => Err(other),
+        }?;
         String::from_utf8(plaintext)
             .map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
     }
@@ -269,6 +284,14 @@ fn derive_x25519_public_key(master_seed: &[u8; 32], key_ref: &str) -> PublicKey 
 }
 
 fn derive_direct_message_aead_key(shared_secret: &[u8; 32]) -> [u8; 32] {
+    hkdf_sha256_derive_32(
+        DIRECT_MESSAGE_AEAD_KDF_SALT_V2,
+        shared_secret,
+        DIRECT_MESSAGE_AEAD_KDF_INFO_V2,
+    )
+}
+
+fn derive_direct_message_aead_key_legacy(shared_secret: &[u8; 32]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(b"kamn:direct-message:aead-key:v1:");
     hasher.update(shared_secret);
@@ -276,6 +299,46 @@ fn derive_direct_message_aead_key(shared_secret: &[u8; 32]) -> [u8; 32] {
     let mut key = [0u8; 32];
     key.copy_from_slice(&digest[..32]);
     key
+}
+
+fn hkdf_sha256_derive_32(salt: &[u8], ikm: &[u8], info: &[u8]) -> [u8; 32] {
+    let prk = hmac_sha256(salt, ikm);
+    let mut expand_input = Vec::with_capacity(info.len() + 1);
+    expand_input.extend_from_slice(info);
+    expand_input.push(0x01);
+    hmac_sha256(&prk, &expand_input)
+}
+
+fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
+    const SHA256_BLOCK_SIZE: usize = 64;
+    let mut normalized_key = [0u8; SHA256_BLOCK_SIZE];
+    if key.len() > SHA256_BLOCK_SIZE {
+        let digest = Sha256::digest(key);
+        normalized_key[..32].copy_from_slice(&digest[..32]);
+    } else {
+        normalized_key[..key.len()].copy_from_slice(key);
+    }
+
+    let mut inner_key_pad = [0u8; SHA256_BLOCK_SIZE];
+    let mut outer_key_pad = [0u8; SHA256_BLOCK_SIZE];
+    for (index, byte) in normalized_key.iter().enumerate() {
+        inner_key_pad[index] = *byte ^ 0x36;
+        outer_key_pad[index] = *byte ^ 0x5c;
+    }
+
+    let mut inner = Sha256::new();
+    inner.update(inner_key_pad);
+    inner.update(data);
+    let inner_digest = inner.finalize();
+
+    let mut outer = Sha256::new();
+    outer.update(outer_key_pad);
+    outer.update(inner_digest);
+    let output = outer.finalize();
+
+    let mut hmac = [0u8; 32];
+    hmac.copy_from_slice(&output[..32]);
+    hmac
 }
 
 fn direct_message_nonce_bytes(nonce: u64) -> [u8; 24] {
@@ -326,7 +389,12 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, DirectMessageCryptoError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DirectMessageCryptoEngine, DirectMessageCryptoError};
+    use super::{
+        DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
+        DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+    };
+    use chacha20poly1305::aead::{Aead, KeyInit, Payload};
+    use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
@@ -350,6 +418,42 @@ mod tests {
         }
 
         output
+    }
+
+    fn legacy_v1_ciphertext(
+        sender_key_ref: &str,
+        recipient_key_ref: &str,
+        plaintext: &str,
+        nonce: u64,
+    ) -> DirectMessageCiphertext {
+        let master_seed =
+            super::load_key_agreement_master_seed().expect("master seed should be available");
+        let shared_secret =
+            super::derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
+        let legacy_key = super::derive_direct_message_aead_key_legacy(&shared_secret);
+
+        let cipher = XChaCha20Poly1305::new((&legacy_key).into());
+        let nonce_bytes = super::direct_message_nonce_bytes(nonce);
+        let xnonce = XNonce::from(nonce_bytes);
+        let aad = super::canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
+        let payload = Payload {
+            msg: plaintext.as_bytes(),
+            aad: aad.as_bytes(),
+        };
+        let mut sealed = cipher
+            .encrypt(&xnonce, payload)
+            .expect("legacy encryption should succeed");
+        let auth_tag = sealed.split_off(sealed.len() - 16);
+
+        DirectMessageCiphertext {
+            key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
+            cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
+            sender_key_ref: sender_key_ref.to_owned(),
+            recipient_key_ref: recipient_key_ref.to_owned(),
+            nonce,
+            ciphertext: super::hex_encode(&sealed),
+            auth_tag: super::hex_encode(&auth_tag),
+        }
     }
 
     #[test]
@@ -476,6 +580,34 @@ mod tests {
                 result,
                 Err(DirectMessageCryptoError::MissingKeyAgreementMasterSeed)
             );
+        });
+    }
+
+    #[test]
+    fn direct_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
+        let shared_secret = [0x5au8; 32];
+        let hkdf_key_a = super::derive_direct_message_aead_key(&shared_secret);
+        let hkdf_key_b = super::derive_direct_message_aead_key(&shared_secret);
+        let legacy_key = super::derive_direct_message_aead_key_legacy(&shared_secret);
+
+        assert_eq!(hkdf_key_a, hkdf_key_b);
+        assert_ne!(hkdf_key_a, legacy_key);
+    }
+
+    #[test]
+    fn decrypt_accepts_legacy_v1_sha256_kdf_ciphertext_for_compatibility() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let sender_key_ref = "kamn:did:agent:alice#key-agreement-1";
+            let recipient_key_ref = "kamn:did:agent:bob#key-agreement-1";
+
+            let engine = DirectMessageCryptoEngine::new(sender_key_ref, recipient_key_ref)
+                .expect("engine init should succeed");
+            let sealed = legacy_v1_ciphertext(sender_key_ref, recipient_key_ref, "legacy-v1", 41);
+
+            let plaintext = engine
+                .decrypt(&sealed)
+                .expect("legacy-v1 decrypt must succeed");
+            assert_eq!(plaintext, "legacy-v1");
         });
     }
 
