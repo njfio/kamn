@@ -4201,8 +4201,12 @@ Required demo lane command contract:
 ## E2E Live Workflow Contract
 - `cargo test -p kamn-core --test e2e_live_workflow_lane`
 - `e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1`
-- `e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing`
+- `e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing`
 - `e2e_live_workflow_contract_status=verified|violation`
+- PR smoke selector contract:
+  - `pull_request` trigger is enabled for `.github/workflows/e2e-live.yml`.
+  - `e2e-cli-smoke` remains bounded to `--scenarios S-01,S-02`.
+  - flaky handling is bounded via `bash scripts/ci/run_with_retry.sh --label e2e-cli-smoke-live --max-attempts 2`.
 - `Regression: #5849`
 
 - `bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json`

@@ -1,12 +1,13 @@
 use std::path::{Path, PathBuf};
 
 const REASON_TAXONOMY_VERSION: &str = "kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1";
-const REASON_CODES_CSV: &str = "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing";
+const REASON_CODES_CSV: &str = "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing";
 const REASON_CODES_ORDER: &[&str] = &[
     "workflow_file_missing",
     "strategy_doc_missing",
     "push_trigger_missing",
     "push_main_branch_scope_missing",
+    "pull_request_trigger_missing",
     "sdk_direct_job_missing",
     "sdk_direct_live_toggle_missing",
     "sdk_direct_external_execution_flag_missing",
@@ -14,15 +15,20 @@ const REASON_CODES_ORDER: &[&str] = &[
     "kolme_bootstrap_step_missing",
     "kamn_runtime_bootstrap_missing",
     "service_health_wait_marker_missing",
+    "cli_smoke_job_missing",
+    "cli_smoke_pr_scope_missing",
+    "cli_smoke_scenarios_not_smoke_slice",
+    "cli_smoke_retry_wrapper_missing",
     "ci_strategy_markers_missing",
 ];
 const SDK_DIRECT_FULL_SCENARIOS: &str =
     "--scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15";
+const CLI_SMOKE_SCENARIOS: &str = "--scenarios S-01,S-02";
 const STRATEGY_REQUIRED_MARKERS: &[&str] = &[
     "## E2E Live Workflow Contract",
     "cargo test -p kamn-core --test e2e_live_workflow_lane",
     "e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1",
-    "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing",
+    "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing",
     "e2e_live_workflow_contract_status=verified|violation",
 ];
 
@@ -73,6 +79,11 @@ fn sdk_direct_section(workflow: &str) -> Option<&str> {
     Some(&workflow[start..mcp_start.unwrap_or(workflow.len())])
 }
 
+fn cli_smoke_section(workflow: &str) -> Option<&str> {
+    let start = workflow.find("  e2e-cli-smoke:")?;
+    Some(&workflow[start..])
+}
+
 fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> ContractDecision {
     let mut raw_reasons = Vec::new();
 
@@ -100,6 +111,10 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
 
         if !workflow_text.contains("branches:") || !workflow_text.contains("- main") {
             add_reason(&mut raw_reasons, "push_main_branch_scope_missing");
+        }
+
+        if !workflow_text.contains("pull_request:") {
+            add_reason(&mut raw_reasons, "pull_request_trigger_missing");
         }
 
         let sdk = sdk_direct_section(workflow_text);
@@ -149,6 +164,33 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
         }
     }
 
+    let cli_section = if workflow_text.is_empty() {
+        None
+    } else {
+        let cli = cli_smoke_section(workflow_text);
+        if cli.is_none() {
+            add_reason(&mut raw_reasons, "cli_smoke_job_missing");
+        }
+        cli
+    };
+
+    if let Some(cli) = cli_section {
+        if !cli.contains("github.event_name == 'pull_request'") {
+            add_reason(&mut raw_reasons, "cli_smoke_pr_scope_missing");
+        }
+
+        if !cli.contains(CLI_SMOKE_SCENARIOS) {
+            add_reason(&mut raw_reasons, "cli_smoke_scenarios_not_smoke_slice");
+        }
+
+        if !cli.contains("bash scripts/ci/run_with_retry.sh")
+            || !cli.contains("--label e2e-cli-smoke-live")
+            || !cli.contains("--max-attempts 2")
+        {
+            add_reason(&mut raw_reasons, "cli_smoke_retry_wrapper_missing");
+        }
+    }
+
     if !strategy_text.is_empty()
         && STRATEGY_REQUIRED_MARKERS
             .iter()
@@ -184,7 +226,7 @@ fn unit_e2e_live_workflow_lane_reason_taxonomy_markers_remain_deterministic() {
     );
     assert_eq!(
         REASON_CODES_CSV,
-        "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing"
+        "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing"
     );
 }
 
@@ -258,6 +300,22 @@ fn regression_e2e_live_workflow_lane_rejects_missing_push_main_branch_scope() {
 }
 
 #[test]
+fn regression_e2e_live_workflow_lane_rejects_missing_pull_request_trigger() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen("  pull_request:\n", "", 1);
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(decision.reason_codes_value, "pull_request_trigger_missing");
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
 fn regression_e2e_live_workflow_lane_rejects_truncated_scenario_matrix() {
     let root = repo_root();
     let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
@@ -312,5 +370,24 @@ fn regression_e2e_live_workflow_lane_rejects_missing_strategy_markers() {
     assert_eq!(decision.status, "fail");
     assert_eq!(decision.final_decision, "NO-GO");
     assert_eq!(decision.reason_codes_value, "ci_strategy_markers_missing");
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
+fn regression_e2e_live_workflow_lane_rejects_missing_cli_smoke_retry_wrapper() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen("          bash scripts/ci/run_with_retry.sh \\\n", "", 1);
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(
+        decision.reason_codes_value,
+        "cli_smoke_retry_wrapper_missing"
+    );
     assert_eq!(decision.contract_status, "violation");
 }
