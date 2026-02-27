@@ -9,6 +9,11 @@ const WS_PRESENCE_DEFAULT_GATEWAY_NODE: &str = "service-api-gateway";
 const WS_PRESENCE_DEFAULT_CONNECTED_SINCE_EPOCH_SECONDS: u64 = 1_709_000_000;
 const WS_EVENT_BUFFER_CAPACITY: usize = 256;
 const WS_EVENT_MESSAGE_CREATED: &str = "service-api.message.created";
+const WS_EVENT_CHANNEL_CREATED: &str = "service-api.channel.created";
+const WS_EVENT_TASK_CREATED: &str = "service-api.task.created";
+const WS_EVENT_TASK_TRANSITIONED: &str = "service-api.task.transitioned";
+const WS_EVENT_BRIDGE_SUBMITTED: &str = "service-api.bridge.submitted";
+const WS_EVENT_BRIDGE_FORWARDED: &str = "service-api.bridge.forwarded";
 const WS_HEARTBEAT_PING_INTERVAL: Duration = Duration::from_millis(1_000);
 const WS_HEARTBEAT_STALE_TIMEOUT: Duration = Duration::from_millis(3_000);
 
@@ -37,6 +42,36 @@ struct ServiceApiWebsocketMessageLifecycleBody {
     sender_did: Option<String>,
     recipient_did: Option<String>,
     channel_id: Option<String>,
+    sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketChannelLifecycleBody {
+    event: &'static str,
+    channel_id: String,
+    status: String,
+    sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketTaskLifecycleBody {
+    event: &'static str,
+    task_id: String,
+    state: String,
+    sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketBridgeLifecycleBody {
+    event: &'static str,
+    bridge_id: String,
+    bridge_status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_message_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    target_message_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    forward_tx_hash: Option<String>,
     sequence: u64,
 }
 
@@ -80,6 +115,67 @@ impl ServiceApiWebsocketEventFanout {
             sender_did: sender_did.map(str::to_owned),
             recipient_did: recipient_did.map(str::to_owned),
             channel_id: channel_id.map(str::to_owned),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_channel_created_event(&self, payload: &ServiceApiChannelCreateBody) {
+        let event = ServiceApiWebsocketChannelLifecycleBody {
+            event: WS_EVENT_CHANNEL_CREATED,
+            channel_id: payload.channel_id.clone(),
+            status: payload.status.clone(),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_task_created_event(&self, payload: &ServiceApiTaskCreateBody) {
+        let event = ServiceApiWebsocketTaskLifecycleBody {
+            event: WS_EVENT_TASK_CREATED,
+            task_id: payload.task_id.clone(),
+            state: payload.state.clone(),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_task_transitioned_event(&self, payload: &ServiceApiTaskTransitionBody) {
+        let event = ServiceApiWebsocketTaskLifecycleBody {
+            event: WS_EVENT_TASK_TRANSITIONED,
+            task_id: payload.task_id.clone(),
+            state: payload.state.clone(),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_bridge_submitted_event(&self, payload: &ServiceApiBridgeSubmitBody) {
+        let event = ServiceApiWebsocketBridgeLifecycleBody {
+            event: WS_EVENT_BRIDGE_SUBMITTED,
+            bridge_id: payload.bridge_id.clone(),
+            bridge_status: payload.bridge_status.clone(),
+            source_message_id: Some(payload.source_message_id.clone()),
+            target_message_id: None,
+            forward_tx_hash: None,
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_bridge_forwarded_event(&self, payload: &ServiceApiBridgeStatusBody) {
+        let event = ServiceApiWebsocketBridgeLifecycleBody {
+            event: WS_EVENT_BRIDGE_FORWARDED,
+            bridge_id: payload.bridge_id.clone(),
+            bridge_status: payload.bridge_status.clone(),
+            source_message_id: None,
+            target_message_id: Some(payload.target_message_id.clone()),
+            forward_tx_hash: Some(payload.forward_tx_hash.clone()),
             sequence: self.next_sequence(),
         };
         let event_payload = super::serialize_service_api_json(&event);

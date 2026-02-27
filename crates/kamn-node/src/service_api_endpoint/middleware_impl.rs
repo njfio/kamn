@@ -365,11 +365,16 @@ pub(super) async fn handle_service_api_http_route(
             message_store.create_channel(context.parsed_request.body.as_str())
         };
         return match create_result {
-            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
-                status_code: 201,
-                content_type: "application/json",
-                body: super::serialize_service_api_json(&payload),
-            }),
+            Ok(payload) => {
+                state
+                    .websocket_events
+                    .publish_channel_created_event(&payload);
+                super::payload::contract_response(ServiceApiEndpointResponse {
+                    status_code: 201,
+                    content_type: "application/json",
+                    body: super::serialize_service_api_json(&payload),
+                })
+            }
             Err(error) => super::payload::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
@@ -385,11 +390,14 @@ pub(super) async fn handle_service_api_http_route(
             message_store.create_task(context.parsed_request.body.as_str())
         };
         return match create_result {
-            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
-                status_code: 201,
-                content_type: "application/json",
-                body: super::serialize_service_api_json(&payload),
-            }),
+            Ok(payload) => {
+                state.websocket_events.publish_task_created_event(&payload);
+                super::payload::contract_response(ServiceApiEndpointResponse {
+                    status_code: 201,
+                    content_type: "application/json",
+                    body: super::serialize_service_api_json(&payload),
+                })
+            }
             Err(error) => super::payload::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
@@ -426,11 +434,16 @@ pub(super) async fn handle_service_api_http_route(
             message_store.submit_bridge(context.parsed_request.body.as_str())
         };
         return match submit_result {
-            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
-                status_code: 202,
-                content_type: "application/json",
-                body: super::serialize_service_api_json(&payload),
-            }),
+            Ok(payload) => {
+                state
+                    .websocket_events
+                    .publish_bridge_submitted_event(&payload);
+                super::payload::contract_response(ServiceApiEndpointResponse {
+                    status_code: 202,
+                    content_type: "application/json",
+                    body: super::serialize_service_api_json(&payload),
+                })
+            }
             Err(error) => super::payload::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
@@ -570,6 +583,9 @@ pub(super) async fn handle_service_api_http_route(
             };
             return match transition_result {
                 Ok(Some(payload)) => {
+                    state
+                        .websocket_events
+                        .publish_task_transitioned_event(&payload);
                     super::payload::contract_response(ServiceApiEndpointResponse {
                         status_code: 200,
                         content_type: "application/json",
@@ -599,6 +615,9 @@ pub(super) async fn handle_service_api_http_route(
             };
             return match transition_result {
                 Ok(Some(payload)) => {
+                    state
+                        .websocket_events
+                        .publish_task_transitioned_event(&payload);
                     super::payload::contract_response(ServiceApiEndpointResponse {
                         status_code: 200,
                         content_type: "application/json",
@@ -715,6 +734,9 @@ pub(super) async fn handle_service_api_http_route(
             };
             return match forward_result {
                 Ok(Some(payload)) => {
+                    state
+                        .websocket_events
+                        .publish_bridge_forwarded_event(&payload);
                     super::payload::contract_response(ServiceApiEndpointResponse {
                         status_code: 200,
                         content_type: "application/json",
