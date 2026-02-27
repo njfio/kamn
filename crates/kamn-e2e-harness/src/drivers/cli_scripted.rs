@@ -1,11 +1,11 @@
-use crate::drivers::shared::{
-    env_var_or_default, env_var_or_else,
-    is_live_bound_scenario_id as shared_is_live_bound_scenario_id,
+use crate::drivers::shared_helpers::{
+    env_var_or_default, env_var_or_else, is_live_bound_scenario_id,
     live_execution_enabled_from_env as shared_live_execution_enabled_from_env,
-    live_s07_probe_agent_suffix as shared_live_s07_probe_agent_suffix,
-    parse_s15_budget_env_u128 as shared_parse_s15_budget_env_u128,
-    validate_s07_replay_reason_marker as shared_validate_s07_replay_reason_marker,
-    validate_s15_latency_budget_samples as shared_validate_s15_latency_budget_samples,
+    live_s07_probe_agent_suffix, parse_s15_budget_env_u128,
+    validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
+    validate_s12_content_field_coherence, validate_s12_content_id_match,
+    validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
+    validate_s15_latency_budget_samples,
 };
 use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
@@ -60,7 +60,6 @@ const DEFAULT_S15_ITERATIONS: u64 = 3;
 const DEFAULT_S15_MAX_TOTAL_MILLIS: u128 = 5_000;
 const DEFAULT_S15_MAX_P50_MILLIS: u128 = 2_500;
 const DEFAULT_S15_MAX_P99_MILLIS: u128 = 5_000;
-const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -273,17 +272,8 @@ impl CliScriptedDriver {
     }
 }
 
-fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
-    shared_is_live_bound_scenario_id(scenario_id)
-}
-
 fn live_execution_enabled_from_env() -> bool {
     shared_live_execution_enabled_from_env(CLI_SCRIPTED_LIVE_ENV)
-}
-
-#[cfg(test)]
-fn parse_bool_flag(value: &str) -> bool {
-    crate::drivers::shared::parse_bool_flag(value)
 }
 
 fn run_live_s01_cli_health_probe() -> Result<(), String> {
@@ -776,24 +766,9 @@ fn run_live_s05_cli_escrow_settlement_probe() -> Result<(), String> {
         escrow_id.as_str(),
         released_escrow_id,
         release_state,
+        "cli live s05 release-escrow",
     )?;
 
-    Ok(())
-}
-
-fn validate_live_s05_release_escrow_response(
-    expected_escrow_id: &str,
-    released_escrow_id: &str,
-    release_state: &str,
-) -> Result<(), String> {
-    if released_escrow_id != expected_escrow_id {
-        return Err(format!(
-            "cli live s05 release-escrow returned mismatched escrow_id: expected={expected_escrow_id}, got={released_escrow_id}"
-        ));
-    }
-    if release_state.trim().is_empty() {
-        return Err("cli live s05 release-escrow returned empty state".to_owned());
-    }
     Ok(())
 }
 
@@ -1986,60 +1961,6 @@ fn validate_s08_query_message_response(
     Ok(())
 }
 
-fn validate_s12_content_id_match(
-    expected_content_id: &str,
-    observed_content_id: &str,
-    step: &str,
-) -> Result<(), String> {
-    if observed_content_id != expected_content_id {
-        return Err(format!(
-            "{step} returned mismatched content_id: expected={expected_content_id}, got={observed_content_id}"
-        ));
-    }
-    Ok(())
-}
-
-fn validate_s12_content_field_coherence(
-    expected_field_value: &str,
-    observed_field_value: &str,
-    field_name: &str,
-    step: &str,
-) -> Result<(), String> {
-    if observed_field_value != expected_field_value {
-        return Err(format!(
-            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
-        ));
-    }
-    Ok(())
-}
-
-fn validate_s13_bridge_id_match(
-    expected_bridge_id: &str,
-    observed_bridge_id: &str,
-    step: &str,
-) -> Result<(), String> {
-    if observed_bridge_id != expected_bridge_id {
-        return Err(format!(
-            "{step} returned mismatched bridge_id: expected={expected_bridge_id}, got={observed_bridge_id}"
-        ));
-    }
-    Ok(())
-}
-
-fn validate_s13_bridge_field_coherence(
-    expected_field_value: &str,
-    observed_field_value: &str,
-    field_name: &str,
-    step: &str,
-) -> Result<(), String> {
-    if observed_field_value != expected_field_value {
-        return Err(format!(
-            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
-        ));
-    }
-    Ok(())
-}
-
 fn validate_s14_cli_verify_proof_response(
     output: &str,
     expected_message_id: &str,
@@ -2077,37 +1998,6 @@ fn validate_s14_cli_verify_proof_response(
     }
 
     Ok(())
-}
-
-fn parse_s15_budget_env_u128(
-    env_key: &str,
-    default_value: u128,
-    step: &str,
-) -> Result<u128, String> {
-    shared_parse_s15_budget_env_u128(env_key, default_value, step)
-}
-
-fn validate_s15_latency_budget_samples(
-    samples_millis: &[u128],
-    total_elapsed_millis: u128,
-    max_total_millis: u128,
-    max_p50_millis: u128,
-    max_p99_millis: u128,
-    step: &str,
-) -> Result<(), String> {
-    shared_validate_s15_latency_budget_samples(
-        samples_millis,
-        total_elapsed_millis,
-        max_total_millis,
-        max_p50_millis,
-        max_p99_millis,
-        step,
-    )
-}
-
-#[cfg(test)]
-fn percentile_index(sample_count: usize, percentile: u128) -> usize {
-    crate::drivers::shared::percentile_index(sample_count, percentile)
 }
 
 fn run_cli_command_capture_stdout(
@@ -2206,34 +2096,25 @@ fn parse_text_output_field<'a>(output: &'a str, key: &str) -> Option<&'a str> {
     })
 }
 
-fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
-    shared_validate_s07_replay_reason_marker(replay_error, step, S07_REPLAY_REASON_MARKER)
-}
-
-fn live_s07_probe_agent_suffix() -> String {
-    shared_live_s07_probe_agent_suffix()
-}
-
 #[cfg(test)]
 mod tests {
     use super::env;
     use super::{
-        live_execution_enabled_from_env, parse_bool_flag, parse_s15_budget_env_u128,
-        parse_text_output_field, percentile_index, run_cli_command_capture_stdout,
-        run_live_s01_cli_health_probe, run_live_s02_cli_direct_message_probe,
-        run_live_s03_cli_group_channel_probe, run_live_s04_cli_task_lifecycle_probe,
-        run_live_s05_cli_escrow_settlement_probe, run_live_s06_cli_proof_verification_probe,
-        run_live_s07_cli_replay_protection_probe, run_live_s08_cli_crash_recovery_probe,
-        run_live_s09_cli_transport_failover_probe, run_live_s10_cli_topology_coherence_probe,
-        run_live_s11_cli_signer_rotation_probe, run_live_s12_cli_retention_deletion_probe,
-        run_live_s13_cli_bridge_forwarding_probe, run_live_s14_cli_batch_merkle_probe,
-        run_live_s15_cli_performance_smoke_probe, validate_live_s05_release_escrow_response,
-        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, validate_s12_content_field_coherence,
-        validate_s12_content_id_match, validate_s13_bridge_field_coherence,
-        validate_s13_bridge_id_match, validate_s14_cli_verify_proof_response,
-        validate_s15_latency_budget_samples, CliScriptedDriver, CLI_BINARY_ENV,
-        CLI_SCRIPTED_LIVE_ENV,
+        live_execution_enabled_from_env, parse_s15_budget_env_u128, parse_text_output_field,
+        run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
+        run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
+        run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
+        run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
+        run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
+        run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
+        run_live_s12_cli_retention_deletion_probe, run_live_s13_cli_bridge_forwarding_probe,
+        run_live_s14_cli_batch_merkle_probe, run_live_s15_cli_performance_smoke_probe,
+        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response,
+        validate_s12_content_field_coherence, validate_s12_content_id_match,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
+        validate_s14_cli_verify_proof_response, validate_s15_latency_budget_samples,
+        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -2305,14 +2186,20 @@ mod tests {
     #[test]
     fn unit_parse_bool_flag_accepts_true_like_values() {
         for value in ["1", "true", "TRUE", "yes", "on"] {
-            assert!(parse_bool_flag(value), "expected truthy for {value}");
+            assert!(
+                crate::drivers::shared_helpers::parse_bool_flag(value),
+                "expected truthy for {value}"
+            );
         }
     }
 
     #[test]
     fn unit_parse_bool_flag_rejects_false_like_values() {
         for value in ["0", "false", "off", "no", ""] {
-            assert!(!parse_bool_flag(value), "expected falsey for {value}");
+            assert!(
+                !crate::drivers::shared_helpers::parse_bool_flag(value),
+                "expected falsey for {value}"
+            );
         }
     }
 
@@ -2510,8 +2397,13 @@ else:
 
     #[test]
     fn unit_validate_live_s05_release_escrow_response_rejects_mismatched_escrow_id() {
-        let error = validate_live_s05_release_escrow_response("escrow-a", "escrow-b", "released")
-            .expect_err("mismatched escrow ids should fail");
+        let error = validate_live_s05_release_escrow_response(
+            "escrow-a",
+            "escrow-b",
+            "released",
+            "cli live s05 release-escrow",
+        )
+        .expect_err("mismatched escrow ids should fail");
         assert!(
             error.contains("mismatched escrow_id"),
             "error should describe escrow-id mismatch: {error}",
@@ -3063,7 +2955,7 @@ else:
     #[test]
     fn unit_percentile_index_returns_expected_midpoint_index() {
         assert_eq!(
-            percentile_index(3, 50),
+            crate::drivers::shared_helpers::percentile_index(3, 50),
             1,
             "len=3 and p50 should map to middle sample index",
         );
@@ -3072,7 +2964,7 @@ else:
     #[test]
     fn unit_percentile_index_clamps_percentile_above_hundred_to_last_index() {
         assert_eq!(
-            percentile_index(3, 150),
+            crate::drivers::shared_helpers::percentile_index(3, 150),
             2,
             "percentiles above 100 should clamp to the last sample index",
         );
