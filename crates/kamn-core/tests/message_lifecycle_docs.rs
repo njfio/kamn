@@ -39,8 +39,9 @@ fn doc_contains_snapshot_persistence_and_restore_contract_rules() {
 #[test]
 fn regression_requires_active_record_ttl_expiry_rule() {
     // Regression: #563
-    assert!(DOC.contains("Expiry APIs only transition active records"));
-    assert!(DOC.contains("`Included`, `Delivered`) to `Expired`."));
+    assert!(DOC.contains("Expiry APIs only transition expirable records"));
+    assert!(DOC.contains("`Validated`, `Rejected`) to `Expired`."));
+    assert!(DOC.contains("Regression: #6115"));
 }
 
 #[test]
