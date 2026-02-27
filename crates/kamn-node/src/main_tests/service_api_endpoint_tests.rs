@@ -7900,6 +7900,272 @@ fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_
 }
 
 #[test]
+fn regression_service_api_endpoint_websocket_stream_delivers_channel_task_bridge_events_after_upgrade(
+) {
+    // Regression: #6137
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34072".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 8,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let websocket_sender_did = "kamn:did:agent:ws-fanout-client";
+    let websocket_signature = service_api_request_signature_for_fields(
+        websocket_sender_did,
+        711,
+        state_hash.as_str(),
+        "",
+    );
+
+    let post_bind_addr = bind_addr.clone();
+    let post_state_hash = state_hash.clone();
+    let post_thread = thread::spawn(move || {
+        thread::sleep(Duration::from_millis(75));
+
+        let channel_body = r#"{"name":"ws-fanout-channel"}"#;
+        let channel_sender_did = "kamn:did:agent:ws-fanout-publisher-channel";
+        let channel_signature = service_api_request_signature_for_fields(
+            channel_sender_did,
+            712,
+            &post_state_hash,
+            channel_body,
+        );
+        let channel_response = send_http_request_with_headers(
+            post_bind_addr.as_str(),
+            "POST",
+            "/v1/channels/create",
+            channel_body,
+            &[
+                ("X-KAMN-Sender-DID", channel_sender_did),
+                ("X-KAMN-Request-Nonce", "712"),
+                ("X-KAMN-Request-Signature", channel_signature.as_str()),
+            ],
+        );
+
+        let task_body = r#"{"task":"ws-fanout-task"}"#;
+        let task_sender_did = "kamn:did:agent:ws-fanout-publisher-task";
+        let task_signature = service_api_request_signature_for_fields(
+            task_sender_did,
+            713,
+            &post_state_hash,
+            task_body,
+        );
+        let task_response = send_http_request_with_headers(
+            post_bind_addr.as_str(),
+            "POST",
+            "/v1/tasks/create",
+            task_body,
+            &[
+                ("X-KAMN-Sender-DID", task_sender_did),
+                ("X-KAMN-Request-Nonce", "713"),
+                ("X-KAMN-Request-Signature", task_signature.as_str()),
+            ],
+        );
+        let task_payload: Value =
+            parse_service_api_payload(extract_http_response_body(task_response.as_str()))
+                .expect("task payload should deserialize");
+        let task_id = task_payload["task_id"]
+            .as_str()
+            .expect("task id should be present")
+            .to_owned();
+
+        let accept_path = format!("/v1/tasks/{task_id}/accept");
+        let accept_sender_did = "kamn:did:agent:ws-fanout-publisher-task-accept";
+        let accept_signature =
+            service_api_request_signature_for_fields(accept_sender_did, 714, &post_state_hash, "");
+        let accept_response = send_http_request_with_headers(
+            post_bind_addr.as_str(),
+            "POST",
+            accept_path.as_str(),
+            "",
+            &[
+                ("X-KAMN-Sender-DID", accept_sender_did),
+                ("X-KAMN-Request-Nonce", "714"),
+                ("X-KAMN-Request-Signature", accept_signature.as_str()),
+            ],
+        );
+
+        let bridge_submit_body = r#"{"source_message_id":"msg-ws-fanout-source"}"#;
+        let bridge_submit_sender_did = "kamn:did:agent:ws-fanout-publisher-bridge-submit";
+        let bridge_submit_signature = service_api_request_signature_for_fields(
+            bridge_submit_sender_did,
+            715,
+            &post_state_hash,
+            bridge_submit_body,
+        );
+        let bridge_submit_response = send_http_request_with_headers(
+            post_bind_addr.as_str(),
+            "POST",
+            "/v1/bridge/submit",
+            bridge_submit_body,
+            &[
+                ("X-KAMN-Sender-DID", bridge_submit_sender_did),
+                ("X-KAMN-Request-Nonce", "715"),
+                ("X-KAMN-Request-Signature", bridge_submit_signature.as_str()),
+            ],
+        );
+        let bridge_submit_payload: Value =
+            parse_service_api_payload(extract_http_response_body(bridge_submit_response.as_str()))
+                .expect("bridge submit payload should deserialize");
+        let bridge_id = bridge_submit_payload["bridge_id"]
+            .as_str()
+            .expect("bridge id should be present")
+            .to_owned();
+
+        let bridge_forward_path = format!("/v1/bridge/{bridge_id}/forward");
+        let bridge_forward_sender_did = "kamn:did:agent:ws-fanout-publisher-bridge-forward";
+        let bridge_forward_signature = service_api_request_signature_for_fields(
+            bridge_forward_sender_did,
+            716,
+            &post_state_hash,
+            "",
+        );
+        let bridge_forward_response = send_http_request_with_headers(
+            post_bind_addr.as_str(),
+            "POST",
+            bridge_forward_path.as_str(),
+            "",
+            &[
+                ("X-KAMN-Sender-DID", bridge_forward_sender_did),
+                ("X-KAMN-Request-Nonce", "716"),
+                (
+                    "X-KAMN-Request-Signature",
+                    bridge_forward_signature.as_str(),
+                ),
+            ],
+        );
+
+        (
+            channel_response,
+            task_response,
+            accept_response,
+            bridge_submit_response,
+            bridge_forward_response,
+        )
+    });
+
+    let websocket_response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", websocket_sender_did),
+            ("X-KAMN-Request-Nonce", "711"),
+            ("X-KAMN-Request-Signature", websocket_signature.as_str()),
+        ],
+    );
+
+    let (
+        channel_response,
+        task_response,
+        accept_response,
+        bridge_submit_response,
+        bridge_forward_response,
+    ) = post_thread
+        .join()
+        .expect("post request thread should complete");
+
+    assert!(
+        channel_response.contains("HTTP/1.1 201 Created"),
+        "channel create request should be accepted: {channel_response}"
+    );
+    assert!(
+        task_response.contains("HTTP/1.1 201 Created"),
+        "task create request should be accepted: {task_response}"
+    );
+    assert!(
+        accept_response.contains("HTTP/1.1 200 OK"),
+        "task accept request should be accepted: {accept_response}"
+    );
+    assert!(
+        bridge_submit_response.contains("HTTP/1.1 202 Accepted"),
+        "bridge submit request should be accepted: {bridge_submit_response}"
+    );
+    assert!(
+        bridge_forward_response.contains("HTTP/1.1 200 OK"),
+        "bridge forward request should be accepted: {bridge_forward_response}"
+    );
+
+    let (_header, frames) = parse_websocket_response_frames(websocket_response.as_slice());
+    let event_names = frames
+        .iter()
+        .filter_map(|frame| {
+            let payload: Value = serde_json::from_str(frame).ok()?;
+            payload
+                .get("event")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        })
+        .collect::<Vec<String>>();
+    assert!(
+        event_names
+            .iter()
+            .any(|event| event == "service-api.channel.created"),
+        "websocket stream should include channel-created event frames: {frames:?}"
+    );
+    assert!(
+        event_names
+            .iter()
+            .any(|event| event == "service-api.task.created"),
+        "websocket stream should include task-created event frames: {frames:?}"
+    );
+    assert!(
+        event_names
+            .iter()
+            .any(|event| event == "service-api.task.transitioned"),
+        "websocket stream should include task-transitioned event frames: {frames:?}"
+    );
+    assert!(
+        event_names
+            .iter()
+            .any(|event| event == "service-api.bridge.submitted"),
+        "websocket stream should include bridge-submitted event frames: {frames:?}"
+    );
+    assert!(
+        event_names
+            .iter()
+            .any(|event| event == "service-api.bridge.forwarded"),
+        "websocket stream should include bridge-forwarded event frames: {frames:?}"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    let ended_cleanly_or_timeout = match &server_result {
+        Ok(()) => true,
+        Err(error) => error.contains("service api timed out after"),
+    };
+    assert!(
+        ended_cleanly_or_timeout,
+        "service api endpoint should end via request budget completion or idle-timeout fail-close after websocket fanout regression test: {server_result:?}"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event() {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
