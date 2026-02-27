@@ -1,11 +1,8 @@
 //! Channel model contracts covering membership, admin policy, and snapshot recovery.
 
-use crate::{
-    snapshot_journal::{
-        decode_journal_hex, encode_journal_hex, parse_snapshot_journal_record,
-        snapshot_journal_path,
-    },
-    AgentDid, SqliteStoreBackend, SqliteStoreBackendError,
+use crate::{AgentDid, SqliteStoreBackend, SqliteStoreBackendError};
+use kamn_snapshot_journal::{
+    decode_journal_hex, encode_journal_hex, parse_snapshot_journal_record, snapshot_journal_path,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
