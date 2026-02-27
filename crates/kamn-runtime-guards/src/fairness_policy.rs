@@ -93,3 +93,104 @@ pub fn evaluate_fairness_policy(input: &FairnessPolicyInput) -> FairnessPolicyDe
     }
     FairnessPolicyDecision::Allow
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_input() -> FairnessPolicyInput {
+        FairnessPolicyInput {
+            scope: "control_plane".to_owned(),
+            window_seconds: 60,
+            active_weighted_share: 3,
+            max_weighted_share_gap: 5,
+        }
+    }
+
+    #[test]
+    fn spec_c05_fairness_policy_rejects_unknown_scope() {
+        let mut input = valid_input();
+        input.scope = "unknown".to_owned();
+        let decision = evaluate_fairness_policy(&input);
+        assert_eq!(
+            decision,
+            FairnessPolicyDecision::Reject {
+                reason: FairnessPolicyViolationReason::ScopeUnknown,
+            }
+        );
+        assert_eq!(
+            FairnessPolicyViolationReason::ScopeUnknown.as_str(),
+            "fairness_scope_unknown"
+        );
+    }
+
+    #[test]
+    fn spec_c06_fairness_policy_rejects_non_positive_window() {
+        let mut input = valid_input();
+        input.window_seconds = 0;
+        let decision = evaluate_fairness_policy(&input);
+        assert_eq!(
+            decision,
+            FairnessPolicyDecision::Reject {
+                reason: FairnessPolicyViolationReason::WindowNonPositive,
+            }
+        );
+        assert_eq!(
+            FairnessPolicyViolationReason::WindowNonPositive.as_str(),
+            "fairness_window_non_positive"
+        );
+    }
+
+    #[test]
+    fn spec_c07_fairness_policy_rejects_non_positive_max_gap() {
+        let mut input = valid_input();
+        input.max_weighted_share_gap = 0;
+        let decision = evaluate_fairness_policy(&input);
+        assert_eq!(
+            decision,
+            FairnessPolicyDecision::Reject {
+                reason: FairnessPolicyViolationReason::MaxGapNonPositive,
+            }
+        );
+        assert_eq!(
+            FairnessPolicyViolationReason::MaxGapNonPositive.as_str(),
+            "fairness_max_gap_non_positive"
+        );
+    }
+
+    #[test]
+    fn spec_c08_fairness_policy_rejects_gap_exceeded_and_allows_boundary() {
+        let mut over_gap = valid_input();
+        over_gap.active_weighted_share = 6;
+        let over_gap_decision = evaluate_fairness_policy(&over_gap);
+        assert_eq!(
+            over_gap_decision,
+            FairnessPolicyDecision::Reject {
+                reason: FairnessPolicyViolationReason::WeightedShareExceedsGap,
+            }
+        );
+        assert_eq!(
+            FairnessPolicyViolationReason::WeightedShareExceedsGap.as_str(),
+            "fairness_weighted_share_exceeds_gap"
+        );
+
+        let mut boundary = valid_input();
+        boundary.active_weighted_share = boundary.max_weighted_share_gap;
+        assert_eq!(
+            evaluate_fairness_policy(&boundary),
+            FairnessPolicyDecision::Allow
+        );
+    }
+
+    #[test]
+    fn fairness_policy_reason_helpers_expose_deterministic_markers() {
+        assert_eq!(
+            fairness_policy_reason_taxonomy_version(),
+            "kamn.runtime.fairness-policy-reason-taxonomy.v1"
+        );
+        assert_eq!(
+            fairness_policy_reason_codes_csv(),
+            "fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap"
+        );
+    }
+}

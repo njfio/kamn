@@ -93,3 +93,101 @@ pub fn evaluate_quota_policy(input: &QuotaPolicyInput) -> QuotaPolicyDecision {
     }
     QuotaPolicyDecision::Allow
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_input() -> QuotaPolicyInput {
+        QuotaPolicyInput {
+            scope: "processor_ingress".to_owned(),
+            window_seconds: 60,
+            limit: 10,
+            observed_count: 5,
+        }
+    }
+
+    #[test]
+    fn spec_c01_quota_policy_rejects_unknown_scope() {
+        let mut input = valid_input();
+        input.scope = "unknown".to_owned();
+        let decision = evaluate_quota_policy(&input);
+        assert_eq!(
+            decision,
+            QuotaPolicyDecision::Reject {
+                reason: QuotaPolicyViolationReason::ScopeUnknown,
+            }
+        );
+        assert_eq!(
+            QuotaPolicyViolationReason::ScopeUnknown.as_str(),
+            "quota_scope_unknown"
+        );
+    }
+
+    #[test]
+    fn spec_c02_quota_policy_rejects_non_positive_window() {
+        let mut input = valid_input();
+        input.window_seconds = 0;
+        let decision = evaluate_quota_policy(&input);
+        assert_eq!(
+            decision,
+            QuotaPolicyDecision::Reject {
+                reason: QuotaPolicyViolationReason::QuotaWindowNonPositive,
+            }
+        );
+        assert_eq!(
+            QuotaPolicyViolationReason::QuotaWindowNonPositive.as_str(),
+            "quota_window_non_positive"
+        );
+    }
+
+    #[test]
+    fn spec_c03_quota_policy_rejects_non_positive_limit() {
+        let mut input = valid_input();
+        input.limit = 0;
+        let decision = evaluate_quota_policy(&input);
+        assert_eq!(
+            decision,
+            QuotaPolicyDecision::Reject {
+                reason: QuotaPolicyViolationReason::QuotaLimitNonPositive,
+            }
+        );
+        assert_eq!(
+            QuotaPolicyViolationReason::QuotaLimitNonPositive.as_str(),
+            "quota_limit_non_positive"
+        );
+    }
+
+    #[test]
+    fn spec_c04_quota_policy_rejects_limit_exceeded_and_allows_boundary() {
+        let mut over_limit = valid_input();
+        over_limit.observed_count = 11;
+        let over_limit_decision = evaluate_quota_policy(&over_limit);
+        assert_eq!(
+            over_limit_decision,
+            QuotaPolicyDecision::Reject {
+                reason: QuotaPolicyViolationReason::QuotaLimitExceeded,
+            }
+        );
+        assert_eq!(
+            QuotaPolicyViolationReason::QuotaLimitExceeded.as_str(),
+            "quota_limit_exceeded"
+        );
+
+        let mut boundary = valid_input();
+        boundary.observed_count = boundary.limit;
+        assert_eq!(evaluate_quota_policy(&boundary), QuotaPolicyDecision::Allow);
+    }
+
+    #[test]
+    fn quota_policy_reason_helpers_expose_deterministic_markers() {
+        assert_eq!(
+            quota_policy_reason_taxonomy_version(),
+            "kamn.runtime.quota-policy-reason-taxonomy.v1"
+        );
+        assert_eq!(
+            quota_policy_reason_codes_csv(),
+            "quota_scope_unknown,quota_window_non_positive,quota_limit_non_positive,quota_limit_exceeded"
+        );
+    }
+}
