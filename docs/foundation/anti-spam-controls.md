@@ -19,7 +19,8 @@ This document captures the first implementation slice for anti-spam controls and
 - Suspension policy:
   - repeated rate-limit violations trigger temporary sender suspension.
 - Replay/spam guard:
-  - duplicate message IDs are rejected deterministically.
+  - duplicate message IDs are rejected deterministically while retained.
+  - retained duplicate-tracking memory is bounded by `max_seen_message_ids` with FIFO eviction.
 
 ## Telemetry Surface
 `AntiSpamTelemetry` tracks:
@@ -31,7 +32,7 @@ This document captures the first implementation slice for anti-spam controls and
 - rejected due to duplicate message ID
 
 ## Validation and Error Handling
-- Config rejects zero/invalid thresholds.
+- Config rejects zero/invalid thresholds (including `max_seen_message_ids`).
 - Sender DID must use `kamn:did:agent:*` format.
 - Empty message IDs are rejected.
 - Invalid inputs produce explicit typed errors.
