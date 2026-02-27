@@ -5,6 +5,7 @@
 pub mod commands;
 
 const DEFAULT_ENDPOINT: &str = "http://localhost:8080";
+const HELP_TEXT: &str = "Usage: kamn-cli <command> [--endpoint <url>] [--format <json|text>] [args...]\n\nGlobal flags:\n  --help, -h        Show this help output\n  --endpoint <url>  KAMN service endpoint (default: http://localhost:8080)\n  --format <mode>   Output mode: json | text (default: json)\n\nCommands:\n  register\n  send-message\n  create-channel\n  list-messages\n  query-message\n  query-task\n  query-agent-profile\n  register-content\n  expire-content\n  tombstone-content\n  query-content\n  submit-bridge-message\n  forward-bridge-message\n  query-bridge-message\n  create-task\n  accept-task\n  complete-task\n  fund-escrow\n  release-escrow\n  verify-proof\n  health";
 
 /// Output format for CLI responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -137,6 +138,22 @@ fn env_var_or_default(key: &str, default: &str) -> String {
     }
 }
 
+/// Returns deterministic usage/help output for the CLI command surface.
+pub fn render_help_text() -> &'static str {
+    HELP_TEXT
+}
+
+/// Returns true when CLI arguments request help output.
+pub fn is_help_request<I, S>(args: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let mut iter = args.into_iter();
+    let _ = iter.next();
+    iter.any(|token| matches!(token.as_ref(), "--help" | "-h" | "help"))
+}
+
 /// Parses CLI arguments for phase-2 command surface contracts.
 pub fn parse_cli_args<I, S>(args: I) -> Result<ParsedCliArgs, String>
 where
@@ -227,7 +244,7 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib:
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_cli_args, OutputFormat};
+    use super::{is_help_request, parse_cli_args, render_help_text, OutputFormat};
 
     #[test]
     fn unit_cli_parser_honors_endpoint_flag() {
@@ -235,5 +252,25 @@ mod tests {
             .expect("parsed");
         assert_eq!(parsed.endpoint, "http://localhost:8080");
         assert_eq!(parsed.output_format, OutputFormat::Json);
+    }
+
+    #[test]
+    fn unit_is_help_request_detects_help_tokens() {
+        assert!(is_help_request(["kamn-cli", "--help"]));
+        assert!(is_help_request(["kamn-cli", "-h"]));
+        assert!(is_help_request(["kamn-cli", "help"]));
+        assert!(is_help_request(["kamn-cli", "health", "--help"]));
+        assert!(!is_help_request(["kamn-cli", "health"]));
+    }
+
+    #[test]
+    fn unit_render_help_text_contains_usage_and_flags() {
+        let help = render_help_text();
+        for marker in ["Usage:", "--endpoint", "--format", "send-message", "health"] {
+            assert!(
+                help.contains(marker),
+                "help output should contain marker `{marker}`: {help}"
+            );
+        }
     }
 }
