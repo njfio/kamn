@@ -243,3 +243,22 @@ fn regression_issue_1910_runtime_request_identity_policy_escapes_signed_envelope
         "{\"signer_key_id\":\"signer:key:\\\"x\\\"\",\"message\":\"message:\\\"x\\\"\",\"signature\":\"signature:\\\"x\\\"\",\"recovery_id\":1}"
     );
 }
+
+#[test]
+fn spec_c13_runtime_request_identity_policy_docs_describe_payload_hash_length_design_decision() {
+    let docs_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../docs/foundation/kolme-runtime-commit-client.md");
+    let docs = std::fs::read_to_string(&docs_path).expect("runtime commit docs should be readable");
+    for marker in [
+        "payload-hash length compatibility mode",
+        "payload_hash.trim().len()",
+        "Regression: #1777",
+        "collision caveat",
+    ] {
+        assert!(
+            docs.contains(marker),
+            "runtime commit docs must contain marker `{marker}` at {}",
+            docs_path.display()
+        );
+    }
+}
