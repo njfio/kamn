@@ -357,14 +357,43 @@ pub(super) async fn handle_service_api_http_route(
     Extension(context): Extension<ServiceApiRequestContext>,
 ) -> Response {
     let _ = context.correlation_id.as_str();
-    if context.parsed_request.method == "POST"
-        && context.parsed_request.path == ROUTE_CHANNELS_CREATE
-    {
+    match context.parsed_request.method.as_str() {
+        "POST" => {
+            if let Some(response) = dispatch_service_api_post_route(state.as_ref(), &context).await
+            {
+                return response;
+            }
+        }
+        "GET" => {
+            if let Some(response) = dispatch_service_api_get_route(state.as_ref(), &context).await {
+                return response;
+            }
+        }
+        _ => {}
+    }
+    let snapshot =
+        super::runtime_observability::snapshot_with_runtime_observability(state.as_ref()).await;
+    let rendered = super::render_service_api_endpoint_response(
+        &snapshot,
+        context.parsed_request.method.as_str(),
+        context.parsed_request.path.as_str(),
+        context.parsed_request.body.as_str(),
+    );
+    super::payload::contract_response(rendered)
+}
+
+async fn dispatch_service_api_post_route(
+    state: &ServiceApiRuntimeState,
+    context: &ServiceApiRequestContext,
+) -> Option<Response> {
+    let parsed_request = &context.parsed_request;
+
+    if parsed_request.path == ROUTE_CHANNELS_CREATE {
         let create_result = {
             let mut message_store = state.message_store.lock().await;
-            message_store.create_channel(context.parsed_request.body.as_str())
+            message_store.create_channel(parsed_request.body.as_str())
         };
-        return match create_result {
+        return Some(match create_result {
             Ok(payload) => {
                 state
                     .websocket_events
@@ -381,15 +410,15 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api channel persistence failed: {error}").as_str(),
             ),
-        };
+        });
     }
-    if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_TASKS_CREATE
-    {
+
+    if parsed_request.path == ROUTE_TASKS_CREATE {
         let create_result = {
             let mut message_store = state.message_store.lock().await;
-            message_store.create_task(context.parsed_request.body.as_str())
+            message_store.create_task(parsed_request.body.as_str())
         };
-        return match create_result {
+        return Some(match create_result {
             Ok(payload) => {
                 state.websocket_events.publish_task_created_event(&payload);
                 super::payload::contract_response(ServiceApiEndpointResponse {
@@ -404,16 +433,15 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api task persistence failed: {error}").as_str(),
             ),
-        };
+        });
     }
-    if context.parsed_request.method == "POST"
-        && context.parsed_request.path == ROUTE_CONTENT_REGISTER
-    {
+
+    if parsed_request.path == ROUTE_CONTENT_REGISTER {
         let register_result = {
             let mut message_store = state.message_store.lock().await;
-            message_store.register_content(context.parsed_request.body.as_str())
+            message_store.register_content(parsed_request.body.as_str())
         };
-        return match register_result {
+        return Some(match register_result {
             Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                 status_code: 201,
                 content_type: "application/json",
@@ -425,15 +453,15 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api content persistence failed: {error}").as_str(),
             ),
-        };
+        });
     }
-    if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_BRIDGE_SUBMIT
-    {
+
+    if parsed_request.path == ROUTE_BRIDGE_SUBMIT {
         let submit_result = {
             let mut message_store = state.message_store.lock().await;
-            message_store.submit_bridge(context.parsed_request.body.as_str())
+            message_store.submit_bridge(parsed_request.body.as_str())
         };
-        return match submit_result {
+        return Some(match submit_result {
             Ok(payload) => {
                 state
                     .websocket_events
@@ -450,14 +478,15 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api bridge persistence failed: {error}").as_str(),
             ),
-        };
+        });
     }
-    if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_ESCROW_FUND {
+
+    if parsed_request.path == ROUTE_ESCROW_FUND {
         let fund_result = {
             let mut message_store = state.message_store.lock().await;
-            message_store.fund_escrow(context.parsed_request.body.as_str())
+            message_store.fund_escrow(parsed_request.body.as_str())
         };
-        return match fund_result {
+        return Some(match fund_result {
             Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
@@ -469,20 +498,19 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api escrow persistence failed: {error}").as_str(),
             ),
-        };
+        });
     }
-    if context.parsed_request.method == "POST"
-        && context.parsed_request.path == ROUTE_MESSAGES_RELAY
-    {
-        let relay_payload = match parse_relay_ingest_payload(context.parsed_request.body.as_str()) {
+
+    if parsed_request.path == ROUTE_MESSAGES_RELAY {
+        let relay_payload = match parse_relay_ingest_payload(parsed_request.body.as_str()) {
             Ok(payload) => payload,
             Err(error) => {
-                return super::payload::json_error_response(
+                return Some(super::payload::json_error_response(
                     StatusCode::BAD_REQUEST,
                     "bad-request",
                     error.reason_code,
                     error.message.as_str(),
-                );
+                ));
             }
         };
         let relay_result = {
@@ -494,7 +522,7 @@ pub(super) async fn handle_service_api_http_route(
                 relay_payload.body.as_str(),
             )
         };
-        return match relay_result {
+        return Some(match relay_result {
             Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
                 status_code: 202,
                 content_type: "application/json",
@@ -506,28 +534,25 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api relay persistence failed: {error}").as_str(),
             ),
-        };
+        });
     }
-    if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_MESSAGES_SEND
-    {
-        let channel_id = extract_channel_id_from_payload(context.parsed_request.body.as_str());
-        let recipient_did =
-            extract_recipient_did_from_payload(context.parsed_request.body.as_str());
-        let sender_did = super::auth::header_value(
-            &context.parsed_request.headers,
-            REQUEST_AUTH_SENDER_DID_HEADER,
-        );
+
+    if parsed_request.path == ROUTE_MESSAGES_SEND {
+        let channel_id = extract_channel_id_from_payload(parsed_request.body.as_str());
+        let recipient_did = extract_recipient_did_from_payload(parsed_request.body.as_str());
+        let sender_did =
+            super::auth::header_value(&parsed_request.headers, REQUEST_AUTH_SENDER_DID_HEADER);
         let create_result = {
             let mut message_store = state.message_store.lock().await;
             message_store.create_message(
-                context.parsed_request.body.as_str(),
+                parsed_request.body.as_str(),
                 state.snapshot.runtime_mode.as_str(),
                 channel_id.as_deref(),
                 sender_did,
                 recipient_did.as_deref(),
             )
         };
-        return match create_result {
+        return Some(match create_result {
             Ok(payload) => {
                 if let Some(recipient_did_value) = recipient_did.as_deref() {
                     let queued_at_unix = SystemTime::now()
@@ -538,19 +563,19 @@ pub(super) async fn handle_service_api_http_route(
                         message_id: payload.message_id.clone(),
                         sender_did: sender_did.map(str::to_owned),
                         recipient_did: recipient_did_value.to_owned(),
-                        body: context.parsed_request.body.clone(),
+                        body: parsed_request.body.clone(),
                         queued_at_unix,
                     };
                     if let Err(error) = super::append_service_api_relay_spool_entry(
                         state.relay_spool_file.as_deref(),
                         &relay_entry,
                     ) {
-                        return super::payload::json_error_response(
+                        return Some(super::payload::json_error_response(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             "internal",
                             REASON_CODE_STATE_PERSISTENCE_FAILED,
                             format!("service api relay spool append failed: {error}").as_str(),
-                        );
+                        ));
                     }
                 }
                 state.websocket_events.publish_message_created_event(
@@ -571,363 +596,339 @@ pub(super) async fn handle_service_api_http_route(
                 REASON_CODE_STATE_PERSISTENCE_FAILED,
                 format!("service api message persistence failed: {error}").as_str(),
             ),
+        });
+    }
+
+    if let Some(task_id) = super::payload::task_accept_path_id(parsed_request.path.as_str()) {
+        let transition_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.transition_task(task_id, "accepted")
         };
-    }
-    if context.parsed_request.method == "POST" {
-        if let Some(task_id) =
-            super::payload::task_accept_path_id(context.parsed_request.path.as_str())
-        {
-            let transition_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.transition_task(task_id, "accepted")
-            };
-            return match transition_result {
-                Ok(Some(payload)) => {
-                    state
-                        .websocket_events
-                        .publish_task_transitioned_event(&payload);
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api task persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(task_id) =
-            super::payload::task_complete_path_id(context.parsed_request.path.as_str())
-        {
-            let transition_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.transition_task(task_id, "completed")
-            };
-            return match transition_result {
-                Ok(Some(payload)) => {
-                    state
-                        .websocket_events
-                        .publish_task_transitioned_event(&payload);
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api task persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(escrow_id) =
-            super::payload::escrow_release_path_id(context.parsed_request.path.as_str())
-        {
-            let release_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.release_escrow(escrow_id)
-            };
-            return match release_result {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api escrow persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(content_id) =
-            super::payload::content_expire_path_id(context.parsed_request.path.as_str())
-        {
-            let expire_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.expire_content(content_id)
-            };
-            return match expire_result {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api content persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(content_id) =
-            super::payload::content_tombstone_path_id(context.parsed_request.path.as_str())
-        {
-            let tombstone_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.tombstone_content(content_id)
-            };
-            return match tombstone_result {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api content persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(bridge_id) =
-            super::payload::bridge_forward_path_id(context.parsed_request.path.as_str())
-        {
-            let forward_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.forward_bridge(bridge_id)
-            };
-            return match forward_result {
-                Ok(Some(payload)) => {
-                    state
-                        .websocket_events
-                        .publish_bridge_forwarded_event(&payload);
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api bridge persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-    }
-    if context.parsed_request.method == "GET" {
-        if let Some(message_id) =
-            super::payload::message_path_id(context.parsed_request.path.as_str())
-        {
-            let requester_did = super::auth::header_value(
-                &context.parsed_request.headers,
-                REQUEST_AUTH_SENDER_DID_HEADER,
-            );
-            let message_result = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.get_message_for_requester(message_id, requester_did)
-            };
-            return match message_result {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api message persistence failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(channel_id) =
-            super::payload::channel_messages_path_id(context.parsed_request.path.as_str())
-        {
-            let channel_payload = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.list_channel_messages(channel_id)
-            };
-            return match channel_payload {
-                Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+        return Some(match transition_result {
+            Ok(Some(payload)) => {
+                state
+                    .websocket_events
+                    .publish_task_transitioned_event(&payload);
+                super::payload::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
-                }),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api channel query failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(task_id) = super::payload::task_path_id(context.parsed_request.path.as_str()) {
-            let task_payload = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.get_task(task_id)
-            };
-            return match task_payload {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api task query failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(content_id) =
-            super::payload::content_path_id(context.parsed_request.path.as_str())
-        {
-            let content_payload = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.get_content(content_id)
-            };
-            return match content_payload {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api content query failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(bridge_id) =
-            super::payload::bridge_path_id(context.parsed_request.path.as_str())
-        {
-            let bridge_payload = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.get_bridge(bridge_id)
-            };
-            return match bridge_payload {
-                Ok(Some(payload)) => {
-                    super::payload::contract_response(ServiceApiEndpointResponse {
-                        status_code: 200,
-                        content_type: "application/json",
-                        body: super::serialize_service_api_json(&payload),
-                    })
-                }
-                Ok(None) => super::payload::json_error_response(
-                    StatusCode::NOT_FOUND,
-                    "not-found",
-                    REASON_CODE_ROUTE_NOT_FOUND,
-                    "not found",
-                ),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api bridge query failed: {error}").as_str(),
-                ),
-            };
-        }
-        if let Some(agent_did) = super::payload::agent_path_id(context.parsed_request.path.as_str())
-        {
-            let agent_payload = {
-                let mut message_store = state.message_store.lock().await;
-                message_store.get_or_create_agent_profile(agent_did)
-            };
-            return match agent_payload {
-                Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                })
+            }
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api task persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(task_id) = super::payload::task_complete_path_id(parsed_request.path.as_str()) {
+        let transition_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.transition_task(task_id, "completed")
+        };
+        return Some(match transition_result {
+            Ok(Some(payload)) => {
+                state
+                    .websocket_events
+                    .publish_task_transitioned_event(&payload);
+                super::payload::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
-                }),
-                Err(error) => super::payload::json_error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    REASON_CODE_STATE_PERSISTENCE_FAILED,
-                    format!("service api agent profile persistence failed: {error}").as_str(),
-                ),
-            };
-        }
+                })
+            }
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api task persistence failed: {error}").as_str(),
+            ),
+        });
     }
-    let snapshot =
-        super::runtime_observability::snapshot_with_runtime_observability(state.as_ref()).await;
-    let rendered = super::render_service_api_endpoint_response(
-        &snapshot,
-        context.parsed_request.method.as_str(),
-        context.parsed_request.path.as_str(),
-        context.parsed_request.body.as_str(),
-    );
-    super::payload::contract_response(rendered)
+
+    if let Some(escrow_id) = super::payload::escrow_release_path_id(parsed_request.path.as_str()) {
+        let release_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.release_escrow(escrow_id)
+        };
+        return Some(match release_result {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api escrow persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(content_id) = super::payload::content_expire_path_id(parsed_request.path.as_str()) {
+        let expire_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.expire_content(content_id)
+        };
+        return Some(match expire_result {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api content persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(content_id) =
+        super::payload::content_tombstone_path_id(parsed_request.path.as_str())
+    {
+        let tombstone_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.tombstone_content(content_id)
+        };
+        return Some(match tombstone_result {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api content persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(bridge_id) = super::payload::bridge_forward_path_id(parsed_request.path.as_str()) {
+        let forward_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.forward_bridge(bridge_id)
+        };
+        return Some(match forward_result {
+            Ok(Some(payload)) => {
+                state
+                    .websocket_events
+                    .publish_bridge_forwarded_event(&payload);
+                super::payload::contract_response(ServiceApiEndpointResponse {
+                    status_code: 200,
+                    content_type: "application/json",
+                    body: super::serialize_service_api_json(&payload),
+                })
+            }
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api bridge persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    None
+}
+
+async fn dispatch_service_api_get_route(
+    state: &ServiceApiRuntimeState,
+    context: &ServiceApiRequestContext,
+) -> Option<Response> {
+    let parsed_request = &context.parsed_request;
+
+    if let Some(message_id) = super::payload::message_path_id(parsed_request.path.as_str()) {
+        let requester_did =
+            super::auth::header_value(&parsed_request.headers, REQUEST_AUTH_SENDER_DID_HEADER);
+        let message_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.get_message_for_requester(message_id, requester_did)
+        };
+        return Some(match message_result {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api message persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(channel_id) = super::payload::channel_messages_path_id(parsed_request.path.as_str())
+    {
+        let channel_payload = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.list_channel_messages(channel_id)
+        };
+        return Some(match channel_payload {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api channel query failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(task_id) = super::payload::task_path_id(parsed_request.path.as_str()) {
+        let task_payload = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.get_task(task_id)
+        };
+        return Some(match task_payload {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api task query failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(content_id) = super::payload::content_path_id(parsed_request.path.as_str()) {
+        let content_payload = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.get_content(content_id)
+        };
+        return Some(match content_payload {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api content query failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(bridge_id) = super::payload::bridge_path_id(parsed_request.path.as_str()) {
+        let bridge_payload = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.get_bridge(bridge_id)
+        };
+        return Some(match bridge_payload {
+            Ok(Some(payload)) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Ok(None) => super::payload::json_error_response(
+                StatusCode::NOT_FOUND,
+                "not-found",
+                REASON_CODE_ROUTE_NOT_FOUND,
+                "not found",
+            ),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api bridge query failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    if let Some(agent_did) = super::payload::agent_path_id(parsed_request.path.as_str()) {
+        let agent_payload = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.get_or_create_agent_profile(agent_did)
+        };
+        return Some(match agent_payload {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api agent profile persistence failed: {error}").as_str(),
+            ),
+        });
+    }
+
+    None
 }
 
 fn extract_channel_id_from_payload(payload: &str) -> Option<String> {

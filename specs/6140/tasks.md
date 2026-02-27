@@ -1,15 +1,13 @@
 # Tasks: Issue #6140
 
-## Ordered Tasks
-- T1 (RED/Conformance): Add or run failing test(s) that reproduce `X-02` gap from the spec ACs.
-- T2 (Implementation): Apply minimal remediation to satisfy AC-1 without unrelated refactors.
-- T3 (GREEN/Regression): Add and run regression coverage for AC-2 with deterministic assertions.
-- T4 (Verification): Run scoped unit/functional/conformance commands and record evidence.
-- T5 (Closure): Update issue/pr docs, map ACs to tests, and publish closure evidence.
+- T1 (RED): Add failing structural conformance test for dispatcher decomposition contract.
+- T2 (GREEN): Refactor `handle_service_api_http_route` to delegate into method-specific helpers.
+- T3 (REGRESSION): Add regression test proving helper delegation markers and method-router contract.
+- T4 (VERIFY): Run scoped `kamn-node` service API tests + formatting/lint checks.
 
 ## Tier Mapping
 - Unit: T1, T3, T4
-- Functional: T3, T4
-- Integration: T4 (when cross-module behavior is affected)
-- Regression: T1, T3, T4
-- Conformance: T1, T4, T5
+- Functional: T4
+- Regression: T3, T4
+- Conformance: T1, T3, T4
+- Integration: T4 (existing service API behavior suite)

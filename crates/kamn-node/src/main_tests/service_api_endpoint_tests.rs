@@ -9021,3 +9021,28 @@ fn regression_service_api_endpoint_returns_timeout_error_when_no_requests_arrive
         "timeout regression should complete quickly for local tests"
     );
 }
+
+#[test]
+fn spec_c01_service_api_route_dispatcher_decomposes_to_method_helpers() {
+    let source = fs::read_to_string("src/service_api_endpoint/middleware_impl.rs")
+        .expect("middleware_impl source should be readable");
+    assert!(
+        source.contains("dispatch_service_api_post_route("),
+        "dispatcher must delegate POST routes through dispatch_service_api_post_route helper"
+    );
+    assert!(
+        source.contains("dispatch_service_api_get_route("),
+        "dispatcher must delegate GET routes through dispatch_service_api_get_route helper"
+    );
+}
+
+#[test]
+fn regression_service_api_route_dispatcher_top_level_handler_uses_method_router_contract() {
+    // Regression: #6140
+    let source = fs::read_to_string("src/service_api_endpoint/middleware_impl.rs")
+        .expect("middleware_impl source should be readable");
+    assert!(
+        source.contains("match context.parsed_request.method.as_str()"),
+        "top-level handler must route by explicit HTTP method match for maintainable decomposition"
+    );
+}
