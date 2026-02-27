@@ -6,6 +6,8 @@ pub mod cli_scripted;
 pub mod mcp_agent;
 /// SDK-direct mode driver.
 pub mod sdk_direct;
+/// Shared internal helpers used by multiple E2E drivers.
+pub(crate) mod shared_helpers;
 
 /// Driver result emitted for one scenario execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
