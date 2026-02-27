@@ -290,6 +290,9 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE=disabled|require`
   - `KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE`
   - `KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE`
+  - default policy:
+    - `runtime_mode=kolme-live` defaults fail-closed to `require` when TLS mode env is omitted.
+    - local/dev plaintext behavior remains explicit via `KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE=disabled`.
 - TLS negative-matrix fail-closed taxonomy (Issue `#3805`):
   - `observability_endpoint_tls_certificate_file_read_failed`
   - `observability_endpoint_tls_key_file_parse_failed`

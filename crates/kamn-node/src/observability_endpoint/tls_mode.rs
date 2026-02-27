@@ -8,6 +8,7 @@ const OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV: &str = "KAMN_OBSERVABILITY_ENDPO
 const OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV: &str = "KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE";
 const OBSERVABILITY_ENDPOINT_TLS_MODE_DISABLED: &str = "disabled";
 const OBSERVABILITY_ENDPOINT_TLS_MODE_REQUIRE: &str = "require";
+const OBSERVABILITY_ENDPOINT_TLS_DEFAULT_REQUIRE_RUNTIME_MODE_KOLME_LIVE: &str = "kolme-live";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum ObservabilityEndpointTlsMode {
@@ -37,6 +38,7 @@ pub(crate) fn set_observability_endpoint_tls_mode_override_for_current_thread_fo
 }
 
 pub(super) fn resolve_observability_endpoint_tls_mode(
+    runtime_mode: &str,
 ) -> Result<ObservabilityEndpointTlsMode, String> {
     if let Some(tls_mode_override) = OBSERVABILITY_ENDPOINT_TLS_MODE_OVERRIDE_FOR_TESTS
         .with(|tls_mode_override| tls_mode_override.borrow().clone())
@@ -82,51 +84,67 @@ pub(super) fn resolve_observability_endpoint_tls_mode(
             match mode.as_str() {
                 OBSERVABILITY_ENDPOINT_TLS_MODE_DISABLED => Ok(ObservabilityEndpointTlsMode::Disabled),
                 OBSERVABILITY_ENDPOINT_TLS_MODE_REQUIRE => {
-                    let cert_file = env::var(OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV)
-                        .map_err(|_| {
-                            format!(
-                                "observability endpoint tls mode requires env: {OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV}"
-                            )
-                        })?
-                        .trim()
-                        .to_owned();
-                    if cert_file.is_empty() {
-                        return Err(format!(
-                            "observability endpoint tls cert env must not be empty: {OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV}"
-                        ));
-                    }
-                    let key_file = env::var(OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV)
-                        .map_err(|_| {
-                            format!(
-                                "observability endpoint tls mode requires env: {OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV}"
-                            )
-                        })?
-                        .trim()
-                        .to_owned();
-                    if key_file.is_empty() {
-                        return Err(format!(
-                            "observability endpoint tls key env must not be empty: {OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV}"
-                        ));
-                    }
-                    validate_observability_endpoint_tls_materials(
-                        cert_file.as_str(),
-                        key_file.as_str(),
-                    )?;
-                    Ok(ObservabilityEndpointTlsMode::Require {
-                        cert_file,
-                        key_file,
-                    })
+                    resolve_observability_endpoint_require_mode_from_env()
                 }
                 other => Err(format!(
                     "observability endpoint tls mode is invalid: {other} (supported: {OBSERVABILITY_ENDPOINT_TLS_MODE_DISABLED},{OBSERVABILITY_ENDPOINT_TLS_MODE_REQUIRE})"
                 )),
             }
         }
-        Err(env::VarError::NotPresent) => Ok(ObservabilityEndpointTlsMode::Disabled),
+        Err(env::VarError::NotPresent) => {
+            if runtime_mode_requires_observability_tls_by_default(runtime_mode) {
+                resolve_observability_endpoint_require_mode_from_env()
+            } else {
+                Ok(ObservabilityEndpointTlsMode::Disabled)
+            }
+        }
         Err(env::VarError::NotUnicode(_)) => Err(format!(
             "observability endpoint tls mode env must be utf-8: {OBSERVABILITY_ENDPOINT_TLS_MODE_ENV}"
         )),
     }
+}
+
+fn runtime_mode_requires_observability_tls_by_default(runtime_mode: &str) -> bool {
+    runtime_mode
+        .trim()
+        .eq_ignore_ascii_case(OBSERVABILITY_ENDPOINT_TLS_DEFAULT_REQUIRE_RUNTIME_MODE_KOLME_LIVE)
+}
+
+fn resolve_observability_endpoint_require_mode_from_env(
+) -> Result<ObservabilityEndpointTlsMode, String> {
+    let cert_file = env::var(OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV)
+        .map_err(|_| {
+            format!(
+                "observability endpoint tls mode requires env: {OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV}"
+            )
+        })?
+        .trim()
+        .to_owned();
+    if cert_file.is_empty() {
+        return Err(format!(
+            "observability endpoint tls cert env must not be empty: {OBSERVABILITY_ENDPOINT_TLS_CERT_FILE_ENV}"
+        ));
+    }
+
+    let key_file = env::var(OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV)
+        .map_err(|_| {
+            format!(
+                "observability endpoint tls mode requires env: {OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV}"
+            )
+        })?
+        .trim()
+        .to_owned();
+    if key_file.is_empty() {
+        return Err(format!(
+            "observability endpoint tls key env must not be empty: {OBSERVABILITY_ENDPOINT_TLS_KEY_FILE_ENV}"
+        ));
+    }
+
+    validate_observability_endpoint_tls_materials(cert_file.as_str(), key_file.as_str())?;
+    Ok(ObservabilityEndpointTlsMode::Require {
+        cert_file,
+        key_file,
+    })
 }
 
 fn validate_observability_endpoint_tls_materials(
