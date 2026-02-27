@@ -385,6 +385,9 @@ fn regression_e2e_live_workflow_lane_rejects_missing_cli_smoke_retry_wrapper() {
 
     assert_eq!(decision.status, "fail");
     assert_eq!(decision.final_decision, "NO-GO");
-    assert_eq!(decision.reason_codes_value, "cli_smoke_retry_wrapper_missing");
+    assert_eq!(
+        decision.reason_codes_value,
+        "cli_smoke_retry_wrapper_missing"
+    );
     assert_eq!(decision.contract_status, "violation");
 }
