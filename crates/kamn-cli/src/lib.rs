@@ -203,6 +203,13 @@ where
                 endpoint = args[index].clone();
                 index += 1;
             }
+            "--" => {
+                passthrough.extend(args[index..].iter().cloned());
+                break;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unsupported flag: {other}"));
+            }
             other => passthrough.push(other.to_owned()),
         }
     }
@@ -272,5 +279,19 @@ mod tests {
                 "help output should contain marker `{marker}`: {help}"
             );
         }
+    }
+
+    #[test]
+    fn unit_cli_parser_rejects_unknown_flag() {
+        let error = parse_cli_args(["kamn-cli", "health", "--endpont", "http://localhost:8080"])
+            .expect_err("unknown flag should fail");
+        assert_eq!(error, "unsupported flag: --endpont");
+    }
+
+    #[test]
+    fn unit_cli_parser_supports_double_dash_passthrough_boundary() {
+        let parsed = parse_cli_args(["kamn-cli", "send-message", "--", "--payload-like-flag"])
+            .expect("parsed");
+        assert_eq!(parsed.passthrough, vec!["--payload-like-flag".to_owned()]);
     }
 }
