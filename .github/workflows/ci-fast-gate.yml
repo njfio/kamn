@@ -559,6 +559,19 @@ jobs:
             --max-attempts 1 \
             -- bash scripts/ci/run_invariant_harness.sh --mode fast
 
+      - name: Run runtime coverage-guided parser fuzz contract lane
+        if: steps.scope.outputs.run_rust == 'true'
+        run: |
+          bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json runtime-input-mutation-coverage-guided-contract-report.json
+
+      - name: Upload runtime coverage-guided parser fuzz report
+        if: always() && hashFiles('runtime-input-mutation-coverage-guided-contract-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-input-mutation-coverage-guided-contract-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime-input-mutation-coverage-guided-contract-report.json
+          if-no-files-found: error
+
       - name: Generate performance smoke report
         if: steps.scope.outputs.run_rust == 'true'
         run: bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --output-json performance-smoke-report.json

@@ -1,26 +1,28 @@
 # Plan: Issue #6141
 
 ## Approach
-1. Re-state `X-03` behavior contract and impacted modules from issue #6141.
-2. Add RED coverage derived from acceptance criteria to reproduce current gap.
-3. Implement minimal remediation with explicit error handling and no behavior drift outside scope.
-4. Execute GREEN verification for unit/functional/regression/conformance tiers.
-5. Update docs/spec/task artifacts and finalize closure evidence.
+1. Capture RED evidence that the fast-gate workflow does not include explicit coverage-guided fuzz contract lane execution/report wiring.
+2. Add a dedicated fast-gate step to run:
+   - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json runtime-input-mutation-coverage-guided-contract-report.json`
+3. Add an artifact upload step for the lane report.
+4. Extend workflow scope-policy regression tests to assert this lane/report wiring and preserve deep-lane exclusion guarantees.
+5. Run scoped verification (`test_workflow_scope_policy`, shell syntax checks) and capture GREEN evidence.
 
 ## Affected Modules
-- Target module(s) identified by issue #6141 scope and test evidence.
+- `.github/workflows/ci-fast-gate.yml`
+- `scripts/ci/test_workflow_scope_policy.sh`
 - `specs/6141/spec.md`
 - `specs/6141/plan.md`
 - `specs/6141/tasks.md`
 
 ## Risks / Mitigations
-- Risk: Scope expansion beyond `X-03` causes unnecessary churn.
-  Mitigation: keep PR constrained to issue ACs and affected call paths.
-- Risk: Missing RED evidence weakens TDD traceability.
-  Mitigation: capture failing command/output before implementation change.
-- Risk: Conformance drift in docs/process contracts.
-  Mitigation: update corresponding review/spec docs in same PR when behavior changes.
+- Risk: Fast-gate runtime budget regression.
+  Mitigation: Use bounded coverage-guided contract lane (existing max-seconds guard).
+- Risk: Accidental enablement of deep fuzz lane in CI.
+  Mitigation: Keep existing deep-lane exclusion assertions and validate in scope-policy test.
+- Risk: Workflow-policy drift.
+  Mitigation: Add explicit regression assertions in `test_workflow_scope_policy.sh`.
 
 ## Interfaces / Contracts
-- Preserve existing public interfaces unless change is explicitly required by `X-03` acceptance criteria.
-- Any contract change must include test and docs updates in the same patch.
+- No production API/wire contract changes.
+- CI workflow contract changes only; must include regression policy test updates in the same patch.
