@@ -19,28 +19,31 @@ fn unit_runtime_request_identity_policy_idempotency_key_contract() {
     );
     assert_eq!(
         idempotency_key,
-        "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:12"
+        "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:7061796c6f61642d68617368"
     );
 }
 
 #[test]
 fn functional_runtime_request_identity_policy_commit_id_contract() {
     let commit_id = deterministic_runtime_commit_id("op-9", "did:agent:beta", 11, "hash:xyz");
-    assert_eq!(commit_id, "kolme-commit:op-9:did:agent:beta:11:8");
+    assert_eq!(
+        commit_id,
+        "kolme-commit:op-9:did:agent:beta:11:686173683a78797a"
+    );
 }
 
 #[test]
-fn regression_runtime_request_identity_policy_payload_length_drift_remains_fail_closed() {
-    // Regression: #1777
+fn regression_issue_6123_runtime_request_identity_policy_payload_collision_remains_fail_closed() {
+    // Regression: #6123
     let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
     let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
-    assert_eq!(left, right);
+    assert_ne!(left, right);
 }
 
 #[test]
 fn functional_runtime_request_identity_policy_accepts_non_empty_commit_id_request() {
     assert!(is_valid_runtime_commit_id_request(
-        "kolme-commit:op-9:did:agent:beta:11:8"
+        "kolme-commit:op-9:did:agent:beta:11:686173683a78797a"
     ));
 }
 

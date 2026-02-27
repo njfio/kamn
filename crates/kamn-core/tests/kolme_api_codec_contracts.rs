@@ -175,7 +175,7 @@ fn regression_issue_1906_runtime_commit_wire_payload_order_remains_canonical() {
 
     assert_eq!(
         request.to_wire_payload(),
-        "operation_id=op-1506-d\nstate_root=state:1506\nactor_did=kamn:did:agent:codec-1506-d\nnonce=14\npayload_hash=payload:1506-d\nidempotency_key=kolme-runtime-commit:op-1506-d:state:1506:kamn:did:agent:codec-1506-d:14:14\n"
+        "operation_id=op-1506-d\nstate_root=state:1506\nactor_did=kamn:did:agent:codec-1506-d\nnonce=14\npayload_hash=payload:1506-d\nidempotency_key=kolme-runtime-commit:op-1506-d:state:1506:kamn:did:agent:codec-1506-d:14:7061796c6f61643a313530362d64\n"
     );
 }
 
@@ -193,7 +193,7 @@ fn regression_issue_1908_runtime_commit_request_construction_trims_request_field
 
     assert_eq!(
         request.to_wire_payload(),
-        "operation_id=op-1506-e\nstate_root=state:1506\nactor_did=kamn:did:agent:codec-1506-e\nnonce=15\npayload_hash=payload:1506-e\nidempotency_key=kolme-runtime-commit:op-1506-e:state:1506:kamn:did:agent:codec-1506-e:15:14\n"
+        "operation_id=op-1506-e\nstate_root=state:1506\nactor_did=kamn:did:agent:codec-1506-e\nnonce=15\npayload_hash=payload:1506-e\nidempotency_key=kolme-runtime-commit:op-1506-e:state:1506:kamn:did:agent:codec-1506-e:15:7061796c6f61643a313530362d65\n"
     );
 }
 
