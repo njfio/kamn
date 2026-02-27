@@ -229,10 +229,17 @@ run_slice "core-http-transport" 3 \
     --cargo-test-arg spec_c0 \
     --timeout "$timeout_seconds"
 
+runtime_orchestration_mutation_line="$(grep -n 'shutdown_drain_status != "completed"' crates/kamn-node/src/runtime_orchestration.rs | head -n 1 | cut -d: -f1 || true)"
+if [ -z "$runtime_orchestration_mutation_line" ]; then
+  echo "unable to resolve runtime orchestration mutation selector line" >&2
+  exit 1
+fi
+runtime_orchestration_mutation_re="runtime_orchestration\\.rs:(${runtime_orchestration_mutation_line}:[0-9]+): replace != with == in classify_full_supervisor_stop_contract_violation"
+
 run_slice "node-runtime-orchestration" 1 \
   cargo mutants -p kamn-node \
     --file crates/kamn-node/src/runtime_orchestration.rs \
-    --re "runtime_orchestration\\.rs:(768:34):" \
+    --re "$runtime_orchestration_mutation_re" \
     --output "$tmp_dir/node-runtime-orchestration" \
     --copy-vcs true \
     --cargo-test-arg --bin \

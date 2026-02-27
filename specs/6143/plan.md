@@ -1,26 +1,29 @@
 # Plan: Issue #6143
 
 ## Approach
-1. Re-state `X-05` behavior contract and impacted modules from issue #6143.
-2. Add RED coverage derived from acceptance criteria to reproduce current gap.
-3. Implement minimal remediation with explicit error handling and no behavior drift outside scope.
-4. Execute GREEN verification for unit/functional/regression/conformance tiers.
-5. Update docs/spec/task artifacts and finalize closure evidence.
+1. Capture RED evidence that no inter-tick lane health probe helper exists in runtime orchestration.
+2. Add an inter-tick probe helper for full-supervisor lanes that:
+   - probes service-api and observability lanes once during daemon runtime
+   - fails closed on non-success responses
+3. Wire helper into `execute_full_supervisor_daemon_runtime` loop after lane liveness state checks.
+4. Update full-supervisor lane `max_requests` internal budgets to account for startup + inter-tick + shutdown probes.
+5. Add regression/unit coverage for one-shot probe behavior and fail-closed probe error path.
+6. Run scoped `kamn-node` tests for new and related lane-liveness paths.
 
 ## Affected Modules
-- Target module(s) identified by issue #6143 scope and test evidence.
+- `crates/kamn-node/src/runtime_orchestration.rs`
 - `specs/6143/spec.md`
 - `specs/6143/plan.md`
 - `specs/6143/tasks.md`
 
 ## Risks / Mitigations
-- Risk: Scope expansion beyond `X-05` causes unnecessary churn.
-  Mitigation: keep PR constrained to issue ACs and affected call paths.
-- Risk: Missing RED evidence weakens TDD traceability.
-  Mitigation: capture failing command/output before implementation change.
-- Risk: Conformance drift in docs/process contracts.
-  Mitigation: update corresponding review/spec docs in same PR when behavior changes.
+- Risk: Added probes consume lane request budget and trigger early lane completion.
+  Mitigation: increase internal lane max-request allowance to cover startup/inter-tick/shutdown probes.
+- Risk: Inter-tick probes introduce runtime overhead.
+  Mitigation: execute probes once per lane during runtime, not per tick.
+- Risk: Probe helper drift reintroduces startup-only behavior.
+  Mitigation: add deterministic regression tests for one-shot execution and fail-closed errors.
 
 ## Interfaces / Contracts
-- Preserve existing public interfaces unless change is explicitly required by `X-05` acceptance criteria.
-- Any contract change must include test and docs updates in the same patch.
+- No external API/wire contract changes.
+- Internal full-supervisor runtime/liveness contract behavior only.
