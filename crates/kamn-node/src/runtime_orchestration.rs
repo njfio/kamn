@@ -158,17 +158,61 @@ fn execute_full_supervisor_daemon_runtime(
         execute_daemon_runtime(runtime_mode, execution_id_owned.as_str(), options)
     });
 
+    let mut service_api_inter_tick_probe_completed = service_api_lane.is_none();
+    let mut observability_inter_tick_probe_completed = observability_lane.is_none();
     loop {
         if daemon_handle.is_finished() {
             break;
         }
         validate_full_supervisor_lane_liveness(service_api_lane, observability_lane)?;
+        run_full_supervisor_inter_tick_lane_health_probes(
+            service_api_lane.map(|lane| (lane.config.bind_addr.as_str(), "/healthz")),
+            observability_lane.map(|lane| {
+                (
+                    lane.config.bind_addr.as_str(),
+                    lane.config.health_path.as_str(),
+                )
+            }),
+            &mut service_api_inter_tick_probe_completed,
+            &mut observability_inter_tick_probe_completed,
+        )?;
         thread::sleep(Duration::from_millis(1));
     }
 
     daemon_handle.join().map_err(|_| {
         ConfigError::RuntimeDaemonLifecycle(FULL_SUPERVISOR_DAEMON_EXECUTION_JOIN_FAILED.to_owned())
     })?
+}
+
+fn run_full_supervisor_inter_tick_lane_health_probes(
+    service_api_probe_target: Option<(&str, &str)>,
+    observability_probe_target: Option<(&str, &str)>,
+    service_api_probe_completed: &mut bool,
+    observability_probe_completed: &mut bool,
+) -> Result<(), ConfigError> {
+    if !*service_api_probe_completed {
+        if let Some((bind_addr, path)) = service_api_probe_target {
+            run_full_supervisor_http_probe(
+                bind_addr,
+                path,
+                FULL_SUPERVISOR_SERVICE_API_LANE_PROBE_FAILED,
+            )?;
+        }
+        *service_api_probe_completed = true;
+    }
+
+    if !*observability_probe_completed {
+        if let Some((bind_addr, path)) = observability_probe_target {
+            run_full_supervisor_http_probe(
+                bind_addr,
+                path,
+                FULL_SUPERVISOR_OBSERVABILITY_LANE_PROBE_FAILED,
+            )?;
+        }
+        *observability_probe_completed = true;
+    }
+
+    Ok(())
 }
 
 fn full_supervisor_lane_idle_timeout_floor_ms(
@@ -1203,7 +1247,8 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                 }
                 let lane_config = ServiceApiEndpointConfig {
                     bind_addr: bind_addr.clone(),
-                    max_requests: api_max_requests.saturating_add(1),
+                    // Reserve request budget for startup probe, inter-tick probe, and shutdown probe.
+                    max_requests: api_max_requests.saturating_add(2),
                     idle_timeout_ms: api_idle_timeout_ms
                         .max(full_supervisor_lane_idle_timeout_floor_ms),
                     body_limit_bytes: api_body_limit_bytes,
@@ -1229,7 +1274,8 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     bind_addr: bind_addr.clone(),
                     metrics_path: observability_endpoint_metrics_path.clone(),
                     health_path: observability_endpoint_health_path.clone(),
-                    max_requests: observability_endpoint_max_requests.saturating_add(1),
+                    // Reserve request budget for startup probe, inter-tick probe, and shutdown probe.
+                    max_requests: observability_endpoint_max_requests.saturating_add(2),
                     idle_timeout_ms: observability_endpoint_idle_timeout_ms
                         .max(full_supervisor_lane_idle_timeout_floor_ms),
                 };
@@ -1502,6 +1548,65 @@ mod tests {
         assert!(
             matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("http_status:503")),
             "probe failure should include deterministic http_status classification: {error:?}"
+        );
+    }
+
+    #[test]
+    fn unit_full_supervisor_inter_tick_probes_execute_once_per_lane() {
+        let service_api_bind_addr = spawn_full_supervisor_probe_server("HTTP/1.1 200 OK");
+        let observability_bind_addr = spawn_full_supervisor_probe_server("HTTP/1.1 200 OK");
+        let mut service_api_probe_completed = false;
+        let mut observability_probe_completed = false;
+
+        run_full_supervisor_inter_tick_lane_health_probes(
+            Some((service_api_bind_addr.as_str(), "/healthz")),
+            Some((observability_bind_addr.as_str(), "/healthz")),
+            &mut service_api_probe_completed,
+            &mut observability_probe_completed,
+        )
+        .expect("inter-tick probes should succeed for healthy lanes");
+
+        assert!(
+            service_api_probe_completed,
+            "service-api inter-tick probe should be marked completed after first success"
+        );
+        assert!(
+            observability_probe_completed,
+            "observability inter-tick probe should be marked completed after first success"
+        );
+
+        run_full_supervisor_inter_tick_lane_health_probes(
+            Some((service_api_bind_addr.as_str(), "/healthz")),
+            Some((observability_bind_addr.as_str(), "/healthz")),
+            &mut service_api_probe_completed,
+            &mut observability_probe_completed,
+        )
+        .expect("completed inter-tick probes should skip additional network probes");
+    }
+
+    #[test]
+    fn regression_full_supervisor_inter_tick_probe_fails_closed_on_probe_error() {
+        // Regression: #6143
+        let service_api_bind_addr =
+            spawn_full_supervisor_probe_server("HTTP/1.1 503 Service Unavailable");
+        let mut service_api_probe_completed = false;
+        let mut observability_probe_completed = true;
+
+        let error = run_full_supervisor_inter_tick_lane_health_probes(
+            Some((service_api_bind_addr.as_str(), "/healthz")),
+            None,
+            &mut service_api_probe_completed,
+            &mut observability_probe_completed,
+        )
+        .expect_err("inter-tick probe must fail closed on non-success lane response");
+
+        assert!(
+            matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("http_status:503")),
+            "inter-tick probe failure should preserve deterministic probe status classification: {error:?}"
+        );
+        assert!(
+            !service_api_probe_completed,
+            "failing inter-tick probe must not mark the service-api lane probe as completed"
         );
     }
 
