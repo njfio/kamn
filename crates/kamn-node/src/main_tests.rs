@@ -23,6 +23,10 @@ use super::{
     RuntimeExecutionBundle, RuntimeMode, ServiceApiEndpointConfig, ServiceApiEndpointRuntimePath,
     KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
 };
+use constants::{
+    TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE, TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE_SECONDARY,
+    TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX, TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY,
+};
 use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
     NodeRole, SignerProviderHandshakeMatrix, SyncMode,
@@ -35,15 +39,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX: &str =
-    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
-const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY: &str =
-    "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
-const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE: &str =
-    "secure:aws-kms:role-operator/key-live-ops-primary";
-const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE_SECONDARY: &str =
-    "secure:aws-kms:role-operator/key-live-ops-secondary";
-
 fn signer_env_lock() -> &'static Mutex<()> {
     super::signer_test_env_lock()
 }
@@ -55,7 +50,6 @@ fn lock_signer_env_guard() -> std::sync::MutexGuard<'static, ()> {
 }
 
 fn log_env_lock() -> &'static Mutex<()> {
-    // Log-config and signer tests both mutate process-wide env; share one lock to avoid races.
     signer_env_lock()
 }
 
@@ -255,6 +249,7 @@ fn spawn_kolme_live_mock_server(replies: Vec<MockHttpReply>) -> (String, Arc<Mut
 // main_tests structural budget shell only; keep domain tests in src/main_tests/*.rs
 mod async_runtime_contract_tests;
 mod cli_contract_tests;
+mod constants;
 mod core_behavior_tests;
 mod daemon_tests;
 mod observability_endpoint_tests;

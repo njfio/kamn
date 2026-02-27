@@ -1,9 +1,10 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
+    parse_service_api_payload, project_service_api_lifecycle_rejection,
+    upsert_service_api_relayed_message_from_daemon, ServiceApiAgentGetBody,
     ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
     ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
-    ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+    ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
     DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
@@ -1501,6 +1502,72 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
     assert_eq!(not_found_payload.error, "not-found");
     assert_eq!(not_found_payload.reason_code, "service_api_route_not_found");
     assert!(not_found_payload.message.contains("not found"));
+
+    let baseline_config = ServiceApiEndpointConfig {
+        bind_addr: "127.0.0.1:0".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 1,
+        body_limit_bytes: 1,
+        concurrency_limit: 1,
+        rate_limit_per_second: 1,
+    };
+
+    let mut max_requests_zero = baseline_config.clone();
+    max_requests_zero.max_requests = 0;
+    let max_requests_error = serve_service_api_endpoint(&max_requests_zero, &snapshot)
+        .expect_err("max_requests=0 must fail closed");
+    assert_eq!(
+        max_requests_error,
+        "service api max requests must be greater than zero"
+    );
+
+    let mut idle_timeout_zero = baseline_config.clone();
+    idle_timeout_zero.idle_timeout_ms = 0;
+    let idle_timeout_error = serve_service_api_endpoint(&idle_timeout_zero, &snapshot)
+        .expect_err("idle_timeout_ms=0 must fail closed");
+    assert_eq!(
+        idle_timeout_error,
+        "service api idle timeout must be greater than zero"
+    );
+
+    let mut body_limit_zero = baseline_config.clone();
+    body_limit_zero.body_limit_bytes = 0;
+    let body_limit_error = serve_service_api_endpoint(&body_limit_zero, &snapshot)
+        .expect_err("body_limit_bytes=0 must fail closed");
+    assert_eq!(
+        body_limit_error,
+        "service api body limit bytes must be greater than zero"
+    );
+
+    let mut concurrency_limit_zero = baseline_config.clone();
+    concurrency_limit_zero.concurrency_limit = 0;
+    let concurrency_limit_error = serve_service_api_endpoint(&concurrency_limit_zero, &snapshot)
+        .expect_err("concurrency_limit=0 must fail closed");
+    assert_eq!(
+        concurrency_limit_error,
+        "service api concurrency limit must be greater than zero"
+    );
+
+    let mut rate_limit_zero = baseline_config;
+    rate_limit_zero.rate_limit_per_second = 0;
+    let rate_limit_error = serve_service_api_endpoint(&rate_limit_zero, &snapshot)
+        .expect_err("rate_limit_per_second=0 must fail closed");
+    assert_eq!(
+        rate_limit_error,
+        "service api rate limit per second must be greater than zero"
+    );
+
+    let relay_entry = ServiceApiRelaySpoolEntry {
+        message_id: "msg-test-relay".to_owned(),
+        sender_did: Some("kamn:did:agent:sender".to_owned()),
+        recipient_did: "kamn:did:agent:recipient".to_owned(),
+        body: "{\"message\":\"relay\"}".to_owned(),
+        queued_at_unix: 1,
+    };
+    let relayed = upsert_service_api_relayed_message_from_daemon(None, &relay_entry)
+        .expect("daemon relay upsert should succeed without a state file");
+    assert_eq!(relayed.message_id, "msg-test-relay");
+    assert_eq!(relayed.status, "relayed");
 }
 
 #[test]
@@ -5392,6 +5459,59 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     assert_eq!(relay_entry_json["message_id"], send_payload.message_id);
     assert_eq!(relay_entry_json["recipient_did"], recipient_did);
 
+    let relay_listener = TcpListener::bind("127.0.0.1:0")
+        .expect("relay receiver listener should bind for daemon forwarding");
+    let relay_receiver_addr = relay_listener
+        .local_addr()
+        .expect("relay receiver listener addr should resolve")
+        .to_string();
+    let relay_route_map = serde_json::json!({
+        recipient_did: relay_receiver_addr.clone(),
+    })
+    .to_string();
+    let _relay_route_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON",
+        Some(relay_route_map.as_str()),
+    );
+    let _daemon_private_key_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+        Some(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX),
+    );
+    let relay_receiver = thread::spawn(move || {
+        let (mut relay_stream, _) = relay_listener
+            .accept()
+            .expect("relay receiver should accept daemon forwarding connection");
+        relay_stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .expect("relay receiver read timeout should configure");
+        let mut request = String::new();
+        let mut chunk = [0_u8; 1024];
+        loop {
+            match relay_stream.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(read_count) => {
+                    request.push_str(
+                        std::str::from_utf8(&chunk[..read_count])
+                            .expect("relay request should be utf-8"),
+                    );
+                    if request.contains("\r\n\r\n") {
+                        break;
+                    }
+                }
+                Err(error)
+                    if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) =>
+                {
+                    break;
+                }
+                Err(error) => panic!("relay receiver request read should succeed: {error}"),
+            }
+        }
+        relay_stream
+            .write_all(b"HTTP/1.1 202 Accepted\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
+            .expect("relay receiver response should write");
+        request
+    });
+
     let daemon_report = execute(
         parse_args(vec![
             "kamn-node".to_owned(),
@@ -5420,6 +5540,13 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
             .unwrap_or(0)
             > 0,
         "daemon observability throughput should reflect relay projection work"
+    );
+    let relay_forward_request = relay_receiver
+        .join()
+        .expect("relay receiver thread should join after daemon projection");
+    assert!(
+        relay_forward_request.starts_with("POST /v1/messages/relay HTTP/1.1"),
+        "daemon relay forward should target /v1/messages/relay"
     );
 
     let post_daemon_relay_contents = fs::read_to_string(relay_spool_file.as_path())

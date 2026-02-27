@@ -23,8 +23,7 @@ const FIXTURE: &str =
 struct FixtureMetadata {
     schema_version: String,
     journal_entry_shape: String,
-    journal_entry_prefix: String,
-    journal_entry_version: String,
+    journal_entry_schema_version: String,
     payload_encoding: String,
     commit_boundary_marker_taxonomy_version: String,
     commit_boundary_markers_csv: String,
@@ -74,8 +73,7 @@ impl Drop for TempDir {
 fn parse_fixture() -> Result<(FixtureMetadata, Vec<FixtureCase>), String> {
     let mut schema_version = None;
     let mut journal_entry_shape = None;
-    let mut journal_entry_prefix = None;
-    let mut journal_entry_version = None;
+    let mut journal_entry_schema_version = None;
     let mut payload_encoding = None;
     let mut commit_boundary_marker_taxonomy_version = None;
     let mut commit_boundary_markers_csv = None;
@@ -96,8 +94,7 @@ fn parse_fixture() -> Result<(FixtureMetadata, Vec<FixtureCase>), String> {
             match key.trim() {
                 "journal_wal_fixture_matrix_schema_version" => schema_version = Some(value),
                 "journal_entry_shape" => journal_entry_shape = Some(value),
-                "journal_entry_prefix" => journal_entry_prefix = Some(value),
-                "journal_entry_version" => journal_entry_version = Some(value),
+                "journal_entry_schema_version" => journal_entry_schema_version = Some(value),
                 "payload_encoding" => payload_encoding = Some(value),
                 "commit_boundary_marker_taxonomy_version" => {
                     commit_boundary_marker_taxonomy_version = Some(value)
@@ -116,10 +113,8 @@ fn parse_fixture() -> Result<(FixtureMetadata, Vec<FixtureCase>), String> {
         schema_version: schema_version.ok_or("missing schema version metadata".to_owned())?,
         journal_entry_shape: journal_entry_shape
             .ok_or("missing journal entry shape metadata".to_owned())?,
-        journal_entry_prefix: journal_entry_prefix
-            .ok_or("missing journal entry prefix metadata".to_owned())?,
-        journal_entry_version: journal_entry_version
-            .ok_or("missing journal entry version metadata".to_owned())?,
+        journal_entry_schema_version: journal_entry_schema_version
+            .ok_or("missing journal entry schema version metadata".to_owned())?,
         payload_encoding: payload_encoding.ok_or("missing payload encoding metadata".to_owned())?,
         commit_boundary_marker_taxonomy_version: commit_boundary_marker_taxonomy_version
             .ok_or("missing commit boundary taxonomy metadata".to_owned())?,
@@ -212,7 +207,7 @@ fn journal_path_for(snapshot_path: &Path) -> PathBuf {
     PathBuf::from(journal)
 }
 
-fn assert_journal_schema(journal_path: &Path, expected_prefix: &str, expected_version: &str) {
+fn assert_journal_schema(journal_path: &Path, expected_schema_version: &str) {
     let payload = fs::read_to_string(journal_path).expect("journal file should be readable");
     let non_empty_lines: Vec<&str> = payload
         .lines()
@@ -225,12 +220,20 @@ fn assert_journal_schema(journal_path: &Path, expected_prefix: &str, expected_ve
         "journal should contain exactly one deterministic entry line"
     );
 
-    let parts: Vec<&str> = non_empty_lines[0].split('|').collect();
-    assert_eq!(parts.len(), 3, "journal line should have 3 segments");
-    assert_eq!(parts[0], expected_prefix, "journal prefix drift detected");
-    assert_eq!(parts[1], expected_version, "journal version drift detected");
-
-    let payload_hex = parts[2];
+    let record: serde_json::Value = serde_json::from_str(non_empty_lines[0])
+        .expect("journal line should be valid snapshot-journal JSON");
+    let schema_version = record
+        .get("schema_version")
+        .and_then(serde_json::Value::as_str)
+        .expect("journal schema_version should be present");
+    assert_eq!(
+        schema_version, expected_schema_version,
+        "journal schema_version drift detected"
+    );
+    let payload_hex = record
+        .get("payload_hex")
+        .and_then(serde_json::Value::as_str)
+        .expect("journal payload_hex should be present");
     assert!(
         !payload_hex.is_empty(),
         "journal payload hex segment must not be empty"
@@ -275,11 +278,7 @@ fn run_channel_store_contract(case: &FixtureCase, metadata: &FixtureMetadata, tm
     store
         .write(channel_snapshot_fixture())
         .expect("channel snapshot write should succeed");
-    assert_journal_schema(
-        &journal_path,
-        &metadata.journal_entry_prefix,
-        &metadata.journal_entry_version,
-    );
+    assert_journal_schema(&journal_path, &metadata.journal_entry_schema_version);
 
     let clean_recovery = store
         .recover_latest_and_repair()
@@ -324,11 +323,7 @@ fn run_message_store_contract(case: &FixtureCase, metadata: &FixtureMetadata, tm
     store
         .write(message_snapshot_fixture())
         .expect("message snapshot write should succeed");
-    assert_journal_schema(
-        &journal_path,
-        &metadata.journal_entry_prefix,
-        &metadata.journal_entry_version,
-    );
+    assert_journal_schema(&journal_path, &metadata.journal_entry_schema_version);
 
     let clean_recovery = store
         .recover_latest_and_repair()
@@ -373,11 +368,7 @@ fn run_task_store_contract(case: &FixtureCase, metadata: &FixtureMetadata, tmp: 
     store
         .write(task_snapshot_fixture())
         .expect("task snapshot write should succeed");
-    assert_journal_schema(
-        &journal_path,
-        &metadata.journal_entry_prefix,
-        &metadata.journal_entry_version,
-    );
+    assert_journal_schema(&journal_path, &metadata.journal_entry_schema_version);
 
     let clean_recovery = store
         .recover_latest_and_repair()
@@ -422,16 +413,13 @@ fn functional_journal_wal_fixture_metadata_and_rows_are_deterministic() {
     let (metadata, cases) = parse_fixture().expect("fixture should parse");
 
     assert_eq!(
-        metadata.journal_entry_shape, "entry|1|<payload_hex>",
+        metadata.journal_entry_shape,
+        "json:{\"schema_version\":\"<schema_version>\",\"payload_hex\":\"<payload_hex>\"}",
         "journal entry schema marker drift detected"
     );
     assert_eq!(
-        metadata.journal_entry_prefix, "entry",
-        "journal entry prefix marker drift detected"
-    );
-    assert_eq!(
-        metadata.journal_entry_version, "1",
-        "journal entry version marker drift detected"
+        metadata.journal_entry_schema_version, "kamn.snapshot-journal.entry.v1",
+        "journal entry schema version marker drift detected"
     );
     assert!(
         cases.iter().any(|case| case.store == "channel"),

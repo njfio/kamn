@@ -4,14 +4,16 @@ use super::{
     message_store::ServiceApiMessageStore,
     project_service_api_relayed_message_statuses, service_api_runtime_worker_threads_for_test,
     state_io::{SERVICE_API_STATE_SQLITE_NAMESPACE, SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY},
-    AntiSpamRejection, REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+    AntiSpamRejection, ServiceApiIngressRateWindow, ServiceApiReplayGuard, ServiceApiRequestBudget,
+    REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
     REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
     REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
 };
 use kamn_core::SqliteStoreBackend;
 use serde_json::Value;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tokio::time::timeout;
 
 #[test]
 fn anti_spam_rate_limit_rejection_maps_to_sender_rate_limit_reason_code() {
@@ -40,6 +42,87 @@ fn unit_service_api_runtime_builder_initializes_runtime() {
     let runtime = build_service_api_runtime()
         .expect("service api runtime builder should initialize tokio runtime");
     runtime.block_on(async {});
+}
+
+#[test]
+fn unit_service_api_request_budget_waits_until_max_requests_are_recorded() {
+    let runtime = build_service_api_runtime()
+        .expect("service api runtime builder should initialize tokio runtime");
+    let budget = ServiceApiRequestBudget::new(2);
+
+    budget.record_request();
+    runtime.block_on(async {
+        let pending = timeout(Duration::from_millis(20), budget.wait_until_complete()).await;
+        assert!(
+            pending.is_err(),
+            "budget should remain pending before max requests are recorded"
+        );
+    });
+
+    budget.record_request();
+    runtime.block_on(async {
+        timeout(Duration::from_millis(200), budget.wait_until_complete())
+            .await
+            .expect("budget should complete after max requests are recorded");
+    });
+}
+
+#[test]
+fn unit_service_api_ingress_rate_window_enforces_limit_and_resets_after_one_second() {
+    let mut window = ServiceApiIngressRateWindow::new(1);
+    let started = Instant::now();
+    assert!(
+        window.try_record_request(started),
+        "first request in a window should be accepted"
+    );
+    assert!(
+        !window.try_record_request(started + Duration::from_millis(100)),
+        "second request in the same window should be rejected"
+    );
+    assert!(
+        window.try_record_request(started + Duration::from_millis(1_100)),
+        "new one-second window should accept requests again"
+    );
+}
+
+#[test]
+fn unit_service_api_replay_guard_evicts_ttl_entries_and_caps_capacity() {
+    let now = Instant::now();
+    let mut guard = ServiceApiReplayGuard::new(0, Duration::from_millis(10));
+    assert!(
+        guard.record_nonce_if_fresh("kamn:did:agent:alice", 1, now),
+        "first nonce should be accepted"
+    );
+    assert!(
+        !guard.record_nonce_if_fresh("kamn:did:agent:alice", 1, now + Duration::from_millis(1)),
+        "duplicate nonce must be rejected"
+    );
+    assert!(
+        !guard.record_nonce_if_fresh("kamn:did:agent:alice", 0, now + Duration::from_millis(2)),
+        "nonces below sender high-watermark must be rejected"
+    );
+    assert!(
+        guard.record_nonce_if_fresh("kamn:did:agent:bob", 1, now + Duration::from_millis(20)),
+        "expired entries should be evicted before accepting fresh nonces"
+    );
+    assert_eq!(
+        guard.tracked_entry_count(),
+        1,
+        "max_entries should clamp to one when configured with zero"
+    );
+    assert!(
+        !guard.record_nonce_if_fresh("kamn:did:agent:alice", 1, now + Duration::from_millis(21)),
+        "sender high-watermark should survive ttl eviction of older entries"
+    );
+    assert!(
+        guard.record_nonce_if_fresh("kamn:did:agent:alice", 2, now + Duration::from_millis(22)),
+        "new nonce above high-watermark should be accepted"
+    );
+    assert_eq!(
+        guard.tracked_entry_count(),
+        1,
+        "capacity eviction should keep replay guard bounded"
+    );
 }
 
 #[test]

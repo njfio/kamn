@@ -272,6 +272,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Panic-Path Policy Checker Fast Lane
 - For panic-policy checker changes, keep PR validation on deterministic checker harness commands:
   - `bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json`
+  - `cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used`
   - `bash scripts/ci/test_check_no_production_expect.sh`
 - Deterministic checker contracts:
   - reason taxonomy marker: `kamn.ci.production-panic-replacement-reason-taxonomy.v1`
@@ -279,6 +280,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - runtime evidence output marker: `runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv`
 - Boundary markers:
   - `panic_path_policy_scope_root=crates/kamn-node/src`
+  - `panic_path_policy_production_target_scope=lib+bins`
+  - `panic_path_policy_test_target_exclusion=tests-benches-excluded`
   - `panic_path_policy_ci_lane_profile=low-cost`
   - `panic_path_policy_ci_smoke_max_seconds=30`
 - Remediation parity markers:
@@ -286,6 +289,38 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `panic_path_policy_remediation_step_1=replace_panic_primitives_with_typed_errors`
   - `panic_path_policy_remediation_step_2=rerun_checker_until_status_ok`
   - `panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr`
+
+## Governance/Feature Commit-Ratio Fast Gate
+- Fast-gate governance-ratio contract command:
+  - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json`
+- Deterministic coverage command:
+  - `git log --no-merges --pretty=format:%s <base_sha>..<head_sha>`
+- Contract test command:
+  - `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
+- Evidence artifact:
+  - `ci-governance-feature-commit-ratio.json`
+- Policy markers:
+  - `governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1`
+  - `governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1`
+  - `governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded`
+  - `governance_feature_commit_ratio_threshold_max=0.50`
+  - `governance_feature_commit_ratio_non_merge_only=true`
+
+## Review-Document Freeze Fast Gate
+- Fast-gate review-freeze contract command:
+  - `python3 scripts/ci/check_review_document_freeze.py --changed-files-file /tmp/pr-changed-files.txt --freeze-manifest docs/review/review-document-freeze.manifest --output-json /tmp/review-document-freeze-report.json`
+- Deterministic changed-files command:
+  - `git diff --name-only <base_sha>..<head_sha>`
+- Contract test command:
+  - `bash scripts/ci/test_check_review_document_freeze.sh`
+- Evidence artifact:
+  - `ci-review-document-freeze.json`
+- Policy markers:
+  - `review_document_freeze_schema_version=kamn.ci.review-document-freeze-gate-report.v1`
+  - `review_document_freeze_reason_taxonomy_version=kamn.ci.review-document-freeze-gate-reason-taxonomy.v1`
+  - `review_document_freeze_reason_codes_csv=review_document_freeze_changed_files_missing,review_document_freeze_manifest_missing,review_document_freeze_manifest_invalid,review_document_freeze_violation_detected`
+  - `review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest`
+  - `review_document_freeze_scope=docs/review/gaps-and-issues-r*.md`
 
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
@@ -5265,7 +5300,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 
 ### Service API Request-Path Authz Matrix and Docs Parity Contract
 - `service_api_request_path_authz_reason_taxonomy_version=kamn.runtime.service-api-auth-reason-taxonomy.v1`
-- `service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected`
+- `service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_did_key_binding_invalid,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected`
 - `service_api_request_path_authz_public_routes_csv=GET:/healthz,GET:/metrics`
 - `service_api_request_path_authz_protected_routes_csv=POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws`
 - `service_api_request_path_authz_missing_header_reason_code=service_api_auth_sender_did_header_missing`
@@ -5278,6 +5313,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - `service_api_request_path_authz_remediation.service_api_auth_nonce_invalid=use a base-10 u64 nonce value in x-kamn-request-nonce`
 - `service_api_request_path_authz_remediation.service_api_auth_nonce_non_positive=increment nonce to a value greater than zero`
 - `service_api_request_path_authz_remediation.service_api_auth_signature_header_missing=add x-kamn-request-signature over sender_did+nonce+state_hash+body`
+- `service_api_request_path_authz_remediation.service_api_auth_did_key_binding_invalid=use the signer key bound to the sender DID instead of a mismatched signing key`
 - `service_api_request_path_authz_remediation.service_api_auth_signature_verification_failed=recompute signature with the supported profile and current state hash`
 - `service_api_request_path_authz_remediation.service_api_auth_replay_nonce_detected=use a fresh nonce per sender DID and avoid replaying accepted envelopes`
 - Guard commands:

@@ -141,6 +141,25 @@ Every error includes:
 - Push directly to main
 - Implement without a spec
 - Delete or weaken tests to pass CI
+
+## Shell-Surface DoR Gate
+
+When work touches shell/python/workflow/template surface (`scripts/**`, `.github/workflows/**`,
+`.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`), the issue body must include:
+
+shell_loc_delta_estimate: <integer|0>
+rust_loc_delta_estimate: <integer|0>
+shell_to_rust_ratio_delta_estimate: <float|0.0>
+shell_surface_mitigation_issue: <issue-id|None>
+
+## Shell-Surface DoD Gate
+
+When shell/python/workflow/template surface changed, closure comments and PR summaries must include:
+
+shell_loc_delta_actual: <integer|0>
+rust_loc_delta_actual: <integer|0>
+shell_to_rust_ratio_delta_actual: <float|0.0>
+shell_surface_ratio_target_status: improved|neutral|regressed_with_waiver
 ---
 ## §6 COMMANDS
 > Adapt to your repo. Discover via package.json, Makefile, Cargo.toml, etc.

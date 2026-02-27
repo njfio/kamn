@@ -285,6 +285,7 @@ fi
 
 api_stdout="$TMP_DIR/service-api-axum-ingress-live.out"
 KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$auth_public_key_hex" \
+KAMN_SERVICE_API_TLS_MODE="disabled" \
 "$NODE_BIN" \
   --role processor \
   --chain-id kamn-devnet \
