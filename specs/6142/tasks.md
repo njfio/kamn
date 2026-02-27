@@ -1,11 +1,11 @@
 # Tasks: Issue #6142
 
 ## Ordered Tasks
-- T1 (RED/Conformance): Add or run failing test(s) that reproduce `X-04` gap from the spec ACs.
-- T2 (Implementation): Apply minimal remediation to satisfy AC-1 without unrelated refactors.
-- T3 (GREEN/Regression): Add and run regression coverage for AC-2 with deterministic assertions.
-- T4 (Verification): Run scoped unit/functional/conformance commands and record evidence.
-- T5 (Closure): Update issue/pr docs, map ACs to tests, and publish closure evidence.
+- [x] T1 (RED/Conformance): Added `crates/kamn-core/tests/k8s_manifest_baseline_contract.rs` and ran `cargo test -p kamn-core --test k8s_manifest_baseline_contract -- --nocapture` to capture failing pre-remediation assertions.
+- [x] T2 (Implementation): Added `kamn-service-api` deployment plus `Service`/`Ingress` resources and `/healthz` readiness/liveness probes in `deploy/k8s/kamn-node.yaml`; updated deployment docs.
+- [x] T3 (GREEN/Regression): Re-ran `cargo test -p kamn-core --test k8s_manifest_baseline_contract -- --nocapture` with all assertions passing.
+- [x] T4 (Verification): Executed `cargo fmt --check`, `cargo clippy -p kamn-core --tests -- -D warnings`, `bash scripts/deploy/test_deployment_assets.sh`, and `bash scripts/deploy/test_validate_deployment_assets_live.sh`.
+- [x] T5 (Closure): Opened PR #6179 with AC->test mapping and RED/GREEN evidence; issue process log updated with measurable outputs.
 
 ## Tier Mapping
 - Unit: T1, T3, T4
