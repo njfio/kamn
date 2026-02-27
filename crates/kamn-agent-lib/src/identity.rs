@@ -1,15 +1,23 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{service_public_key_for_private_key, AgentDid};
 use std::env;
+use std::sync::atomic::{compiler_fence, Ordering};
 
 const DETERMINISTIC_IDENTITY_ALLOW_ENV: &str = "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
 
 /// Agent identity material used by phase-1 authenticated operations.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct AgentIdentity {
     did: AgentDid,
     signing_key: String,
     encryption_key: String,
+}
+
+impl Drop for AgentIdentity {
+    fn drop(&mut self) {
+        let mut signing_key_bytes = drain_signing_key_bytes(&mut self.signing_key);
+        wipe_secret_bytes(signing_key_bytes.as_mut_slice());
+    }
 }
 
 impl AgentIdentity {
@@ -164,6 +172,18 @@ fn hex_encode(bytes: &[u8]) -> String {
     out
 }
 
+fn drain_signing_key_bytes(signing_key: &mut String) -> Vec<u8> {
+    core::mem::take(signing_key).into_bytes()
+}
+
+fn wipe_secret_bytes(bytes: &mut [u8]) {
+    for byte in bytes.iter_mut() {
+        *byte = 0;
+    }
+    compiler_fence(Ordering::SeqCst);
+    let _ = std::hint::black_box(bytes);
+}
+
 #[cfg(test)]
 mod tests {
     use super::AgentIdentity;
@@ -242,5 +262,15 @@ mod tests {
         let rendered = error.to_string();
         assert!(rendered.contains("deterministic identity derivation is disabled"));
         assert!(rendered.contains("from_did_and_signing_key"));
+    }
+
+    #[test]
+    fn regression_agent_identity_signing_key_scrub_helpers_zeroize_bytes() {
+        // Regression: #6128
+        let mut signing_key = String::from("0123abcd");
+        let mut bytes = super::drain_signing_key_bytes(&mut signing_key);
+        assert!(signing_key.is_empty());
+        super::wipe_secret_bytes(bytes.as_mut_slice());
+        assert!(bytes.iter().all(|byte| *byte == 0));
     }
 }
