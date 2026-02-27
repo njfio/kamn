@@ -3,18 +3,18 @@
   "targets": [
     {
       "path": "crates/kamn-core/src/direct_message_crypto.rs",
+      "line_percent_min": 60.0,
+      "function_percent_min": 60.0
+    },
+    {
+      "path": "crates/kamn-core/src/group_channel_crypto.rs",
       "line_percent_min": 50.0,
       "function_percent_min": 50.0
     },
     {
-      "path": "crates/kamn-core/src/group_channel_crypto.rs",
-      "line_percent_min": 24.0,
-      "function_percent_min": 30.0
-    },
-    {
       "path": "crates/kamn-core/src/kolme_runtime_commit/http_transport.rs",
-      "line_percent_min": 25.0,
-      "function_percent_min": 20.0
+      "line_percent_min": 27.0,
+      "function_percent_min": 22.0
     },
     {
       "path": "crates/kamn-node/src/runtime_orchestration.rs",
@@ -23,13 +23,13 @@
     },
     {
       "path": "crates/kamn-node/src/service_api_endpoint.rs",
-      "line_percent_min": 40.0,
-      "function_percent_min": 20.0
+      "line_percent_min": 45.0,
+      "function_percent_min": 24.0
     },
     {
       "path": "crates/kamn-node/src/signer.rs",
-      "line_percent_min": 2.0,
-      "function_percent_min": 2.5
+      "line_percent_min": 4.5,
+      "function_percent_min": 8.5
     }
   ]
 }
