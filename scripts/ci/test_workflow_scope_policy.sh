@@ -556,6 +556,21 @@ if grep -Fq "bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mod
   exit 1
 fi
 
+if ! grep -Fq "name: Run runtime coverage-guided parser fuzz contract lane" "$FAST_WORKFLOW"; then
+  echo "expected runtime coverage-guided parser fuzz contract lane step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected runtime coverage-guided parser fuzz contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "runtime-input-mutation-coverage-guided-contract-report.json" "$FAST_WORKFLOW"; then
+  echo "expected runtime coverage-guided parser fuzz contract report wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if grep -Fq "bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected coverage-guided parser fuzz deep lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1

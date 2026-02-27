@@ -1,15 +1,15 @@
 # Tasks: Issue #6141
 
 ## Ordered Tasks
-- T1 (RED/Conformance): Add or run failing test(s) that reproduce `X-03` gap from the spec ACs.
-- T2 (Implementation): Apply minimal remediation to satisfy AC-1 without unrelated refactors.
-- T3 (GREEN/Regression): Add and run regression coverage for AC-2 with deterministic assertions.
-- T4 (Verification): Run scoped unit/functional/conformance commands and record evidence.
-- T5 (Closure): Update issue/pr docs, map ACs to tests, and publish closure evidence.
+- T1 (RED/Conformance): Capture failing check showing fast-gate lacks explicit coverage-guided fuzz lane/report command.
+- T2 (GREEN/Implementation): Add fast-gate coverage-guided parser fuzz contract lane step + artifact upload.
+- T3 (Regression): Extend `test_workflow_scope_policy.sh` assertions for lane/report wiring while preserving deep-lane exclusion checks.
+- T4 (Verify): Run scoped workflow-policy and shell checks to validate CI contract behavior.
+- T5 (Closure): Map ACs to commands/tests and publish evidence in issue/PR.
 
 ## Tier Mapping
-- Unit: T1, T3, T4
-- Functional: T3, T4
-- Integration: T4 (when cross-module behavior is affected)
-- Regression: T1, T3, T4
-- Conformance: T1, T4, T5
+- Unit: N/A (workflow/shell contract scope)
+- Functional: T2, T4
+- Integration: N/A (no runtime integration changes)
+- Regression: T3, T4
+- Conformance: T1, T2, T3, T4, T5
