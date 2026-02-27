@@ -1,5 +1,6 @@
 //! Flat JSON scalar/object parsing contracts for Kolme runtime-commit payloads.
 
+use crate::json_parse_helpers::split_unquoted;
 use crate::json_scalar_policy::parse_json_string_token as parse_json_string;
 use std::collections::HashMap;
 use std::error::Error;
@@ -181,51 +182,4 @@ fn is_json_number_literal(token: &str) -> bool {
         return !remainder.is_empty() && remainder.chars().all(|ch| ch.is_ascii_digit());
     }
     first.is_ascii_digit() && chars.as_str().chars().all(|ch| ch.is_ascii_digit())
-}
-
-fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>, &'static str> {
-    let mut parts = Vec::new();
-    let mut current = String::new();
-    let mut in_quotes = false;
-    let mut escape = false;
-
-    for ch in input.chars() {
-        if escape {
-            current.push(ch);
-            escape = false;
-            continue;
-        }
-
-        if ch == '\\' && in_quotes {
-            current.push(ch);
-            escape = true;
-            continue;
-        }
-
-        if ch == '"' {
-            in_quotes = !in_quotes;
-            current.push(ch);
-            continue;
-        }
-
-        if ch == delimiter && !in_quotes {
-            if current.trim().is_empty() {
-                return Err("empty segment");
-            }
-            parts.push(current.trim().to_owned());
-            current.clear();
-            continue;
-        }
-
-        current.push(ch);
-    }
-
-    if in_quotes {
-        return Err("unterminated quoted string");
-    }
-    if current.trim().is_empty() {
-        return Err("empty trailing segment");
-    }
-    parts.push(current.trim().to_owned());
-    Ok(parts)
 }

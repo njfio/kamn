@@ -1,5 +1,6 @@
 //! Block-scan policy contracts for Kolme fallback reconciliation.
 
+use crate::json_parse_helpers::skip_ascii_whitespace;
 use crate::json_scalar_policy::parse_json_string_token as parse_json_string;
 use crate::provider_outcome_policy::deterministic_backend_commit_id;
 use crate::receipt_finality::ReceiptFinality;
@@ -280,17 +281,6 @@ fn find_string_field(payload: &str, field: &str) -> Result<Option<String>, Block
         });
     }
     Ok(None)
-}
-
-fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
-    while let Some(byte) = value.as_bytes().get(cursor).copied() {
-        if byte.is_ascii_whitespace() {
-            cursor += 1;
-            continue;
-        }
-        break;
-    }
-    cursor
 }
 
 #[cfg(test)]
