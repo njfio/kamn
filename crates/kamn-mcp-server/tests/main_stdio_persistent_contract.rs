@@ -172,6 +172,11 @@ fn spec_c04_main_startup_fails_closed_when_key_file_is_unreadable() {
 #[test]
 fn spec_c03_main_stdio_rejects_oversized_framed_content_length() {
     let binary = env!("CARGO_BIN_EXE_kamn-mcp-server");
+    let key_file = write_temp_key_file("mcp-content-length-cap-test");
+    let key_file_string = key_file
+        .to_str()
+        .expect("temp key file path should render as utf-8")
+        .to_owned();
     let mut child = Command::new(binary)
         .args([
             "--endpoint",
@@ -179,7 +184,7 @@ fn spec_c03_main_stdio_rejects_oversized_framed_content_length() {
             "--agent-name",
             "mcp-content-length-cap-test",
             "--key-file",
-            "/tmp/mcp-content-length-cap-test.key",
+            key_file_string.as_str(),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -214,4 +219,6 @@ fn spec_c03_main_stdio_rejects_oversized_framed_content_length() {
         stderr.contains("content-length exceeds maximum"),
         "stderr should include oversized content-length marker: {stderr}",
     );
+
+    std::fs::remove_file(key_file).expect("temp key file should be removable");
 }
