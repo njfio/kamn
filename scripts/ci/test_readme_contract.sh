@@ -4,14 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
 README_FILE="$ROOT_DIR/README.md"
+CONTRACT_REFERENCE_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 
 test_harness_require_file "$README_FILE" "README contract failed: README.md is missing at repository root."
+test_harness_require_file "$CONTRACT_REFERENCE_FILE" "README contract failed: docs/developer/readme-contract-reference.md is missing."
 
 required_headers=(
   "# KAMN"
   "## What This Repository Contains"
   "## Quickstart"
   "## Workflow"
+  "## Architecture Map"
+  "## Contract Reference"
   "## Key Links"
 )
 
@@ -198,8 +202,8 @@ required_snippets=(
 )
 
 for snippet in "${required_snippets[@]}"; do
-  if ! grep -Fq -- "$snippet" "$README_FILE"; then
-    echo "README contract failed: missing snippet '$snippet'." >&2
+  if ! grep -Fq -- "$snippet" "$CONTRACT_REFERENCE_FILE"; then
+    echo "README contract failed: missing snippet '$snippet' in docs/developer/readme-contract-reference.md." >&2
     exit 1
   fi
 done

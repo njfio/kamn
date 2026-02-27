@@ -1,5 +1,5 @@
 const ADR: &str = include_str!("../../../docs/architecture/adr-kamn-core-live-tls-transport.md");
-const README: &str = include_str!("../../../README.md");
+const README: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 const RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/foundation/kolme-runtime-commit-client.md");
 const OPS_CONFIGURATION_DOC: &str = include_str!("../../../docs/ops/configuration.md");

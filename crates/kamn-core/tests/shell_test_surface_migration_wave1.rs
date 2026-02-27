@@ -637,7 +637,7 @@ fn spec_c04_workflow_kolme_heavy_exclusion_checker_contract() {
 #[test]
 fn spec_c05_fallback_retirement_docs_parity_markers() {
     let docs = [
-        read_text("README.md"),
+        read_text("docs/developer/readme-contract-reference.md"),
         read_text("docs/ci/strategy.md"),
         read_text("docs/planning/kolme-devnet-ops.md"),
     ];

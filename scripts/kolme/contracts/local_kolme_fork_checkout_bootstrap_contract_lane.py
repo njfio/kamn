@@ -17,7 +17,7 @@ RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 PIN_MANIFEST_SCHEMA = "kamn.kolme.fork-pin-manifest.v1"
 PIN_MANIFEST_FIXTURE = ROOT_DIR / "fixtures/kolme_compatibility/kolme_fork_pin_manifest.json"
 

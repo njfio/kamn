@@ -20,7 +20,7 @@ CONTRACT_RUNNER = ROOT_DIR / "scripts/kolme/run_onchain_lifecycle_evidence_contr
 DOC_FILE = ROOT_DIR / "docs/foundation/kolme-runtime-commit-client.md"
 OPS_DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 
 # Live integration markers ensure command-surface parity coverage for the three
 # underlying on-chain validators:

@@ -10,7 +10,7 @@ GENERATOR="$ROOT_DIR/scripts/kolme/generate_managed_signer_backend_slo_telemetry
 CHECKER="$ROOT_DIR/scripts/kolme/check_managed_signer_backend_slo_policy.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_COST_DOC="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 

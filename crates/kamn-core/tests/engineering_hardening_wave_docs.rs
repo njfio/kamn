@@ -3,7 +3,7 @@ const ENGINEERING_HARDENING_WAVE_DOC: &str =
 const ARCHITECTURE_MODULE_MAP_DOC: &str =
     include_str!("../../../docs/architecture/kamn-core-module-map.md");
 const RUSTDOC_PUBLISHING_DOC: &str = include_str!("../../../docs/developer/rustdoc-publishing.md");
-const README: &str = include_str!("../../../README.md");
+const README: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 
 #[test]
 fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {

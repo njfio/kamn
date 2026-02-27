@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SMOKE_RUNNER="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane.sh"
 LIVE_NETWORK_DOC="$ROOT_DIR/docs/planning/live-network-wave.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 MAKEFILE="$ROOT_DIR/Makefile"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT

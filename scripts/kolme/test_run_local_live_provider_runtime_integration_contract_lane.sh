@@ -8,7 +8,7 @@ CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_live_provider_runtime_int
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_live_provider_runtime_integration_contract_lane.json"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 

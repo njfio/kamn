@@ -17,7 +17,7 @@ POLICY_CHECKER = ROOT_DIR / "scripts/kolme/check_triadic_devnet_smoke_policy.py"
 FIXTURE_FILE = ROOT_DIR / "fixtures/kolme_compatibility/devnet_smoke_markers.json"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 MAX_SECONDS = 180
 
 
