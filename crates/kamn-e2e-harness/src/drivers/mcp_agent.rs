@@ -4247,10 +4247,12 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         let payload_false = r#"{"ok":false}"#;
         let payload_quoted = r#"{"ok":"true"}"#;
         let payload_nested_string = r#"{"note":"status says \\\"ok\\\":true"}"#;
+        let payload_prefix = r#"{"ok":truefalse}"#;
         assert_eq!(json_optional_bool_field(payload_true, "ok"), Some(true));
         assert_eq!(json_optional_bool_field(payload_false, "ok"), Some(false));
         assert_eq!(json_optional_bool_field(payload_quoted, "ok"), None);
         assert_eq!(json_optional_bool_field(payload_nested_string, "ok"), None);
+        assert_eq!(json_optional_bool_field(payload_prefix, "ok"), None);
     }
 
     #[test]
