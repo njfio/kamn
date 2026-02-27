@@ -8,7 +8,10 @@
 5. Update docs/spec/task artifacts and finalize closure evidence.
 
 ## Affected Modules
-- Target module(s) identified by issue #6124 scope and test evidence.
+- `.ci/docs-contract-test-file-budget.env`
+- `scripts/ci/test_ci_tools.sh`
+- `.github/workflows/ci-fast-gate.yml`
+- `crates/kamn-core/tests/*_docs.rs` (12 removed unreferenced placeholders/stubs)
 - `specs/6124/spec.md`
 - `specs/6124/plan.md`
 - `specs/6124/tasks.md`
