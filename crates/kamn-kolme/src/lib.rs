@@ -14,6 +14,7 @@ pub mod finality;
 pub mod finality_receipt_policy;
 pub mod flat_json_policy;
 pub mod http_response_policy;
+mod json_parse_helpers;
 mod json_scalar_policy;
 pub mod live_provider_pipeline;
 pub mod notification_policy;
