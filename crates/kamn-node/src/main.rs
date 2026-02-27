@@ -34,7 +34,7 @@ use logging::{
     resolve_log_config_from_inputs, NodeLogConfig, NodeLogFormat, NodeLogLevel,
     KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
 };
-use logging::{log_error, log_info};
+use logging::{initialize_log_config_from_env, log_error, log_info};
 #[cfg(test)]
 pub(crate) use observability_endpoint::render_observability_endpoint_response;
 pub(crate) use observability_endpoint::{
@@ -596,6 +596,7 @@ fn should_skip_observability_endpoint_for_full_supervisor(runtime_mode: &str) ->
 
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
+    initialize_log_config_from_env()?;
     let runtime_mode = cli.runtime_mode.as_str();
     let execution_id =
         build_runtime_execution_id(cli.runtime_mode, cli.chain_id.as_str(), cli.role.as_str());

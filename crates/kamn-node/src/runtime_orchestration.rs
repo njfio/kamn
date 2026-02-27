@@ -988,6 +988,7 @@ pub(crate) fn enforce_kolme_live_signer_key_source_policy(
 }
 
 pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
+    initialize_log_config_from_env()?;
     let NodeCli {
         profile,
         role,
