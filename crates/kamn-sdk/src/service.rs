@@ -1079,7 +1079,11 @@ fn parse_service_websocket_response_frame_payload(frame: &[u8]) -> Result<&[u8],
             })?;
             (payload_len, 10usize)
         }
-        _ => unreachable!("payload length marker is masked to 7 bits"),
+        _ => {
+            return Err(SdkError::TransportFailure(
+                "service websocket response frame payload length marker invalid",
+            ));
+        }
     };
     let payload_end = payload_offset
         .checked_add(payload_len)
