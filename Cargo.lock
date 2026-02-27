@@ -1612,6 +1612,7 @@ version = "0.1.0"
 dependencies = [
  "kamn-kolme",
  "kamn-sdk",
+ "kamn-types",
  "zeroize",
 ]
 
@@ -1703,6 +1704,7 @@ name = "kamn-sdk"
 version = "0.1.0"
 dependencies = [
  "kamn-core",
+ "kamn-types",
  "rustls",
  "rustls-pemfile",
  "serde_json",
@@ -1715,6 +1717,13 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "kamn-types"
+version = "0.1.0"
+dependencies = [
+ "kamn-core",
 ]
 
 [[package]]

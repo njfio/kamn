@@ -1,4 +1,5 @@
 use kamn_sdk::SdkError;
+use kamn_types::AgentDidError;
 use std::fmt;
 
 /// Errors returned by `kamn-agent-lib` APIs.
@@ -39,5 +40,24 @@ impl std::error::Error for AgentLibError {}
 impl From<SdkError> for AgentLibError {
     fn from(value: SdkError) -> Self {
         Self::Sdk(value)
+    }
+}
+
+impl From<AgentDidError> for AgentLibError {
+    fn from(value: AgentDidError) -> Self {
+        match value {
+            AgentDidError::InvalidPrefix(_) => Self::InvalidInput {
+                field: "did",
+                reason: "must start with kamn:did:agent:".to_owned(),
+            },
+            AgentDidError::MissingMethodSpecificId => Self::InvalidInput {
+                field: "did",
+                reason: "method specific identifier is required".to_owned(),
+            },
+            AgentDidError::InvalidCharacter(_) => Self::InvalidInput {
+                field: "did",
+                reason: "contains unsupported characters".to_owned(),
+            },
+        }
     }
 }

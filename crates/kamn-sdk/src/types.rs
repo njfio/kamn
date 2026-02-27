@@ -1,40 +1,5 @@
-use crate::SdkError;
-
-/// Strongly typed agent DID value.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AgentDid(String);
-
-impl AgentDid {
-    /// Parses and validates an agent DID string.
-    /// Input values must use the `kamn:did:agent:` prefix.
-    pub fn parse(value: impl Into<String>) -> Result<Self, SdkError> {
-        let value = value.into();
-        if !value.starts_with("kamn:did:agent:") {
-            return Err(SdkError::InvalidInput {
-                field: "did",
-                reason: "must start with kamn:did:agent:",
-            });
-        }
-        if value.trim().len() <= "kamn:did:agent:".len() {
-            return Err(SdkError::InvalidInput {
-                field: "did",
-                reason: "method specific identifier is required",
-            });
-        }
-        Ok(Self(value))
-    }
-
-    /// Returns the DID string view.
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for AgentDid {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+/// Shared canonical agent DID value.
+pub use kamn_types::AgentDid;
 
 /// Agent registration metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]

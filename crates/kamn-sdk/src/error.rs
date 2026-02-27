@@ -1,5 +1,7 @@
 use std::fmt;
 
+use kamn_types::AgentDidError;
+
 /// Errors returned by SDK transport, validation, and workflow operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SdkError {
@@ -87,3 +89,22 @@ impl fmt::Display for SdkError {
 }
 
 impl std::error::Error for SdkError {}
+
+impl From<AgentDidError> for SdkError {
+    fn from(value: AgentDidError) -> Self {
+        match value {
+            AgentDidError::InvalidPrefix(_) => Self::InvalidInput {
+                field: "did",
+                reason: "must start with kamn:did:agent:",
+            },
+            AgentDidError::MissingMethodSpecificId => Self::InvalidInput {
+                field: "did",
+                reason: "method specific identifier is required",
+            },
+            AgentDidError::InvalidCharacter(_) => Self::InvalidInput {
+                field: "did",
+                reason: "contains unsupported characters",
+            },
+        }
+    }
+}

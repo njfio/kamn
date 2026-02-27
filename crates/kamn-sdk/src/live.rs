@@ -69,7 +69,7 @@ impl LiveTransportConfig {
         let requester_did_raw =
             env_var_or_default(LIVE_REQUESTER_DID_ENV, DEFAULT_LIVE_REQUESTER_DID);
         let requester_did =
-            AgentDid::parse(requester_did_raw).map_err(|_| SdkError::InvalidInput {
+            AgentDid::parse(&requester_did_raw).map_err(|_| SdkError::InvalidInput {
                 field: "transport.requester_did",
                 reason: "must be a valid kamn agent did",
             })?;
@@ -248,7 +248,7 @@ impl KamnAgent for LiveTransportKamnClient {
     fn resolve(&self, did: &AgentDid) -> Result<DidDocument, SdkError> {
         let auth = self.build_auth(&self.config.requester_did, "", Some(AGENTS_READ_SCOPE))?;
         let profile = self.service_client.get_agent_profile(did.as_str(), &auth)?;
-        let resolved_did = AgentDid::parse(profile.did).map_err(|_| {
+        let resolved_did = AgentDid::parse(&profile.did).map_err(|_| {
             SdkError::TransportFailure("service returned invalid did in agent profile response")
         })?;
         Ok(DidDocument {
@@ -324,7 +324,7 @@ impl KamnAgent for LiveTransportKamnClient {
         let profile = self
             .service_client
             .get_agent_profile(agent.as_str(), &auth)?;
-        let profile_did = AgentDid::parse(profile.did).map_err(|_| {
+        let profile_did = AgentDid::parse(&profile.did).map_err(|_| {
             SdkError::TransportFailure("service returned invalid did in agent profile response")
         })?;
         let score = u32::try_from(profile.reputation_score).map_err(|_| {

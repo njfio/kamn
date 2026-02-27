@@ -191,14 +191,20 @@ impl TcpSignedEnvelope {
         }
 
         let envelope = Self {
-            from: AgentDid::parse(from.ok_or(SdkError::InvalidInput {
-                field: "from",
-                reason: "missing required key",
-            })?)?,
-            to: AgentDid::parse(to.ok_or(SdkError::InvalidInput {
-                field: "to",
-                reason: "missing required key",
-            })?)?,
+            from: AgentDid::parse(
+                from.ok_or(SdkError::InvalidInput {
+                    field: "from",
+                    reason: "missing required key",
+                })?
+                .as_str(),
+            )?,
+            to: AgentDid::parse(
+                to.ok_or(SdkError::InvalidInput {
+                    field: "to",
+                    reason: "missing required key",
+                })?
+                .as_str(),
+            )?,
             nonce: nonce.ok_or(SdkError::InvalidInput {
                 field: "nonce",
                 reason: "missing required key",
@@ -469,14 +475,20 @@ impl TcpHandshakeFrame {
         }
 
         Ok(Self {
-            from: AgentDid::parse(from.ok_or(SdkError::InvalidInput {
-                field: "handshake.from",
-                reason: "missing required key",
-            })?)?,
-            to: AgentDid::parse(to.ok_or(SdkError::InvalidInput {
-                field: "handshake.to",
-                reason: "missing required key",
-            })?)?,
+            from: AgentDid::parse(
+                from.ok_or(SdkError::InvalidInput {
+                    field: "handshake.from",
+                    reason: "missing required key",
+                })?
+                .as_str(),
+            )?,
+            to: AgentDid::parse(
+                to.ok_or(SdkError::InvalidInput {
+                    field: "handshake.to",
+                    reason: "missing required key",
+                })?
+                .as_str(),
+            )?,
             nonce: nonce.ok_or(SdkError::InvalidInput {
                 field: "handshake.nonce",
                 reason: "missing required key",

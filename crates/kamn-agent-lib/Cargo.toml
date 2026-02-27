@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
 kamn-sdk = { path = "../kamn-sdk" }
+kamn-types = { path = "../kamn-types" }
 zeroize = "1.8.1"
 
 [lints]

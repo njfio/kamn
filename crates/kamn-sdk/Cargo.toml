@@ -9,6 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 kamn-core = { path = "../kamn-core" }
+kamn-types = { path = "../kamn-types" }
 serde_json = "1.0.145"
 rustls = { version = "0.23.36", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pemfile = "2.2.0"

@@ -64,12 +64,13 @@ impl InMemoryKamnClient {
         }
         Err(SdkError::NotFound {
             entity: "agent",
-            id: did.to_string(),
+            id: did.as_str().to_owned(),
         })
     }
 
     fn next_did(&mut self) -> Result<AgentDid, SdkError> {
-        let did = AgentDid::parse(format!("kamn:did:agent:agent-{}", self.next_agent_id))?;
+        let did_value = format!("kamn:did:agent:agent-{}", self.next_agent_id);
+        let did = AgentDid::parse(did_value.as_str())?;
         self.next_agent_id += 1;
         Ok(did)
     }
@@ -178,7 +179,7 @@ impl KamnAgent for InMemoryKamnClient {
             .cloned()
             .ok_or_else(|| SdkError::NotFound {
                 entity: "agent",
-                id: did.to_string(),
+                id: did.as_str().to_owned(),
             })
     }
 
@@ -211,7 +212,7 @@ impl KamnAgent for InMemoryKamnClient {
             .get_mut(did)
             .ok_or_else(|| SdkError::NotFound {
                 entity: "inbox",
-                id: did.to_string(),
+                id: did.as_str().to_owned(),
             })?;
         Ok(std::mem::take(inbox))
     }
@@ -323,7 +324,7 @@ impl KamnAgent for InMemoryKamnClient {
                 .get_mut(&escrow.payer)
                 .ok_or_else(|| SdkError::NotFound {
                     entity: "balance",
-                    id: escrow.payer.to_string(),
+                    id: escrow.payer.as_str().to_owned(),
                 })?;
         if payer_balance.0 < escrow.amount.0 {
             return Err(SdkError::InsufficientFunds {
@@ -362,7 +363,7 @@ impl KamnAgent for InMemoryKamnClient {
                 .get_mut(&escrow.config.payee)
                 .ok_or_else(|| SdkError::NotFound {
                     entity: "balance",
-                    id: escrow.config.payee.to_string(),
+                    id: escrow.config.payee.as_str().to_owned(),
                 })?;
         payee_balance.0 += escrow.config.amount.0;
         escrow.released = true;
@@ -375,7 +376,7 @@ impl KamnAgent for InMemoryKamnClient {
             .copied()
             .ok_or_else(|| SdkError::NotFound {
                 entity: "balance",
-                id: did.to_string(),
+                id: did.as_str().to_owned(),
             })
     }
 
@@ -413,7 +414,7 @@ impl KamnAgent for InMemoryKamnClient {
             .cloned()
             .ok_or_else(|| SdkError::NotFound {
                 entity: "reputation",
-                id: agent.to_string(),
+                id: agent.as_str().to_owned(),
             })
     }
 }

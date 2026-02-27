@@ -64,7 +64,8 @@ pub struct AgentDid(String);
 
 impl AgentDid {
     /// Parses and validates a KAMN agent DID.
-    pub fn parse(value: &str) -> Result<Self, AgentDidError> {
+    pub fn parse(value: impl AsRef<str>) -> Result<Self, AgentDidError> {
+        let value = value.as_ref();
         if !value.starts_with(AGENT_DID_PREFIX) {
             return Err(AgentDidError::InvalidPrefix(value.to_owned()));
         }
@@ -162,6 +163,12 @@ impl AgentDid {
                 "agent did key-binding rendering failed validation: {error}"
             ))
         })
+    }
+}
+
+impl fmt::Display for AgentDid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
