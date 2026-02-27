@@ -5392,6 +5392,59 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     assert_eq!(relay_entry_json["message_id"], send_payload.message_id);
     assert_eq!(relay_entry_json["recipient_did"], recipient_did);
 
+    let relay_listener = TcpListener::bind("127.0.0.1:0")
+        .expect("relay receiver listener should bind for daemon forwarding");
+    let relay_receiver_addr = relay_listener
+        .local_addr()
+        .expect("relay receiver listener addr should resolve")
+        .to_string();
+    let relay_route_map = serde_json::json!({
+        recipient_did: relay_receiver_addr.clone(),
+    })
+    .to_string();
+    let _relay_route_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON",
+        Some(relay_route_map.as_str()),
+    );
+    let _daemon_private_key_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+        Some(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX),
+    );
+    let relay_receiver = thread::spawn(move || {
+        let (mut relay_stream, _) = relay_listener
+            .accept()
+            .expect("relay receiver should accept daemon forwarding connection");
+        relay_stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .expect("relay receiver read timeout should configure");
+        let mut request = String::new();
+        let mut chunk = [0_u8; 1024];
+        loop {
+            match relay_stream.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(read_count) => {
+                    request.push_str(
+                        std::str::from_utf8(&chunk[..read_count])
+                            .expect("relay request should be utf-8"),
+                    );
+                    if request.contains("\r\n\r\n") {
+                        break;
+                    }
+                }
+                Err(error)
+                    if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) =>
+                {
+                    break;
+                }
+                Err(error) => panic!("relay receiver request read should succeed: {error}"),
+            }
+        }
+        relay_stream
+            .write_all(b"HTTP/1.1 202 Accepted\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
+            .expect("relay receiver response should write");
+        request
+    });
+
     let daemon_report = execute(
         parse_args(vec![
             "kamn-node".to_owned(),
@@ -5420,6 +5473,13 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
             .unwrap_or(0)
             > 0,
         "daemon observability throughput should reflect relay projection work"
+    );
+    let relay_forward_request = relay_receiver
+        .join()
+        .expect("relay receiver thread should join after daemon projection");
+    assert!(
+        relay_forward_request.starts_with("POST /v1/messages/relay HTTP/1.1"),
+        "daemon relay forward should target /v1/messages/relay"
     );
 
     let post_daemon_relay_contents = fs::read_to_string(relay_spool_file.as_path())
