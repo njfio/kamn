@@ -145,6 +145,13 @@ pub(super) struct ServiceApiMessageStore {
     snapshot: ServiceApiPersistedMessageStoreSnapshot,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct ServiceApiRelayProgressCounts {
+    pub(super) created_message_count: u64,
+    pub(super) relayed_message_count: u64,
+    pub(super) delivered_message_count: u64,
+}
+
 impl ServiceApiMessageStore {
     pub(super) fn from_optional_state_file(state_file: Option<String>) -> Result<Self, String> {
         let snapshot = if let Some(path) = state_file.as_deref() {
@@ -435,6 +442,34 @@ impl ServiceApiMessageStore {
                 .get(channel_id)
                 .cloned()
                 .unwrap_or_default(),
+        })
+    }
+
+    pub(super) fn relay_progress_counts(
+        &mut self,
+    ) -> Result<ServiceApiRelayProgressCounts, String> {
+        self.refresh_from_disk()?;
+        let mut created_message_count = 0_u64;
+        let mut relayed_message_count = 0_u64;
+        let mut delivered_message_count = 0_u64;
+        for record in self.snapshot.messages.values() {
+            match record.status.as_str() {
+                "created" => {
+                    created_message_count = created_message_count.saturating_add(1);
+                }
+                "relayed" => {
+                    relayed_message_count = relayed_message_count.saturating_add(1);
+                }
+                "delivered" => {
+                    delivered_message_count = delivered_message_count.saturating_add(1);
+                }
+                _ => {}
+            }
+        }
+        Ok(ServiceApiRelayProgressCounts {
+            created_message_count,
+            relayed_message_count,
+            delivered_message_count,
         })
     }
 

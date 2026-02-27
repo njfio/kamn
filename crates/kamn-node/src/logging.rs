@@ -65,6 +65,11 @@ pub(crate) fn resolve_log_config_from_env() -> Result<NodeLogConfig, ConfigError
     resolve_log_config_from_inputs(level_value.as_deref(), format_value.as_deref())
 }
 
+pub(crate) fn initialize_log_config_from_env() -> Result<(), ConfigError> {
+    let _ = resolve_log_config_from_env()?;
+    Ok(())
+}
+
 pub(crate) fn resolve_log_config_from_inputs(
     level: Option<&str>,
     format: Option<&str>,
