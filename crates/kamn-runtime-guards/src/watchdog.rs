@@ -302,7 +302,7 @@ impl WatchdogNode {
         }
 
         let observed_ratio_pct =
-            ((delivered_recipients as f64 / expected_recipients as f64) * 100.0).floor() as u8;
+            delivery_ratio_pct_floor(delivered_recipients, expected_recipients);
         if observed_ratio_pct >= self.config.min_delivery_ratio_pct {
             return Ok(Vec::new());
         }
@@ -364,6 +364,13 @@ fn require_non_empty(field: &str, value: &str) -> Result<(), WatchdogError> {
     Ok(())
 }
 
+fn delivery_ratio_pct_floor(delivered_recipients: usize, expected_recipients: usize) -> u8 {
+    let delivered = delivered_recipients as u128;
+    let expected = expected_recipients as u128;
+    let ratio_pct = (delivered.saturating_mul(100)) / expected;
+    ratio_pct as u8
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -416,5 +423,26 @@ mod tests {
             .expect("observation should be valid");
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].severity, WatchdogSeverity::Critical);
+    }
+
+    #[test]
+    fn gossip_precision_boundary_uses_floor_semantics() {
+        let mut watchdog = WatchdogNode::new(WatchdogConfig {
+            min_quorum_signatures: 2,
+            min_delivery_ratio_pct: 100,
+        })
+        .expect("valid config");
+
+        let alerts = watchdog
+            .observe(WatchdogObservation::gossip_delivery(
+                "msg-precision",
+                9_007_199_254_740_993,
+                9_007_199_254_740_992,
+                9_007_199_254_740_993,
+            ))
+            .expect("observation should be valid");
+
+        assert_eq!(alerts.len(), 1);
+        assert_eq!(alerts[0].severity, WatchdogSeverity::Warning);
     }
 }
