@@ -628,6 +628,20 @@ pub(crate) fn render_service_api_endpoint_response(
     payload::render_service_api_endpoint_response(snapshot, method, path, body)
 }
 
+pub(crate) fn upsert_service_api_relayed_message_from_daemon(
+    state_file: Option<&str>,
+    relay_entry: &ServiceApiRelaySpoolEntry,
+) -> Result<ServiceApiMessageRelayBody, String> {
+    let mut message_store =
+        ServiceApiMessageStore::from_optional_state_file(state_file.map(str::to_owned))?;
+    message_store.upsert_relayed_message(
+        relay_entry.message_id.as_str(),
+        relay_entry.sender_did.as_deref(),
+        relay_entry.recipient_did.as_str(),
+        relay_entry.body.as_str(),
+    )
+}
+
 pub(crate) fn serve_service_api_endpoint(
     config: &ServiceApiEndpointConfig,
     snapshot: &ServiceApiSnapshot,

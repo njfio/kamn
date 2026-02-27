@@ -346,6 +346,16 @@ fn escape_json_string(input: &str) -> String {
 static TEST_LOG_CAPTURE: std::sync::Mutex<Option<Vec<String>>> = std::sync::Mutex::new(None);
 
 #[cfg(test)]
+static LOG_CONFIG_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[cfg(test)]
+pub(crate) fn lock_log_config_for_tests() -> std::sync::MutexGuard<'static, ()> {
+    LOG_CONFIG_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+}
+
+#[cfg(test)]
 fn with_test_log_capture_mut<T, F>(operation: F) -> T
 where
     F: FnOnce(&mut Option<Vec<String>>) -> T,
@@ -389,13 +399,10 @@ fn record_test_log_line(_line: &str) {}
 mod tests {
     use super::{
         capture_test_logs, emit_log_event, initialize_log_config_from_env,
-        reset_cached_log_config_for_tests, NodeLogLevel, KAMN_NODE_LOG_FORMAT_ENV,
-        KAMN_NODE_LOG_LEVEL_ENV,
+        lock_log_config_for_tests, reset_cached_log_config_for_tests, NodeLogLevel,
+        KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
     };
     use std::env;
-    use std::sync::Mutex;
-
-    static LOG_ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn spec_c01_emit_log_event_uses_cached_config_until_reset() {
@@ -510,9 +517,7 @@ mod tests {
     }
 
     fn lock_log_env_test_guard() -> std::sync::MutexGuard<'static, ()> {
-        LOG_ENV_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
+        lock_log_config_for_tests()
     }
 
     struct EnvVarTestGuard {
