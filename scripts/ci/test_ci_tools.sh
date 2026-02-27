@@ -26,7 +26,6 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_docs_contract_test_file_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"

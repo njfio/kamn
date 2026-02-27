@@ -9,8 +9,6 @@
 
 ## Affected Modules
 - `.ci/docs-contract-test-file-budget.env`
-- `scripts/ci/check_docs_contract_test_file_budget.sh`
-- `scripts/ci/test_check_docs_contract_test_file_budget.sh`
 - `scripts/ci/test_ci_tools.sh`
 - `.github/workflows/ci-fast-gate.yml`
 - `crates/kamn-core/tests/*_docs.rs` (12 removed unreferenced placeholders/stubs)
