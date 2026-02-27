@@ -1,15 +1,17 @@
 # Tasks: Issue #6144
 
 ## Ordered Tasks
-- T1 (RED/Conformance): Add or run failing test(s) that reproduce `X-06` gap from the spec ACs.
-- T2 (Implementation): Apply minimal remediation to satisfy AC-1 without unrelated refactors.
-- T3 (GREEN/Regression): Add and run regression coverage for AC-2 with deterministic assertions.
-- T4 (Verification): Run scoped unit/functional/conformance commands and record evidence.
-- T5 (Closure): Update issue/pr docs, map ACs to tests, and publish closure evidence.
+- T1 (RED/Baseline): Capture pre-change marker/test-surface metrics and failing assertions for
+  over-expanded governance contract surface.
+- T2 (Implementation): Simplify heavyweight governance contract tests to essential fail-closed
+  checks and remove self-referential reconciliation loops.
+- T3 (GREEN/Regression): Add/keep focused regression checks for missing required core markers.
+- T4 (Verification): Run scoped `kamn-core` governance contract tests and quality gates.
+- T5 (Closure): Publish measurable reduction evidence and AC-to-test mapping in PR.
 
 ## Tier Mapping
-- Unit: T1, T3, T4
-- Functional: T3, T4
-- Integration: T4 (when cross-module behavior is affected)
-- Regression: T1, T3, T4
-- Conformance: T1, T4, T5
+- Unit: T3, T4, T5
+- Functional: T2, T3, T4
+- Conformance: T2, T3, T4, T5
+- Regression: T1, T4, T5
+- Integration: N/A (documentation/test-contract-only surface)

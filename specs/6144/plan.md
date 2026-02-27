@@ -1,26 +1,33 @@
 # Plan: Issue #6144
 
 ## Approach
-1. Re-state `X-06` behavior contract and impacted modules from issue #6144.
-2. Add RED coverage derived from acceptance criteria to reproduce current gap.
-3. Implement minimal remediation with explicit error handling and no behavior drift outside scope.
-4. Execute GREEN verification for unit/functional/regression/conformance tiers.
-5. Update docs/spec/task artifacts and finalize closure evidence.
+1. Capture RED baseline counts for:
+   - LOC of heavyweight governance contract test files.
+2. Rewrite high-overhead governance test modules to a minimal contract harness:
+   - `review_r53_docs_contract.rs`
+   - `review_r52_branch_hygiene_reconciliation_docs_contract.rs`
+   - `review_r50_doc_contract_consolidation_docs_contract.rs`
+3. Keep fail-closed behavior for missing critical markers and preserve deterministic parsing.
+4. Run scoped `kamn-core` test verification for the modified modules and quality gates.
 
 ## Affected Modules
-- Target module(s) identified by issue #6144 scope and test evidence.
+- `crates/kamn-core/tests/review_r53_docs_contract.rs`
+- `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`
+- `crates/kamn-core/tests/review_r50_doc_contract_consolidation_docs_contract.rs`
 - `specs/6144/spec.md`
 - `specs/6144/plan.md`
 - `specs/6144/tasks.md`
 
 ## Risks / Mitigations
-- Risk: Scope expansion beyond `X-06` causes unnecessary churn.
-  Mitigation: keep PR constrained to issue ACs and affected call paths.
-- Risk: Missing RED evidence weakens TDD traceability.
-  Mitigation: capture failing command/output before implementation change.
-- Risk: Conformance drift in docs/process contracts.
-  Mitigation: update corresponding review/spec docs in same PR when behavior changes.
+- Risk: Removing markers that other tests still expect causes broad breakage.
+  Mitigation: keep the README marker surface intact in this issue and simplify only targeted
+  governance contract files with scoped validation.
+- Risk: Over-pruning could remove safety-critical checks.
+  Mitigation: explicitly keep activity-ratio and freeze/immutability checks as required contracts.
+- Risk: Historical review docs may lack newly interpreted keys.
+  Mitigation: keep checks keyed to existing stable markers or explicitly validate presence only in
+  canonical README contract docs.
 
 ## Interfaces / Contracts
-- Preserve existing public interfaces unless change is explicitly required by `X-06` acceptance criteria.
-- Any contract change must include test and docs updates in the same patch.
+- No runtime API or protocol interface changes.
+- Governance contract interface changes are limited to static marker definitions and tests.
