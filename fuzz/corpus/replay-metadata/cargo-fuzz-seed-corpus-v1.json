@@ -72,19 +72,19 @@
       ]
     },
     {
-      "name": "kolme_flat_json_policy_parser",
-      "seed_dir": "fuzz/corpus/kolme_flat_json_policy_parser",
+      "name": "kolme_flat_json_parser",
+      "seed_dir": "fuzz/corpus/kolme_flat_json_parser",
       "seed_files": [
-        "seed-0001-valid-flat-object.json",
-        "seed-0002-malformed-flat-object.json"
+        "seed-0001-valid-flat-json.txt",
+        "seed-0002-malformed-flat-json.txt"
       ],
-      "parser_surface": "parse_flat_json_value_fields|parse_provider_response_fields|split_unquoted(indirect)",
-      "deterministic_seed_replay_key": "cargo_fuzz_seed_replay:kolme_flat_json_policy_parser:v1",
+      "parser_surface": "parse_flat_json_value_fields|parse_provider_response_fields",
+      "deterministic_seed_replay_key": "cargo_fuzz_seed_replay:kolme_flat_json_parser:v1",
       "seed_budget_ci_smoke_max_seconds": 120,
       "seed_budget_local_heavy_max_seconds": 900,
       "failure_taxonomy_markers": [
         "invalid json response",
-        "json response pair must contain exactly one ':'",
+        "invalid json response pair",
         "invalid json value token"
       ]
     }

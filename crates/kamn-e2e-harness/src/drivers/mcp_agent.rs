@@ -1,16 +1,15 @@
-use crate::drivers::shared_helpers::{
-    env_var_or_default, env_var_or_else, is_live_bound_scenario_id,
+use crate::drivers::shared::{
+    env_var_or_default, env_var_or_else,
+    is_live_bound_scenario_id as shared_is_live_bound_scenario_id,
     live_execution_enabled_from_env as shared_live_execution_enabled_from_env,
-    live_s07_probe_agent_suffix, parse_s15_budget_env_u128,
-    validate_live_s05_release_escrow_response as shared_validate_live_s05_release_escrow_response,
-    validate_s07_replay_reason_marker, validate_s12_content_field_coherence,
-    validate_s12_content_id_match, validate_s13_bridge_field_coherence,
-    validate_s13_bridge_id_match, validate_s15_latency_budget_samples,
+    live_s07_probe_agent_suffix as shared_live_s07_probe_agent_suffix,
+    parse_s15_budget_env_u128 as shared_parse_s15_budget_env_u128,
+    validate_s07_replay_reason_marker as shared_validate_s07_replay_reason_marker,
+    validate_s15_latency_budget_samples as shared_validate_s15_latency_budget_samples,
 };
-#[cfg(test)]
-use crate::drivers::shared_helpers::{parse_bool_flag, percentile_index};
 use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
+use kamn_mcp_server::json_optional_bool_field;
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -62,6 +61,7 @@ const DEFAULT_S15_ITERATIONS: u64 = 3;
 const DEFAULT_S15_MAX_TOTAL_MILLIS: u128 = 5_000;
 const DEFAULT_S15_MAX_P50_MILLIS: u128 = 2_500;
 const DEFAULT_S15_MAX_P99_MILLIS: u128 = 5_000;
+const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -290,8 +290,17 @@ impl McpAgentDriver {
     }
 }
 
+fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
+    shared_is_live_bound_scenario_id(scenario_id)
+}
+
 fn live_execution_enabled_from_env() -> bool {
     shared_live_execution_enabled_from_env(MCP_AGENT_LIVE_ENV)
+}
+
+#[cfg(test)]
+fn parse_bool_flag(value: &str) -> bool {
+    crate::drivers::shared::parse_bool_flag(value)
 }
 
 fn run_live_s01_mcp_probe() -> Result<(), String> {
@@ -840,12 +849,15 @@ fn validate_live_s05_release_escrow_response(
     released_escrow_id: &str,
     release_state: &str,
 ) -> Result<(), String> {
-    shared_validate_live_s05_release_escrow_response(
-        expected_escrow_id,
-        released_escrow_id,
-        release_state,
-        "mcp live s05 release_escrow",
-    )
+    if released_escrow_id != expected_escrow_id {
+        return Err(format!(
+            "mcp live s05 release_escrow returned mismatched escrow_id: expected={expected_escrow_id}, got={released_escrow_id}"
+        ));
+    }
+    if release_state.trim().is_empty() {
+        return Err("mcp live s05 release_escrow returned empty state".to_owned());
+    }
+    Ok(())
 }
 
 fn run_live_s06_mcp_proof_verification_probe() -> Result<(), String> {
@@ -2051,6 +2063,37 @@ fn validate_s14_mcp_verify_proof_response(
     Ok(())
 }
 
+fn parse_s15_budget_env_u128(
+    env_key: &str,
+    default_value: u128,
+    step: &str,
+) -> Result<u128, String> {
+    shared_parse_s15_budget_env_u128(env_key, default_value, step)
+}
+
+fn validate_s15_latency_budget_samples(
+    samples_millis: &[u128],
+    total_elapsed_millis: u128,
+    max_total_millis: u128,
+    max_p50_millis: u128,
+    max_p99_millis: u128,
+    step: &str,
+) -> Result<(), String> {
+    shared_validate_s15_latency_budget_samples(
+        samples_millis,
+        total_elapsed_millis,
+        max_total_millis,
+        max_p50_millis,
+        max_p99_millis,
+        step,
+    )
+}
+
+#[cfg(test)]
+fn percentile_index(sample_count: usize, percentile: u128) -> usize {
+    crate::drivers::shared::percentile_index(sample_count, percentile)
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -2083,6 +2126,64 @@ fn validate_s08_mcp_query_message_response(
         return Err(format!("{step} returned empty status"));
     }
     Ok(())
+}
+
+fn validate_s12_content_id_match(
+    expected_content_id: &str,
+    observed_content_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_content_id != expected_content_id {
+        return Err(format!(
+            "{step} returned mismatched content_id: expected={expected_content_id}, got={observed_content_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s12_content_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_id_match(
+    expected_bridge_id: &str,
+    observed_bridge_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_bridge_id != expected_bridge_id {
+        return Err(format!(
+            "{step} returned mismatched bridge_id: expected={expected_bridge_id}, got={observed_bridge_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
+    shared_validate_s07_replay_reason_marker(replay_error, step, S07_REPLAY_REASON_MARKER)
 }
 
 fn run_live_s04_mcp_tool_call(
@@ -2152,7 +2253,7 @@ fn run_live_s04_mcp_tool_call(
         .iter()
         .find(|payload| payload.contains(response_id.as_str()))
         .ok_or_else(|| format!("mcp live s04 {tool_name} missing tool response payload"))?;
-    if json_optional_bool_field(tool_response.as_str(), "ok") != Some(true) {
+    if !json_optional_bool_field(tool_response.as_str(), "ok").unwrap_or(false) {
         return Err(format!(
             "mcp live s04 {tool_name} returned non-success payload: {tool_response}"
         ));
@@ -2434,6 +2535,10 @@ fn run_live_s15_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s15"))
 }
 
+fn live_s07_probe_agent_suffix() -> String {
+    shared_live_s07_probe_agent_suffix()
+}
+
 fn build_framed_jsonrpc_request(payload: &str) -> String {
     format!("Content-Length: {}\r\n\r\n{}", payload.len(), payload)
 }
@@ -2453,7 +2558,7 @@ fn validate_probe_initialize_response(payload: &str) -> Result<(), String> {
 }
 
 fn validate_probe_health_response(payload: &str) -> Result<(), String> {
-    if json_optional_bool_field(payload, "ok") != Some(true) {
+    if !json_optional_bool_field(payload, "ok").unwrap_or(false) {
         return Err(format!(
             "mcp live probe returned non-success health payload: {payload}"
         ));
@@ -2534,47 +2639,6 @@ fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
     digits.parse::<u64>().ok()
 }
 
-fn json_optional_bool_field(payload: &str, key: &str) -> Option<bool> {
-    let marker = format!("\"{key}\":");
-    let mut search_start = 0usize;
-
-    while search_start < payload.len() {
-        let marker_offset = payload.get(search_start..)?.find(marker.as_str())?;
-        let marker_start = search_start.checked_add(marker_offset)?;
-        if marker_start > 0 && payload.as_bytes().get(marker_start.wrapping_sub(1)) == Some(&b'\\')
-        {
-            search_start = marker_start.checked_add(marker.len())?;
-            continue;
-        }
-
-        let value_start = marker_start.checked_add(marker.len())?;
-        let rest = payload.get(value_start..)?.trim_start();
-        if let Some(tail) = rest.strip_prefix("true") {
-            let boundary = tail.chars().next();
-            if matches!(
-                boundary,
-                None | Some(',' | '}' | ']' | ' ' | '\t' | '\r' | '\n')
-            ) {
-                return Some(true);
-            }
-            return None;
-        }
-        if let Some(tail) = rest.strip_prefix("false") {
-            let boundary = tail.chars().next();
-            if matches!(
-                boundary,
-                None | Some(',' | '}' | ']' | ' ' | '\t' | '\r' | '\n')
-            ) {
-                return Some(false);
-            }
-            return None;
-        }
-        return None;
-    }
-
-    None
-}
-
 fn escape_json_scalar(input: &str) -> String {
     let mut escaped = String::with_capacity(input.len());
     for ch in input.chars() {
@@ -2593,10 +2657,10 @@ fn escape_json_scalar(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_framed_jsonrpc_request, escape_json_scalar, json_optional_bool_field,
-        json_optional_string_field, json_optional_u64_field, live_execution_enabled_from_env,
-        parse_bool_flag, parse_framed_jsonrpc_payloads, parse_s15_budget_env_u128,
-        percentile_index, run_live_s01_mcp_probe, run_live_s02_mcp_direct_message_probe,
+        build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
+        json_optional_u64_field, live_execution_enabled_from_env, parse_bool_flag,
+        parse_framed_jsonrpc_payloads, parse_s15_budget_env_u128, percentile_index,
+        run_live_s01_mcp_probe, run_live_s02_mcp_direct_message_probe,
         run_live_s03_mcp_group_channel_probe, run_live_s04_mcp_task_lifecycle_probe,
         run_live_s04_mcp_tool_call, run_live_s05_mcp_escrow_settlement_probe,
         run_live_s06_mcp_proof_verification_probe, run_live_s07_mcp_replay_protection_probe,
@@ -4000,11 +4064,15 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
-    fn unit_run_live_s04_mcp_tool_call_rejects_non_boolean_ok_payload() {
-        let script_path = unique_temp_script_path("kamn-e2e-mcp-tool-call-invalid-ok");
-        write_mcp_tool_response_script(&script_path, "probe-request", r#"{"ok":"true"}"#);
+    fn regression_issue_6214_run_live_s04_mcp_tool_call_rejects_nested_ok_true_when_root_false() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-tool-call-root-false");
+        write_mcp_tool_response_script(
+            &script_path,
+            "probe-request",
+            r#"{"ok":false,"detail":{"ok":true}}"#,
+        );
 
-        let probe_error = run_live_s04_mcp_tool_call(
+        let error = run_live_s04_mcp_tool_call(
             script_path
                 .to_str()
                 .expect("script path should be valid utf-8"),
@@ -4015,13 +4083,13 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
             "health",
             "{}",
         )
-        .expect_err("quoted ok field should fail");
+        .expect_err("root ok=false payload should fail");
 
         fs::remove_file(&script_path).expect("script fixture should be removable");
 
         assert!(
-            probe_error.contains("non-success payload"),
-            "error should surface non-success payload: {probe_error}",
+            error.contains("non-success payload"),
+            "error should mention non-success payload contract: {error}"
         );
     }
 
@@ -4063,20 +4131,6 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         let payload = r#"{"jsonrpc":"2.0","id":"probe","result":{"block_height":42,"ok":true}}"#;
         assert_eq!(json_optional_u64_field(payload, "block_height"), Some(42));
         assert_eq!(json_optional_u64_field(payload, "missing"), None);
-    }
-
-    #[test]
-    fn unit_json_optional_bool_field_extracts_true_false_and_rejects_quoted_values() {
-        let payload_true = r#"{"ok":true,"note":"ready"}"#;
-        let payload_false = r#"{"ok":false}"#;
-        let payload_quoted = r#"{"ok":"true"}"#;
-        let payload_nested_string = r#"{"note":"status says \\\"ok\\\":true"}"#;
-        let payload_prefix = r#"{"ok":truefalse}"#;
-        assert_eq!(json_optional_bool_field(payload_true, "ok"), Some(true));
-        assert_eq!(json_optional_bool_field(payload_false, "ok"), Some(false));
-        assert_eq!(json_optional_bool_field(payload_quoted, "ok"), None);
-        assert_eq!(json_optional_bool_field(payload_nested_string, "ok"), None);
-        assert_eq!(json_optional_bool_field(payload_prefix, "ok"), None);
     }
 
     #[test]
@@ -4411,13 +4465,15 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
-    fn spec_c25_validate_probe_health_response_rejects_quoted_ok_payload() {
-        let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":"true"}}"#;
-        let error =
-            validate_probe_health_response(payload).expect_err("quoted ok payload should fail");
+    fn regression_issue_6214_validate_probe_health_response_rejects_nested_ok_true_when_root_false()
+    {
+        let payload =
+            r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":false,"detail":{"ok":true}}}"#;
+        let error = validate_probe_health_response(payload)
+            .expect_err("root result.ok=false should fail even when nested fields contain ok=true");
         assert!(
             error.contains("non-success health payload"),
-            "error should mention non-success health payload: {error}",
+            "error should mention non-success health payload: {error}"
         );
     }
 }

@@ -1,17 +1,6 @@
 //! Runtime-commit deterministic request identity policy contracts.
 use crate::escape_json_string;
 
-fn payload_hash_fingerprint_component(payload_hash: &str) -> String {
-    let trimmed = payload_hash.trim();
-    let mut encoded = String::with_capacity(trimmed.len() * 2);
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    for byte in trimmed.as_bytes() {
-        encoded.push(HEX[(byte >> 4) as usize] as char);
-        encoded.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    encoded
-}
-
 /// Renders deterministic idempotency key for a runtime commit request.
 pub fn deterministic_runtime_commit_idempotency_key(
     operation_id: &str,
@@ -20,14 +9,15 @@ pub fn deterministic_runtime_commit_idempotency_key(
     nonce: u64,
     payload_hash: &str,
 ) -> String {
-    let payload_fingerprint = payload_hash_fingerprint_component(payload_hash);
+    // Commit identity derives from payload-hash VALUE bytes, not string length.
+    let payload_hash_value_component = hex_encode(payload_hash.trim().as_bytes());
     format!(
         "kolme-runtime-commit:{}:{}:{}:{}:{}",
         operation_id.trim(),
         state_root.trim(),
         actor_did.trim(),
         nonce,
-        payload_fingerprint
+        payload_hash_value_component
     )
 }
 
@@ -82,11 +72,31 @@ pub fn deterministic_runtime_commit_id(
     nonce: u64,
     payload_hash: &str,
 ) -> String {
-    let payload_fingerprint = payload_hash_fingerprint_component(payload_hash);
+    // Commit identity derives from payload-hash VALUE bytes, not string length.
+    let payload_hash_value_component = hex_encode(payload_hash.trim().as_bytes());
     format!(
         "kolme-commit:{}:{}:{}:{}",
-        operation_id, actor_did, nonce, payload_fingerprint
+        operation_id, actor_did, nonce, payload_hash_value_component
     )
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let high = byte >> 4;
+        let low = byte & 0x0f;
+        output.push(hex_nibble(high));
+        output.push(hex_nibble(low));
+    }
+    output
+}
+
+fn hex_nibble(value: u8) -> char {
+    match value {
+        0..=9 => (b'0' + value) as char,
+        10..=15 => (b'a' + (value - 10)) as char,
+        _ => '0',
+    }
 }
 
 /// Validates runtime finality request commit identifier input.
@@ -171,18 +181,25 @@ mod tests {
     }
 
     #[test]
-    fn regression_issue_6123_commit_id_is_payload_value_fingerprint_based() {
-        // Regression: #6123
-        assert_ne!(
-            deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc"),
-            deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz")
-        );
+    fn regression_issue_6202_commit_id_uses_payload_hash_value_component() {
+        let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
+        let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
+        assert_ne!(left, right);
+    }
+
+    #[test]
+    fn regression_issue_6215_idempotency_key_uses_payload_hash_value_component() {
+        let left =
+            deterministic_runtime_commit_idempotency_key("op-x", "state:x", "did:agent", 3, "abc");
+        let right =
+            deterministic_runtime_commit_idempotency_key("op-x", "state:x", "did:agent", 3, "xyz");
+        assert_ne!(left, right);
     }
 
     #[test]
     fn unit_validates_runtime_commit_id_request_input() {
         assert!(is_valid_runtime_commit_id_request(
-            "kolme-commit:op:did:1:12"
+            "kolme-commit:op:did:1:7061796c6f6164"
         ));
         assert!(!is_valid_runtime_commit_id_request("   "));
     }

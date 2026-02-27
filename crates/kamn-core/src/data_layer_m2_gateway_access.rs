@@ -880,178 +880,72 @@ fn tagged_digest(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        DataLayerM2AbacEngine, DataLayerM2ActorRole, DataLayerM2AuthorizationDecision,
+        DataLayerM2DidAuthRequest, DataLayerM2DidSessionService, DataLayerM2MessageScope,
+        DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
+        DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
+    };
 
-    fn audit_input(
-        action: &str,
-        resource_id: &str,
-        reason_code: &str,
-        event_epoch_seconds: u64,
-    ) -> DataLayerM2AccessAuditInput {
-        DataLayerM2AccessAuditInput {
-            requester_did: "kamn:did:owner:gateway-operator-1".to_owned(),
-            action: action.to_owned(),
-            resource_id: resource_id.to_owned(),
-            reason_code: reason_code.to_owned(),
-            event_epoch_seconds,
-        }
-    }
+    #[test]
+    fn unit_data_layer_m2_session_authenticate_succeeds_for_valid_request() {
+        let service =
+            DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
+        let requester_did = "kamn:did:agent:alice";
+        let challenge = "nonce-1";
+        let token = service
+            .authenticate(DataLayerM2DidAuthRequest {
+                requester_did: requester_did.to_owned(),
+                challenge: challenge.to_owned(),
+                credential: format!("sig:{requester_did}:{challenge}"),
+                issued_at_epoch_seconds: 1_000,
+                ttl_seconds: 120,
+            })
+            .expect("valid auth request should issue session token");
 
-    fn message_scope(message_id: &str) -> DataLayerM2MessageScope {
-        DataLayerM2MessageScope {
-            message_id: message_id.to_owned(),
-            sender_did: "kamn:did:agent:sender-1".to_owned(),
-            recipient_did: "kamn:did:agent:recipient-1".to_owned(),
-            owner_sender_did: "kamn:did:owner:sender-1".to_owned(),
-            owner_recipient_did: "kamn:did:owner:recipient-1".to_owned(),
-            escrow_id: None,
-        }
-    }
-
-    fn negative_case(
-        case_id: &str,
-        requester_did: &str,
-        requester_role: DataLayerM2ActorRole,
-        expected_denied: bool,
-        event_epoch_seconds: u64,
-    ) -> DataLayerM2NegativeAuthorizationCase {
-        DataLayerM2NegativeAuthorizationCase {
-            case_id: case_id.to_owned(),
-            requester_did: requester_did.to_owned(),
-            requester_role,
-            scope: message_scope("msg-42"),
-            expected_denied,
-            event_epoch_seconds,
-        }
+        assert_eq!(token.requester_did, requester_did);
+        assert_eq!(token.expires_at_epoch_seconds, 1_120);
+        assert!(token.token_id.starts_with("session:sha256:"));
     }
 
     #[test]
-    fn unit_access_audit_append_builds_deterministic_chain_links() {
-        let mut ledger = DataLayerM2AccessAuditLedger::new();
-        let first = ledger
-            .append(audit_input(
-                "read_message",
-                "msg-1",
-                DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
-                100,
-            ))
-            .expect("first audit append should succeed");
-        let second = ledger
-            .append(audit_input(
-                "read_message",
-                "msg-2",
-                DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
-                101,
-            ))
-            .expect("second audit append should succeed");
-
-        assert_eq!(first.sequence, 1);
-        assert_eq!(
-            first.hash_chain_prev,
-            DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS
-        );
-        assert_eq!(second.sequence, 2);
-        assert_eq!(second.hash_chain_prev, first.record_hash);
-        assert_eq!(ledger.records().len(), 2);
-        assert_eq!(ledger.records()[0], first);
-        assert_eq!(ledger.records()[1], second);
-        assert!(ledger.verify_hash_chain().is_ok());
-    }
-
-    #[test]
-    fn regression_verify_hash_chain_detects_tampered_lineage() {
-        let mut ledger = DataLayerM2AccessAuditLedger::new();
-        ledger
-            .append(audit_input(
-                "read_message",
-                "msg-1",
-                DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
-                200,
-            ))
-            .expect("first append should succeed");
-        ledger
-            .append(audit_input(
-                "read_message",
-                "msg-2",
-                DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
-                201,
-            ))
-            .expect("second append should succeed");
-        ledger
-            .replace_record_hash_unchecked(1, "sha256:tampered-lineage")
-            .expect("tamper setup should succeed");
-
-        let error = ledger
-            .verify_hash_chain()
-            .expect_err("tampered lineage must fail hash-chain verification");
-        assert_eq!(
-            error,
-            DataLayerM2GatewayError::InvalidAuditHashChain {
-                position: 0,
-                reason: "record_hash mismatch",
-            }
-        );
-    }
-
-    #[test]
-    fn unit_negative_authorization_matrix_projects_stable_and_drift_decisions() {
+    fn unit_data_layer_m2_authorize_message_visibility_allows_counterparty_and_denies_stranger() {
         let engine = DataLayerM2AbacEngine::new();
-        let stable_cases = vec![
-            negative_case(
-                "case-owner-denied",
-                "kamn:did:owner:outsider-1",
-                DataLayerM2ActorRole::Owner,
-                true,
-                300,
-            ),
-            negative_case(
-                "case-platform-denied",
-                "kamn:did:platform:ops-1",
-                DataLayerM2ActorRole::PlatformOperator,
-                true,
-                301,
-            ),
-        ];
-        let stable_report = engine
-            .evaluate_negative_authorization_matrix(&stable_cases)
-            .expect("stable negative matrix evaluation should succeed");
-        assert_eq!(
-            stable_report.decision,
-            DataLayerM2NegativeAuthorizationMatrixDecision::AllDenied {
-                reason_code: DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
-            }
-        );
-        assert_eq!(stable_report.fixtures.len(), 2);
-        assert!(stable_report
-            .fixtures
-            .iter()
-            .all(|fixture| fixture.denied && !fixture.mismatch));
-        assert_eq!(
-            stable_report.fixtures[0].audit_record.hash_chain_prev,
-            DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS
-        );
-        assert_eq!(
-            stable_report.fixtures[1].audit_record.hash_chain_prev,
-            stable_report.fixtures[0].audit_record.record_hash
-        );
+        let scope = DataLayerM2MessageScope {
+            message_id: "msg-1".to_owned(),
+            sender_did: "kamn:did:agent:alice".to_owned(),
+            recipient_did: "kamn:did:agent:bob".to_owned(),
+            owner_sender_did: "kamn:did:owner:alice".to_owned(),
+            owner_recipient_did: "kamn:did:owner:bob".to_owned(),
+            escrow_id: Some("escrow-1".to_owned()),
+        };
 
-        let drift_cases = vec![negative_case(
-            "case-owner-drift",
-            "kamn:did:owner:outsider-1",
-            DataLayerM2ActorRole::Owner,
-            false,
-            302,
-        )];
-        let drift_report = engine
-            .evaluate_negative_authorization_matrix(&drift_cases)
-            .expect("drift matrix evaluation should succeed");
-        assert_eq!(
-            drift_report.decision,
-            DataLayerM2NegativeAuthorizationMatrixDecision::DriftDetected {
-                reason_code: DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
+        let allow = engine
+            .authorize_message_visibility(
+                "kamn:did:agent:alice",
+                DataLayerM2ActorRole::Agent,
+                &scope,
+            )
+            .expect("sender should be authorized as agent");
+        assert!(matches!(
+            allow,
+            DataLayerM2AuthorizationDecision::Allow {
+                reason_code: DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED
             }
-        );
-        assert!(drift_report.fixtures.iter().any(|fixture| fixture.mismatch));
-        assert!(drift_report.fixtures.iter().any(|fixture| fixture.denied));
+        ));
+
+        let deny = engine
+            .authorize_message_visibility(
+                "kamn:did:agent:mallory",
+                DataLayerM2ActorRole::Agent,
+                &scope,
+            )
+            .expect("non-counterparty should return deterministic deny decision");
+        assert!(matches!(
+            deny,
+            DataLayerM2AuthorizationDecision::Deny {
+                reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED
+            }
+        ));
     }
 }

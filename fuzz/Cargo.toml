@@ -44,8 +44,8 @@ doc = false
 bench = false
 
 [[bin]]
-name = "kolme_flat_json_policy_parser"
-path = "fuzz_targets/kolme_flat_json_policy_parser.rs"
+name = "kolme_flat_json_parser"
+path = "fuzz_targets/kolme_flat_json_parser.rs"
 test = false
 doc = false
 bench = false

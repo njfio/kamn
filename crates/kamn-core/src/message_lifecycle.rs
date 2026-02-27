@@ -3,9 +3,9 @@ use crate::{
     ProcessorProofArtifact, SqliteStoreBackend, SqliteStoreBackendError, ZkDesignError,
 };
 use kamn_snapshot_journal::{
-    decode_journal_hex, encode_journal_hex, parse_snapshot_journal_record, snapshot_journal_path,
+    append_snapshot_journal_record, decode_snapshot_journal_hex, default_snapshot_journal_path,
+    parse_snapshot_journal_record,
 };
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
@@ -855,7 +855,7 @@ const MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX: &str =
     "message_lifecycle_snapshot_journal_corrupt_tail";
 
 fn message_lifecycle_snapshot_journal_path(path: &Path) -> PathBuf {
-    snapshot_journal_path(path)
+    default_snapshot_journal_path(path)
 }
 
 fn read_message_lifecycle_snapshot_file(
@@ -882,14 +882,9 @@ fn append_message_lifecycle_snapshot_journal_record(
     journal_path: &Path,
     payload: &str,
 ) -> Result<(), MessageLifecycleSnapshotStoreError> {
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(journal_path)
+    append_snapshot_journal_record(journal_path, payload)
         .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
-    let record = format!("entry|1|{}\n", encode_journal_hex(payload.as_bytes()));
-    file.write_all(record.as_bytes())
-        .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))
+    Ok(())
 }
 
 fn replay_message_lifecycle_snapshot_journal(
@@ -909,9 +904,8 @@ fn replay_message_lifecycle_snapshot_journal(
             continue;
         }
 
-        let payload_hex = parse_snapshot_journal_record(trimmed)
-            .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
-        let payload_bytes = decode_journal_hex(payload_hex)
+        let payload_hex = parse_message_lifecycle_snapshot_journal_record(trimmed, index + 1)?;
+        let payload_bytes = decode_snapshot_journal_hex(&payload_hex)
             .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
         let payload = String::from_utf8(payload_bytes)
             .map_err(|_| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
@@ -925,6 +919,14 @@ fn replay_message_lifecycle_snapshot_journal(
     }
 
     Ok(latest)
+}
+
+fn parse_message_lifecycle_snapshot_journal_record(
+    line: &str,
+    index: usize,
+) -> Result<String, MessageLifecycleSnapshotStoreError> {
+    parse_snapshot_journal_record(line)
+        .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index))
 }
 
 fn message_lifecycle_snapshot_journal_corrupt_tail(
@@ -963,7 +965,6 @@ fn is_expirable_status(status: MessageStatus) -> bool {
             | MessageStatus::Included
             | MessageStatus::Delivered
             | MessageStatus::Validated
-            | MessageStatus::Rejected
     )
 }
 
@@ -1026,92 +1027,55 @@ fn parse_message_status_code(raw: &str) -> Option<MessageStatus> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct MessageRecordSnapshotWire {
-    message_id: String,
-    sender: String,
-    recipients: Vec<String>,
-    created: String,
-    expires: String,
-    status: String,
-    history: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct MessageLifecycleSnapshotWire {
-    schema_version: u16,
-    records: Vec<MessageRecordSnapshotWire>,
+fn ensure_snapshot_token(
+    value: &str,
+    field: &str,
+    allow_comma: bool,
+) -> Result<(), MessageLifecycleSnapshotStoreError> {
+    let has_comma = !allow_comma && value.contains(',');
+    if value.contains('|') || value.contains('\n') || value.contains('\r') || has_comma {
+        return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(format!(
+            "{field} contains unsupported delimiter characters"
+        )));
+    }
+    Ok(())
 }
 
 fn serialize_message_lifecycle_snapshot(
     snapshot: &MessageLifecycleSnapshot,
 ) -> Result<String, MessageLifecycleSnapshotStoreError> {
-    let wire = MessageLifecycleSnapshotWire {
-        schema_version: snapshot.schema_version,
-        records: snapshot
-            .records
+    let mut payload = format!("schema|{}\n", snapshot.schema_version);
+    for record in &snapshot.records {
+        ensure_snapshot_token(&record.message_id, "message_id", false)?;
+        ensure_snapshot_token(&record.sender, "sender", false)?;
+        ensure_snapshot_token(&record.created, "created", false)?;
+        ensure_snapshot_token(&record.expires, "expires", false)?;
+        for recipient in &record.recipients {
+            ensure_snapshot_token(recipient, "recipient", false)?;
+        }
+
+        let recipients = record.recipients.join(",");
+        let history = record
+            .history
             .iter()
-            .map(|record| MessageRecordSnapshotWire {
-                message_id: record.message_id.clone(),
-                sender: record.sender.clone(),
-                recipients: record.recipients.clone(),
-                created: record.created.clone(),
-                expires: record.expires.clone(),
-                status: message_status_code(record.status).to_owned(),
-                history: record
-                    .history
-                    .iter()
-                    .map(|status| message_status_code(*status).to_owned())
-                    .collect(),
-            })
-            .collect(),
-    };
-    serde_json::to_string(&wire)
-        .map_err(|error| MessageLifecycleSnapshotStoreError::InvalidPayload(error.to_string()))
+            .map(|status| message_status_code(*status))
+            .collect::<Vec<_>>()
+            .join(",");
+        payload.push_str(&format!(
+            "record|{}|{}|{}|{}|{}|{}|{}\n",
+            record.message_id,
+            record.sender,
+            recipients,
+            record.created,
+            record.expires,
+            message_status_code(record.status),
+            history
+        ));
+    }
+    Ok(payload)
 }
 
 fn parse_message_lifecycle_snapshot_payload(
-    payload: &str,
-) -> Result<MessageLifecycleSnapshot, MessageLifecycleSnapshotStoreError> {
-    if let Ok(wire) = serde_json::from_str::<MessageLifecycleSnapshotWire>(payload) {
-        let records = wire
-            .records
-            .into_iter()
-            .map(|record| {
-                let status =
-                    parse_message_status_code(record.status.as_str()).ok_or_else(|| {
-                        MessageLifecycleSnapshotStoreError::InvalidPayload(record.status.clone())
-                    })?;
-                let history = record
-                    .history
-                    .into_iter()
-                    .map(|raw| {
-                        parse_message_status_code(raw.as_str()).ok_or_else(|| {
-                            MessageLifecycleSnapshotStoreError::InvalidPayload(raw.clone())
-                        })
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                Ok(MessageRecordSnapshot {
-                    message_id: record.message_id,
-                    sender: record.sender,
-                    recipients: record.recipients,
-                    created: record.created,
-                    expires: record.expires,
-                    status,
-                    history,
-                })
-            })
-            .collect::<Result<Vec<_>, MessageLifecycleSnapshotStoreError>>()?;
-        return Ok(MessageLifecycleSnapshot {
-            schema_version: wire.schema_version,
-            records,
-        });
-    }
-    parse_message_lifecycle_snapshot_payload_legacy(payload)
-}
-
-fn parse_message_lifecycle_snapshot_payload_legacy(
     payload: &str,
 ) -> Result<MessageLifecycleSnapshot, MessageLifecycleSnapshotStoreError> {
     let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
@@ -1320,7 +1284,7 @@ mod tests {
     }
 
     #[test]
-    fn spec_c02_expire_overdue_messages_expires_validated_overdue_records() {
+    fn expire_overdue_messages_expires_created_and_validated_records() {
         let mut store = MessageLifecycleStore::new();
         store
             .register(
@@ -1374,13 +1338,44 @@ mod tests {
                 .expect("status should exist"),
             MessageStatus::Expired
         );
+    }
+
+    #[test]
+    fn regression_issue_6194_expire_message_if_overdue_transitions_validated_message() {
+        let mut store = MessageLifecycleStore::new();
+        store
+            .register(
+                "urn:uuid:msg-2d",
+                "kamn:did:agent:sender-1",
+                vec!["kamn:did:agent:recipient-1".to_owned()],
+                "2026-02-07T20:15:30.123Z",
+                "2026-02-07T20:45:30.123Z",
+            )
+            .expect("register should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Signed)
+            .expect("created->signed should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Broadcast)
+            .expect("signed->broadcast should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Included)
+            .expect("broadcast->included should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Delivered)
+            .expect("included->delivered should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Validated)
+            .expect("delivered->validated should succeed");
+
+        assert!(store
+            .expire_message_if_overdue("urn:uuid:msg-2d", "2026-02-07T20:50:30.123Z")
+            .expect("validated message should expire once overdue"));
         assert_eq!(
             store
-                .history("urn:uuid:msg-2c")
-                .expect("history should exist")
-                .last()
-                .copied(),
-            Some(MessageStatus::Expired)
+                .status("urn:uuid:msg-2d")
+                .expect("status should exist"),
+            MessageStatus::Expired
         );
     }
 
@@ -1571,38 +1566,6 @@ mod tests {
         store
             .register(
                 "urn:uuid:msg-snapshot-4",
-                "kamn:did:agent:sender-1",
-                vec!["kamn:did:agent:recipient-1".to_owned()],
-                "2026-02-07T20:15:30.123Z",
-                "2026-02-07T20:45:30.123Z",
-            )
-            .expect("register should succeed");
-        let snapshot = store.export_snapshot();
-
-        let mut file_store =
-            FileMessageLifecycleSnapshotStore::new(path.clone()).expect("store should build");
-        assert!(file_store.write(snapshot.clone()).is_ok());
-        assert_eq!(
-            file_store.read_latest().expect("read should pass"),
-            Some(snapshot)
-        );
-
-        let _ = fs::remove_file(path);
-        let _ = fs::remove_file(journal_path);
-    }
-
-    #[test]
-    fn regression_file_message_lifecycle_snapshot_store_roundtrips_delimiter_rich_message_id() {
-        // Regression: #6126
-        let path = temp_message_lifecycle_snapshot_path("delimiter-rich-message-id");
-        let journal_path = temp_message_lifecycle_snapshot_journal_path(&path);
-        let _ = fs::remove_file(&path);
-        let _ = fs::remove_file(&journal_path);
-
-        let mut store = MessageLifecycleStore::new();
-        store
-            .register(
-                "urn:uuid:msg|delimiter,rich\nv2",
                 "kamn:did:agent:sender-1",
                 vec!["kamn:did:agent:recipient-1".to_owned()],
                 "2026-02-07T20:15:30.123Z",

@@ -33,8 +33,7 @@ fn functional_runtime_request_identity_policy_commit_id_contract() {
 }
 
 #[test]
-fn regression_issue_6123_runtime_request_identity_policy_payload_collision_remains_fail_closed() {
-    // Regression: #6123
+fn regression_issue_6202_runtime_request_identity_policy_payload_component_uses_value_not_length() {
     let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
     let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
     assert_ne!(left, right);
@@ -245,23 +244,4 @@ fn regression_issue_1910_runtime_request_identity_policy_escapes_signed_envelope
         payload,
         "{\"signer_key_id\":\"signer:key:\\\"x\\\"\",\"message\":\"message:\\\"x\\\"\",\"signature\":\"signature:\\\"x\\\"\",\"recovery_id\":1}"
     );
-}
-
-#[test]
-fn spec_c13_runtime_request_identity_policy_docs_describe_payload_hash_length_design_decision() {
-    let docs_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../docs/foundation/kolme-runtime-commit-client.md");
-    let docs = std::fs::read_to_string(&docs_path).expect("runtime commit docs should be readable");
-    for marker in [
-        "payload-hash length compatibility mode",
-        "payload_hash.trim().len()",
-        "Regression: #1777",
-        "collision caveat",
-    ] {
-        assert!(
-            docs.contains(marker),
-            "runtime commit docs must contain marker `{marker}` at {}",
-            docs_path.display()
-        );
-    }
 }

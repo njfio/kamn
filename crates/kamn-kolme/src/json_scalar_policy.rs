@@ -49,6 +49,69 @@ pub(crate) fn percent_encode_component(value: &str) -> String {
     encoded
 }
 
+/// Advances one byte cursor past ASCII whitespace in a UTF-8 payload.
+pub(crate) fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
+    while let Some(byte) = value.as_bytes().get(cursor).copied() {
+        if byte.is_ascii_whitespace() {
+            cursor += 1;
+            continue;
+        }
+        break;
+    }
+    cursor
+}
+
+/// Splits a delimited string while honoring quoted JSON string sections.
+pub(crate) fn split_unquoted_segments(
+    input: &str,
+    delimiter: char,
+) -> Result<Vec<String>, &'static str> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut escape = false;
+
+    for ch in input.chars() {
+        if escape {
+            current.push(ch);
+            escape = false;
+            continue;
+        }
+
+        if ch == '\\' && in_quotes {
+            current.push(ch);
+            escape = true;
+            continue;
+        }
+
+        if ch == '"' {
+            in_quotes = !in_quotes;
+            current.push(ch);
+            continue;
+        }
+
+        if ch == delimiter && !in_quotes {
+            if current.trim().is_empty() {
+                return Err("empty segment");
+            }
+            parts.push(current.trim().to_owned());
+            current.clear();
+            continue;
+        }
+
+        current.push(ch);
+    }
+
+    if in_quotes {
+        return Err("unterminated quoted string");
+    }
+    if current.trim().is_empty() {
+        return Err("empty trailing segment");
+    }
+    parts.push(current.trim().to_owned());
+    Ok(parts)
+}
+
 fn parse_unicode_scalar(
     chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
 ) -> Result<char, &'static str> {
@@ -89,7 +152,10 @@ fn parse_hex_quad(
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_json_string_token, percent_encode_component};
+    use super::{
+        parse_json_string_token, percent_encode_component, skip_ascii_whitespace,
+        split_unquoted_segments,
+    };
 
     #[test]
     fn unit_json_scalar_policy_parses_common_escape_sequences() {
@@ -126,5 +192,28 @@ mod tests {
     fn unit_json_scalar_policy_percent_encodes_reserved_bytes() {
         let encoded = percent_encode_component("did:example:alice?nonce=7");
         assert_eq!(encoded, "did%3Aexample%3Aalice%3Fnonce%3D7");
+    }
+
+    #[test]
+    fn unit_json_scalar_policy_skips_ascii_whitespace_prefix() {
+        let payload = " \n\tfield";
+        let cursor = skip_ascii_whitespace(payload, 0);
+        assert_eq!(cursor, 3);
+        assert_eq!(payload.as_bytes()[cursor], b'f');
+    }
+
+    #[test]
+    fn unit_json_scalar_policy_splits_unquoted_segments_with_quoted_delimiters() {
+        let parts = split_unquoted_segments(r#""a,b",c,"d,e""#, ',').expect("parts");
+        assert_eq!(parts, vec![r#""a,b""#, "c", r#""d,e""#]);
+    }
+
+    #[test]
+    fn unit_json_scalar_policy_rejects_empty_or_unterminated_segments() {
+        assert_eq!(split_unquoted_segments("a,,b", ','), Err("empty segment"));
+        assert_eq!(
+            split_unquoted_segments(r#""unterminated"#, ','),
+            Err("unterminated quoted string")
+        );
     }
 }

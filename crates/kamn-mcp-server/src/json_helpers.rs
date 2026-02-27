@@ -18,6 +18,7 @@ pub(crate) fn escape_json(input: &str) -> String {
 /// Looks up one field value across root, params, and arguments objects.
 pub(crate) fn json_field_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
     root.get(key)
+        .or_else(|| root.get("result").and_then(|value| value.get(key)))
         .or_else(|| root.get("params").and_then(|value| value.get(key)))
         .or_else(|| {
             root.get("params")
@@ -39,9 +40,27 @@ pub(crate) fn json_required_string_field(payload: &str, key: &str) -> Result<Str
     json_optional_string_field(payload, key).ok_or_else(|| format!("missing required field: {key}"))
 }
 
+/// Parses one payload and reads an optional `u64` from either number or string token.
+pub(crate) fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = json_field_value(&root, key)?;
+    match value {
+        Value::Number(number) => number.as_u64(),
+        Value::String(raw) => raw.parse::<u64>().ok(),
+        _ => None,
+    }
+}
+
+/// Parses one payload and reads an optional boolean field.
+pub fn json_optional_bool_field(payload: &str, key: &str) -> Option<bool> {
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = json_field_value(&root, key)?;
+    value.as_bool()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{escape_json, json_field_value};
+    use super::{escape_json, json_field_value, json_optional_bool_field};
 
     #[test]
     fn unit_json_helpers_escape_json_handles_control_characters() {
@@ -59,5 +78,11 @@ mod tests {
             json_field_value(&root, "payload").and_then(|value| value.as_str()),
             Some("ok")
         );
+    }
+
+    #[test]
+    fn unit_json_helpers_json_optional_bool_field_resolves_result_scope() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe","result":{"ok":true}}"#;
+        assert_eq!(json_optional_bool_field(payload, "ok"), Some(true));
     }
 }

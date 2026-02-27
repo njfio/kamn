@@ -64,6 +64,10 @@ fn source_enforces_signer_adapter_ownership_without_reinline_backslide() {
         !SIGNER_RS.contains("impl KolmeForkSecp256k1SignerAdapter {"),
         "signer.rs must not re-inline signer adapter implementation"
     );
+    assert!(
+        !SIGNER_ADAPTER_RS.contains("#[derive(Debug, Clone)]"),
+        "signer_adapter.rs must not derive Clone for signer adapter key material"
+    );
 }
 
 #[test]

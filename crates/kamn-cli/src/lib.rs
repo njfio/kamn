@@ -5,7 +5,31 @@
 pub mod commands;
 
 const DEFAULT_ENDPOINT: &str = "http://localhost:8080";
-const HELP_TEXT: &str = "Usage: kamn-cli <command> [--endpoint <url>] [--format <json|text>] [args...]\n\nGlobal flags:\n  --help, -h        Show this help output\n  --endpoint <url>  KAMN service endpoint (default: http://localhost:8080)\n  --format <mode>   Output mode: json | text (default: json)\n\nCommands:\n  register\n  send-message\n  create-channel\n  list-messages\n  query-message\n  query-task\n  query-agent-profile\n  register-content\n  expire-content\n  tombstone-content\n  query-content\n  submit-bridge-message\n  forward-bridge-message\n  query-bridge-message\n  create-task\n  accept-task\n  complete-task\n  fund-escrow\n  release-escrow\n  verify-proof\n  health";
+const CLI_USAGE: &str = "kamn-cli <command> [--format json|text] [--endpoint <url>] [args]";
+const CLI_HELP_FLAGS: &[&str] = &["--help", "-h", "--format", "--endpoint"];
+const CLI_SUPPORTED_COMMANDS: &[&str] = &[
+    "register",
+    "send-message",
+    "create-channel",
+    "list-messages",
+    "query-message",
+    "query-task",
+    "query-agent-profile",
+    "register-content",
+    "expire-content",
+    "tombstone-content",
+    "query-content",
+    "submit-bridge-message",
+    "forward-bridge-message",
+    "query-bridge-message",
+    "create-task",
+    "accept-task",
+    "complete-task",
+    "fund-escrow",
+    "release-escrow",
+    "verify-proof",
+    "health",
+];
 
 /// Output format for CLI responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,6 +53,8 @@ impl OutputFormat {
 /// Supported phase-2 CLI command kinds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandKind {
+    /// Show CLI usage and command surface.
+    Help,
     /// Register one agent identity.
     Register,
     /// Send one message.
@@ -76,6 +102,7 @@ pub enum CommandKind {
 impl CommandKind {
     fn parse(raw: &str) -> Result<Self, String> {
         match raw {
+            "help" | "--help" | "-h" => Ok(Self::Help),
             "register" => Ok(Self::Register),
             "send-message" => Ok(Self::SendMessage),
             "create-channel" => Ok(Self::CreateChannel),
@@ -138,22 +165,6 @@ fn env_var_or_default(key: &str, default: &str) -> String {
     }
 }
 
-/// Returns deterministic usage/help output for the CLI command surface.
-pub fn render_help_text() -> &'static str {
-    HELP_TEXT
-}
-
-/// Returns true when CLI arguments request help output.
-pub fn is_help_request<I, S>(args: I) -> bool
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
-{
-    let mut iter = args.into_iter();
-    let _ = iter.next();
-    iter.any(|token| matches!(token.as_ref(), "--help" | "-h" | "help"))
-}
-
 /// Parses CLI arguments for phase-2 command surface contracts.
 pub fn parse_cli_args<I, S>(args: I) -> Result<ParsedCliArgs, String>
 where
@@ -203,14 +214,12 @@ where
                 endpoint = args[index].clone();
                 index += 1;
             }
-            "--" => {
-                passthrough.extend(args[index..].iter().cloned());
-                break;
+            other => {
+                if other.starts_with('-') {
+                    return Err(format!("unsupported flag: {other}"));
+                }
+                passthrough.push(other.to_owned());
             }
-            other if other.starts_with("--") => {
-                return Err(format!("unsupported flag: {other}"));
-            }
-            other => passthrough.push(other.to_owned()),
         }
     }
 
@@ -225,6 +234,7 @@ where
 /// Dispatches one parsed command to the corresponding phase-2 command module.
 pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib::AgentLibError> {
     match parsed.command {
+        CommandKind::Help => Ok(help_output()),
         CommandKind::Register => commands::register::execute(parsed),
         CommandKind::SendMessage => commands::send_message::execute(parsed),
         CommandKind::CreateChannel => commands::create_channel::execute(parsed),
@@ -249,9 +259,29 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib:
     }
 }
 
+fn help_output() -> CommandOutput {
+    let command_list = CLI_SUPPORTED_COMMANDS.join(", ");
+    let flag_list = CLI_HELP_FLAGS.join(", ");
+    let text = format!("usage={CLI_USAGE}\ncommands={command_list}\nflags={flag_list}");
+    let commands_json = CLI_SUPPORTED_COMMANDS
+        .iter()
+        .map(|value| format!("\"{value}\""))
+        .collect::<Vec<_>>()
+        .join(",");
+    let flags_json = CLI_HELP_FLAGS
+        .iter()
+        .map(|value| format!("\"{value}\""))
+        .collect::<Vec<_>>()
+        .join(",");
+    let json = format!(
+        "{{\"usage\":\"{CLI_USAGE}\",\"commands\":[{commands_json}],\"flags\":[{flags_json}]}}"
+    );
+    CommandOutput::new(json, text)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{is_help_request, parse_cli_args, render_help_text, OutputFormat};
+    use super::{dispatch, parse_cli_args, CommandKind, OutputFormat};
 
     #[test]
     fn unit_cli_parser_honors_endpoint_flag() {
@@ -262,36 +292,38 @@ mod tests {
     }
 
     #[test]
-    fn unit_is_help_request_detects_help_tokens() {
-        assert!(is_help_request(["kamn-cli", "--help"]));
-        assert!(is_help_request(["kamn-cli", "-h"]));
-        assert!(is_help_request(["kamn-cli", "help"]));
-        assert!(is_help_request(["kamn-cli", "health", "--help"]));
-        assert!(!is_help_request(["kamn-cli", "health"]));
+    fn regression_issue_6198_cli_parser_accepts_help_flag_as_command() {
+        let parsed = parse_cli_args(["kamn-cli", "--help"]).expect("help command should parse");
+        assert_eq!(parsed.command, CommandKind::Help);
     }
 
     #[test]
-    fn unit_render_help_text_contains_usage_and_flags() {
-        let help = render_help_text();
-        for marker in ["Usage:", "--endpoint", "--format", "send-message", "health"] {
-            assert!(
-                help.contains(marker),
-                "help output should contain marker `{marker}`: {help}"
-            );
-        }
+    fn regression_issue_6198_cli_dispatch_renders_usage_surface() {
+        let parsed = parse_cli_args(["kamn-cli", "--help"]).expect("help command should parse");
+        let output = dispatch(&parsed).expect("help command should dispatch");
+        assert!(output.text.contains("usage=kamn-cli <command>"));
+        assert!(output.text.contains("commands=register"));
+        assert!(output.text.contains("flags=--help"));
+        assert!(output.json.contains("\"usage\":\"kamn-cli <command>"));
+        assert!(output.json.contains("\"commands\":[\"register\""));
     }
 
     #[test]
-    fn unit_cli_parser_rejects_unknown_flag() {
-        let error = parse_cli_args(["kamn-cli", "health", "--endpont", "http://localhost:8080"])
-            .expect_err("unknown flag should fail");
-        assert_eq!(error, "unsupported flag: --endpont");
+    fn regression_issue_6213_cli_parser_rejects_unknown_long_flag() {
+        let error = parse_cli_args(["kamn-cli", "health", "--unknown"]).expect_err("must fail");
+        assert_eq!(error, "unsupported flag: --unknown");
     }
 
     #[test]
-    fn unit_cli_parser_supports_double_dash_passthrough_boundary() {
-        let parsed = parse_cli_args(["kamn-cli", "send-message", "--", "--payload-like-flag"])
-            .expect("parsed");
-        assert_eq!(parsed.passthrough, vec!["--payload-like-flag".to_owned()]);
+    fn regression_issue_6213_cli_parser_rejects_unknown_short_flag() {
+        let error = parse_cli_args(["kamn-cli", "health", "-x"]).expect_err("must fail");
+        assert_eq!(error, "unsupported flag: -x");
+    }
+
+    #[test]
+    fn regression_issue_6213_cli_parser_keeps_non_flag_passthrough() {
+        let parsed = parse_cli_args(["kamn-cli", "send-message", "payload.json"])
+            .expect("non-flag positional arguments should pass through");
+        assert_eq!(parsed.passthrough, vec!["payload.json".to_owned()]);
     }
 }

@@ -1,8 +1,9 @@
+use kamn_agent_lib::{AgentIdentity, KamnAgentHandle};
 use kamn_mcp_server::config::McpServerConfig;
 use kamn_mcp_server::process_stdio_input;
 use kamn_mcp_server::tools::build_tool_registry;
-use std::fs;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::path::Path;
 
 const MAX_FRAMED_CONTENT_LENGTH_BYTES: usize = 1_048_576;
 
@@ -24,15 +25,6 @@ fn parse_content_length_header_line(line: &str) -> Option<usize> {
         .and_then(|(_, value)| value.trim().parse::<usize>().ok())
 }
 
-fn validate_framed_content_length(content_length: usize) -> Result<(), String> {
-    if content_length > MAX_FRAMED_CONTENT_LENGTH_BYTES {
-        return Err(format!(
-            "content-length exceeds maximum: {content_length} > {MAX_FRAMED_CONTENT_LENGTH_BYTES}"
-        ));
-    }
-    Ok(())
-}
-
 fn write_stdio_response<W: Write>(writer: &mut W, response: &str) -> io::Result<()> {
     if response.starts_with("Content-Length: ") {
         writer.write_all(response.as_bytes())
@@ -42,8 +34,30 @@ fn write_stdio_response<W: Write>(writer: &mut W, response: &str) -> io::Result<
     }
 }
 
-fn normalize_agent_name_for_did(agent_name: &str) -> Result<String, String> {
-    let trimmed = agent_name.trim();
+fn validate_framed_content_length(content_length: usize) -> Result<(), String> {
+    if content_length > MAX_FRAMED_CONTENT_LENGTH_BYTES {
+        return Err(format!(
+            "content-length {content_length} exceeds max {MAX_FRAMED_CONTENT_LENGTH_BYTES}"
+        ));
+    }
+    Ok(())
+}
+
+fn load_signing_key_from_file(path: &Path) -> Result<String, String> {
+    let raw = std::fs::read_to_string(path)
+        .map_err(|error| format!("failed to read key file {}: {error}", path.display()))?;
+    let signing_key = raw.trim();
+    if signing_key.is_empty() {
+        return Err(format!(
+            "key file {} did not contain key material",
+            path.display()
+        ));
+    }
+    Ok(signing_key.to_owned())
+}
+
+fn normalize_agent_name_for_did(name: &str) -> Result<String, String> {
+    let trimmed = name.trim();
     if trimmed.is_empty() {
         return Err("agent name must not be empty".to_owned());
     }
@@ -56,16 +70,12 @@ fn normalize_agent_name_for_did(agent_name: &str) -> Result<String, String> {
     Ok(trimmed.to_ascii_lowercase())
 }
 
-fn load_identity_from_key_file(
-    agent_name: &str,
-    key_file: &str,
-) -> Result<kamn_agent_lib::AgentIdentity, String> {
-    let normalized_agent_name = normalize_agent_name_for_did(agent_name)?;
-    let signing_key = fs::read_to_string(key_file)
-        .map_err(|error| format!("failed to read key file `{key_file}`: {error}"))?;
-    let did = format!("kamn:did:agent:{normalized_agent_name}");
-    kamn_agent_lib::AgentIdentity::from_did_and_signing_key(did.as_str(), signing_key.as_str())
-        .map_err(|error| format!("failed to parse key-file identity: {error}"))
+fn build_identity_from_key_file(agent_name: &str, key_file: &str) -> Result<AgentIdentity, String> {
+    let normalized = normalize_agent_name_for_did(agent_name)?;
+    let did = format!("kamn:did:agent:{normalized}");
+    let signing_key = load_signing_key_from_file(Path::new(key_file))?;
+    AgentIdentity::from_did_and_signing_key(did.as_str(), signing_key.as_str())
+        .map_err(|error| format!("failed to construct identity: {error}"))
 }
 
 fn main() {
@@ -78,16 +88,16 @@ fn main() {
     };
 
     let tool_count = build_tool_registry().len();
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", "http://localhost:3000");
     let identity =
-        match load_identity_from_key_file(config.agent_name.as_str(), config.key_file.as_str()) {
+        match build_identity_from_key_file(config.agent_name.as_str(), config.key_file.as_str()) {
             Ok(identity) => identity,
             Err(error) => {
                 eprintln!("kamn-mcp-server config error: {error}");
                 std::process::exit(2);
             }
         };
-    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", "http://localhost:3000");
-    let handle = match kamn_agent_lib::KamnAgentHandle::with_identity(
+    let handle = match KamnAgentHandle::with_identity(
         config.endpoint.as_str(),
         kolme_endpoint.as_str(),
         identity,
@@ -146,7 +156,7 @@ fn main() {
                 }
             }
             if let Err(error) = validate_framed_content_length(content_length) {
-                eprintln!("kamn-mcp-server io error: {error}");
+                eprintln!("kamn-mcp-server protocol error: {error}");
                 std::process::exit(2);
             }
 
@@ -204,80 +214,68 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        load_identity_from_key_file, normalize_agent_name_for_did, validate_framed_content_length,
+        build_identity_from_key_file, load_signing_key_from_file, validate_framed_content_length,
         MAX_FRAMED_CONTENT_LENGTH_BYTES,
     };
     use std::fs;
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    const TEST_SIGNING_KEY_HEX: &str =
-        "094cf4e1f3d974bbf3e72233e2c2937e8fdb094740e0f017e010aa47ac1201ac";
-
-    fn temp_key_file_path(stem: &str) -> PathBuf {
-        let mut path = std::env::temp_dir();
-        let timestamp = SystemTime::now()
+    fn temp_file_path(suffix: &str) -> PathBuf {
+        let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("system clock should be after unix epoch")
+            .expect("system time should be monotonic")
             .as_nanos();
-        path.push(format!("{stem}-{}-{timestamp}.key", std::process::id()));
-        path
+        std::env::temp_dir().join(format!(
+            "kamn-mcp-server-{suffix}-{nanos}-{}.key",
+            std::process::id()
+        ))
     }
 
     #[test]
-    fn spec_c01_load_identity_from_key_file_uses_signing_material() {
-        let path = temp_key_file_path("mcp-key-file");
-        fs::write(&path, TEST_SIGNING_KEY_HEX).expect("temp key file should be writable");
-        let identity = load_identity_from_key_file(
-            "Alice",
-            path.to_str().expect("temp path should render as utf-8"),
+    fn regression_issue_6197_load_signing_key_from_file_consumes_key_material() {
+        let path = temp_file_path("regression-6197");
+        fs::write(
+            path.as_path(),
+            "1111111111111111111111111111111111111111111111111111111111111111\n",
         )
-        .expect("valid key file should load identity");
-        fs::remove_file(&path).expect("temp key file should be removable");
+        .expect("key file should write");
 
+        let loaded =
+            load_signing_key_from_file(path.as_path()).expect("key file should load successfully");
+        assert_eq!(
+            loaded,
+            "1111111111111111111111111111111111111111111111111111111111111111"
+        );
+
+        let identity = build_identity_from_key_file("Alice", path.to_str().expect("utf8 path"))
+            .expect("identity should build from key file");
         assert_eq!(identity.did().as_str(), "kamn:did:agent:alice");
-        assert_eq!(identity.signing_key(), TEST_SIGNING_KEY_HEX);
+        assert_eq!(identity.signing_key(), loaded);
+
+        let _ = fs::remove_file(path.as_path());
     }
 
     #[test]
-    fn spec_c02_load_identity_from_key_file_rejects_unreadable_path() {
-        let path = temp_key_file_path("mcp-key-file-missing");
-        let error = load_identity_from_key_file(
-            "alice",
-            path.to_str().expect("temp path should render as utf-8"),
-        )
-        .expect_err("missing path must fail");
-        assert!(
-            error.contains("failed to read key file"),
-            "error should contain deterministic key-file read marker: {error}",
-        );
-    }
-
-    #[test]
-    fn spec_c03_validate_framed_content_length_accepts_configured_boundary() {
-        assert!(
-            validate_framed_content_length(MAX_FRAMED_CONTENT_LENGTH_BYTES).is_ok(),
-            "boundary content-length should be accepted",
-        );
-    }
-
-    #[test]
-    fn spec_c04_validate_framed_content_length_rejects_values_above_boundary() {
-        let error = validate_framed_content_length(MAX_FRAMED_CONTENT_LENGTH_BYTES + 1)
-            .expect_err("oversized content-length should be rejected");
-        assert!(
-            error.contains("content-length exceeds maximum"),
-            "error should include deterministic max-size marker: {error}",
-        );
-    }
-
-    #[test]
-    fn unit_normalize_agent_name_for_did_rejects_invalid_characters() {
+    fn regression_issue_6197_load_signing_key_from_file_rejects_empty_content() {
+        let path = temp_file_path("regression-6197-empty");
+        fs::write(path.as_path(), "  \n\t").expect("empty-ish key file should write");
         let error =
-            normalize_agent_name_for_did("alice bad").expect_err("invalid chars should fail");
-        assert!(
-            error.contains("[a-zA-Z0-9_-]"),
-            "normalization error should explain allowed charset: {error}",
-        );
+            load_signing_key_from_file(path.as_path()).expect_err("empty key file must fail");
+        assert!(error.contains("did not contain key material"));
+        let _ = fs::remove_file(path.as_path());
+    }
+
+    #[test]
+    fn regression_issue_6199_validate_content_length_accepts_boundary_values() {
+        validate_framed_content_length(MAX_FRAMED_CONTENT_LENGTH_BYTES)
+            .expect("max boundary should remain valid");
+    }
+
+    #[test]
+    fn regression_issue_6199_validate_content_length_rejects_oversize_values() {
+        let error = validate_framed_content_length(MAX_FRAMED_CONTENT_LENGTH_BYTES + 1)
+            .expect_err("oversize content-length should be rejected");
+        assert!(error.contains("exceeds max"));
     }
 }

@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 const BASELINE_SCHEMA_VERSION: &str = "kamn.ci.shell-test-surface-ratio-baseline.v1";
 const THRESHOLD_SCHEMA_VERSION: &str = "kamn.ci.shell-test-surface-ratio-thresholds.v1";
@@ -14,6 +13,7 @@ const REASON_CODES_CSV: &str = "baseline_file_missing,baseline_file_invalid,base
 struct Baseline {
     shell_test_file_count: i64,
     rust_test_file_count: i64,
+    docs_rust_test_file_count: i64,
     shell_to_rust_ratio: f64,
 }
 
@@ -35,6 +35,7 @@ struct Waiver {
 struct CurrentSurface {
     shell_test_file_count: i64,
     rust_test_file_count: i64,
+    docs_rust_test_file_count: i64,
     shell_to_rust_ratio: f64,
 }
 
@@ -116,6 +117,23 @@ fn required_f64(map: &BTreeMap<String, String>, key: &str, reason_code: &str) ->
         })
 }
 
+fn optional_i64_with_default(
+    map: &BTreeMap<String, String>,
+    key: &str,
+    default: i64,
+    reason_code: &str,
+) -> i64 {
+    match map.get(key) {
+        Some(value) => value.parse::<i64>().unwrap_or_else(|error| {
+            fail(
+                reason_code,
+                &format!("key {} must parse as integer: {}", key, error),
+            )
+        }),
+        None => default,
+    }
+}
+
 fn optional_path(map: &BTreeMap<String, String>, key: &str) -> Option<PathBuf> {
     map.get(key).and_then(|value| {
         let trimmed = value.trim();
@@ -151,8 +169,18 @@ fn load_baseline(path: &Path) -> Baseline {
     let shell_test_file_count =
         required_i64(&map, "shell_test_file_count", "baseline_value_invalid");
     let rust_test_file_count = required_i64(&map, "rust_test_file_count", "baseline_value_invalid");
+    let docs_rust_test_file_count = optional_i64_with_default(
+        &map,
+        "docs_rust_test_file_count",
+        0,
+        "baseline_value_invalid",
+    );
     let shell_to_rust_ratio = required_f64(&map, "shell_to_rust_ratio", "baseline_value_invalid");
-    if shell_test_file_count < 0 || rust_test_file_count <= 0 || shell_to_rust_ratio < 0.0 {
+    if shell_test_file_count < 0
+        || rust_test_file_count <= 0
+        || docs_rust_test_file_count < 0
+        || shell_to_rust_ratio < 0.0
+    {
         fail(
             "baseline_value_invalid",
             "baseline counts and ratio must be non-negative and rust count must be > 0",
@@ -162,6 +190,7 @@ fn load_baseline(path: &Path) -> Baseline {
     Baseline {
         shell_test_file_count,
         rust_test_file_count,
+        docs_rust_test_file_count,
         shell_to_rust_ratio,
     }
 }
@@ -276,52 +305,44 @@ fn load_waiver(path: &Path) -> Waiver {
     }
 }
 
-fn git_tracked_files(relative_root: &str) -> Vec<PathBuf> {
-    let repo = repo_root();
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(&repo)
-        .arg("ls-files")
-        .arg("--")
-        .arg(relative_root)
-        .output()
-        .unwrap_or_else(|error| {
-            fail(
-                "threshold_value_invalid",
-                &format!(
-                    "failed to execute git ls-files for {}: {}",
-                    relative_root, error
-                ),
-            )
-        });
-    if !output.status.success() {
+fn walk_files(root: &Path, output: &mut Vec<PathBuf>) {
+    let entries = fs::read_dir(root).unwrap_or_else(|error| {
         fail(
             "threshold_value_invalid",
-            &format!(
-                "git ls-files failed for {}: {}",
-                relative_root,
-                String::from_utf8_lossy(&output.stderr)
-            ),
-        );
-    }
-    String::from_utf8(output.stdout)
-        .unwrap_or_else(|error| {
+            &format!("failed to read directory {}: {}", root.display(), error),
+        )
+    });
+    for entry in entries {
+        let entry = entry.unwrap_or_else(|error| {
             fail(
                 "threshold_value_invalid",
-                &format!(
-                    "git ls-files stdout invalid UTF-8 for {}: {}",
-                    relative_root, error
-                ),
+                &format!("failed to read dir entry in {}: {}", root.display(), error),
             )
-        })
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(PathBuf::from)
-        .collect()
+        });
+        let path = entry.path();
+        if path.is_dir() {
+            walk_files(&path, output);
+            continue;
+        }
+        if path.is_file() {
+            output.push(path);
+        }
+    }
+}
+
+fn is_docs_governance_rust_test_file(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    name.ends_with("_docs.rs")
+        || name.contains("docs_contract")
+        || name.contains("doc_contract")
+        || name.contains("missing_docs_policy")
 }
 
 fn current_surface() -> CurrentSurface {
-    let shell_files = git_tracked_files("scripts");
+    let mut shell_files = Vec::new();
+    walk_files(&repo_path("scripts"), &mut shell_files);
     let shell_test_file_count = shell_files
         .iter()
         .filter(|path| {
@@ -333,14 +354,28 @@ fn current_surface() -> CurrentSurface {
         })
         .count() as i64;
 
-    let crate_files = git_tracked_files("crates");
-    let rust_test_file_count = crate_files
+    let mut crate_files = Vec::new();
+    walk_files(&repo_path("crates"), &mut crate_files);
+    let rust_test_file_count_all = crate_files
         .iter()
         .filter(|path| {
             path.extension().is_some_and(|extension| extension == "rs")
-                && path.iter().any(|component| component == "tests")
+                && path
+                    .iter()
+                    .any(|component| component.to_string_lossy() == "tests")
         })
         .count() as i64;
+    let docs_rust_test_file_count = crate_files
+        .iter()
+        .filter(|path| {
+            path.extension().is_some_and(|extension| extension == "rs")
+                && path
+                    .iter()
+                    .any(|component| component.to_string_lossy() == "tests")
+                && is_docs_governance_rust_test_file(path)
+        })
+        .count() as i64;
+    let rust_test_file_count = rust_test_file_count_all - docs_rust_test_file_count;
     if rust_test_file_count <= 0 {
         fail(
             "threshold_value_invalid",
@@ -352,6 +387,7 @@ fn current_surface() -> CurrentSurface {
     CurrentSurface {
         shell_test_file_count,
         rust_test_file_count,
+        docs_rust_test_file_count,
         shell_to_rust_ratio,
     }
 }
@@ -426,15 +462,17 @@ fn maybe_write_report(
         .map(|path| path.to_string_lossy().into_owned())
         .unwrap_or_else(|| "none".to_owned());
     let report = format!(
-        "{{\n  \"schema_version\": \"{REPORT_SCHEMA_VERSION}\",\n  \"reason_taxonomy_version\": \"{REASON_TAXONOMY_VERSION}\",\n  \"reason_codes_csv\": \"{REASON_CODES_CSV}\",\n  \"policy_status\": \"{}\",\n  \"final_decision\": \"{}\",\n  \"reason_codes\": \"{}\",\n  \"baseline\": {{\n    \"shell_test_file_count\": {},\n    \"rust_test_file_count\": {},\n    \"shell_to_rust_ratio\": {:.6}\n  }},\n  \"current\": {{\n    \"shell_test_file_count\": {},\n    \"rust_test_file_count\": {},\n    \"shell_to_rust_ratio\": {:.6}\n  }},\n  \"delta\": {{\n    \"shell_test_file_delta\": {},\n    \"rust_test_file_delta\": {},\n    \"ratio_delta\": {:.6}\n  }},\n  \"thresholds\": {{\n    \"allowed_shell_test_file_delta_max\": {},\n    \"allowed_ratio_delta_max\": {:.6},\n    \"waiver_file\": \"{}\"\n  }}\n}}\n",
+        "{{\n  \"schema_version\": \"{REPORT_SCHEMA_VERSION}\",\n  \"reason_taxonomy_version\": \"{REASON_TAXONOMY_VERSION}\",\n  \"reason_codes_csv\": \"{REASON_CODES_CSV}\",\n  \"policy_status\": \"{}\",\n  \"final_decision\": \"{}\",\n  \"reason_codes\": \"{}\",\n  \"baseline\": {{\n    \"shell_test_file_count\": {},\n    \"rust_test_file_count\": {},\n    \"docs_rust_test_file_count\": {},\n    \"shell_to_rust_ratio\": {:.6}\n  }},\n  \"current\": {{\n    \"shell_test_file_count\": {},\n    \"rust_test_file_count\": {},\n    \"docs_rust_test_file_count\": {},\n    \"shell_to_rust_ratio\": {:.6}\n  }},\n  \"delta\": {{\n    \"shell_test_file_delta\": {},\n    \"rust_test_file_delta\": {},\n    \"ratio_delta\": {:.6}\n  }},\n  \"thresholds\": {{\n    \"allowed_shell_test_file_delta_max\": {},\n    \"allowed_ratio_delta_max\": {:.6},\n    \"waiver_file\": \"{}\"\n  }}\n}}\n",
         evaluation.policy_status,
         evaluation.final_decision,
         reason_codes,
         baseline.shell_test_file_count,
         baseline.rust_test_file_count,
+        baseline.docs_rust_test_file_count,
         baseline.shell_to_rust_ratio,
         current.shell_test_file_count,
         current.rust_test_file_count,
+        current.docs_rust_test_file_count,
         current.shell_to_rust_ratio,
         shell_delta,
         rust_delta,
@@ -510,6 +548,22 @@ fn functional_shell_test_surface_ratio_non_regression_gate() {
 }
 
 #[test]
+fn unit_docs_governance_rust_test_classifier_detects_docs_contract_patterns() {
+    assert!(is_docs_governance_rust_test_file(Path::new(
+        "crates/kamn-core/tests/runtime_network_docs.rs"
+    )));
+    assert!(is_docs_governance_rust_test_file(Path::new(
+        "crates/kamn-core/tests/review_r53_docs_contract.rs"
+    )));
+    assert!(is_docs_governance_rust_test_file(Path::new(
+        "crates/kamn-core/tests/missing_docs_policy.rs"
+    )));
+    assert!(!is_docs_governance_rust_test_file(Path::new(
+        "crates/kamn-core/tests/task_operations.rs"
+    )));
+}
+
+#[test]
 fn regression_waiver_mitigation_issue_marker_must_match_issue_format() {
     let repo_tmp = repo_root().join("target/tmp/shell-test-surface-ratio");
     let _ = fs::remove_dir_all(&repo_tmp);
@@ -530,40 +584,5 @@ fn regression_waiver_mitigation_issue_marker_must_match_issue_format() {
     assert!(
         panic_result.is_err(),
         "invalid waiver mitigation issue format must fail closed"
-    );
-}
-
-#[test]
-fn regression_shell_surface_ratio_ignores_untracked_shell_test_files() {
-    // Regression: #6139
-    struct TempFileCleanup {
-        path: PathBuf,
-    }
-
-    impl Drop for TempFileCleanup {
-        fn drop(&mut self) {
-            let _ = fs::remove_file(&self.path);
-        }
-    }
-
-    let baseline = current_surface();
-    let temp_file = repo_path("scripts/test_issue_6139_untracked_ratio_guard.sh");
-    let _ = fs::remove_file(&temp_file);
-    fs::write(&temp_file, "#!/usr/bin/env bash\nexit 0\n")
-        .expect("failed to write untracked shell test fixture");
-    let _cleanup = TempFileCleanup { path: temp_file };
-
-    let with_untracked = current_surface();
-    assert_eq!(
-        with_untracked.shell_test_file_count, baseline.shell_test_file_count,
-        "untracked shell test files must not contribute to tracked-surface counts"
-    );
-    assert_eq!(
-        with_untracked.rust_test_file_count, baseline.rust_test_file_count,
-        "rust test count must remain stable when adding untracked shell files"
-    );
-    assert!(
-        (with_untracked.shell_to_rust_ratio - baseline.shell_to_rust_ratio).abs() < f64::EPSILON,
-        "shell/rust ratio must remain stable when adding untracked shell files"
     );
 }

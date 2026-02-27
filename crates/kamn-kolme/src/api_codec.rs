@@ -1,8 +1,12 @@
 //! Typed codec contracts for Kolme nonce and broadcast APIs.
 
-use crate::json_parse_helpers::{skip_ascii_whitespace, split_unquoted};
+use crate::flat_json_policy::{
+    parse_flat_json_value_fields, required_json_string_field, required_positive_u64_json_field,
+    KolmeFlatJsonPolicyError, KolmeFlatJsonValue,
+};
 use crate::json_scalar_policy::{
     parse_json_string_token as parse_json_string, percent_encode_component as percent_encode,
+    skip_ascii_whitespace,
 };
 use std::collections::HashMap;
 use std::error::Error;
@@ -87,9 +91,11 @@ pub struct KolmeApiNextNonceResponse {
 impl KolmeApiNextNonceResponse {
     /// Parses one nonce lookup response JSON payload.
     pub fn parse_json(response: &str) -> Result<Self, KolmeApiCodecError> {
-        let fields = parse_flat_json_value_fields(response)?;
-        let next_nonce = required_positive_u64_json_field(&fields, "next_nonce")?;
-        let account_id = optional_nullable_json_string_field(&fields, "account_id")?;
+        let fields = parse_flat_json_value_fields(response).map_err(map_flat_json_error)?;
+        let next_nonce =
+            required_positive_u64_json_field(&fields, "next_nonce").map_err(map_flat_json_error)?;
+        let account_id = optional_nullable_json_string_field(&fields, "account_id")
+            .map_err(map_flat_json_error)?;
         Ok(Self {
             next_nonce,
             account_id,
@@ -157,8 +163,8 @@ pub struct KolmeApiBroadcastResponse {
 impl KolmeApiBroadcastResponse {
     /// Parses one broadcast response JSON payload.
     pub fn parse_json(response: &str) -> Result<Self, KolmeApiCodecError> {
-        let fields = parse_flat_json_value_fields(response)?;
-        let txhash = required_json_string_field(&fields, "txhash")?;
+        let fields = parse_flat_json_value_fields(response).map_err(map_flat_json_error)?;
+        let txhash = required_json_string_field(&fields, "txhash").map_err(map_flat_json_error)?;
         Ok(Self { txhash })
     }
 }
@@ -204,176 +210,28 @@ pub fn validate_direct_signed_transaction_message(message: &str) -> Result<(), K
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum FlatJsonValue {
-    String(String),
-    Number(String),
-    Boolean,
-    Null,
-}
-
-fn parse_flat_json_value_fields(
-    response: &str,
-) -> Result<HashMap<String, FlatJsonValue>, KolmeApiCodecError> {
-    let body = response.trim();
-    if !(body.starts_with('{') && body.ends_with('}')) {
-        return Err(KolmeApiCodecError::MalformedResponse {
-            reason: "json response must be an object".to_owned(),
-        });
-    }
-    let inner = &body[1..body.len() - 1];
-    if inner.trim().is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    let entries =
-        split_unquoted(inner, ',').map_err(|reason| KolmeApiCodecError::MalformedResponse {
-            reason: format!("invalid json response: {reason}"),
-        })?;
-
-    let mut fields = HashMap::new();
-    for entry in entries {
-        let pair = split_unquoted(entry.as_str(), ':').map_err(|reason| {
-            KolmeApiCodecError::MalformedResponse {
-                reason: format!("invalid json response pair: {reason}"),
-            }
-        })?;
-        if pair.len() != 2 {
-            return Err(KolmeApiCodecError::MalformedResponse {
-                reason: "json response pair must contain exactly one ':'".to_owned(),
-            });
-        }
-
-        let key = parse_json_string(pair[0].trim()).map_err(|reason| {
-            KolmeApiCodecError::MalformedResponse {
-                reason: format!("invalid json key: {reason}"),
-            }
-        })?;
-        let value = parse_json_value(pair[1].trim())?;
-        fields.insert(key, value);
-    }
-    Ok(fields)
-}
-
-fn parse_json_value(token: &str) -> Result<FlatJsonValue, KolmeApiCodecError> {
-    let trimmed = token.trim();
-    if trimmed.starts_with('"') {
-        let value =
-            parse_json_string(trimmed).map_err(|reason| KolmeApiCodecError::MalformedResponse {
-                reason: format!("invalid json value: {reason}"),
-            })?;
-        return Ok(FlatJsonValue::String(value));
-    }
-    if trimmed == "null" {
-        return Ok(FlatJsonValue::Null);
-    }
-    if trimmed == "true" {
-        return Ok(FlatJsonValue::Boolean);
-    }
-    if trimmed == "false" {
-        return Ok(FlatJsonValue::Boolean);
-    }
-    if is_json_number_literal(trimmed) {
-        return Ok(FlatJsonValue::Number(trimmed.to_owned()));
-    }
-    Err(KolmeApiCodecError::MalformedResponse {
-        reason: "invalid json value token".to_owned(),
-    })
-}
-
-fn is_json_number_literal(token: &str) -> bool {
-    if token.is_empty() {
-        return false;
-    }
-    let mut chars = token.chars();
-    let first = chars.next().unwrap_or_default();
-    if first == '-' {
-        let remainder = chars.as_str();
-        return !remainder.is_empty() && remainder.chars().all(|ch| ch.is_ascii_digit());
-    }
-    first.is_ascii_digit() && chars.as_str().chars().all(|ch| ch.is_ascii_digit())
-}
-
-fn required_json_string_field(
-    fields: &HashMap<String, FlatJsonValue>,
-    field: &'static str,
-) -> Result<String, KolmeApiCodecError> {
-    let value = fields
-        .get(field)
-        .ok_or_else(|| KolmeApiCodecError::MalformedResponse {
-            reason: format!("missing required field: {field}"),
-        })?;
-    let FlatJsonValue::String(raw) = value else {
-        return Err(KolmeApiCodecError::MalformedResponse {
-            reason: format!("field must be a string: {field}"),
-        });
-    };
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeApiCodecError::MalformedResponse {
-            reason: format!("field must not be empty: {field}"),
-        });
-    }
-    Ok(trimmed.to_owned())
-}
-
 fn optional_nullable_json_string_field(
-    fields: &HashMap<String, FlatJsonValue>,
+    fields: &HashMap<String, KolmeFlatJsonValue>,
     field: &'static str,
-) -> Result<Option<String>, KolmeApiCodecError> {
+) -> Result<Option<String>, KolmeFlatJsonPolicyError> {
     let Some(value) = fields.get(field) else {
         return Ok(None);
     };
     match value {
-        FlatJsonValue::Null => Ok(None),
-        FlatJsonValue::String(raw) => {
+        KolmeFlatJsonValue::Null => Ok(None),
+        KolmeFlatJsonValue::String(raw) => {
             let trimmed = raw.trim();
             if trimmed.is_empty() {
-                return Err(KolmeApiCodecError::MalformedResponse {
+                return Err(KolmeFlatJsonPolicyError::MalformedResponse {
                     reason: format!("field must not be empty: {field}"),
                 });
             }
             Ok(Some(trimmed.to_owned()))
         }
-        _ => Err(KolmeApiCodecError::MalformedResponse {
+        _ => Err(KolmeFlatJsonPolicyError::MalformedResponse {
             reason: format!("field must be string|null: {field}"),
         }),
     }
-}
-
-fn required_positive_u64_json_field(
-    fields: &HashMap<String, FlatJsonValue>,
-    field: &'static str,
-) -> Result<u64, KolmeApiCodecError> {
-    let value = fields
-        .get(field)
-        .ok_or_else(|| KolmeApiCodecError::MalformedResponse {
-            reason: format!("missing required field: {field}"),
-        })?;
-
-    let raw = match value {
-        FlatJsonValue::Number(value) => value.as_str(),
-        FlatJsonValue::String(value) => value.trim(),
-        _ => {
-            return Err(KolmeApiCodecError::MalformedResponse {
-                reason: format!("field must be numeric: {field}"),
-            })
-        }
-    };
-
-    let parsed = raw
-        .parse::<i128>()
-        .map_err(|_| KolmeApiCodecError::MalformedResponse {
-            reason: format!("invalid numeric field: {field}"),
-        })?;
-    if parsed <= 0 {
-        return Err(KolmeApiCodecError::MalformedResponse {
-            reason: format!("{field} must be positive"),
-        });
-    }
-    u64::try_from(parsed).map_err(|_| KolmeApiCodecError::MalformedResponse {
-        reason: format!("invalid numeric field: {field}"),
-    })
 }
 
 fn find_json_string_field(payload: &str, field: &str) -> Result<Option<String>, &'static str> {
@@ -500,6 +358,12 @@ fn has_json_array_field(payload: &str, field: &str) -> Result<bool, &'static str
         return Err("field must be array");
     }
     Ok(false)
+}
+
+fn map_flat_json_error(error: KolmeFlatJsonPolicyError) -> KolmeApiCodecError {
+    KolmeApiCodecError::MalformedResponse {
+        reason: error.to_string(),
+    }
 }
 
 /// Escapes one UTF-8 string for deterministic JSON string rendering.

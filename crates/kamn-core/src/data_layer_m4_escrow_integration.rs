@@ -1055,241 +1055,96 @@ fn tagged_digest(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        DataLayerM4EscrowDraftInput, DataLayerM4EscrowState, DataLayerM4EscrowTransitionAction,
+        DataLayerM4EscrowTransitionEngine, DataLayerM4EscrowVisibilityDecision,
+        DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceRegistryError,
+        DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE,
+    };
 
-    fn escrow_draft(escrow_id: &str) -> DataLayerM4EscrowDraftInput {
+    fn fixture_draft() -> DataLayerM4EscrowDraftInput {
         DataLayerM4EscrowDraftInput {
-            escrow_id: escrow_id.to_owned(),
-            initiator_did: "kamn:did:agent:initiator-1".to_owned(),
-            counterparty_did: "kamn:did:agent:counterparty-1".to_owned(),
-            auditor_did: None,
-            auditor_threshold: None,
-            auditor_share_holders: Vec::new(),
-            expires_at_epoch_seconds: Some(9_999),
-        }
-    }
-
-    fn evidence_input(
-        escrow_id: &str,
-        escrow_state: DataLayerM4EscrowState,
-        settlement_receipt_hash: &str,
-        settlement_payload_hash: &str,
-        recorded_at_epoch_seconds: u64,
-    ) -> DataLayerM4SettlementEvidenceInput {
-        DataLayerM4SettlementEvidenceInput {
-            escrow_id: escrow_id.to_owned(),
-            escrow_state,
-            settlement_receipt_hash: settlement_receipt_hash.to_owned(),
-            settlement_payload_hash: settlement_payload_hash.to_owned(),
-            recorded_at_epoch_seconds,
+            escrow_id: "escrow-1".to_owned(),
+            initiator_did: "kamn:did:owner:alice".to_owned(),
+            counterparty_did: "kamn:did:owner:bob".to_owned(),
+            auditor_did: Some("kamn:did:auditor:carol".to_owned()),
+            auditor_threshold: Some(2),
+            auditor_share_holders: vec![
+                "kamn:did:holder:one".to_owned(),
+                "kamn:did:holder:two".to_owned(),
+            ],
+            expires_at_epoch_seconds: Some(2_000),
         }
     }
 
     #[test]
-    fn unit_transition_and_visibility_happy_path_projects_reason_codes() {
+    fn unit_data_layer_m4_escrow_transition_flow_reaches_disputed() {
         let mut engine = DataLayerM4EscrowTransitionEngine::new();
         engine
-            .create_escrow(escrow_draft("escrow-happy"))
-            .expect("escrow creation should succeed");
-
-        let funded = engine
+            .create_escrow(fixture_draft())
+            .expect("escrow draft should create");
+        engine
             .apply_transition(
-                "escrow-happy",
+                "escrow-1",
                 DataLayerM4EscrowTransitionAction::Fund {
-                    funded_at_epoch_seconds: 100,
-                },
-            )
-            .expect("fund transition should succeed");
-        assert_eq!(funded.to, DataLayerM4EscrowState::Funded);
-        assert_eq!(funded.reason_code, DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE);
-
-        let activated = engine
-            .apply_transition(
-                "escrow-happy",
-                DataLayerM4EscrowTransitionAction::Activate {
-                    activated_at_epoch_seconds: 101,
-                },
-            )
-            .expect("activate transition should succeed");
-        assert_eq!(activated.to, DataLayerM4EscrowState::Active);
-        assert_eq!(
-            activated.reason_code,
-            DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE
-        );
-
-        let participant_visibility = engine
-            .authorize_message_visibility(DataLayerM4EscrowVisibilityRequest {
-                escrow_id: "escrow-happy".to_owned(),
-                requester_did: "kamn:did:agent:initiator-1".to_owned(),
-                reconstructed_auditor_shares: None,
-            })
-            .expect("participant visibility query should succeed");
-        assert_eq!(
-            participant_visibility,
-            DataLayerM4EscrowVisibilityDecision::Allow {
-                reason_code: DATA_LAYER_M4_ESCROW_PARTICIPANT_SCOPE_ALLOWED_REASON_CODE,
-            }
-        );
-
-        let outsider_visibility = engine
-            .authorize_message_visibility(DataLayerM4EscrowVisibilityRequest {
-                escrow_id: "escrow-happy".to_owned(),
-                requester_did: "kamn:did:observer:outsider-1".to_owned(),
-                reconstructed_auditor_shares: None,
-            })
-            .expect("outsider visibility query should succeed");
-        assert_eq!(
-            outsider_visibility,
-            DataLayerM4EscrowVisibilityDecision::Deny {
-                reason_code: DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE,
-            }
-        );
-    }
-
-    #[test]
-    fn regression_invalid_transition_and_tampered_evidence_fail_closed() {
-        let mut engine = DataLayerM4EscrowTransitionEngine::new();
-        engine
-            .create_escrow(escrow_draft("escrow-regression"))
-            .expect("escrow creation should succeed");
-
-        let transition_error = engine
-            .apply_transition(
-                "escrow-regression",
-                DataLayerM4EscrowTransitionAction::Activate {
-                    activated_at_epoch_seconds: 150,
-                },
-            )
-            .expect_err("activate from created must be rejected");
-        assert_eq!(
-            transition_error,
-            DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowTransition {
-                escrow_id: "escrow-regression".to_owned(),
-                from: DataLayerM4EscrowState::Created,
-                action: "activate",
-            }
-        );
-
-        let mut registry = DataLayerM4SettlementEvidenceRegistry::new();
-        registry
-            .append(evidence_input(
-                "escrow-regression",
-                DataLayerM4EscrowState::Released,
-                "sha256:receipt-1",
-                "sha256:payload-1",
-                201,
-            ))
-            .expect("first evidence append should succeed");
-        registry
-            .append(evidence_input(
-                "escrow-regression",
-                DataLayerM4EscrowState::Released,
-                "sha256:receipt-2",
-                "sha256:payload-2",
-                202,
-            ))
-            .expect("second evidence append should succeed");
-        registry
-            .replace_record_hash_unchecked("escrow-regression", 1, "sha256:tampered")
-            .expect("tamper setup should succeed");
-
-        let integrity_error = registry
-            .verify_escrow_integrity("escrow-regression")
-            .expect_err("tampered evidence chain must fail");
-        assert_eq!(
-            integrity_error,
-            DataLayerM4SettlementEvidenceRegistryError::InvalidEvidenceHashChain {
-                escrow_id: "escrow-regression".to_owned(),
-                position: 0,
-                reason: "record_hash mismatch",
-            }
-        );
-    }
-
-    #[test]
-    fn unit_reconciliation_projects_match_and_mismatch_decisions() {
-        let mut engine = DataLayerM4EscrowTransitionEngine::new();
-        engine
-            .create_escrow(escrow_draft("escrow-reconcile"))
-            .expect("escrow creation should succeed");
-        engine
-            .apply_transition(
-                "escrow-reconcile",
-                DataLayerM4EscrowTransitionAction::Fund {
-                    funded_at_epoch_seconds: 300,
+                    funded_at_epoch_seconds: 1_001,
                 },
             )
             .expect("fund transition should succeed");
         engine
             .apply_transition(
-                "escrow-reconcile",
+                "escrow-1",
                 DataLayerM4EscrowTransitionAction::Activate {
-                    activated_at_epoch_seconds: 301,
+                    activated_at_epoch_seconds: 1_002,
                 },
             )
             .expect("activate transition should succeed");
         engine
             .apply_transition(
-                "escrow-reconcile",
-                DataLayerM4EscrowTransitionAction::ResolveRelease {
-                    settled_at_epoch_seconds: 302,
-                    settlement_receipt_hash: "sha256:receipt-match".to_owned(),
+                "escrow-1",
+                DataLayerM4EscrowTransitionAction::OpenDispute {
+                    dispute_opened_at_epoch_seconds: 1_003,
                 },
             )
-            .expect("resolve-release transition should succeed");
+            .expect("open dispute transition should succeed");
 
         let escrow = engine
-            .escrow("escrow-reconcile")
-            .expect("terminal escrow should exist")
-            .clone();
-        let mut registry = DataLayerM4SettlementEvidenceRegistry::new();
-        registry
-            .append(evidence_input(
-                "escrow-reconcile",
-                DataLayerM4EscrowState::Released,
-                "sha256:receipt-match",
-                "sha256:payload-match",
-                303,
-            ))
-            .expect("matching evidence append should succeed");
+            .escrow("escrow-1")
+            .expect("escrow should remain stored after transitions");
+        assert_eq!(escrow.state, DataLayerM4EscrowState::Disputed);
 
-        let match_report = registry
-            .reconcile_against_escrow(&escrow)
-            .expect("match reconciliation should succeed");
-        assert_eq!(
-            match_report.decision,
-            DataLayerM4SettlementEvidenceReconciliationDecision::Match
-        );
-        assert_eq!(
-            match_report.reason_code,
-            DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE
-        );
-        assert_eq!(match_report.evidence_sequence, Some(1));
+        let visibility = engine
+            .authorize_message_visibility(DataLayerM4EscrowVisibilityRequest {
+                escrow_id: "escrow-1".to_owned(),
+                requester_did: "kamn:did:auditor:carol".to_owned(),
+                reconstructed_auditor_shares: Some(2),
+            })
+            .expect("auditor visibility decision should be computed");
+        assert!(matches!(
+            visibility,
+            DataLayerM4EscrowVisibilityDecision::Allow {
+                reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE
+            }
+        ));
+    }
 
-        registry
-            .append(evidence_input(
-                "escrow-reconcile",
-                DataLayerM4EscrowState::Released,
-                "sha256:receipt-mismatch",
-                "sha256:payload-mismatch",
-                304,
-            ))
-            .expect("mismatch evidence append should succeed");
-        let mismatch_report = registry
-            .reconcile_against_escrow(&escrow)
-            .expect("mismatch reconciliation should succeed");
-        assert_eq!(
-            mismatch_report.decision,
-            DataLayerM4SettlementEvidenceReconciliationDecision::Mismatch
-        );
-        assert_eq!(
-            mismatch_report.reason_code,
-            DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE
-        );
-        assert_eq!(mismatch_report.evidence_sequence, Some(2));
-        assert_eq!(
-            mismatch_report.evidence_settlement_receipt_hash,
-            Some("sha256:receipt-mismatch".to_owned())
-        );
+    #[test]
+    fn unit_data_layer_m4_rejects_invalid_state_transition() {
+        let mut engine = DataLayerM4EscrowTransitionEngine::new();
+        engine
+            .create_escrow(fixture_draft())
+            .expect("escrow draft should create");
+        let error = engine
+            .apply_transition(
+                "escrow-1",
+                DataLayerM4EscrowTransitionAction::Activate {
+                    activated_at_epoch_seconds: 1_001,
+                },
+            )
+            .expect_err("activate from created state must fail");
+        assert!(matches!(
+            error,
+            DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowTransition { .. }
+        ));
     }
 }

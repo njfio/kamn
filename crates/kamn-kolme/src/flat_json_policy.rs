@@ -1,7 +1,8 @@
 //! Flat JSON scalar/object parsing contracts for Kolme runtime-commit payloads.
 
-use crate::json_parse_helpers::split_unquoted;
-use crate::json_scalar_policy::parse_json_string_token as parse_json_string;
+use crate::json_scalar_policy::{
+    parse_json_string_token as parse_json_string, split_unquoted_segments as split_unquoted,
+};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;

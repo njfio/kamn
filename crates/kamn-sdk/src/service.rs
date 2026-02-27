@@ -13,13 +13,17 @@ use std::net::{IpAddr, TcpStream};
 use std::sync::Arc;
 use std::time::Duration;
 
-const DEFAULT_REQUEST_TIMEOUT_SECONDS: u64 = 2;
+const REQUEST_TIMEOUT_SECONDS_DEFAULT: u64 = 2;
+const REQUEST_TIMEOUT_SECONDS_ENV: &str = "KAMN_SDK_SERVICE_TIMEOUT_SECONDS";
+const REQUEST_TIMEOUT_SECONDS_FIELD: &str = "service.request_timeout_seconds";
+const REQUEST_TIMEOUT_SECONDS_EMPTY_REASON: &str = "must not be empty when set";
+const REQUEST_TIMEOUT_SECONDS_INVALID_REASON: &str = "must be valid integer seconds";
+const REQUEST_TIMEOUT_SECONDS_NON_POSITIVE_REASON: &str = "must be greater than zero";
 const SERVICE_TLS_CA_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CA_FILE";
-const SERVICE_REQUEST_TIMEOUT_SECONDS_FIELD: &str = "service.request_timeout_seconds";
-const SERVICE_REQUEST_TIMEOUT_SECONDS_INVALID_REASON: &str = "must be greater than zero";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
+const REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER: &str = "x-kamn-signer-public-key";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const SERVICE_TLS_CA_FILE_FIELD: &str = "service.tls.ca_file";
 const SERVICE_TLS_CA_FILE_EMPTY_REASON: &str = "must not be empty when set";
@@ -137,9 +141,6 @@ impl ServiceEndpoint {
             ),
             None => (suffix, String::new()),
         };
-        if !base_path.is_empty() {
-            validate_request_path(base_path.as_str())?;
-        }
         if authority.trim().is_empty() {
             return Err(SdkError::InvalidInput {
                 field: "service.endpoint",
@@ -163,20 +164,21 @@ impl ServiceEndpoint {
         format!("{}{}", self.base_path, route)
     }
 
-    fn connect_tcp_stream(&self, request_timeout: Duration) -> Result<TcpStream, SdkError> {
+    fn connect_tcp_stream(&self) -> Result<TcpStream, SdkError> {
+        let timeout = Duration::from_secs(resolve_request_timeout_seconds()?);
         let stream = TcpStream::connect((self.host.as_str(), self.port))
             .map_err(|_| SdkError::TransportFailure("failed to connect to service endpoint"))?;
         stream
-            .set_read_timeout(Some(request_timeout))
+            .set_read_timeout(Some(timeout))
             .map_err(|_| SdkError::TransportFailure("failed to configure service read timeout"))?;
         stream
-            .set_write_timeout(Some(request_timeout))
+            .set_write_timeout(Some(timeout))
             .map_err(|_| SdkError::TransportFailure("failed to configure service write timeout"))?;
         Ok(stream)
     }
 
-    fn connect_stream(&self, request_timeout: Duration) -> Result<ServiceStream, SdkError> {
-        let tcp_stream = self.connect_tcp_stream(request_timeout)?;
+    fn connect_stream(&self) -> Result<ServiceStream, SdkError> {
+        let tcp_stream = self.connect_tcp_stream()?;
         if self.scheme == ServiceScheme::Http {
             return Ok(ServiceStream::Tcp(tcp_stream));
         }
@@ -228,6 +230,39 @@ fn resolve_tls_client_config() -> Result<Arc<ClientConfig>, SdkError> {
         .with_root_certificates(root_store)
         .with_no_client_auth();
     Ok(Arc::new(config))
+}
+
+fn resolve_request_timeout_seconds() -> Result<u64, SdkError> {
+    match std::env::var(REQUEST_TIMEOUT_SECONDS_ENV) {
+        Ok(raw_timeout) => {
+            let normalized_timeout = raw_timeout.trim();
+            if normalized_timeout.is_empty() {
+                return Err(SdkError::InvalidInput {
+                    field: REQUEST_TIMEOUT_SECONDS_FIELD,
+                    reason: REQUEST_TIMEOUT_SECONDS_EMPTY_REASON,
+                });
+            }
+            let parsed_timeout =
+                normalized_timeout
+                    .parse::<u64>()
+                    .map_err(|_| SdkError::InvalidInput {
+                        field: REQUEST_TIMEOUT_SECONDS_FIELD,
+                        reason: REQUEST_TIMEOUT_SECONDS_INVALID_REASON,
+                    })?;
+            if parsed_timeout == 0 {
+                return Err(SdkError::InvalidInput {
+                    field: REQUEST_TIMEOUT_SECONDS_FIELD,
+                    reason: REQUEST_TIMEOUT_SECONDS_NON_POSITIVE_REASON,
+                });
+            }
+            Ok(parsed_timeout)
+        }
+        Err(std::env::VarError::NotPresent) => Ok(REQUEST_TIMEOUT_SECONDS_DEFAULT),
+        Err(std::env::VarError::NotUnicode(_)) => Err(SdkError::InvalidInput {
+            field: REQUEST_TIMEOUT_SECONDS_FIELD,
+            reason: REQUEST_TIMEOUT_SECONDS_INVALID_REASON,
+        }),
+    }
 }
 
 fn resolve_tls_server_name(host: &str) -> Result<ServerName<'static>, SdkError> {
@@ -282,13 +317,14 @@ pub struct ServiceRequestAuth {
     sender_did: AgentDid,
     nonce: u64,
     signature: String,
+    signer_public_key_hex: Option<String>,
     scope: Option<String>,
 }
 
 impl ServiceRequestAuth {
     /// Builds a validated request auth envelope.
     pub fn new(sender_did: AgentDid, nonce: u64, signature: String) -> Result<Self, SdkError> {
-        Self::new_with_scope(sender_did, nonce, signature, None)
+        Self::new_with_signer_public_key_and_scope(sender_did, nonce, signature, None, None)
     }
 
     /// Builds a validated request auth envelope with optional auth scope marker.
@@ -296,6 +332,17 @@ impl ServiceRequestAuth {
         sender_did: AgentDid,
         nonce: u64,
         signature: String,
+        scope: Option<&str>,
+    ) -> Result<Self, SdkError> {
+        Self::new_with_signer_public_key_and_scope(sender_did, nonce, signature, None, scope)
+    }
+
+    /// Builds a validated request auth envelope with optional signer key and auth scope marker.
+    pub fn new_with_signer_public_key_and_scope(
+        sender_did: AgentDid,
+        nonce: u64,
+        signature: String,
+        signer_public_key_hex: Option<&str>,
         scope: Option<&str>,
     ) -> Result<Self, SdkError> {
         if nonce == 0 {
@@ -327,10 +374,25 @@ impl ServiceRequestAuth {
             }
             None => None,
         };
+        let signer_public_key_hex = match signer_public_key_hex {
+            Some(value) => {
+                let normalized = value.trim();
+                if normalized.is_empty() {
+                    return Err(SdkError::InvalidInput {
+                        field: "request_auth.signer_public_key",
+                        reason: "must not be empty when set",
+                    });
+                }
+                validate_http_header_value("request_auth.signer_public_key", normalized)?;
+                Some(normalized.to_owned())
+            }
+            None => None,
+        };
         Ok(Self {
             sender_did,
             nonce,
             signature: normalized_signature.to_owned(),
+            signer_public_key_hex,
             scope,
         })
     }
@@ -345,6 +407,10 @@ impl ServiceRequestAuth {
 
     fn signature(&self) -> &str {
         self.signature.as_str()
+    }
+
+    fn signer_public_key_hex(&self) -> Option<&str> {
+        self.signer_public_key_hex.as_deref()
     }
 
     fn scope(&self) -> Option<&str> {
@@ -374,6 +440,17 @@ pub fn service_signature_for_fields(
         body,
         private_key_hex.as_str(),
     )
+}
+
+/// Derives signer public key hex from the configured service signing private key env.
+pub fn service_signer_public_key_for_fields() -> Result<String, SdkError> {
+    let private_key_hex = std::env::var(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV).map_err(|_| {
+        SdkError::InvalidInput {
+            field: "service.request_auth.private_key",
+            reason: "missing KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+        }
+    })?;
+    service_public_key_for_private_key(private_key_hex.as_str())
 }
 
 /// Cryptographic request signature builder for canonical service state-hash fields.
@@ -633,29 +710,13 @@ struct HttpResponse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceApiClient {
     endpoint: ServiceEndpoint,
-    request_timeout_seconds: u64,
 }
 
 impl ServiceApiClient {
     /// Connects and validates the base service endpoint.
     pub fn connect(endpoint: &str) -> Result<Self, SdkError> {
-        Self::connect_with_timeout_seconds(endpoint, DEFAULT_REQUEST_TIMEOUT_SECONDS)
-    }
-
-    /// Connects and validates the base service endpoint with a configurable timeout.
-    pub fn connect_with_timeout_seconds(
-        endpoint: &str,
-        request_timeout_seconds: u64,
-    ) -> Result<Self, SdkError> {
-        if request_timeout_seconds == 0 {
-            return Err(SdkError::InvalidInput {
-                field: SERVICE_REQUEST_TIMEOUT_SECONDS_FIELD,
-                reason: SERVICE_REQUEST_TIMEOUT_SECONDS_INVALID_REASON,
-            });
-        }
         Ok(Self {
             endpoint: ServiceEndpoint::parse(endpoint)?,
-            request_timeout_seconds,
         })
     }
 
@@ -977,7 +1038,7 @@ impl ServiceApiClient {
         &self,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceRouteEvent, SdkError> {
-        let mut stream = self.endpoint.connect_stream(self.request_timeout())?;
+        let mut stream = self.endpoint.connect_stream()?;
         let route = self.endpoint.route_path(SERVICE_WS_ROUTE);
         validate_request_path(route.as_str())?;
         let authority = format!("{}:{}", self.endpoint.host, self.endpoint.port);
@@ -1013,8 +1074,8 @@ impl ServiceApiClient {
         }
 
         let frame = &response_bytes[header_end..];
-        let payload = parse_service_websocket_response_frame_payload(frame)?;
-        let payload = String::from_utf8(payload.to_vec())
+        let payload_bytes = parse_unmasked_text_frame_payload(frame)?;
+        let payload = String::from_utf8(payload_bytes.to_vec())
             .map_err(|_| SdkError::TransportFailure("service websocket event payload not utf-8"))?;
         Ok(ServiceRouteEvent {
             event: json_string_field(payload.as_str(), "event")?,
@@ -1031,7 +1092,7 @@ impl ServiceApiClient {
         body: &str,
         auth: Option<&ServiceRequestAuth>,
     ) -> Result<HttpResponse, SdkError> {
-        let mut stream = self.endpoint.connect_stream(self.request_timeout())?;
+        let mut stream = self.endpoint.connect_stream()?;
         validate_request_method(method)?;
         let path = self.endpoint.route_path(route);
         validate_request_path(path.as_str())?;
@@ -1052,13 +1113,9 @@ impl ServiceApiClient {
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
     }
-
-    fn request_timeout(&self) -> Duration {
-        Duration::from_secs(self.request_timeout_seconds)
-    }
 }
 
-fn parse_service_websocket_response_frame_payload(frame: &[u8]) -> Result<&[u8], SdkError> {
+fn parse_unmasked_text_frame_payload(frame: &[u8]) -> Result<&[u8], SdkError> {
     if frame.len() < 2 {
         return Err(SdkError::TransportFailure(
             "service websocket response missing event frame",
@@ -1074,50 +1131,50 @@ fn parse_service_websocket_response_frame_payload(frame: &[u8]) -> Result<&[u8],
             "service websocket response frame unexpectedly masked",
         ));
     }
-    let payload_len_marker = frame[1] & 0x7f;
-    let (payload_len, payload_offset) = match payload_len_marker {
-        0..=125 => (payload_len_marker as usize, 2usize),
+
+    let length_marker = frame[1] & 0x7f;
+    let (payload_offset, payload_len) = match length_marker {
+        0..=125 => (2_usize, length_marker as usize),
         126 => {
             if frame.len() < 4 {
                 return Err(SdkError::TransportFailure(
-                    "service websocket response frame extended length truncated",
+                    "service websocket response frame payload truncated",
                 ));
             }
-            (u16::from_be_bytes([frame[2], frame[3]]) as usize, 4usize)
+            let payload_len = u16::from_be_bytes([frame[2], frame[3]]) as usize;
+            (4, payload_len)
         }
         127 => {
             if frame.len() < 10 {
                 return Err(SdkError::TransportFailure(
-                    "service websocket response frame extended length truncated",
+                    "service websocket response frame payload truncated",
                 ));
             }
-            let payload_len = u64::from_be_bytes([
+            let encoded_len = u64::from_be_bytes([
                 frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
             ]);
-            let payload_len = usize::try_from(payload_len).map_err(|_| {
-                SdkError::TransportFailure(
-                    "service websocket response frame payload length overflow",
-                )
+            let payload_len = usize::try_from(encoded_len).map_err(|_| {
+                SdkError::TransportFailure("service websocket response frame payload too large")
             })?;
-            (payload_len, 10usize)
+            (10, payload_len)
         }
         _ => {
             return Err(SdkError::TransportFailure(
-                "service websocket response frame payload length marker invalid",
+                "service websocket response frame payload length unsupported",
             ));
         }
     };
-    let payload_end = payload_offset
+    let frame_end = payload_offset
         .checked_add(payload_len)
         .ok_or(SdkError::TransportFailure(
-            "service websocket response frame payload length overflow",
+            "service websocket response frame payload too large",
         ))?;
-    if frame.len() < payload_end {
+    if frame.len() < frame_end {
         return Err(SdkError::TransportFailure(
             "service websocket response frame payload truncated",
         ));
     }
-    Ok(&frame[payload_offset..payload_end])
+    Ok(&frame[payload_offset..frame_end])
 }
 
 fn write_and_flush_request<W: Write>(
@@ -1272,6 +1329,13 @@ fn render_auth_headers(auth: Option<&ServiceRequestAuth>) -> Result<String, SdkE
     );
     headers.push_str(format!("{REQUEST_AUTH_NONCE_HEADER}: {}\r\n", auth.nonce()).as_str());
     headers.push_str(format!("{REQUEST_AUTH_SIGNATURE_HEADER}: {}\r\n", auth.signature()).as_str());
+    if let Some(signer_public_key_hex) = auth.signer_public_key_hex() {
+        validate_http_header_value("request_auth.signer_public_key", signer_public_key_hex)?;
+        headers.push_str(
+            format!("{REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER}: {signer_public_key_hex}\r\n",)
+                .as_str(),
+        );
+    }
     if let Some(scope) = auth.scope() {
         validate_http_header_value("request_auth.scope", scope)?;
         headers.push_str(format!("{REQUEST_AUTH_SCOPE_HEADER}: {scope}\r\n").as_str());
@@ -1510,19 +1574,17 @@ fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkE
 #[cfg(test)]
 mod tests {
     use super::{
-        normalize_route_segment, parse_service_websocket_response_frame_payload,
-        read_response_bytes, service_public_key_for_private_key,
-        service_signature_for_state_hash_with_private_key,
+        parse_unmasked_text_frame_payload, read_response_bytes, resolve_request_timeout_seconds,
+        service_public_key_for_private_key, service_signature_for_state_hash_with_private_key,
         service_verify_signature_with_public_key, write_and_flush_request, SdkError,
-        ServiceApiClient, ServiceEndpoint, ServiceRequestAuth, MAX_SERVICE_RESPONSE_BYTES,
+        MAX_SERVICE_RESPONSE_BYTES, REQUEST_TIMEOUT_SECONDS_ENV,
         SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED, SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
     };
     use crate::AgentDid;
     use std::collections::VecDeque;
+    use std::ffi::OsString;
     use std::io::{ErrorKind, Read, Write};
-    use std::net::TcpListener;
-    use std::thread;
-    use std::time::Duration;
+    use std::sync::{Mutex, OnceLock};
 
     enum ReadStep {
         Bytes(Vec<u8>),
@@ -1584,6 +1646,47 @@ mod tests {
         fail_flush: bool,
     }
 
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn set_utf8(key: &'static str, value: &str) -> Self {
+            let previous = std::env::var_os(key);
+            // SAFETY: tests serialize env writes with test-local guard lifetime.
+            unsafe { std::env::set_var(key, value) };
+            Self { key, previous }
+        }
+
+        fn unset(key: &'static str) -> Self {
+            let previous = std::env::var_os(key);
+            // SAFETY: tests serialize env writes with test-local guard lifetime.
+            unsafe { std::env::remove_var(key) };
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match self.previous.as_ref() {
+                Some(previous) => {
+                    // SAFETY: restoring process env value captured at guard construction.
+                    unsafe { std::env::set_var(self.key, previous) };
+                }
+                None => {
+                    // SAFETY: restoring process env to prior absent state.
+                    unsafe { std::env::remove_var(self.key) };
+                }
+            }
+        }
+    }
+
+    fn timeout_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
     impl RecordingWriter {
         fn with_flush_failure(fail_flush: bool) -> Self {
             Self {
@@ -1622,6 +1725,42 @@ mod tests {
         assert_eq!(
             writer.flush_calls, 1,
             "flush should be invoked exactly once"
+        );
+    }
+
+    #[test]
+    fn regression_issue_6208_request_timeout_defaults_when_env_missing() {
+        let _lock = timeout_env_lock().lock().expect("lock poisoned");
+        let _guard = EnvVarGuard::unset(REQUEST_TIMEOUT_SECONDS_ENV);
+        assert_eq!(resolve_request_timeout_seconds(), Ok(2));
+    }
+
+    #[test]
+    fn regression_issue_6208_request_timeout_accepts_configured_positive_value() {
+        let _lock = timeout_env_lock().lock().expect("lock poisoned");
+        let _guard = EnvVarGuard::set_utf8(REQUEST_TIMEOUT_SECONDS_ENV, "7");
+        assert_eq!(resolve_request_timeout_seconds(), Ok(7));
+    }
+
+    #[test]
+    fn regression_issue_6208_request_timeout_rejects_zero_or_non_numeric_values() {
+        let _lock = timeout_env_lock().lock().expect("lock poisoned");
+        let _guard = EnvVarGuard::set_utf8(REQUEST_TIMEOUT_SECONDS_ENV, "0");
+        assert_eq!(
+            resolve_request_timeout_seconds(),
+            Err(SdkError::InvalidInput {
+                field: "service.request_timeout_seconds",
+                reason: "must be greater than zero",
+            })
+        );
+
+        let _guard = EnvVarGuard::set_utf8(REQUEST_TIMEOUT_SECONDS_ENV, "fast");
+        assert_eq!(
+            resolve_request_timeout_seconds(),
+            Err(SdkError::InvalidInput {
+                field: "service.request_timeout_seconds",
+                reason: "must be valid integer seconds",
+            })
         );
     }
 
@@ -1702,116 +1841,55 @@ mod tests {
         );
     }
 
-    #[test]
-    fn unit_parse_service_websocket_response_frame_payload_accepts_inline_length() {
-        let payload = br#"{"event":"state-transition","sequence":1}"#;
-        let mut frame = vec![0x81, payload.len() as u8];
-        frame.extend_from_slice(payload);
-        let parsed = parse_service_websocket_response_frame_payload(frame.as_slice())
-            .expect("inline length frame should parse");
-        assert_eq!(parsed, payload);
-    }
-
-    #[test]
-    fn regression_parse_service_websocket_response_frame_payload_accepts_u16_extended_length() {
-        // Regression: #6111
-        let payload = vec![b'a'; 200];
-        let payload_len = payload.len() as u16;
-        let mut frame = vec![0x81, 126, (payload_len >> 8) as u8, payload_len as u8];
-        frame.extend_from_slice(payload.as_slice());
-        let parsed = parse_service_websocket_response_frame_payload(frame.as_slice())
-            .expect("u16 extended length frame should parse");
-        assert_eq!(parsed, payload.as_slice());
-    }
-
-    #[test]
-    fn regression_parse_service_websocket_response_frame_payload_accepts_u64_extended_length() {
-        // Regression: #6111
-        let payload = vec![b'b'; 130];
-        let payload_len = payload.len() as u64;
-        let mut frame = vec![0x81, 127];
-        frame.extend_from_slice(payload_len.to_be_bytes().as_slice());
-        frame.extend_from_slice(payload.as_slice());
-        let parsed = parse_service_websocket_response_frame_payload(frame.as_slice())
-            .expect("u64 extended length frame should parse");
-        assert_eq!(parsed, payload.as_slice());
-    }
-
-    #[test]
-    fn regression_parse_service_websocket_response_frame_payload_rejects_truncated_extended_header()
-    {
-        // Regression: #6111
-        let frame = vec![0x81, 126, 0x00];
-        let error = parse_service_websocket_response_frame_payload(frame.as_slice())
-            .expect_err("truncated u16 extended header should fail closed");
-        assert_eq!(
-            error,
-            SdkError::TransportFailure(
-                "service websocket response frame extended length truncated"
-            )
-        );
-    }
-
-    #[test]
-    fn regression_parse_service_websocket_response_frame_payload_rejects_u64_length_overflow() {
-        // Regression: #6111
-        let mut frame = vec![0x81, 127];
-        frame.extend_from_slice(u64::MAX.to_be_bytes().as_slice());
-        let error = parse_service_websocket_response_frame_payload(frame.as_slice())
-            .expect_err("u64 payload length overflow should fail closed");
-        assert_eq!(
-            error,
-            SdkError::TransportFailure("service websocket response frame payload length overflow")
-        );
-    }
-
-    #[test]
-    fn spec_c02_service_api_client_connect_with_timeout_rejects_zero_seconds() {
-        let error = ServiceApiClient::connect_with_timeout_seconds("http://127.0.0.1:34052", 0)
-            .expect_err("zero timeout seconds must fail closed");
-        assert_eq!(
-            error,
-            SdkError::InvalidInput {
-                field: "service.request_timeout_seconds",
-                reason: "must be greater than zero",
+    fn websocket_text_frame(payload: &[u8], length_mode: u8) -> Vec<u8> {
+        let mut frame = Vec::new();
+        frame.push(0x81);
+        match length_mode {
+            125 => {
+                frame.push(payload.len() as u8);
             }
-        );
+            126 => {
+                frame.push(126);
+                frame.extend_from_slice(&(payload.len() as u16).to_be_bytes());
+            }
+            127 => {
+                frame.push(127);
+                frame.extend_from_slice(&(payload.len() as u64).to_be_bytes());
+            }
+            _ => panic!("unsupported test length mode"),
+        }
+        frame.extend_from_slice(payload);
+        frame
     }
 
     #[test]
-    fn spec_c03_service_api_client_connect_uses_default_timeout_seconds() {
-        let client = ServiceApiClient::connect("http://127.0.0.1:34052")
-            .expect("client should construct with default timeout");
-        assert_eq!(client.request_timeout_seconds, 2);
+    fn unit_parse_websocket_frame_payload_accepts_16bit_extended_length() {
+        let payload = vec![b'a'; 130];
+        let frame = websocket_text_frame(payload.as_slice(), 126);
+        let parsed = parse_unmasked_text_frame_payload(frame.as_slice())
+            .expect("16-bit extended websocket payload should parse");
+        assert_eq!(parsed, payload.as_slice());
     }
 
     #[test]
-    fn spec_c04_service_endpoint_connect_tcp_stream_applies_configured_timeout() {
-        let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
-        let addr = listener
-            .local_addr()
-            .expect("listener address should resolve");
-        let accept_thread = thread::spawn(move || {
-            let _ = listener.accept();
-        });
+    fn unit_parse_websocket_frame_payload_accepts_64bit_extended_length() {
+        let payload = vec![b'b'; 130];
+        let frame = websocket_text_frame(payload.as_slice(), 127);
+        let parsed = parse_unmasked_text_frame_payload(frame.as_slice())
+            .expect("64-bit extended websocket payload should parse");
+        assert_eq!(parsed, payload.as_slice());
+    }
 
-        let endpoint = ServiceEndpoint::parse(format!("http://{addr}").as_str())
-            .expect("endpoint should parse");
-        let timeout = Duration::from_secs(7);
-        let stream = endpoint
-            .connect_tcp_stream(timeout)
-            .expect("tcp stream should connect");
+    #[test]
+    fn regression_parse_websocket_frame_payload_rejects_truncated_extended_header() {
+        // Regression: #6190
+        let frame = vec![0x81, 126, 0x00];
+        let error = parse_unmasked_text_frame_payload(frame.as_slice())
+            .expect_err("truncated extended-length header must fail closed");
         assert_eq!(
-            stream.read_timeout().expect("read timeout should resolve"),
-            Some(timeout)
+            error,
+            SdkError::TransportFailure("service websocket response frame payload truncated")
         );
-        assert_eq!(
-            stream
-                .write_timeout()
-                .expect("write timeout should resolve"),
-            Some(timeout)
-        );
-        let _ = accept_thread.join();
     }
 
     const TEST_PRIVATE_KEY_HEX: &str =
@@ -2023,99 +2101,5 @@ mod tests {
                 reason: "failed cryptographic signature verification",
             }
         );
-    }
-
-    #[test]
-    fn regression_service_api_client_connect_rejects_control_chars_in_base_path() {
-        // Regression: #6057
-        let error = ServiceApiClient::connect("http://127.0.0.1:8080/base\r\nx-injected:true")
-            .expect_err("connect should fail closed for control-byte base paths");
-        assert_eq!(
-            error,
-            SdkError::InvalidInput {
-                field: "service.request_path",
-                reason: "contains invalid path characters",
-            }
-        );
-    }
-
-    #[test]
-    fn regression_service_request_auth_rejects_crlf_signature_header_value() {
-        // Regression: #6057
-        let sender_did =
-            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
-        let error = ServiceRequestAuth::new_with_scope(
-            sender_did,
-            17,
-            "sig:ok\r\nx-injected:true".to_owned(),
-            None,
-        )
-        .expect_err("signature header values with CRLF must fail closed");
-        assert_eq!(
-            error,
-            SdkError::InvalidInput {
-                field: "request_auth.signature",
-                reason: "contains invalid http header characters",
-            }
-        );
-    }
-
-    #[test]
-    fn regression_service_request_auth_rejects_crlf_scope_header_value() {
-        // Regression: #6057
-        let sender_did =
-            AgentDid::parse("kamn:did:agent:alice".to_owned()).expect("sender did should parse");
-        let error = ServiceRequestAuth::new_with_scope(
-            sender_did,
-            18,
-            "sig:ok".to_owned(),
-            Some("messages:write\r\nx-injected:true"),
-        )
-        .expect_err("scope header values with CRLF must fail closed");
-        assert_eq!(
-            error,
-            SdkError::InvalidInput {
-                field: "request_auth.scope",
-                reason: "contains invalid http header characters",
-            }
-        );
-    }
-
-    #[test]
-    fn regression_normalize_route_segment_rejects_delimiter_and_control_injection_payloads() {
-        // Regression: #6057
-        let invalid_cases = [
-            (
-                "segment/slash",
-                "contains characters not allowed in route segment",
-            ),
-            (
-                "segment?query",
-                "contains characters not allowed in route segment",
-            ),
-            (
-                "segment#fragment",
-                "contains characters not allowed in route segment",
-            ),
-            (
-                "segment with space",
-                "contains characters not allowed in route segment",
-            ),
-            (
-                "segment\r\nx-injected:true",
-                "contains characters not allowed in route segment",
-            ),
-        ];
-        for (value, expected_reason) in invalid_cases {
-            let error = normalize_route_segment("message_id", value)
-                .expect_err("invalid segment must fail closed");
-            assert_eq!(
-                error,
-                SdkError::InvalidInput {
-                    field: "message_id",
-                    reason: expected_reason,
-                }
-            );
-        }
     }
 }

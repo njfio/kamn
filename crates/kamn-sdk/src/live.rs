@@ -1,8 +1,8 @@
 use crate::{
-    service_signature_for_fields, AgentDid, AgentMetadata, AgentQuery, AgentReputation,
-    AgentSummary, Artifact, ArtifactId, DidDocument, EscrowConfig, EscrowId, KamnAgent,
-    KamnTransport, Message, MessageId, MessageRecord, MessageStream, SdkError, ServiceApiClient,
-    ServiceRequestAuth, TaskDefinition, TaskId, TokenAmount, TransportMode,
+    service_signature_for_fields, service_signer_public_key_for_fields, AgentDid, AgentMetadata,
+    AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId, DidDocument, EscrowConfig,
+    EscrowId, KamnAgent, KamnTransport, Message, MessageId, MessageRecord, MessageStream, SdkError,
+    ServiceApiClient, ServiceRequestAuth, TaskDefinition, TaskId, TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 use std::fmt::Write as _;
@@ -140,7 +140,14 @@ impl LiveTransportKamnClient {
             self.config.chain_version.as_str(),
             body,
         )?;
-        ServiceRequestAuth::new_with_scope(sender_did.clone(), nonce, signature, scope)
+        let signer_public_key_hex = service_signer_public_key_for_fields()?;
+        ServiceRequestAuth::new_with_signer_public_key_and_scope(
+            sender_did.clone(),
+            nonce,
+            signature,
+            Some(signer_public_key_hex.as_str()),
+            scope,
+        )
     }
 
     fn map_service_message_id(&self, service_message_id: &str) -> Result<MessageId, SdkError> {

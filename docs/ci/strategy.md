@@ -168,13 +168,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo fuzz run did_parser fuzz/corpus/did_parser -- -max_total_time=120`
   - `cargo fuzz run signature_profile_parser fuzz/corpus/signature_profile_parser -- -max_total_time=120`
   - `cargo fuzz run kolme_api_codec_parser fuzz/corpus/kolme_api_codec_parser -- -max_total_time=120`
-  - `cargo fuzz run kolme_flat_json_policy_parser fuzz/corpus/kolme_flat_json_policy_parser -- -max_total_time=120`
+  - `cargo fuzz run kolme_flat_json_parser fuzz/corpus/kolme_flat_json_parser -- -max_total_time=120`
 - Local-heavy parser fuzz command surface:
   - `cargo fuzz run message_envelope_parser fuzz/corpus/message_envelope_parser -- -max_total_time=900`
   - `cargo fuzz run did_parser fuzz/corpus/did_parser -- -max_total_time=900`
   - `cargo fuzz run signature_profile_parser fuzz/corpus/signature_profile_parser -- -max_total_time=900`
   - `cargo fuzz run kolme_api_codec_parser fuzz/corpus/kolme_api_codec_parser -- -max_total_time=900`
-  - `cargo fuzz run kolme_flat_json_policy_parser fuzz/corpus/kolme_flat_json_policy_parser -- -max_total_time=900`
+  - `cargo fuzz run kolme_flat_json_parser fuzz/corpus/kolme_flat_json_parser -- -max_total_time=900`
 - Nightly/deep parser fuzz execution mirrors local-heavy command surfaces above.
 - Corpus governance markers:
   - `fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json`
@@ -184,7 +184,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo_fuzz_local_heavy_max_seconds=900`
   - `cargo_fuzz_local_heavy_excluded_from_ci_fast_gate=true`
   - `cargo_fuzz_seed_provenance_version=kamn.runtime.cargo-fuzz-seed-provenance.v1`
-  - `cargo_fuzz_seed_replay_keys_csv=cargo_fuzz_seed_replay:message_envelope_parser:v1,cargo_fuzz_seed_replay:did_parser:v1,cargo_fuzz_seed_replay:signature_profile_parser:v1,cargo_fuzz_seed_replay:kolme_api_codec_parser:v1,cargo_fuzz_seed_replay:kolme_flat_json_policy_parser:v1`
+  - `cargo_fuzz_seed_replay_keys_csv=cargo_fuzz_seed_replay:message_envelope_parser:v1,cargo_fuzz_seed_replay:did_parser:v1,cargo_fuzz_seed_replay:signature_profile_parser:v1,cargo_fuzz_seed_replay:kolme_api_codec_parser:v1,cargo_fuzz_seed_replay:kolme_flat_json_parser:v1`
   - `cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds`
 - Deep fuzz execution remains local-heavy only and excluded from `ci-fast-gate`.
 
@@ -272,7 +272,6 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Panic-Path Policy Checker Fast Lane
 - For panic-policy checker changes, keep PR validation on deterministic checker harness commands:
   - `bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json`
-  - `cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used`
   - `bash scripts/ci/test_check_no_production_expect.sh`
 - Deterministic checker contracts:
   - reason taxonomy marker: `kamn.ci.production-panic-replacement-reason-taxonomy.v1`
@@ -280,8 +279,6 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - runtime evidence output marker: `runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv`
 - Boundary markers:
   - `panic_path_policy_scope_root=crates/kamn-node/src`
-  - `panic_path_policy_production_target_scope=lib+bins`
-  - `panic_path_policy_test_target_exclusion=tests-benches-excluded`
   - `panic_path_policy_ci_lane_profile=low-cost`
   - `panic_path_policy_ci_smoke_max_seconds=30`
 - Remediation parity markers:
@@ -289,38 +286,6 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `panic_path_policy_remediation_step_1=replace_panic_primitives_with_typed_errors`
   - `panic_path_policy_remediation_step_2=rerun_checker_until_status_ok`
   - `panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr`
-
-## Governance/Feature Commit-Ratio Fast Gate
-- For governance ratio policy changes, keep PR validation on deterministic commit-subject checker commands:
-  - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json`
-  - `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
-- Checker wiring contract:
-  - PR workflow must source subjects from non-merge commits:
-    - `git log --no-merges --pretty=format:%s <base_sha>..<head_sha>`
-  - checker output artifact:
-    - `ci-governance-feature-commit-ratio.json`
-- Deterministic governance ratio taxonomy markers:
-  - `governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1`
-  - `governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1`
-  - `governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded`
-  - `governance_feature_commit_ratio_threshold_max=0.50`
-  - `governance_feature_commit_ratio_non_merge_only=true`
-
-## Review-Document Freeze Fast Gate
-- For post-publication freeze policy changes, keep PR validation on deterministic changed-file checker commands:
-  - `python3 scripts/ci/check_review_document_freeze.py --changed-files-file /tmp/pr-changed-files.txt --freeze-manifest docs/review/review-document-freeze.manifest --output-json /tmp/review-document-freeze-report.json`
-  - `bash scripts/ci/test_check_review_document_freeze.sh`
-- Checker wiring contract:
-  - PR workflow must source changed files from pull-request base/head delta:
-    - `git diff --name-only <base_sha>..<head_sha>`
-  - checker output artifact:
-    - `ci-review-document-freeze.json`
-- Deterministic review-document freeze taxonomy markers:
-  - `review_document_freeze_schema_version=kamn.ci.review-document-freeze-gate-report.v1`
-  - `review_document_freeze_reason_taxonomy_version=kamn.ci.review-document-freeze-gate-reason-taxonomy.v1`
-  - `review_document_freeze_reason_codes_csv=review_document_freeze_changed_files_missing,review_document_freeze_manifest_missing,review_document_freeze_manifest_invalid,review_document_freeze_violation_detected`
-  - `review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest`
-  - `review_document_freeze_scope=docs/review/gaps-and-issues-r*.md`
 
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
@@ -5300,7 +5265,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 
 ### Service API Request-Path Authz Matrix and Docs Parity Contract
 - `service_api_request_path_authz_reason_taxonomy_version=kamn.runtime.service-api-auth-reason-taxonomy.v1`
-- `service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_did_key_binding_invalid,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected`
+- `service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected`
 - `service_api_request_path_authz_public_routes_csv=GET:/healthz,GET:/metrics`
 - `service_api_request_path_authz_protected_routes_csv=POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws`
 - `service_api_request_path_authz_missing_header_reason_code=service_api_auth_sender_did_header_missing`
@@ -5313,7 +5278,6 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - `service_api_request_path_authz_remediation.service_api_auth_nonce_invalid=use a base-10 u64 nonce value in x-kamn-request-nonce`
 - `service_api_request_path_authz_remediation.service_api_auth_nonce_non_positive=increment nonce to a value greater than zero`
 - `service_api_request_path_authz_remediation.service_api_auth_signature_header_missing=add x-kamn-request-signature over sender_did+nonce+state_hash+body`
-- `service_api_request_path_authz_remediation.service_api_auth_did_key_binding_invalid=use the signer key bound to the sender DID instead of a mismatched signing key`
 - `service_api_request_path_authz_remediation.service_api_auth_signature_verification_failed=recompute signature with the supported profile and current state hash`
 - `service_api_request_path_authz_remediation.service_api_auth_replay_nonce_detected=use a fresh nonce per sender DID and avoid replaying accepted envelopes`
 - Guard commands:

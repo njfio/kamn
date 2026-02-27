@@ -1,6 +1,6 @@
 use kamn_core::ConfigError;
 use std::env;
-use std::sync::RwLock;
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const KAMN_NODE_LOG_LEVEL_ENV: &str = "KAMN_NODE_LOG_LEVEL";
@@ -9,6 +9,9 @@ const LOG_FIELD_CORRELATION_ID: &str = "correlation_id";
 const LOG_FIELD_REASON_CODE: &str = "reason_code";
 const LOG_DEFAULT_CORRELATION_ID: &str = "none";
 const LOG_DEFAULT_REASON_CODE: &str = "none";
+
+#[cfg(not(test))]
+static LOG_CONFIG_CACHE: OnceLock<Result<NodeLogConfig, String>> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum NodeLogLevel {
@@ -56,18 +59,15 @@ impl NodeLogConfig {
     }
 }
 
-static LOG_CONFIG_CACHE: RwLock<Option<NodeLogConfig>> = RwLock::new(None);
-
 pub(crate) fn resolve_log_config_from_env() -> Result<NodeLogConfig, ConfigError> {
     let level_value = read_env_var(KAMN_NODE_LOG_LEVEL_ENV)?;
     let format_value = read_env_var(KAMN_NODE_LOG_FORMAT_ENV)?;
     resolve_log_config_from_inputs(level_value.as_deref(), format_value.as_deref())
 }
 
-pub(crate) fn initialize_log_config_from_env() -> Result<NodeLogConfig, ConfigError> {
-    let resolved = resolve_log_config_from_env()?;
-    write_cached_log_config(resolved);
-    Ok(resolved)
+pub(crate) fn initialize_log_config_from_env() -> Result<(), ConfigError> {
+    let _ = resolve_log_config_from_env()?;
+    Ok(())
 }
 
 pub(crate) fn resolve_log_config_from_inputs(
@@ -106,7 +106,10 @@ pub(crate) fn emit_log_event(
     event: &str,
     fields: &[(&str, &str)],
 ) -> Result<(), ConfigError> {
-    let config = resolve_cached_log_config()?;
+    #[cfg(not(test))]
+    let config = resolve_cached_log_config(&LOG_CONFIG_CACHE, resolve_log_config_from_env)?;
+    #[cfg(test)]
+    let config = resolve_log_config_from_env()?;
     if !config.allows(level) {
         return Ok(());
     }
@@ -114,60 +117,6 @@ pub(crate) fn emit_log_event(
     record_test_log_line(line.as_str());
     eprintln!("{line}");
     Ok(())
-}
-
-fn resolve_cached_log_config() -> Result<NodeLogConfig, ConfigError> {
-    if let Some(config) = read_cached_log_config() {
-        return Ok(config);
-    }
-
-    let resolved = resolve_log_config_from_env()?;
-    write_cached_log_config_if_absent(resolved);
-    Ok(read_cached_log_config().unwrap_or(resolved))
-}
-
-fn read_cached_log_config() -> Option<NodeLogConfig> {
-    match LOG_CONFIG_CACHE.read() {
-        Ok(guard) => *guard,
-        Err(poisoned) => *poisoned.into_inner(),
-    }
-}
-
-fn write_cached_log_config_if_absent(config: NodeLogConfig) {
-    match LOG_CONFIG_CACHE.write() {
-        Ok(mut guard) => {
-            if guard.is_none() {
-                *guard = Some(config);
-            }
-        }
-        Err(poisoned) => {
-            let mut guard = poisoned.into_inner();
-            if guard.is_none() {
-                *guard = Some(config);
-            }
-        }
-    }
-}
-
-fn write_cached_log_config(config: NodeLogConfig) {
-    match LOG_CONFIG_CACHE.write() {
-        Ok(mut guard) => *guard = Some(config),
-        Err(poisoned) => {
-            let mut guard = poisoned.into_inner();
-            *guard = Some(config);
-        }
-    }
-}
-
-#[cfg(test)]
-pub(crate) fn reset_cached_log_config_for_tests() {
-    match LOG_CONFIG_CACHE.write() {
-        Ok(mut guard) => *guard = None,
-        Err(poisoned) => {
-            let mut guard = poisoned.into_inner();
-            *guard = None;
-        }
-    }
 }
 
 pub(crate) fn render_log_event_line(
@@ -213,6 +162,24 @@ fn parse_node_log_format(value: &str) -> Result<NodeLogFormat, ConfigError> {
         _ => Err(ConfigError::InvalidLogConfig(format!(
             "{KAMN_NODE_LOG_FORMAT_ENV} must be one of: text,json"
         ))),
+    }
+}
+
+fn resolve_cached_log_config(
+    cache: &OnceLock<Result<NodeLogConfig, String>>,
+    resolver: impl FnOnce() -> Result<NodeLogConfig, ConfigError>,
+) -> Result<NodeLogConfig, ConfigError> {
+    let cached = cache.get_or_init(|| resolver().map_err(normalize_log_config_cache_error));
+    match cached {
+        Ok(config) => Ok(*config),
+        Err(message) => Err(ConfigError::InvalidLogConfig(message.clone())),
+    }
+}
+
+fn normalize_log_config_cache_error(error: ConfigError) -> String {
+    match error {
+        ConfigError::InvalidLogConfig(message) => message,
+        other => other.to_string(),
     }
 }
 
@@ -346,16 +313,6 @@ fn escape_json_string(input: &str) -> String {
 static TEST_LOG_CAPTURE: std::sync::Mutex<Option<Vec<String>>> = std::sync::Mutex::new(None);
 
 #[cfg(test)]
-static LOG_CONFIG_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-#[cfg(test)]
-pub(crate) fn lock_log_config_for_tests() -> std::sync::MutexGuard<'static, ()> {
-    LOG_CONFIG_TEST_LOCK
-        .lock()
-        .unwrap_or_else(|error| error.into_inner())
-}
-
-#[cfg(test)]
 fn with_test_log_capture_mut<T, F>(operation: F) -> T
 where
     F: FnOnce(&mut Option<Vec<String>>) -> T,
@@ -398,152 +355,60 @@ fn record_test_log_line(_line: &str) {}
 #[cfg(test)]
 mod tests {
     use super::{
-        capture_test_logs, emit_log_event, initialize_log_config_from_env,
-        lock_log_config_for_tests, reset_cached_log_config_for_tests, NodeLogLevel,
-        KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
+        resolve_cached_log_config, ConfigError, NodeLogConfig, NodeLogFormat, NodeLogLevel,
+        OnceLock,
     };
-    use std::env;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
-    fn spec_c01_emit_log_event_uses_cached_config_until_reset() {
-        let _guard = lock_log_env_test_guard();
-        reset_cached_log_config_for_tests();
-        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("error"));
-        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("text"));
+    fn regression_issue_6212_cached_log_config_resolver_invoked_once() {
+        let cache: OnceLock<Result<NodeLogConfig, String>> = OnceLock::new();
+        let resolver_calls = AtomicUsize::new(0);
+        let expected = NodeLogConfig {
+            level: NodeLogLevel::Info,
+            format: NodeLogFormat::Json,
+        };
 
-        let (first_result, first_logs) =
-            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-check-1", &[]));
-        assert!(first_result.is_ok(), "first log emission should not error");
-        assert!(
-            first_logs.is_empty(),
-            "error level should suppress info event before cache change check"
-        );
+        let first = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(expected)
+        })
+        .expect("first resolve should succeed");
+        let second = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(NodeLogConfig::default_config())
+        })
+        .expect("cached resolve should reuse first config");
 
-        env::set_var(KAMN_NODE_LOG_LEVEL_ENV, "trace");
-        let (second_result, second_logs) =
-            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-check-2", &[]));
-        assert!(
-            second_result.is_ok(),
-            "second log emission should not error"
-        );
-        assert!(
-            second_logs.is_empty(),
-            "cached config should remain in effect until explicit reset"
-        );
+        assert_eq!(first, expected);
+        assert_eq!(second, expected);
+        assert_eq!(resolver_calls.load(Ordering::SeqCst), 1);
     }
 
     #[test]
-    fn regression_cached_log_config_reset_applies_updated_env() {
-        let _guard = lock_log_env_test_guard();
-        reset_cached_log_config_for_tests();
-        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("error"));
-        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("text"));
+    fn regression_issue_6212_cached_log_config_caches_fail_closed_error() {
+        let cache: OnceLock<Result<NodeLogConfig, String>> = OnceLock::new();
+        let resolver_calls = AtomicUsize::new(0);
 
-        let (initial_result, initial_logs) =
-            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-reset-1", &[]));
-        assert!(
-            initial_result.is_ok(),
-            "initial log emission should not error"
-        );
-        assert!(
-            initial_logs.is_empty(),
-            "error level should suppress info before cache reset"
-        );
+        let first = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Err(ConfigError::InvalidLogConfig(
+                "KAMN_NODE_LOG_LEVEL must be one of: error,warn,info,debug,trace".to_owned(),
+            ))
+        })
+        .expect_err("first resolve should fail closed");
+        let second = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(NodeLogConfig::default_config())
+        })
+        .expect_err("cached failure should persist");
 
-        env::set_var(KAMN_NODE_LOG_LEVEL_ENV, "trace");
-        reset_cached_log_config_for_tests();
-        let (after_reset_result, after_reset_logs) =
-            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "cache-reset-2", &[]));
         assert!(
-            after_reset_result.is_ok(),
-            "post-reset log emission should not error"
-        );
-        assert_eq!(
-            after_reset_logs.len(),
-            1,
-            "info event should emit after cache reset"
+            matches!(first, ConfigError::InvalidLogConfig(message) if message.contains("KAMN_NODE_LOG_LEVEL"))
         );
         assert!(
-            after_reset_logs[0].contains("event=cache-reset-2"),
-            "rendered line should include emitted event"
+            matches!(second, ConfigError::InvalidLogConfig(message) if message.contains("KAMN_NODE_LOG_LEVEL"))
         );
-    }
-
-    #[test]
-    fn unit_cached_log_config_preserves_json_format_rendering() {
-        let _guard = lock_log_env_test_guard();
-        reset_cached_log_config_for_tests();
-        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("info"));
-        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("json"));
-
-        let (result, logs) =
-            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "json-format", &[]));
-        assert!(result.is_ok(), "json-format log emission should not error");
-        assert_eq!(logs.len(), 1, "json format path should emit one log line");
-        assert!(
-            logs[0].starts_with("{\"ts_unix_ms\":"),
-            "json format must keep json payload structure"
-        );
-        assert!(
-            logs[0].contains("\"event\":\"json-format\""),
-            "json log line should include event field"
-        );
-    }
-
-    #[test]
-    fn regression_initialize_log_config_overwrites_cache_and_ignores_later_env_mutation() {
-        let _guard = lock_log_env_test_guard();
-        reset_cached_log_config_for_tests();
-        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("info"));
-        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("text"));
-
-        initialize_log_config_from_env().expect("startup log config should initialize");
-
-        env::set_var(KAMN_NODE_LOG_LEVEL_ENV, "error");
-        env::set_var(KAMN_NODE_LOG_FORMAT_ENV, "json");
-
-        let (result, logs) =
-            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "startup-cache-check", &[]));
-        assert!(result.is_ok(), "log emission should succeed");
-        assert_eq!(
-            logs.len(),
-            1,
-            "cached info/text config should still emit info"
-        );
-        assert!(
-            logs[0].contains("event=startup-cache-check"),
-            "cached text formatter should remain active"
-        );
-    }
-
-    fn lock_log_env_test_guard() -> std::sync::MutexGuard<'static, ()> {
-        lock_log_config_for_tests()
-    }
-
-    struct EnvVarTestGuard {
-        key: &'static str,
-        previous: Option<String>,
-    }
-
-    impl EnvVarTestGuard {
-        fn set(key: &'static str, value: Option<&str>) -> Self {
-            let previous = env::var(key).ok();
-            match value {
-                Some(value) => env::set_var(key, value),
-                None => env::remove_var(key),
-            }
-            Self { key, previous }
-        }
-    }
-
-    impl Drop for EnvVarTestGuard {
-        fn drop(&mut self) {
-            if let Some(previous) = self.previous.as_deref() {
-                env::set_var(self.key, previous);
-            } else {
-                env::remove_var(self.key);
-            }
-            reset_cached_log_config_for_tests();
-        }
+        assert_eq!(resolver_calls.load(Ordering::SeqCst), 1);
     }
 }

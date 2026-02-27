@@ -1612,6 +1612,7 @@ version = "0.1.0"
 dependencies = [
  "kamn-kolme",
  "kamn-sdk",
+ "zeroize",
 ]
 
 [[package]]
@@ -1711,6 +1712,10 @@ dependencies = [
 [[package]]
 name = "kamn-snapshot-journal"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "lazy_static"

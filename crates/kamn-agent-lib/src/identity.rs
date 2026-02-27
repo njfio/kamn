@@ -1,12 +1,12 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{service_public_key_for_private_key, AgentDid};
 use std::env;
-use std::sync::atomic::{compiler_fence, Ordering};
+use zeroize::Zeroize;
 
-const DETERMINISTIC_IDENTITY_ALLOW_ENV: &str = "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
-const FNV_OFFSET_BASIS_64: u64 = 0xcbf2_9ce4_8422_2325;
-const FNV_PRIME_64: u64 = 0x0000_0100_0000_01b3;
-const NAME_SEED_INDEX_SALT_XOR: u64 = 0x9e37_79b9_7f4a_7c15;
+const DETERMINISTIC_IDENTITY_OPT_IN_ENV: &str = "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
+const DETERMINISTIC_IDENTITY_DISABLED_REASON: &str = "deterministic identity derivation disabled by default; use AgentIdentity::from_did_and_signing_key or set KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY=1 for local development";
+const FNV1A_64_OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV1A_64_PRIME: u64 = 0x0000_0100_0000_01b3;
 
 /// Agent identity material used by phase-1 authenticated operations.
 #[derive(Debug, PartialEq, Eq)]
@@ -16,22 +16,18 @@ pub struct AgentIdentity {
     encryption_key: String,
 }
 
-impl Drop for AgentIdentity {
-    fn drop(&mut self) {
-        let mut signing_key_bytes = drain_signing_key_bytes(&mut self.signing_key);
-        wipe_secret_bytes(signing_key_bytes.as_mut_slice());
-    }
-}
-
 impl AgentIdentity {
     /// Builds deterministic identity material from an agent name.
-    ///
-    /// # Security Warning
-    /// Deterministic identities are intended for non-production workflows.
-    /// Production builds deny this path by default unless
-    /// `KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY` is explicitly enabled.
     pub fn from_agent_name(name: &str) -> Result<Self, AgentLibError> {
-        agent_identity_from_name_with_policy(name, deterministic_identity_allowed())
+        deterministic_identity_allowed()?;
+        let normalized_name = normalize_agent_name(name)?;
+        let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
+        let did = AgentDid::parse(format!("kamn:did:agent:{normalized_name}"))?;
+        Ok(Self {
+            did,
+            signing_key,
+            encryption_key: format!("x25519:{normalized_name}:encryption"),
+        })
     }
 
     /// Builds identity material from explicit DID and signing-key inputs.
@@ -66,50 +62,41 @@ impl AgentIdentity {
     }
 }
 
-fn agent_identity_from_name_with_policy(
-    name: &str,
-    deterministic_identity_allowed: bool,
-) -> Result<AgentIdentity, AgentLibError> {
-    let normalized_name = normalize_agent_name(name)?;
-    if !deterministic_identity_allowed {
-        return Err(AgentLibError::InvalidInput {
-            field: "agent_name",
-            reason: format!(
-                "deterministic identity derivation is disabled by default for production builds; use AgentIdentity::from_did_and_signing_key or set {DETERMINISTIC_IDENTITY_ALLOW_ENV}=1 to opt in explicitly"
-            ),
-        });
+impl Drop for AgentIdentity {
+    fn drop(&mut self) {
+        self.signing_key.zeroize();
+        self.encryption_key.zeroize();
     }
-    let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
-    let did = AgentDid::parse(format!("kamn:did:agent:{normalized_name}"))?;
-    Ok(AgentIdentity {
-        did,
-        signing_key,
-        encryption_key: format!("x25519:{normalized_name}:encryption"),
-    })
 }
 
-fn deterministic_identity_allowed() -> bool {
-    deterministic_identity_allowed_with_env(
-        cfg!(debug_assertions),
-        env::var(DETERMINISTIC_IDENTITY_ALLOW_ENV),
+fn deterministic_identity_allowed() -> Result<(), AgentLibError> {
+    deterministic_identity_allowed_from_env(
+        env::var(DETERMINISTIC_IDENTITY_OPT_IN_ENV),
+        cfg!(any(test, debug_assertions)),
     )
 }
 
-fn deterministic_identity_allowed_with_env(
-    debug_assertions_enabled: bool,
+fn deterministic_identity_allowed_from_env(
     env_value: Result<String, env::VarError>,
-) -> bool {
-    if debug_assertions_enabled {
-        return true;
+    allow_insecure_default: bool,
+) -> Result<(), AgentLibError> {
+    if allow_insecure_default {
+        return Ok(());
     }
-    match env_value {
-        Ok(value) => {
-            let normalized = value.trim().to_ascii_lowercase();
-            matches!(normalized.as_str(), "1" | "true" | "yes")
-        }
+    let is_enabled = match env_value {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes"
+        ),
         Err(env::VarError::NotPresent) => false,
         Err(env::VarError::NotUnicode(_)) => false,
+    };
+    if is_enabled {
+        return Ok(());
     }
+    Err(AgentLibError::UnsupportedOperation(
+        DETERMINISTIC_IDENTITY_DISABLED_REASON,
+    ))
 }
 
 fn normalize_agent_name(name: &str) -> Result<String, AgentLibError> {
@@ -150,25 +137,24 @@ fn derive_deterministic_service_signing_key_hex(
     ))
 }
 
+fn fnv1a_round_u64(state: u64, value: u64) -> u64 {
+    (state ^ value).wrapping_mul(FNV1A_64_PRIME)
+}
+
 fn derive_name_seed_bytes(normalized_name: &str) -> [u8; 32] {
-    let mut state = FNV_OFFSET_BASIS_64;
+    let mut state: u64 = FNV1A_64_OFFSET_BASIS;
     let input = normalized_name.as_bytes();
     let mut output = [0u8; 32];
     for (index, slot) in output.iter_mut().enumerate() {
-        state = fnv1a64_round(state, input[index % input.len()]);
-        let index_salt = (((index as u64) << 8) ^ NAME_SEED_INDEX_SALT_XOR).to_le_bytes();
-        for byte in index_salt {
-            state = fnv1a64_round(state, byte);
-        }
+        let source = u64::from(input[index % input.len()]);
+        let index_mix = ((index as u64) << 8) ^ 0x9e37_79b9_7f4a_7c15;
+        let mixed_source = source.wrapping_add(index_mix);
+        state = fnv1a_round_u64(state, mixed_source);
         *slot = (state >> ((index % 8) * 8)) as u8;
     }
     // Ensure non-zero scalar candidate.
     output[0] |= 0x01;
     output
-}
-
-fn fnv1a64_round(state: u64, byte: u8) -> u64 {
-    (state ^ (byte as u64)).wrapping_mul(FNV_PRIME_64)
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -181,46 +167,10 @@ fn hex_encode(bytes: &[u8]) -> String {
     out
 }
 
-fn drain_signing_key_bytes(signing_key: &mut String) -> Vec<u8> {
-    core::mem::take(signing_key).into_bytes()
-}
-
-fn wipe_secret_bytes(bytes: &mut [u8]) {
-    for byte in bytes.iter_mut() {
-        *byte = 0;
-    }
-    compiler_fence(Ordering::SeqCst);
-    let _ = std::hint::black_box(bytes);
-}
-
 #[cfg(test)]
 mod tests {
-    use super::AgentIdentity;
+    use super::{deterministic_identity_allowed_from_env, fnv1a_round_u64, AgentIdentity};
     use std::env;
-
-    fn derive_name_seed_bytes_reference_fnv1a(normalized_name: &str) -> [u8; 32] {
-        let input = normalized_name.as_bytes();
-        let mut state = super::FNV_OFFSET_BASIS_64;
-        let mut output = [0u8; 32];
-        for (index, slot) in output.iter_mut().enumerate() {
-            state = super::fnv1a64_round(state, input[index % input.len()]);
-            let index_salt =
-                (((index as u64) << 8) ^ super::NAME_SEED_INDEX_SALT_XOR).to_le_bytes();
-            for byte in index_salt {
-                state = super::fnv1a64_round(state, byte);
-            }
-            *slot = (state >> ((index % 8) * 8)) as u8;
-        }
-        output[0] |= 0x01;
-        output
-    }
-
-    #[test]
-    fn spec_c01_derive_name_seed_bytes_matches_explicit_fnv1a_round_reference() {
-        let derived = super::derive_name_seed_bytes("alice");
-        let expected = derive_name_seed_bytes_reference_fnv1a("alice");
-        assert_eq!(derived, expected);
-    }
 
     #[test]
     fn unit_agent_identity_from_name_builds_expected_did_and_keys() {
@@ -228,7 +178,7 @@ mod tests {
         assert_eq!(identity.did().as_str(), "kamn:did:agent:alice");
         assert_eq!(
             identity.signing_key(),
-            "3d8a1dbfd141e25f472298086ae0ce64b7057017ee110ad5fee6aba21dd89fb3"
+            "094cf4e1f3d974bbf3e72233e2c2937e8fdb094740e0f017e010aa47ac1201ac"
         );
         assert!(identity
             .signing_key()
@@ -256,54 +206,58 @@ mod tests {
     }
 
     #[test]
-    fn unit_deterministic_identity_policy_denies_production_without_override() {
-        assert!(!super::deterministic_identity_allowed_with_env(
-            false,
-            Err(env::VarError::NotPresent)
-        ));
+    fn regression_deterministic_identity_gate_blocks_non_test_mode_without_opt_in() {
+        // Regression: #6187
+        let error = deterministic_identity_allowed_from_env(Err(env::VarError::NotPresent), false)
+            .expect_err("non-test mode should fail closed when deterministic gate is not enabled");
+        assert!(
+            error
+                .to_string()
+                .contains("deterministic identity derivation disabled by default"),
+            "gate error should include deterministic disable marker: {error}"
+        );
     }
 
     #[test]
-    fn unit_deterministic_identity_policy_allows_debug_without_override() {
-        assert!(super::deterministic_identity_allowed_with_env(
-            true,
-            Err(env::VarError::NotPresent)
-        ));
+    fn unit_deterministic_identity_gate_allows_test_mode_without_opt_in() {
+        deterministic_identity_allowed_from_env(Err(env::VarError::NotPresent), true)
+            .expect("test mode should permit deterministic identity derivation");
     }
 
     #[test]
-    fn unit_deterministic_identity_policy_allows_explicit_production_override() {
-        assert!(super::deterministic_identity_allowed_with_env(
-            false,
-            Ok("1".to_owned())
-        ));
-        assert!(super::deterministic_identity_allowed_with_env(
-            false,
-            Ok("TRUE".to_owned())
-        ));
-        assert!(super::deterministic_identity_allowed_with_env(
-            false,
-            Ok(" yes ".to_owned())
-        ));
+    fn unit_deterministic_identity_gate_allows_non_test_mode_with_opt_in_env() {
+        deterministic_identity_allowed_from_env(Ok("1".to_owned()), false)
+            .expect("explicit opt-in env should permit deterministic identity derivation");
     }
 
     #[test]
-    fn regression_agent_identity_from_name_rejects_when_policy_disables_deterministic_identity() {
-        // Regression: #6064
-        let error = super::agent_identity_from_name_with_policy("alice", false)
-            .expect_err("deterministic identity should be blocked");
-        let rendered = error.to_string();
-        assert!(rendered.contains("deterministic identity derivation is disabled"));
-        assert!(rendered.contains("from_did_and_signing_key"));
+    fn regression_issue_6209_name_seed_round_uses_fnv1a_ordering() {
+        let state = 0xcbf2_9ce4_8422_2325_u64;
+        let value = 0x4142_4344_4546_4748_u64;
+        let expected_fnv1a = (state ^ value).wrapping_mul(0x0000_0100_0000_01b3_u64);
+        let unexpected_fnv1 = state.wrapping_mul(0x0000_0100_0000_01b3_u64) ^ value;
+        assert_eq!(fnv1a_round_u64(state, value), expected_fnv1a);
+        assert_ne!(fnv1a_round_u64(state, value), unexpected_fnv1);
     }
 
     #[test]
-    fn regression_agent_identity_signing_key_scrub_helpers_zeroize_bytes() {
-        // Regression: #6128
-        let mut signing_key = String::from("0123abcd");
-        let mut bytes = super::drain_signing_key_bytes(&mut signing_key);
-        assert!(signing_key.is_empty());
-        super::wipe_secret_bytes(bytes.as_mut_slice());
-        assert!(bytes.iter().all(|byte| *byte == 0));
+    fn regression_issue_6207_agent_identity_enforces_drop_zeroization_and_no_clone_derive() {
+        let source = include_str!("identity.rs");
+        assert!(
+            !source.contains("#[derive(Debug, Clone, PartialEq, Eq)]\npub struct AgentIdentity"),
+            "AgentIdentity must not derive Clone after #6207"
+        );
+        assert!(
+            source.contains("#[derive(Debug, PartialEq, Eq)]\npub struct AgentIdentity"),
+            "AgentIdentity derive contract must remain explicit and clone-free"
+        );
+        assert!(
+            source.contains("impl Drop for AgentIdentity"),
+            "AgentIdentity drop-based zeroization must remain present"
+        );
+        assert!(
+            source.contains("self.signing_key.zeroize();"),
+            "signing key zeroization marker must remain present"
+        );
     }
 }

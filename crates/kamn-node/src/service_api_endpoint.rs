@@ -1,12 +1,11 @@
 mod auth;
 mod message_store;
 mod middleware_impl;
-mod models;
-mod observability_projection;
 mod payload;
 mod runtime_observability;
 mod scope_fixture;
 mod server;
+mod snapshot;
 mod state_io;
 #[cfg(test)]
 mod tests;
@@ -53,12 +52,11 @@ use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
 use message_store::ServiceApiMessageStore;
-use observability_projection::resolve_service_api_observability;
 use runtime_observability::ServiceApiRuntimeObservability;
+pub(crate) use snapshot::ServiceApiSnapshot;
 pub(crate) use state_io::{
     append_service_api_relay_spool_entry,
     default_service_api_relay_spool_file_path_from_state_file,
-    default_service_api_replay_guard_state_file_path_from_state_file,
     default_service_api_state_file_path_for_bind_addr, drain_service_api_relay_spool_entries,
     project_service_api_relayed_message_statuses,
 };
@@ -72,8 +70,6 @@ pub(crate) const DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND: u64 = 120;
 pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES: usize = 65_536;
 pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS: u64 = 900;
 const SERVICE_API_RUNTIME_WORKER_THREADS: usize = 2;
-const SERVICE_API_REPLAY_GUARD_STATE_SCHEMA_VERSION: &str =
-    "kamn.runtime.service-api-replay-guard.v1";
 
 const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
 const ROUTE_MESSAGES_RELAY: &str = "/v1/messages/relay";
@@ -102,6 +98,7 @@ const ROUTE_METRICS: &str = "/metrics";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
+const REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER: &str = "x-kamn-signer-public-key";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
@@ -133,7 +130,6 @@ const REASON_CODE_AUTH_NONCE_HEADER_MISSING: &str = "service_api_auth_nonce_head
 const REASON_CODE_AUTH_NONCE_INVALID: &str = "service_api_auth_nonce_invalid";
 const REASON_CODE_AUTH_NONCE_NON_POSITIVE: &str = "service_api_auth_nonce_non_positive";
 const REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING: &str = "service_api_auth_signature_header_missing";
-const REASON_CODE_AUTH_DID_KEY_BINDING_INVALID: &str = "service_api_auth_did_key_binding_invalid";
 const REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED: &str =
     "service_api_auth_signature_verification_failed";
 const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_nonce_detected";
@@ -142,7 +138,7 @@ const REASON_CODE_AUTH_SCOPE_INVALID: &str = "service_api_auth_scope_invalid";
 const REASON_CODE_AUTH_SCOPE_ROUTE_MISMATCH: &str = "service_api_auth_scope_route_mismatch";
 pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-auth-reason-taxonomy.v1";
-pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_did_key_binding_invalid,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
+pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
 pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-reason-taxonomy.v1";
 pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str = "service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch";
@@ -201,11 +197,147 @@ const SERVICE_API_TLS_KEY_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_KEY_FILE";
 const SERVICE_API_TLS_MODE_DISABLED: &str = "disabled";
 const SERVICE_API_TLS_MODE_REQUIRE: &str = "require";
 const SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV: &str = "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX";
-const SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON_ENV: &str =
-    "KAMN_SERVICE_API_AUTH_PUBLIC_KEYS_BY_DID_JSON";
 const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
 pub(crate) const SERVICE_API_RELAY_SPOOL_FILE_ENV: &str = "KAMN_SERVICE_API_RELAY_SPOOL_FILE";
-pub(crate) use models::*;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceApiEndpointConfig {
+    pub(crate) bind_addr: String,
+    pub(crate) max_requests: u64,
+    pub(crate) idle_timeout_ms: u64,
+    pub(crate) body_limit_bytes: u64,
+    pub(crate) concurrency_limit: u64,
+    pub(crate) rate_limit_per_second: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceApiEndpointResponse {
+    pub(crate) status_code: u16,
+    pub(crate) content_type: &'static str,
+    pub(crate) body: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiErrorBody {
+    pub(crate) error: String,
+    pub(crate) reason_code: String,
+    pub(crate) message: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiHealthBody {
+    pub(crate) status: String,
+    pub(crate) runtime_mode: String,
+    pub(crate) role: String,
+    pub(crate) observability_source: String,
+    pub(crate) observability_health: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiMessageCreateBody {
+    pub(crate) message_id: String,
+    pub(crate) status: String,
+    pub(crate) runtime_mode: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiMessageRelayBody {
+    pub(crate) message_id: String,
+    pub(crate) status: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiMessageGetBody {
+    pub(crate) message_id: String,
+    pub(crate) status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) sender_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) recipient_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) body: Option<String>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiRelaySpoolEntry {
+    pub(crate) message_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) sender_did: Option<String>,
+    pub(crate) recipient_did: String,
+    pub(crate) body: String,
+    pub(crate) queued_at_unix: u64,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiChannelCreateBody {
+    pub(crate) channel_id: String,
+    pub(crate) status: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiChannelMessagesBody {
+    pub(crate) channel_id: String,
+    pub(crate) messages: Vec<String>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiTaskCreateBody {
+    pub(crate) task_id: String,
+    pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiTaskGetBody {
+    pub(crate) task_id: String,
+    pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiTaskTransitionBody {
+    pub(crate) task_id: String,
+    pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiEscrowStatusBody {
+    pub(crate) escrow_id: String,
+    pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiContentRegisterBody {
+    pub(crate) content_id: String,
+    pub(crate) retention_class: String,
+    pub(crate) lifecycle_state: String,
+    pub(crate) redaction_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiContentLifecycleBody {
+    pub(crate) content_id: String,
+    pub(crate) lifecycle_state: String,
+    pub(crate) redaction_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiBridgeSubmitBody {
+    pub(crate) bridge_id: String,
+    pub(crate) source_message_id: String,
+    pub(crate) bridge_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiBridgeStatusBody {
+    pub(crate) bridge_id: String,
+    pub(crate) bridge_status: String,
+    pub(crate) target_message_id: String,
+    pub(crate) forward_tx_hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiAgentGetBody {
+    pub(crate) did: String,
+    pub(crate) reputation_score: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiWebsocketStateTransitionBody {
+    pub(crate) event: String,
+    pub(crate) runtime_mode: String,
+    pub(crate) role: String,
+    pub(crate) sequence: u64,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedRequest {
@@ -309,7 +441,6 @@ struct ServiceApiRuntimeState {
     ingress_rate_window: Arc<Mutex<ServiceApiIngressRateWindow>>,
     sender_anti_spam: Arc<Mutex<AntiSpamEngine>>,
     auth_public_key_hex: Option<String>,
-    auth_public_keys_by_did: Option<BTreeMap<String, String>>,
     message_store: Arc<Mutex<ServiceApiMessageStore>>,
     relay_spool_file: Option<String>,
 }
@@ -325,17 +456,9 @@ struct ServiceApiIngressRateWindow {
 struct ServiceApiReplayGuard {
     entries: BTreeSet<(String, u64)>,
     insertion_order: VecDeque<(String, u64, Instant)>,
-    sender_nonce_floor: BTreeMap<String, u64>,
-    state_file: Option<String>,
+    highest_nonce_by_sender: BTreeMap<String, u64>,
     max_entries: usize,
     ttl: Duration,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct ServiceApiReplayGuardPersistedState {
-    schema_version: String,
-    #[serde(default)]
-    sender_nonce_floor: BTreeMap<String, u64>,
 }
 
 impl ServiceApiReplayGuard {
@@ -343,62 +466,38 @@ impl ServiceApiReplayGuard {
         Self {
             entries: BTreeSet::new(),
             insertion_order: VecDeque::new(),
-            sender_nonce_floor: BTreeMap::new(),
-            state_file: None,
+            highest_nonce_by_sender: BTreeMap::new(),
             max_entries: max_entries.max(1),
             ttl,
         }
     }
 
-    fn from_state_file(
-        max_entries: usize,
-        ttl: Duration,
-        state_file: Option<&str>,
-    ) -> Result<Self, String> {
-        let state_file = state_file.map(str::to_owned);
-        let sender_nonce_floor = load_replay_guard_nonce_floor(state_file.as_deref())?;
-        let mut replay_guard = Self::new(max_entries, ttl);
-        replay_guard.sender_nonce_floor = sender_nonce_floor;
-        replay_guard.state_file = state_file;
-        Ok(replay_guard)
-    }
-
     fn record_nonce_if_fresh(&mut self, sender_did: &str, nonce: u64, now: Instant) -> bool {
         self.evict_expired(now);
-        if self.state_file.is_some()
-            && self
-                .sender_nonce_floor
-                .get(sender_did)
-                .is_some_and(|seen_nonce| nonce <= *seen_nonce)
-        {
-            return false;
+        if let Some(high_watermark) = self.highest_nonce_by_sender.get(sender_did) {
+            if nonce <= *high_watermark {
+                return false;
+            }
         }
         let entry = (sender_did.to_owned(), nonce);
         if self.entries.contains(&entry) {
             return false;
         }
         self.entries.insert(entry.clone());
-        self.insertion_order
-            .push_back((entry.0.clone(), entry.1, now));
-        let previous_floor = self.sender_nonce_floor.insert(sender_did.to_owned(), nonce);
-        if persist_replay_guard_nonce_floor(
-            self.state_file.as_deref(),
-            self.sender_nonce_floor.clone(),
-        )
-        .is_err()
-        {
-            if let Some(previous_floor) = previous_floor {
-                self.sender_nonce_floor
-                    .insert(sender_did.to_owned(), previous_floor);
-            } else {
-                self.sender_nonce_floor.remove(sender_did);
-            }
-            self.entries.remove(&entry);
-            let _ = self.insertion_order.pop_back();
-            return false;
-        }
+        self.insertion_order.push_back((entry.0, entry.1, now));
+        self.seed_sender_nonce_high_watermark(sender_did, nonce);
         self.evict_over_capacity();
         true
+    }
+
+    fn seed_sender_nonce_high_watermark(&mut self, sender_did: &str, nonce: u64) {
+        let entry = self
+            .highest_nonce_by_sender
+            .entry(sender_did.to_owned())
+            .or_insert(0);
+        if nonce > *entry {
+            *entry = nonce;
+        }
     }
 
     #[cfg(test)]
@@ -425,44 +524,6 @@ impl ServiceApiReplayGuard {
             self.entries.remove(&(sender_did, nonce));
         }
     }
-}
-
-fn load_replay_guard_nonce_floor(
-    state_file: Option<&str>,
-) -> Result<BTreeMap<String, u64>, String> {
-    let Some(path) = state_file else {
-        return Ok(BTreeMap::new());
-    };
-    let payload = match fs::read_to_string(path) {
-        Ok(payload) => payload,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
-        Err(error) => {
-            return Err(format!(
-                "service api replay guard state read failed: {path}: {error}"
-            ));
-        }
-    };
-    let persisted = serde_json::from_str::<ServiceApiReplayGuardPersistedState>(payload.as_str())
-        .map_err(|error| {
-        format!("service api replay guard state parse failed: {path}: {error}")
-    })?;
-    Ok(persisted.sender_nonce_floor)
-}
-
-fn persist_replay_guard_nonce_floor(
-    state_file: Option<&str>,
-    sender_nonce_floor: BTreeMap<String, u64>,
-) -> Result<(), String> {
-    let Some(path) = state_file else {
-        return Ok(());
-    };
-    let payload = serde_json::to_string_pretty(&ServiceApiReplayGuardPersistedState {
-        schema_version: SERVICE_API_REPLAY_GUARD_STATE_SCHEMA_VERSION.to_owned(),
-        sender_nonce_floor,
-    })
-    .map_err(|error| format!("service api replay guard state serialization failed: {error}"))?;
-    fs::write(path, payload)
-        .map_err(|error| format!("service api replay guard state write failed: {path}: {error}"))
 }
 
 #[derive(Debug, Clone)]
@@ -728,6 +789,91 @@ pub(crate) fn project_service_api_lifecycle_rejection(
     reason_code: &str,
 ) -> Option<ServiceApiLifecycleRejectionProjection> {
     middleware_impl::project_service_api_lifecycle_rejection(reason_code)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ServiceApiObservabilitySnapshot {
+    source: String,
+    latency_p50_ms: u64,
+    latency_p99_ms: u64,
+    throughput_tps: u64,
+    error_rate_bps: u64,
+    availability_bps: u64,
+    health: String,
+    alert_count: usize,
+}
+
+fn resolve_service_api_observability(
+    report: &NodeBootstrapReport,
+) -> ServiceApiObservabilitySnapshot {
+    if let (
+        Some(latency_p50_ms),
+        Some(latency_p99_ms),
+        Some(throughput_tps),
+        Some(error_rate_bps),
+        Some(availability_bps),
+        Some(health),
+        Some(alert_count),
+    ) = (
+        report.daemon_observability_latency_p50_ms,
+        report.daemon_observability_latency_p99_ms,
+        report.daemon_observability_throughput_tps,
+        report.daemon_observability_error_rate_bps,
+        report.daemon_observability_availability_bps,
+        report.daemon_observability_health.as_deref(),
+        report.daemon_observability_alert_count,
+    ) {
+        return ServiceApiObservabilitySnapshot {
+            source: "daemon".to_owned(),
+            latency_p50_ms,
+            latency_p99_ms,
+            throughput_tps,
+            error_rate_bps,
+            availability_bps,
+            health: health.to_owned(),
+            alert_count,
+        };
+    }
+
+    if let (
+        Some(latency_p50_ms),
+        Some(latency_p99_ms),
+        Some(throughput_tps),
+        Some(error_rate_bps),
+        Some(availability_bps),
+        Some(health),
+        Some(alert_count),
+    ) = (
+        report.kolme_live_observability_latency_p50_ms,
+        report.kolme_live_observability_latency_p99_ms,
+        report.kolme_live_observability_throughput_tps,
+        report.kolme_live_observability_error_rate_bps,
+        report.kolme_live_observability_availability_bps,
+        report.kolme_live_observability_health.as_deref(),
+        report.kolme_live_observability_alert_count,
+    ) {
+        return ServiceApiObservabilitySnapshot {
+            source: "kolme-live".to_owned(),
+            latency_p50_ms,
+            latency_p99_ms,
+            throughput_tps,
+            error_rate_bps,
+            availability_bps,
+            health: health.to_owned(),
+            alert_count,
+        };
+    }
+
+    ServiceApiObservabilitySnapshot {
+        source: "unknown".to_owned(),
+        latency_p50_ms: 0,
+        latency_p99_ms: 0,
+        throughput_tps: 0,
+        error_rate_bps: 0,
+        availability_bps: 0,
+        health: "unknown".to_owned(),
+        alert_count: 0,
+    }
 }
 
 #[cfg(test)]

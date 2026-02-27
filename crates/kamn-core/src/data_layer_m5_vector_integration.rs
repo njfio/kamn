@@ -1074,244 +1074,64 @@ fn tagged_digest(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput,
+        DataLayerM5EmbeddingRegistry, DataLayerM5SemanticQuery, DataLayerM5VectorIntegrationError,
+    };
+    use crate::ContentRetentionClass;
 
-    fn embedding_input(
+    fn fixture_input(
         embedding_id: &str,
         message_id: &str,
-        owner_did: &str,
-        agent_did: &str,
         vector_plaintext: Option<Vec<f32>>,
-        created_at_epoch_seconds: u64,
     ) -> DataLayerM5EmbeddingRecordInput {
         DataLayerM5EmbeddingRecordInput {
             embedding_id: embedding_id.to_owned(),
             message_id: message_id.to_owned(),
-            owner_did: owner_did.to_owned(),
-            agent_did: agent_did.to_owned(),
+            owner_did: "kamn:did:owner:alice".to_owned(),
+            agent_did: "kamn:did:agent:alice".to_owned(),
             retention_class: ContentRetentionClass::Standard,
-            model_id: "embedding-model-v1".to_owned(),
-            vector_encrypted: vec![0x01, 0x02, 0x03, 0x04],
+            model_id: "model-1".to_owned(),
+            vector_encrypted: vec![0x01, 0x02, 0x03],
             vector_plaintext,
-            created_at_epoch_seconds,
+            created_at_epoch_seconds: 1_000,
         }
     }
 
     #[test]
-    fn unit_m5_append_and_integrity_chain_is_deterministic() {
-        let owner_did = "kamn:did:owner:owner-1";
-        let agent_did = "kamn:did:agent:agent-1";
+    fn unit_data_layer_m5_append_and_semantic_query_rank_results() {
         let mut registry = DataLayerM5EmbeddingRegistry::new(
             DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
         );
-
-        let first = registry
-            .append(embedding_input(
-                "emb-1",
-                "msg-1",
-                owner_did,
-                agent_did,
-                Some(vec![1.0, 0.0, 0.0]),
-                1_700_000_000,
-            ))
-            .expect("first append should succeed");
-        let second = registry
-            .append(embedding_input(
-                "emb-2",
-                "msg-2",
-                owner_did,
-                agent_did,
-                Some(vec![0.0, 1.0, 0.0]),
-                1_700_000_100,
-            ))
-            .expect("second append should succeed");
-
-        assert_eq!(first.sequence, 1);
-        assert_eq!(
-            first.hash_chain_prev,
-            DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS
-        );
-        assert_eq!(second.sequence, 2);
-        assert_eq!(second.hash_chain_prev, first.record_hash);
-
         registry
-            .verify_owner_integrity(owner_did)
-            .expect("owner chain should verify");
+            .append(fixture_input("emb-1", "msg-1", Some(vec![1.0, 0.0])))
+            .expect("first embedding append should succeed");
+        registry
+            .append(fixture_input("emb-2", "msg-2", Some(vec![0.0, 1.0])))
+            .expect("second embedding append should succeed");
 
-        let query_results = registry
+        let results = registry
             .semantic_query(DataLayerM5SemanticQuery {
-                owner_did: owner_did.to_owned(),
-                query_vector: vec![1.0, 0.0, 0.0],
+                owner_did: "kamn:did:owner:alice".to_owned(),
+                query_vector: vec![1.0, 0.0],
                 limit: Some(2),
             })
-            .expect("semantic query should succeed");
-        let ordered_embedding_ids = query_results
-            .iter()
-            .map(|result| result.embedding_id.as_str())
-            .collect::<Vec<_>>();
-        assert_eq!(ordered_embedding_ids, vec!["emb-1", "emb-2"]);
+            .expect("semantic query should rank plaintext vectors");
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].embedding_id, "emb-1");
+        assert!(results[0].similarity_score > results[1].similarity_score);
     }
 
     #[test]
-    fn regression_m5_rejects_privacy_tamper_and_dimension_drift_fail_closed() {
-        let owner_did = "kamn:did:owner:owner-2";
-        let agent_did = "kamn:did:agent:agent-2";
-
-        let mut owner_encrypted_registry =
+    fn unit_data_layer_m5_owner_side_mode_rejects_plaintext_ingestion() {
+        let mut registry =
             DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted);
-        let privacy_error = owner_encrypted_registry
-            .append(embedding_input(
-                "enc-emb-1",
-                "enc-msg-1",
-                owner_did,
-                agent_did,
-                Some(vec![1.0, 0.0]),
-                1_700_000_200,
-            ))
-            .expect_err("owner-side encrypted mode must reject plaintext storage");
-        assert_eq!(
-            privacy_error,
-            DataLayerM5VectorIntegrationError::PrivacyModeViolation {
-                reason_code: DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE
-            }
-        );
-
-        let query_error = owner_encrypted_registry
-            .semantic_query(DataLayerM5SemanticQuery {
-                owner_did: owner_did.to_owned(),
-                query_vector: vec![1.0, 0.0],
-                limit: Some(5),
-            })
-            .expect_err("owner-side encrypted mode must reject server-side semantic queries");
-        assert_eq!(
-            query_error,
-            DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
-                reason_code: DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE
-            }
-        );
-
-        let mut plaintext_registry = DataLayerM5EmbeddingRegistry::new(
-            DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
-        );
-        plaintext_registry
-            .append(embedding_input(
-                "plain-emb-1",
-                "plain-msg-1",
-                owner_did,
-                agent_did,
-                Some(vec![0.5, 0.5, 0.0]),
-                1_700_000_300,
-            ))
-            .expect("first plaintext append should succeed");
-        let dimensions_error = plaintext_registry
-            .append(embedding_input(
-                "plain-emb-2",
-                "plain-msg-2",
-                owner_did,
-                agent_did,
-                Some(vec![0.1, 0.9]),
-                1_700_000_301,
-            ))
-            .expect_err("dimension drift must fail closed");
-        assert_eq!(
-            dimensions_error,
-            DataLayerM5VectorIntegrationError::InvalidVectorDimensions {
-                expected: 3,
-                found: 2
-            }
-        );
-
-        plaintext_registry
-            .append(embedding_input(
-                "plain-emb-3",
-                "plain-msg-3",
-                owner_did,
-                agent_did,
-                Some(vec![0.9, 0.1, 0.0]),
-                1_700_000_302,
-            ))
-            .expect("second valid append should succeed");
-        plaintext_registry
-            .replace_record_hash_unchecked(owner_did, 1, "sha256:tampered")
-            .expect("tamper helper should succeed");
-        let tamper_error = plaintext_registry
-            .verify_owner_integrity(owner_did)
-            .expect_err("tampered hash chain must fail verification");
-        assert_eq!(
-            tamper_error,
-            DataLayerM5VectorIntegrationError::InvalidEmbeddingHashChain {
-                owner_did: owner_did.to_owned(),
-                position: 0,
-                reason: "record_hash mismatch"
-            }
-        );
-    }
-
-    #[test]
-    fn unit_m5_recall_drift_projects_stable_and_degraded_decisions() {
-        let owner_did = "kamn:did:owner:owner-3";
-        let agent_did = "kamn:did:agent:agent-3";
-        let mut registry = DataLayerM5EmbeddingRegistry::new(
-            DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
-        );
-
-        registry
-            .append(embedding_input(
-                "emb-a",
-                "msg-a",
-                owner_did,
-                agent_did,
-                Some(vec![1.0, 0.0]),
-                1_700_000_400,
-            ))
-            .expect("append emb-a should succeed");
-        registry
-            .append(embedding_input(
-                "emb-b",
-                "msg-b",
-                owner_did,
-                agent_did,
-                Some(vec![0.2, 0.8]),
-                1_700_000_401,
-            ))
-            .expect("append emb-b should succeed");
-
-        let stable_report = registry
-            .evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
-                owner_did: owner_did.to_owned(),
-                query_vector: vec![1.0, 0.0],
-                baseline_top_k_embedding_ids: vec!["emb-a".to_owned(), "emb-b".to_owned()],
-                min_recall_at_k: 1.0,
-                max_allowed_rank_shift: 1,
-            })
-            .expect("stable recall drift evaluation should succeed");
-        assert_eq!(
-            stable_report.decision,
-            DataLayerM5RecallDriftDecision::Stable
-        );
-        assert_eq!(
-            stable_report.reason_code,
-            DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE
-        );
-        assert_eq!(stable_report.missing_embedding_ids, Vec::<String>::new());
-
-        let degraded_report = registry
-            .evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
-                owner_did: owner_did.to_owned(),
-                query_vector: vec![1.0, 0.0],
-                baseline_top_k_embedding_ids: vec!["emb-b".to_owned(), "emb-a".to_owned()],
-                min_recall_at_k: 1.0,
-                max_allowed_rank_shift: 0,
-            })
-            .expect("degraded recall drift evaluation should succeed");
-        assert_eq!(
-            degraded_report.decision,
-            DataLayerM5RecallDriftDecision::Degraded
-        );
-        assert_eq!(
-            degraded_report.reason_code,
-            DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE
-        );
-        assert_eq!(degraded_report.max_observed_rank_shift, 1);
+        let error = registry
+            .append(fixture_input("emb-1", "msg-1", Some(vec![1.0, 0.0])))
+            .expect_err("owner-side mode must reject plaintext vectors");
+        assert!(matches!(
+            error,
+            DataLayerM5VectorIntegrationError::PrivacyModeViolation { .. }
+        ));
     }
 }

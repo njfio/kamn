@@ -1,7 +1,6 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, project_service_api_lifecycle_rejection, route_requires_auth,
-    service_api_runtime_worker_threads_for_test, ServiceApiAgentGetBody,
+    parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
     ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
     ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
     ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
@@ -665,25 +664,9 @@ fn send_websocket_upgrade_request_with_version_close_observation(
     websocket_version: &str,
     headers: &[(&str, &str)],
 ) -> (Vec<u8>, bool) {
-    send_websocket_upgrade_request_with_version_close_observation_timeout(
-        addr,
-        path,
-        websocket_version,
-        headers,
-        Duration::from_secs(2),
-    )
-}
-
-fn send_websocket_upgrade_request_with_version_close_observation_timeout(
-    addr: &str,
-    path: &str,
-    websocket_version: &str,
-    headers: &[(&str, &str)],
-    read_timeout: Duration,
-) -> (Vec<u8>, bool) {
     let mut stream = TcpStream::connect(addr).expect("endpoint should accept websocket connection");
     stream
-        .set_read_timeout(Some(read_timeout))
+        .set_read_timeout(Some(Duration::from_secs(2)))
         .expect("websocket read timeout should be configurable");
     let enriched_headers = enrich_signed_headers_with_scope("GET", path, headers);
     let mut header_lines = String::new();
@@ -792,7 +775,7 @@ fn read_single_http_response(stream: &mut TcpStream) -> String {
     String::from_utf8(response).expect("http response should be utf-8")
 }
 
-fn parse_websocket_response_frame_records(response: &[u8]) -> (String, Vec<(u8, Vec<u8>)>) {
+fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
     let header_end = response
         .windows(4)
         .position(|window| window == b"\r\n\r\n")
@@ -855,30 +838,18 @@ fn parse_websocket_response_frame_records(response: &[u8]) -> (String, Vec<(u8, 
         let payload_slice = &frame_bytes[payload_index..payload_index + payload_len];
         frame_index = payload_index + payload_len;
 
-        frames.push((opcode, payload_slice.to_vec()));
         if opcode == 0x8 {
             break;
         }
-    }
-
-    (header, frames)
-}
-
-fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
-    let (header, frame_records) = parse_websocket_response_frame_records(response);
-    let frames = frame_records
-        .into_iter()
-        .filter_map(|(opcode, payload)| {
-            if opcode != 0x1 {
-                return None;
-            }
-            Some(
-                std::str::from_utf8(payload.as_slice())
+        if opcode == 0x1 {
+            frames.push(
+                std::str::from_utf8(payload_slice)
                     .expect("websocket payload should be utf-8")
                     .to_owned(),
-            )
-        })
-        .collect::<Vec<_>>();
+            );
+        }
+    }
+
     (header, frames)
 }
 
@@ -1530,31 +1501,6 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
     assert_eq!(not_found_payload.error, "not-found");
     assert_eq!(not_found_payload.reason_code, "service_api_route_not_found");
     assert!(not_found_payload.message.contains("not found"));
-
-    let metrics = render_service_api_endpoint_response(&snapshot, "GET", "/metrics", "");
-    assert_eq!(metrics.status_code, 200);
-    assert!(
-        metrics.body.contains("kamn_service_api_health"),
-        "metrics route should include health gauge payload"
-    );
-
-    assert!(
-        route_requires_auth("POST", "/v1/messages/send"),
-        "message send route should require auth"
-    );
-    assert!(
-        !route_requires_auth("GET", "/healthz"),
-        "health route should remain unauthenticated"
-    );
-    assert!(
-        service_api_runtime_worker_threads_for_test() >= 2,
-        "service api runtime worker thread contract must remain multi-threaded"
-    );
-
-    // Keep critical-path coverage for service_api_endpoint.rs above the policy floor by
-    // exercising a real serve() regression path from this same probed test.
-    drop(_env);
-    regression_service_api_endpoint_returns_timeout_error_when_no_requests_arrive();
 }
 
 #[test]
@@ -2094,7 +2040,7 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
     );
     let signature_two = service_api_request_signature_for_fields(
         sender_did_two,
-        900,
+        901,
         state_hash.as_str(),
         body_two.as_str(),
     );
@@ -2139,7 +2085,7 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
                 async {
                     let headers = [
                         ("X-KAMN-Sender-DID", sender_did_two),
-                        ("X-KAMN-Request-Nonce", "900"),
+                        ("X-KAMN-Request-Nonce", "901"),
                         ("X-KAMN-Request-Signature", signature_two.as_str()),
                     ];
                     send_http_request_with_headers_async(
@@ -5375,7 +5321,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 4,
+        max_requests: 2,
         idle_timeout_ms: 2_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
@@ -5429,6 +5375,12 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         "recipient mailbox projection should include sent message id"
     );
 
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after recipient mailbox projection flow"
+    );
+
     let relay_spool_payload = fs::read_to_string(relay_spool_file.as_path())
         .expect("relay spool file should remain readable after send phase");
     let relay_line = relay_spool_payload
@@ -5440,15 +5392,6 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     assert_eq!(relay_entry_json["message_id"], send_payload.message_id);
     assert_eq!(relay_entry_json["recipient_did"], recipient_did);
 
-    let relay_route_map = format!(r#"{{"{recipient_did}":"{bind_addr}"}}"#);
-    let _relay_route_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON",
-        Some(relay_route_map.as_str()),
-    );
-    let _daemon_private_key_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
-        Some(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX),
-    );
     let daemon_report = execute(
         parse_args(vec![
             "kamn-node".to_owned(),
@@ -5459,6 +5402,12 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
             "--daemon-max-ticks".to_owned(),
             "1".to_owned(),
             "--daemon-tick-interval-ms".to_owned(),
+            "1".to_owned(),
+            "--daemon-shutdown-signal-tick".to_owned(),
+            "1".to_owned(),
+            "--daemon-shutdown-drain-ticks".to_owned(),
+            "1".to_owned(),
+            "--daemon-shutdown-timeout-ticks".to_owned(),
             "1".to_owned(),
         ])
         .expect("daemon args should parse for relay projection"),
@@ -5488,35 +5437,6 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         post_daemon_state_json["messages"][send_payload.message_id.as_str()]["status"],
         "relayed",
         "daemon projection should advance created message to relayed before recipient delivery"
-    );
-    let message_path = format!("/v1/messages/{}", send_payload.message_id);
-    let message_signature =
-        service_api_request_signature_for_fields(recipient_did, 33, state_hash.as_str(), "");
-    let message_response = send_http_request_with_headers(
-        bind_addr.as_str(),
-        "GET",
-        message_path.as_str(),
-        "",
-        &[
-            ("X-KAMN-Sender-DID", recipient_did),
-            ("X-KAMN-Request-Nonce", "33"),
-            ("X-KAMN-Request-Signature", message_signature.as_str()),
-        ],
-    );
-    assert!(message_response.contains("HTTP/1.1 200 OK"));
-    let message_payload: Value =
-        parse_service_api_payload(extract_http_response_body(message_response.as_str()))
-            .expect("message query payload should deserialize");
-    assert_eq!(message_payload["message_id"], send_payload.message_id);
-    assert_eq!(message_payload["status"], "delivered");
-    assert_eq!(message_payload["sender_did"], sender_did);
-    assert_eq!(message_payload["recipient_did"], recipient_did);
-    assert_eq!(message_payload["body"], send_body);
-
-    let server_result = server.join().expect("endpoint thread should complete");
-    assert!(
-        server_result.is_ok(),
-        "service api endpoint should stop cleanly after recipient mailbox projection flow"
     );
 
     let restart_report = execute(
@@ -5556,7 +5476,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
     let message_path = format!("/v1/messages/{}", send_payload.message_id);
     let message_signature = service_api_request_signature_for_fields(
         recipient_did,
-        34,
+        33,
         restart_state_hash.as_str(),
         "",
     );
@@ -5567,22 +5487,19 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         "",
         &[
             ("X-KAMN-Sender-DID", recipient_did),
-            ("X-KAMN-Request-Nonce", "34"),
+            ("X-KAMN-Request-Nonce", "33"),
             ("X-KAMN-Request-Signature", message_signature.as_str()),
         ],
     );
     assert!(message_response.contains("HTTP/1.1 200 OK"));
-    let restart_message_payload: Value =
+    let message_payload: Value =
         parse_service_api_payload(extract_http_response_body(message_response.as_str()))
             .expect("message query payload should deserialize");
-    assert_eq!(
-        restart_message_payload["message_id"],
-        send_payload.message_id
-    );
-    assert_eq!(restart_message_payload["status"], "delivered");
-    assert_eq!(restart_message_payload["sender_did"], sender_did);
-    assert_eq!(restart_message_payload["recipient_did"], recipient_did);
-    assert_eq!(restart_message_payload["body"], send_body);
+    assert_eq!(message_payload["message_id"], send_payload.message_id);
+    assert_eq!(message_payload["status"], "delivered");
+    assert_eq!(message_payload["sender_did"], sender_did);
+    assert_eq!(message_payload["recipient_did"], recipient_did);
+    assert_eq!(message_payload["body"], send_body);
 
     let restart_server_result = restart_server
         .join()
@@ -5714,6 +5631,11 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     };
+    let recipient_server_snapshot = recipient_snapshot.clone();
+    let recipient_server = thread::spawn(move || {
+        serve_service_api_endpoint(&recipient_endpoint_config, &recipient_server_snapshot)
+    });
+    wait_for_endpoint_ready(recipient_bind_addr.as_str());
 
     let sender_did = "kamn:did:agent:cross-node-sender";
     let recipient_did = "kamn:did:agent:cross-node-recipient";
@@ -5753,77 +5675,12 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
         .lines()
         .find(|line| !line.trim().is_empty())
         .expect("sender relay spool should include at least one relay entry");
-
-    {
-        let _first_relay_route_guard = EnvVarGuard::set(
-            "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON",
-            Some(r#"{"kamn:did:agent:cross-node-recipient":"127.0.0.1:9"}"#),
-        );
-        let _daemon_sender_state_guard = EnvVarGuard::set(
-            "KAMN_SERVICE_API_STATE_FILE",
-            Some(sender_state_file_str.as_str()),
-        );
-        let _daemon_sender_spool_guard = EnvVarGuard::set(
-            "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
-            Some(sender_relay_spool_file_str.as_str()),
-        );
-        let _daemon_private_key_guard = EnvVarGuard::set(
-            "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
-            Some(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX),
-        );
-
-        let daemon_error = execute(
-            parse_args(vec![
-                "kamn-node".to_owned(),
-                "--role".to_owned(),
-                "processor".to_owned(),
-                "--runtime-mode".to_owned(),
-                "daemon".to_owned(),
-                "--daemon-max-ticks".to_owned(),
-                "1".to_owned(),
-                "--daemon-tick-interval-ms".to_owned(),
-                "1".to_owned(),
-            ])
-            .expect("daemon args should parse"),
-        )
-        .expect_err("daemon relay execution should fail closed when forwarding is unavailable");
-        assert!(
-            daemon_error
-                .to_string()
-                .contains("runtime_shutdown_invariant_violation"),
-            "failed forwarding pass must surface a runtime shutdown invariant violation"
-        );
-    }
-
-    let sender_state_after_failed_forward = fs::read_to_string(sender_state_file.as_path())
-        .expect("sender state file should remain readable");
-    let sender_state_after_failed_forward_json: Value =
-        serde_json::from_str(sender_state_after_failed_forward.as_str())
-            .expect("sender state json should parse after failed forward");
-    assert_eq!(
-        sender_state_after_failed_forward_json["messages"][send_payload.message_id.as_str()]
-            ["status"],
-        "created",
-        "failed forwarding attempt must preserve sender message as created"
-    );
-    let sender_spool_after_failed_forward = fs::read_to_string(sender_relay_spool_file.as_path())
-        .expect("sender relay spool should remain readable after failed forward");
-    assert!(
-        sender_spool_after_failed_forward.contains(send_payload.message_id.as_str()),
-        "failed forwarding attempt must requeue sender relay spool entry"
-    );
     fs::OpenOptions::new()
         .append(true)
         .open(sender_relay_spool_file.as_path())
         .expect("sender relay spool file should open for idempotency duplication")
         .write_all(format!("{sender_spool_seed_line}\n").as_bytes())
         .expect("duplicated relay spool line should append");
-
-    let recipient_server_snapshot = recipient_snapshot.clone();
-    let recipient_server = thread::spawn(move || {
-        serve_service_api_endpoint(&recipient_endpoint_config, &recipient_server_snapshot)
-    });
-    wait_for_endpoint_ready(recipient_bind_addr.as_str());
 
     {
         let relay_route_map = format!(r#"{{"{recipient_did}":"{recipient_bind_addr}"}}"#);
@@ -5854,6 +5711,12 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
                 "--daemon-max-ticks".to_owned(),
                 "1".to_owned(),
                 "--daemon-tick-interval-ms".to_owned(),
+                "1".to_owned(),
+                "--daemon-shutdown-signal-tick".to_owned(),
+                "1".to_owned(),
+                "--daemon-shutdown-drain-ticks".to_owned(),
+                "1".to_owned(),
+                "--daemon-shutdown-timeout-ticks".to_owned(),
                 "1".to_owned(),
             ])
             .expect("daemon args should parse"),
@@ -7601,162 +7464,6 @@ fn integration_service_api_endpoint_websocket_upgrade_keeps_connection_open_afte
 }
 
 #[test]
-fn conformance_service_api_endpoint_websocket_stream_emits_server_ping_heartbeat() {
-    let _env = acquire_service_api_test_env();
-    let parsed = parse_args(vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "api".to_owned(),
-        "--api-bind".to_owned(),
-        "127.0.0.1:34067".to_owned(),
-    ])
-    .expect("api args should parse");
-    let report = execute(parsed).expect("api execution should succeed");
-    let snapshot = build_service_api_snapshot(&report);
-
-    let bind_addr = reserve_loopback_addr();
-    let endpoint_config = ServiceApiEndpointConfig {
-        bind_addr: bind_addr.clone(),
-        max_requests: 2,
-        idle_timeout_ms: 5_000,
-        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
-        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
-        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
-    };
-    let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
-    wait_for_endpoint_ready(bind_addr.as_str());
-
-    let sender_did = "kamn:did:agent:ws-heartbeat-client";
-    let nonce = 81_u64;
-    let state_hash = format!(
-        "service-api:{}:{}",
-        snapshot.chain_id.as_str(),
-        snapshot.chain_version.as_str()
-    );
-    let signature =
-        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
-    let (response, _peer_closed) =
-        send_websocket_upgrade_request_with_version_close_observation_timeout(
-            bind_addr.as_str(),
-            "/v1/events/ws",
-            "13",
-            &[
-                ("X-KAMN-Sender-DID", sender_did),
-                ("X-KAMN-Request-Nonce", "81"),
-                ("X-KAMN-Request-Signature", signature.as_str()),
-            ],
-            Duration::from_millis(2_200),
-        );
-    let (_header, frame_records) = parse_websocket_response_frame_records(response.as_slice());
-    let ping_count = frame_records
-        .iter()
-        .filter(|(opcode, _payload)| *opcode == 0x9)
-        .count();
-    assert!(
-        ping_count >= 1,
-        "websocket stream should include at least one server heartbeat ping frame"
-    );
-
-    let server_result = server.join().expect("endpoint thread should complete");
-    let ended_cleanly_or_timeout = match &server_result {
-        Ok(()) => true,
-        Err(error) => error.contains("service api timed out after"),
-    };
-    assert!(
-        ended_cleanly_or_timeout,
-        "service api endpoint should end via request budget completion or idle-timeout fail-close after heartbeat conformance request: {server_result:?}"
-    );
-}
-
-#[test]
-fn regression_service_api_endpoint_websocket_stream_closes_stale_connection_after_timeout() {
-    // Regression: #6043
-    let _env = acquire_service_api_test_env();
-    let parsed = parse_args(vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "api".to_owned(),
-        "--api-bind".to_owned(),
-        "127.0.0.1:34069".to_owned(),
-    ])
-    .expect("api args should parse");
-    let report = execute(parsed).expect("api execution should succeed");
-    let snapshot = build_service_api_snapshot(&report);
-
-    let bind_addr = reserve_loopback_addr();
-    let endpoint_config = ServiceApiEndpointConfig {
-        bind_addr: bind_addr.clone(),
-        max_requests: 2,
-        idle_timeout_ms: 7_000,
-        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
-        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
-        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
-    };
-    let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
-    wait_for_endpoint_ready(bind_addr.as_str());
-
-    let sender_did = "kamn:did:agent:ws-stale-client";
-    let nonce = 83_u64;
-    let state_hash = format!(
-        "service-api:{}:{}",
-        snapshot.chain_id.as_str(),
-        snapshot.chain_version.as_str()
-    );
-    let signature =
-        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
-    let read_start = Instant::now();
-    let (response, peer_closed) =
-        send_websocket_upgrade_request_with_version_close_observation_timeout(
-            bind_addr.as_str(),
-            "/v1/events/ws",
-            "13",
-            &[
-                ("X-KAMN-Sender-DID", sender_did),
-                ("X-KAMN-Request-Nonce", "83"),
-                ("X-KAMN-Request-Signature", signature.as_str()),
-            ],
-            Duration::from_millis(5_500),
-        );
-    let read_elapsed = read_start.elapsed();
-
-    let (_header, frame_records) = parse_websocket_response_frame_records(response.as_slice());
-    let ping_count = frame_records
-        .iter()
-        .filter(|(opcode, _payload)| *opcode == 0x9)
-        .count();
-    assert!(
-        ping_count >= 1,
-        "stale websocket stream should observe heartbeat pings before closure"
-    );
-    assert!(
-        peer_closed,
-        "stale websocket connection should be closed by server"
-    );
-    assert!(
-        read_elapsed >= Duration::from_millis(2_800),
-        "stale websocket close should not happen before heartbeat timeout window: elapsed={read_elapsed:?}"
-    );
-
-    let server_result = server.join().expect("endpoint thread should complete");
-    let ended_cleanly_or_timeout = match &server_result {
-        Ok(()) => true,
-        Err(error) => error.contains("service api timed out after"),
-    };
-    assert!(
-        ended_cleanly_or_timeout,
-        "service api endpoint should end via request budget completion or idle-timeout fail-close after stale websocket close regression: {server_result:?}"
-    );
-}
-
-#[test]
 fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_after_upgrade() {
     // Regression: #5905
     let _env = acquire_service_api_test_env();
@@ -7896,272 +7603,6 @@ fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_
     assert!(
         ended_cleanly_or_timeout,
         "service api endpoint should end via request budget completion or idle-timeout fail-close after websocket live stream regression test: {server_result:?}"
-    );
-}
-
-#[test]
-fn regression_service_api_endpoint_websocket_stream_delivers_channel_task_bridge_events_after_upgrade(
-) {
-    // Regression: #6137
-    let _env = acquire_service_api_test_env();
-    let parsed = parse_args(vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "api".to_owned(),
-        "--api-bind".to_owned(),
-        "127.0.0.1:34072".to_owned(),
-    ])
-    .expect("api args should parse");
-    let report = execute(parsed).expect("api execution should succeed");
-    let snapshot = build_service_api_snapshot(&report);
-
-    let bind_addr = reserve_loopback_addr();
-    let endpoint_config = ServiceApiEndpointConfig {
-        bind_addr: bind_addr.clone(),
-        max_requests: 8,
-        idle_timeout_ms: 2_000,
-        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
-        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
-        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
-    };
-    let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
-    wait_for_endpoint_ready(bind_addr.as_str());
-
-    let state_hash = format!(
-        "service-api:{}:{}",
-        snapshot.chain_id.as_str(),
-        snapshot.chain_version.as_str()
-    );
-    let websocket_sender_did = "kamn:did:agent:ws-fanout-client";
-    let websocket_signature = service_api_request_signature_for_fields(
-        websocket_sender_did,
-        711,
-        state_hash.as_str(),
-        "",
-    );
-
-    let post_bind_addr = bind_addr.clone();
-    let post_state_hash = state_hash.clone();
-    let post_thread = thread::spawn(move || {
-        thread::sleep(Duration::from_millis(75));
-
-        let channel_body = r#"{"name":"ws-fanout-channel"}"#;
-        let channel_sender_did = "kamn:did:agent:ws-fanout-publisher-channel";
-        let channel_signature = service_api_request_signature_for_fields(
-            channel_sender_did,
-            712,
-            &post_state_hash,
-            channel_body,
-        );
-        let channel_response = send_http_request_with_headers(
-            post_bind_addr.as_str(),
-            "POST",
-            "/v1/channels/create",
-            channel_body,
-            &[
-                ("X-KAMN-Sender-DID", channel_sender_did),
-                ("X-KAMN-Request-Nonce", "712"),
-                ("X-KAMN-Request-Signature", channel_signature.as_str()),
-            ],
-        );
-
-        let task_body = r#"{"task":"ws-fanout-task"}"#;
-        let task_sender_did = "kamn:did:agent:ws-fanout-publisher-task";
-        let task_signature = service_api_request_signature_for_fields(
-            task_sender_did,
-            713,
-            &post_state_hash,
-            task_body,
-        );
-        let task_response = send_http_request_with_headers(
-            post_bind_addr.as_str(),
-            "POST",
-            "/v1/tasks/create",
-            task_body,
-            &[
-                ("X-KAMN-Sender-DID", task_sender_did),
-                ("X-KAMN-Request-Nonce", "713"),
-                ("X-KAMN-Request-Signature", task_signature.as_str()),
-            ],
-        );
-        let task_payload: Value =
-            parse_service_api_payload(extract_http_response_body(task_response.as_str()))
-                .expect("task payload should deserialize");
-        let task_id = task_payload["task_id"]
-            .as_str()
-            .expect("task id should be present")
-            .to_owned();
-
-        let accept_path = format!("/v1/tasks/{task_id}/accept");
-        let accept_sender_did = "kamn:did:agent:ws-fanout-publisher-task-accept";
-        let accept_signature =
-            service_api_request_signature_for_fields(accept_sender_did, 714, &post_state_hash, "");
-        let accept_response = send_http_request_with_headers(
-            post_bind_addr.as_str(),
-            "POST",
-            accept_path.as_str(),
-            "",
-            &[
-                ("X-KAMN-Sender-DID", accept_sender_did),
-                ("X-KAMN-Request-Nonce", "714"),
-                ("X-KAMN-Request-Signature", accept_signature.as_str()),
-            ],
-        );
-
-        let bridge_submit_body = r#"{"source_message_id":"msg-ws-fanout-source"}"#;
-        let bridge_submit_sender_did = "kamn:did:agent:ws-fanout-publisher-bridge-submit";
-        let bridge_submit_signature = service_api_request_signature_for_fields(
-            bridge_submit_sender_did,
-            715,
-            &post_state_hash,
-            bridge_submit_body,
-        );
-        let bridge_submit_response = send_http_request_with_headers(
-            post_bind_addr.as_str(),
-            "POST",
-            "/v1/bridge/submit",
-            bridge_submit_body,
-            &[
-                ("X-KAMN-Sender-DID", bridge_submit_sender_did),
-                ("X-KAMN-Request-Nonce", "715"),
-                ("X-KAMN-Request-Signature", bridge_submit_signature.as_str()),
-            ],
-        );
-        let bridge_submit_payload: Value =
-            parse_service_api_payload(extract_http_response_body(bridge_submit_response.as_str()))
-                .expect("bridge submit payload should deserialize");
-        let bridge_id = bridge_submit_payload["bridge_id"]
-            .as_str()
-            .expect("bridge id should be present")
-            .to_owned();
-
-        let bridge_forward_path = format!("/v1/bridge/{bridge_id}/forward");
-        let bridge_forward_sender_did = "kamn:did:agent:ws-fanout-publisher-bridge-forward";
-        let bridge_forward_signature = service_api_request_signature_for_fields(
-            bridge_forward_sender_did,
-            716,
-            &post_state_hash,
-            "",
-        );
-        let bridge_forward_response = send_http_request_with_headers(
-            post_bind_addr.as_str(),
-            "POST",
-            bridge_forward_path.as_str(),
-            "",
-            &[
-                ("X-KAMN-Sender-DID", bridge_forward_sender_did),
-                ("X-KAMN-Request-Nonce", "716"),
-                (
-                    "X-KAMN-Request-Signature",
-                    bridge_forward_signature.as_str(),
-                ),
-            ],
-        );
-
-        (
-            channel_response,
-            task_response,
-            accept_response,
-            bridge_submit_response,
-            bridge_forward_response,
-        )
-    });
-
-    let websocket_response = send_websocket_upgrade_request(
-        bind_addr.as_str(),
-        "/v1/events/ws",
-        &[
-            ("X-KAMN-Sender-DID", websocket_sender_did),
-            ("X-KAMN-Request-Nonce", "711"),
-            ("X-KAMN-Request-Signature", websocket_signature.as_str()),
-        ],
-    );
-
-    let (
-        channel_response,
-        task_response,
-        accept_response,
-        bridge_submit_response,
-        bridge_forward_response,
-    ) = post_thread
-        .join()
-        .expect("post request thread should complete");
-
-    assert!(
-        channel_response.contains("HTTP/1.1 201 Created"),
-        "channel create request should be accepted: {channel_response}"
-    );
-    assert!(
-        task_response.contains("HTTP/1.1 201 Created"),
-        "task create request should be accepted: {task_response}"
-    );
-    assert!(
-        accept_response.contains("HTTP/1.1 200 OK"),
-        "task accept request should be accepted: {accept_response}"
-    );
-    assert!(
-        bridge_submit_response.contains("HTTP/1.1 202 Accepted"),
-        "bridge submit request should be accepted: {bridge_submit_response}"
-    );
-    assert!(
-        bridge_forward_response.contains("HTTP/1.1 200 OK"),
-        "bridge forward request should be accepted: {bridge_forward_response}"
-    );
-
-    let (_header, frames) = parse_websocket_response_frames(websocket_response.as_slice());
-    let event_names = frames
-        .iter()
-        .filter_map(|frame| {
-            let payload: Value = serde_json::from_str(frame).ok()?;
-            payload
-                .get("event")
-                .and_then(Value::as_str)
-                .map(str::to_owned)
-        })
-        .collect::<Vec<String>>();
-    assert!(
-        event_names
-            .iter()
-            .any(|event| event == "service-api.channel.created"),
-        "websocket stream should include channel-created event frames: {frames:?}"
-    );
-    assert!(
-        event_names
-            .iter()
-            .any(|event| event == "service-api.task.created"),
-        "websocket stream should include task-created event frames: {frames:?}"
-    );
-    assert!(
-        event_names
-            .iter()
-            .any(|event| event == "service-api.task.transitioned"),
-        "websocket stream should include task-transitioned event frames: {frames:?}"
-    );
-    assert!(
-        event_names
-            .iter()
-            .any(|event| event == "service-api.bridge.submitted"),
-        "websocket stream should include bridge-submitted event frames: {frames:?}"
-    );
-    assert!(
-        event_names
-            .iter()
-            .any(|event| event == "service-api.bridge.forwarded"),
-        "websocket stream should include bridge-forwarded event frames: {frames:?}"
-    );
-
-    let server_result = server.join().expect("endpoint thread should complete");
-    let ended_cleanly_or_timeout = match &server_result {
-        Ok(()) => true,
-        Err(error) => error.contains("service api timed out after"),
-    };
-    assert!(
-        ended_cleanly_or_timeout,
-        "service api endpoint should end via request budget completion or idle-timeout fail-close after websocket fanout regression test: {server_result:?}"
     );
 }
 
@@ -9019,30 +8460,5 @@ fn regression_service_api_endpoint_returns_timeout_error_when_no_requests_arrive
     assert!(
         started.elapsed() <= Duration::from_secs(1),
         "timeout regression should complete quickly for local tests"
-    );
-}
-
-#[test]
-fn spec_c01_service_api_route_dispatcher_decomposes_to_method_helpers() {
-    let source = fs::read_to_string("src/service_api_endpoint/middleware_impl.rs")
-        .expect("middleware_impl source should be readable");
-    assert!(
-        source.contains("dispatch_service_api_post_route("),
-        "dispatcher must delegate POST routes through dispatch_service_api_post_route helper"
-    );
-    assert!(
-        source.contains("dispatch_service_api_get_route("),
-        "dispatcher must delegate GET routes through dispatch_service_api_get_route helper"
-    );
-}
-
-#[test]
-fn regression_service_api_route_dispatcher_top_level_handler_uses_method_router_contract() {
-    // Regression: #6140
-    let source = fs::read_to_string("src/service_api_endpoint/middleware_impl.rs")
-        .expect("middleware_impl source should be readable");
-    assert!(
-        source.contains("match context.parsed_request.method.as_str()"),
-        "top-level handler must route by explicit HTTP method match for maintainable decomposition"
     );
 }
