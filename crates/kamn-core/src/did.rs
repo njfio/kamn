@@ -1,9 +1,12 @@
 //! DID identity parsing, canonical document construction, and federated trust-handshake contracts.
 
+use sha2::{Digest, Sha256};
 use std::{collections::BTreeSet, fmt};
 
 const KAMN_DID_PREFIX: &str = "kamn:did:";
 const AGENT_DID_PREFIX: &str = "kamn:did:agent:";
+const AGENT_DID_KEY_BINDING_MARKER: &str = "--keyh-";
+const AGENT_DID_KEY_BINDING_HEX_LEN: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// Canonical KAMN DID wrapper for non-agent and agent role identifiers.
@@ -90,6 +93,76 @@ impl AgentDid {
     pub fn method_specific_id(&self) -> &str {
         &self.0[AGENT_DID_PREFIX.len()..]
     }
+
+    /// Returns DID-embedded key-binding fingerprint when present.
+    pub fn key_binding_fingerprint(&self) -> Option<&str> {
+        let method_specific_id = self.method_specific_id();
+        let (base, fingerprint) = method_specific_id.rsplit_once(AGENT_DID_KEY_BINDING_MARKER)?;
+        if base.is_empty() {
+            return None;
+        }
+        if fingerprint.len() != AGENT_DID_KEY_BINDING_HEX_LEN {
+            return None;
+        }
+        if !fingerprint.chars().all(|ch| ch.is_ascii_hexdigit()) {
+            return None;
+        }
+        Some(fingerprint)
+    }
+
+    /// Verifies that DID-embedded key-binding fingerprint matches `public_key_hex`.
+    pub fn ensure_public_key_hex_binding(
+        &self,
+        public_key_hex: &str,
+    ) -> Result<(), AgentDidKeyBindingError> {
+        let expected = self
+            .key_binding_fingerprint()
+            .ok_or(AgentDidKeyBindingError::MissingKeyBinding)?;
+        let actual = agent_did_key_binding_fingerprint_for_public_key_hex(public_key_hex)?;
+        if actual != expected {
+            return Err(AgentDidKeyBindingError::KeyBindingMismatch {
+                expected: expected.to_owned(),
+                actual,
+            });
+        }
+        Ok(())
+    }
+
+    /// Builds an agent DID with deterministic key-binding fingerprint suffix.
+    pub fn with_public_key_hex_binding(
+        method_specific_id: &str,
+        public_key_hex: &str,
+    ) -> Result<Self, AgentDidKeyBindingError> {
+        let normalized_method_specific_id = method_specific_id.trim();
+        if normalized_method_specific_id.is_empty() {
+            return Err(AgentDidKeyBindingError::InvalidMethodSpecificId(
+                "agent did method-specific id must not be empty".to_owned(),
+            ));
+        }
+        if normalized_method_specific_id.contains(AGENT_DID_KEY_BINDING_MARKER) {
+            return Err(AgentDidKeyBindingError::InvalidMethodSpecificId(
+                "agent did method-specific id must not include key-binding marker".to_owned(),
+            ));
+        }
+        if !normalized_method_specific_id
+            .chars()
+            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_')
+        {
+            return Err(AgentDidKeyBindingError::InvalidMethodSpecificId(
+                "agent did method-specific id has invalid characters".to_owned(),
+            ));
+        }
+        let key_binding_fingerprint =
+            agent_did_key_binding_fingerprint_for_public_key_hex(public_key_hex)?;
+        let rendered = format!(
+            "{AGENT_DID_PREFIX}{normalized_method_specific_id}{AGENT_DID_KEY_BINDING_MARKER}{key_binding_fingerprint}"
+        );
+        AgentDid::parse(rendered.as_str()).map_err(|error| {
+            AgentDidKeyBindingError::InvalidMethodSpecificId(format!(
+                "agent did key-binding rendering failed validation: {error}"
+            ))
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,6 +174,24 @@ pub enum AgentDidError {
     MissingMethodSpecificId,
     /// Method-specific id contained unsupported characters.
     InvalidCharacter(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Errors returned when validating or generating DID/public-key bindings.
+pub enum AgentDidKeyBindingError {
+    /// DID does not include key-binding fingerprint suffix.
+    MissingKeyBinding,
+    /// DID method-specific-id input is invalid for binding generation.
+    InvalidMethodSpecificId(String),
+    /// Public key hex could not be decoded.
+    InvalidPublicKeyHex,
+    /// DID fingerprint does not match derived public-key fingerprint.
+    KeyBindingMismatch {
+        /// Fingerprint embedded in DID.
+        expected: String,
+        /// Fingerprint derived from provided public key.
+        actual: String,
+    },
 }
 
 impl fmt::Display for AgentDidError {
@@ -117,7 +208,67 @@ impl fmt::Display for AgentDidError {
     }
 }
 
+impl fmt::Display for AgentDidKeyBindingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingKeyBinding => write!(f, "agent did key binding is missing"),
+            Self::InvalidMethodSpecificId(reason) => {
+                write!(f, "invalid agent did method-specific id: {reason}")
+            }
+            Self::InvalidPublicKeyHex => write!(f, "invalid public key hex for did key binding"),
+            Self::KeyBindingMismatch { expected, actual } => write!(
+                f,
+                "agent did key binding mismatch: expected={expected}, actual={actual}"
+            ),
+        }
+    }
+}
+
 impl std::error::Error for AgentDidError {}
+impl std::error::Error for AgentDidKeyBindingError {}
+
+fn decode_hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn decode_hex_bytes(value: &str) -> Option<Vec<u8>> {
+    let bytes = value.as_bytes();
+    if bytes.is_empty() || !bytes.len().is_multiple_of(2) {
+        return None;
+    }
+    let mut output = Vec::with_capacity(bytes.len() / 2);
+    for chunk in bytes.chunks_exact(2) {
+        let high = decode_hex_nibble(chunk[0])?;
+        let low = decode_hex_nibble(chunk[1])?;
+        output.push((high << 4) | low);
+    }
+    Some(output)
+}
+
+fn encode_hex_lower(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
+}
+
+fn agent_did_key_binding_fingerprint_for_public_key_hex(
+    public_key_hex: &str,
+) -> Result<String, AgentDidKeyBindingError> {
+    let bytes = decode_hex_bytes(public_key_hex.trim())
+        .ok_or(AgentDidKeyBindingError::InvalidPublicKeyHex)?;
+    let digest = Sha256::digest(bytes.as_slice());
+    let fingerprint_bytes = &digest[..(AGENT_DID_KEY_BINDING_HEX_LEN / 2)];
+    Ok(encode_hex_lower(fingerprint_bytes))
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Metadata extension embedded in KAMN DID documents.
@@ -695,8 +846,8 @@ pub fn canonical_did_document(
 mod tests {
     use super::{
         canonical_did_document, canonical_service_endpoint,
-        validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
-        DidDocumentError, KamnDid, KamnDidError,
+        validate_did_verification_method_algorithms, AgentDid, AgentDidError,
+        AgentDidKeyBindingError, AgentDidMetadata, DidDocumentError, KamnDid, KamnDidError,
     };
 
     fn metadata() -> AgentDidMetadata {
@@ -789,5 +940,54 @@ mod tests {
                 "mixed verification method algorithms are not allowed".to_owned()
             ))
         );
+    }
+
+    const TEST_PUBLIC_KEY_HEX: &str =
+        "025f6ceceac37540cf6ef5f09d4f62c05f0b8f57fe6d8ae32a8f13f4a2eb6e940d";
+    const TEST_PUBLIC_KEY_HEX_ALT: &str =
+        "02dbf4fcb77ef6a9f2d0f5f0d7c7faaf02f53b724f4cfe6fe1d95ff5a6d4bf8132";
+
+    #[test]
+    fn unit_agent_did_with_public_key_hex_binding_embeds_fingerprint_suffix() {
+        let did = AgentDid::with_public_key_hex_binding("agent-1", TEST_PUBLIC_KEY_HEX)
+            .expect("bound did should render");
+        assert!(did.as_str().starts_with("kamn:did:agent:agent-1--keyh-"));
+        let fingerprint = did
+            .key_binding_fingerprint()
+            .expect("bound did should expose fingerprint");
+        assert_eq!(fingerprint.len(), 32);
+    }
+
+    #[test]
+    fn regression_agent_did_key_binding_verification_rejects_missing_binding() {
+        // Regression: #6109
+        let did = AgentDid::parse("kamn:did:agent:agent-1").expect("did should parse");
+        assert_eq!(
+            did.ensure_public_key_hex_binding(TEST_PUBLIC_KEY_HEX),
+            Err(AgentDidKeyBindingError::MissingKeyBinding)
+        );
+    }
+
+    #[test]
+    fn regression_agent_did_key_binding_verification_rejects_mismatched_public_key() {
+        // Regression: #6109
+        let did = AgentDid::with_public_key_hex_binding("agent-2", TEST_PUBLIC_KEY_HEX)
+            .expect("bound did should render");
+        let error = did
+            .ensure_public_key_hex_binding(TEST_PUBLIC_KEY_HEX_ALT)
+            .expect_err("mismatched public key should fail binding verification");
+        assert!(
+            matches!(error, AgentDidKeyBindingError::KeyBindingMismatch { .. }),
+            "expected key binding mismatch error"
+        );
+    }
+
+    #[test]
+    fn regression_agent_did_key_binding_verification_accepts_matching_public_key() {
+        // Regression: #6109
+        let did = AgentDid::with_public_key_hex_binding("agent-3", TEST_PUBLIC_KEY_HEX)
+            .expect("bound did should render");
+        did.ensure_public_key_hex_binding(TEST_PUBLIC_KEY_HEX)
+            .expect("matching public key should satisfy did binding");
     }
 }
