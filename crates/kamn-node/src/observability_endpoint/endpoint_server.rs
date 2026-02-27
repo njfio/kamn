@@ -73,7 +73,7 @@ pub(super) async fn serve_observability_endpoint_async(
     config: ObservabilityEndpointConfig,
     snapshot: RuntimeObservabilitySnapshot,
 ) -> Result<(), String> {
-    let tls_mode = resolve_observability_endpoint_tls_mode()?;
+    let tls_mode = resolve_observability_endpoint_tls_mode(snapshot.runtime_mode.as_str())?;
     let request_budget = Arc::new(ObservabilityRequestBudget::new(config.max_requests));
     let runtime_state = Arc::new(ObservabilityEndpointRuntimeState {
         snapshot,

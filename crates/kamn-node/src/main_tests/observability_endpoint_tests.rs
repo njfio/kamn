@@ -955,6 +955,80 @@ fn integration_runtime_observability_endpoint_tls_mode_serves_required_https_rou
 }
 
 #[test]
+fn regression_runtime_observability_endpoint_tls_mode_defaults_to_require_for_kolme_live() {
+    let _env_lock = daemon_test_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _tls_mode_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE", None);
+    let _tls_cert_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE", None);
+    let _tls_key_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE", None);
+
+    let mut snapshot = sample_observability_snapshot();
+    snapshot.source = "kolme-live".to_owned();
+    snapshot.runtime_mode = "kolme-live".to_owned();
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr,
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 50,
+    };
+
+    let error = serve_observability_endpoint(&endpoint_config, &snapshot)
+        .expect_err("kolme-live default tls mode must fail closed without cert/key env");
+    assert!(
+        error.contains(
+            "observability endpoint tls mode requires env: KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE"
+        ),
+        "unexpected kolme-live default-tls marker: {error}"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_tls_mode_allows_explicit_disabled_override_for_kolme_live(
+) {
+    let _env_lock = daemon_test_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _tls_mode_guard =
+        EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE", Some("disabled"));
+    let _tls_cert_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE", None);
+    let _tls_key_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE", None);
+
+    let mut snapshot = sample_observability_snapshot();
+    snapshot.source = "kolme-live".to_owned();
+    snapshot.runtime_mode = "kolme-live".to_owned();
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let metrics_response = send_http_get(bind_addr.as_str(), "/metrics");
+    assert!(
+        metrics_response.contains("HTTP/1.1 200 OK"),
+        "explicit disabled override should keep HTTP observability path available for local/dev use"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "explicit disabled override should permit plaintext observability endpoint path"
+    );
+}
+
+#[test]
 fn regression_runtime_observability_endpoint_tls_mode_rejects_missing_cert_file() {
     let snapshot = sample_observability_snapshot();
     let bind_addr = reserve_loopback_addr();
