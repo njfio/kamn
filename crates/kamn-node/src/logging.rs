@@ -64,6 +64,12 @@ pub(crate) fn resolve_log_config_from_env() -> Result<NodeLogConfig, ConfigError
     resolve_log_config_from_inputs(level_value.as_deref(), format_value.as_deref())
 }
 
+pub(crate) fn initialize_log_config_from_env() -> Result<NodeLogConfig, ConfigError> {
+    let resolved = resolve_log_config_from_env()?;
+    write_cached_log_config(resolved);
+    Ok(resolved)
+}
+
 pub(crate) fn resolve_log_config_from_inputs(
     level: Option<&str>,
     format: Option<&str>,
@@ -139,6 +145,16 @@ fn write_cached_log_config_if_absent(config: NodeLogConfig) {
             if guard.is_none() {
                 *guard = Some(config);
             }
+        }
+    }
+}
+
+fn write_cached_log_config(config: NodeLogConfig) {
+    match LOG_CONFIG_CACHE.write() {
+        Ok(mut guard) => *guard = Some(config),
+        Err(poisoned) => {
+            let mut guard = poisoned.into_inner();
+            *guard = Some(config);
         }
     }
 }
@@ -372,8 +388,9 @@ fn record_test_log_line(_line: &str) {}
 #[cfg(test)]
 mod tests {
     use super::{
-        capture_test_logs, emit_log_event, reset_cached_log_config_for_tests, NodeLogLevel,
-        KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
+        capture_test_logs, emit_log_event, initialize_log_config_from_env,
+        reset_cached_log_config_for_tests, NodeLogLevel, KAMN_NODE_LOG_FORMAT_ENV,
+        KAMN_NODE_LOG_LEVEL_ENV,
     };
     use std::env;
     use std::sync::Mutex;
@@ -463,6 +480,32 @@ mod tests {
         assert!(
             logs[0].contains("\"event\":\"json-format\""),
             "json log line should include event field"
+        );
+    }
+
+    #[test]
+    fn regression_initialize_log_config_overwrites_cache_and_ignores_later_env_mutation() {
+        let _guard = lock_log_env_test_guard();
+        reset_cached_log_config_for_tests();
+        let _level_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_LEVEL_ENV, Some("info"));
+        let _format_guard = EnvVarTestGuard::set(KAMN_NODE_LOG_FORMAT_ENV, Some("text"));
+
+        initialize_log_config_from_env().expect("startup log config should initialize");
+
+        env::set_var(KAMN_NODE_LOG_LEVEL_ENV, "error");
+        env::set_var(KAMN_NODE_LOG_FORMAT_ENV, "json");
+
+        let (result, logs) =
+            capture_test_logs(|| emit_log_event(NodeLogLevel::Info, "startup-cache-check", &[]));
+        assert!(result.is_ok(), "log emission should succeed");
+        assert_eq!(
+            logs.len(),
+            1,
+            "cached info/text config should still emit info"
+        );
+        assert!(
+            logs[0].contains("event=startup-cache-check"),
+            "cached text formatter should remain active"
         );
     }
 
