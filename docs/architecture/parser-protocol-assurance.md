@@ -14,6 +14,7 @@ property-based invariant checks.
 - `fuzz/fuzz_targets/did_parser.rs`
 - `fuzz/fuzz_targets/signature_profile_parser.rs`
 - `fuzz/fuzz_targets/kolme_api_codec_parser.rs`
+- `fuzz/fuzz_targets/kolme_flat_json_policy_parser.rs`
 
 Corpus metadata is tracked in:
 

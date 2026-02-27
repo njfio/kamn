@@ -87,6 +87,7 @@
   - `did_parser`
   - `signature_profile_parser`
   - `kolme_api_codec_parser`
+  - `kolme_flat_json_policy_parser`
 - Deterministic corpus metadata:
   - `fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json`
 - Property invariant suites:
