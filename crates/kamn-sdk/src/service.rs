@@ -13,8 +13,10 @@ use std::net::{IpAddr, TcpStream};
 use std::sync::Arc;
 use std::time::Duration;
 
-const REQUEST_TIMEOUT_SECONDS: u64 = 2;
+const DEFAULT_REQUEST_TIMEOUT_SECONDS: u64 = 2;
 const SERVICE_TLS_CA_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CA_FILE";
+const SERVICE_REQUEST_TIMEOUT_SECONDS_FIELD: &str = "service.request_timeout_seconds";
+const SERVICE_REQUEST_TIMEOUT_SECONDS_INVALID_REASON: &str = "must be greater than zero";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
@@ -161,20 +163,20 @@ impl ServiceEndpoint {
         format!("{}{}", self.base_path, route)
     }
 
-    fn connect_tcp_stream(&self) -> Result<TcpStream, SdkError> {
+    fn connect_tcp_stream(&self, request_timeout: Duration) -> Result<TcpStream, SdkError> {
         let stream = TcpStream::connect((self.host.as_str(), self.port))
             .map_err(|_| SdkError::TransportFailure("failed to connect to service endpoint"))?;
         stream
-            .set_read_timeout(Some(Duration::from_secs(REQUEST_TIMEOUT_SECONDS)))
+            .set_read_timeout(Some(request_timeout))
             .map_err(|_| SdkError::TransportFailure("failed to configure service read timeout"))?;
         stream
-            .set_write_timeout(Some(Duration::from_secs(REQUEST_TIMEOUT_SECONDS)))
+            .set_write_timeout(Some(request_timeout))
             .map_err(|_| SdkError::TransportFailure("failed to configure service write timeout"))?;
         Ok(stream)
     }
 
-    fn connect_stream(&self) -> Result<ServiceStream, SdkError> {
-        let tcp_stream = self.connect_tcp_stream()?;
+    fn connect_stream(&self, request_timeout: Duration) -> Result<ServiceStream, SdkError> {
+        let tcp_stream = self.connect_tcp_stream(request_timeout)?;
         if self.scheme == ServiceScheme::Http {
             return Ok(ServiceStream::Tcp(tcp_stream));
         }
@@ -631,13 +633,29 @@ struct HttpResponse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceApiClient {
     endpoint: ServiceEndpoint,
+    request_timeout_seconds: u64,
 }
 
 impl ServiceApiClient {
     /// Connects and validates the base service endpoint.
     pub fn connect(endpoint: &str) -> Result<Self, SdkError> {
+        Self::connect_with_timeout_seconds(endpoint, DEFAULT_REQUEST_TIMEOUT_SECONDS)
+    }
+
+    /// Connects and validates the base service endpoint with a configurable timeout.
+    pub fn connect_with_timeout_seconds(
+        endpoint: &str,
+        request_timeout_seconds: u64,
+    ) -> Result<Self, SdkError> {
+        if request_timeout_seconds == 0 {
+            return Err(SdkError::InvalidInput {
+                field: SERVICE_REQUEST_TIMEOUT_SECONDS_FIELD,
+                reason: SERVICE_REQUEST_TIMEOUT_SECONDS_INVALID_REASON,
+            });
+        }
         Ok(Self {
             endpoint: ServiceEndpoint::parse(endpoint)?,
+            request_timeout_seconds,
         })
     }
 
@@ -959,7 +977,7 @@ impl ServiceApiClient {
         &self,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceRouteEvent, SdkError> {
-        let mut stream = self.endpoint.connect_stream()?;
+        let mut stream = self.endpoint.connect_stream(self.request_timeout())?;
         let route = self.endpoint.route_path(SERVICE_WS_ROUTE);
         validate_request_path(route.as_str())?;
         let authority = format!("{}:{}", self.endpoint.host, self.endpoint.port);
@@ -1013,7 +1031,7 @@ impl ServiceApiClient {
         body: &str,
         auth: Option<&ServiceRequestAuth>,
     ) -> Result<HttpResponse, SdkError> {
-        let mut stream = self.endpoint.connect_stream()?;
+        let mut stream = self.endpoint.connect_stream(self.request_timeout())?;
         validate_request_method(method)?;
         let path = self.endpoint.route_path(route);
         validate_request_path(path.as_str())?;
@@ -1033,6 +1051,10 @@ impl ServiceApiClient {
 
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
+    }
+
+    fn request_timeout(&self) -> Duration {
+        Duration::from_secs(self.request_timeout_seconds)
     }
 }
 
@@ -1492,12 +1514,15 @@ mod tests {
         read_response_bytes, service_public_key_for_private_key,
         service_signature_for_state_hash_with_private_key,
         service_verify_signature_with_public_key, write_and_flush_request, SdkError,
-        ServiceApiClient, ServiceRequestAuth, MAX_SERVICE_RESPONSE_BYTES,
+        ServiceApiClient, ServiceEndpoint, ServiceRequestAuth, MAX_SERVICE_RESPONSE_BYTES,
         SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED, SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
     };
     use crate::AgentDid;
     use std::collections::VecDeque;
     use std::io::{ErrorKind, Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+    use std::time::Duration;
 
     enum ReadStep {
         Bytes(Vec<u8>),
@@ -1738,6 +1763,55 @@ mod tests {
             error,
             SdkError::TransportFailure("service websocket response frame payload length overflow")
         );
+    }
+
+    #[test]
+    fn spec_c02_service_api_client_connect_with_timeout_rejects_zero_seconds() {
+        let error = ServiceApiClient::connect_with_timeout_seconds("http://127.0.0.1:34052", 0)
+            .expect_err("zero timeout seconds must fail closed");
+        assert_eq!(
+            error,
+            SdkError::InvalidInput {
+                field: "service.request_timeout_seconds",
+                reason: "must be greater than zero",
+            }
+        );
+    }
+
+    #[test]
+    fn spec_c03_service_api_client_connect_uses_default_timeout_seconds() {
+        let client = ServiceApiClient::connect("http://127.0.0.1:34052")
+            .expect("client should construct with default timeout");
+        assert_eq!(client.request_timeout_seconds, 2);
+    }
+
+    #[test]
+    fn spec_c04_service_endpoint_connect_tcp_stream_applies_configured_timeout() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+        let addr = listener
+            .local_addr()
+            .expect("listener address should resolve");
+        let accept_thread = thread::spawn(move || {
+            let _ = listener.accept();
+        });
+
+        let endpoint = ServiceEndpoint::parse(format!("http://{addr}").as_str())
+            .expect("endpoint should parse");
+        let timeout = Duration::from_secs(7);
+        let stream = endpoint
+            .connect_tcp_stream(timeout)
+            .expect("tcp stream should connect");
+        assert_eq!(
+            stream.read_timeout().expect("read timeout should resolve"),
+            Some(timeout)
+        );
+        assert_eq!(
+            stream
+                .write_timeout()
+                .expect("write timeout should resolve"),
+            Some(timeout)
+        );
+        let _ = accept_thread.join();
     }
 
     const TEST_PRIVATE_KEY_HEX: &str =
