@@ -172,49 +172,6 @@ jobs:
           path: ci-shell-loc-hard-ceiling.json
           if-no-files-found: error
 
-      - name: Check docs-contract test-file budget
-        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
-        run: |
-          docs_contract_test_file_max="$(grep -E '^DOCS_CONTRACT_TEST_FILE_MAX=' .ci/docs-contract-test-file-budget.env | cut -d= -f2)"
-          docs_contract_test_file_count="$(git ls-files 'crates/*/tests/*_docs.rs' | wc -l | tr -d '[:space:]')"
-          if [[ ! "$docs_contract_test_file_max" =~ ^[0-9]+$ ]] || [[ ! "$docs_contract_test_file_count" =~ ^[0-9]+$ ]]; then
-            echo "invalid docs-contract test-file budget configuration or metric value" >&2
-            exit 1
-          fi
-          final_decision="GO"
-          status="ok"
-          reason_codes="none"
-          if [ "$docs_contract_test_file_count" -gt "$docs_contract_test_file_max" ]; then
-            final_decision="NO-GO"
-            status="fail"
-            reason_codes="docs_contract_test_file_budget_exceeded"
-          fi
-          cat > ci-docs-contract-test-file-budget.json <<JSON
-          {
-            "schema_version": "kamn.ci.docs-contract-test-file-budget-report.v1",
-            "status": "${status}",
-            "final_decision": "${final_decision}",
-            "reason_codes": "${reason_codes}",
-            "metrics": {
-              "docs_contract_test_file_count": ${docs_contract_test_file_count},
-              "docs_contract_test_file_max": ${docs_contract_test_file_max},
-              "delta_to_docs_contract_test_file_max": $((docs_contract_test_file_max - docs_contract_test_file_count))
-            }
-          }
-          JSON
-          if [ "$status" != "ok" ]; then
-            echo "docs-contract test-file budget exceeded: ${docs_contract_test_file_count} > ${docs_contract_test_file_max}" >&2
-            exit 1
-          fi
-
-      - name: Upload docs-contract test-file budget telemetry
-        if: always() && hashFiles('ci-docs-contract-test-file-budget.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-docs-contract-test-file-budget-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ci-docs-contract-test-file-budget.json
-          if-no-files-found: error
-
       - name: Check shell-surface threshold ratchet
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |
@@ -223,6 +180,12 @@ jobs:
             --ratio-threshold-file .ci/shell-rust-ratio-guardrail.env \
             --ratchet-exception-file .ci/shell-surface-threshold-ratchet-exception.json \
             --output-json ci-shell-surface-threshold-ratchet.json
+          docs_contract_test_file_max="$(grep -E '^DOCS_CONTRACT_TEST_FILE_MAX=' .ci/docs-contract-test-file-budget.env | cut -d= -f2)"
+          docs_contract_test_file_count="$(git ls-files 'crates/*/tests/*_docs.rs' | wc -l | tr -d '[:space:]')"
+          if [ "$docs_contract_test_file_count" -gt "$docs_contract_test_file_max" ]; then
+            echo "docs-contract test-file budget exceeded: ${docs_contract_test_file_count} > ${docs_contract_test_file_max}" >&2
+            exit 1
+          fi
 
       - name: Upload shell-surface threshold ratchet telemetry
         if: always() && hashFiles('ci-shell-surface-threshold-ratchet.json') != ''
