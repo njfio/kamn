@@ -127,9 +127,11 @@ fn spec_c18_workflow_sets_explicit_tls_mode_for_all_live_lanes() {
     let workflow = std::fs::read_to_string(root.join(".github/workflows/e2e-live.yml"))
         .expect("e2e-live workflow should exist");
 
-    let tls_disable_marker_count = workflow.matches("KAMN_SERVICE_API_TLS_MODE=disable").count();
+    let tls_disabled_marker_count = workflow
+        .matches("KAMN_SERVICE_API_TLS_MODE=disabled")
+        .count();
     assert_eq!(
-        tls_disable_marker_count, 3,
-        "workflow must set explicit disable mode for all three live lanes"
+        tls_disabled_marker_count, 3,
+        "workflow must set explicit disabled mode for all three live lanes"
     );
 }
