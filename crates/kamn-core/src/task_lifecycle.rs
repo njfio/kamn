@@ -210,64 +210,118 @@ impl fmt::Display for TaskLifecycleError {
 
 impl std::error::Error for TaskLifecycleError {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct TaskTransitionEdge {
+    from: TaskState,
+    transition: TaskTransition,
+    to: TaskState,
+}
+
+const TASK_TRANSITION_EDGES: &[TaskTransitionEdge] = &[
+    TaskTransitionEdge {
+        from: TaskState::Submitted,
+        transition: TaskTransition::Accept,
+        to: TaskState::Accepted,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Submitted,
+        transition: TaskTransition::Cancel,
+        to: TaskState::Cancelled,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Accepted,
+        transition: TaskTransition::Delegate,
+        to: TaskState::Delegated,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Accepted,
+        transition: TaskTransition::StartWork,
+        to: TaskState::InProgress,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Accepted,
+        transition: TaskTransition::Cancel,
+        to: TaskState::Cancelled,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Delegated,
+        transition: TaskTransition::StartWork,
+        to: TaskState::InProgress,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Delegated,
+        transition: TaskTransition::Cancel,
+        to: TaskState::Cancelled,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InProgress,
+        transition: TaskTransition::Block,
+        to: TaskState::Blocked,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InProgress,
+        transition: TaskTransition::RequestInput,
+        to: TaskState::InputRequired,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InProgress,
+        transition: TaskTransition::Complete,
+        to: TaskState::Completed,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InProgress,
+        transition: TaskTransition::Fail,
+        to: TaskState::Failed,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InProgress,
+        transition: TaskTransition::Cancel,
+        to: TaskState::Cancelled,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InputRequired,
+        transition: TaskTransition::StartWork,
+        to: TaskState::InProgress,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InputRequired,
+        transition: TaskTransition::Fail,
+        to: TaskState::Failed,
+    },
+    TaskTransitionEdge {
+        from: TaskState::InputRequired,
+        transition: TaskTransition::Cancel,
+        to: TaskState::Cancelled,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Blocked,
+        transition: TaskTransition::StartWork,
+        to: TaskState::InProgress,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Blocked,
+        transition: TaskTransition::Fail,
+        to: TaskState::Failed,
+    },
+    TaskTransitionEdge {
+        from: TaskState::Blocked,
+        transition: TaskTransition::Cancel,
+        to: TaskState::Cancelled,
+    },
+];
+
 fn next_state(from: TaskState, transition: TaskTransition) -> Option<TaskState> {
-    match (from, transition) {
-        (TaskState::Submitted, TaskTransition::Accept) => Some(TaskState::Accepted),
-        (TaskState::Submitted, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::Accepted, TaskTransition::Delegate) => Some(TaskState::Delegated),
-        (TaskState::Accepted, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::Accepted, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::Delegated, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::Delegated, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::InProgress, TaskTransition::Block) => Some(TaskState::Blocked),
-        (TaskState::InProgress, TaskTransition::RequestInput) => Some(TaskState::InputRequired),
-        (TaskState::InProgress, TaskTransition::Complete) => Some(TaskState::Completed),
-        (TaskState::InProgress, TaskTransition::Fail) => Some(TaskState::Failed),
-        (TaskState::InProgress, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::InputRequired, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::InputRequired, TaskTransition::Fail) => Some(TaskState::Failed),
-        (TaskState::InputRequired, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::Blocked, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::Blocked, TaskTransition::Fail) => Some(TaskState::Failed),
-        (TaskState::Blocked, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        _ => None,
-    }
+    TASK_TRANSITION_EDGES
+        .iter()
+        .find(|edge| edge.from == from && edge.transition == transition)
+        .map(|edge| edge.to)
 }
 
 fn transition_between(from: TaskState, to: TaskState) -> Option<TaskTransition> {
-    match (from, to) {
-        (TaskState::Submitted, TaskState::Accepted) => Some(TaskTransition::Accept),
-        (TaskState::Submitted, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::Accepted, TaskState::Delegated) => Some(TaskTransition::Delegate),
-        (TaskState::Accepted, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::Accepted, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::Delegated, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::Delegated, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::InProgress, TaskState::Blocked) => Some(TaskTransition::Block),
-        (TaskState::InProgress, TaskState::InputRequired) => Some(TaskTransition::RequestInput),
-        (TaskState::InProgress, TaskState::Completed) => Some(TaskTransition::Complete),
-        (TaskState::InProgress, TaskState::Failed) => Some(TaskTransition::Fail),
-        (TaskState::InProgress, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::InputRequired, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::InputRequired, TaskState::Failed) => Some(TaskTransition::Fail),
-        (TaskState::InputRequired, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::Blocked, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::Blocked, TaskState::Failed) => Some(TaskTransition::Fail),
-        (TaskState::Blocked, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        _ => None,
-    }
+    TASK_TRANSITION_EDGES
+        .iter()
+        .find(|edge| edge.from == from && edge.to == to)
+        .map(|edge| edge.transition)
 }
 
 fn is_terminal(state: TaskState) -> bool {
@@ -280,6 +334,7 @@ fn is_terminal(state: TaskState) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
+    use std::collections::HashSet;
 
     #[test]
     fn new_rejects_empty_task_id() {
@@ -310,6 +365,38 @@ mod tests {
         assert!(lifecycle.transition(TaskTransition::RequestInput).is_ok());
         assert!(lifecycle.transition(TaskTransition::StartWork).is_ok());
         assert_eq!(lifecycle.state(), TaskState::InProgress);
+    }
+
+    #[test]
+    fn regression_transition_edge_table_is_bidirectionally_consistent() {
+        // Regression: #6127
+        let mut unique_from_transition = HashSet::new();
+        let mut unique_from_to = HashSet::new();
+
+        for edge in super::TASK_TRANSITION_EDGES {
+            assert!(
+                unique_from_transition.insert((edge.from, edge.transition)),
+                "duplicate from+transition edge for {:?} via {:?}",
+                edge.from,
+                edge.transition
+            );
+            assert!(
+                unique_from_to.insert((edge.from, edge.to)),
+                "duplicate from+to edge for {:?} -> {:?}",
+                edge.from,
+                edge.to
+            );
+            assert_eq!(
+                super::next_state(edge.from, edge.transition),
+                Some(edge.to),
+                "next_state lookup must match transition edge table"
+            );
+            assert_eq!(
+                super::transition_between(edge.from, edge.to),
+                Some(edge.transition),
+                "transition_between lookup must match transition edge table"
+            );
+        }
     }
 
     #[test]
