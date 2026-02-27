@@ -10,30 +10,43 @@
 - Parent: #6099
 
 ## Problem Statement
-Close remaining distributed coordination gap by integrating P2P transport into delivery path.
+`kamn-node` daemon relay currently forwards queued `/v1/messages/send` entries only through HTTP
+recipient route maps. That leaves the live P2P transport path unwired for message delivery, so
+multi-node relay cannot run over the transport profile used by production runtime policy.
 
 ## Scope
 In scope:
-- Implement targeted remediation for `X-07` from `docs/review/gaps-and-issues-r59-swarm.md`.
-- Add/adjust conformance, regression, and functional test coverage for the remediated path.
-- Update affected documentation and lifecycle artifacts within the same change-set.
+- Add optional daemon relay P2P wiring that can forward queued relay entries through
+  `kamn_core` transport and ingest inbound relay frames into local service-api message state.
+- Keep existing HTTP relay forwarding as compatibility fallback when P2P is not configured or
+  cannot route a recipient.
+- Add regression/conformance coverage for P2P success and failure paths.
+- Update lifecycle/spec artifacts for deterministic AC-to-test mapping.
 
 Out of scope:
-- Unrelated refactors outside `X-07`.
-- Unscoped protocol/schema redesign not required by the finding.
+- Protocol redesign beyond relay-path transport selection.
+- Unrelated runtime orchestration refactors outside daemon relay handling.
 
 ## Risk Level
 `med`
 
 ## Acceptance Criteria
-- AC-1: The X-07 gap is remediated with production-safe behavior.
-- AC-2: Regression/conformance tests cover the remediation path.
-- AC-3: Issue closure includes measurable evidence and linked PR.
+- AC-1: Daemon relay tick loop supports an optional P2P transport path for outbound relay entries,
+  keyed by recipient DID → peer-id mapping, without removing existing HTTP behavior.
+- AC-2: Daemon relay tick loop drains inbound P2P relay frames and upserts relayed message state
+  into local service-api persistence.
+- AC-3: If outbound P2P delivery fails for an entry, daemon requeues that entry deterministically
+  and does not project false relayed status.
+- AC-4: Regression/conformance tests cover outbound P2P success + failure and preserve existing
+  HTTP/no-route behavior.
 
 ## Conformance Cases
-- C-01 (Conformance, AC-1): Implemented behavior resolves R59 X-07 with deterministic pass/fail signals.
-- C-02 (Regression, AC-2): RED->GREEN test sequence demonstrates failing precondition and passing post-remediation behavior.
-- C-03 (Conformance, AC-3): Issue closure references PR, test commands, and measurable outputs tied to acceptance criteria.
+- C-01 (Integration/Conformance, AC-1/AC-2): Two deterministic daemon relay nodes configured for
+  shared P2P topic deliver a queued relay message from sender spool to recipient state via P2P.
+- C-02 (Regression, AC-3): Recipient peer unavailable path requeues relay entry and increments
+  processing error count without projecting sender status to `relayed`.
+- C-03 (Functional/Conformance, AC-4): Existing no-route/HTTP relay behavior remains deterministic
+  when P2P relay config is absent.
 
 ## Success Metrics / Observable Signals
 - Targeted R59 finding `X-07` no longer appears as unresolved in follow-up review docs.
