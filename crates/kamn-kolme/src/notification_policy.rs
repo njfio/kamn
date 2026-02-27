@@ -1,5 +1,6 @@
 //! Notification event parsing contracts for Kolme websocket payloads.
 
+use crate::json_parse_helpers::skip_ascii_whitespace;
 use crate::json_scalar_policy::parse_json_string_token as parse_json_string;
 use crate::provider_outcome_policy::deterministic_backend_commit_id;
 use crate::runtime_lifecycle_policy::KolmeCommitReceiptFinality;
@@ -368,17 +369,6 @@ fn parse_notification_positive_u64(
         });
     }
     Ok(parsed)
-}
-
-fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
-    while let Some(byte) = value.as_bytes().get(cursor).copied() {
-        if byte.is_ascii_whitespace() {
-            cursor += 1;
-            continue;
-        }
-        break;
-    }
-    cursor
 }
 
 #[cfg(test)]

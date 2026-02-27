@@ -5,6 +5,14 @@ durable snapshot persistence/restore guards for message lifecycle state.
 
 ## Lifecycle State Machine
 - `Created -> Signed -> Broadcast -> Included -> Delivered -> Validated -> Rejected -> Expired`
+- Overdue expiry transitions are policy-validated edges:
+  - `Created -> Expired`
+  - `Signed -> Expired`
+  - `Broadcast -> Expired`
+  - `Included -> Expired`
+  - `Delivered -> Expired`
+  - `Validated -> Expired`
+  - `Rejected -> Expired`
 - Any transition outside the canonical chain is rejected with
   `MessageLifecycleError::InvalidTransition`.
 
@@ -16,9 +24,9 @@ durable snapshot persistence/restore guards for message lifecycle state.
 - `status(message_id)`:
   returns current lifecycle status.
 - `expire_message_if_overdue(message_id, observed_at)`:
-  expires an active message deterministically when `observed_at > expires`.
+  expires an expirable message deterministically when `observed_at > expires`.
 - `expire_overdue_messages(observed_at)`:
-  sweeps active records and returns deterministically ordered expired message IDs.
+  sweeps expirable records and returns deterministically ordered expired message IDs.
 - `ids_by_status(status)`:
   returns deterministic message IDs for a lifecycle stage.
 - `ids_by_sender(sender)`:
@@ -41,8 +49,9 @@ durable snapshot persistence/restore guards for message lifecycle state.
 - `created` and `expires` timestamps must be non-empty, with `expires > created`.
 - `observed_at` passed to expiry APIs must be non-empty.
 - Unknown message IDs return `MessageLifecycleError::NotFound`.
-- Expiry APIs only transition active records (`Created`, `Signed`, `Broadcast`,
-  `Included`, `Delivered`) to `Expired`.
+- Expiry APIs only transition expirable records (`Created`, `Signed`, `Broadcast`,
+  `Included`, `Delivered`, `Validated`, `Rejected`) to `Expired`.
+- Expiry APIs use the same transition validator as `transition(...)`; direct status bypass is not permitted (`Regression: #6115`).
 
 ## Snapshot Persistence and Restore Contract Rules
 - Snapshot schema is versioned with
