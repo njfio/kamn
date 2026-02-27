@@ -2321,7 +2321,7 @@ fn run_live_s04_mcp_tool_call(
         .iter()
         .find(|payload| payload.contains(response_id.as_str()))
         .ok_or_else(|| format!("mcp live s04 {tool_name} missing tool response payload"))?;
-    if !tool_response.contains(r#""ok":true"#) {
+    if json_optional_bool_field(tool_response.as_str(), "ok") != Some(true) {
         return Err(format!(
             "mcp live s04 {tool_name} returned non-success payload: {tool_response}"
         ));
@@ -2629,7 +2629,7 @@ fn validate_probe_initialize_response(payload: &str) -> Result<(), String> {
 }
 
 fn validate_probe_health_response(payload: &str) -> Result<(), String> {
-    if !payload.contains(r#""ok":true"#) {
+    if json_optional_bool_field(payload, "ok") != Some(true) {
         return Err(format!(
             "mcp live probe returned non-success health payload: {payload}"
         ));
@@ -2710,6 +2710,47 @@ fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
     digits.parse::<u64>().ok()
 }
 
+fn json_optional_bool_field(payload: &str, key: &str) -> Option<bool> {
+    let marker = format!("\"{key}\":");
+    let mut search_start = 0usize;
+
+    while search_start < payload.len() {
+        let marker_offset = payload.get(search_start..)?.find(marker.as_str())?;
+        let marker_start = search_start.checked_add(marker_offset)?;
+        if marker_start > 0 && payload.as_bytes().get(marker_start.wrapping_sub(1)) == Some(&b'\\')
+        {
+            search_start = marker_start.checked_add(marker.len())?;
+            continue;
+        }
+
+        let value_start = marker_start.checked_add(marker.len())?;
+        let rest = payload.get(value_start..)?.trim_start();
+        if let Some(tail) = rest.strip_prefix("true") {
+            let boundary = tail.chars().next();
+            if matches!(
+                boundary,
+                None | Some(',' | '}' | ']' | ' ' | '\t' | '\r' | '\n')
+            ) {
+                return Some(true);
+            }
+            return None;
+        }
+        if let Some(tail) = rest.strip_prefix("false") {
+            let boundary = tail.chars().next();
+            if matches!(
+                boundary,
+                None | Some(',' | '}' | ']' | ' ' | '\t' | '\r' | '\n')
+            ) {
+                return Some(false);
+            }
+            return None;
+        }
+        return None;
+    }
+
+    None
+}
+
 fn escape_json_scalar(input: &str) -> String {
     let mut escaped = String::with_capacity(input.len());
     for ch in input.chars() {
@@ -2728,10 +2769,10 @@ fn escape_json_scalar(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
-        json_optional_u64_field, live_execution_enabled_from_env, parse_bool_flag,
-        parse_framed_jsonrpc_payloads, parse_s15_budget_env_u128, percentile_index,
-        run_live_s01_mcp_probe, run_live_s02_mcp_direct_message_probe,
+        build_framed_jsonrpc_request, escape_json_scalar, json_optional_bool_field,
+        json_optional_string_field, json_optional_u64_field, live_execution_enabled_from_env,
+        parse_bool_flag, parse_framed_jsonrpc_payloads, parse_s15_budget_env_u128,
+        percentile_index, run_live_s01_mcp_probe, run_live_s02_mcp_direct_message_probe,
         run_live_s03_mcp_group_channel_probe, run_live_s04_mcp_task_lifecycle_probe,
         run_live_s04_mcp_tool_call, run_live_s05_mcp_escrow_settlement_probe,
         run_live_s06_mcp_proof_verification_probe, run_live_s07_mcp_replay_protection_probe,
@@ -4135,6 +4176,32 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s04_mcp_tool_call_rejects_non_boolean_ok_payload() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-tool-call-invalid-ok");
+        write_mcp_tool_response_script(&script_path, "probe-request", r#"{"ok":"true"}"#);
+
+        let probe_error = run_live_s04_mcp_tool_call(
+            script_path
+                .to_str()
+                .expect("script path should be valid utf-8"),
+            "http://localhost:8080",
+            "probe",
+            "/tmp/probe.key",
+            "probe-request",
+            "health",
+            "{}",
+        )
+        .expect_err("quoted ok field should fail");
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+
+        assert!(
+            probe_error.contains("non-success payload"),
+            "error should surface non-success payload: {probe_error}",
+        );
+    }
+
+    #[test]
     fn unit_run_live_s04_mcp_tool_call_success_status_still_requires_framed_payloads() {
         let error = run_live_s04_mcp_tool_call(
             "/bin/true",
@@ -4172,6 +4239,18 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         let payload = r#"{"jsonrpc":"2.0","id":"probe","result":{"block_height":42,"ok":true}}"#;
         assert_eq!(json_optional_u64_field(payload, "block_height"), Some(42));
         assert_eq!(json_optional_u64_field(payload, "missing"), None);
+    }
+
+    #[test]
+    fn unit_json_optional_bool_field_extracts_true_false_and_rejects_quoted_values() {
+        let payload_true = r#"{"ok":true,"note":"ready"}"#;
+        let payload_false = r#"{"ok":false}"#;
+        let payload_quoted = r#"{"ok":"true"}"#;
+        let payload_nested_string = r#"{"note":"status says \\\"ok\\\":true"}"#;
+        assert_eq!(json_optional_bool_field(payload_true, "ok"), Some(true));
+        assert_eq!(json_optional_bool_field(payload_false, "ok"), Some(false));
+        assert_eq!(json_optional_bool_field(payload_quoted, "ok"), None);
+        assert_eq!(json_optional_bool_field(payload_nested_string, "ok"), None);
     }
 
     #[test]
@@ -4503,5 +4582,16 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     fn spec_c24_validate_probe_health_response_accepts_success_payload() {
         let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":true}}"#;
         validate_probe_health_response(payload).expect("ok=true health payload should pass");
+    }
+
+    #[test]
+    fn spec_c25_validate_probe_health_response_rejects_quoted_ok_payload() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":"true"}}"#;
+        let error =
+            validate_probe_health_response(payload).expect_err("quoted ok payload should fail");
+        assert!(
+            error.contains("non-success health payload"),
+            "error should mention non-success health payload: {error}",
+        );
     }
 }
