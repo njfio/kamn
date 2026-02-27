@@ -1,6 +1,17 @@
 //! Runtime-commit deterministic request identity policy contracts.
 use crate::escape_json_string;
 
+fn payload_hash_fingerprint_component(payload_hash: &str) -> String {
+    let trimmed = payload_hash.trim();
+    let mut encoded = String::with_capacity(trimmed.len() * 2);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for byte in trimmed.as_bytes() {
+        encoded.push(HEX[(byte >> 4) as usize] as char);
+        encoded.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    encoded
+}
+
 /// Renders deterministic idempotency key for a runtime commit request.
 pub fn deterministic_runtime_commit_idempotency_key(
     operation_id: &str,
@@ -9,13 +20,14 @@ pub fn deterministic_runtime_commit_idempotency_key(
     nonce: u64,
     payload_hash: &str,
 ) -> String {
+    let payload_fingerprint = payload_hash_fingerprint_component(payload_hash);
     format!(
         "kolme-runtime-commit:{}:{}:{}:{}:{}",
         operation_id.trim(),
         state_root.trim(),
         actor_did.trim(),
         nonce,
-        payload_hash.trim().len()
+        payload_fingerprint
     )
 }
 
@@ -70,12 +82,10 @@ pub fn deterministic_runtime_commit_id(
     nonce: u64,
     payload_hash: &str,
 ) -> String {
+    let payload_fingerprint = payload_hash_fingerprint_component(payload_hash);
     format!(
         "kolme-commit:{}:{}:{}:{}",
-        operation_id,
-        actor_did,
-        nonce,
-        payload_hash.len()
+        operation_id, actor_did, nonce, payload_fingerprint
     )
 }
 
@@ -156,14 +166,14 @@ mod tests {
                 7,
                 " payload-hash "
             ),
-            "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:12"
+            "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:7061796c6f61642d68617368"
         );
     }
 
     #[test]
-    fn regression_commit_id_is_payload_length_based() {
-        // Regression: #1777
-        assert_eq!(
+    fn regression_issue_6123_commit_id_is_payload_value_fingerprint_based() {
+        // Regression: #6123
+        assert_ne!(
             deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc"),
             deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz")
         );
