@@ -48,6 +48,11 @@ use kamn_sdk::{
 };
 
 let client = ServiceApiClient::connect("http://127.0.0.1:34052")?;
+// Optional: override default 2s socket timeout for slower environments.
+let tuned_client = ServiceApiClient::connect_with_timeout_seconds(
+    "http://127.0.0.1:34052",
+    10,
+)?;
 let sender = AgentDid::parse("kamn:did:agent:alpha")?;
 
 let body = r#"{"message":"hello"}"#;
