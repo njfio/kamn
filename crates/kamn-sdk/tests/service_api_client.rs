@@ -404,17 +404,27 @@ fn deterministic_tag(payload: &[u8]) -> u64 {
     acc
 }
 
-fn write_websocket_upgrade_response(stream: &mut TcpStream) -> Result<(), String> {
+const DEFAULT_WEBSOCKET_EVENT_PAYLOAD: &str =
+    r#"{"event":"state-transition","runtime_mode":"api","role":"processor","sequence":1}"#;
+
+fn write_websocket_upgrade_response(stream: &mut TcpStream, payload: &str) -> Result<(), String> {
     let handshake = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: kamn-test-accept\r\nX-KAMN-WebSocket-Contract: v1\r\n\r\n";
     stream
         .write_all(handshake.as_bytes())
         .map_err(|error| format!("websocket handshake write failed: {error}"))?;
-    let payload =
-        r#"{"event":"state-transition","runtime_mode":"api","role":"processor","sequence":1}"#;
-    let mut frame = Vec::with_capacity(2 + payload.len());
+    let payload = payload.as_bytes();
+    let mut frame = Vec::with_capacity(10 + payload.len());
     frame.push(0x81);
-    frame.push(payload.len() as u8);
-    frame.extend_from_slice(payload.as_bytes());
+    if payload.len() <= 125 {
+        frame.push(payload.len() as u8);
+    } else if payload.len() <= u16::MAX as usize {
+        frame.push(126);
+        frame.extend_from_slice((payload.len() as u16).to_be_bytes().as_slice());
+    } else {
+        frame.push(127);
+        frame.extend_from_slice((payload.len() as u64).to_be_bytes().as_slice());
+    }
+    frame.extend_from_slice(payload);
     stream
         .write_all(frame.as_slice())
         .map_err(|error| format!("websocket frame write failed: {error}"))
@@ -574,6 +584,18 @@ fn route_requires_auth(method: &str, path: &str) -> bool {
 }
 
 fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(), String> {
+    run_service_contract_server_with_websocket_payload(
+        bind_addr,
+        max_requests,
+        DEFAULT_WEBSOCKET_EVENT_PAYLOAD.to_owned(),
+    )
+}
+
+fn run_service_contract_server_with_websocket_payload(
+    bind_addr: String,
+    max_requests: u64,
+    websocket_payload: String,
+) -> Result<(), String> {
     let listener = TcpListener::bind(bind_addr.as_str())
         .map_err(|error| format!("server bind failed: {error}"))?;
     listener
@@ -650,7 +672,7 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                             r#"{"error":"bad-request","reason_code":"service_api_websocket_upgrade_required","message":"websocket upgrade required"}"#,
                         )?;
                     } else {
-                        write_websocket_upgrade_response(&mut stream)?;
+                        write_websocket_upgrade_response(&mut stream, websocket_payload.as_str())?;
                     }
                     served = served.saturating_add(1);
                     continue;
@@ -1027,6 +1049,40 @@ fn integration_service_api_client_reads_websocket_event_frame() {
 
     let event = client
         .read_event_once(&auth_with_scope(&sender, 9, "", "events:read"))
+        .expect("event read should succeed");
+    assert_eq!(event.event, "state-transition");
+    assert_eq!(event.runtime_mode, "api");
+    assert_eq!(event.role, "processor");
+    assert_eq!(event.sequence, 1);
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy websocket request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_client_reads_websocket_event_frame_extended_length() {
+    // Regression: #6111
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let note = "x".repeat(200);
+    let websocket_payload = format!(
+        "{{\"event\":\"state-transition\",\"runtime_mode\":\"api\",\"role\":\"processor\",\"sequence\":1,\"note\":\"{note}\"}}"
+    );
+    let server = thread::spawn(move || {
+        run_service_contract_server_with_websocket_payload(server_addr, 1, websocket_payload)
+    });
+    wait_for_server_ready(bind_addr.as_str());
+
+    let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
+        .expect("client should connect");
+    let sender =
+        AgentDid::parse("kamn:did:agent:sdk-events-extended").expect("sender did should parse");
+
+    let event = client
+        .read_event_once(&auth_with_scope(&sender, 10, "", "events:read"))
         .expect("event read should succeed");
     assert_eq!(event.event, "state-transition");
     assert_eq!(event.runtime_mode, "api");
