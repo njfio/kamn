@@ -1,26 +1,31 @@
 # Plan: Issue #6140
 
 ## Approach
-1. Re-state `X-02` behavior contract and impacted modules from issue #6140.
-2. Add RED coverage derived from acceptance criteria to reproduce current gap.
-3. Implement minimal remediation with explicit error handling and no behavior drift outside scope.
-4. Execute GREEN verification for unit/functional/regression/conformance tiers.
-5. Update docs/spec/task artifacts and finalize closure evidence.
+1. Add a structural conformance test that currently fails (RED) by asserting helper-delegation markers absent/present in source.
+2. Refactor `handle_service_api_http_route` into:
+   - top-level method router
+   - dedicated `dispatch_service_api_post_route` and `dispatch_service_api_get_route` helpers
+3. Keep route and reason-code behavior unchanged.
+4. Re-run targeted and broader service-api tests.
 
 ## Affected Modules
-- Target module(s) identified by issue #6140 scope and test evidence.
+- `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`
 - `specs/6140/spec.md`
 - `specs/6140/plan.md`
 - `specs/6140/tasks.md`
 
-## Risks / Mitigations
-- Risk: Scope expansion beyond `X-02` causes unnecessary churn.
-  Mitigation: keep PR constrained to issue ACs and affected call paths.
-- Risk: Missing RED evidence weakens TDD traceability.
-  Mitigation: capture failing command/output before implementation change.
-- Risk: Conformance drift in docs/process contracts.
-  Mitigation: update corresponding review/spec docs in same PR when behavior changes.
+## Risks
+- Behavior drift in status/reason-code mapping for route branches.
+- Increased helper indirection reducing readability if over-split.
+- Conflicts with auto-generated lifecycle artifacts from intake PRs.
 
-## Interfaces / Contracts
-- Preserve existing public interfaces unless change is explicitly required by `X-02` acceptance criteria.
-- Any contract change must include test and docs updates in the same patch.
+## Mitigations
+- Preserve existing branch bodies with minimal movement.
+- Add structural and regression assertions.
+- Run scoped service-api test suite after refactor.
+- Rebase onto latest main and keep single source-of-truth lifecycle artifacts.
+
+## Interfaces/Contracts
+- No wire-format or API contract changes.
+- Internal function boundaries change only.

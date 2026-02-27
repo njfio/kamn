@@ -1,4 +1,4 @@
-# Spec: Issue #6140 - Task: [X-02] Decompose oversized 555-line route dispatcher
+# Spec: Issue #6140 - Task: [X-02] Decompose oversized route dispatcher
 
 - Issue: #6140
 - Status: Reviewed
@@ -10,32 +10,32 @@
 - Parent: #6101
 
 ## Problem Statement
-Refactor route dispatcher structure to remove high-risk monolith pattern cited in R59 delta table.
+`handle_service_api_http_route` in `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` was a dense monolithic route dispatcher, increasing audit and maintenance risk called out in R59 finding `X-02`.
 
 ## Scope
 In scope:
-- Implement targeted remediation for `X-02` from `docs/review/gaps-and-issues-r59-swarm.md`.
-- Add/adjust conformance, regression, and functional test coverage for the remediated path.
-- Update affected documentation and lifecycle artifacts within the same change-set.
+- Decompose HTTP dispatch flow into method-level helper functions while preserving route behavior.
+- Add structural conformance coverage that enforces helper delegation.
+- Keep route outcomes, status codes, and reason codes unchanged.
 
 Out of scope:
-- Unrelated refactors outside `X-02`.
-- Unscoped protocol/schema redesign not required by the finding.
+- Semantic behavior changes to service API route contracts.
+- New API endpoints or schema changes.
 
 ## Risk Level
 `med`
 
 ## Acceptance Criteria
-- AC-1: The X-02 gap is remediated with production-safe behavior.
-- AC-2: Regression/conformance tests cover the remediation path.
-- AC-3: Issue closure includes measurable evidence and linked PR.
+- AC-1: `handle_service_api_http_route` delegates to focused helper dispatch functions rather than containing full monolithic route logic.
+- AC-2: Existing route behavior remains unchanged for POST and GET route families.
+- AC-3: Regression/conformance tests fail closed if dispatcher monolith structure regresses.
 
 ## Conformance Cases
-- C-01 (Conformance, AC-1): Implemented behavior resolves R59 X-02 with deterministic pass/fail signals.
-- C-02 (Regression, AC-2): RED->GREEN test sequence demonstrates failing precondition and passing post-remediation behavior.
-- C-03 (Conformance, AC-3): Issue closure references PR, test commands, and measurable outputs tied to acceptance criteria.
+- C-01 (AC-1, Unit/Conformance): Structural test validates top-level handler delegates to method-level helpers.
+- C-02 (AC-2, Functional/Regression): Existing service API route behavior tests continue passing for representative POST/GET routes.
+- C-03 (AC-3, Regression/Conformance): Regression test fails if helper delegation markers disappear.
 
 ## Success Metrics / Observable Signals
-- Targeted R59 finding `X-02` no longer appears as unresolved in follow-up review docs.
-- Required scoped test commands pass in CI and local verification runs.
-- Closure comment includes deterministic evidence links and tier coverage summary.
+- Targeted R59 finding `X-02` is remediated by merged code and test evidence.
+- Scoped verification commands pass in local and CI runs.
+- Closure evidence links PR and AC-to-test mapping.
