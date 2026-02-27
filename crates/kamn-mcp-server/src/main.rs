@@ -3,6 +3,8 @@ use kamn_mcp_server::process_stdio_input;
 use kamn_mcp_server::tools::build_tool_registry;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 
+const MAX_FRAMED_CONTENT_LENGTH_BYTES: usize = 1_048_576;
+
 fn env_var_or_default(key: &str, default: &str) -> String {
     match std::env::var(key) {
         Ok(value) => value,
@@ -19,6 +21,15 @@ fn parse_content_length_header_line(line: &str) -> Option<usize> {
     trimmed
         .split_once(':')
         .and_then(|(_, value)| value.trim().parse::<usize>().ok())
+}
+
+fn validate_framed_content_length(content_length: usize) -> Result<(), String> {
+    if content_length > MAX_FRAMED_CONTENT_LENGTH_BYTES {
+        return Err(format!(
+            "content-length exceeds maximum: {content_length} > {MAX_FRAMED_CONTENT_LENGTH_BYTES}"
+        ));
+    }
+    Ok(())
 }
 
 fn write_stdio_response<W: Write>(writer: &mut W, response: &str) -> io::Result<()> {
@@ -100,6 +111,10 @@ fn main() {
                     break;
                 }
             }
+            if let Err(error) = validate_framed_content_length(content_length) {
+                eprintln!("kamn-mcp-server io error: {error}");
+                std::process::exit(2);
+            }
 
             let mut payload_bytes = vec![0_u8; content_length];
             if reader.read_exact(payload_bytes.as_mut_slice()).is_err() {
@@ -149,5 +164,28 @@ fn main() {
             eprintln!("kamn-mcp-server io error: failed to write ready status");
             std::process::exit(2);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_framed_content_length, MAX_FRAMED_CONTENT_LENGTH_BYTES};
+
+    #[test]
+    fn spec_c01_validate_framed_content_length_accepts_configured_boundary() {
+        assert!(
+            validate_framed_content_length(MAX_FRAMED_CONTENT_LENGTH_BYTES).is_ok(),
+            "boundary content-length should be accepted",
+        );
+    }
+
+    #[test]
+    fn spec_c02_validate_framed_content_length_rejects_values_above_boundary() {
+        let error = validate_framed_content_length(MAX_FRAMED_CONTENT_LENGTH_BYTES + 1)
+            .expect_err("oversized content-length should be rejected");
+        assert!(
+            error.contains("content-length exceeds maximum"),
+            "error should include deterministic max-size marker: {error}",
+        );
     }
 }

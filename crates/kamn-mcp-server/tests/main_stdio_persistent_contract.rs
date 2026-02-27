@@ -108,3 +108,50 @@ fn spec_c10_main_stdio_session_processes_multiple_framed_requests_without_eof() 
         String::from_utf8_lossy(output.stderr.as_slice())
     );
 }
+
+#[test]
+fn spec_c03_main_stdio_rejects_oversized_framed_content_length() {
+    let binary = env!("CARGO_BIN_EXE_kamn-mcp-server");
+    let mut child = Command::new(binary)
+        .args([
+            "--endpoint",
+            "http://127.0.0.1:18080",
+            "--agent-name",
+            "mcp-content-length-cap-test",
+            "--key-file",
+            "/tmp/mcp-content-length-cap-test.key",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("mcp server process should spawn");
+
+    let mut stdin = child
+        .stdin
+        .take()
+        .expect("child stdin should be piped for framed requests");
+
+    // Regression: #6120
+    let oversized_frame = "Content-Length: 1048577\r\n\r\n";
+    stdin
+        .write_all(oversized_frame.as_bytes())
+        .expect("oversized frame header should write");
+    stdin.flush().expect("oversized frame header should flush");
+    drop(stdin);
+
+    let output = child
+        .wait_with_output()
+        .expect("mcp server should terminate after oversized frame");
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "oversized framed content-length should fail closed with parse/io exit status",
+    );
+
+    let stderr = String::from_utf8_lossy(output.stderr.as_slice());
+    assert!(
+        stderr.contains("content-length exceeds maximum"),
+        "stderr should include oversized content-length marker: {stderr}",
+    );
+}
