@@ -299,7 +299,7 @@ fn search_agents_filters_by_capability_and_reputation_exists() {
 
 #[test]
 fn did_parse_rejects_wrong_prefix() {
-    let invalid = AgentDid::parse("did:example:abc");
+    let invalid = AgentDid::parse("did:example:abc").map_err(SdkError::from);
     assert_eq!(
         invalid,
         Err(SdkError::InvalidInput {

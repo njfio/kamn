@@ -1,0 +1,14 @@
+[package]
+name = "kamn-types"
+version.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+kamn-core = { path = "../kamn-core" }
+
+[lints]
+workspace = true
