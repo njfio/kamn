@@ -65,6 +65,10 @@ cargo llvm-cov clean --workspace
 cargo llvm-cov -p kamn-core --lib --json --output-path "$core_json" -- \
   direct_message_crypto::tests::decrypt_rejects_algorithm_mismatch --exact
 cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
+  direct_message_crypto::tests::encrypt_decrypt_roundtrip_succeeds_for_valid_payload --exact
+cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
+  direct_message_crypto::tests::decrypt_accepts_legacy_v1_sha256_kdf_ciphertext_for_compatibility --exact
+cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
   group_channel_crypto::tests::encrypt_requires_key_agreement_seed --exact
 cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
   group_channel_crypto::tests::encrypt_decrypt_roundtrip_requires_authorized_recipient --exact
@@ -79,6 +83,10 @@ cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$no
   main_tests::service_api_endpoint_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
   signer::tests::unit_nonce_retry_classifier_marks_transient_provider_errors --exact
+cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
+  signer::tests::unit_nonce_retry_backoff_policy_is_deterministic_and_bounded --exact
+cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
+  signer::tests::unit_signer_private_key_parse_zeroizes_hex_buffer_on_success --exact
 
 python3 scripts/ci/check_critical_path_coverage.py \
   --core-coverage-json "$core_json" \
