@@ -1,258 +1,164 @@
-# AGENTS.md — Repository Contract
-
-You are a disciplined engineer. You follow strict **spec-driven**, issue-driven, test-driven development. Specifications are the source of truth — code is a verified derivative. **This contract is non-negotiable.**
-
-No issue + milestone + accepted spec => no implementation (see §0 for bootstrap exceptions).
-
+# AGENTS.md
+> **Contract**: Spec-first, issue-driven, TDD workflow enforced via 7 gated phases.
+> Every change traces to a GitHub Issue. No phase may be skipped. Tests and CI are the authority — if this file conflicts with passing tests, update this file.
 ---
-
-## 0) Default Behavior + Bootstrap
-
-**Bias toward action.** If a prerequisite artifact is missing and you can reasonably create it, create it — do NOT stop and wait.
-
-- If `specs/`, `docs/`, or `.github/ISSUE_TEMPLATE/` directories do not exist, **create them as your first commit**. This bootstrapping work does not require pre-existing specs — it IS the spec work.
-- If a milestone's `index.md` is missing, **create it** as part of your first commit for that milestone, then proceed.
-- If no GitHub issue exists for work you've been asked to do, **create the issue first**, then proceed.
-
-**Self-acceptance rule:**
-
-- **P2 tasks** affecting ≤1 module: agent may author the spec AND self-accept it, then implement immediately.
-- **P1 tasks** or multi-module work: agent authors the spec, marks it `Reviewed`, proceeds to implementation, and flags for human review in the PR.
-- **P0 tasks**: agent authors the spec and **stops for human acceptance** before implementation unless explicitly told to proceed.
-
-**When stuck:** If blocked after 3 attempts on the same problem, stop — post a 🔴 Blocked comment on the issue, tag the relevant person, and open a `[WIP]` draft PR if partial progress is worth preserving. Do NOT spin silently.
-
+## §0 NON-NEGOTIABLES
+1. **Issue-first.** No code without a GitHub Issue. Create one with `gh issue create` if none exists.
+2. **Spec-before-code.** Write `specs/{issue}-{slug}.md` before any implementation.
+3. **TDD mandatory.** Red → Green → Refactor. Refactor is NOT optional.
+4. **Integration mandatory.** No standalone, mock-only, or unwired code ships.
+5. **Hard-fail errors.** Raise errors. Never swallow. No silent fallbacks.
+6. **Small & idempotent.** Small files, single-purpose functions, safe to re-run.
 ---
-
-## 1) Commands (prefer scoped; full suite = pre-PR gate)
-
-```bash
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test -p <crate> -- <test>     # fastest — preferred for iteration
-cargo test -p <crate>
-cargo test                          # pre-PR gate only
-cargo mutants --in-diff             # critical paths gate
-cargo insta test                    # if snapshots used
-```
-
+## §1 THE 7-PHASE GATE
+**Announce each phase transition explicitly.** ("ENTERING PHASE 3: RED TESTS")
+### Phase 1 — ISSUE
+- Read issue fully: `gh issue view <id> --comments`
+- Issue MUST contain: problem statement, acceptance criteria, non-goals
+- If acceptance criteria are missing, comment to propose them. Do not code.
+- One issue = one concern. Split compound issues.
+### Phase 2 — SPEC
+- Create: `specs/{issue}-{slug}.md`
+- Required sections: Objective | Inputs/Outputs | Boundaries/Non-goals | Failure modes | Acceptance criteria (testable booleans) | Files to touch | Error semantics | Test plan
+- Update issue with spec link. Commit spec.
+- **GATE: Spec committed before any implementation or test code.**
+### Phase 3 — RED (Failing Tests)
+- Write tests derived from spec acceptance criteria
+- Tests MUST fail. If they pass, investigate — feature exists or test is wrong
+- Test error paths for every failure mode in spec
+- No mocks except at true external boundaries (network, filesystem, clock)
+- Commit: `test({issue}): red tests for {slug}`
+- **GATE: All tests committed and failing.**
+### Phase 4 — GREEN (Minimal Implementation)
+- Write minimum code to pass tests. Nothing extra.
+- Follow §2 code standards strictly
+- Run tests after each logical commit
+- Commit: `feat({issue}): {what}`
+- **GATE: All tests green.**
+### Phase 5 — REFACTOR (Mandatory — Cannot Be Skipped)
+Checklist — every item must be verified:
+[ ] No function > 25 lines — extract
+[ ] No file > 200 lines — split
+[ ] Zero duplication (DRY pass)
+[ ] All names self-documenting — rename anything unclear
+[ ] Single responsibility per function and module
+[ ] Error handling matches §3
+[ ] Idempotency verified per §2
+[ ] Dead code, TODOs, placeholders removed
+[ ] Linter/formatter clean
+[ ] Full test suite still green
+- Commit: `refactor({issue}): {what improved}`
+- **GATE: Checklist complete, tests green, lint clean.**
+### Phase 6 — INTEGRATION WIRING
+**The most critical phase. No floating code.**
+[ ] New code imported/called from real entrypoints (routes, handlers, CLI, workers, DI container)
+[ ] Config/env vars validated at startup — fail loud on missing
+[ ] DB migrations exist and run
+[ ] No TODO stubs, no mock adapters in production paths
+[ ] At least one integration test exercises the real path
+[ ] Smoke test: run the app and exercise the feature
+- If ANYTHING is disconnected → return to Phase 4
+- Commit: `integrate({issue}): wire {feature} into {system}`
+- **GATE: Feature callable from real application and producing correct results.**
+### Phase 7 — CLOSE & PR
+- Update spec with any deviations
+- Push branch, open PR: `gh pr create --title "[{issue}] {title}" --body "Closes #{issue}"`
+- PR body includes: issue link, spec link, what/why summary, test evidence
+- Close issue: `gh issue close {id}`
+- PR checklist:
+[ ] Spec current
+[ ] Tests added
+[ ] Refactor complete
+[ ] Integration verified
+[ ] CI green
+- Merge PR
 ---
-
-## 2) Boundaries
-
-✅ **Always** (no prompt needed): read/list files; run cmds §1; branch/commit/PR per §8; failing test before impl; verify vs spec before PR; add `tracing` to new public APIs; update specs/docs when behavior changes; create missing spec/doc infrastructure per §0.
-
-⚠️ **Ask first:** new/upgrade deps; delete/move files; CI/CD changes; schema/protocol/wire-format changes; release builds; secrets/env.
-
-🚫 **Never:** commit secrets/tokens/keys; force-push protected branches; skip/remove failing tests; mark tier N/A w/o justification; speculative large changes w/o approval; `unwrap()` in prod.
-
+## §2 CODE STANDARDS
+### Size & Structure
+- **Files**: ≤200 LOC. Split at logical seams.
+- **Functions**: ≤25 LOC. Extract helpers aggressively.
+- **Nesting**: ≤2 levels. Use guard clauses and early returns.
+- **Single purpose**: one file = one concept. One function = one operation.
+### Idempotency
+- Write operations MUST be safe to retry (upserts, conflict resolution, idempotency keys)
+- No "create then hope" — enforce uniqueness constraints
+- Side effects centralized and explicit — never in constructors or imports
+- If true idempotency is impossible, document in spec: what duplicates, how to detect, how to reconcile
+### Data & Dependencies
+- Immutable by default. Never mutate arguments.
+- Validate external input at boundaries. Never trust upstream data.
+- Wrap external services behind interfaces. Inject dependencies.
+- New dependencies require spec justification. Prefer stdlib.
 ---
-
-## 3) Milestones = Spec Containers (coarse) + Repo Specs (binding)
-
-Every implementation issue belongs to exactly 1 milestone. Milestone description MUST link `specs/milestones/<milestone-id>/index.md`. If missing, **create it** (§0), then proceed.
-
-**Spec hierarchy:** Milestone desc+index.md (context) → issue body (scope/links) → `spec.md` **(binding)** → `plan.md` → `tasks.md` → code/tests/docs.
-
-**Per-issue artifacts (in git):**
-
-- `specs/<issue-id>/spec.md` — AC + conformance cases; Status: Draft | Reviewed | Accepted | Implemented
-- `specs/<issue-id>/plan.md` — approach, risks, interfaces, ADR refs
-- `specs/<issue-id>/tasks.md` — ordered tasks; T1=tests; tiers mapped
-
+## §3 ERROR HANDLING
+### Hard Fail — Always
+- **Raise errors. Never swallow.** No empty catches. No silent defaults.
+- The caller MUST know when something failed.
+- No fallbacks unless spec explicitly allows AND fallback is observable (logged/metricked).
+### Structured Errors
+Every error includes:
+- `code`: Machine-readable constant (`USER_NOT_FOUND`, `CONFIG_INVALID`)
+- `message`: Human-readable description
+- `context`: Debug payload (IDs, parameters, correlation IDs)
+- `cause`: Wrapped underlying error (preserve stack traces)
+### Boundary Rule
+- **Interior code**: throw/return typed errors. Do not log.
+- **Entrypoints** (handlers, CLI, jobs): catch, log once with correlation ID, translate to response.
+- Use `Result<T, E>` / explicit return types for expected failure paths. Reserve exceptions for unexpected failures.
+### Fail Fast
+- Validate inputs at function entry. Return/throw immediately.
+- Fail at startup for missing config/env — not at first request.
 ---
-
-## 4) Issue Intake
-
-Hierarchy: Milestone → Epic → Story → Task → Subtask (Task/Subtask has exactly 1 parent).
-Templates: `.github/ISSUE_TEMPLATE/{epic,story,task,subtask}.md` — create these if missing (§0).
-
-Required labels:
-
-| ns | values |
-|---|---|
-| type | `type:{epic,story,task,subtask}` |
-| area | `area:{backend,frontend,networking,qa,devops,docs,governance}` |
-| process | `process:{spec-driven,tdd}` |
-| priority | `priority:{P0,P1,P2}` |
-| status | `status:{todo,specifying,planning,implementing,done}` |
-
-No new namespaces w/o governance approval.
-
-**DoR (Definition of Ready):** parent linked; milestone set; deps linked; risk low/med/high; labels set; `spec.md` exists + accepted per §0 self-acceptance rules; ACs testable.
-
-## Shell-Surface DoR Gate
-
-When work touches shell/python/workflow/template surface (`scripts/**`, `.github/workflows/**`, `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`), the issue body must include explicit shell-surface impact estimates:
-
-    shell_loc_delta_estimate: <integer|0>
-    rust_loc_delta_estimate: <integer|0>
-    shell_to_rust_ratio_delta_estimate: <float|0.0>
-    shell_surface_mitigation_issue: <issue-id|None>
-
-If estimates are unknown at intake time, set conservative upper bounds and refine during implementation.
-
+## §4 GIT DISCIPLINE
+- **Branch**: `{issue}-{slug}`
+- **Commits**: `{type}({issue}): {imperative description}`
+- Types: `test`, `feat`, `fix`, `refactor`, `integrate`, `docs`, `chore`
+- Commit after every meaningful change — commits are save points
+- Preserve TDD commit arc (red → green → refactor → integrate). No squash.
+- Never commit: secrets, .env, node_modules, build artifacts
 ---
-
-## 5) Spec-Driven Lifecycle (gated — but create-as-you-go)
-
-SPECIFY → PLAN → TASKS → IMPLEMENT → VERIFY.
-
-**If artifacts for a phase don't exist yet, create them — don't wait.** The gate is that the artifact must exist and be reasonable before you advance, not that a human must pre-approve every phase (see §0 for acceptance thresholds).
-
-### SPECIFY (`specs/<id>/spec.md`)
-
-Minimum:
-
-- Problem statement
-- AC-1..n (Given/When/Then)
-- Scope (in/out)
-- Conformance cases C-01..n (concrete I/O; maps to ACs; tier)
-- Success metrics / observable signals
-
-Rule: each AC → ≥1 conformance case → ≥1 test.
-
-### PLAN (`plan.md`)
-
-Approach; affected modules; risks/mitigations; interfaces/contracts (API/traits/wire formats); ADR pointer if non-trivial decision.
-
-### TASKS (`tasks.md`)
-
-Ordered tasks w/ deps + tiers. **T1 always = write conformance/tests first.**
-
+## §5 BOUNDARIES
+### ✅ ALWAYS
+- Create issue before code
+- Write spec before tests
+- Write tests before implementation
+- Refactor after implementation
+- Verify integration wiring
+- Run tests before every commit
+### ⚠️ ASK FIRST
+- Adding dependencies
+- Modifying DB schemas
+- Changing public API contracts
+- Modifying CI/CD config
+- Deleting files
+### 🚫 NEVER
+- Commit secrets or credentials
+- Skip refactor phase
+- Leave TODO/FIXME in merged code
+- Ship unwired/standalone code
+- Use mocks in integration tests
+- Swallow errors silently
+- Push directly to main
+- Implement without a spec
+- Delete or weaken tests to pass CI
 ---
+## §6 COMMANDS
+> Adapt to your repo. Discover via package.json, Makefile, Cargo.toml, etc.
+bash
+# Targeted (prefer these — fast feedback)
+FORMAT_FILE="<cmd> path/to/file"
+LINT_FILE="<cmd> path/to/file"
+TYPECHECK_FILE="<cmd> path/to/file"
+TEST_FILE="<cmd> path/to/test"
+# Full suite (run before PR)
+FORMAT_ALL="<cmd>"
+LINT_ALL="<cmd>"
+BUILD="<cmd>"
+TEST_ALL="<cmd>"
 
-## 6) TDD + Testing Contract
-
-Loop per task: 🔴Red (spec-derived failing test) → 🟢Green (min code) → 🔵Refactor → 🔁Regression → ✅Verify (all ACs mapped/passed).
-
-PR must include Red+Green evidence (cmd + output excerpts).
-
-**Test tiers** (each row must be ✅/❌/N/A; N/A requires written justification; blanks block merge):
-
-| Tier | When | Tool | Purpose |
-|---|---|---|---|
-| Unit | always | `cargo test` | public fn ≥1 test; happy+error+edge |
-| Property | invariants/parsers/serde/algos | `proptest` | randomized invariants |
-| Contract/DbC | non-trivial public APIs | `contracts` | `#[requires]`/`#[ensures]`/`#[invariant]` |
-| Snapshot | stable structured output | `insta` | `cargo insta review`; never replaces behavior asserts |
-| Functional | always | `cargo test` | behavior vs ACs |
-| Conformance | always | `cargo test` | covers spec C-xx cases |
-| Integration | cross-module/crate/service | `cargo test` | real I/O + composition |
-| Fuzz | untrusted input/parsers | `cargo-fuzz` | no panics/crashes; ≥10k iters; corpus tracked |
-| Mutation | critical paths | `cargo-mutants` | escapes = coverage gap → fix before merge |
-| Regression | bugfix/refactor | `cargo test` | failing repro first; `// Regression: #<id>` |
-| Performance | hotspots | `criterion` | no >5% regression w/o explicit justification |
-
-**Test naming:**
-
-    #[test] fn <module>_<behavior>_<condition>() {}
-    #[test] fn spec_c01_<desc>() {}
-    proptest! { #[test] fn <inv>(v in any::<T>()) { } }
-
-**Coverage:** no decrease; critical paths exhaustive; if untestable => explain in PR + follow-up issue.
-
----
-
-## 7) Execution Cadence
-
-1. Ensure milestone + index.md exist — create if missing (§0)
-2. SPECIFY → status:specifying
-3. PLAN → status:planning
-4. TASKS
-5. Start: status:implementing; branch `codex/issue-<id>-<slug>`
-6. Implement via §6 loop; keep diffs small; no unrelated edits
-7. Docs/spec/ADR updates in same PR when behavior/decision changes
-8. PR (template §8); CI green; all gates satisfied
-9. Merge; close issue; set status:done; set spec Status=Implemented
-
-**Process log** (issue comments):
-
-    Status: InProgress|Blocked|Done | Phase: Specify|Plan|Tasks|Implement
-    Step: <what> | Result: <outcome> | Next: <action>
-
----
-
-## 8) Git + PR Contract
-
-**Branch:** `codex/issue-<id>-<slug>` from `main`.
-
-**Commits** (atomic by concern — spec/tests/impl/docs):
-
-    spec|test|feat|fix|refactor|docs|chore(<scope>): <msg> (#<id>)
-
-**PR must include:**
-
-- **Summary:** 1–3 sentences
-- **Links:** Milestone, `Closes #<id>`, spec path, plan path
-- **Spec Verification (AC → tests):**
-
-| AC | ✅/❌ | Test(s) |
-|---|---|---|
-| AC-1: `<criterion>` | | |
-| AC-2: `<criterion>` | | |
-
-- **TDD Evidence:** RED cmd+output · GREEN cmd+output · REGRESSION summary
-- **Test Tiers** (no blanks; N/A must be justified):
-
-| Tier | ✅/❌/N/A | Tests | N/A Why |
-|---|---|---|---|
-| Unit | | | |
-| Property | | | |
-| Contract/DbC | | | |
-| Snapshot | | | |
-| Functional | | | |
-| Conformance | | | |
-| Integration | | | |
-| Fuzz | | | |
-| Mutation | | | |
-| Regression | | | |
-| Performance | | | |
-
-- **Mutation:** caught/total; escaped explained or fixed
-- **Risks/Rollback:** breaking changes + plan, or "None"
-- **Docs/ADR:** updated paths, or justification
-
-**Merge gates (blockers):** any AC ❌; missing milestone/spec links; missing Red/Green evidence; incomplete tier matrix (blank or unjustified N/A); fmt/clippy/CI fail; unexplained escaped mutants; behavior change w/o docs/spec update.
-
----
-
-## 9) Done / Closure
-
-Done iff: all ACs ✅; conformance ✅; tiers satisfied; regression green; mutation clean; docs/spec/ADR updated. Close issue with:
-
-    Outcome: <what was delivered>
-    PR: #<number>
-    Milestone: <name>
-    Spec: specs/<id>/spec.md → Implemented
-    Tests: <by tier>
-    Conformance: <passed/total>
-    Mutants: <caught/total>
-    Follow-up: None | <issues>
-
-## Shell-Surface DoD Gate
-
-When shell/python/workflow/template surface changed, closure comments and PR summaries must include measured post-change markers:
-
-    shell_loc_delta_actual: <integer|0>
-    rust_loc_delta_actual: <integer|0>
-    shell_to_rust_ratio_delta_actual: <float|0.0>
-    shell_surface_ratio_target_status: improved|neutral|regressed_with_waiver
-
-`regressed_with_waiver` requires linked mitigation follow-up issue in the same closure comment.
-
----
-
-## 10) Docs / ADRs / Research
-
-| Content | Location |
-|---|---|
-| Milestone overviews | `specs/milestones/<id>/index.md` |
-| Feature specs | `specs/<issue-id>/spec.md` |
-| Plans | `specs/<issue-id>/plan.md` |
-| Tasks | `specs/<issue-id>/tasks.md` |
-| ADRs | `docs/architecture/adr-NNN.md` |
-| Research | `docs/research/` |
-| Planning/roadmap | `docs/planning/` |
-
-ADRs required for: new deps, arch changes, protocol decisions, error-strategy changes. Format: Context / Decision / Consequences.
+a
+## §7 WHEN UNCERTAIN — STOP
+> If requirements, behavior, integration points, or error semantics are unclear:
+- Re-read the issue and spec and research
+- Propose clarifying questions or spec amendments
+- Do NOT guess. Do NOT write speculative code.
