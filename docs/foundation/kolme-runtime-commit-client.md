@@ -456,6 +456,7 @@ cargo test -p kamn-core
 - transport request helper extraction parity drift remains fail-closed (`Regression: #1755`).
 - broadcast payload normalization extraction parity drift remains fail-closed (`Regression: #1757`).
 - runtime lifecycle/finality projection extraction parity drift remains fail-closed (`Regression: #1775`).
+- runtime request identity extraction parity drift remains fail-closed (`Regression: #1777`).
 - runtime request identity payload-fingerprint parity drift remains fail-closed (`Regression: #6123`).
 - receipt-finality mapping extraction parity drift remains fail-closed (`Regression: #1779`).
 - JSON escape helper extraction parity drift remains fail-closed (`Regression: #1781`).
