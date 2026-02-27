@@ -1167,16 +1167,14 @@ fn execute_daemon_service_api_relay_tick_loop(
             let p2p_ingested_count =
                 drain_daemon_service_api_relay_p2p_inbox(relay_p2p_context, service_api_state_file)
                     .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-            if p2p_ingested_count > 0 {
-                let ingested_count_label = p2p_ingested_count.to_string();
-                log_info(
-                    "node.runtime.daemon.relay.p2p.ingested",
-                    &[("ingested_count", ingested_count_label.as_str())],
-                )
-                .map_err(|logging_error| {
-                    ConfigError::RuntimeDaemonLifecycle(logging_error.to_string())
-                })?;
-            }
+            let ingested_count_label = p2p_ingested_count.to_string();
+            log_info(
+                "node.runtime.daemon.relay.p2p.ingested",
+                &[("ingested_count", ingested_count_label.as_str())],
+            )
+            .map_err(|logging_error| {
+                ConfigError::RuntimeDaemonLifecycle(logging_error.to_string())
+            })?;
         }
         if relay_enabled {
             let relay_entries = crate::service_api_endpoint::drain_service_api_relay_spool_entries(
@@ -1501,7 +1499,7 @@ mod tests {
         forward_service_api_relay_entry_via_p2p_for_test,
         resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test,
         set_daemon_service_api_relay_p2p_config_override_for_test,
-        SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
+        SERVICE_API_RELAY_P2P_DEFAULT_TOPIC, SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
     };
     use std::env;
     use std::fs;
@@ -1879,6 +1877,33 @@ mod tests {
     fn unique_p2p_listen_address() -> String {
         let next_port = NEXT_TEST_P2P_PORT.fetch_add(1, Ordering::Relaxed);
         format!("/ip4/127.0.0.1/tcp/{next_port}")
+    }
+
+    #[test]
+    fn unit_daemon_relay_p2p_config_omitted_topic_defaults_to_messages() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
+        let listen_address = unique_p2p_listen_address();
+        let relay_config_json = format!(
+            r#"{{
+  "local_peer_id":"daemon-p2p-default-topic",
+  "listen_address":"{listen_address}",
+  "bootstrap_peers":["{listen_address}"],
+  "recipient_peers_by_did":{{"kamn:did:agent:recipient":"daemon-p2p-default-topic"}}
+}}"#
+        );
+        let shared_transport = Arc::new(kamn_core::InMemoryPeerLifecycleTransport::default());
+        let relay_context =
+            resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test(
+                relay_config_json.as_str(),
+                shared_transport,
+            )
+            .expect("relay p2p context should parse with default topic");
+        assert_eq!(
+            relay_context.topic.as_str(),
+            SERVICE_API_RELAY_P2P_DEFAULT_TOPIC,
+            "omitted topic must use canonical daemon relay p2p default"
+        );
     }
 
     #[test]
