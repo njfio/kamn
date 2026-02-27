@@ -5,7 +5,7 @@
 - [x] T2 (Implementation): Added `kamn-service-api` deployment plus `Service`/`Ingress` resources and `/healthz` readiness/liveness probes in `deploy/k8s/kamn-node.yaml`; updated deployment docs.
 - [x] T3 (GREEN/Regression): Re-ran `cargo test -p kamn-core --test k8s_manifest_baseline_contract -- --nocapture` with all assertions passing.
 - [x] T4 (Verification): Executed `cargo fmt --check`, `cargo clippy -p kamn-core --tests -- -D warnings`, `bash scripts/deploy/test_deployment_assets.sh`, and `bash scripts/deploy/test_validate_deployment_assets_live.sh`.
-- [ ] T5 (Closure): Open PR, add AC->test mapping and RED/GREEN evidence, then close issue with measured outputs.
+- [x] T5 (Closure): Opened PR #6179 with AC->test mapping and RED/GREEN evidence; issue process log updated with measurable outputs.
 
 ## Tier Mapping
 - Unit: T1, T3, T4
