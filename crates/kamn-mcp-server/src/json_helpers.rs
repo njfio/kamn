@@ -41,6 +41,7 @@ pub(crate) fn json_required_string_field(payload: &str, key: &str) -> Result<Str
 }
 
 /// Parses one payload and reads an optional `u64` from either number or string token.
+#[allow(dead_code)]
 pub(crate) fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
     let root = serde_json::from_str::<Value>(payload).ok()?;
     let value = json_field_value(&root, key)?;

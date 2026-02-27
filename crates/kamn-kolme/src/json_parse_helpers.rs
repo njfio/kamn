@@ -1,6 +1,7 @@
 //! Shared low-level JSON token scanning helpers used by Kolme parser policies.
 
 /// Splits one string by `delimiter`, ignoring delimiters inside quoted segments.
+#[allow(dead_code)]
 pub(crate) fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>, &'static str> {
     let mut parts = Vec::new();
     let mut current = String::new();
@@ -49,6 +50,7 @@ pub(crate) fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>
 }
 
 /// Advances `cursor` over ASCII whitespace bytes.
+#[allow(dead_code)]
 pub(crate) fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
     while let Some(byte) = value.as_bytes().get(cursor).copied() {
         if byte.is_ascii_whitespace() {

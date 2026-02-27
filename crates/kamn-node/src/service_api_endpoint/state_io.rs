@@ -172,6 +172,7 @@ pub(crate) fn default_service_api_relay_spool_file_path_from_state_file(
     format!("{state_file}.relay.ndjson")
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_service_api_replay_guard_state_file_path_from_state_file(
     state_file: &str,
 ) -> String {

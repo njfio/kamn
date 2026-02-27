@@ -313,6 +313,9 @@ fn escape_json_string(input: &str) -> String {
 static TEST_LOG_CAPTURE: std::sync::Mutex<Option<Vec<String>>> = std::sync::Mutex::new(None);
 
 #[cfg(test)]
+static TEST_LOG_CONFIG_LOCK: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
+
+#[cfg(test)]
 fn with_test_log_capture_mut<T, F>(operation: F) -> T
 where
     F: FnOnce(&mut Option<Vec<String>>) -> T,
@@ -339,6 +342,15 @@ where
         Err(payload) => std::panic::resume_unwind(payload),
     }
 }
+
+#[cfg(test)]
+pub(crate) fn lock_log_config_for_tests() -> std::sync::MutexGuard<'static, ()> {
+    let lock = TEST_LOG_CONFIG_LOCK.get_or_init(|| std::sync::Mutex::new(()));
+    lock.lock().unwrap_or_else(|error| error.into_inner())
+}
+
+#[cfg(test)]
+pub(crate) fn reset_cached_log_config_for_tests() {}
 
 #[cfg(test)]
 fn record_test_log_line(line: &str) {
