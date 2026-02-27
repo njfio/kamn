@@ -165,6 +165,16 @@ fn env_var_or_default(key: &str, default: &str) -> String {
     }
 }
 
+/// Returns whether CLI arguments include the help flag.
+pub fn is_help_request<I, S>(args: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    args.into_iter()
+        .any(|value| matches!(value.as_ref(), "--help" | "-h"))
+}
+
 /// Parses CLI arguments for phase-2 command surface contracts.
 pub fn parse_cli_args<I, S>(args: I) -> Result<ParsedCliArgs, String>
 where
@@ -279,9 +289,18 @@ fn help_output() -> CommandOutput {
     CommandOutput::new(json, text)
 }
 
+/// Renders deterministic help text for CLI usage output.
+pub fn render_help_text() -> String {
+    let commands = CLI_SUPPORTED_COMMANDS.join(", ");
+    let flags = CLI_HELP_FLAGS.join(", ");
+    format!("Usage: {CLI_USAGE}\nCommands: {commands}\nFlags: {flags}")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{dispatch, parse_cli_args, CommandKind, OutputFormat};
+    use super::{
+        dispatch, is_help_request, parse_cli_args, render_help_text, CommandKind, OutputFormat,
+    };
 
     #[test]
     fn unit_cli_parser_honors_endpoint_flag() {
@@ -325,5 +344,28 @@ mod tests {
         let parsed = parse_cli_args(["kamn-cli", "send-message", "payload.json"])
             .expect("non-flag positional arguments should pass through");
         assert_eq!(parsed.passthrough, vec!["payload.json".to_owned()]);
+    }
+
+    #[test]
+    fn regression_issue_6219_help_request_true_for_long_flag() {
+        assert!(is_help_request(["kamn-cli", "--help"]));
+    }
+
+    #[test]
+    fn regression_issue_6219_help_request_true_for_short_flag() {
+        assert!(is_help_request(["kamn-cli", "-h"]));
+    }
+
+    #[test]
+    fn regression_issue_6219_help_request_false_without_help_flags() {
+        assert!(!is_help_request(["kamn-cli", "health"]));
+    }
+
+    #[test]
+    fn regression_issue_6219_render_help_text_includes_usage_commands_and_flags() {
+        let help = render_help_text();
+        assert!(help.contains("Usage: kamn-cli <command>"));
+        assert!(help.contains("Commands: register"));
+        assert!(help.contains("Flags: --help"));
     }
 }
