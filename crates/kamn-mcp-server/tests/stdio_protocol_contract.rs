@@ -1,5 +1,6 @@
 use kamn_agent_lib::AgentLibError;
 use kamn_mcp_server::{process_stdio_input, McpToolBackend};
+use serde_json::Value;
 
 #[derive(Debug, Default)]
 struct ProtocolBackend;
@@ -251,6 +252,46 @@ fn spec_c02_mcp_tools_list_framed_tool_inventory_contract() {
     assert!(
         body.contains(r#""name":"query_bridge_message""#),
         "tools/list should include query_bridge_message tool: {body}",
+    );
+
+    let response_json: Value =
+        serde_json::from_str(body.as_str()).expect("tools/list response should parse as JSON");
+    let tools = response_json
+        .get("result")
+        .and_then(|value| value.get("tools"))
+        .and_then(Value::as_array)
+        .expect("tools/list response should expose result.tools array");
+
+    let query_task = tools
+        .iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some("query_task"))
+        .expect("tools/list should expose query_task descriptor");
+    let query_task_required = query_task
+        .get("inputSchema")
+        .and_then(|value| value.get("required"))
+        .and_then(Value::as_array)
+        .expect("query_task input schema should expose required array");
+    assert_eq!(query_task_required.len(), 1);
+    assert_eq!(
+        query_task_required.first().and_then(Value::as_str),
+        Some("task_id")
+    );
+
+    let verify_proof = tools
+        .iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some("verify_proof"))
+        .expect("tools/list should expose verify_proof descriptor");
+    let verify_required = verify_proof
+        .get("inputSchema")
+        .and_then(|value| value.get("required"))
+        .and_then(Value::as_array)
+        .expect("verify_proof input schema should expose required array");
+    assert_eq!(verify_required.len(), 4);
+    assert!(
+        verify_required
+            .iter()
+            .any(|field| field.as_str() == Some("block_height")),
+        "verify_proof input schema should require block_height",
     );
 }
 
