@@ -162,9 +162,12 @@ fn integration_expire_overdue_messages_sweeps_active_records_deterministically()
     let expired = store
         .expire_overdue_messages("2026-02-07T20:50:30.123Z")
         .expect("sweep should succeed");
-    assert_eq!(expired, vec!["urn:uuid:msg-6".to_owned()]);
+    assert_eq!(
+        expired,
+        vec!["urn:uuid:msg-6".to_owned(), "urn:uuid:msg-7".to_owned()]
+    );
     assert_eq!(
         store.ids_by_status(MessageStatus::Expired),
-        vec!["urn:uuid:msg-6".to_owned()]
+        vec!["urn:uuid:msg-6".to_owned(), "urn:uuid:msg-7".to_owned()]
     );
 }

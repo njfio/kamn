@@ -199,11 +199,11 @@ impl MessageLifecycleStore {
             .records
             .get(message_id)
             .ok_or_else(|| MessageLifecycleError::NotFound(message_id.to_owned()))?;
-        if !is_active_status(record.status) || observed_at <= record.expires.as_str() {
+        if !is_expirable_status(record.status) || observed_at <= record.expires.as_str() {
             return Ok(false);
         }
 
-        self.apply_status(message_id, MessageStatus::Expired)?;
+        self.transition(message_id, MessageStatus::Expired)?;
         Ok(true)
     }
 
@@ -219,7 +219,7 @@ impl MessageLifecycleStore {
             .records
             .iter()
             .filter_map(|(message_id, record)| {
-                if is_active_status(record.status) && observed_at > record.expires.as_str() {
+                if is_expirable_status(record.status) && observed_at > record.expires.as_str() {
                     Some(message_id.clone())
                 } else {
                     None
@@ -227,7 +227,7 @@ impl MessageLifecycleStore {
             })
             .collect();
         for message_id in &overdue_ids {
-            self.apply_status(message_id, MessageStatus::Expired)?;
+            self.transition(message_id, MessageStatus::Expired)?;
         }
         Ok(overdue_ids)
     }
@@ -991,16 +991,22 @@ fn is_valid_transition(from: MessageStatus, to: MessageStatus) -> bool {
     matches!(
         (from, to),
         (MessageStatus::Created, MessageStatus::Signed)
+            | (MessageStatus::Created, MessageStatus::Expired)
             | (MessageStatus::Signed, MessageStatus::Broadcast)
+            | (MessageStatus::Signed, MessageStatus::Expired)
             | (MessageStatus::Broadcast, MessageStatus::Included)
+            | (MessageStatus::Broadcast, MessageStatus::Expired)
             | (MessageStatus::Included, MessageStatus::Delivered)
+            | (MessageStatus::Included, MessageStatus::Expired)
             | (MessageStatus::Delivered, MessageStatus::Validated)
+            | (MessageStatus::Delivered, MessageStatus::Expired)
             | (MessageStatus::Validated, MessageStatus::Rejected)
+            | (MessageStatus::Validated, MessageStatus::Expired)
             | (MessageStatus::Rejected, MessageStatus::Expired)
     )
 }
 
-fn is_active_status(status: MessageStatus) -> bool {
+fn is_expirable_status(status: MessageStatus) -> bool {
     matches!(
         status,
         MessageStatus::Created
@@ -1008,6 +1014,8 @@ fn is_active_status(status: MessageStatus) -> bool {
             | MessageStatus::Broadcast
             | MessageStatus::Included
             | MessageStatus::Delivered
+            | MessageStatus::Validated
+            | MessageStatus::Rejected
     )
 }
 
@@ -1327,7 +1335,7 @@ mod tests {
     }
 
     #[test]
-    fn expire_overdue_messages_expires_active_records_only() {
+    fn spec_c02_expire_overdue_messages_expires_validated_overdue_records() {
         let mut store = MessageLifecycleStore::new();
         store
             .register(
@@ -1367,7 +1375,7 @@ mod tests {
             store
                 .expire_overdue_messages("2026-02-07T20:50:30.123Z")
                 .expect("sweep should succeed"),
-            vec!["urn:uuid:msg-2b".to_owned()]
+            vec!["urn:uuid:msg-2b".to_owned(), "urn:uuid:msg-2c".to_owned()]
         );
         assert_eq!(
             store
@@ -1379,7 +1387,15 @@ mod tests {
             store
                 .status("urn:uuid:msg-2c")
                 .expect("status should exist"),
-            MessageStatus::Validated
+            MessageStatus::Expired
+        );
+        assert_eq!(
+            store
+                .history("urn:uuid:msg-2c")
+                .expect("history should exist")
+                .last()
+                .copied(),
+            Some(MessageStatus::Expired)
         );
     }
 
