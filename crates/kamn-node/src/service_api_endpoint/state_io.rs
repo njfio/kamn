@@ -4,7 +4,8 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const SERVICE_API_STATE_SQLITE_NAMESPACE: &str = "service_api_state";
 pub(crate) const SERVICE_API_STATE_SQLITE_SNAPSHOT_KEY: &str = "message_store_snapshot";
@@ -32,6 +33,65 @@ fn service_api_state_file_is_sqlite(path: &str) -> bool {
     normalized.ends_with(".sqlite")
         || normalized.ends_with(".sqlite3")
         || normalized.ends_with(".db")
+}
+
+fn atomic_temp_filename_prefix(target: &Path) -> String {
+    let file_name = target
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| "state".to_owned());
+    format!(".{file_name}.tmp-{}-", std::process::id())
+}
+
+fn atomic_temp_path_for_target(target: &Path) -> PathBuf {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    let temp_name = format!("{}{}", atomic_temp_filename_prefix(target), nonce);
+    target.with_file_name(temp_name)
+}
+
+fn cleanup_atomic_temp_file(temp_path: &Path) {
+    let _ = fs::remove_file(temp_path);
+}
+
+fn sync_parent_directory_best_effort(target: &Path) {
+    let Some(parent) = target.parent() else {
+        return;
+    };
+    if parent.as_os_str().is_empty() {
+        return;
+    }
+    if let Ok(directory) = fs::File::open(parent) {
+        let _ = directory.sync_all();
+    }
+}
+
+fn write_file_atomically(path: &str, payload: &[u8], error_prefix: &str) -> Result<(), String> {
+    let target = Path::new(path);
+    let temp_path = atomic_temp_path_for_target(target);
+    let mut temp_file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(temp_path.as_path())
+        .map_err(|error| format!("{error_prefix}: {path}: {error}"))?;
+    if let Err(error) = temp_file.write_all(payload) {
+        cleanup_atomic_temp_file(temp_path.as_path());
+        return Err(format!("{error_prefix}: {path}: {error}"));
+    }
+    if let Err(error) = temp_file.sync_all() {
+        cleanup_atomic_temp_file(temp_path.as_path());
+        return Err(format!("{error_prefix}: {path}: {error}"));
+    }
+    drop(temp_file);
+    if let Err(error) = fs::rename(temp_path.as_path(), target) {
+        cleanup_atomic_temp_file(temp_path.as_path());
+        return Err(format!("{error_prefix}: {path}: {error}"));
+    }
+    sync_parent_directory_best_effort(target);
+    Ok(())
 }
 
 pub(super) fn load_service_api_state_payload(
@@ -79,8 +139,11 @@ pub(super) fn persist_service_api_state_payload(
         return Ok(());
     };
     match backend {
-        ServiceApiStateStorageBackend::JsonFile(path) => fs::write(path, payload)
-            .map_err(|error| format!("service api state file write failed: {path}: {error}")),
+        ServiceApiStateStorageBackend::JsonFile(path) => write_file_atomically(
+            path,
+            payload.as_bytes(),
+            "service api state file write failed",
+        ),
         ServiceApiStateStorageBackend::SqliteFile(path) => {
             let mut backend = SqliteStoreBackend::open(Path::new(path)).map_err(|error| {
                 format!("service api sqlite state open failed: {path}: {error}")
@@ -166,8 +229,7 @@ pub(crate) fn drain_service_api_relay_spool_entries(
             })?;
         entries.push(entry);
     }
-    fs::write(path, "")
-        .map_err(|error| format!("service api relay spool truncate failed: {path}: {error}"))?;
+    write_file_atomically(path, b"", "service api relay spool truncate failed")?;
     Ok(entries)
 }
 
@@ -245,5 +307,122 @@ fn sanitize_service_api_state_file_component(value: &str) -> String {
         "default".to_owned()
     } else {
         trimmed.to_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        atomic_temp_filename_prefix, drain_service_api_relay_spool_entries,
+        persist_service_api_state_payload, write_file_atomically,
+    };
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_file_path(label: &str, suffix: &str) -> PathBuf {
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        std::env::temp_dir().join(format!(
+            "kamn-node-state-io-{label}-{unique_suffix}.{suffix}"
+        ))
+    }
+
+    fn temp_artifacts_for_target(target: &Path) -> Vec<PathBuf> {
+        let Some(parent) = target.parent() else {
+            return Vec::new();
+        };
+        let prefix = atomic_temp_filename_prefix(target);
+        let mut artifacts = Vec::new();
+        let Ok(entries) = fs::read_dir(parent) else {
+            return artifacts;
+        };
+        for entry_result in entries {
+            let Ok(entry) = entry_result else {
+                continue;
+            };
+            let file_name = entry.file_name();
+            let file_name = file_name.to_string_lossy();
+            if file_name.starts_with(prefix.as_str()) {
+                artifacts.push(entry.path());
+            }
+        }
+        artifacts
+    }
+
+    #[test]
+    fn unit_write_file_atomically_replaces_content_without_leaking_temp_files() {
+        let state_file = unique_temp_file_path("atomic-replace", "json");
+        fs::write(state_file.as_path(), r#"{"state":"old"}"#).expect("fixture should write");
+        write_file_atomically(
+            state_file.to_str().expect("state path should be utf-8"),
+            br#"{"state":"new"}"#,
+            "atomic test write failed",
+        )
+        .expect("atomic write should replace destination");
+        let payload =
+            fs::read_to_string(state_file.as_path()).expect("replaced payload should be readable");
+        assert_eq!(payload, r#"{"state":"new"}"#);
+        assert!(
+            temp_artifacts_for_target(state_file.as_path()).is_empty(),
+            "atomic write should not leave temp artifacts beside destination"
+        );
+        let _ = fs::remove_file(state_file);
+    }
+
+    #[test]
+    fn regression_persist_service_api_state_payload_json_backend_is_atomic() {
+        // Regression: #6110
+        let state_file = unique_temp_file_path("persist-atomic", "json");
+        fs::write(state_file.as_path(), r#"{"schema_version":"old"}"#)
+            .expect("fixture should write");
+        persist_service_api_state_payload(
+            state_file.to_str(),
+            r#"{"schema_version":"kamn.runtime.service-api-message-store.v2"}"#,
+        )
+        .expect("json backend persistence should succeed");
+        let payload =
+            fs::read_to_string(state_file.as_path()).expect("persisted payload should be readable");
+        assert_eq!(
+            payload,
+            r#"{"schema_version":"kamn.runtime.service-api-message-store.v2"}"#
+        );
+        assert!(
+            temp_artifacts_for_target(state_file.as_path()).is_empty(),
+            "json persistence should not leave atomic temp artifacts"
+        );
+        let _ = fs::remove_file(state_file);
+    }
+
+    #[test]
+    fn regression_relay_spool_drain_truncates_with_atomic_replace() {
+        // Regression: #6110
+        let spool_file = unique_temp_file_path("relay-spool", "ndjson");
+        fs::write(
+            spool_file.as_path(),
+            r#"{"message_id":"msg-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"hello\"}","queued_at_unix":1}
+"#,
+        )
+        .expect("relay spool fixture should write");
+        let drained = drain_service_api_relay_spool_entries(spool_file.to_str())
+            .expect("relay spool drain should succeed");
+        assert_eq!(drained.len(), 1);
+        let payload = fs::read_to_string(spool_file.as_path())
+            .expect("relay spool file should remain readable after drain");
+        assert!(
+            payload.is_empty(),
+            "relay spool drain should atomically replace with empty payload"
+        );
+        assert!(
+            temp_artifacts_for_target(spool_file.as_path()).is_empty(),
+            "relay spool drain should not leak temp artifacts"
+        );
+        let _ = fs::remove_file(spool_file);
     }
 }
