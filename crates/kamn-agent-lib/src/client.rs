@@ -1,10 +1,10 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
-    service_signature_for_fields, AgentDid, ServiceAgentProfile, ServiceApiClient,
-    ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages, ServiceChannelReceipt,
-    ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus,
-    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
-    ServiceTaskStatus,
+    service_signature_for_fields, service_signer_public_key_for_fields, AgentDid,
+    ServiceAgentProfile, ServiceApiClient, ServiceBridgeStatus, ServiceBridgeSubmission,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
+    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
 };
 use std::env;
 
@@ -76,10 +76,12 @@ impl ServiceApiHttpClient {
             self.chain_version.as_str(),
             body,
         )?;
-        Ok(ServiceRequestAuth::new_with_scope(
+        let signer_public_key_hex = service_signer_public_key_for_fields()?;
+        Ok(ServiceRequestAuth::new_with_signer_public_key_and_scope(
             sender_did.clone(),
             nonce,
             signature,
+            Some(signer_public_key_hex.as_str()),
             authz_scope,
         )?)
     }

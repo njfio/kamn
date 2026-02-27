@@ -27,6 +27,8 @@ use kamn_core::{
     DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
 };
 use std::collections::BTreeMap;
+use std::io::Write;
+use std::path::Path;
 
 const SERVICE_API_DATA_LAYER_RUNTIME_EVIDENCE_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-data-layer-runtime-evidence.v1";
@@ -108,6 +110,8 @@ struct ServiceApiPersistedMessageStoreSnapshot {
     messages: BTreeMap<String, ServiceApiPersistedMessageRecord>,
     channel_messages: BTreeMap<String, Vec<String>>,
     #[serde(default)]
+    auth_nonce_high_watermarks: BTreeMap<String, u64>,
+    #[serde(default)]
     tasks: BTreeMap<String, ServiceApiPersistedTaskRecord>,
     #[serde(default)]
     escrows: BTreeMap<String, ServiceApiPersistedEscrowRecord>,
@@ -125,6 +129,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             schema_version: "kamn.runtime.service-api-message-store.v2".to_owned(),
             messages: BTreeMap::new(),
             channel_messages: BTreeMap::new(),
+            auth_nonce_high_watermarks: BTreeMap::new(),
             tasks: BTreeMap::new(),
             escrows: BTreeMap::new(),
             contents: BTreeMap::new(),
@@ -172,8 +177,7 @@ impl ServiceApiMessageStore {
         };
         let payload = serde_json::to_string_pretty(&self.snapshot)
             .map_err(|error| format!("service api state serialization failed: {error}"))?;
-        fs::write(path, payload)
-            .map_err(|error| format!("service api state file write failed: {path}: {error}"))
+        write_state_file_atomically(Path::new(path), payload.as_str())
     }
 
     fn refresh_from_disk(&mut self) -> Result<(), String> {
@@ -432,6 +436,39 @@ impl ServiceApiMessageStore {
                 .cloned()
                 .unwrap_or_default(),
         })
+    }
+
+    pub(super) fn auth_nonce_high_watermarks(&self) -> BTreeMap<String, u64> {
+        self.snapshot.auth_nonce_high_watermarks.clone()
+    }
+
+    pub(super) fn record_auth_nonce_high_watermark(
+        &mut self,
+        sender_did: &str,
+        nonce: u64,
+    ) -> Result<(), String> {
+        self.refresh_from_disk()?;
+        let normalized_sender = sender_did.trim();
+        if normalized_sender.is_empty() {
+            return Err("service api auth nonce sender did must not be empty".to_owned());
+        }
+        if nonce == 0 {
+            return Err("service api auth nonce must be greater than zero".to_owned());
+        }
+
+        let current = self
+            .snapshot
+            .auth_nonce_high_watermarks
+            .get(normalized_sender)
+            .copied()
+            .unwrap_or(0);
+        if nonce <= current {
+            return Ok(());
+        }
+        self.snapshot
+            .auth_nonce_high_watermarks
+            .insert(normalized_sender.to_owned(), nonce);
+        self.persist()
     }
 
     pub(super) fn create_task(
@@ -760,6 +797,70 @@ fn bridge_source_message_id_from_payload(
         return default_value;
     }
     source_message_id.to_owned()
+}
+
+fn write_state_file_atomically(path: &Path, payload: &str) -> Result<(), String> {
+    let parent_dir = path
+        .parent()
+        .filter(|candidate| !candidate.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| {
+            format!(
+                "service api state file path has no file name: {}",
+                path.display()
+            )
+        })?;
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| format!("service api state file temp suffix failed: {error}"))?
+        .as_nanos();
+    let temp_file_name = format!("{file_name}.tmp-{}-{unique_suffix}", std::process::id());
+    let temp_path = parent_dir.join(temp_file_name);
+
+    let mut temp_file = fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(temp_path.as_path())
+        .map_err(|error| {
+            format!(
+                "service api state file temp create failed: {}: {error}",
+                temp_path.display()
+            )
+        })?;
+
+    if let Err(error) = temp_file.write_all(payload.as_bytes()) {
+        let _ = fs::remove_file(temp_path.as_path());
+        return Err(format!(
+            "service api state file temp write failed: {}: {error}",
+            temp_path.display()
+        ));
+    }
+
+    if let Err(error) = temp_file.sync_all() {
+        let _ = fs::remove_file(temp_path.as_path());
+        return Err(format!(
+            "service api state file temp sync failed: {}: {error}",
+            temp_path.display()
+        ));
+    }
+    drop(temp_file);
+
+    if let Err(error) = fs::rename(temp_path.as_path(), path) {
+        let _ = fs::remove_file(temp_path.as_path());
+        return Err(format!(
+            "service api state file rename failed: {}: {error}",
+            path.display()
+        ));
+    }
+
+    if let Ok(parent_handle) = fs::File::open(parent_dir) {
+        let _ = parent_handle.sync_all();
+    }
+
+    Ok(())
 }
 
 fn recipient_mailbox_channel_id(recipient_did: &str) -> String {
@@ -1190,5 +1291,99 @@ fn observability_health_label(health: ObservabilityHealth) -> &'static str {
         ObservabilityHealth::Healthy => "healthy",
         ObservabilityHealth::Degraded => "degraded",
         ObservabilityHealth::Critical => "critical",
+    }
+}
+
+#[cfg(test)]
+mod atomic_state_write_tests {
+    use super::write_state_file_atomically;
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    fn unique_temp_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be available")
+            .as_nanos();
+        std::env::temp_dir().join(format!("kamn-node-{name}-{}-{nanos}", std::process::id()))
+    }
+
+    fn collect_atomic_temp_entries(dir: &Path, state_file_name: &str) -> Vec<PathBuf> {
+        let prefix = format!("{state_file_name}.tmp-");
+        let mut entries = Vec::new();
+        if let Ok(read_dir) = fs::read_dir(dir) {
+            for entry in read_dir.flatten() {
+                if entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(prefix.as_str())
+                {
+                    entries.push(entry.path());
+                }
+            }
+        }
+        entries
+    }
+
+    #[test]
+    fn unit_atomic_state_write_replaces_payload_and_removes_temp_entries() {
+        let base_dir = unique_temp_dir("atomic-state-write-ok");
+        fs::create_dir_all(base_dir.as_path()).expect("temp base dir should create");
+        let state_file = base_dir.join("service-api-state.json");
+        fs::write(state_file.as_path(), "{\"schema_version\":\"old\"}")
+            .expect("initial state fixture should write");
+
+        write_state_file_atomically(
+            state_file.as_path(),
+            "{\"schema_version\":\"new\",\"messages\":{}}",
+        )
+        .expect("atomic write should succeed");
+
+        let payload = fs::read_to_string(state_file.as_path()).expect("state file should remain");
+        assert!(
+            payload.contains("\"schema_version\":\"new\""),
+            "atomic replacement should update destination payload"
+        );
+
+        let temp_entries =
+            collect_atomic_temp_entries(base_dir.as_path(), "service-api-state.json");
+        assert!(
+            temp_entries.is_empty(),
+            "atomic writer should not leave temp files behind after success"
+        );
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_dir(base_dir);
+    }
+
+    #[test]
+    fn unit_atomic_state_write_rename_failure_cleans_temp_entry() {
+        let base_dir = unique_temp_dir("atomic-state-write-rename-fail");
+        fs::create_dir_all(base_dir.as_path()).expect("temp base dir should create");
+        let state_path = base_dir.join("service-api-state.json");
+        fs::create_dir(state_path.as_path()).expect("fixture directory should create");
+
+        let error = write_state_file_atomically(
+            state_path.as_path(),
+            "{\"schema_version\":\"new\",\"messages\":{}}",
+        )
+        .expect_err("rename over directory destination must fail");
+        assert!(
+            error.contains("state file rename failed"),
+            "rename failure should fail closed with deterministic marker"
+        );
+
+        let temp_entries =
+            collect_atomic_temp_entries(base_dir.as_path(), "service-api-state.json");
+        assert!(
+            temp_entries.is_empty(),
+            "failed atomic write must clean temp entries before returning"
+        );
+
+        let _ = fs::remove_dir(state_path);
+        let _ = fs::remove_dir(base_dir);
     }
 }

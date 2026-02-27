@@ -8,6 +8,12 @@ const WS_PRESENCE_DEFAULT_GATEWAY_NODE: &str = "service-api-gateway";
 const WS_PRESENCE_DEFAULT_CONNECTED_SINCE_EPOCH_SECONDS: u64 = 1_709_000_000;
 const WS_EVENT_BUFFER_CAPACITY: usize = 256;
 const WS_EVENT_MESSAGE_CREATED: &str = "service-api.message.created";
+const WS_EVENT_CHANNEL_CREATED: &str = "service-api.channel.created";
+const WS_EVENT_TASK_SUBMITTED: &str = "service-api.task.submitted";
+const WS_EVENT_TASK_ACCEPTED: &str = "service-api.task.accepted";
+const WS_EVENT_TASK_COMPLETED: &str = "service-api.task.completed";
+const WS_EVENT_BRIDGE_SUBMITTED: &str = "service-api.bridge.submitted";
+const WS_EVENT_BRIDGE_FORWARDED: &str = "service-api.bridge.forwarded";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct ServiceApiWebsocketPresenceBody {
@@ -34,6 +40,33 @@ struct ServiceApiWebsocketMessageLifecycleBody {
     sender_did: Option<String>,
     recipient_did: Option<String>,
     channel_id: Option<String>,
+    sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketChannelLifecycleBody {
+    event: &'static str,
+    channel_id: String,
+    status: String,
+    sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketTaskLifecycleBody {
+    event: &'static str,
+    task_id: String,
+    state: String,
+    sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketBridgeLifecycleBody {
+    event: &'static str,
+    bridge_id: String,
+    bridge_status: String,
+    source_message_id: Option<String>,
+    target_message_id: Option<String>,
+    forward_tx_hash: Option<String>,
     sequence: u64,
 }
 
@@ -77,6 +110,74 @@ impl ServiceApiWebsocketEventFanout {
             sender_did: sender_did.map(str::to_owned),
             recipient_did: recipient_did.map(str::to_owned),
             channel_id: channel_id.map(str::to_owned),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_channel_created_event(&self, payload: &ServiceApiChannelCreateBody) {
+        let event = ServiceApiWebsocketChannelLifecycleBody {
+            event: WS_EVENT_CHANNEL_CREATED,
+            channel_id: payload.channel_id.clone(),
+            status: payload.status.clone(),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_task_submitted_event(&self, payload: &ServiceApiTaskCreateBody) {
+        let event = ServiceApiWebsocketTaskLifecycleBody {
+            event: WS_EVENT_TASK_SUBMITTED,
+            task_id: payload.task_id.clone(),
+            state: payload.state.clone(),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_task_transition_event(&self, payload: &ServiceApiTaskTransitionBody) {
+        let event_name = if payload.state == "accepted" {
+            WS_EVENT_TASK_ACCEPTED
+        } else if payload.state == "completed" {
+            WS_EVENT_TASK_COMPLETED
+        } else {
+            WS_EVENT_TASK_SUBMITTED
+        };
+        let event = ServiceApiWebsocketTaskLifecycleBody {
+            event: event_name,
+            task_id: payload.task_id.clone(),
+            state: payload.state.clone(),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_bridge_submitted_event(&self, payload: &ServiceApiBridgeSubmitBody) {
+        let event = ServiceApiWebsocketBridgeLifecycleBody {
+            event: WS_EVENT_BRIDGE_SUBMITTED,
+            bridge_id: payload.bridge_id.clone(),
+            bridge_status: payload.bridge_status.clone(),
+            source_message_id: Some(payload.source_message_id.clone()),
+            target_message_id: None,
+            forward_tx_hash: None,
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
+
+    pub(super) fn publish_bridge_forwarded_event(&self, payload: &ServiceApiBridgeStatusBody) {
+        let event = ServiceApiWebsocketBridgeLifecycleBody {
+            event: WS_EVENT_BRIDGE_FORWARDED,
+            bridge_id: payload.bridge_id.clone(),
+            bridge_status: payload.bridge_status.clone(),
+            source_message_id: None,
+            target_message_id: Some(payload.target_message_id.clone()),
+            forward_tx_hash: Some(payload.forward_tx_hash.clone()),
             sequence: self.next_sequence(),
         };
         let event_payload = super::serialize_service_api_json(&event);
@@ -452,5 +553,88 @@ fn map_realtime_contract_error(error: DataLayerM9RealtimeDeliveryError) -> Servi
             REASON_CODE_WS_PRESENCE_PROJECTION_INVALID,
             format!("presence projection failed: {other}"),
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ServiceApiWebsocketEventFanout;
+    use crate::service_api_endpoint::{
+        ServiceApiBridgeStatusBody, ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody,
+        ServiceApiTaskCreateBody, ServiceApiTaskTransitionBody,
+    };
+    use serde_json::Value;
+
+    #[test]
+    fn regression_issue_6216_websocket_fanout_publishes_channel_task_bridge_lifecycle_events() {
+        let fanout = ServiceApiWebsocketEventFanout::new();
+        let mut receiver = fanout.subscribe();
+
+        fanout.publish_channel_created_event(&ServiceApiChannelCreateBody {
+            channel_id: "channel-1".to_owned(),
+            status: "created".to_owned(),
+        });
+        fanout.publish_task_submitted_event(&ServiceApiTaskCreateBody {
+            task_id: "task-1".to_owned(),
+            state: "submitted".to_owned(),
+        });
+        fanout.publish_task_transition_event(&ServiceApiTaskTransitionBody {
+            task_id: "task-1".to_owned(),
+            state: "accepted".to_owned(),
+        });
+        fanout.publish_bridge_submitted_event(&ServiceApiBridgeSubmitBody {
+            bridge_id: "bridge-1".to_owned(),
+            source_message_id: "msg-source-1".to_owned(),
+            bridge_status: "submitted".to_owned(),
+        });
+        fanout.publish_bridge_forwarded_event(&ServiceApiBridgeStatusBody {
+            bridge_id: "bridge-1".to_owned(),
+            bridge_status: "forwarded".to_owned(),
+            target_message_id: "msg-target-1".to_owned(),
+            forward_tx_hash: "sha256:bridge-forwarded-1".to_owned(),
+        });
+
+        let mut events = Vec::new();
+        for _ in 0..5 {
+            events.push(
+                receiver
+                    .try_recv()
+                    .expect("fanout should publish lifecycle event"),
+            );
+        }
+
+        let parsed = events
+            .iter()
+            .map(|payload| {
+                serde_json::from_str::<Value>(payload).expect("event payload should be valid json")
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            parsed[0].get("event").and_then(Value::as_str),
+            Some("service-api.channel.created")
+        );
+        assert_eq!(
+            parsed[1].get("event").and_then(Value::as_str),
+            Some("service-api.task.submitted")
+        );
+        assert_eq!(
+            parsed[2].get("event").and_then(Value::as_str),
+            Some("service-api.task.accepted")
+        );
+        assert_eq!(
+            parsed[3].get("event").and_then(Value::as_str),
+            Some("service-api.bridge.submitted")
+        );
+        assert_eq!(
+            parsed[4].get("event").and_then(Value::as_str),
+            Some("service-api.bridge.forwarded")
+        );
+
+        let sequences = parsed
+            .iter()
+            .map(|payload| payload.get("sequence").and_then(Value::as_u64))
+            .collect::<Vec<_>>();
+        assert_eq!(sequences, vec![Some(1), Some(2), Some(3), Some(4), Some(5)]);
     }
 }

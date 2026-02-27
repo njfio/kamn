@@ -82,8 +82,33 @@ fn resolve_service_api_relay_spool_file_from_env(
     }
 }
 
+fn build_service_api_replay_guard(message_store: &ServiceApiMessageStore) -> ServiceApiReplayGuard {
+    let mut replay_guard = ServiceApiReplayGuard::new(
+        DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES,
+        Duration::from_secs(DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS),
+    );
+    for (sender_did, nonce) in message_store.auth_nonce_high_watermarks() {
+        replay_guard.seed_sender_nonce_high_watermark(sender_did.as_str(), nonce);
+    }
+    replay_guard
+}
+
 pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String> {
-    match env::var(SERVICE_API_TLS_MODE_ENV) {
+    resolve_service_api_tls_mode_from_env(
+        env::var(SERVICE_API_TLS_MODE_ENV),
+        env::var(SERVICE_API_TLS_CERT_FILE_ENV),
+        env::var(SERVICE_API_TLS_KEY_FILE_ENV),
+        cfg!(test),
+    )
+}
+
+fn resolve_service_api_tls_mode_from_env(
+    mode_env: Result<String, env::VarError>,
+    cert_file_env: Result<String, env::VarError>,
+    key_file_env: Result<String, env::VarError>,
+    allow_insecure_default: bool,
+) -> Result<ServiceApiTlsMode, String> {
+    match mode_env {
         Ok(value) => {
             let mode = value.trim().to_ascii_lowercase();
             if mode.is_empty() {
@@ -94,48 +119,82 @@ pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String
             match mode.as_str() {
                 SERVICE_API_TLS_MODE_DISABLED => Ok(ServiceApiTlsMode::Disabled),
                 SERVICE_API_TLS_MODE_REQUIRE => {
-                    let cert_file = env::var(SERVICE_API_TLS_CERT_FILE_ENV)
-                        .map_err(|_| {
-                            format!(
-                                "service api tls mode requires env: {SERVICE_API_TLS_CERT_FILE_ENV}"
-                            )
-                        })?
-                        .trim()
-                        .to_owned();
-                    if cert_file.is_empty() {
-                        return Err(format!(
-                            "service api tls cert env must not be empty: {SERVICE_API_TLS_CERT_FILE_ENV}"
-                        ));
-                    }
-                    let key_file = env::var(SERVICE_API_TLS_KEY_FILE_ENV)
-                        .map_err(|_| {
-                            format!(
-                                "service api tls mode requires env: {SERVICE_API_TLS_KEY_FILE_ENV}"
-                            )
-                        })?
-                        .trim()
-                        .to_owned();
-                    if key_file.is_empty() {
-                        return Err(format!(
-                            "service api tls key env must not be empty: {SERVICE_API_TLS_KEY_FILE_ENV}"
-                        ));
-                    }
-                    validate_service_api_tls_materials(cert_file.as_str(), key_file.as_str())?;
-                    Ok(ServiceApiTlsMode::Require {
-                        cert_file,
-                        key_file,
-                    })
+                    resolve_service_api_required_tls_mode_from_env(cert_file_env, key_file_env)
                 }
                 other => Err(format!(
                     "service api tls mode is invalid: {other} (supported: {SERVICE_API_TLS_MODE_DISABLED},{SERVICE_API_TLS_MODE_REQUIRE})"
                 )),
             }
         }
-        Err(env::VarError::NotPresent) => Ok(ServiceApiTlsMode::Disabled),
+        Err(env::VarError::NotPresent) => {
+            if allow_insecure_default {
+                return Ok(ServiceApiTlsMode::Disabled);
+            }
+            resolve_service_api_required_tls_mode_from_env(cert_file_env, key_file_env).map_err(
+                |error| {
+                    format!(
+                        "service api tls mode defaults to require when {SERVICE_API_TLS_MODE_ENV} is unset: {error}"
+                    )
+                },
+            )
+        }
         Err(env::VarError::NotUnicode(_)) => Err(format!(
             "service api tls mode env must be utf-8: {SERVICE_API_TLS_MODE_ENV}"
         )),
     }
+}
+
+fn resolve_service_api_required_tls_mode_from_env(
+    cert_file_env: Result<String, env::VarError>,
+    key_file_env: Result<String, env::VarError>,
+) -> Result<ServiceApiTlsMode, String> {
+    let cert_file = match cert_file_env {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(format!(
+                    "service api tls cert env must not be empty: {SERVICE_API_TLS_CERT_FILE_ENV}"
+                ));
+            }
+            normalized.to_owned()
+        }
+        Err(env::VarError::NotPresent) => {
+            return Err(format!(
+                "service api tls mode requires env: {SERVICE_API_TLS_CERT_FILE_ENV}"
+            ));
+        }
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(format!(
+                "service api tls cert env must be utf-8: {SERVICE_API_TLS_CERT_FILE_ENV}"
+            ));
+        }
+    };
+    let key_file = match key_file_env {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(format!(
+                    "service api tls key env must not be empty: {SERVICE_API_TLS_KEY_FILE_ENV}"
+                ));
+            }
+            normalized.to_owned()
+        }
+        Err(env::VarError::NotPresent) => {
+            return Err(format!(
+                "service api tls mode requires env: {SERVICE_API_TLS_KEY_FILE_ENV}"
+            ));
+        }
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(format!(
+                "service api tls key env must be utf-8: {SERVICE_API_TLS_KEY_FILE_ENV}"
+            ));
+        }
+    };
+    validate_service_api_tls_materials(cert_file.as_str(), key_file.as_str())?;
+    Ok(ServiceApiTlsMode::Require {
+        cert_file,
+        key_file,
+    })
 }
 
 pub(super) fn validate_service_api_tls_materials(
@@ -180,15 +239,13 @@ pub(super) async fn serve_service_api_endpoint_async(
     let state_file = resolve_service_api_state_file(&config)?;
     let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
     let message_store = ServiceApiMessageStore::from_optional_state_file(state_file)?;
+    let replay_guard = build_service_api_replay_guard(&message_store);
     let sender_anti_spam = build_service_api_sender_anti_spam_engine()
         .map_err(|error| format!("service api anti-spam init failed: {error}"))?;
 
     let runtime_state = Arc::new(ServiceApiRuntimeState {
         snapshot,
-        replay_guard: Arc::new(Mutex::new(ServiceApiReplayGuard::new(
-            DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES,
-            Duration::from_secs(DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS),
-        ))),
+        replay_guard: Arc::new(Mutex::new(replay_guard)),
         request_budget: Arc::new(ServiceApiRequestBudget::new(config.max_requests)),
         websocket_events: ServiceApiWebsocketEventFanout::new(),
         runtime_observability: Arc::new(Mutex::new(ServiceApiRuntimeObservability::new(
@@ -212,6 +269,11 @@ pub(super) async fn serve_service_api_endpoint_async(
 
     match tls_mode {
         ServiceApiTlsMode::Disabled => {
+            if !cfg!(test) {
+                eprintln!(
+                    "warning: service api tls disabled; traffic is plaintext (set {SERVICE_API_TLS_MODE_ENV}={SERVICE_API_TLS_MODE_REQUIRE} with {SERVICE_API_TLS_CERT_FILE_ENV}/{SERVICE_API_TLS_KEY_FILE_ENV})"
+                );
+            }
             let request_budget = request_budget_shared.clone();
             let timeout_flag = timeout_reached.clone();
             let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())
@@ -316,6 +378,7 @@ pub(super) fn build_service_api_router(state: Arc<ServiceApiRuntimeState>) -> Ro
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn fixture_endpoint_config(bind_addr: &str) -> ServiceApiEndpointConfig {
         ServiceApiEndpointConfig {
@@ -379,5 +442,77 @@ mod tests {
             resolved,
             Some("/tmp/state-store.json.relay.ndjson".to_owned())
         );
+    }
+
+    #[test]
+    fn regression_service_api_tls_mode_resolution_fails_closed_when_unset_in_production_mode() {
+        // Regression: #6185
+        let error = resolve_service_api_tls_mode_from_env(
+            Err(env::VarError::NotPresent),
+            Err(env::VarError::NotPresent),
+            Err(env::VarError::NotPresent),
+            false,
+        )
+        .expect_err("production default must fail closed when tls mode env is unset");
+        assert!(
+            error.contains("service api tls mode defaults to require"),
+            "production default failure should include deterministic marker: {error}"
+        );
+    }
+
+    #[test]
+    fn unit_service_api_tls_mode_resolution_allows_insecure_default_in_test_mode() {
+        let mode = resolve_service_api_tls_mode_from_env(
+            Err(env::VarError::NotPresent),
+            Err(env::VarError::NotPresent),
+            Err(env::VarError::NotPresent),
+            true,
+        )
+        .expect("test-mode default may resolve disabled");
+        assert_eq!(mode, ServiceApiTlsMode::Disabled);
+    }
+
+    #[test]
+    fn unit_service_api_tls_mode_resolution_keeps_explicit_disabled_mode() {
+        let mode = resolve_service_api_tls_mode_from_env(
+            Ok("disabled".to_owned()),
+            Err(env::VarError::NotPresent),
+            Err(env::VarError::NotPresent),
+            false,
+        )
+        .expect("explicit disabled mode should remain accepted");
+        assert_eq!(mode, ServiceApiTlsMode::Disabled);
+    }
+
+    #[test]
+    fn integration_service_api_replay_guard_seeds_nonce_high_watermark_from_state() {
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-service-api-replay-seed-state-{unique_suffix}.json"
+        ));
+        let state_path = state_file.to_string_lossy().to_string();
+        let mut store = ServiceApiMessageStore::from_optional_state_file(Some(state_path))
+            .expect("state-backed store should initialize");
+        store
+            .record_auth_nonce_high_watermark("kamn:did:agent:seeded", 9)
+            .expect("nonce high-watermark should persist");
+
+        let mut replay_guard = build_service_api_replay_guard(&store);
+        let start = Instant::now();
+        assert!(!replay_guard.record_nonce_if_fresh("kamn:did:agent:seeded", 9, start));
+        assert!(replay_guard.record_nonce_if_fresh(
+            "kamn:did:agent:seeded",
+            10,
+            start + Duration::from_secs(1)
+        ));
+
+        let _ = std::fs::remove_file(state_file);
     }
 }

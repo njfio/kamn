@@ -1,5 +1,6 @@
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Command, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn frame_request(body: &str) -> String {
     format!("Content-Length: {}\r\n\r\n{}", body.len(), body)
@@ -39,9 +40,30 @@ fn read_framed_response(reader: &mut BufReader<impl Read>) -> String {
     String::from_utf8(body_bytes).expect("response body should be utf-8")
 }
 
+fn temp_key_file_path() -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be monotonic")
+        .as_nanos();
+    std::env::temp_dir()
+        .join(format!(
+            "kamn-mcp-server-main-stdio-persistent-{nanos}-{}.key",
+            std::process::id()
+        ))
+        .to_str()
+        .expect("temp key path should be utf-8")
+        .to_owned()
+}
+
 #[test]
 fn spec_c10_main_stdio_session_processes_multiple_framed_requests_without_eof() {
     let binary = env!("CARGO_BIN_EXE_kamn-mcp-server");
+    let key_file = temp_key_file_path();
+    std::fs::write(
+        key_file.as_str(),
+        "1111111111111111111111111111111111111111111111111111111111111111\n",
+    )
+    .expect("mcp key file should be writable");
     let mut child = Command::new(binary)
         .args([
             "--endpoint",
@@ -49,7 +71,7 @@ fn spec_c10_main_stdio_session_processes_multiple_framed_requests_without_eof() 
             "--agent-name",
             "mcp-persistent-test",
             "--key-file",
-            "/tmp/mcp-persistent-test.key",
+            key_file.as_str(),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -107,4 +129,5 @@ fn spec_c10_main_stdio_session_processes_multiple_framed_requests_without_eof() 
         "mcp server should exit cleanly after persistent session; stderr={}",
         String::from_utf8_lossy(output.stderr.as_slice())
     );
+    let _ = std::fs::remove_file(key_file.as_str());
 }

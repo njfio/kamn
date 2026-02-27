@@ -25,6 +25,7 @@ use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
     NodeRole, SignerProviderHandshakeMatrix, SyncMode,
 };
+use serde_json::Value;
 use std::env;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpListener;
@@ -167,12 +168,34 @@ fn request_body(raw_request: &str) -> &str {
         .unwrap_or("")
 }
 
+fn project_json_value_to_string(value: &Value) -> Option<String> {
+    match value {
+        Value::String(value) => Some(value.clone()),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Bool(value) => Some(value.to_string()),
+        _ => None,
+    }
+}
+
+fn find_json_field_value(body: &Value, field: &str) -> Option<String> {
+    match body {
+        Value::Object(map) => {
+            if let Some(value) = map.get(field) {
+                return project_json_value_to_string(value);
+            }
+            map.values()
+                .find_map(|value| find_json_field_value(value, field))
+        }
+        Value::Array(entries) => entries
+            .iter()
+            .find_map(|value| find_json_field_value(value, field)),
+        _ => None,
+    }
+}
+
 fn extract_json_string_field(body: &str, field: &str) -> Option<String> {
-    let marker = format!("\"{field}\":\"");
-    let start = body.find(marker.as_str())?;
-    let remainder = &body[start + marker.len()..];
-    let end = remainder.find('"')?;
-    Some(remainder[..end].to_owned())
+    let parsed: Value = serde_json::from_str(body).ok()?;
+    find_json_field_value(&parsed, field)
 }
 
 fn spawn_kolme_live_mock_server(replies: Vec<MockHttpReply>) -> (String, Arc<Mutex<Vec<String>>>) {

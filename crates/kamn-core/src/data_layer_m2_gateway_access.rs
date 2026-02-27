@@ -877,3 +877,75 @@ fn compute_audit_record_hash(
 fn tagged_digest(value: &str) -> String {
     tagged_sha256(value, DATA_LAYER_M2_HASH_ALGORITHM)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        DataLayerM2AbacEngine, DataLayerM2ActorRole, DataLayerM2AuthorizationDecision,
+        DataLayerM2DidAuthRequest, DataLayerM2DidSessionService, DataLayerM2MessageScope,
+        DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
+        DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
+    };
+
+    #[test]
+    fn unit_data_layer_m2_session_authenticate_succeeds_for_valid_request() {
+        let service =
+            DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
+        let requester_did = "kamn:did:agent:alice";
+        let challenge = "nonce-1";
+        let token = service
+            .authenticate(DataLayerM2DidAuthRequest {
+                requester_did: requester_did.to_owned(),
+                challenge: challenge.to_owned(),
+                credential: format!("sig:{requester_did}:{challenge}"),
+                issued_at_epoch_seconds: 1_000,
+                ttl_seconds: 120,
+            })
+            .expect("valid auth request should issue session token");
+
+        assert_eq!(token.requester_did, requester_did);
+        assert_eq!(token.expires_at_epoch_seconds, 1_120);
+        assert!(token.token_id.starts_with("session:sha256:"));
+    }
+
+    #[test]
+    fn unit_data_layer_m2_authorize_message_visibility_allows_counterparty_and_denies_stranger() {
+        let engine = DataLayerM2AbacEngine::new();
+        let scope = DataLayerM2MessageScope {
+            message_id: "msg-1".to_owned(),
+            sender_did: "kamn:did:agent:alice".to_owned(),
+            recipient_did: "kamn:did:agent:bob".to_owned(),
+            owner_sender_did: "kamn:did:owner:alice".to_owned(),
+            owner_recipient_did: "kamn:did:owner:bob".to_owned(),
+            escrow_id: Some("escrow-1".to_owned()),
+        };
+
+        let allow = engine
+            .authorize_message_visibility(
+                "kamn:did:agent:alice",
+                DataLayerM2ActorRole::Agent,
+                &scope,
+            )
+            .expect("sender should be authorized as agent");
+        assert!(matches!(
+            allow,
+            DataLayerM2AuthorizationDecision::Allow {
+                reason_code: DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED
+            }
+        ));
+
+        let deny = engine
+            .authorize_message_visibility(
+                "kamn:did:agent:mallory",
+                DataLayerM2ActorRole::Agent,
+                &scope,
+            )
+            .expect("non-counterparty should return deterministic deny decision");
+        assert!(matches!(
+            deny,
+            DataLayerM2AuthorizationDecision::Deny {
+                reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED
+            }
+        ));
+    }
+}

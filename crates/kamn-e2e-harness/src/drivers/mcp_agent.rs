@@ -1,5 +1,15 @@
+use crate::drivers::shared::{
+    env_var_or_default, env_var_or_else,
+    is_live_bound_scenario_id as shared_is_live_bound_scenario_id,
+    live_execution_enabled_from_env as shared_live_execution_enabled_from_env,
+    live_s07_probe_agent_suffix as shared_live_s07_probe_agent_suffix,
+    parse_s15_budget_env_u128 as shared_parse_s15_budget_env_u128,
+    validate_s07_replay_reason_marker as shared_validate_s07_replay_reason_marker,
+    validate_s15_latency_budget_samples as shared_validate_s15_latency_budget_samples,
+};
 use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
+use kamn_mcp_server::json_optional_bool_field;
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -58,23 +68,6 @@ const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
 const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveMcpProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
-
-fn env_var_or_default(key: &str, default: &str) -> String {
-    match env::var(key) {
-        Ok(value) => value,
-        Err(_) => default.to_owned(),
-    }
-}
-
-fn env_var_or_else<F>(key: &str, fallback: F) -> String
-where
-    F: FnOnce() -> String,
-{
-    match env::var(key) {
-        Ok(value) => value,
-        Err(_) => fallback(),
-    }
-}
 
 /// MCP-agent driver for Tau and generic MCP runtimes.
 #[derive(Clone)]
@@ -298,38 +291,16 @@ impl McpAgentDriver {
 }
 
 fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
-    matches!(
-        scenario_id,
-        "S-01"
-            | "S-02"
-            | "S-03"
-            | "S-04"
-            | "S-05"
-            | "S-06"
-            | "S-07"
-            | "S-08"
-            | "S-09"
-            | "S-10"
-            | "S-11"
-            | "S-12"
-            | "S-13"
-            | "S-14"
-            | "S-15"
-    )
+    shared_is_live_bound_scenario_id(scenario_id)
 }
 
 fn live_execution_enabled_from_env() -> bool {
-    env::var(MCP_AGENT_LIVE_ENV)
-        .ok()
-        .map(|value| parse_bool_flag(value.as_str()))
-        .unwrap_or(false)
+    shared_live_execution_enabled_from_env(MCP_AGENT_LIVE_ENV)
 }
 
+#[cfg(test)]
 fn parse_bool_flag(value: &str) -> bool {
-    matches!(
-        value.trim().to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes" | "on"
-    )
+    crate::drivers::shared::parse_bool_flag(value)
 }
 
 fn run_live_s01_mcp_probe() -> Result<(), String> {
@@ -2097,19 +2068,7 @@ fn parse_s15_budget_env_u128(
     default_value: u128,
     step: &str,
 ) -> Result<u128, String> {
-    let parsed = env::var(env_key)
-        .ok()
-        .map(|raw| {
-            raw.trim()
-                .parse::<u128>()
-                .map_err(|_| format!("{step} invalid env value for {env_key}: {raw}"))
-        })
-        .transpose()?
-        .unwrap_or(default_value);
-    if parsed == 0 {
-        return Err(format!("{step} must be greater than zero for {env_key}"));
-    }
-    Ok(parsed)
+    shared_parse_s15_budget_env_u128(env_key, default_value, step)
 }
 
 fn validate_s15_latency_budget_samples(
@@ -2120,41 +2079,19 @@ fn validate_s15_latency_budget_samples(
     max_p99_millis: u128,
     step: &str,
 ) -> Result<(), String> {
-    if samples_millis.is_empty() {
-        return Err(format!("{step} produced zero latency samples"));
-    }
-
-    let mut sorted = samples_millis.to_vec();
-    sorted.sort_unstable();
-    let p50_index = percentile_index(sorted.len(), 50);
-    let p99_index = percentile_index(sorted.len(), 99);
-    let p50 = sorted[p50_index];
-    let p99 = sorted[p99_index];
-
-    if total_elapsed_millis > max_total_millis {
-        return Err(format!(
-            "{step} total elapsed millis exceeded budget: observed={total_elapsed_millis}, max={max_total_millis}"
-        ));
-    }
-    if p50 > max_p50_millis {
-        return Err(format!(
-            "{step} p50 millis exceeded budget: observed={p50}, max={max_p50_millis}"
-        ));
-    }
-    if p99 > max_p99_millis {
-        return Err(format!(
-            "{step} p99 millis exceeded budget: observed={p99}, max={max_p99_millis}"
-        ));
-    }
-    Ok(())
+    shared_validate_s15_latency_budget_samples(
+        samples_millis,
+        total_elapsed_millis,
+        max_total_millis,
+        max_p50_millis,
+        max_p99_millis,
+        step,
+    )
 }
 
+#[cfg(test)]
 fn percentile_index(sample_count: usize, percentile: u128) -> usize {
-    let numerator = (sample_count as u128)
-        .saturating_mul(percentile)
-        .saturating_add(100u128.saturating_sub(1));
-    let rank = numerator / 100;
-    rank.saturating_sub(1).min(sample_count as u128 - 1) as usize
+    crate::drivers::shared::percentile_index(sample_count, percentile)
 }
 
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
@@ -2246,12 +2183,7 @@ fn validate_s13_bridge_field_coherence(
 }
 
 fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
-    if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
-        return Err(format!(
-            "{step} missing replay reason marker: {replay_error}"
-        ));
-    }
-    Ok(())
+    shared_validate_s07_replay_reason_marker(replay_error, step, S07_REPLAY_REASON_MARKER)
 }
 
 fn run_live_s04_mcp_tool_call(
@@ -2321,7 +2253,7 @@ fn run_live_s04_mcp_tool_call(
         .iter()
         .find(|payload| payload.contains(response_id.as_str()))
         .ok_or_else(|| format!("mcp live s04 {tool_name} missing tool response payload"))?;
-    if !tool_response.contains(r#""ok":true"#) {
+    if !json_optional_bool_field(tool_response.as_str(), "ok").unwrap_or(false) {
         return Err(format!(
             "mcp live s04 {tool_name} returned non-success payload: {tool_response}"
         ));
@@ -2604,10 +2536,7 @@ fn run_live_s15_mcp_tool_call(
 }
 
 fn live_s07_probe_agent_suffix() -> String {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| duration.as_nanos().to_string())
-        .unwrap_or_else(|_| "0".to_owned())
+    shared_live_s07_probe_agent_suffix()
 }
 
 fn build_framed_jsonrpc_request(payload: &str) -> String {
@@ -2629,7 +2558,7 @@ fn validate_probe_initialize_response(payload: &str) -> Result<(), String> {
 }
 
 fn validate_probe_health_response(payload: &str) -> Result<(), String> {
-    if !payload.contains(r#""ok":true"#) {
+    if !json_optional_bool_field(payload, "ok").unwrap_or(false) {
         return Err(format!(
             "mcp live probe returned non-success health payload: {payload}"
         ));
@@ -4135,6 +4064,36 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn regression_issue_6214_run_live_s04_mcp_tool_call_rejects_nested_ok_true_when_root_false() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-tool-call-root-false");
+        write_mcp_tool_response_script(
+            &script_path,
+            "probe-request",
+            r#"{"ok":false,"detail":{"ok":true}}"#,
+        );
+
+        let error = run_live_s04_mcp_tool_call(
+            script_path
+                .to_str()
+                .expect("script path should be valid utf-8"),
+            "http://localhost:8080",
+            "probe",
+            "/tmp/probe.key",
+            "probe-request",
+            "health",
+            "{}",
+        )
+        .expect_err("root ok=false payload should fail");
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+
+        assert!(
+            error.contains("non-success payload"),
+            "error should mention non-success payload contract: {error}"
+        );
+    }
+
+    #[test]
     fn unit_run_live_s04_mcp_tool_call_success_status_still_requires_framed_payloads() {
         let error = run_live_s04_mcp_tool_call(
             "/bin/true",
@@ -4503,5 +4462,18 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     fn spec_c24_validate_probe_health_response_accepts_success_payload() {
         let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":true}}"#;
         validate_probe_health_response(payload).expect("ok=true health payload should pass");
+    }
+
+    #[test]
+    fn regression_issue_6214_validate_probe_health_response_rejects_nested_ok_true_when_root_false()
+    {
+        let payload =
+            r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":false,"detail":{"ok":true}}}"#;
+        let error = validate_probe_health_response(payload)
+            .expect_err("root result.ok=false should fail even when nested fields contain ok=true");
+        assert!(
+            error.contains("non-success health payload"),
+            "error should mention non-success health payload: {error}"
+        );
     }
 }

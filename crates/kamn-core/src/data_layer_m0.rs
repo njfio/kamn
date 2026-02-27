@@ -508,3 +508,118 @@ fn canonical_aad_payload(
 fn tagged_digest(value: &str) -> String {
     tagged_sha256(value, DATA_LAYER_M0_HASH_ALGORITHM)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        DataLayerM0AppendOnlyLedger, DataLayerM0Error, DataLayerM0RecordInput,
+        DataLayerM0WrappedKey, DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD,
+    };
+    use crate::direct_message_crypto::{
+        DirectMessageCiphertext, DIRECT_MESSAGE_CIPHER_ALGORITHM,
+        DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+    };
+    use crate::message_envelope::{
+        AttachmentRef, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader,
+        EnvelopeMetadata, EnvelopeProof, CANONICAL_ENCRYPTION_ALGORITHM,
+        CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
+    };
+    use std::collections::BTreeMap;
+
+    fn fixture_input(message_id: &str, nonce: u64) -> DataLayerM0RecordInput {
+        let mut body = BTreeMap::new();
+        body.insert("payload".to_owned(), "hello".to_owned());
+        DataLayerM0RecordInput {
+            envelope: CanonicalMessageEnvelope {
+                envelope: EnvelopeMetadata {
+                    id: message_id.to_owned(),
+                    type_name: CANONICAL_MESSAGE_ENVELOPE_TYPE.to_owned(),
+                    from: "kamn:did:agent:alice".to_owned(),
+                    to: vec!["kamn:did:agent:bob".to_owned()],
+                    created: "2026-01-01T00:00:00Z".to_owned(),
+                    expires: "2026-01-01T00:01:00Z".to_owned(),
+                    thread_id: Some("thread-1".to_owned()),
+                    parent_id: None,
+                    nonce,
+                },
+                header: EnvelopeHeader {
+                    message_type: "Request".to_owned(),
+                    priority: "high".to_owned(),
+                    content_type: "application/json".to_owned(),
+                    encryption: EnvelopeEncryption {
+                        algorithm: CANONICAL_ENCRYPTION_ALGORITHM.to_owned(),
+                        recipient_keys: vec!["did:key:bob#k1".to_owned()],
+                    },
+                },
+                body,
+                attachments: vec![AttachmentRef {
+                    id: "att-1".to_owned(),
+                    media_type: "text/plain".to_owned(),
+                    uri: "cid:att-1".to_owned(),
+                }],
+                proof: EnvelopeProof {
+                    type_name: "Ed25519Signature2020".to_owned(),
+                    created: "2026-01-01T00:00:00Z".to_owned(),
+                    verification_method: "kamn:did:agent:alice#k1".to_owned(),
+                    proof_purpose: CANONICAL_PROOF_PURPOSE.to_owned(),
+                    proof_value: "proof:ok".to_owned(),
+                },
+            },
+            ciphertext: DirectMessageCiphertext {
+                key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
+                cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
+                sender_key_ref: "did:key:alice#k1".to_owned(),
+                recipient_key_ref: "did:key:bob#k1".to_owned(),
+                nonce,
+                ciphertext: "a1b2".to_owned(),
+                auth_tag: "c3d4".to_owned(),
+            },
+            wrapped_keys: vec![DataLayerM0WrappedKey {
+                did: "kamn:did:agent:bob".to_owned(),
+                wrapped_cek: "cek-1".to_owned(),
+            }],
+            compression_codec: DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD.to_owned(),
+            compression_dict_id: None,
+            content_size_bytes: 128,
+            compressed_size_bytes: 64,
+        }
+    }
+
+    #[test]
+    fn unit_data_layer_m0_append_ledger_verifies_hash_chain() {
+        let mut ledger = DataLayerM0AppendOnlyLedger::new();
+        ledger
+            .append(fixture_input("msg-1", 1))
+            .expect("first append should succeed");
+        ledger
+            .append(fixture_input("msg-2", 2))
+            .expect("second append should succeed");
+
+        assert_eq!(ledger.records().len(), 2);
+        ledger
+            .verify_hash_chain()
+            .expect("hash-chain should remain valid");
+    }
+
+    #[test]
+    fn unit_data_layer_m0_tamper_detection_rejects_broken_hash_chain() {
+        let mut ledger = DataLayerM0AppendOnlyLedger::new();
+        ledger
+            .append(fixture_input("msg-1", 1))
+            .expect("first append should succeed");
+        ledger
+            .append(fixture_input("msg-2", 2))
+            .expect("second append should succeed");
+        ledger
+            .replace_content_hash_unchecked("msg-1", "sha256:tampered")
+            .expect("tamper hook should mutate first record");
+
+        let error = ledger
+            .verify_hash_chain()
+            .expect_err("tampered hash-chain must fail verification");
+        assert!(matches!(
+            error,
+            DataLayerM0Error::InvalidHashChainLink { .. }
+        ));
+    }
+}

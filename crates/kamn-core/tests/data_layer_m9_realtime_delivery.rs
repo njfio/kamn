@@ -542,6 +542,7 @@ fn spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_stable_reason_co
         minimum_sybil_deposit: 1,
         suspension_violation_threshold: 2,
         suspension_seconds: 60,
+        max_seen_message_ids: 10_000,
     })
     .expect("custom anti-spam config should initialize");
     rate_limit_engine

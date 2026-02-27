@@ -1,4 +1,5 @@
 use kamn_mcp_server::tools::{build_tool_registry, MCP_TOOL_NAMES};
+use serde_json::Value;
 
 #[test]
 fn spec_c03_mcp_tool_registry_contains_required_21_tools() {
@@ -43,13 +44,33 @@ fn spec_c04_mcp_tool_registry_has_deterministic_schema_descriptors() {
     let registry = build_tool_registry();
     for tool in registry {
         assert!(!tool.description.trim().is_empty());
+        let input_schema: Value =
+            serde_json::from_str(tool.input_schema).expect("input schema must be valid json");
+        let output_schema: Value =
+            serde_json::from_str(tool.output_schema).expect("output schema must be valid json");
         assert_eq!(
-            tool.input_schema,
-            r#"{"type":"object","additionalProperties":true}"#
+            input_schema
+                .get("type")
+                .and_then(Value::as_str)
+                .expect("input type"),
+            "object"
+        );
+        assert!(
+            input_schema.get("properties").is_some(),
+            "input schema should expose properties for {}",
+            tool.name
         );
         assert_eq!(
-            tool.output_schema,
-            r#"{"type":"object","additionalProperties":true}"#
+            output_schema
+                .get("type")
+                .and_then(Value::as_str)
+                .expect("output type"),
+            "object"
+        );
+        assert!(
+            output_schema.get("properties").is_some(),
+            "output schema should expose deterministic envelope properties for {}",
+            tool.name
         );
     }
 }
@@ -147,5 +168,86 @@ fn spec_c09_mcp_bridge_tool_descriptors_match_contract_descriptions() {
     assert_eq!(
         query_bridge_message.description, "Query one bridge message",
         "query_bridge_message descriptor should keep canonical contract description",
+    );
+}
+
+#[test]
+fn spec_c10_mcp_tool_registry_output_schema_declares_envelope_shape() {
+    let registry = build_tool_registry();
+    let health = registry
+        .iter()
+        .find(|tool| tool.name == "health")
+        .expect("health descriptor should exist");
+    let output_schema: Value =
+        serde_json::from_str(health.output_schema).expect("output schema should parse");
+    let required = output_schema
+        .get("required")
+        .and_then(Value::as_array)
+        .expect("output schema required field should exist");
+    assert!(
+        required.iter().any(|value| value == "ok"),
+        "output schema must require ok flag"
+    );
+    let properties = output_schema
+        .get("properties")
+        .and_then(Value::as_object)
+        .expect("output schema properties should exist");
+    assert!(properties.contains_key("result"));
+    assert!(properties.contains_key("error"));
+}
+
+#[test]
+fn spec_c11_mcp_tool_registry_input_schemas_expose_required_fields_for_representative_tools() {
+    let registry = build_tool_registry();
+
+    let send_message = registry
+        .iter()
+        .find(|tool| tool.name == "send_message")
+        .expect("send_message descriptor should exist");
+    let send_input: Value =
+        serde_json::from_str(send_message.input_schema).expect("send_message schema should parse");
+    let send_required = send_input
+        .get("required")
+        .and_then(Value::as_array)
+        .expect("send_message required set");
+    assert!(send_required.iter().any(|value| value == "payload"));
+
+    let verify_proof = registry
+        .iter()
+        .find(|tool| tool.name == "verify_proof")
+        .expect("verify_proof descriptor should exist");
+    let verify_input: Value =
+        serde_json::from_str(verify_proof.input_schema).expect("verify_proof schema should parse");
+    let verify_required = verify_input
+        .get("required")
+        .and_then(Value::as_array)
+        .expect("verify_proof required set");
+    for field in ["message_id", "tx_hash", "block_height", "finality"] {
+        assert!(
+            verify_required.iter().any(|value| value == field),
+            "verify_proof required set should include {field}"
+        );
+    }
+
+    let health = registry
+        .iter()
+        .find(|tool| tool.name == "health")
+        .expect("health descriptor should exist");
+    let health_input: Value =
+        serde_json::from_str(health.input_schema).expect("health schema should parse");
+    let health_properties = health_input
+        .get("properties")
+        .and_then(Value::as_object)
+        .expect("health properties object");
+    assert!(
+        health_properties.is_empty(),
+        "health input schema should expose no required payload fields"
+    );
+    assert_eq!(
+        health_input
+            .get("additionalProperties")
+            .and_then(Value::as_bool),
+        Some(false),
+        "health input schema should reject undeclared fields"
     );
 }

@@ -12,4 +12,5 @@ pub mod protocol;
 pub mod tools;
 
 pub use dispatch::{dispatch_tool_request_json, invalid_request_response_json, McpToolBackend};
+pub use json_helpers::json_optional_bool_field;
 pub use protocol::process_stdio_input;

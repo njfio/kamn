@@ -6,6 +6,8 @@ pub mod cli_scripted;
 pub mod mcp_agent;
 /// SDK-direct mode driver.
 pub mod sdk_direct;
+/// Shared helper surface for duplicated driver internals.
+pub(crate) mod shared;
 
 /// Driver result emitted for one scenario execution.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,3 +1,12 @@
+use crate::drivers::shared::{
+    env_var_or_default, env_var_or_else,
+    is_live_bound_scenario_id as shared_is_live_bound_scenario_id,
+    live_execution_enabled_from_env as shared_live_execution_enabled_from_env,
+    live_s07_probe_agent_suffix as shared_live_s07_probe_agent_suffix,
+    parse_s15_budget_env_u128 as shared_parse_s15_budget_env_u128,
+    validate_s07_replay_reason_marker as shared_validate_s07_replay_reason_marker,
+    validate_s15_latency_budget_samples as shared_validate_s15_latency_budget_samples,
+};
 use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
 use std::env;
@@ -58,23 +67,6 @@ const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
 const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
-
-fn env_var_or_default(key: &str, default: &str) -> String {
-    match env::var(key) {
-        Ok(value) => value,
-        Err(_) => default.to_owned(),
-    }
-}
-
-fn env_var_or_else<F>(key: &str, fallback: F) -> String
-where
-    F: FnOnce() -> String,
-{
-    match env::var(key) {
-        Ok(value) => value,
-        Err(_) => fallback(),
-    }
-}
 
 /// CLI-scripted driver with optional live execution for S-01 through S-15.
 #[derive(Clone)]
@@ -282,38 +274,16 @@ impl CliScriptedDriver {
 }
 
 fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
-    matches!(
-        scenario_id,
-        "S-01"
-            | "S-02"
-            | "S-03"
-            | "S-04"
-            | "S-05"
-            | "S-06"
-            | "S-07"
-            | "S-08"
-            | "S-09"
-            | "S-10"
-            | "S-11"
-            | "S-12"
-            | "S-13"
-            | "S-14"
-            | "S-15"
-    )
+    shared_is_live_bound_scenario_id(scenario_id)
 }
 
 fn live_execution_enabled_from_env() -> bool {
-    env::var(CLI_SCRIPTED_LIVE_ENV)
-        .ok()
-        .map(|value| parse_bool_flag(value.as_str()))
-        .unwrap_or(false)
+    shared_live_execution_enabled_from_env(CLI_SCRIPTED_LIVE_ENV)
 }
 
+#[cfg(test)]
 fn parse_bool_flag(value: &str) -> bool {
-    matches!(
-        value.trim().to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes" | "on"
-    )
+    crate::drivers::shared::parse_bool_flag(value)
 }
 
 fn run_live_s01_cli_health_probe() -> Result<(), String> {
@@ -2114,19 +2084,7 @@ fn parse_s15_budget_env_u128(
     default_value: u128,
     step: &str,
 ) -> Result<u128, String> {
-    let parsed = env::var(env_key)
-        .ok()
-        .map(|raw| {
-            raw.trim()
-                .parse::<u128>()
-                .map_err(|_| format!("{step} invalid env value for {env_key}: {raw}"))
-        })
-        .transpose()?
-        .unwrap_or(default_value);
-    if parsed == 0 {
-        return Err(format!("{step} must be greater than zero for {env_key}"));
-    }
-    Ok(parsed)
+    shared_parse_s15_budget_env_u128(env_key, default_value, step)
 }
 
 fn validate_s15_latency_budget_samples(
@@ -2137,41 +2095,19 @@ fn validate_s15_latency_budget_samples(
     max_p99_millis: u128,
     step: &str,
 ) -> Result<(), String> {
-    if samples_millis.is_empty() {
-        return Err(format!("{step} produced zero latency samples"));
-    }
-
-    let mut sorted = samples_millis.to_vec();
-    sorted.sort_unstable();
-    let p50_index = percentile_index(sorted.len(), 50);
-    let p99_index = percentile_index(sorted.len(), 99);
-    let p50 = sorted[p50_index];
-    let p99 = sorted[p99_index];
-
-    if total_elapsed_millis > max_total_millis {
-        return Err(format!(
-            "{step} total elapsed millis exceeded budget: observed={total_elapsed_millis}, max={max_total_millis}"
-        ));
-    }
-    if p50 > max_p50_millis {
-        return Err(format!(
-            "{step} p50 millis exceeded budget: observed={p50}, max={max_p50_millis}"
-        ));
-    }
-    if p99 > max_p99_millis {
-        return Err(format!(
-            "{step} p99 millis exceeded budget: observed={p99}, max={max_p99_millis}"
-        ));
-    }
-    Ok(())
+    shared_validate_s15_latency_budget_samples(
+        samples_millis,
+        total_elapsed_millis,
+        max_total_millis,
+        max_p50_millis,
+        max_p99_millis,
+        step,
+    )
 }
 
+#[cfg(test)]
 fn percentile_index(sample_count: usize, percentile: u128) -> usize {
-    let numerator = (sample_count as u128)
-        .saturating_mul(percentile)
-        .saturating_add(100u128.saturating_sub(1));
-    let rank = numerator / 100;
-    rank.saturating_sub(1).min(sample_count as u128 - 1) as usize
+    crate::drivers::shared::percentile_index(sample_count, percentile)
 }
 
 fn run_cli_command_capture_stdout(
@@ -2271,19 +2207,11 @@ fn parse_text_output_field<'a>(output: &'a str, key: &str) -> Option<&'a str> {
 }
 
 fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
-    if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
-        return Err(format!(
-            "{step} missing replay reason marker: {replay_error}"
-        ));
-    }
-    Ok(())
+    shared_validate_s07_replay_reason_marker(replay_error, step, S07_REPLAY_REASON_MARKER)
 }
 
 fn live_s07_probe_agent_suffix() -> String {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| duration.as_nanos().to_string())
-        .unwrap_or_else(|_| "0".to_owned())
+    shared_live_s07_probe_agent_suffix()
 }
 
 #[cfg(test)]

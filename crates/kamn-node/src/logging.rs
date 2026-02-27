@@ -1,5 +1,6 @@
 use kamn_core::ConfigError;
 use std::env;
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const KAMN_NODE_LOG_LEVEL_ENV: &str = "KAMN_NODE_LOG_LEVEL";
@@ -8,6 +9,9 @@ const LOG_FIELD_CORRELATION_ID: &str = "correlation_id";
 const LOG_FIELD_REASON_CODE: &str = "reason_code";
 const LOG_DEFAULT_CORRELATION_ID: &str = "none";
 const LOG_DEFAULT_REASON_CODE: &str = "none";
+
+#[cfg(not(test))]
+static LOG_CONFIG_CACHE: OnceLock<Result<NodeLogConfig, String>> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum NodeLogLevel {
@@ -97,6 +101,9 @@ pub(crate) fn emit_log_event(
     event: &str,
     fields: &[(&str, &str)],
 ) -> Result<(), ConfigError> {
+    #[cfg(not(test))]
+    let config = resolve_cached_log_config(&LOG_CONFIG_CACHE, resolve_log_config_from_env)?;
+    #[cfg(test)]
     let config = resolve_log_config_from_env()?;
     if !config.allows(level) {
         return Ok(());
@@ -150,6 +157,24 @@ fn parse_node_log_format(value: &str) -> Result<NodeLogFormat, ConfigError> {
         _ => Err(ConfigError::InvalidLogConfig(format!(
             "{KAMN_NODE_LOG_FORMAT_ENV} must be one of: text,json"
         ))),
+    }
+}
+
+fn resolve_cached_log_config(
+    cache: &OnceLock<Result<NodeLogConfig, String>>,
+    resolver: impl FnOnce() -> Result<NodeLogConfig, ConfigError>,
+) -> Result<NodeLogConfig, ConfigError> {
+    let cached = cache.get_or_init(|| resolver().map_err(normalize_log_config_cache_error));
+    match cached {
+        Ok(config) => Ok(*config),
+        Err(message) => Err(ConfigError::InvalidLogConfig(message.clone())),
+    }
+}
+
+fn normalize_log_config_cache_error(error: ConfigError) -> String {
+    match error {
+        ConfigError::InvalidLogConfig(message) => message,
+        other => other.to_string(),
     }
 }
 
@@ -321,3 +346,64 @@ fn record_test_log_line(line: &str) {
 
 #[cfg(not(test))]
 fn record_test_log_line(_line: &str) {}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        resolve_cached_log_config, ConfigError, NodeLogConfig, NodeLogFormat, NodeLogLevel,
+        OnceLock,
+    };
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn regression_issue_6212_cached_log_config_resolver_invoked_once() {
+        let cache: OnceLock<Result<NodeLogConfig, String>> = OnceLock::new();
+        let resolver_calls = AtomicUsize::new(0);
+        let expected = NodeLogConfig {
+            level: NodeLogLevel::Info,
+            format: NodeLogFormat::Json,
+        };
+
+        let first = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(expected)
+        })
+        .expect("first resolve should succeed");
+        let second = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(NodeLogConfig::default_config())
+        })
+        .expect("cached resolve should reuse first config");
+
+        assert_eq!(first, expected);
+        assert_eq!(second, expected);
+        assert_eq!(resolver_calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn regression_issue_6212_cached_log_config_caches_fail_closed_error() {
+        let cache: OnceLock<Result<NodeLogConfig, String>> = OnceLock::new();
+        let resolver_calls = AtomicUsize::new(0);
+
+        let first = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Err(ConfigError::InvalidLogConfig(
+                "KAMN_NODE_LOG_LEVEL must be one of: error,warn,info,debug,trace".to_owned(),
+            ))
+        })
+        .expect_err("first resolve should fail closed");
+        let second = resolve_cached_log_config(&cache, || {
+            resolver_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(NodeLogConfig::default_config())
+        })
+        .expect_err("cached failure should persist");
+
+        assert!(
+            matches!(first, ConfigError::InvalidLogConfig(message) if message.contains("KAMN_NODE_LOG_LEVEL"))
+        );
+        assert!(
+            matches!(second, ConfigError::InvalidLogConfig(message) if message.contains("KAMN_NODE_LOG_LEVEL"))
+        );
+        assert_eq!(resolver_calls.load(Ordering::SeqCst), 1);
+    }
+}

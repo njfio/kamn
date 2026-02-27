@@ -263,6 +263,45 @@ fn service_api_relay_projection_missing_state_file_is_noop() {
 }
 
 #[test]
+fn integration_message_store_persists_auth_nonce_high_watermark_state() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-auth-nonce-watermark-{unique_suffix}.json"
+    ));
+    let state_path = state_file
+        .to_str()
+        .expect("state file path should be utf-8")
+        .to_owned();
+
+    let mut store = ServiceApiMessageStore::from_optional_state_file(Some(state_path.clone()))
+        .expect("store should initialize");
+    store
+        .record_auth_nonce_high_watermark("kamn:did:agent:alice", 7)
+        .expect("nonce watermark should persist");
+    store
+        .record_auth_nonce_high_watermark("kamn:did:agent:alice", 6)
+        .expect("stale nonce should be ignored without error");
+
+    let reloaded = ServiceApiMessageStore::from_optional_state_file(Some(state_path))
+        .expect("store should reload from disk");
+    let high_watermarks = reloaded.auth_nonce_high_watermarks();
+    assert_eq!(
+        high_watermarks.get("kamn:did:agent:alice"),
+        Some(&7),
+        "persisted nonce high-watermark should survive reload"
+    );
+
+    let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
 fn service_api_relay_projection_errors_for_non_not_found_paths() {
     let unique_suffix = format!(
         "{}-{}",

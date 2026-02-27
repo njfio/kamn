@@ -5,7 +5,7 @@ use zeroize::Zeroize;
 #[cfg(test)]
 use super::signer_policy::resolve_kolme_live_signer_env_name_set;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct KolmeForkSecp256k1SignerAdapter {
     signing_key: SigningKey,
     pub(crate) private_key_env: &'static str,

@@ -115,6 +115,7 @@ fn rejects_invalid_configuration() {
             minimum_sybil_deposit: 10,
             suspension_violation_threshold: 2,
             suspension_seconds: 60,
+            max_seen_message_ids: 10_000,
         }),
         Err(AntiSpamError::InvalidConfig(
             "max_messages_per_window must be greater than zero".to_owned()

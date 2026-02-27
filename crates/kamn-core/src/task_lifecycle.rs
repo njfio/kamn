@@ -210,64 +210,109 @@ impl fmt::Display for TaskLifecycleError {
 
 impl std::error::Error for TaskLifecycleError {}
 
+const TASK_TRANSITION_EDGES: &[(TaskState, TaskTransition, TaskState)] = &[
+    (
+        TaskState::Submitted,
+        TaskTransition::Accept,
+        TaskState::Accepted,
+    ),
+    (
+        TaskState::Submitted,
+        TaskTransition::Cancel,
+        TaskState::Cancelled,
+    ),
+    (
+        TaskState::Accepted,
+        TaskTransition::Delegate,
+        TaskState::Delegated,
+    ),
+    (
+        TaskState::Accepted,
+        TaskTransition::StartWork,
+        TaskState::InProgress,
+    ),
+    (
+        TaskState::Accepted,
+        TaskTransition::Cancel,
+        TaskState::Cancelled,
+    ),
+    (
+        TaskState::Delegated,
+        TaskTransition::StartWork,
+        TaskState::InProgress,
+    ),
+    (
+        TaskState::Delegated,
+        TaskTransition::Cancel,
+        TaskState::Cancelled,
+    ),
+    (
+        TaskState::InProgress,
+        TaskTransition::Block,
+        TaskState::Blocked,
+    ),
+    (
+        TaskState::InProgress,
+        TaskTransition::RequestInput,
+        TaskState::InputRequired,
+    ),
+    (
+        TaskState::InProgress,
+        TaskTransition::Complete,
+        TaskState::Completed,
+    ),
+    (
+        TaskState::InProgress,
+        TaskTransition::Fail,
+        TaskState::Failed,
+    ),
+    (
+        TaskState::InProgress,
+        TaskTransition::Cancel,
+        TaskState::Cancelled,
+    ),
+    (
+        TaskState::InputRequired,
+        TaskTransition::StartWork,
+        TaskState::InProgress,
+    ),
+    (
+        TaskState::InputRequired,
+        TaskTransition::Fail,
+        TaskState::Failed,
+    ),
+    (
+        TaskState::InputRequired,
+        TaskTransition::Cancel,
+        TaskState::Cancelled,
+    ),
+    (
+        TaskState::Blocked,
+        TaskTransition::StartWork,
+        TaskState::InProgress,
+    ),
+    (TaskState::Blocked, TaskTransition::Fail, TaskState::Failed),
+    (
+        TaskState::Blocked,
+        TaskTransition::Cancel,
+        TaskState::Cancelled,
+    ),
+];
+
 fn next_state(from: TaskState, transition: TaskTransition) -> Option<TaskState> {
-    match (from, transition) {
-        (TaskState::Submitted, TaskTransition::Accept) => Some(TaskState::Accepted),
-        (TaskState::Submitted, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::Accepted, TaskTransition::Delegate) => Some(TaskState::Delegated),
-        (TaskState::Accepted, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::Accepted, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::Delegated, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::Delegated, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::InProgress, TaskTransition::Block) => Some(TaskState::Blocked),
-        (TaskState::InProgress, TaskTransition::RequestInput) => Some(TaskState::InputRequired),
-        (TaskState::InProgress, TaskTransition::Complete) => Some(TaskState::Completed),
-        (TaskState::InProgress, TaskTransition::Fail) => Some(TaskState::Failed),
-        (TaskState::InProgress, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::InputRequired, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::InputRequired, TaskTransition::Fail) => Some(TaskState::Failed),
-        (TaskState::InputRequired, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        (TaskState::Blocked, TaskTransition::StartWork) => Some(TaskState::InProgress),
-        (TaskState::Blocked, TaskTransition::Fail) => Some(TaskState::Failed),
-        (TaskState::Blocked, TaskTransition::Cancel) => Some(TaskState::Cancelled),
-
-        _ => None,
-    }
+    TASK_TRANSITION_EDGES
+        .iter()
+        .find(|&&(edge_from, edge_transition, _)| {
+            edge_from == from && edge_transition == transition
+        })
+        .map(|&(_, _, to)| to)
 }
 
 fn transition_between(from: TaskState, to: TaskState) -> Option<TaskTransition> {
-    match (from, to) {
-        (TaskState::Submitted, TaskState::Accepted) => Some(TaskTransition::Accept),
-        (TaskState::Submitted, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::Accepted, TaskState::Delegated) => Some(TaskTransition::Delegate),
-        (TaskState::Accepted, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::Accepted, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::Delegated, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::Delegated, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::InProgress, TaskState::Blocked) => Some(TaskTransition::Block),
-        (TaskState::InProgress, TaskState::InputRequired) => Some(TaskTransition::RequestInput),
-        (TaskState::InProgress, TaskState::Completed) => Some(TaskTransition::Complete),
-        (TaskState::InProgress, TaskState::Failed) => Some(TaskTransition::Fail),
-        (TaskState::InProgress, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::InputRequired, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::InputRequired, TaskState::Failed) => Some(TaskTransition::Fail),
-        (TaskState::InputRequired, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        (TaskState::Blocked, TaskState::InProgress) => Some(TaskTransition::StartWork),
-        (TaskState::Blocked, TaskState::Failed) => Some(TaskTransition::Fail),
-        (TaskState::Blocked, TaskState::Cancelled) => Some(TaskTransition::Cancel),
-
-        _ => None,
-    }
+    TASK_TRANSITION_EDGES
+        .iter()
+        .find(|&&(edge_from, _, edge_to)| edge_from == from && edge_to == to)
+        .map(|&(_, transition, _)| transition)
 }
 
 fn is_terminal(state: TaskState) -> bool {
@@ -279,7 +324,10 @@ fn is_terminal(state: TaskState) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
+    use super::{
+        next_state, transition_between, TaskLifecycle, TaskLifecycleError, TaskState,
+        TaskTransition, TASK_TRANSITION_EDGES,
+    };
 
     #[test]
     fn new_rejects_empty_task_id() {
@@ -343,6 +391,36 @@ mod tests {
                 TaskState::InProgress,
                 TaskState::Completed,
             ]
+        );
+    }
+
+    #[test]
+    fn regression_issue_6206_lifecycle_forward_and_reverse_lookup_are_consistent() {
+        for &(from, transition, to) in TASK_TRANSITION_EDGES {
+            assert_eq!(
+                next_state(from, transition),
+                Some(to),
+                "forward lookup must resolve canonical edge {from:?} --{transition:?}--> {to:?}"
+            );
+            assert_eq!(
+                transition_between(from, to),
+                Some(transition),
+                "reverse lookup must resolve canonical edge {from:?} --{transition:?}--> {to:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn regression_issue_6206_lifecycle_lookups_share_single_transition_table() {
+        assert_eq!(
+            next_state(TaskState::Submitted, TaskTransition::Fail),
+            None,
+            "invalid forward edge must not be admitted"
+        );
+        assert_eq!(
+            transition_between(TaskState::Submitted, TaskState::Completed),
+            None,
+            "invalid reverse edge must not be admitted"
         );
     }
 }

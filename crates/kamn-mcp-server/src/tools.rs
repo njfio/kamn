@@ -11,8 +11,18 @@ pub struct ToolDescriptor {
     pub output_schema: &'static str,
 }
 
-const GENERIC_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","additionalProperties":true}"#;
-const GENERIC_OUTPUT_SCHEMA_JSON: &str = r#"{"type":"object","additionalProperties":true}"#;
+const EMPTY_INPUT_SCHEMA_JSON: &str =
+    r#"{"type":"object","properties":{},"additionalProperties":false}"#;
+const PAYLOAD_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["payload"],"properties":{"payload":{"type":"string"}},"additionalProperties":false}"#;
+const CHANNEL_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["channel_id"],"properties":{"channel_id":{"type":"string"}},"additionalProperties":false}"#;
+const MESSAGE_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["message_id"],"properties":{"message_id":{"type":"string"}},"additionalProperties":false}"#;
+const TASK_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["task_id"],"properties":{"task_id":{"type":"string"}},"additionalProperties":false}"#;
+const DID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["did"],"properties":{"did":{"type":"string"}},"additionalProperties":false}"#;
+const CONTENT_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["content_id"],"properties":{"content_id":{"type":"string"}},"additionalProperties":false}"#;
+const BRIDGE_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["bridge_id"],"properties":{"bridge_id":{"type":"string"}},"additionalProperties":false}"#;
+const ESCROW_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["escrow_id"],"properties":{"escrow_id":{"type":"string"}},"additionalProperties":false}"#;
+const VERIFY_PROOF_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["message_id","tx_hash","block_height","finality"],"properties":{"message_id":{"type":"string"},"tx_hash":{"type":"string"},"block_height":{"type":"string"},"finality":{"type":"string"}},"additionalProperties":false}"#;
+const MCP_ENVELOPE_OUTPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"},"id":{"type":"string"},"tool":{"type":"string"},"result":{"type":"object"},"error":{"type":"object","required":["kind","message"],"properties":{"kind":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}"#;
 
 /// Required PRD phase-2 MCP tool names.
 pub const MCP_TOOL_NAMES: [&str; 21] = [
@@ -74,11 +84,36 @@ fn tool_descriptor_for_name(name: &'static str) -> ToolDescriptor {
         _ => "Unsupported tool",
     };
 
+    let input_schema = match name {
+        "register" => EMPTY_INPUT_SCHEMA_JSON,
+        "send_message" => PAYLOAD_INPUT_SCHEMA_JSON,
+        "create_channel" => PAYLOAD_INPUT_SCHEMA_JSON,
+        "list_messages" => CHANNEL_ID_INPUT_SCHEMA_JSON,
+        "query_message" => MESSAGE_ID_INPUT_SCHEMA_JSON,
+        "query_task" => TASK_ID_INPUT_SCHEMA_JSON,
+        "query_agent_profile" => DID_INPUT_SCHEMA_JSON,
+        "register_content" => PAYLOAD_INPUT_SCHEMA_JSON,
+        "expire_content" => CONTENT_ID_INPUT_SCHEMA_JSON,
+        "tombstone_content" => CONTENT_ID_INPUT_SCHEMA_JSON,
+        "query_content" => CONTENT_ID_INPUT_SCHEMA_JSON,
+        "submit_bridge_message" => PAYLOAD_INPUT_SCHEMA_JSON,
+        "forward_bridge_message" => BRIDGE_ID_INPUT_SCHEMA_JSON,
+        "query_bridge_message" => BRIDGE_ID_INPUT_SCHEMA_JSON,
+        "create_task" => PAYLOAD_INPUT_SCHEMA_JSON,
+        "accept_task" => TASK_ID_INPUT_SCHEMA_JSON,
+        "complete_task" => TASK_ID_INPUT_SCHEMA_JSON,
+        "fund_escrow" => PAYLOAD_INPUT_SCHEMA_JSON,
+        "release_escrow" => ESCROW_ID_INPUT_SCHEMA_JSON,
+        "verify_proof" => VERIFY_PROOF_INPUT_SCHEMA_JSON,
+        "health" => EMPTY_INPUT_SCHEMA_JSON,
+        _ => EMPTY_INPUT_SCHEMA_JSON,
+    };
+
     ToolDescriptor {
         name,
         description,
-        input_schema: GENERIC_INPUT_SCHEMA_JSON,
-        output_schema: GENERIC_OUTPUT_SCHEMA_JSON,
+        input_schema,
+        output_schema: MCP_ENVELOPE_OUTPUT_SCHEMA_JSON,
     }
 }
 

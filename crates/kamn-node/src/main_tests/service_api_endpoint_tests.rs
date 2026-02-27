@@ -2023,7 +2023,8 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let sender_did = "kamn:did:agent:async-http-client";
+    let sender_did_one = "kamn:did:agent:async-http-client-1";
+    let sender_did_two = "kamn:did:agent:async-http-client-2";
     let body_one = "{\"message\":\"async-route-1\"}".to_owned();
     let body_two = "{\"message\":\"async-route-2\"}".to_owned();
     let state_hash = format!(
@@ -2032,13 +2033,13 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
         snapshot.chain_version.as_str()
     );
     let signature_one = service_api_request_signature_for_fields(
-        sender_did,
+        sender_did_one,
         900,
         state_hash.as_str(),
         body_one.as_str(),
     );
     let signature_two = service_api_request_signature_for_fields(
-        sender_did,
+        sender_did_two,
         901,
         state_hash.as_str(),
         body_two.as_str(),
@@ -2068,7 +2069,7 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
                 ),
                 async {
                     let headers = [
-                        ("X-KAMN-Sender-DID", sender_did),
+                        ("X-KAMN-Sender-DID", sender_did_one),
                         ("X-KAMN-Request-Nonce", "900"),
                         ("X-KAMN-Request-Signature", signature_one.as_str()),
                     ];
@@ -2083,7 +2084,7 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
                 },
                 async {
                     let headers = [
-                        ("X-KAMN-Sender-DID", sender_did),
+                        ("X-KAMN-Sender-DID", sender_did_two),
                         ("X-KAMN-Request-Nonce", "901"),
                         ("X-KAMN-Request-Signature", signature_two.as_str()),
                     ];

@@ -302,7 +302,7 @@ impl WatchdogNode {
         }
 
         let observed_ratio_pct =
-            ((delivered_recipients as f64 / expected_recipients as f64) * 100.0).floor() as u8;
+            observed_ratio_pct_floor(delivered_recipients, expected_recipients);
         if observed_ratio_pct >= self.config.min_delivery_ratio_pct {
             return Ok(Vec::new());
         }
@@ -364,10 +364,18 @@ fn require_non_empty(field: &str, value: &str) -> Result<(), WatchdogError> {
     Ok(())
 }
 
+fn observed_ratio_pct_floor(delivered_recipients: usize, expected_recipients: usize) -> u8 {
+    let delivered = delivered_recipients as u128;
+    let expected = expected_recipients as u128;
+    let ratio_pct = (delivered.saturating_mul(100)) / expected;
+    ratio_pct as u8
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        WatchdogConfig, WatchdogError, WatchdogNode, WatchdogObservation, WatchdogSeverity,
+        observed_ratio_pct_floor, WatchdogConfig, WatchdogError, WatchdogNode, WatchdogObservation,
+        WatchdogSeverity,
     };
 
     #[test]
@@ -416,5 +424,21 @@ mod tests {
             .expect("observation should be valid");
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].severity, WatchdogSeverity::Critical);
+    }
+
+    #[test]
+    fn regression_issue_6211_delivery_ratio_pct_uses_integer_floor_math() {
+        assert_eq!(observed_ratio_pct_floor(2, 3), 66);
+        assert_eq!(observed_ratio_pct_floor(1, 2), 50);
+        assert_eq!(observed_ratio_pct_floor(8, 10), 80);
+    }
+
+    #[test]
+    fn regression_issue_6211_delivery_ratio_pct_handles_large_values_without_overflow() {
+        let expected = usize::MAX;
+        let delivered = expected.saturating_sub(1);
+        let ratio_pct = observed_ratio_pct_floor(delivered, expected);
+        assert!(ratio_pct <= 100);
+        assert_eq!(ratio_pct, 99);
     }
 }

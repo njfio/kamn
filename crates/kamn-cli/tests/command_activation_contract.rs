@@ -19,21 +19,30 @@ fn reserve_loopback_addr() -> String {
 fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String> {
     let mut request = Vec::new();
     let mut chunk = [0_u8; 1024];
+    let read_deadline = Instant::now() + Duration::from_secs(5);
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(Duration::from_millis(250)))
         .map_err(|error| format!("request read-timeout failed: {error}"))?;
 
     loop {
+        if request.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+        if Instant::now() > read_deadline {
+            break;
+        }
         match stream.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(read_count) => {
-                request.extend_from_slice(&chunk[..read_count]);
-                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+            Ok(0) => {
+                if Instant::now() > read_deadline {
                     break;
                 }
+                thread::sleep(Duration::from_millis(5));
+            }
+            Ok(read_count) => {
+                request.extend_from_slice(&chunk[..read_count]);
             }
             Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break;
+                continue;
             }
             Err(error) => return Err(format!("request read failed: {error}")),
         }
@@ -85,7 +94,7 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
         .map_err(|error| format!("server nonblocking mode failed: {error}"))?;
 
     // Workspace-wide test load can delay bind/accept scheduling; keep the fixture budget tolerant.
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(15);
     let mut served = 0usize;
     while served < max_requests {
         if Instant::now() > deadline {
@@ -270,6 +279,39 @@ fn spec_c01_cli_health_command_executes_supported_path() {
     assert!(
         server_result.is_ok(),
         "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c11_cli_help_command_renders_usage_surface() {
+    let text_output = dispatch(&parsed(CommandKind::Help, "http://localhost:18080", &[]))
+        .expect("help command should succeed");
+    assert!(
+        text_output.text.contains("usage=kamn-cli <command>"),
+        "help text should include usage: {text_output:?}"
+    );
+    assert!(
+        text_output.text.contains("commands=register"),
+        "help text should include command inventory: {text_output:?}"
+    );
+    assert!(
+        text_output
+            .text
+            .contains("flags=--help, -h, --format, --endpoint"),
+        "help text should include known flags: {text_output:?}"
+    );
+
+    let json_output = dispatch(&parsed_json(
+        CommandKind::Help,
+        "http://localhost:18080",
+        &[],
+    ))
+    .expect("help command should succeed in json mode");
+    assert!(
+        json_output
+            .json
+            .contains("\"flags\":[\"--help\",\"-h\",\"--format\",\"--endpoint\"]"),
+        "help json should expose deterministic flag set: {json_output:?}"
     );
 }
 

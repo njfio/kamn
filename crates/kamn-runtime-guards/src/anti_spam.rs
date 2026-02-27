@@ -14,6 +14,8 @@ pub struct AntiSpamConfig {
     pub suspension_violation_threshold: u32,
     /// Suspension duration in seconds after threshold is exceeded.
     pub suspension_seconds: u64,
+    /// Maximum retained seen-message-id entries before deterministic eviction.
+    pub max_seen_message_ids: usize,
 }
 
 impl Default for AntiSpamConfig {
@@ -24,6 +26,7 @@ impl Default for AntiSpamConfig {
             minimum_sybil_deposit: 10,
             suspension_violation_threshold: 2,
             suspension_seconds: 60,
+            max_seen_message_ids: 10_000,
         }
     }
 }
@@ -115,6 +118,7 @@ pub struct AntiSpamEngine {
     config: AntiSpamConfig,
     deposits: HashMap<String, u64>,
     seen_message_ids: HashSet<String>,
+    seen_message_id_order: VecDeque<String>,
     sender_state: HashMap<String, SenderState>,
     telemetry: AntiSpamTelemetry,
 }
@@ -128,6 +132,7 @@ impl AntiSpamEngine {
             config,
             deposits: HashMap::new(),
             seen_message_ids: HashSet::new(),
+            seen_message_id_order: VecDeque::new(),
             sender_state: HashMap::new(),
             telemetry: AntiSpamTelemetry::default(),
         })
@@ -152,11 +157,19 @@ impl AntiSpamEngine {
 
         self.telemetry.total_processed += 1;
 
-        if !self.seen_message_ids.insert(message_id.to_owned()) {
+        if self.seen_message_ids.contains(message_id) {
             self.telemetry.rejected_duplicate_message += 1;
             return Ok(AntiSpamDecision::Rejected(
                 AntiSpamRejection::DuplicateMessageId(message_id.to_owned()),
             ));
+        }
+        self.seen_message_ids.insert(message_id.to_owned());
+        self.seen_message_id_order.push_back(message_id.to_owned());
+        while self.seen_message_id_order.len() > self.config.max_seen_message_ids {
+            let Some(oldest_message_id) = self.seen_message_id_order.pop_front() else {
+                break;
+            };
+            self.seen_message_ids.remove(oldest_message_id.as_str());
         }
 
         let deposit = *self.deposits.get(sender_did).unwrap_or(&0);
@@ -239,6 +252,11 @@ fn validate_config(config: AntiSpamConfig) -> Result<(), AntiSpamError> {
             "suspension_seconds must be greater than zero".to_owned(),
         ));
     }
+    if config.max_seen_message_ids == 0 {
+        return Err(AntiSpamError::InvalidConfig(
+            "max_seen_message_ids must be greater than zero".to_owned(),
+        ));
+    }
 
     Ok(())
 }
@@ -266,7 +284,9 @@ fn require_non_empty(field: &str, value: &str) -> Result<(), AntiSpamError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError};
+    use super::{
+        AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
+    };
 
     #[test]
     fn invalid_sender_did_is_rejected() {
@@ -303,5 +323,64 @@ mod tests {
             decision,
             AntiSpamDecision::Rejected(super::AntiSpamRejection::InsufficientDeposit { .. })
         ));
+    }
+
+    #[test]
+    fn regression_issue_6210_seen_message_ids_evict_oldest_entry_at_capacity() {
+        let mut engine = AntiSpamEngine::new(AntiSpamConfig {
+            max_seen_message_ids: 2,
+            minimum_sybil_deposit: 0,
+            max_messages_per_window: 100,
+            ..AntiSpamConfig::default()
+        })
+        .expect("valid config");
+
+        let sender = "kamn:did:agent:sender-eviction";
+        engine
+            .set_deposit(sender, 0)
+            .expect("zero deposit should be allowed for test config");
+
+        assert_eq!(
+            engine.evaluate(sender, "msg-1", 1).expect("accept msg-1"),
+            AntiSpamDecision::Accepted
+        );
+        assert_eq!(
+            engine.evaluate(sender, "msg-2", 2).expect("accept msg-2"),
+            AntiSpamDecision::Accepted
+        );
+        assert_eq!(
+            engine.evaluate(sender, "msg-3", 3).expect("accept msg-3"),
+            AntiSpamDecision::Accepted
+        );
+
+        // msg-2 is still retained and must be rejected as duplicate.
+        assert_eq!(
+            engine
+                .evaluate(sender, "msg-2", 4)
+                .expect("duplicate msg-2 should be rejected"),
+            AntiSpamDecision::Rejected(AntiSpamRejection::DuplicateMessageId("msg-2".to_owned()))
+        );
+
+        // msg-1 was deterministically evicted as the oldest and is accepted again.
+        assert_eq!(
+            engine
+                .evaluate(sender, "msg-1", 5)
+                .expect("evicted oldest id should be accepted"),
+            AntiSpamDecision::Accepted
+        );
+    }
+
+    #[test]
+    fn regression_issue_6210_config_rejects_zero_seen_message_capacity() {
+        let result = AntiSpamEngine::new(AntiSpamConfig {
+            max_seen_message_ids: 0,
+            ..AntiSpamConfig::default()
+        });
+        assert_eq!(
+            result,
+            Err(AntiSpamError::InvalidConfig(
+                "max_seen_message_ids must be greater than zero".to_owned(),
+            ))
+        );
     }
 }

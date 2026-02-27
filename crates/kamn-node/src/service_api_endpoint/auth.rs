@@ -1,6 +1,8 @@
 use super::*;
 use kamn_kolme::{ServiceApiScope, ServiceApiScopeError};
 
+const SELF_CERTIFYING_AGENT_DID_KEY_PREFIX: &str = "kamn:did:agent:pkh-";
+
 pub(super) fn header_value<'a>(
     headers: &'a BTreeMap<String, String>,
     name: &str,
@@ -12,6 +14,20 @@ pub(super) fn authorize_service_api_request(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
     replay_guard: &mut ServiceApiReplayGuard,
+) -> Result<(), RequestAuthFailure> {
+    authorize_service_api_request_with_legacy_policy(
+        state,
+        request,
+        replay_guard,
+        cfg!(any(test, debug_assertions)),
+    )
+}
+
+fn authorize_service_api_request_with_legacy_policy(
+    state: &ServiceApiRuntimeState,
+    request: &ParsedRequest,
+    replay_guard: &mut ServiceApiReplayGuard,
+    allow_legacy_sender_binding: bool,
 ) -> Result<(), RequestAuthFailure> {
     if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
         return Ok(());
@@ -56,22 +72,33 @@ pub(super) fn authorize_service_api_request(
                 format!("missing required header: {REQUEST_AUTH_SIGNATURE_HEADER}"),
             ))
         })?;
+    let signer_public_key_hex = resolve_signer_public_key_for_request(
+        &request.headers,
+        state.auth_public_key_hex.as_deref(),
+        allow_legacy_sender_binding,
+    )?;
+    if !sender_did_matches_signer_public_key(
+        sender_did,
+        signer_public_key_hex,
+        allow_legacy_sender_binding,
+    ) {
+        return Err(RequestAuthFailure::Unauthorized(
+            ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
+                "sender did does not match signer public key binding contract",
+            ),
+        ));
+    }
     let state_hash = service_api_signature_state_hash(&state.snapshot);
-    let crypto_verified = state
-        .auth_public_key_hex
-        .as_deref()
-        .map(|public_key_hex| {
-            service_auth_verify_with_public_key_hex(
-                signature,
-                sender_did,
-                nonce,
-                state_hash.as_str(),
-                request.body.as_str(),
-                public_key_hex,
-            )
-            .is_ok()
-        })
-        .unwrap_or(false);
+    let crypto_verified = service_auth_verify_with_public_key_hex(
+        signature,
+        sender_did,
+        nonce,
+        state_hash.as_str(),
+        request.body.as_str(),
+        signer_public_key_hex,
+    )
+    .is_ok();
     if !crypto_verified {
         return Err(RequestAuthFailure::Unauthorized(
             ServiceApiReasonedError::new(
@@ -87,6 +114,51 @@ pub(super) fn authorize_service_api_request(
         )));
     }
     Ok(())
+}
+
+fn resolve_signer_public_key_for_request<'a>(
+    headers: &'a BTreeMap<String, String>,
+    fallback_public_key_hex: Option<&'a str>,
+    allow_legacy_sender_binding: bool,
+) -> Result<&'a str, RequestAuthFailure> {
+    if let Some(public_key_hex) = header_value(headers, REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER) {
+        let normalized = public_key_hex.trim();
+        if normalized.is_empty() {
+            return Err(RequestAuthFailure::Unauthorized(
+                ServiceApiReasonedError::new(
+                    REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
+                    format!(
+                        "invalid signer public key header: {REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER}"
+                    ),
+                ),
+            ));
+        }
+        return Ok(public_key_hex);
+    }
+    if allow_legacy_sender_binding {
+        if let Some(public_key_hex) = fallback_public_key_hex {
+            return Ok(public_key_hex);
+        }
+    }
+    Err(RequestAuthFailure::Unauthorized(
+        ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
+            format!("missing required header: {REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER}"),
+        ),
+    ))
+}
+
+fn sender_did_matches_signer_public_key(
+    sender_did: &str,
+    signer_public_key_hex: &str,
+    allow_legacy_sender_binding: bool,
+) -> bool {
+    if let Some(bound_public_key_hex) =
+        sender_did.strip_prefix(SELF_CERTIFYING_AGENT_DID_KEY_PREFIX)
+    {
+        return bound_public_key_hex.eq_ignore_ascii_case(signer_public_key_hex);
+    }
+    allow_legacy_sender_binding
 }
 
 pub(super) fn enforce_request_scope_policy(
@@ -447,7 +519,7 @@ mod tests {
         ));
         assert_eq!(guard.tracked_entry_count(), 3);
 
-        assert!(guard.record_nonce_if_fresh(
+        assert!(!guard.record_nonce_if_fresh(
             "kamn:did:agent:alice",
             1,
             start + Duration::from_secs(4)
@@ -466,10 +538,128 @@ mod tests {
             9,
             start + Duration::from_secs(1)
         ));
-        assert!(guard.record_nonce_if_fresh(
+        assert!(!guard.record_nonce_if_fresh(
             "kamn:did:agent:bob",
             9,
             start + Duration::from_secs(3)
         ));
+    }
+
+    #[test]
+    fn regression_issue_6196_nonce_contract_rejects_post_ttl_replay_nonce_values() {
+        // Regression: #6196
+        let start = Instant::now();
+        let mut guard = ServiceApiReplayGuard::new(8, Duration::from_secs(2));
+
+        assert!(guard.record_nonce_if_fresh("kamn:did:agent:ivy", 50, start));
+        assert!(!guard.record_nonce_if_fresh(
+            "kamn:did:agent:ivy",
+            50,
+            start + Duration::from_secs(3)
+        ));
+        assert!(!guard.record_nonce_if_fresh(
+            "kamn:did:agent:ivy",
+            49,
+            start + Duration::from_secs(4)
+        ));
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:ivy",
+            51,
+            start + Duration::from_secs(5)
+        ));
+    }
+
+    #[test]
+    fn regression_replay_guard_seeded_nonce_rejects_stale_values_after_restart() {
+        // Regression: #6186
+        let start = Instant::now();
+        let mut guard = ServiceApiReplayGuard::new(8, Duration::from_secs(60));
+        guard.seed_sender_nonce_high_watermark("kamn:did:agent:carol", 42);
+
+        assert!(!guard.record_nonce_if_fresh("kamn:did:agent:carol", 42, start));
+        assert!(!guard.record_nonce_if_fresh(
+            "kamn:did:agent:carol",
+            41,
+            start + Duration::from_secs(1)
+        ));
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:carol",
+            43,
+            start + Duration::from_secs(2)
+        ));
+    }
+
+    #[test]
+    fn unit_sender_did_binding_accepts_self_certifying_public_key_suffix() {
+        let signer_public_key_hex =
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11";
+        let sender_did = format!("kamn:did:agent:pkh-{signer_public_key_hex}");
+        assert!(sender_did_matches_signer_public_key(
+            sender_did.as_str(),
+            signer_public_key_hex,
+            false,
+        ));
+    }
+
+    #[test]
+    fn unit_sender_did_binding_rejects_self_certifying_key_mismatch() {
+        let sender_did =
+            "kamn:did:agent:pkh-02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11";
+        assert!(!sender_did_matches_signer_public_key(
+            sender_did,
+            "03f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
+            false,
+        ));
+    }
+
+    #[test]
+    fn unit_sender_did_binding_rejects_legacy_did_without_legacy_policy() {
+        assert!(!sender_did_matches_signer_public_key(
+            "kamn:did:agent:alice",
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
+            false,
+        ));
+        assert!(sender_did_matches_signer_public_key(
+            "kamn:did:agent:alice",
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
+            true,
+        ));
+    }
+
+    #[test]
+    fn regression_signer_public_key_resolution_requires_header_without_legacy_policy() {
+        // Regression: #6184
+        let headers = BTreeMap::new();
+        let error = resolve_signer_public_key_for_request(
+            &headers,
+            Some("02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11"),
+            false,
+        )
+        .expect_err("production policy should require explicit signer public key header");
+        let RequestAuthFailure::Unauthorized(error) = error else {
+            panic!("expected unauthorized auth failure");
+        };
+        assert_eq!(
+            error.reason_code,
+            REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
+        );
+        assert!(error
+            .message
+            .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER));
+    }
+
+    #[test]
+    fn unit_signer_public_key_resolution_allows_legacy_fallback_when_enabled() {
+        let headers = BTreeMap::new();
+        let resolved = resolve_signer_public_key_for_request(
+            &headers,
+            Some("02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11"),
+            true,
+        )
+        .expect("legacy policy should allow shared fallback key");
+        assert_eq!(
+            resolved,
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11"
+        );
     }
 }

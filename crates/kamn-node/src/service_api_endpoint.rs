@@ -5,6 +5,7 @@ mod payload;
 mod runtime_observability;
 mod scope_fixture;
 mod server;
+mod snapshot;
 mod state_io;
 #[cfg(test)]
 mod tests;
@@ -52,6 +53,7 @@ use tokio::sync::{Mutex, Notify, Semaphore};
 
 use message_store::ServiceApiMessageStore;
 use runtime_observability::ServiceApiRuntimeObservability;
+pub(crate) use snapshot::ServiceApiSnapshot;
 pub(crate) use state_io::{
     append_service_api_relay_spool_entry,
     default_service_api_relay_spool_file_path_from_state_file,
@@ -96,6 +98,7 @@ const ROUTE_METRICS: &str = "/metrics";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
+const REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER: &str = "x-kamn-signer-public-key";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
@@ -208,71 +211,17 @@ pub(crate) struct ServiceApiEndpointConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ServiceApiSnapshot {
-    pub(crate) runtime_mode: String,
-    pub(crate) role: String,
-    pub(crate) chain_id: String,
-    pub(crate) chain_version: String,
-    pub(crate) cross_store_replay_reason_taxonomy_version: String,
-    pub(crate) cross_store_replay_reason_code_count: usize,
-    pub(crate) auth_reason_taxonomy_version: String,
-    pub(crate) auth_reason_code_count: usize,
-    pub(crate) scope_policy_reason_taxonomy_version: String,
-    pub(crate) scope_policy_reason_code_count: usize,
-    pub(crate) scope_policy_fixture_reason_taxonomy_version: String,
-    pub(crate) scope_policy_fixture_reason_code_count: usize,
-    pub(crate) scope_policy_fixture_row_count: usize,
-    pub(crate) scope_policy_fixture_allow_row_count: usize,
-    pub(crate) scope_policy_fixture_deny_row_count: usize,
-    pub(crate) scope_policy_fixture_unique_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_method_count: usize,
-    pub(crate) scope_policy_fixture_unique_expected_outcome_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_only_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_only_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_only_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_only_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_method_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_only_method_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_only_method_count: usize,
-    pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
-    pub(crate) lifecycle_rejection_reason_code_count: usize,
-    pub(crate) route_authz_matrix_schema_version: String,
-    pub(crate) route_authz_matrix_total_route_count: usize,
-    pub(crate) route_authz_matrix_public_route_count: usize,
-    pub(crate) route_authz_matrix_protected_route_count: usize,
-    pub(crate) websocket_reason_taxonomy_version: String,
-    pub(crate) websocket_reason_code_count: usize,
-    pub(crate) observability_source: String,
-    pub(crate) observability_latency_p50_ms: u64,
-    pub(crate) observability_latency_p99_ms: u64,
-    pub(crate) observability_throughput_tps: u64,
-    pub(crate) observability_error_rate_bps: u64,
-    pub(crate) observability_availability_bps: u64,
-    pub(crate) observability_health: String,
-    pub(crate) observability_alert_count: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointResponse {
     pub(crate) status_code: u16,
     pub(crate) content_type: &'static str,
     pub(crate) body: String,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiErrorBody {
     pub(crate) error: String,
     pub(crate) reason_code: String,
     pub(crate) message: String,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiHealthBody {
     pub(crate) status: String,
@@ -281,20 +230,17 @@ pub(crate) struct ServiceApiHealthBody {
     pub(crate) observability_source: String,
     pub(crate) observability_health: String,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiMessageCreateBody {
     pub(crate) message_id: String,
     pub(crate) status: String,
     pub(crate) runtime_mode: String,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiMessageRelayBody {
     pub(crate) message_id: String,
     pub(crate) status: String,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiMessageGetBody {
     pub(crate) message_id: String,
@@ -306,7 +252,6 @@ pub(crate) struct ServiceApiMessageGetBody {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) body: Option<String>,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiRelaySpoolEntry {
     pub(crate) message_id: String,
@@ -316,19 +261,16 @@ pub(crate) struct ServiceApiRelaySpoolEntry {
     pub(crate) body: String,
     pub(crate) queued_at_unix: u64,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiChannelCreateBody {
     pub(crate) channel_id: String,
     pub(crate) status: String,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiChannelMessagesBody {
     pub(crate) channel_id: String,
     pub(crate) messages: Vec<String>,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiTaskCreateBody {
     pub(crate) task_id: String,
@@ -514,6 +456,7 @@ struct ServiceApiIngressRateWindow {
 struct ServiceApiReplayGuard {
     entries: BTreeSet<(String, u64)>,
     insertion_order: VecDeque<(String, u64, Instant)>,
+    highest_nonce_by_sender: BTreeMap<String, u64>,
     max_entries: usize,
     ttl: Duration,
 }
@@ -523,6 +466,7 @@ impl ServiceApiReplayGuard {
         Self {
             entries: BTreeSet::new(),
             insertion_order: VecDeque::new(),
+            highest_nonce_by_sender: BTreeMap::new(),
             max_entries: max_entries.max(1),
             ttl,
         }
@@ -530,14 +474,30 @@ impl ServiceApiReplayGuard {
 
     fn record_nonce_if_fresh(&mut self, sender_did: &str, nonce: u64, now: Instant) -> bool {
         self.evict_expired(now);
+        if let Some(high_watermark) = self.highest_nonce_by_sender.get(sender_did) {
+            if nonce <= *high_watermark {
+                return false;
+            }
+        }
         let entry = (sender_did.to_owned(), nonce);
         if self.entries.contains(&entry) {
             return false;
         }
         self.entries.insert(entry.clone());
         self.insertion_order.push_back((entry.0, entry.1, now));
+        self.seed_sender_nonce_high_watermark(sender_did, nonce);
         self.evict_over_capacity();
         true
+    }
+
+    fn seed_sender_nonce_high_watermark(&mut self, sender_did: &str, nonce: u64) {
+        let entry = self
+            .highest_nonce_by_sender
+            .entry(sender_did.to_owned())
+            .or_insert(0);
+        if nonce > *entry {
+            *entry = nonce;
+        }
     }
 
     #[cfg(test)]
