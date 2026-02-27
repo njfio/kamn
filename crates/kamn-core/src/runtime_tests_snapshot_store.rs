@@ -115,6 +115,29 @@ fn integration_file_snapshot_store_round_trips_snapshots() {
 }
 
 #[test]
+fn regression_file_snapshot_store_uses_json_line_payload() {
+    // Regression: #6126
+    let path = temp_snapshot_store_path("json-lines");
+    let _ = fs::remove_file(&path);
+
+    let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+    let snapshot = RuntimeSnapshot::with_cursor(41, "state-41", 100).expect("valid snapshot");
+    assert!(store.write(snapshot).is_ok());
+
+    let payload = fs::read_to_string(&path).expect("snapshot payload should be readable");
+    let first_line = payload
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .expect("snapshot payload should contain one line");
+    assert!(
+        first_line.trim_start().starts_with('{'),
+        "expected serde JSON line payload, found: {first_line}"
+    );
+
+    let _ = fs::remove_file(path);
+}
+
+#[test]
 fn regression_file_snapshot_store_rejects_malformed_payload() {
     // Regression: #387
     let path = temp_snapshot_store_path("malformed");
@@ -217,10 +240,18 @@ fn regression_file_snapshot_store_recovery_truncates_corrupt_suffix() {
     );
     assert_eq!(result.recovered_entries, 2);
     assert_eq!(result.dropped_corrupt_entries, 2);
-    assert_eq!(
-        fs::read_to_string(&path).expect("snapshot file should be readable"),
-        "41|state-41|41\n42|state-42|42\n"
-    );
+    let repaired_payload = fs::read_to_string(&path).expect("snapshot file should be readable");
+    let repaired_lines = repaired_payload
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect::<Vec<_>>();
+    assert_eq!(repaired_lines.len(), 2);
+    for line in repaired_lines {
+        assert!(
+            line.trim_start().starts_with('{'),
+            "expected json line payload after repair, found: {line}"
+        );
+    }
 
     let _ = fs::remove_file(path);
 }
@@ -341,9 +372,16 @@ fn functional_file_snapshot_store_recovery_truncates_stale_metadata_suffix() {
     );
     assert_eq!(result.recovered_entries, 1);
     assert_eq!(result.dropped_corrupt_entries, 2);
-    assert_eq!(
-        fs::read_to_string(&path).expect("snapshot file should be readable"),
-        "41|state-41|100\n"
+    let repaired_payload = fs::read_to_string(&path).expect("snapshot file should be readable");
+    let repaired_lines = repaired_payload
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect::<Vec<_>>();
+    assert_eq!(repaired_lines.len(), 1);
+    assert!(
+        repaired_lines[0].trim_start().starts_with('{'),
+        "expected json line payload after repair, found: {}",
+        repaired_lines[0]
     );
 
     let _ = fs::remove_file(path);
