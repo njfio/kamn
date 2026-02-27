@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const BASELINE_SCHEMA_VERSION: &str = "kamn.ci.shell-test-surface-ratio-baseline.v1";
 const THRESHOLD_SCHEMA_VERSION: &str = "kamn.ci.shell-test-surface-ratio-thresholds.v1";
@@ -275,34 +276,52 @@ fn load_waiver(path: &Path) -> Waiver {
     }
 }
 
-fn walk_files(root: &Path, output: &mut Vec<PathBuf>) {
-    let entries = fs::read_dir(root).unwrap_or_else(|error| {
-        fail(
-            "threshold_value_invalid",
-            &format!("failed to read directory {}: {}", root.display(), error),
-        )
-    });
-    for entry in entries {
-        let entry = entry.unwrap_or_else(|error| {
+fn git_tracked_files(relative_root: &str) -> Vec<PathBuf> {
+    let repo = repo_root();
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&repo)
+        .arg("ls-files")
+        .arg("--")
+        .arg(relative_root)
+        .output()
+        .unwrap_or_else(|error| {
             fail(
                 "threshold_value_invalid",
-                &format!("failed to read dir entry in {}: {}", root.display(), error),
+                &format!(
+                    "failed to execute git ls-files for {}: {}",
+                    relative_root, error
+                ),
             )
         });
-        let path = entry.path();
-        if path.is_dir() {
-            walk_files(&path, output);
-            continue;
-        }
-        if path.is_file() {
-            output.push(path);
-        }
+    if !output.status.success() {
+        fail(
+            "threshold_value_invalid",
+            &format!(
+                "git ls-files failed for {}: {}",
+                relative_root,
+                String::from_utf8_lossy(&output.stderr)
+            ),
+        );
     }
+    String::from_utf8(output.stdout)
+        .unwrap_or_else(|error| {
+            fail(
+                "threshold_value_invalid",
+                &format!(
+                    "git ls-files stdout invalid UTF-8 for {}: {}",
+                    relative_root, error
+                ),
+            )
+        })
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(PathBuf::from)
+        .collect()
 }
 
 fn current_surface() -> CurrentSurface {
-    let mut shell_files = Vec::new();
-    walk_files(&repo_path("scripts"), &mut shell_files);
+    let shell_files = git_tracked_files("scripts");
     let shell_test_file_count = shell_files
         .iter()
         .filter(|path| {
@@ -314,15 +333,12 @@ fn current_surface() -> CurrentSurface {
         })
         .count() as i64;
 
-    let mut crate_files = Vec::new();
-    walk_files(&repo_path("crates"), &mut crate_files);
+    let crate_files = git_tracked_files("crates");
     let rust_test_file_count = crate_files
         .iter()
         .filter(|path| {
             path.extension().is_some_and(|extension| extension == "rs")
-                && path
-                    .iter()
-                    .any(|component| component.to_string_lossy() == "tests")
+                && path.iter().any(|component| component == "tests")
         })
         .count() as i64;
     if rust_test_file_count <= 0 {
@@ -514,5 +530,40 @@ fn regression_waiver_mitigation_issue_marker_must_match_issue_format() {
     assert!(
         panic_result.is_err(),
         "invalid waiver mitigation issue format must fail closed"
+    );
+}
+
+#[test]
+fn regression_shell_surface_ratio_ignores_untracked_shell_test_files() {
+    // Regression: #6139
+    struct TempFileCleanup {
+        path: PathBuf,
+    }
+
+    impl Drop for TempFileCleanup {
+        fn drop(&mut self) {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+
+    let baseline = current_surface();
+    let temp_file = repo_path("scripts/test_issue_6139_untracked_ratio_guard.sh");
+    let _ = fs::remove_file(&temp_file);
+    fs::write(&temp_file, "#!/usr/bin/env bash\nexit 0\n")
+        .expect("failed to write untracked shell test fixture");
+    let _cleanup = TempFileCleanup { path: temp_file };
+
+    let with_untracked = current_surface();
+    assert_eq!(
+        with_untracked.shell_test_file_count, baseline.shell_test_file_count,
+        "untracked shell test files must not contribute to tracked-surface counts"
+    );
+    assert_eq!(
+        with_untracked.rust_test_file_count, baseline.rust_test_file_count,
+        "rust test count must remain stable when adding untracked shell files"
+    );
+    assert!(
+        (with_untracked.shell_to_rust_ratio - baseline.shell_to_rust_ratio).abs() < f64::EPSILON,
+        "shell/rust ratio must remain stable when adding untracked shell files"
     );
 }
