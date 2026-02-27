@@ -357,14 +357,15 @@ mod tests {
     #[test]
     fn unit_kamn_agent_handle_exposes_identity_after_connect() {
         let identity = AgentIdentity::from_agent_name("alice").expect("identity");
+        let expected_did = identity.did().clone();
         let handle = KamnAgentHandle::with_identity(
             "http://localhost:8080",
             "http://localhost:3000",
-            identity.clone(),
+            identity,
         )
         .expect("handle");
 
-        assert_eq!(handle.identity().did(), identity.did());
+        assert_eq!(handle.identity().did(), &expected_did);
     }
 
     #[test]

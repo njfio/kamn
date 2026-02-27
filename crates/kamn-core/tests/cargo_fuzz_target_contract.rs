@@ -17,6 +17,10 @@ const KOLME_CODEC_SEED_VALID: &str = include_str!(
 const KOLME_CODEC_SEED_MALFORMED: &str = include_str!(
     "../../../fuzz/corpus/kolme_api_codec_parser/seed-0002-malformed-broadcast-response.json"
 );
+const KOLME_FLAT_JSON_SEED_VALID: &str =
+    include_str!("../../../fuzz/corpus/kolme_flat_json_parser/seed-0001-valid-flat-json.txt");
+const KOLME_FLAT_JSON_SEED_MALFORMED: &str =
+    include_str!("../../../fuzz/corpus/kolme_flat_json_parser/seed-0002-malformed-flat-json.txt");
 
 #[test]
 fn cargo_fuzz_package_and_targets_exist() {
@@ -25,6 +29,7 @@ fn cargo_fuzz_package_and_targets_exist() {
     assert!(Path::new("../../fuzz/fuzz_targets/did_parser.rs").is_file());
     assert!(Path::new("../../fuzz/fuzz_targets/signature_profile_parser.rs").is_file());
     assert!(Path::new("../../fuzz/fuzz_targets/kolme_api_codec_parser.rs").is_file());
+    assert!(Path::new("../../fuzz/fuzz_targets/kolme_flat_json_parser.rs").is_file());
 }
 
 #[test]
@@ -40,6 +45,10 @@ fn cargo_fuzz_seed_corpus_and_replay_metadata_exist() {
     )
     .is_file());
     assert!(
+        Path::new("../../fuzz/corpus/kolme_flat_json_parser/seed-0001-valid-flat-json.txt")
+            .is_file()
+    );
+    assert!(
         Path::new("../../fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json").is_file()
     );
 }
@@ -51,6 +60,7 @@ fn ci_strategy_contains_cargo_fuzz_boundary_markers() {
     assert!(CI_STRATEGY_DOC.contains("cargo fuzz run did_parser"));
     assert!(CI_STRATEGY_DOC.contains("cargo fuzz run signature_profile_parser"));
     assert!(CI_STRATEGY_DOC.contains("cargo fuzz run kolme_api_codec_parser"));
+    assert!(CI_STRATEGY_DOC.contains("cargo fuzz run kolme_flat_json_parser"));
     assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_ci_smoke_max_seconds=120"));
     assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_local_heavy_max_seconds=900"));
     assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_local_heavy_excluded_from_ci_fast_gate=true"));
@@ -64,6 +74,7 @@ fn regression_cargo_fuzz_seed_corpus_metadata_tracks_required_targets_and_seed_f
     assert!(SEED_CORPUS_METADATA.contains("\"name\": \"did_parser\""));
     assert!(SEED_CORPUS_METADATA.contains("\"name\": \"signature_profile_parser\""));
     assert!(SEED_CORPUS_METADATA.contains("\"name\": \"kolme_api_codec_parser\""));
+    assert!(SEED_CORPUS_METADATA.contains("\"name\": \"kolme_flat_json_parser\""));
     assert!(SEED_CORPUS_METADATA.contains("\"seed-0001-wire.txt\""));
     assert!(SEED_CORPUS_METADATA.contains("\"seed-0002-invalid-recipient.txt\""));
     assert!(SEED_CORPUS_METADATA.contains("\"seed-0001-valid-did.txt\""));
@@ -72,6 +83,8 @@ fn regression_cargo_fuzz_seed_corpus_metadata_tracks_required_targets_and_seed_f
     assert!(SEED_CORPUS_METADATA.contains("\"seed-0002-malformed-signature.txt\""));
     assert!(SEED_CORPUS_METADATA.contains("\"seed-0001-valid-next-nonce-response.json\""));
     assert!(SEED_CORPUS_METADATA.contains("\"seed-0002-malformed-broadcast-response.json\""));
+    assert!(SEED_CORPUS_METADATA.contains("\"seed-0001-valid-flat-json.txt\""));
+    assert!(SEED_CORPUS_METADATA.contains("\"seed-0002-malformed-flat-json.txt\""));
 }
 
 #[test]
@@ -108,6 +121,9 @@ fn regression_cargo_fuzz_seed_corpus_metadata_tracks_deterministic_seed_provenan
     assert!(SEED_CORPUS_METADATA.contains(
         "\"deterministic_seed_replay_key\": \"cargo_fuzz_seed_replay:kolme_api_codec_parser:v1\""
     ));
+    assert!(SEED_CORPUS_METADATA.contains(
+        "\"deterministic_seed_replay_key\": \"cargo_fuzz_seed_replay:kolme_flat_json_parser:v1\""
+    ));
     assert!(SEED_CORPUS_METADATA.contains("\"seed_budget_ci_smoke_max_seconds\": 120"));
     assert!(SEED_CORPUS_METADATA.contains("\"seed_budget_local_heavy_max_seconds\": 900"));
 }
@@ -121,6 +137,7 @@ fn regression_ci_strategy_contains_cargo_fuzz_seed_provenance_budget_markers() {
     assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_seed_replay:did_parser:v1"));
     assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_seed_replay:signature_profile_parser:v1"));
     assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_seed_replay:kolme_api_codec_parser:v1"));
+    assert!(CI_STRATEGY_DOC.contains("cargo_fuzz_seed_replay:kolme_flat_json_parser:v1"));
     assert!(
         CI_STRATEGY_DOC
             .contains("cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds")
@@ -153,4 +170,15 @@ fn regression_kolme_api_codec_seed_corpus_replays_expected_parser_outcomes() {
 
     assert!(KolmeApiNextNonceResponse::parse_json(malformed_response).is_err());
     assert!(KolmeApiBroadcastResponse::parse_json(malformed_response).is_err());
+}
+
+#[test]
+fn regression_kolme_flat_json_seed_corpus_contains_expected_shape_markers() {
+    // Regression: #6217
+    let valid_seed = KOLME_FLAT_JSON_SEED_VALID.trim();
+    let malformed_seed = KOLME_FLAT_JSON_SEED_MALFORMED.trim();
+    assert!(valid_seed.starts_with('{'));
+    assert!(valid_seed.contains("\"provider\""));
+    assert!(malformed_seed.contains("7.2"));
+    assert!(!malformed_seed.ends_with('}'));
 }

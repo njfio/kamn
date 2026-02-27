@@ -1612,6 +1612,7 @@ version = "0.1.0"
 dependencies = [
  "kamn-kolme",
  "kamn-sdk",
+ "zeroize",
 ]
 
 [[package]]
@@ -1630,6 +1631,7 @@ dependencies = [
  "k256",
  "kamn-kolme",
  "kamn-runtime-guards",
+ "kamn-snapshot-journal",
  "libp2p",
  "proptest",
  "rusqlite",
@@ -1695,6 +1697,14 @@ dependencies = [
  "rustls-pemfile",
  "serde_json",
  "webpki-roots 1.0.6",
+]
+
+[[package]]
+name = "kamn-snapshot-journal"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

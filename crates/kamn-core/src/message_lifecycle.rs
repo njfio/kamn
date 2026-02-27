@@ -2,6 +2,10 @@ use crate::{
     AgentDid, ProcessorProofAdmissionEvaluator, ProcessorProofAdmissionInput,
     ProcessorProofArtifact, SqliteStoreBackend, SqliteStoreBackendError, ZkDesignError,
 };
+use kamn_snapshot_journal::{
+    append_snapshot_journal_record, decode_snapshot_journal_hex, default_snapshot_journal_path,
+    parse_snapshot_journal_record,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
@@ -199,11 +203,11 @@ impl MessageLifecycleStore {
             .records
             .get(message_id)
             .ok_or_else(|| MessageLifecycleError::NotFound(message_id.to_owned()))?;
-        if !is_active_status(record.status) || observed_at <= record.expires.as_str() {
+        if !is_expirable_status(record.status) || observed_at <= record.expires.as_str() {
             return Ok(false);
         }
 
-        self.apply_status(message_id, MessageStatus::Expired)?;
+        self.transition(message_id, MessageStatus::Expired)?;
         Ok(true)
     }
 
@@ -219,7 +223,7 @@ impl MessageLifecycleStore {
             .records
             .iter()
             .filter_map(|(message_id, record)| {
-                if is_active_status(record.status) && observed_at > record.expires.as_str() {
+                if is_expirable_status(record.status) && observed_at > record.expires.as_str() {
                     Some(message_id.clone())
                 } else {
                     None
@@ -227,7 +231,7 @@ impl MessageLifecycleStore {
             })
             .collect();
         for message_id in &overdue_ids {
-            self.apply_status(message_id, MessageStatus::Expired)?;
+            self.transition(message_id, MessageStatus::Expired)?;
         }
         Ok(overdue_ids)
     }
@@ -851,9 +855,7 @@ const MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX: &str =
     "message_lifecycle_snapshot_journal_corrupt_tail";
 
 fn message_lifecycle_snapshot_journal_path(path: &Path) -> PathBuf {
-    let mut journal = path.as_os_str().to_os_string();
-    journal.push(".journal");
-    PathBuf::from(journal)
+    default_snapshot_journal_path(path)
 }
 
 fn read_message_lifecycle_snapshot_file(
@@ -880,14 +882,9 @@ fn append_message_lifecycle_snapshot_journal_record(
     journal_path: &Path,
     payload: &str,
 ) -> Result<(), MessageLifecycleSnapshotStoreError> {
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(journal_path)
+    append_snapshot_journal_record(journal_path, payload)
         .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
-    let record = format!("entry|1|{}\n", encode_journal_hex(payload.as_bytes()));
-    file.write_all(record.as_bytes())
-        .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))
+    Ok(())
 }
 
 fn replay_message_lifecycle_snapshot_journal(
@@ -908,7 +905,7 @@ fn replay_message_lifecycle_snapshot_journal(
         }
 
         let payload_hex = parse_message_lifecycle_snapshot_journal_record(trimmed, index + 1)?;
-        let payload_bytes = decode_journal_hex(payload_hex)
+        let payload_bytes = decode_snapshot_journal_hex(&payload_hex)
             .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
         let payload = String::from_utf8(payload_bytes)
             .map_err(|_| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
@@ -927,21 +924,9 @@ fn replay_message_lifecycle_snapshot_journal(
 fn parse_message_lifecycle_snapshot_journal_record(
     line: &str,
     index: usize,
-) -> Result<&str, MessageLifecycleSnapshotStoreError> {
-    let mut parts = line.split('|');
-    let Some(prefix) = parts.next() else {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    };
-    let Some(version) = parts.next() else {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    };
-    let Some(payload_hex) = parts.next() else {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    };
-    if prefix != "entry" || version != "1" || payload_hex.is_empty() || parts.next().is_some() {
-        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
-    }
-    Ok(payload_hex)
+) -> Result<String, MessageLifecycleSnapshotStoreError> {
+    parse_snapshot_journal_record(line)
+        .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index))
 }
 
 fn message_lifecycle_snapshot_journal_corrupt_tail(
@@ -952,55 +937,26 @@ fn message_lifecycle_snapshot_journal_corrupt_tail(
     ))
 }
 
-fn encode_journal_hex(bytes: &[u8]) -> String {
-    let mut encoded = String::with_capacity(bytes.len() * 2);
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    for byte in bytes {
-        encoded.push(HEX[(byte >> 4) as usize] as char);
-        encoded.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    encoded
-}
-
-fn decode_journal_hex(value: &str) -> Option<Vec<u8>> {
-    if !value.len().is_multiple_of(2) {
-        return None;
-    }
-    let bytes = value.as_bytes();
-    let mut decoded = Vec::with_capacity(bytes.len() / 2);
-    let mut index = 0usize;
-    while index < bytes.len() {
-        let high = decode_journal_nibble(bytes[index])?;
-        let low = decode_journal_nibble(bytes[index + 1])?;
-        decoded.push((high << 4) | low);
-        index += 2;
-    }
-    Some(decoded)
-}
-
-fn decode_journal_nibble(value: u8) -> Option<u8> {
-    match value {
-        b'0'..=b'9' => Some(value - b'0'),
-        b'a'..=b'f' => Some(value - b'a' + 10),
-        b'A'..=b'F' => Some(value - b'A' + 10),
-        _ => None,
-    }
-}
-
 fn is_valid_transition(from: MessageStatus, to: MessageStatus) -> bool {
     matches!(
         (from, to),
         (MessageStatus::Created, MessageStatus::Signed)
+            | (MessageStatus::Created, MessageStatus::Expired)
             | (MessageStatus::Signed, MessageStatus::Broadcast)
+            | (MessageStatus::Signed, MessageStatus::Expired)
             | (MessageStatus::Broadcast, MessageStatus::Included)
+            | (MessageStatus::Broadcast, MessageStatus::Expired)
             | (MessageStatus::Included, MessageStatus::Delivered)
+            | (MessageStatus::Included, MessageStatus::Expired)
             | (MessageStatus::Delivered, MessageStatus::Validated)
+            | (MessageStatus::Delivered, MessageStatus::Expired)
             | (MessageStatus::Validated, MessageStatus::Rejected)
+            | (MessageStatus::Validated, MessageStatus::Expired)
             | (MessageStatus::Rejected, MessageStatus::Expired)
     )
 }
 
-fn is_active_status(status: MessageStatus) -> bool {
+fn is_expirable_status(status: MessageStatus) -> bool {
     matches!(
         status,
         MessageStatus::Created
@@ -1008,6 +964,7 @@ fn is_active_status(status: MessageStatus) -> bool {
             | MessageStatus::Broadcast
             | MessageStatus::Included
             | MessageStatus::Delivered
+            | MessageStatus::Validated
     )
 }
 
@@ -1327,7 +1284,7 @@ mod tests {
     }
 
     #[test]
-    fn expire_overdue_messages_expires_active_records_only() {
+    fn expire_overdue_messages_expires_created_and_validated_records() {
         let mut store = MessageLifecycleStore::new();
         store
             .register(
@@ -1367,7 +1324,7 @@ mod tests {
             store
                 .expire_overdue_messages("2026-02-07T20:50:30.123Z")
                 .expect("sweep should succeed"),
-            vec!["urn:uuid:msg-2b".to_owned()]
+            vec!["urn:uuid:msg-2b".to_owned(), "urn:uuid:msg-2c".to_owned()]
         );
         assert_eq!(
             store
@@ -1379,7 +1336,46 @@ mod tests {
             store
                 .status("urn:uuid:msg-2c")
                 .expect("status should exist"),
-            MessageStatus::Validated
+            MessageStatus::Expired
+        );
+    }
+
+    #[test]
+    fn regression_issue_6194_expire_message_if_overdue_transitions_validated_message() {
+        let mut store = MessageLifecycleStore::new();
+        store
+            .register(
+                "urn:uuid:msg-2d",
+                "kamn:did:agent:sender-1",
+                vec!["kamn:did:agent:recipient-1".to_owned()],
+                "2026-02-07T20:15:30.123Z",
+                "2026-02-07T20:45:30.123Z",
+            )
+            .expect("register should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Signed)
+            .expect("created->signed should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Broadcast)
+            .expect("signed->broadcast should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Included)
+            .expect("broadcast->included should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Delivered)
+            .expect("included->delivered should succeed");
+        store
+            .transition("urn:uuid:msg-2d", MessageStatus::Validated)
+            .expect("delivered->validated should succeed");
+
+        assert!(store
+            .expire_message_if_overdue("urn:uuid:msg-2d", "2026-02-07T20:50:30.123Z")
+            .expect("validated message should expire once overdue"));
+        assert_eq!(
+            store
+                .status("urn:uuid:msg-2d")
+                .expect("status should exist"),
+            MessageStatus::Expired
         );
     }
 

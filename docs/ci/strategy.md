@@ -168,11 +168,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo fuzz run did_parser fuzz/corpus/did_parser -- -max_total_time=120`
   - `cargo fuzz run signature_profile_parser fuzz/corpus/signature_profile_parser -- -max_total_time=120`
   - `cargo fuzz run kolme_api_codec_parser fuzz/corpus/kolme_api_codec_parser -- -max_total_time=120`
+  - `cargo fuzz run kolme_flat_json_parser fuzz/corpus/kolme_flat_json_parser -- -max_total_time=120`
 - Local-heavy parser fuzz command surface:
   - `cargo fuzz run message_envelope_parser fuzz/corpus/message_envelope_parser -- -max_total_time=900`
   - `cargo fuzz run did_parser fuzz/corpus/did_parser -- -max_total_time=900`
   - `cargo fuzz run signature_profile_parser fuzz/corpus/signature_profile_parser -- -max_total_time=900`
   - `cargo fuzz run kolme_api_codec_parser fuzz/corpus/kolme_api_codec_parser -- -max_total_time=900`
+  - `cargo fuzz run kolme_flat_json_parser fuzz/corpus/kolme_flat_json_parser -- -max_total_time=900`
 - Nightly/deep parser fuzz execution mirrors local-heavy command surfaces above.
 - Corpus governance markers:
   - `fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json`
@@ -182,7 +184,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo_fuzz_local_heavy_max_seconds=900`
   - `cargo_fuzz_local_heavy_excluded_from_ci_fast_gate=true`
   - `cargo_fuzz_seed_provenance_version=kamn.runtime.cargo-fuzz-seed-provenance.v1`
-  - `cargo_fuzz_seed_replay_keys_csv=cargo_fuzz_seed_replay:message_envelope_parser:v1,cargo_fuzz_seed_replay:did_parser:v1,cargo_fuzz_seed_replay:signature_profile_parser:v1,cargo_fuzz_seed_replay:kolme_api_codec_parser:v1`
+  - `cargo_fuzz_seed_replay_keys_csv=cargo_fuzz_seed_replay:message_envelope_parser:v1,cargo_fuzz_seed_replay:did_parser:v1,cargo_fuzz_seed_replay:signature_profile_parser:v1,cargo_fuzz_seed_replay:kolme_api_codec_parser:v1,cargo_fuzz_seed_replay:kolme_flat_json_parser:v1`
   - `cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds`
 - Deep fuzz execution remains local-heavy only and excluded from `ci-fast-gate`.
 

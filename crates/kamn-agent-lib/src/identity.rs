@@ -1,8 +1,15 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{service_public_key_for_private_key, AgentDid};
+use std::env;
+use zeroize::Zeroize;
+
+const DETERMINISTIC_IDENTITY_OPT_IN_ENV: &str = "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
+const DETERMINISTIC_IDENTITY_DISABLED_REASON: &str = "deterministic identity derivation disabled by default; use AgentIdentity::from_did_and_signing_key or set KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY=1 for local development";
+const FNV1A_64_OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV1A_64_PRIME: u64 = 0x0000_0100_0000_01b3;
 
 /// Agent identity material used by phase-1 authenticated operations.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct AgentIdentity {
     did: AgentDid,
     signing_key: String,
@@ -12,6 +19,7 @@ pub struct AgentIdentity {
 impl AgentIdentity {
     /// Builds deterministic identity material from an agent name.
     pub fn from_agent_name(name: &str) -> Result<Self, AgentLibError> {
+        deterministic_identity_allowed()?;
         let normalized_name = normalize_agent_name(name)?;
         let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
         let did = AgentDid::parse(format!("kamn:did:agent:{normalized_name}"))?;
@@ -54,6 +62,43 @@ impl AgentIdentity {
     }
 }
 
+impl Drop for AgentIdentity {
+    fn drop(&mut self) {
+        self.signing_key.zeroize();
+        self.encryption_key.zeroize();
+    }
+}
+
+fn deterministic_identity_allowed() -> Result<(), AgentLibError> {
+    deterministic_identity_allowed_from_env(
+        env::var(DETERMINISTIC_IDENTITY_OPT_IN_ENV),
+        cfg!(any(test, debug_assertions)),
+    )
+}
+
+fn deterministic_identity_allowed_from_env(
+    env_value: Result<String, env::VarError>,
+    allow_insecure_default: bool,
+) -> Result<(), AgentLibError> {
+    if allow_insecure_default {
+        return Ok(());
+    }
+    let is_enabled = match env_value {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes"
+        ),
+        Err(env::VarError::NotPresent) => false,
+        Err(env::VarError::NotUnicode(_)) => false,
+    };
+    if is_enabled {
+        return Ok(());
+    }
+    Err(AgentLibError::UnsupportedOperation(
+        DETERMINISTIC_IDENTITY_DISABLED_REASON,
+    ))
+}
+
 fn normalize_agent_name(name: &str) -> Result<String, AgentLibError> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
@@ -92,14 +137,19 @@ fn derive_deterministic_service_signing_key_hex(
     ))
 }
 
+fn fnv1a_round_u64(state: u64, value: u64) -> u64 {
+    (state ^ value).wrapping_mul(FNV1A_64_PRIME)
+}
+
 fn derive_name_seed_bytes(normalized_name: &str) -> [u8; 32] {
-    let mut state: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut state: u64 = FNV1A_64_OFFSET_BASIS;
     let input = normalized_name.as_bytes();
     let mut output = [0u8; 32];
     for (index, slot) in output.iter_mut().enumerate() {
-        let source = input[index % input.len()];
-        state ^= (source as u64).wrapping_add(((index as u64) << 8) ^ 0x9e37_79b9_7f4a_7c15);
-        state = state.wrapping_mul(0x0000_0100_0000_01b3);
+        let source = u64::from(input[index % input.len()]);
+        let index_mix = ((index as u64) << 8) ^ 0x9e37_79b9_7f4a_7c15;
+        let mixed_source = source.wrapping_add(index_mix);
+        state = fnv1a_round_u64(state, mixed_source);
         *slot = (state >> ((index % 8) * 8)) as u8;
     }
     // Ensure non-zero scalar candidate.
@@ -119,7 +169,8 @@ fn hex_encode(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::AgentIdentity;
+    use super::{deterministic_identity_allowed_from_env, fnv1a_round_u64, AgentIdentity};
+    use std::env;
 
     #[test]
     fn unit_agent_identity_from_name_builds_expected_did_and_keys() {
@@ -152,5 +203,61 @@ mod tests {
         let error = AgentIdentity::from_agent_name("alice space")
             .expect_err("invalid characters must be rejected");
         assert!(error.to_string().contains("agent_name"));
+    }
+
+    #[test]
+    fn regression_deterministic_identity_gate_blocks_non_test_mode_without_opt_in() {
+        // Regression: #6187
+        let error = deterministic_identity_allowed_from_env(Err(env::VarError::NotPresent), false)
+            .expect_err("non-test mode should fail closed when deterministic gate is not enabled");
+        assert!(
+            error
+                .to_string()
+                .contains("deterministic identity derivation disabled by default"),
+            "gate error should include deterministic disable marker: {error}"
+        );
+    }
+
+    #[test]
+    fn unit_deterministic_identity_gate_allows_test_mode_without_opt_in() {
+        deterministic_identity_allowed_from_env(Err(env::VarError::NotPresent), true)
+            .expect("test mode should permit deterministic identity derivation");
+    }
+
+    #[test]
+    fn unit_deterministic_identity_gate_allows_non_test_mode_with_opt_in_env() {
+        deterministic_identity_allowed_from_env(Ok("1".to_owned()), false)
+            .expect("explicit opt-in env should permit deterministic identity derivation");
+    }
+
+    #[test]
+    fn regression_issue_6209_name_seed_round_uses_fnv1a_ordering() {
+        let state = 0xcbf2_9ce4_8422_2325_u64;
+        let value = 0x4142_4344_4546_4748_u64;
+        let expected_fnv1a = (state ^ value).wrapping_mul(0x0000_0100_0000_01b3_u64);
+        let unexpected_fnv1 = state.wrapping_mul(0x0000_0100_0000_01b3_u64) ^ value;
+        assert_eq!(fnv1a_round_u64(state, value), expected_fnv1a);
+        assert_ne!(fnv1a_round_u64(state, value), unexpected_fnv1);
+    }
+
+    #[test]
+    fn regression_issue_6207_agent_identity_enforces_drop_zeroization_and_no_clone_derive() {
+        let source = include_str!("identity.rs");
+        assert!(
+            !source.contains("#[derive(Debug, Clone, PartialEq, Eq)]\npub struct AgentIdentity"),
+            "AgentIdentity must not derive Clone after #6207"
+        );
+        assert!(
+            source.contains("#[derive(Debug, PartialEq, Eq)]\npub struct AgentIdentity"),
+            "AgentIdentity derive contract must remain explicit and clone-free"
+        );
+        assert!(
+            source.contains("impl Drop for AgentIdentity"),
+            "AgentIdentity drop-based zeroization must remain present"
+        );
+        assert!(
+            source.contains("self.signing_key.zeroize();"),
+            "signing key zeroization marker must remain present"
+        );
     }
 }

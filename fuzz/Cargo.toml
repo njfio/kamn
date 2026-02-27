@@ -12,6 +12,7 @@ members = ["."]
 
 [dependencies]
 kamn-core = { path = "../crates/kamn-core" }
+kamn-kolme = { path = "../crates/kamn-kolme" }
 libfuzzer-sys = "0.4"
 
 [[bin]]
@@ -38,6 +39,13 @@ bench = false
 [[bin]]
 name = "kolme_api_codec_parser"
 path = "fuzz_targets/kolme_api_codec_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kolme_flat_json_parser"
+path = "fuzz_targets/kolme_flat_json_parser.rs"
 test = false
 doc = false
 bench = false

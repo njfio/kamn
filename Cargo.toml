@@ -8,6 +8,7 @@ members = [
   "crates/kamn-kolme",
   "crates/kamn-mcp-server",
   "crates/kamn-runtime-guards",
+  "crates/kamn-snapshot-journal",
   "crates/kamn-sdk",
   "crates/kamn-node",
 ]
