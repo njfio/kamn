@@ -23,7 +23,7 @@ pub(super) fn authorize_service_api_request(
                 format!("missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"),
             ))
         })?;
-    AgentDid::parse(sender_did).map_err(|error| {
+    let parsed_sender_did = AgentDid::parse(sender_did).map_err(|error| {
         RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
             REASON_CODE_AUTH_SENDER_DID_INVALID,
             format!("invalid sender did: {error}"),
@@ -62,6 +62,12 @@ pub(super) fn authorize_service_api_request(
         state.auth_public_keys_by_did.as_ref(),
         state.auth_public_key_hex.as_deref(),
     );
+    enforce_sender_did_public_key_binding_if_required(
+        &parsed_sender_did,
+        selected_public_key_hex,
+        state.auth_public_keys_by_did.as_ref(),
+    )
+    .map_err(RequestAuthFailure::Unauthorized)?;
     let crypto_verified = selected_public_key_hex
         .map(|public_key_hex| {
             service_auth_verify_with_public_key_hex(
@@ -101,6 +107,27 @@ fn select_service_api_auth_public_key_for_sender<'a>(
         return public_keys_by_did.get(sender_did).map(String::as_str);
     }
     fallback_auth_public_key_hex
+}
+
+fn enforce_sender_did_public_key_binding_if_required(
+    sender_did: &AgentDid,
+    selected_public_key_hex: Option<&str>,
+    auth_public_keys_by_did: Option<&BTreeMap<String, String>>,
+) -> Result<(), ServiceApiReasonedError> {
+    if auth_public_keys_by_did.is_none() {
+        return Ok(());
+    }
+    let Some(public_key_hex) = selected_public_key_hex else {
+        return Ok(());
+    };
+    sender_did
+        .ensure_public_key_hex_binding(public_key_hex)
+        .map_err(|error| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_DID_KEY_BINDING_INVALID,
+                format!("sender did key binding invalid: {error}"),
+            )
+        })
 }
 
 pub(super) fn enforce_request_scope_policy(
@@ -613,5 +640,41 @@ mod tests {
             Some("fallback-shared-key"),
         );
         assert_eq!(selected, None);
+    }
+
+    #[test]
+    fn regression_enforce_sender_did_binding_passes_when_mapped_did_matches_public_key() {
+        // Regression: #6109
+        let public_key_hex = "025f6ceceac37540cf6ef5f09d4f62c05f0b8f57fe6d8ae32a8f13f4a2eb6e940d";
+        let sender_did = AgentDid::with_public_key_hex_binding("alice", public_key_hex)
+            .expect("bound did should render");
+        let mut keys_by_did = BTreeMap::new();
+        keys_by_did.insert(sender_did.as_str().to_owned(), public_key_hex.to_owned());
+        enforce_sender_did_public_key_binding_if_required(
+            &sender_did,
+            Some(public_key_hex),
+            Some(&keys_by_did),
+        )
+        .expect("matching did/public-key binding should pass");
+    }
+
+    #[test]
+    fn regression_enforce_sender_did_binding_fails_closed_when_binding_missing_in_map_mode() {
+        // Regression: #6109
+        let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("did should parse");
+        let public_key_hex = "025f6ceceac37540cf6ef5f09d4f62c05f0b8f57fe6d8ae32a8f13f4a2eb6e940d";
+        let mut keys_by_did = BTreeMap::new();
+        keys_by_did.insert(sender_did.as_str().to_owned(), public_key_hex.to_owned());
+        let error = enforce_sender_did_public_key_binding_if_required(
+            &sender_did,
+            Some(public_key_hex),
+            Some(&keys_by_did),
+        )
+        .expect_err("map mode should require did key-binding suffix");
+        assert_eq!(error.reason_code, REASON_CODE_AUTH_DID_KEY_BINDING_INVALID);
+        assert!(
+            error.message.contains("key binding"),
+            "binding failure should preserve deterministic context"
+        );
     }
 }
