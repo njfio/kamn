@@ -14,6 +14,8 @@ pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "X25519";
 /// Cipher profile identifier stamped on group ciphertext envelopes.
 pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
+const GROUP_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:group-message:aead-key:hkdf-salt:v2";
+const GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2: &[u8] = b"kamn:group-message:aead-key:hkdf-info:v2:";
 const GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE: &str =
     "group_channel_crypto_invalid_sender_did";
 const GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE: &str =
@@ -323,22 +325,36 @@ impl GroupChannelCryptoEngine {
         );
         let xnonce = XNonce::from(nonce_bytes);
 
-        let aead_key = derive_group_aead_key(
+        let aead_key_v2 = derive_group_aead_key(
             &shared_secret,
             self.channel_id.as_str(),
             sealed.key_generation,
         );
-        let cipher = XChaCha20Poly1305::new((&aead_key).into());
+        let aead_key_v1 = derive_group_aead_key_legacy(
+            &shared_secret,
+            self.channel_id.as_str(),
+            sealed.key_generation,
+        );
 
-        let plaintext = cipher
-            .decrypt(
-                &xnonce,
-                Payload {
-                    msg: &combined,
-                    aad: &aad,
-                },
-            )
-            .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)?;
+        let decrypt_with_key = |key: &[u8; 32]| {
+            XChaCha20Poly1305::new(key.into())
+                .decrypt(
+                    &xnonce,
+                    Payload {
+                        msg: &combined,
+                        aad: &aad,
+                    },
+                )
+                .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)
+        };
+
+        // Compatibility policy: encrypt with HKDF-v2 key, but continue accepting
+        // legacy SHA-256-v1 derived ciphertext on decrypt.
+        let plaintext = match decrypt_with_key(&aead_key_v2) {
+            Ok(value) => Ok(value),
+            Err(GroupChannelCryptoError::IntegrityCheckFailed) => decrypt_with_key(&aead_key_v1),
+            Err(other) => Err(other),
+        }?;
 
         String::from_utf8(plaintext).map_err(|_| GroupChannelCryptoError::InvalidCiphertextEncoding)
     }
@@ -540,6 +556,20 @@ fn derive_group_shared_secret(
 }
 
 fn derive_group_aead_key(shared_secret: &[u8; 32], channel_id: &str, generation: u64) -> [u8; 32] {
+    let mut info = Vec::with_capacity(
+        GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2.len() + channel_id.len() + std::mem::size_of::<u64>(),
+    );
+    info.extend_from_slice(GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2);
+    info.extend_from_slice(channel_id.as_bytes());
+    info.extend_from_slice(&generation.to_le_bytes());
+    hkdf_sha256_derive_32(GROUP_MESSAGE_AEAD_KDF_SALT_V2, shared_secret, &info)
+}
+
+fn derive_group_aead_key_legacy(
+    shared_secret: &[u8; 32],
+    channel_id: &str,
+    generation: u64,
+) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(b"kamn:group-message:aead-key:v1:");
     hasher.update(shared_secret);
@@ -549,6 +579,46 @@ fn derive_group_aead_key(shared_secret: &[u8; 32], channel_id: &str, generation:
     let mut key = [0u8; 32];
     key.copy_from_slice(&digest[..32]);
     key
+}
+
+fn hkdf_sha256_derive_32(salt: &[u8], ikm: &[u8], info: &[u8]) -> [u8; 32] {
+    let prk = hmac_sha256(salt, ikm);
+    let mut expand_input = Vec::with_capacity(info.len() + 1);
+    expand_input.extend_from_slice(info);
+    expand_input.push(0x01);
+    hmac_sha256(&prk, &expand_input)
+}
+
+fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
+    const SHA256_BLOCK_SIZE: usize = 64;
+    let mut normalized_key = [0u8; SHA256_BLOCK_SIZE];
+    if key.len() > SHA256_BLOCK_SIZE {
+        let digest = Sha256::digest(key);
+        normalized_key[..32].copy_from_slice(&digest[..32]);
+    } else {
+        normalized_key[..key.len()].copy_from_slice(key);
+    }
+
+    let mut inner_key_pad = [0u8; SHA256_BLOCK_SIZE];
+    let mut outer_key_pad = [0u8; SHA256_BLOCK_SIZE];
+    for (index, byte) in normalized_key.iter().enumerate() {
+        inner_key_pad[index] = *byte ^ 0x36;
+        outer_key_pad[index] = *byte ^ 0x5c;
+    }
+
+    let mut inner = Sha256::new();
+    inner.update(inner_key_pad);
+    inner.update(data);
+    let inner_digest = inner.finalize();
+
+    let mut outer = Sha256::new();
+    outer.update(outer_key_pad);
+    outer.update(inner_digest);
+    let output = outer.finalize();
+
+    let mut hmac = [0u8; 32];
+    hmac.copy_from_slice(&output[..32]);
+    hmac
 }
 
 fn derive_x25519_private_key(master_seed: &[u8; 32], key_ref: &str) -> StaticSecret {
@@ -624,7 +694,12 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, GroupChannelCryptoError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{GroupChannelCryptoEngine, GroupChannelCryptoError};
+    use super::{
+        GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
+        GROUP_MESSAGE_CIPHER_ALGORITHM, GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
+    };
+    use chacha20poly1305::aead::{Aead, KeyInit, Payload};
+    use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
@@ -645,6 +720,59 @@ mod tests {
             None => std::env::remove_var(super::KEY_AGREEMENT_MASTER_SEED_ENV),
         }
         output
+    }
+
+    fn legacy_v1_ciphertext(
+        channel_id: &str,
+        sender_did: &str,
+        sender_key_ref: &str,
+        generation: u64,
+        nonce: u64,
+        plaintext: &str,
+    ) -> GroupMessageCiphertext {
+        let master_seed =
+            super::load_key_agreement_master_seed().expect("master seed should be available");
+        let shared_secret =
+            super::derive_group_shared_secret(channel_id, sender_key_ref, generation, &master_seed);
+        let legacy_key =
+            super::derive_group_aead_key_legacy(&shared_secret, channel_id, generation);
+
+        let cipher = XChaCha20Poly1305::new((&legacy_key).into());
+        let nonce_bytes = super::group_nonce_bytes(sender_did, generation, nonce);
+        let xnonce = XNonce::from(nonce_bytes);
+        let aad: [u8; 0] = [];
+        let mut sealed = cipher
+            .encrypt(
+                &xnonce,
+                Payload {
+                    msg: plaintext.as_bytes(),
+                    aad: &aad,
+                },
+            )
+            .expect("legacy encryption should succeed");
+        let auth_tag = sealed.split_off(sealed.len() - 16);
+        let ciphertext_hex = super::hex_encode(&sealed);
+        let auth_tag_hex = super::hex_encode(&auth_tag);
+
+        GroupMessageCiphertext {
+            key_derivation_algorithm: GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM.to_owned(),
+            cipher_algorithm: GROUP_MESSAGE_CIPHER_ALGORITHM.to_owned(),
+            channel_id: channel_id.to_owned(),
+            sender_did: sender_did.to_owned(),
+            key_generation: generation,
+            nonce,
+            ciphertext: ciphertext_hex.clone(),
+            auth_tag: auth_tag_hex.clone(),
+            signature: super::compute_signature(
+                &shared_secret,
+                channel_id,
+                sender_did,
+                generation,
+                nonce,
+                ciphertext_hex.as_str(),
+                auth_tag_hex.as_str(),
+            ),
+        }
     }
 
     #[test]
@@ -845,6 +973,46 @@ mod tests {
                 result,
                 Err(GroupChannelCryptoError::MissingKeyAgreementMasterSeed)
             );
+        });
+    }
+
+    #[test]
+    fn group_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
+        let shared_secret = [0x3cu8; 32];
+        let hkdf_key_a = super::derive_group_aead_key(&shared_secret, "channel:test", 9);
+        let hkdf_key_b = super::derive_group_aead_key(&shared_secret, "channel:test", 9);
+        let legacy_key = super::derive_group_aead_key_legacy(&shared_secret, "channel:test", 9);
+
+        assert_eq!(hkdf_key_a, hkdf_key_b);
+        assert_ne!(hkdf_key_a, legacy_key);
+    }
+
+    #[test]
+    fn decrypt_accepts_legacy_v1_sha256_kdf_ciphertext_for_compatibility() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let channel_id = "channel:group:legacy";
+            let sender_did = "kamn:did:agent:alice";
+            let sender_key_ref = "kamn:did:agent:alice#sender-key-1";
+            let recipient_did = "kamn:did:agent:bob";
+
+            let mut engine =
+                GroupChannelCryptoEngine::new(channel_id).expect("group engine should initialize");
+            let distribution = engine
+                .distribute_sender_key(sender_did, sender_key_ref, vec![recipient_did.to_owned()])
+                .expect("distribution should succeed");
+            let sealed = legacy_v1_ciphertext(
+                channel_id,
+                sender_did,
+                sender_key_ref,
+                distribution.key_generation,
+                57,
+                "legacy-group-v1",
+            );
+
+            let plaintext = engine
+                .decrypt(recipient_did, &sealed)
+                .expect("legacy-v1 group decrypt must succeed");
+            assert_eq!(plaintext, "legacy-group-v1");
         });
     }
 
