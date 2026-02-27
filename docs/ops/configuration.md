@@ -334,6 +334,7 @@ Deterministic remediation markers:
 - `service_api_request_path_authz_remediation.service_api_auth_nonce_invalid=use a base-10 u64 nonce value in x-kamn-request-nonce`
 - `service_api_request_path_authz_remediation.service_api_auth_nonce_non_positive=increment nonce to a value greater than zero`
 - `service_api_request_path_authz_remediation.service_api_auth_signature_header_missing=add x-kamn-request-signature over sender_did+nonce+state_hash+body`
+- `service_api_request_path_authz_remediation.service_api_auth_did_key_binding_invalid=use the signer key bound to the sender DID instead of a mismatched signing key`
 - `service_api_request_path_authz_remediation.service_api_auth_signature_verification_failed=recompute signature with the supported profile and current state hash`
 - `service_api_request_path_authz_remediation.service_api_auth_replay_nonce_detected=use a fresh nonce per sender DID and avoid replaying accepted envelopes`
 
