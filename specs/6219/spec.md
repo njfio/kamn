@@ -1,6 +1,6 @@
 # Issue 6219 Spec
 
-Status: Accepted
+Status: Implemented
 Priority: P2
 Milestone: R59 Swarm Gap Closure
 Parent: #6183
