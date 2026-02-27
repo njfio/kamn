@@ -8,7 +8,9 @@
 5. Update docs/spec/task artifacts and finalize closure evidence.
 
 ## Affected Modules
-- Target module(s) identified by issue #6142 scope and test evidence.
+- `deploy/k8s/kamn-node.yaml`
+- `docs/ops/deployment.md`
+- `crates/kamn-core/tests/k8s_manifest_baseline_contract.rs`
 - `specs/6142/spec.md`
 - `specs/6142/plan.md`
 - `specs/6142/tasks.md`
