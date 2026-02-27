@@ -41,7 +41,7 @@ mod onchain_lifecycle_evidence_docs {
         include_str!("../../../docs/foundation/kolme-runtime-commit-client.md");
     const DEVNET_DOC: &str = include_str!("../../../docs/planning/kolme-devnet-ops.md");
     const CI_DOC: &str = include_str!("../../../docs/ci/strategy.md");
-    const README_DOC: &str = include_str!("../../../README.md");
+    const README_DOC: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 
     #[test]
     fn docs_include_onchain_lifecycle_evidence_bundle_contract_markers() {
@@ -585,7 +585,7 @@ mod task_escrow_suite_modularization_contract {
 
 mod kolme_runtime_architecture_docs {
     const DOC: &str = include_str!("../../../docs/foundation/kolme-runtime-architecture.md");
-    const README: &str = include_str!("../../../README.md");
+    const README: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 
     #[test]
     fn architecture_doc_contains_runtime_flow_and_signer_boundaries() {

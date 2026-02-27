@@ -1,5 +1,5 @@
 const LIVE_NETWORK_WAVE_DOC: &str = include_str!("../../../docs/planning/live-network-wave.md");
-const README: &str = include_str!("../../../README.md");
+const README: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 const MAKEFILE: &str = include_str!("../../../Makefile");
 
 #[test]

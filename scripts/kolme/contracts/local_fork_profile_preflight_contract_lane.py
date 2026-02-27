@@ -13,7 +13,7 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh"
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 MAX_SECONDS_ENV = "KAMN_KOLME_LOCAL_FORK_PROFILE_PREFLIGHT_CONTRACT_MAX_SECONDS"
 DEFAULT_MAX_SECONDS = 45
 

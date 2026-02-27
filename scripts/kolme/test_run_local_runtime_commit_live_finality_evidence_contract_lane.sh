@@ -9,7 +9,7 @@ CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_runtime_commit_live_final
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 FOUNDATION_DOC="$ROOT_DIR/docs/foundation/kolme-runtime-commit-client.md"
 CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT

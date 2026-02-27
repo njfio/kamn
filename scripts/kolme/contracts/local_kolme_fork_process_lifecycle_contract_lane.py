@@ -15,7 +15,7 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 RUNBOOK_FILE = ROOT_DIR / "docs/ops/runbook_demo.md"
 
 

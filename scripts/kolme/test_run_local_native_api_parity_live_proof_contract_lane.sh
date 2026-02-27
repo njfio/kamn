@@ -6,7 +6,7 @@ CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_native_api_parity_live_proof_co
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected local native API parity live proof contract lane script to be executable" >&2

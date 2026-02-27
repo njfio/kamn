@@ -12,7 +12,7 @@ DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_COST_DOC="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
 RUNBOOK_DOC="$ROOT_DIR/docs/foundation/upgrade-rollback-runbook.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 

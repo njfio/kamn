@@ -16,7 +16,7 @@ RUNNER = ROOT_DIR / "scripts/kolme/run_local_kamn_live_runtime_integration_lane.
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
     "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",

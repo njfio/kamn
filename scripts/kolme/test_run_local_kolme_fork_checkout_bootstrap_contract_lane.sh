@@ -11,7 +11,7 @@ RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_check
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected local fork checkout bootstrap contract lane script to be executable" >&2

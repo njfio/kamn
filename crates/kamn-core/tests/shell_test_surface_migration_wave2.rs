@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const CI_TOOLS_SCRIPT: &str = "scripts/ci/test_ci_tools.sh";
 const CI_STRATEGY_DOC: &str = "docs/ci/strategy.md";
-const README_DOC: &str = "README.md";
+const README_DOC: &str = "docs/developer/readme-contract-reference.md";
 const MAKEFILE: &str = "Makefile";
 const QUARANTINE_SCRIPT: &str = "scripts/ci/run_cargo_test_with_quarantine.sh";
 

@@ -23,7 +23,7 @@ LIFECYCLE_RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_process_lifecy
 LIFECYCLE_CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py"
 POLICY_CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_real_process_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 
 
 def build_parser() -> argparse.ArgumentParser:

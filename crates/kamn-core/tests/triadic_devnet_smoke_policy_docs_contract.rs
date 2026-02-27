@@ -29,7 +29,7 @@ fn functional_triadic_devnet_policy_docs_contract_ci_strategy_references_policy_
 
 #[test]
 fn integration_triadic_devnet_policy_docs_contract_readme_references_policy_command() {
-    let readme = repo_file("README.md");
+    let readme = repo_file("docs/developer/readme-contract-reference.md");
     assert!(
         readme.contains(POLICY_COMMAND),
         "expected README to reference triadic devnet policy checker command"

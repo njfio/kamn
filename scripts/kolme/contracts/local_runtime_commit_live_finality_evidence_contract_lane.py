@@ -18,7 +18,7 @@ CHECKER = ROOT_DIR / "scripts/kolme/check_local_runtime_commit_live_evidence_pol
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 FOUNDATION_DOC = ROOT_DIR / "docs/foundation/kolme-runtime-commit-client.md"
 CI_STRATEGY_DOC = ROOT_DIR / "docs/ci/strategy.md"
-README_FILE = ROOT_DIR / "README.md"
+README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 SUBMIT_FINALITY_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
 )

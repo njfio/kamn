@@ -8,7 +8,7 @@ MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_live_node_validation
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_live_node_validation_bundle_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT

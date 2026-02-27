@@ -8,7 +8,7 @@ CHECKER="$ROOT_DIR/scripts/kolme/check_local_heavy_validation_matrix_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_heavy_validation_matrix_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT

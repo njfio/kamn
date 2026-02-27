@@ -10,7 +10,7 @@ DEMO_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_demo.sh"
 INTEGRATION_CONTRACT_LANE="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 INTEGRATION_POLICY="$ROOT_DIR/scripts/sdk/check_localhost_signed_integration_evidence_policy.sh"
 REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 DEVNET_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

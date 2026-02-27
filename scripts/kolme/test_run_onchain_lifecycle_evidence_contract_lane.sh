@@ -10,7 +10,7 @@ CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/onchain_lifecycle_evidence_cont
 DOC_FILE="$ROOT_DIR/docs/foundation/kolme-runtime-commit-client.md"
 OPS_DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
-README_FILE="$ROOT_DIR/README.md"
+README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 TMP_SUMMARY="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 trap 'rm -f "$TMP_SUMMARY" "$TMP_POLICY"' EXIT
