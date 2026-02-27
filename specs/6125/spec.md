@@ -1,7 +1,7 @@
 # Spec: Issue #6125 - Task: [S-02] Split kamn-core into 4-6 focused crates
 
 - Issue: #6125
-- Status: Accepted
+- Status: Reviewed
 - Type: task
 - Priority: P2
 - Area: backend
@@ -10,32 +10,33 @@
 - Parent: #6101
 
 ## Problem Statement
-Suggestion from R59 section 8. Impact: Better layering, faster incremental builds
+`kamn-core` currently concentrates many architectural domains in one crate. S-02 requires a focused split that improves layering and incremental compile boundaries while preserving runtime behavior.
 
 ## Scope
 In scope:
-- Implement targeted remediation for `S-02` from `docs/review/gaps-and-issues-r59-swarm.md`.
-- Add/adjust conformance, regression, and functional test coverage for the remediated path.
-- Update affected documentation and lifecycle artifacts within the same change-set.
+- Deliver a bounded phase-1 decomposition that introduces at least one focused crate extracted from `kamn-core`.
+- Preserve existing behavior through re-exports and compatibility tests.
+- Add conformance/regression tests proving the new crate boundary is real and wired.
 
 Out of scope:
-- Unrelated refactors outside `S-02`.
-- Unscoped protocol/schema redesign not required by the finding.
+- Full 4-6 crate decomposition in a single PR.
+- Public API removals or breaking changes unrelated to boundary extraction.
 
 ## Risk Level
 `low`
 
 ## Acceptance Criteria
-- AC-1: The S-02 gap is remediated with production-safe behavior.
-- AC-2: Regression/conformance tests cover the remediation path.
+- AC-1: A focused crate extracted from `kamn-core` is introduced and consumed by `kamn-core`.
+- AC-2: Regression/conformance tests verify the extracted boundary and behavior parity.
 - AC-3: Issue closure includes measurable evidence and linked PR.
 
 ## Conformance Cases
-- C-01 (Conformance, AC-1): Implemented behavior resolves R59 S-02 with deterministic pass/fail signals.
-- C-02 (Regression, AC-2): RED->GREEN test sequence demonstrates failing precondition and passing post-remediation behavior.
-- C-03 (Conformance, AC-3): Issue closure references PR, test commands, and measurable outputs tied to acceptance criteria.
+- C-01 (Conformance, AC-1): Build graph shows new extracted crate and `kamn-core` dependency wiring.
+- C-02 (Regression, AC-2): Existing behavior tests for migrated modules remain green after extraction.
+- C-03 (Conformance, AC-2): New boundary contract test(s) assert symbols are sourced from extracted crate.
+- C-04 (Conformance, AC-3): PR and issue log include RED/GREEN commands and measured verification outputs.
 
 ## Success Metrics / Observable Signals
-- Targeted R59 finding `S-02` no longer appears as unresolved in follow-up review docs.
-- Required scoped test commands pass in CI and local verification runs.
-- Closure comment includes deterministic evidence links and tier coverage summary.
+- `cargo test -p <new-crate>` and affected `kamn-core` suites pass.
+- Boundary contract tests pass and fail when wiring is removed.
+- No API regressions in migrated module surfaces.

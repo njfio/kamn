@@ -1631,6 +1631,7 @@ dependencies = [
  "kamn-kolme",
  "kamn-live-probe-matrix",
  "kamn-runtime-guards",
+ "kamn-snapshot-journal",
  "libp2p",
  "proptest",
  "rusqlite",
@@ -1706,6 +1707,10 @@ dependencies = [
  "serde_json",
  "webpki-roots 1.0.6",
 ]
+
+[[package]]
+name = "kamn-snapshot-journal"
+version = "0.1.0"
 
 [[package]]
 name = "lazy_static"
