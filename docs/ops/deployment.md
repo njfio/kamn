@@ -83,10 +83,21 @@ Includes:
 - `Namespace` (`kamn-system`)
 - `ConfigMap` for chain/runtime defaults
 - env-driven daemon controls via `KAMN_NODE_DAEMON_MAX_TICKS` and `KAMN_NODE_DAEMON_TICK_INTERVAL_MS`
+- Service API env defaults via:
+  - `KAMN_NODE_API_BIND`
+  - `KAMN_NODE_API_MAX_REQUESTS`
+  - `KAMN_NODE_API_IDLE_TIMEOUT_MS`
+  - `KAMN_NODE_API_BODY_LIMIT_BYTES`
+  - `KAMN_NODE_API_CONCURRENCY_LIMIT`
+  - `KAMN_NODE_API_RATE_LIMIT_PER_SECOND`
 - `Deployment` resources:
+  - `kamn-service-api` (runtime-mode `api`)
   - `kamn-processor`
   - `kamn-listener`
   - `kamn-approver`
+- Service (`kamn-service-api`) exposing port `80 -> targetPort http (8080)`
+- Ingress (`kamn-service-api`) baseline (`ingressClassName: nginx`, host `kamn.local`, path `/`)
+- API pod `readinessProbe` and `livenessProbe` checks against `GET /healthz`
 
 Apply:
 

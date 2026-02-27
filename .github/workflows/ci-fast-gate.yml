@@ -81,6 +81,40 @@ jobs:
         if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/check_pr_ci_declaration.sh
 
+      - name: Governance/feature commit ratio gate
+        if: github.event_name == 'pull_request'
+        run: |
+          git log --no-merges --pretty=format:%s "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" > ci-pr-commit-subjects.txt
+          python3 scripts/ci/check_governance_feature_commit_ratio.py \
+            --commit-subjects-file ci-pr-commit-subjects.txt \
+            --max-governance-ratio 0.50 \
+            --output-json ci-governance-feature-commit-ratio.json
+
+      - name: Upload governance/feature commit ratio report
+        if: always() && hashFiles('ci-governance-feature-commit-ratio.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-governance-feature-commit-ratio-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-governance-feature-commit-ratio.json
+          if-no-files-found: error
+
+      - name: Review document freeze gate
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" > ci-pr-changed-files.txt
+          python3 scripts/ci/check_review_document_freeze.py \
+            --changed-files-file ci-pr-changed-files.txt \
+            --freeze-manifest docs/review/review-document-freeze.manifest \
+            --output-json ci-review-document-freeze.json
+
+      - name: Upload review document freeze report
+        if: always() && hashFiles('ci-review-document-freeze.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-review-document-freeze-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-review-document-freeze.json
+          if-no-files-found: error
+
       - name: Run kamn-core missing-docs policy contract check
         if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
         run: bash scripts/ci/check_kamn_core_missing_docs_policy.sh
@@ -146,6 +180,12 @@ jobs:
             --ratio-threshold-file .ci/shell-rust-ratio-guardrail.env \
             --ratchet-exception-file .ci/shell-surface-threshold-ratchet-exception.json \
             --output-json ci-shell-surface-threshold-ratchet.json
+          docs_contract_test_file_max="$(grep -E '^DOCS_CONTRACT_TEST_FILE_MAX=' .ci/docs-contract-test-file-budget.env | cut -d= -f2)"
+          docs_contract_test_file_count="$(git ls-files 'crates/*/tests/*_docs.rs' | wc -l | tr -d '[:space:]')"
+          if [ "$docs_contract_test_file_count" -gt "$docs_contract_test_file_max" ]; then
+            echo "docs-contract test-file budget exceeded: ${docs_contract_test_file_count} > ${docs_contract_test_file_max}" >&2
+            exit 1
+          fi
 
       - name: Upload shell-surface threshold ratchet telemetry
         if: always() && hashFiles('ci-shell-surface-threshold-ratchet.json') != ''
@@ -492,6 +532,22 @@ jobs:
         if: steps.scope.outputs.run_rust == 'true'
         run: ${{ steps.scope.outputs.clippy_cmd }}
 
+      - name: Production-target expect() gate
+        if: steps.scope.outputs.run_rust == 'true'
+        run: cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used
+
+      - name: Production panic-surface gate
+        if: steps.scope.outputs.run_rust == 'true'
+        run: bash scripts/ci/check_no_production_expect.sh --output-json ci-no-production-expect-report.json
+
+      - name: Upload production panic-surface report
+        if: always() && hashFiles('ci-no-production-expect-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-no-production-expect-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-no-production-expect-report.json
+          if-no-files-found: error
+
       - name: Test (bounded retry)
         id: tests
         if: steps.scope.outputs.run_rust == 'true'
@@ -508,6 +564,19 @@ jobs:
             --label invariant-harness-fast \
             --max-attempts 1 \
             -- bash scripts/ci/run_invariant_harness.sh --mode fast
+
+      - name: Run runtime coverage-guided parser fuzz contract lane
+        if: steps.scope.outputs.run_rust == 'true'
+        run: |
+          bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json runtime-input-mutation-coverage-guided-contract-report.json
+
+      - name: Upload runtime coverage-guided parser fuzz report
+        if: always() && hashFiles('runtime-input-mutation-coverage-guided-contract-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-input-mutation-coverage-guided-contract-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime-input-mutation-coverage-guided-contract-report.json
+          if-no-files-found: error
 
       - name: Generate performance smoke report
         if: steps.scope.outputs.run_rust == 'true'

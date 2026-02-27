@@ -1,16 +1,29 @@
+fn reserve_runtime_test_loopback_addr() -> String {
+    let listener = std::net::TcpListener::bind(("127.0.0.1", 0))
+        .expect("runtime test loopback port should bind");
+    let addr = listener
+        .local_addr()
+        .expect("runtime test loopback addr should resolve");
+    drop(listener);
+    addr.to_string()
+}
+
 #[test]
-fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
+fn integration_runtime_daemon_without_route_map_preserves_relay_spool_entries() {
     let _lock = log_env_lock()
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let relay_spool_file = std::env::temp_dir().join(format!(
-        "kamn-node-runtime-daemon-relay-spool-{}-{}.ndjson",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("clock should be monotonic")
-            .as_nanos()
-    ));
+    let bind_addr = reserve_runtime_test_loopback_addr();
+    let state_file = std::path::PathBuf::from(
+        crate::service_api_endpoint::default_service_api_state_file_path_for_bind_addr(
+            bind_addr.as_str(),
+        ),
+    );
+    let relay_spool_file = std::path::PathBuf::from(
+        crate::service_api_endpoint::default_service_api_relay_spool_file_path_from_state_file(
+            state_file.to_string_lossy().as_ref(),
+        ),
+    );
     std::fs::write(
         relay_spool_file.as_path(),
         concat!(
@@ -19,11 +32,6 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
         ),
     )
     .expect("relay spool fixture should write");
-    let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
-    let _relay_spool_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
-        Some(relay_spool_file_str.as_str()),
-    );
 
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -31,6 +39,8 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
         "processor".to_owned(),
         "--runtime-mode".to_owned(),
         "daemon".to_owned(),
+        "--api-bind".to_owned(),
+        bind_addr,
         "--daemon-max-ticks".to_owned(),
         "2".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
@@ -46,6 +56,14 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
     assert!(
+        report.daemon_service_api_relay_drained_count.is_some(),
+        "daemon runtime output must expose drained relay entry counters"
+    );
+    assert!(
+        report.daemon_service_api_relay_projected_state_count.is_some(),
+        "daemon runtime output must expose projected relay state counters"
+    );
+    assert!(
         report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
         "daemon observability throughput should reflect projected relay work"
     );
@@ -57,31 +75,29 @@ fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
     let relay_contents = std::fs::read_to_string(relay_spool_file.as_path())
         .expect("relay spool should remain readable after daemon execution");
     assert!(
-        relay_contents.trim().is_empty(),
-        "daemon runtime should drain relay spool entries"
+        relay_contents.contains("msg-relay-1") && relay_contents.contains("msg-relay-2"),
+        "daemon runtime must preserve relay spool entries until a forwarding route is configured"
     );
     let _ = std::fs::remove_file(relay_spool_file);
+    let _ = std::fs::remove_file(state_file);
 }
 
 #[test]
-fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
+fn regression_runtime_daemon_without_route_map_keeps_created_message_pending() {
     let _lock = log_env_lock()
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let unique_suffix = format!(
-        "{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("clock should be monotonic")
-            .as_nanos()
+    let bind_addr = reserve_runtime_test_loopback_addr();
+    let state_file = std::path::PathBuf::from(
+        crate::service_api_endpoint::default_service_api_state_file_path_for_bind_addr(
+            bind_addr.as_str(),
+        ),
     );
-    let state_file = std::env::temp_dir().join(format!(
-        "kamn-node-runtime-daemon-relay-state-{unique_suffix}.json"
-    ));
-    let relay_spool_file = std::env::temp_dir().join(format!(
-        "kamn-node-runtime-daemon-relay-state-spool-{unique_suffix}.ndjson"
-    ));
+    let relay_spool_file = std::path::PathBuf::from(
+        crate::service_api_endpoint::default_service_api_relay_spool_file_path_from_state_file(
+            state_file.to_string_lossy().as_ref(),
+        ),
+    );
     std::fs::write(
         state_file.as_path(),
         r#"{
@@ -108,13 +124,6 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
 "#,
     )
     .expect("relay spool fixture should write");
-    let state_file_str = state_file.to_string_lossy().to_string();
-    let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
-    let _state_file_guard = EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(&state_file_str));
-    let _relay_spool_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
-        Some(relay_spool_file_str.as_str()),
-    );
 
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -122,6 +131,8 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
         "processor".to_owned(),
         "--runtime-mode".to_owned(),
         "daemon".to_owned(),
+        "--api-bind".to_owned(),
+        bind_addr,
         "--daemon-max-ticks".to_owned(),
         "1".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
@@ -130,6 +141,14 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_service_api_relay_drained_count.is_some(),
+        "daemon runtime output must expose drained relay entry counters for state projection"
+    );
+    assert!(
+        report.daemon_service_api_relay_projected_state_count.is_some(),
+        "daemon runtime output must expose projected relay state counters for state projection"
+    );
     assert!(
         report.daemon_observability_throughput_tps.unwrap_or(0) > 0,
         "daemon observability throughput should reflect delayed relay processing work"
@@ -145,8 +164,14 @@ fn integration_runtime_daemon_relay_drain_projects_message_state_to_relayed() {
         serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
     assert_eq!(
         state_json["messages"]["msg-relay-project-1"]["status"],
-        "relayed",
-        "daemon relay drain should project created status to relayed"
+        "created",
+        "daemon relay processing without routing must not project created status"
+    );
+    let relay_payload = std::fs::read_to_string(relay_spool_file.as_path())
+        .expect("relay spool should remain readable after daemon execution");
+    assert!(
+        relay_payload.contains("msg-relay-project-1"),
+        "pending relay entry must remain queued for retry"
     );
 
     let _ = std::fs::remove_file(state_file);
@@ -293,24 +318,21 @@ fn regression_runtime_daemon_relay_state_projection_is_idempotent_for_relayed_me
 }
 
 #[test]
-fn integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop() {
+fn integration_runtime_daemon_without_route_map_requeues_relay_entries_arriving_during_tick_loop() {
     let _lock = log_env_lock()
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let unique_suffix = format!(
-        "{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("clock should be monotonic")
-            .as_nanos()
+    let bind_addr = reserve_runtime_test_loopback_addr();
+    let state_file = std::path::PathBuf::from(
+        crate::service_api_endpoint::default_service_api_state_file_path_for_bind_addr(
+            bind_addr.as_str(),
+        ),
     );
-    let state_file = std::env::temp_dir().join(format!(
-        "kamn-node-runtime-daemon-live-tick-state-{unique_suffix}.json"
-    ));
-    let relay_spool_file = std::env::temp_dir().join(format!(
-        "kamn-node-runtime-daemon-live-tick-spool-{unique_suffix}.ndjson"
-    ));
+    let relay_spool_file = std::path::PathBuf::from(
+        crate::service_api_endpoint::default_service_api_relay_spool_file_path_from_state_file(
+            state_file.to_string_lossy().as_ref(),
+        ),
+    );
     std::fs::write(
         state_file.as_path(),
         r#"{
@@ -333,19 +355,11 @@ fn integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop(
     .expect("state file fixture should write");
     std::fs::write(relay_spool_file.as_path(), "").expect("relay spool fixture should write");
 
-    let state_file_str = state_file.to_string_lossy().to_string();
-    let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
-    let _state_file_guard = EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(&state_file_str));
-    let _relay_spool_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
-        Some(relay_spool_file_str.as_str()),
-    );
-
     let writer_spool_path = relay_spool_file.clone();
     let relay_writer = std::thread::spawn(move || {
         use std::io::Write;
 
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(100));
         let mut relay_file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -364,14 +378,24 @@ fn integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop(
         "processor".to_owned(),
         "--runtime-mode".to_owned(),
         "daemon".to_owned(),
+        "--api-bind".to_owned(),
+        bind_addr,
         "--daemon-max-ticks".to_owned(),
-        "30".to_owned(),
+        "40".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
         "10".to_owned(),
     ])
     .expect("daemon args should parse");
     let report = execute(parsed).expect("daemon runtime should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    assert!(
+        report.daemon_service_api_relay_drained_count.is_some(),
+        "daemon runtime output must expose drained relay entry counters for delayed arrivals"
+    );
+    assert!(
+        report.daemon_service_api_relay_projected_state_count.is_some(),
+        "daemon runtime output must expose projected relay state counters for delayed arrivals"
+    );
     relay_writer
         .join()
         .expect("relay append worker should complete successfully");
@@ -382,15 +406,15 @@ fn integration_runtime_daemon_processes_relay_entries_arriving_during_tick_loop(
         serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
     assert_eq!(
         state_json["messages"]["msg-live-tick-1"]["status"],
-        "relayed",
-        "daemon tick loop should project delayed relay entries during runtime execution"
+        "created",
+        "daemon tick loop must keep delayed relay entries pending until routing is configured"
     );
 
     let relay_payload = std::fs::read_to_string(relay_spool_file.as_path())
         .expect("relay spool should remain readable after daemon execution");
     assert!(
-        relay_payload.trim().is_empty(),
-        "daemon tick loop should drain delayed relay entries before completion"
+        relay_payload.contains("msg-live-tick-1"),
+        "daemon tick loop must requeue delayed relay entries when forwarding is unavailable"
     );
 
     let _ = std::fs::remove_file(state_file);

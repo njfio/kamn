@@ -30,10 +30,11 @@ pub(crate) use daemon_shutdown::{
 use daemon_shutdown::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
 #[cfg(test)]
 use logging::{
-    capture_test_logs, render_log_event_line, resolve_log_config_from_inputs, NodeLogConfig,
-    NodeLogFormat, NodeLogLevel,
+    capture_test_logs, render_log_event_line, reset_cached_log_config_for_tests,
+    resolve_log_config_from_inputs, NodeLogConfig, NodeLogFormat, NodeLogLevel,
+    KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
 };
-use logging::{log_error, log_info};
+use logging::{initialize_log_config_from_env, log_error, log_info};
 #[cfg(test)]
 pub(crate) use observability_endpoint::render_observability_endpoint_response;
 pub(crate) use observability_endpoint::{
@@ -398,6 +399,8 @@ struct DaemonExecution {
     tick_interval_ms: u64,
     executed_ticks: u64,
     completion_reason: String,
+    service_api_relay_drained_count: u64,
+    service_api_relay_projected_state_count: u64,
     observability_latency_p50_ms: u64,
     observability_latency_p99_ms: u64,
     observability_throughput_tps: u64,
@@ -497,6 +500,8 @@ struct NodeBootstrapReport {
     daemon_tick_interval_ms: Option<u64>,
     daemon_executed_ticks: Option<u64>,
     daemon_completion_reason: Option<String>,
+    daemon_service_api_relay_drained_count: Option<u64>,
+    daemon_service_api_relay_projected_state_count: Option<u64>,
     daemon_observability_latency_p50_ms: Option<u64>,
     daemon_observability_latency_p99_ms: Option<u64>,
     daemon_observability_throughput_tps: Option<u64>,
@@ -591,6 +596,7 @@ fn should_skip_observability_endpoint_for_full_supervisor(runtime_mode: &str) ->
 
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
+    initialize_log_config_from_env()?;
     let runtime_mode = cli.runtime_mode.as_str();
     let execution_id =
         build_runtime_execution_id(cli.runtime_mode, cli.chain_id.as_str(), cli.role.as_str());

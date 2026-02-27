@@ -97,3 +97,11 @@ fn docs_declare_signer_adapter_boundary_markers() {
         "runtime-commit docs must declare signer adapter boundary contract command"
     );
 }
+
+#[test]
+fn source_forbids_clone_derive_on_signer_adapter_secret_owner() {
+    assert!(
+        !SIGNER_ADAPTER_RS.contains("#[derive(Debug, Clone)]"),
+        "signer_adapter.rs must not derive Clone on KolmeForkSecp256k1SignerAdapter (signing key owner)"
+    );
+}

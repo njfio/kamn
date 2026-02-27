@@ -44,7 +44,7 @@ const PERFORMANCE_CI_SMOKE_REASON_CODES_CSV: &str =
     "performance_ci_smoke_argument_invalid,performance_ci_smoke_threshold_contract_violation,performance_ci_smoke_report_contract_violation,performance_ci_smoke_latency_p50_threshold_exceeded,performance_ci_smoke_latency_p99_threshold_exceeded,performance_ci_smoke_throughput_threshold_below_minimum,performance_ci_smoke_availability_threshold_below_minimum,performance_ci_smoke_selector_missing_checker_entry,performance_ci_smoke_selector_forbidden_entry_present,performance_ci_smoke_workflow_missing_checker_step,performance_ci_smoke_workflow_forbidden_entry_present,performance_ci_smoke_docs_marker_parity_drift,performance_ci_smoke_docs_remediation_marker_missing,performance_ci_smoke_runtime_budget_exceeded";
 const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-auth-reason-taxonomy.v1";
-const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
+const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_did_key_binding_invalid,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
 const SERVICE_API_REQUEST_PATH_AUTHZ_PUBLIC_ROUTES_CSV: &str = "GET:/healthz,GET:/metrics";
 const SERVICE_API_REQUEST_PATH_AUTHZ_PROTECTED_ROUTES_CSV: &str = "POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws";
 const SERVICE_API_REQUEST_PATH_AUTHZ_MISSING_HEADER_REASON_CODE: &str =
@@ -2034,6 +2034,9 @@ fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {
     assert!(DOC.contains(
         "bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json"
     ));
+    assert!(
+        DOC.contains("cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used")
+    );
     assert!(DOC.contains("bash scripts/ci/test_check_no_production_expect.sh"));
     assert!(DOC.contains("kamn.ci.production-panic-replacement-reason-taxonomy.v1"));
     assert!(DOC.contains(
@@ -2043,6 +2046,8 @@ fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {
         "runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
     ));
     assert!(DOC.contains("panic_path_policy_scope_root=crates/kamn-node/src"));
+    assert!(DOC.contains("panic_path_policy_production_target_scope=lib+bins"));
+    assert!(DOC.contains("panic_path_policy_test_target_exclusion=tests-benches-excluded"));
     assert!(DOC.contains("panic_path_policy_ci_smoke_max_seconds=30"));
     assert!(DOC.contains("panic_path_policy_remediation_steps_version=v1"));
     assert!(DOC.contains(
@@ -2144,7 +2149,7 @@ fn doc_contains_service_api_request_path_authz_docs_parity_markers() {
         "service_api_request_path_authz_reason_taxonomy_version=kamn.runtime.service-api-auth-reason-taxonomy.v1"
     ));
     assert!(DOC.contains(
-        "service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected"
+        "service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_did_key_binding_invalid,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected"
     ));
     assert!(
         DOC.contains("service_api_request_path_authz_public_routes_csv=GET:/healthz,GET:/metrics")
@@ -3006,4 +3011,50 @@ fn doc_enforces_performance_ci_smoke_docs_remediation_markers_cover_reason_codes
             "missing performance-ci-smoke remediation marker for {reason_code}"
         );
     }
+}
+
+#[test]
+fn doc_contains_governance_feature_commit_ratio_gate_markers() {
+    assert!(DOC.contains("## Governance/Feature Commit-Ratio Fast Gate"));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_check_governance_feature_commit_ratio.sh"));
+    assert!(DOC.contains("git log --no-merges --pretty=format:%s <base_sha>..<head_sha>"));
+    assert!(DOC.contains("ci-governance-feature-commit-ratio.json"));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded"
+    ));
+    assert!(DOC.contains("governance_feature_commit_ratio_threshold_max=0.50"));
+    assert!(DOC.contains("governance_feature_commit_ratio_non_merge_only=true"));
+}
+
+#[test]
+fn doc_contains_review_document_freeze_gate_markers() {
+    assert!(DOC.contains("## Review-Document Freeze Fast Gate"));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_review_document_freeze.py --changed-files-file /tmp/pr-changed-files.txt --freeze-manifest docs/review/review-document-freeze.manifest --output-json /tmp/review-document-freeze-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_check_review_document_freeze.sh"));
+    assert!(DOC.contains("git diff --name-only <base_sha>..<head_sha>"));
+    assert!(DOC.contains("ci-review-document-freeze.json"));
+    assert!(DOC.contains(
+        "review_document_freeze_schema_version=kamn.ci.review-document-freeze-gate-report.v1"
+    ));
+    assert!(DOC.contains(
+        "review_document_freeze_reason_taxonomy_version=kamn.ci.review-document-freeze-gate-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "review_document_freeze_reason_codes_csv=review_document_freeze_changed_files_missing,review_document_freeze_manifest_missing,review_document_freeze_manifest_invalid,review_document_freeze_violation_detected"
+    ));
+    assert!(DOC.contains(
+        "review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest"
+    ));
+    assert!(DOC.contains("review_document_freeze_scope=docs/review/gaps-and-issues-r*.md"));
 }

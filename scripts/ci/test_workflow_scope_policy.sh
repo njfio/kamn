@@ -80,6 +80,81 @@ if ! grep -Fq "if: steps.scope.outputs.run_script_surface_budget_checks == 'true
   exit 1
 fi
 
+if ! grep -Fq "Production-target expect() gate" "$FAST_WORKFLOW"; then
+  echo "expected production-target expect gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used" "$FAST_WORKFLOW"; then
+  echo "expected production-target expect gate to enforce cargo clippy --workspace --lib --bins -- -D warnings -D clippy::expect_used" >&2
+  exit 1
+fi
+
+if grep -Fq -- "--all-targets -- -D warnings -D clippy::expect_used" "$FAST_WORKFLOW"; then
+  echo "production-target expect gate must not widen scope to --all-targets" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Production panic-surface gate" "$FAST_WORKFLOW"; then
+  echo "expected production panic-surface gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/check_no_production_expect.sh --output-json ci-no-production-expect-report.json" "$FAST_WORKFLOW"; then
+  echo "expected production panic-surface gate to run no-production-expect checker with deterministic report output path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-no-production-expect-report.json" "$FAST_WORKFLOW"; then
+  echo "expected production panic-surface report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Governance/feature commit ratio gate" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "git log --no-merges --pretty=format:%s" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to source non-merge commit subjects" >&2
+  exit 1
+fi
+
+if ! grep -Fq "python3 scripts/ci/check_governance_feature_commit_ratio.py" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to run checker script" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--max-governance-ratio 0.50" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to enforce max ratio 0.50" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-governance-feature-commit-ratio.json" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Review document freeze gate" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "python3 scripts/ci/check_review_document_freeze.py" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze gate to run checker script" >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/review/review-document-freeze.manifest" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze gate to reference freeze manifest path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-review-document-freeze.json" "$FAST_WORKFLOW"; then
+  echo "expected review document freeze report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/ci/check_script_duplication_budget.sh" "$FAST_WORKFLOW"; then
   echo "expected script-surface budget checker command in ci-fast-gate.yml" >&2
   exit 1
@@ -478,6 +553,21 @@ fi
 
 if grep -Fq "bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mode run" "$FAST_WORKFLOW"; then
   echo "expected local retry/diagnostics run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "name: Run runtime coverage-guided parser fuzz contract lane" "$FAST_WORKFLOW"; then
+  echo "expected runtime coverage-guided parser fuzz contract lane step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected runtime coverage-guided parser fuzz contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "runtime-input-mutation-coverage-guided-contract-report.json" "$FAST_WORKFLOW"; then
+  echo "expected runtime coverage-guided parser fuzz contract report wiring in ci-fast-gate.yml" >&2
   exit 1
 fi
 

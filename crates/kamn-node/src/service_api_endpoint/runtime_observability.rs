@@ -94,21 +94,27 @@ pub(super) async fn snapshot_with_runtime_observability(
         let observability = state.runtime_observability.lock().await;
         observability.project()
     };
-    match runtime_projection {
-        Some(runtime_projection) => {
-            let mut snapshot = state.snapshot.clone();
-            snapshot.observability_source = runtime_projection.source;
-            snapshot.observability_latency_p50_ms = runtime_projection.latency_p50_ms;
-            snapshot.observability_latency_p99_ms = runtime_projection.latency_p99_ms;
-            snapshot.observability_throughput_tps = runtime_projection.throughput_tps;
-            snapshot.observability_error_rate_bps = runtime_projection.error_rate_bps;
-            snapshot.observability_availability_bps = runtime_projection.availability_bps;
-            snapshot.observability_health = runtime_projection.health;
-            snapshot.observability_alert_count = runtime_projection.alert_count;
-            snapshot
-        }
-        None => state.snapshot.clone(),
+    let relay_progress = {
+        let mut message_store = state.message_store.lock().await;
+        message_store.relay_progress_counts().ok()
+    };
+    let mut snapshot = state.snapshot.clone();
+    if let Some(runtime_projection) = runtime_projection {
+        snapshot.observability_source = runtime_projection.source;
+        snapshot.observability_latency_p50_ms = runtime_projection.latency_p50_ms;
+        snapshot.observability_latency_p99_ms = runtime_projection.latency_p99_ms;
+        snapshot.observability_throughput_tps = runtime_projection.throughput_tps;
+        snapshot.observability_error_rate_bps = runtime_projection.error_rate_bps;
+        snapshot.observability_availability_bps = runtime_projection.availability_bps;
+        snapshot.observability_health = runtime_projection.health;
+        snapshot.observability_alert_count = runtime_projection.alert_count;
     }
+    if let Some(relay_progress) = relay_progress {
+        snapshot.relay_created_message_count = relay_progress.created_message_count;
+        snapshot.relay_relayed_message_count = relay_progress.relayed_message_count;
+        snapshot.relay_delivered_message_count = relay_progress.delivered_message_count;
+    }
+    snapshot
 }
 
 pub(super) async fn record_runtime_observation(

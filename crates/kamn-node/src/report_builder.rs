@@ -44,6 +44,12 @@ pub(crate) fn build_bootstrap_report(
     let daemon_completion_reason = daemon
         .as_ref()
         .map(|daemon| daemon.completion_reason.clone());
+    let daemon_service_api_relay_drained_count = daemon
+        .as_ref()
+        .map(|daemon| daemon.service_api_relay_drained_count);
+    let daemon_service_api_relay_projected_state_count = daemon
+        .as_ref()
+        .map(|daemon| daemon.service_api_relay_projected_state_count);
     let daemon_observability_latency_p50_ms = daemon
         .as_ref()
         .map(|daemon| daemon.observability_latency_p50_ms);
@@ -228,6 +234,8 @@ pub(crate) fn build_bootstrap_report(
         daemon_tick_interval_ms,
         daemon_executed_ticks,
         daemon_completion_reason,
+        daemon_service_api_relay_drained_count,
+        daemon_service_api_relay_projected_state_count,
         daemon_observability_latency_p50_ms,
         daemon_observability_latency_p99_ms,
         daemon_observability_throughput_tps,

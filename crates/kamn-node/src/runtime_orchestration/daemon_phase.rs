@@ -1,9 +1,15 @@
 use super::*;
-use kamn_core::{service_auth_sign_with_private_key_hex, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV};
+use kamn_core::{
+    service_auth_sign_with_private_key_hex, Libp2pLivePeerLifecycleTransport, NodeRole,
+    P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, PeerDiscoveryRecord, PeerGossipFrame,
+    PeerLifecycleTransport, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+};
+use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
@@ -39,11 +45,14 @@ const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_COUNT_MISMATCH_REASON_CODE: &str 
     "live_postgres_selector_bundle_row_count_mismatch";
 const SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV: &str =
     "KAMN_SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_JSON";
+const SERVICE_API_RELAY_P2P_CONFIG_ENV: &str = "KAMN_SERVICE_API_RELAY_P2P_CONFIG_JSON";
 const SERVICE_API_RELAY_FORWARD_PATH: &str = "/v1/messages/relay";
 const SERVICE_API_RELAY_FORWARD_SCOPE: &str = "messages:write";
 const SERVICE_API_RELAY_FORWARD_DEFAULT_SENDER_DID: &str = "kamn:did:agent:relay-daemon";
 const SERVICE_API_RELAY_FORWARD_CONNECT_TIMEOUT_MS: u64 = 500;
 const SERVICE_API_RELAY_FORWARD_IO_TIMEOUT_MS: u64 = 500;
+const SERVICE_API_RELAY_P2P_DEFAULT_TOPIC: &str = "messages";
+const SERVICE_API_RELAY_P2P_HARNESS_TICK_BUDGET: u16 = 3;
 const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS: [(&str, &str); 6] = [
     (
         "b01_runtime_matrix_bundle",
@@ -95,6 +104,77 @@ struct DaemonConvergenceProjection {
     concurrency_gate_passed: bool,
     performance_budget_gate_passed: bool,
     cost_budget_gate_passed: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct DaemonServiceApiRelayP2pConfigInput {
+    local_peer_id: String,
+    listen_address: String,
+    #[serde(default)]
+    bootstrap_peers: Vec<String>,
+    #[serde(default = "default_service_api_relay_p2p_topic")]
+    topic: String,
+    #[serde(default)]
+    recipient_peers_by_did: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DaemonServiceApiRelayP2pConfig {
+    local_peer_id: String,
+    listen_address: String,
+    bootstrap_peers: Vec<String>,
+    topic: String,
+    recipient_peers_by_did: BTreeMap<String, String>,
+}
+
+type DaemonServiceApiRelayP2pTransport = Arc<dyn PeerLifecycleTransport + Send + Sync>;
+
+#[derive(Clone)]
+struct DaemonServiceApiRelayP2pContext {
+    local_peer_id: String,
+    topic: String,
+    recipient_peers_by_did: BTreeMap<String, String>,
+    transport: DaemonServiceApiRelayP2pTransport,
+}
+
+#[cfg(test)]
+static TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE: std::sync::Mutex<Option<String>> =
+    std::sync::Mutex::new(None);
+
+#[cfg(test)]
+#[derive(Debug)]
+struct DaemonServiceApiRelayP2pConfigOverrideGuard {
+    previous: Option<String>,
+}
+
+#[cfg(test)]
+fn daemon_service_api_relay_p2p_config_override_json_for_tests() -> Option<String> {
+    TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+        .clone()
+}
+
+#[cfg(test)]
+fn set_daemon_service_api_relay_p2p_config_override_for_tests(
+    raw_json: Option<&str>,
+) -> DaemonServiceApiRelayP2pConfigOverrideGuard {
+    let mut guard = TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let previous = guard.clone();
+    *guard = raw_json.map(str::to_owned);
+    DaemonServiceApiRelayP2pConfigOverrideGuard { previous }
+}
+
+#[cfg(test)]
+impl Drop for DaemonServiceApiRelayP2pConfigOverrideGuard {
+    fn drop(&mut self) {
+        let mut guard = TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        *guard = self.previous.clone();
+    }
 }
 
 fn daemon_lifecycle_event_as_str(event: PeerLifecycleEvent) -> &'static str {
@@ -761,6 +841,8 @@ pub(super) fn execute_daemon_runtime(
         tick_interval_ms,
         executed_ticks: daemon_completion.executed_ticks,
         completion_reason: daemon_completion.completion_reason,
+        service_api_relay_drained_count: runtime_processing.relay_drained_count,
+        service_api_relay_projected_state_count: runtime_processing.relay_projected_state_count,
         observability_latency_p50_ms: daemon_observability.latency_p50_ms,
         observability_latency_p99_ms: daemon_observability.latency_p99_ms,
         observability_throughput_tps: daemon_observability.throughput_tps,
@@ -804,6 +886,255 @@ pub(super) fn execute_daemon_runtime(
     })
 }
 
+fn default_service_api_relay_p2p_topic() -> String {
+    SERVICE_API_RELAY_P2P_DEFAULT_TOPIC.to_owned()
+}
+
+fn normalize_daemon_service_api_relay_p2p_config(
+    config: DaemonServiceApiRelayP2pConfigInput,
+) -> Result<DaemonServiceApiRelayP2pConfig, ConfigError> {
+    let local_peer_id = config.local_peer_id.trim();
+    if local_peer_id.is_empty() {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} local_peer_id must not be empty"
+        )));
+    }
+    let listen_address = config.listen_address.trim();
+    if listen_address.is_empty() {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} listen_address must not be empty"
+        )));
+    }
+    let topic = config.topic.trim();
+    if topic.is_empty() {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} topic must not be empty"
+        )));
+    }
+
+    let mut bootstrap_peers = BTreeSet::new();
+    for peer in config.bootstrap_peers {
+        let normalized_peer = peer.trim();
+        if normalized_peer.is_empty() {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_P2P_CONFIG_ENV} bootstrap_peers must not include empty entries"
+            )));
+        }
+        bootstrap_peers.insert(normalized_peer.to_owned());
+    }
+    if bootstrap_peers.is_empty() {
+        bootstrap_peers.insert(listen_address.to_owned());
+    }
+
+    let mut recipient_peers_by_did = BTreeMap::new();
+    for (recipient_did, peer_id) in config.recipient_peers_by_did {
+        let normalized_recipient_did = recipient_did.trim();
+        if normalized_recipient_did.is_empty() {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_P2P_CONFIG_ENV} recipient_peers_by_did contains an empty recipient DID key"
+            )));
+        }
+        let normalized_peer_id = peer_id.trim();
+        if normalized_peer_id.is_empty() {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_P2P_CONFIG_ENV} recipient_peers_by_did contains an empty peer id for recipient={normalized_recipient_did}"
+            )));
+        }
+        recipient_peers_by_did.insert(
+            normalized_recipient_did.to_owned(),
+            normalized_peer_id.to_owned(),
+        );
+    }
+
+    Ok(DaemonServiceApiRelayP2pConfig {
+        local_peer_id: local_peer_id.to_owned(),
+        listen_address: listen_address.to_owned(),
+        bootstrap_peers: bootstrap_peers.into_iter().collect(),
+        topic: topic.to_owned(),
+        recipient_peers_by_did,
+    })
+}
+
+fn build_daemon_service_api_relay_p2p_context(
+    config: DaemonServiceApiRelayP2pConfig,
+    transport: DaemonServiceApiRelayP2pTransport,
+) -> Result<DaemonServiceApiRelayP2pContext, ConfigError> {
+    let local_record = PeerDiscoveryRecord::new(
+        config.local_peer_id.as_str(),
+        NodeRole::Processor,
+        vec![config.topic.clone()],
+    )
+    .map_err(|error| {
+        ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} local peer discovery record invalid: {error}"
+        ))
+    })?;
+    transport.advertise(local_record).map_err(|error| {
+        ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} local peer advertise failed: {error}"
+        ))
+    })?;
+    Ok(DaemonServiceApiRelayP2pContext {
+        local_peer_id: config.local_peer_id,
+        topic: config.topic,
+        recipient_peers_by_did: config.recipient_peers_by_did,
+        transport,
+    })
+}
+
+fn resolve_daemon_service_api_relay_p2p_context(
+) -> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
+    #[cfg(test)]
+    if let Some(override_json) = daemon_service_api_relay_p2p_config_override_json_for_tests() {
+        return resolve_daemon_service_api_relay_p2p_context_from_json(override_json.as_str())
+            .map(Some);
+    }
+    let raw = match env::var(SERVICE_API_RELAY_P2P_CONFIG_ENV) {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => return Ok(None),
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_P2P_CONFIG_ENV} must be valid utf-8 when present"
+            )));
+        }
+    };
+    let normalized = raw.trim();
+    if normalized.is_empty() {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} must not be empty when present"
+        )));
+    }
+    resolve_daemon_service_api_relay_p2p_context_from_json(normalized).map(Some)
+}
+
+fn resolve_daemon_service_api_relay_p2p_context_from_json(
+    raw_json: &str,
+) -> Result<DaemonServiceApiRelayP2pContext, ConfigError> {
+    let parsed =
+        serde_json::from_str::<DaemonServiceApiRelayP2pConfigInput>(raw_json).map_err(|error| {
+            ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_P2P_CONFIG_ENV} must be a JSON object with local_peer_id/listen_address/bootstrap_peers/topic/recipient_peers_by_did: {error}"
+            ))
+        })?;
+    let config = normalize_daemon_service_api_relay_p2p_config(parsed)?;
+    let swarm_config = P2pSwarmDeterministicConfig::new(
+        config.local_peer_id.as_str(),
+        config.listen_address.as_str(),
+        config.bootstrap_peers.clone(),
+        vec![config.topic.clone()],
+        SERVICE_API_RELAY_P2P_HARNESS_TICK_BUDGET,
+    )
+    .map_err(|error| {
+        ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} swarm config validation failed: {error}"
+        ))
+    })?;
+    let live_transport =
+        Libp2pLivePeerLifecycleTransport::new(swarm_config, P2pSwarmHarnessMode::DryRun).map_err(
+            |error| {
+                ConfigError::RuntimeDaemonLifecycle(format!(
+                    "{SERVICE_API_RELAY_P2P_CONFIG_ENV} transport initialization failed: {error}"
+                ))
+            },
+        )?;
+    let transport: DaemonServiceApiRelayP2pTransport = Arc::new(live_transport);
+    build_daemon_service_api_relay_p2p_context(config, transport)
+}
+
+fn forward_service_api_relay_entry_via_p2p(
+    relay_p2p_context: &DaemonServiceApiRelayP2pContext,
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+) -> Result<(), String> {
+    let recipient_peer_id = relay_p2p_context
+        .recipient_peers_by_did
+        .get(relay_entry.recipient_did.as_str())
+        .ok_or_else(|| {
+            format!(
+                "p2p recipient peer mapping missing for recipient_did={}",
+                relay_entry.recipient_did
+            )
+        })?;
+    let payload = serde_json::to_string(relay_entry)
+        .map_err(|error| format!("p2p relay payload serialization failed: {error}"))?;
+    let frame = PeerGossipFrame::new(
+        relay_p2p_context.topic.as_str(),
+        relay_p2p_context.local_peer_id.as_str(),
+        recipient_peer_id.as_str(),
+        payload.as_str(),
+    )
+    .map_err(|error| format!("p2p relay frame build failed: {error}"))?;
+    relay_p2p_context
+        .transport
+        .send(frame)
+        .map_err(|error| format!("p2p relay send failed: {error}"))
+}
+
+fn drain_daemon_service_api_relay_p2p_inbox(
+    relay_p2p_context: &DaemonServiceApiRelayP2pContext,
+    service_api_state_file: Option<&str>,
+) -> Result<usize, String> {
+    let frames = relay_p2p_context
+        .transport
+        .drain_inbox(relay_p2p_context.local_peer_id.as_str())
+        .map_err(|error| format!("p2p relay inbox drain failed: {error}"))?;
+    let mut ingested_count = 0_usize;
+    for frame in frames {
+        if frame.topic != relay_p2p_context.topic {
+            continue;
+        }
+        let relay_entry = serde_json::from_str::<
+            crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+        >(frame.payload.as_str())
+        .map_err(|error| format!("p2p relay payload parse failed: {error}"))?;
+        crate::service_api_endpoint::upsert_service_api_relayed_message_from_daemon(
+            service_api_state_file,
+            &relay_entry,
+        )
+        .map_err(|error| format!("p2p relay ingress persistence failed: {error}"))?;
+        ingested_count = ingested_count.saturating_add(1);
+    }
+    Ok(ingested_count)
+}
+
+#[cfg(test)]
+fn resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test(
+    raw_json: &str,
+    shared_transport: Arc<kamn_core::InMemoryPeerLifecycleTransport>,
+) -> Result<DaemonServiceApiRelayP2pContext, ConfigError> {
+    let parsed =
+        serde_json::from_str::<DaemonServiceApiRelayP2pConfigInput>(raw_json).map_err(|error| {
+            ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_P2P_CONFIG_ENV} must be a JSON object with local_peer_id/listen_address/bootstrap_peers/topic/recipient_peers_by_did: {error}"
+            ))
+        })?;
+    let config = normalize_daemon_service_api_relay_p2p_config(parsed)?;
+    let transport: DaemonServiceApiRelayP2pTransport = shared_transport;
+    build_daemon_service_api_relay_p2p_context(config, transport)
+}
+
+#[cfg(test)]
+fn set_daemon_service_api_relay_p2p_config_override_for_test(
+    raw_json: Option<&str>,
+) -> DaemonServiceApiRelayP2pConfigOverrideGuard {
+    set_daemon_service_api_relay_p2p_config_override_for_tests(raw_json)
+}
+
+#[cfg(test)]
+fn forward_service_api_relay_entry_via_p2p_for_test(
+    relay_p2p_context: &DaemonServiceApiRelayP2pContext,
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+) -> Result<(), String> {
+    forward_service_api_relay_entry_via_p2p(relay_p2p_context, relay_entry)
+}
+
+#[cfg(test)]
+fn drain_daemon_service_api_relay_p2p_inbox_for_test(
+    relay_p2p_context: &DaemonServiceApiRelayP2pContext,
+    service_api_state_file: Option<&str>,
+) -> Result<usize, String> {
+    drain_daemon_service_api_relay_p2p_inbox(relay_p2p_context, service_api_state_file)
+}
+
 fn execute_daemon_service_api_relay_tick_loop(
     executed_ticks: u64,
     tick_interval_ms: u64,
@@ -819,6 +1150,7 @@ fn execute_daemon_service_api_relay_tick_loop(
     if executed_ticks == 0 {
         return Ok(runtime_processing);
     }
+    let relay_p2p_context = resolve_daemon_service_api_relay_p2p_context()?;
     let relay_route_map = resolve_daemon_service_api_relay_recipient_route_map()?;
     let relay_forwarding_enabled = !relay_route_map.is_empty();
     let relay_signing_private_key_hex = if relay_forwarding_enabled {
@@ -831,6 +1163,19 @@ fn execute_daemon_service_api_relay_tick_loop(
     let tick_duration = Duration::from_millis(tick_interval_ms.max(1));
     for tick in 0..executed_ticks {
         let tick_started_at = Instant::now();
+        if let Some(relay_p2p_context) = relay_p2p_context.as_ref() {
+            let p2p_ingested_count =
+                drain_daemon_service_api_relay_p2p_inbox(relay_p2p_context, service_api_state_file)
+                    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            let ingested_count_label = p2p_ingested_count.to_string();
+            log_info(
+                "node.runtime.daemon.relay.p2p.ingested",
+                &[("ingested_count", ingested_count_label.as_str())],
+            )
+            .map_err(|logging_error| {
+                ConfigError::RuntimeDaemonLifecycle(logging_error.to_string())
+            })?;
+        }
         if relay_enabled {
             let relay_entries = crate::service_api_endpoint::drain_service_api_relay_spool_entries(
                 service_api_relay_spool_file,
@@ -842,43 +1187,83 @@ fn execute_daemon_service_api_relay_tick_loop(
             let mut relay_message_ids = Vec::new();
             let mut failed_entries = Vec::new();
             for relay_entry in relay_entries {
-                if !relay_forwarding_enabled {
+                let mut forwarded = false;
+                let mut forward_error = None::<String>;
+
+                if let Some(relay_p2p_context) = relay_p2p_context.as_ref() {
+                    if relay_p2p_context
+                        .recipient_peers_by_did
+                        .contains_key(relay_entry.recipient_did.as_str())
+                    {
+                        match forward_service_api_relay_entry_via_p2p(
+                            relay_p2p_context,
+                            &relay_entry,
+                        ) {
+                            Ok(()) => {
+                                forwarded = true;
+                            }
+                            Err(error) => {
+                                forward_error = Some(error);
+                            }
+                        }
+                    }
+                }
+
+                if !forwarded {
+                    if relay_forwarding_enabled {
+                        let Some(signing_key_hex) = relay_signing_private_key_hex.as_deref() else {
+                            return Err(ConfigError::RuntimeDaemonLifecycle(
+                                "service api relay forwarding signer key was missing".to_owned(),
+                            ));
+                        };
+                        match forward_service_api_relay_entry(
+                            &relay_route_map,
+                            &relay_entry,
+                            service_api_signature_state_hash,
+                            signing_key_hex,
+                            &mut relay_nonce_counter,
+                        ) {
+                            Ok(()) => {
+                                forwarded = true;
+                            }
+                            Err(error) => {
+                                forward_error = Some(match forward_error {
+                                    Some(existing) => {
+                                        format!("{existing}; http relay forward failed: {error}")
+                                    }
+                                    None => error,
+                                });
+                            }
+                        }
+                    } else if forward_error.is_none() {
+                        failed_entries.push(relay_entry);
+                        continue;
+                    }
+                }
+
+                if forwarded {
                     relay_message_ids.push(relay_entry.message_id.clone());
                     continue;
                 }
-                let Some(signing_key_hex) = relay_signing_private_key_hex.as_deref() else {
-                    return Err(ConfigError::RuntimeDaemonLifecycle(
-                        "service api relay forwarding signer key was missing".to_owned(),
-                    ));
-                };
-                match forward_service_api_relay_entry(
-                    &relay_route_map,
-                    &relay_entry,
-                    service_api_signature_state_hash,
-                    signing_key_hex,
-                    &mut relay_nonce_counter,
-                ) {
-                    Ok(()) => relay_message_ids.push(relay_entry.message_id.clone()),
-                    Err(error) => {
-                        runtime_processing.processing_error_count =
-                            runtime_processing.processing_error_count.saturating_add(1);
-                        let error_message = error;
-                        let queued_at_label = relay_entry.queued_at_unix.to_string();
-                        log_info(
-                            "node.runtime.daemon.relay.forward.failed",
-                            &[
-                                ("message_id", relay_entry.message_id.as_str()),
-                                ("recipient_did", relay_entry.recipient_did.as_str()),
-                                ("queued_at_unix", queued_at_label.as_str()),
-                                ("error", error_message.as_str()),
-                            ],
-                        )
-                        .map_err(|logging_error| {
-                            ConfigError::RuntimeDaemonLifecycle(logging_error.to_string())
-                        })?;
-                        failed_entries.push(relay_entry);
-                    }
-                }
+
+                runtime_processing.processing_error_count =
+                    runtime_processing.processing_error_count.saturating_add(1);
+                let error_message = forward_error
+                    .unwrap_or_else(|| "relay forwarding failed without error details".to_owned());
+                let queued_at_label = relay_entry.queued_at_unix.to_string();
+                log_info(
+                    "node.runtime.daemon.relay.forward.failed",
+                    &[
+                        ("message_id", relay_entry.message_id.as_str()),
+                        ("recipient_did", relay_entry.recipient_did.as_str()),
+                        ("queued_at_unix", queued_at_label.as_str()),
+                        ("error", error_message.as_str()),
+                    ],
+                )
+                .map_err(|logging_error| {
+                    ConfigError::RuntimeDaemonLifecycle(logging_error.to_string())
+                })?;
+                failed_entries.push(relay_entry);
             }
             for relay_entry in failed_entries {
                 crate::service_api_endpoint::append_service_api_relay_spool_entry(
@@ -1109,12 +1494,31 @@ fn daemon_tick_remaining_sleep_duration(
 #[cfg(test)]
 mod tests {
     use super::{
-        daemon_tick_remaining_sleep_duration, execute_daemon_service_api_relay_tick_loop,
-        SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
+        daemon_tick_remaining_sleep_duration, drain_daemon_service_api_relay_p2p_inbox_for_test,
+        execute_daemon_service_api_relay_tick_loop,
+        forward_service_api_relay_entry_via_p2p_for_test,
+        resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test,
+        set_daemon_service_api_relay_p2p_config_override_for_test,
+        SERVICE_API_RELAY_P2P_DEFAULT_TOPIC, SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
     };
     use std::env;
     use std::fs;
+    use std::sync::atomic::{AtomicU16, Ordering};
+    use std::sync::{Arc, Mutex, OnceLock};
     use std::time::Duration;
+
+    static NEXT_TEST_P2P_PORT: AtomicU16 = AtomicU16::new(24_000);
+
+    fn daemon_phase_test_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn lock_daemon_phase_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        daemon_phase_test_lock()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
 
     struct TestEnvGuard {
         key: &'static str,
@@ -1144,6 +1548,8 @@ mod tests {
 
     #[test]
     fn unit_daemon_relay_tick_loop_sleeps_between_ticks_when_interval_budget_remains() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
         let runtime_processing =
             execute_daemon_service_api_relay_tick_loop(3, 50, None, None, "service-api:test:v1")
                 .expect("tick loop");
@@ -1157,6 +1563,8 @@ mod tests {
 
     #[test]
     fn regression_daemon_relay_tick_loop_single_tick_never_sleeps() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
         // Regression: #5895
         let runtime_processing =
             execute_daemon_service_api_relay_tick_loop(1, 50, None, None, "service-api:test:v1")
@@ -1170,6 +1578,8 @@ mod tests {
 
     #[test]
     fn unit_daemon_tick_remaining_sleep_duration_contract_is_deterministic() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
         assert_eq!(
             daemon_tick_remaining_sleep_duration(
                 0,
@@ -1212,7 +1622,90 @@ mod tests {
     }
 
     #[test]
+    fn unit_daemon_relay_tick_loop_reports_deterministic_projection_counters() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-projection-state-{unique_suffix}.json"
+        ));
+        let relay_spool_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-projection-spool-{unique_suffix}.ndjson"
+        ));
+        fs::write(
+            state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-daemon-projection-unit-1":{
+      "message_id":"msg-daemon-projection-unit-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender",
+      "recipient_did":"kamn:did:agent:recipient",
+      "body":"{\"message\":\"project\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("state file fixture should write");
+        fs::write(
+            relay_spool_file.as_path(),
+            r#"{"message_id":"msg-daemon-projection-unit-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"project\"}","queued_at_unix":1700000888}
+"#,
+        )
+        .expect("relay spool fixture should write");
+        let state_file_str = state_file.to_string_lossy().to_string();
+        let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+        let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV, None);
+
+        let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+            1,
+            1,
+            Some(state_file_str.as_str()),
+            Some(relay_spool_file_str.as_str()),
+            "service-api:kamn-devnet:v0.1.0",
+        )
+        .expect("daemon relay tick loop should complete without synthetic projection");
+
+        assert_eq!(runtime_processing.relay_drained_count, 1);
+        assert_eq!(runtime_processing.relay_projected_state_count, 0);
+        assert_eq!(runtime_processing.processing_error_count, 0);
+
+        let state_payload =
+            fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+        let state_json: serde_json::Value =
+            serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+        assert_eq!(
+            state_json["messages"]["msg-daemon-projection-unit-1"]["status"],
+            "created"
+        );
+
+        let relay_payload = fs::read_to_string(relay_spool_file.as_path())
+            .expect("relay spool file should remain readable");
+        assert!(
+            relay_payload.contains("msg-daemon-projection-unit-1"),
+            "relay spool entry should be retained for retry when no route map is configured"
+        );
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_file(relay_spool_file);
+    }
+
+    #[test]
     fn regression_daemon_relay_tick_loop_requeues_failed_cross_node_forward_entries() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
         // Regression: #5983
         const TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX: &str =
             "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
@@ -1292,6 +1785,305 @@ mod tests {
         let relay_payload = fs::read_to_string(relay_spool_file.as_path())
             .expect("relay spool file should remain readable");
         assert!(relay_payload.contains("msg-forward-failure-unit-1"));
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_file(relay_spool_file);
+    }
+
+    #[test]
+    fn regression_daemon_relay_tick_loop_without_route_map_preserves_pending_relay_entries() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
+        // Regression: #6077
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-no-route-state-{unique_suffix}.json"
+        ));
+        let relay_spool_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-no-route-spool-{unique_suffix}.ndjson"
+        ));
+        fs::write(
+            state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-no-route-unit-1":{
+      "message_id":"msg-no-route-unit-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender",
+      "recipient_did":"kamn:did:agent:recipient",
+      "body":"{\"message\":\"pending\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("state file fixture should write");
+        fs::write(
+            relay_spool_file.as_path(),
+            r#"{"message_id":"msg-no-route-unit-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"pending\"}","queued_at_unix":1700001001}
+"#,
+        )
+        .expect("relay spool fixture should write");
+        let state_file_str = state_file.to_string_lossy().to_string();
+        let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+        let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV, None);
+
+        let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+            1,
+            1,
+            Some(state_file_str.as_str()),
+            Some(relay_spool_file_str.as_str()),
+            "service-api:kamn-devnet:v0.1.0",
+        )
+        .expect("daemon relay tick loop should complete when route map is not configured");
+
+        assert_eq!(runtime_processing.relay_drained_count, 1);
+        assert_eq!(
+            runtime_processing.relay_projected_state_count, 0,
+            "relay state must not project when no recipient forwarding map is configured"
+        );
+
+        let state_payload =
+            fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+        let state_json: serde_json::Value =
+            serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+        assert_eq!(
+            state_json["messages"]["msg-no-route-unit-1"]["status"],
+            "created"
+        );
+
+        let relay_payload = fs::read_to_string(relay_spool_file.as_path())
+            .expect("relay spool file should remain readable");
+        assert!(
+            relay_payload.contains("msg-no-route-unit-1"),
+            "entry must remain durable for retry when no route map exists"
+        );
+
+        let _ = fs::remove_file(state_file);
+        let _ = fs::remove_file(relay_spool_file);
+    }
+
+    fn unique_p2p_listen_address() -> String {
+        let next_port = NEXT_TEST_P2P_PORT.fetch_add(1, Ordering::Relaxed);
+        format!("/ip4/127.0.0.1/tcp/{next_port}")
+    }
+
+    #[test]
+    fn unit_daemon_relay_p2p_config_omitted_topic_defaults_to_messages() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
+        let listen_address = unique_p2p_listen_address();
+        let relay_config_json = format!(
+            r#"{{
+  "local_peer_id":"daemon-p2p-default-topic",
+  "listen_address":"{listen_address}",
+  "bootstrap_peers":["{listen_address}"],
+  "recipient_peers_by_did":{{"kamn:did:agent:recipient":"daemon-p2p-default-topic"}}
+}}"#
+        );
+        let shared_transport = Arc::new(kamn_core::InMemoryPeerLifecycleTransport::default());
+        let relay_context =
+            resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test(
+                relay_config_json.as_str(),
+                shared_transport,
+            )
+            .expect("relay p2p context should parse with default topic");
+        assert_eq!(
+            relay_context.topic.as_str(),
+            SERVICE_API_RELAY_P2P_DEFAULT_TOPIC,
+            "omitted topic must use canonical daemon relay p2p default"
+        );
+    }
+
+    #[test]
+    fn integration_daemon_relay_p2p_forward_and_ingest_updates_recipient_state() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let recipient_state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-p2p-recipient-state-{unique_suffix}.json"
+        ));
+        fs::write(
+            recipient_state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{},
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("recipient state fixture should write");
+
+        let sender_listen_address = unique_p2p_listen_address();
+        let recipient_listen_address = unique_p2p_listen_address();
+        let sender_relay_config_json = format!(
+            r#"{{
+  "local_peer_id":"daemon-p2p-sender",
+  "listen_address":"{sender_listen_address}",
+  "bootstrap_peers":["{sender_listen_address}","{recipient_listen_address}"],
+  "topic":"messages",
+  "recipient_peers_by_did":{{"kamn:did:agent:recipient":"daemon-p2p-recipient"}}
+}}"#
+        );
+        let recipient_relay_config_json = format!(
+            r#"{{
+  "local_peer_id":"daemon-p2p-recipient",
+  "listen_address":"{recipient_listen_address}",
+  "bootstrap_peers":["{sender_listen_address}","{recipient_listen_address}"],
+  "topic":"messages",
+  "recipient_peers_by_did":{{}}
+}}"#
+        );
+
+        let shared_transport = Arc::new(kamn_core::InMemoryPeerLifecycleTransport::default());
+        let sender_relay_context =
+            resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test(
+                sender_relay_config_json.as_str(),
+                Arc::clone(&shared_transport),
+            )
+            .expect("sender relay p2p context should parse");
+        let recipient_relay_context =
+            resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test(
+                recipient_relay_config_json.as_str(),
+                Arc::clone(&shared_transport),
+            )
+            .expect("recipient relay p2p context should parse");
+
+        let relay_entry = crate::service_api_endpoint::ServiceApiRelaySpoolEntry {
+            message_id: "msg-p2p-forward-unit-1".to_owned(),
+            sender_did: Some("kamn:did:agent:sender".to_owned()),
+            recipient_did: "kamn:did:agent:recipient".to_owned(),
+            body: r#"{"message":"hello-p2p"}"#.to_owned(),
+            queued_at_unix: 1_700_001_000,
+        };
+        forward_service_api_relay_entry_via_p2p_for_test(&sender_relay_context, &relay_entry)
+            .expect("p2p relay send should succeed with deterministic in-memory transport");
+
+        let recipient_state_file_str = recipient_state_file.to_string_lossy().to_string();
+        let ingested = drain_daemon_service_api_relay_p2p_inbox_for_test(
+            &recipient_relay_context,
+            Some(recipient_state_file_str.as_str()),
+        )
+        .expect("recipient inbox drain should succeed");
+
+        assert_eq!(ingested, 1);
+        let recipient_state_payload = fs::read_to_string(recipient_state_file.as_path())
+            .expect("recipient state file should remain readable");
+        let recipient_state_json: serde_json::Value =
+            serde_json::from_str(recipient_state_payload.as_str())
+                .expect("recipient state payload should parse");
+        assert_eq!(
+            recipient_state_json["messages"]["msg-p2p-forward-unit-1"]["status"],
+            "relayed"
+        );
+        assert_eq!(
+            recipient_state_json["messages"]["msg-p2p-forward-unit-1"]["recipient_did"],
+            "kamn:did:agent:recipient"
+        );
+
+        let _ = fs::remove_file(recipient_state_file);
+    }
+
+    #[test]
+    fn regression_daemon_relay_tick_loop_p2p_unknown_recipient_requeues_with_error_counter() {
+        let _test_lock = lock_daemon_phase_test_guard();
+        let _log_lock = crate::logging::lock_log_config_for_tests();
+        let unique_suffix = format!(
+            "{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        );
+        let state_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-p2p-unknown-recipient-state-{unique_suffix}.json"
+        ));
+        let relay_spool_file = std::env::temp_dir().join(format!(
+            "kamn-node-daemon-phase-p2p-unknown-recipient-spool-{unique_suffix}.ndjson"
+        ));
+        fs::write(
+            state_file.as_path(),
+            r#"{
+  "schema_version":"kamn.runtime.service-api-message-store.v2",
+  "messages":{
+    "msg-p2p-unknown-recipient-unit-1":{
+      "message_id":"msg-p2p-unknown-recipient-unit-1",
+      "status":"created",
+      "channel_id":null,
+      "sender_did":"kamn:did:agent:sender",
+      "recipient_did":"kamn:did:agent:recipient",
+      "body":"{\"message\":\"p2p-unknown-recipient\"}"
+    }
+  },
+  "channel_messages":{},
+  "tasks":{},
+  "escrows":{}
+}"#,
+        )
+        .expect("state file fixture should write");
+        fs::write(
+            relay_spool_file.as_path(),
+            r#"{"message_id":"msg-p2p-unknown-recipient-unit-1","sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"p2p-unknown-recipient\"}","queued_at_unix":1700001100}
+"#,
+        )
+        .expect("relay spool fixture should write");
+
+        let listen_address = unique_p2p_listen_address();
+        let p2p_config_json = format!(
+            r#"{{
+  "local_peer_id":"daemon-p2p-unknown-recipient-sender",
+  "listen_address":"{listen_address}",
+  "bootstrap_peers":["{listen_address}"],
+  "topic":"messages",
+  "recipient_peers_by_did":{{"kamn:did:agent:recipient":"daemon-p2p-unknown-recipient-recipient"}}
+}}"#
+        );
+        let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV, None);
+        let _p2p_guard = set_daemon_service_api_relay_p2p_config_override_for_test(Some(
+            p2p_config_json.as_str(),
+        ));
+
+        let state_file_str = state_file.to_string_lossy().to_string();
+        let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+        let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+            1,
+            1,
+            Some(state_file_str.as_str()),
+            Some(relay_spool_file_str.as_str()),
+            "service-api:kamn-devnet:v0.1.0",
+        )
+        .expect("daemon relay tick loop should complete");
+
+        assert_eq!(runtime_processing.relay_drained_count, 1);
+        assert_eq!(runtime_processing.relay_projected_state_count, 0);
+        assert_eq!(
+            runtime_processing.processing_error_count, 1,
+            "p2p forward failure must increment processing error count"
+        );
+
+        let relay_payload = fs::read_to_string(relay_spool_file.as_path())
+            .expect("relay spool file should remain readable");
+        assert!(relay_payload.contains("msg-p2p-unknown-recipient-unit-1"));
 
         let _ = fs::remove_file(state_file);
         let _ = fs::remove_file(relay_spool_file);

@@ -6,6 +6,7 @@ members = [
   "crates/kamn-core",
   "crates/kamn-e2e-harness",
   "crates/kamn-kolme",
+  "crates/kamn-live-probe-matrix",
   "crates/kamn-mcp-server",
   "crates/kamn-runtime-guards",
   "crates/kamn-snapshot-journal",

@@ -75,10 +75,17 @@ const FULL_SUPERVISOR_SERVICE_API_LANE_EXECUTION_FAILED: &str =
     "full_supervisor_service_api_lane_execution_failed";
 const FULL_SUPERVISOR_OBSERVABILITY_LANE_EXECUTION_FAILED: &str =
     "full_supervisor_observability_lane_execution_failed";
+const FULL_SUPERVISOR_SERVICE_API_LANE_LIVENESS_FAILED: &str =
+    "full_supervisor_service_api_lane_liveness_failed";
+const FULL_SUPERVISOR_OBSERVABILITY_LANE_LIVENESS_FAILED: &str =
+    "full_supervisor_observability_lane_liveness_failed";
 const FULL_SUPERVISOR_SERVICE_API_LANE_JOIN_FAILED: &str =
     "full_supervisor_service_api_lane_join_failed";
 const FULL_SUPERVISOR_OBSERVABILITY_LANE_JOIN_FAILED: &str =
     "full_supervisor_observability_lane_join_failed";
+const FULL_SUPERVISOR_DAEMON_EXECUTION_JOIN_FAILED: &str =
+    "full_supervisor_daemon_execution_join_failed";
+const FULL_SUPERVISOR_LANE_IDLE_TIMEOUT_CONTENTION_GUARD_MS: u64 = 1_000;
 const FULL_SUPERVISOR_PROVISIONAL_OBSERVABILITY_REASON_CODE: &str =
     "full_supervisor_bootstrap_in_progress";
 const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
@@ -98,6 +105,144 @@ fn full_supervisor_lane_error(reason_code: &'static str, detail: String) -> Conf
     ConfigError::RuntimeDaemonLifecycle(format!(
         "full_supervisor_lane_failure:{reason_code}:{detail}"
     ))
+}
+
+fn is_service_api_idle_timeout_completion_error(error: &str) -> bool {
+    error.starts_with("service api timed out after ") && error.ends_with(" ms waiting for requests")
+}
+
+fn is_observability_idle_timeout_completion_error(error: &str) -> bool {
+    error.starts_with("observability endpoint timed out after ")
+        && error.ends_with(" ms waiting for requests")
+}
+
+fn validate_full_supervisor_lane_liveness(
+    service_api_lane: Option<&FullSupervisorServiceApiLane>,
+    observability_lane: Option<&FullSupervisorObservabilityLane>,
+) -> Result<(), ConfigError> {
+    if let Some(lane) = service_api_lane {
+        if lane.handle.is_finished() {
+            return Err(full_supervisor_lane_error(
+                FULL_SUPERVISOR_SERVICE_API_LANE_LIVENESS_FAILED,
+                format!("bind_addr={}", lane.config.bind_addr),
+            ));
+        }
+    }
+
+    if let Some(lane) = observability_lane {
+        if lane.handle.is_finished() {
+            return Err(full_supervisor_lane_error(
+                FULL_SUPERVISOR_OBSERVABILITY_LANE_LIVENESS_FAILED,
+                format!("bind_addr={}", lane.config.bind_addr),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn execute_full_supervisor_daemon_runtime(
+    runtime_mode: RuntimeMode,
+    execution_id: &str,
+    options: DaemonRuntimeOptions,
+    service_api_lane: Option<&FullSupervisorServiceApiLane>,
+    observability_lane: Option<&FullSupervisorObservabilityLane>,
+) -> Result<DaemonExecution, ConfigError> {
+    #[cfg(test)]
+    let os_signal_test_triggers =
+        super::daemon_shutdown::take_configured_os_signal_test_triggers_for_current_thread();
+    let execution_id_owned = execution_id.to_owned();
+    let daemon_handle = thread::spawn(move || {
+        #[cfg(test)]
+        configure_os_signal_test_triggers(os_signal_test_triggers);
+        execute_daemon_runtime(runtime_mode, execution_id_owned.as_str(), options)
+    });
+
+    let mut service_api_inter_tick_probe_completed = service_api_lane.is_none();
+    let mut observability_inter_tick_probe_completed = observability_lane.is_none();
+    loop {
+        if daemon_handle.is_finished() {
+            break;
+        }
+        validate_full_supervisor_lane_liveness(service_api_lane, observability_lane)?;
+        run_full_supervisor_inter_tick_lane_health_probes(
+            service_api_lane.map(|lane| (lane.config.bind_addr.as_str(), "/healthz")),
+            observability_lane.map(|lane| {
+                (
+                    lane.config.bind_addr.as_str(),
+                    lane.config.health_path.as_str(),
+                )
+            }),
+            &mut service_api_inter_tick_probe_completed,
+            &mut observability_inter_tick_probe_completed,
+        )?;
+        thread::sleep(Duration::from_millis(1));
+    }
+
+    daemon_handle.join().map_err(|_| {
+        ConfigError::RuntimeDaemonLifecycle(FULL_SUPERVISOR_DAEMON_EXECUTION_JOIN_FAILED.to_owned())
+    })?
+}
+
+fn run_full_supervisor_inter_tick_lane_health_probes(
+    service_api_probe_target: Option<(&str, &str)>,
+    observability_probe_target: Option<(&str, &str)>,
+    service_api_probe_completed: &mut bool,
+    observability_probe_completed: &mut bool,
+) -> Result<(), ConfigError> {
+    if !*service_api_probe_completed {
+        if let Some((bind_addr, path)) = service_api_probe_target {
+            run_full_supervisor_http_probe(
+                bind_addr,
+                path,
+                FULL_SUPERVISOR_SERVICE_API_LANE_PROBE_FAILED,
+            )?;
+        }
+        *service_api_probe_completed = true;
+    }
+
+    if !*observability_probe_completed {
+        if let Some((bind_addr, path)) = observability_probe_target {
+            run_full_supervisor_http_probe(
+                bind_addr,
+                path,
+                FULL_SUPERVISOR_OBSERVABILITY_LANE_PROBE_FAILED,
+            )?;
+        }
+        *observability_probe_completed = true;
+    }
+
+    Ok(())
+}
+
+fn full_supervisor_lane_idle_timeout_floor_ms(
+    daemon_max_ticks: Option<u64>,
+    daemon_tick_interval_ms: Option<u64>,
+) -> u64 {
+    let expected_daemon_runtime_ms = daemon_max_ticks
+        .unwrap_or(0)
+        .saturating_mul(daemon_tick_interval_ms.unwrap_or(0));
+    expected_daemon_runtime_ms.saturating_add(FULL_SUPERVISOR_LANE_IDLE_TIMEOUT_CONTENTION_GUARD_MS)
+}
+
+fn request_full_supervisor_lane_shutdown_probes(
+    service_api_lane: Option<&FullSupervisorServiceApiLane>,
+    observability_lane: Option<&FullSupervisorObservabilityLane>,
+) {
+    if let Some(lane) = service_api_lane {
+        let _ = run_full_supervisor_http_probe(
+            lane.config.bind_addr.as_str(),
+            "/healthz",
+            FULL_SUPERVISOR_SERVICE_API_LANE_PROBE_FAILED,
+        );
+    }
+    if let Some(lane) = observability_lane {
+        let _ = run_full_supervisor_http_probe(
+            lane.config.bind_addr.as_str(),
+            lane.config.health_path.as_str(),
+            FULL_SUPERVISOR_OBSERVABILITY_LANE_PROBE_FAILED,
+        );
+    }
 }
 
 fn run_full_supervisor_http_probe(
@@ -266,12 +411,14 @@ fn finish_full_supervisor_service_api_lane(
             format!("bind_addr={}", lane.config.bind_addr),
         )
     })?;
-    join_result.map_err(|error| {
-        full_supervisor_lane_error(
-            FULL_SUPERVISOR_SERVICE_API_LANE_EXECUTION_FAILED,
-            format!("bind_addr={};error={error}", lane.config.bind_addr),
-        )
-    })?;
+    if let Err(error) = join_result {
+        if !is_service_api_idle_timeout_completion_error(error.as_str()) {
+            return Err(full_supervisor_lane_error(
+                FULL_SUPERVISOR_SERVICE_API_LANE_EXECUTION_FAILED,
+                format!("bind_addr={};error={error}", lane.config.bind_addr),
+            ));
+        }
+    }
     log_info(
         "node.runtime.service_api.endpoint.complete",
         &[
@@ -389,12 +536,14 @@ fn finish_full_supervisor_observability_lane(
             format!("bind_addr={}", lane.config.bind_addr),
         )
     })?;
-    join_result.map_err(|error| {
-        full_supervisor_lane_error(
-            FULL_SUPERVISOR_OBSERVABILITY_LANE_EXECUTION_FAILED,
-            format!("bind_addr={};error={error}", lane.config.bind_addr),
-        )
-    })?;
+    if let Err(error) = join_result {
+        if !is_observability_idle_timeout_completion_error(error.as_str()) {
+            return Err(full_supervisor_lane_error(
+                FULL_SUPERVISOR_OBSERVABILITY_LANE_EXECUTION_FAILED,
+                format!("bind_addr={};error={error}", lane.config.bind_addr),
+            ));
+        }
+    }
     log_info(
         "node.runtime.observability.endpoint.complete",
         &[
@@ -883,6 +1032,7 @@ pub(crate) fn enforce_kolme_live_signer_key_source_policy(
 }
 
 pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
+    initialize_log_config_from_env()?;
     let NodeCli {
         profile,
         role,
@@ -1054,6 +1204,11 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             RuntimeExecutionBundle::default()
         }
         RuntimeModeKind::Full => {
+            let full_supervisor_lane_idle_timeout_floor_ms =
+                full_supervisor_lane_idle_timeout_floor_ms(
+                    daemon_max_ticks,
+                    daemon_tick_interval_ms,
+                );
             validate_full_bootstrap_component_contract(
                 FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE.as_slice(),
             )?;
@@ -1092,8 +1247,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                 }
                 let lane_config = ServiceApiEndpointConfig {
                     bind_addr: bind_addr.clone(),
-                    max_requests: api_max_requests,
-                    idle_timeout_ms: api_idle_timeout_ms,
+                    // Reserve request budget for startup probe, inter-tick probe, and shutdown probe.
+                    max_requests: api_max_requests.saturating_add(2),
+                    idle_timeout_ms: api_idle_timeout_ms
+                        .max(full_supervisor_lane_idle_timeout_floor_ms),
                     body_limit_bytes: api_body_limit_bytes,
                     concurrency_limit: api_concurrency_limit,
                     rate_limit_per_second: api_rate_limit_per_second,
@@ -1117,8 +1274,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     bind_addr: bind_addr.clone(),
                     metrics_path: observability_endpoint_metrics_path.clone(),
                     health_path: observability_endpoint_health_path.clone(),
-                    max_requests: observability_endpoint_max_requests,
-                    idle_timeout_ms: observability_endpoint_idle_timeout_ms,
+                    // Reserve request budget for startup probe, inter-tick probe, and shutdown probe.
+                    max_requests: observability_endpoint_max_requests.saturating_add(2),
+                    idle_timeout_ms: observability_endpoint_idle_timeout_ms
+                        .max(full_supervisor_lane_idle_timeout_floor_ms),
                 };
                 let lane_snapshot = build_runtime_observability_snapshot(&provisional_report)
                     .unwrap_or_else(|| {
@@ -1135,7 +1294,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                 resolve_daemon_service_api_state_file(api_bind_addr.as_deref())?;
             let service_api_relay_spool_file =
                 resolve_daemon_service_api_relay_spool_file(service_api_state_file.as_deref())?;
-            let daemon_execution = match execute_daemon_runtime(
+            let daemon_execution = match execute_full_supervisor_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
                 DaemonRuntimeOptions {
@@ -1151,6 +1310,8 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     service_api_relay_spool_file,
                     service_api_signature_state_hash: service_api_signature_state_hash.clone(),
                 },
+                service_api_lane.as_ref(),
+                observability_lane.as_ref(),
             ) {
                 Ok(execution) => execution,
                 Err(error) => {
@@ -1220,6 +1381,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;
+            request_full_supervisor_lane_shutdown_probes(
+                service_api_lane.as_ref(),
+                observability_lane.as_ref(),
+            );
             let service_api_lane_result = if let Some(lane) = service_api_lane {
                 finish_full_supervisor_service_api_lane(lane, execution_id.as_str())
             } else {
@@ -1384,5 +1549,84 @@ mod tests {
             matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("http_status:503")),
             "probe failure should include deterministic http_status classification: {error:?}"
         );
+    }
+
+    #[test]
+    fn unit_full_supervisor_inter_tick_probes_execute_once_per_lane() {
+        let service_api_bind_addr = spawn_full_supervisor_probe_server("HTTP/1.1 200 OK");
+        let observability_bind_addr = spawn_full_supervisor_probe_server("HTTP/1.1 200 OK");
+        let mut service_api_probe_completed = false;
+        let mut observability_probe_completed = false;
+
+        run_full_supervisor_inter_tick_lane_health_probes(
+            Some((service_api_bind_addr.as_str(), "/healthz")),
+            Some((observability_bind_addr.as_str(), "/healthz")),
+            &mut service_api_probe_completed,
+            &mut observability_probe_completed,
+        )
+        .expect("inter-tick probes should succeed for healthy lanes");
+
+        assert!(
+            service_api_probe_completed,
+            "service-api inter-tick probe should be marked completed after first success"
+        );
+        assert!(
+            observability_probe_completed,
+            "observability inter-tick probe should be marked completed after first success"
+        );
+
+        run_full_supervisor_inter_tick_lane_health_probes(
+            Some((service_api_bind_addr.as_str(), "/healthz")),
+            Some((observability_bind_addr.as_str(), "/healthz")),
+            &mut service_api_probe_completed,
+            &mut observability_probe_completed,
+        )
+        .expect("completed inter-tick probes should skip additional network probes");
+    }
+
+    #[test]
+    fn regression_full_supervisor_inter_tick_probe_fails_closed_on_probe_error() {
+        // Regression: #6143
+        let service_api_bind_addr =
+            spawn_full_supervisor_probe_server("HTTP/1.1 503 Service Unavailable");
+        let mut service_api_probe_completed = false;
+        let mut observability_probe_completed = true;
+
+        let error = run_full_supervisor_inter_tick_lane_health_probes(
+            Some((service_api_bind_addr.as_str(), "/healthz")),
+            None,
+            &mut service_api_probe_completed,
+            &mut observability_probe_completed,
+        )
+        .expect_err("inter-tick probe must fail closed on non-success lane response");
+
+        assert!(
+            matches!(error, ConfigError::RuntimeDaemonLifecycle(ref message) if message.contains("http_status:503")),
+            "inter-tick probe failure should preserve deterministic probe status classification: {error:?}"
+        );
+        assert!(
+            !service_api_probe_completed,
+            "failing inter-tick probe must not mark the service-api lane probe as completed"
+        );
+    }
+
+    #[test]
+    fn regression_full_supervisor_lane_idle_timeout_floor_adds_contention_guard_window() {
+        // Regression: #6003
+        assert_eq!(
+            full_supervisor_lane_idle_timeout_floor_ms(Some(2), Some(10)),
+            1_020
+        );
+        assert_eq!(
+            full_supervisor_lane_idle_timeout_floor_ms(Some(0), Some(10)),
+            1_000
+        );
+    }
+
+    #[test]
+    fn unit_build_runtime_execution_id_formats_mode_chain_and_role() {
+        let execution_id =
+            build_runtime_execution_id(RuntimeMode::full(), "kamn-mainnet", "sequencer");
+        assert_eq!(execution_id, "node-runtime:full:kamn-mainnet:sequencer");
     }
 }

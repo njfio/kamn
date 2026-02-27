@@ -1,8 +1,8 @@
 use crate::dispatch_tool_request_json;
 use crate::invalid_request_response_json;
-use crate::json_helpers::{
-    escape_json, json_optional_string_field, json_optional_u64_field, json_required_string_field,
-};
+#[cfg(test)]
+use crate::json_helpers::json_required_string_field;
+use crate::json_helpers::{escape_json, json_field_value};
 use crate::tools::build_tool_registry;
 use crate::McpToolBackend;
 use serde_json::Value;
@@ -75,27 +75,24 @@ fn process_framed_input<B: McpToolBackend>(
 }
 
 fn process_jsonrpc_request<B: McpToolBackend>(backend: &B, request_json: &str) -> String {
-    let id_token =
-        json_optional_value_token(request_json, "id").unwrap_or_else(|| "null".to_owned());
-    let method = match json_required_string_field(request_json, "method") {
-        Ok(method) => method,
-        Err(error) => {
-            return jsonrpc_error_with_id(
-                id_token.as_str(),
-                JSONRPC_INVALID_REQUEST,
-                error.as_str(),
-            );
+    let request = match decode_jsonrpc_request(request_json) {
+        Ok(request) => request,
+        Err(JsonRpcDecodeError::ParseError) => {
+            return jsonrpc_error_with_id("null", JSONRPC_PARSE_ERROR, "parse error");
+        }
+        Err(JsonRpcDecodeError::InvalidRequest { id_token, message }) => {
+            return jsonrpc_error_with_id(id_token.as_str(), JSONRPC_INVALID_REQUEST, message);
         }
     };
 
-    match method.as_str() {
+    match request.method.as_str() {
         "initialize" => {
             let result = format!(
                 "{{\"protocolVersion\":\"{}\",\"capabilities\":{{\"tools\":{{\"listChanged\":false}}}},\"serverInfo\":{{\"name\":\"kamn-mcp-server\",\"version\":\"{}\"}}}}",
                 MCP_PROTOCOL_VERSION,
                 escape_json(env!("CARGO_PKG_VERSION")),
             );
-            jsonrpc_success_with_id(id_token.as_str(), result.as_str())
+            jsonrpc_success_with_id(request.id_token.as_str(), result.as_str())
         }
         "tools/list" => {
             let tools = build_tool_registry()
@@ -112,61 +109,73 @@ fn process_jsonrpc_request<B: McpToolBackend>(backend: &B, request_json: &str) -
                 .collect::<Vec<_>>()
                 .join(",");
             let result = format!("{{\"tools\":[{tools}]}}");
-            jsonrpc_success_with_id(id_token.as_str(), result.as_str())
+            jsonrpc_success_with_id(request.id_token.as_str(), result.as_str())
         }
-        "tools/call" => process_tools_call(backend, request_json, id_token.as_str()),
+        "tools/call" => process_tools_call(backend, &request),
         _ => jsonrpc_error_with_id(
-            id_token.as_str(),
+            request.id_token.as_str(),
             JSONRPC_METHOD_NOT_FOUND,
             "method not found",
         ),
     }
 }
 
-fn process_tools_call<B: McpToolBackend>(
-    backend: &B,
-    request_json: &str,
-    id_token: &str,
-) -> String {
-    let tool_name = match json_required_string_field(request_json, "name") {
+fn process_tools_call<B: McpToolBackend>(backend: &B, request: &JsonRpcRequest) -> String {
+    let tool_name = match json_string_field(request.root(), "name") {
         Ok(name) => name,
         Err(_) => {
             return jsonrpc_error_with_id(
-                id_token,
+                request.id_token.as_str(),
                 JSONRPC_INVALID_PARAMS,
                 "tools/call requires params.name",
             );
         }
     };
 
-    let dispatch_request = build_dispatch_payload(id_token, tool_name.as_str(), request_json);
+    let dispatch_request = build_dispatch_payload(
+        request.id_token.as_str(),
+        tool_name.as_str(),
+        request.root(),
+    );
     let dispatch_response = match dispatch_tool_request_json(backend, dispatch_request.as_str()) {
         Ok(response) => response,
         Err(error) => {
-            return jsonrpc_error_with_id(id_token, JSONRPC_INVALID_PARAMS, error.as_str());
+            return jsonrpc_error_with_id(
+                request.id_token.as_str(),
+                JSONRPC_INVALID_PARAMS,
+                error.as_str(),
+            );
         }
     };
 
     if dispatch_response.contains("\"ok\":true") {
-        return jsonrpc_success_with_id(id_token, dispatch_response.as_str());
+        return jsonrpc_success_with_id(request.id_token.as_str(), dispatch_response.as_str());
     }
 
     if dispatch_response.contains("\"kind\":\"invalid_request\"") {
         return jsonrpc_error_with_id(
-            id_token,
+            request.id_token.as_str(),
             JSONRPC_INVALID_PARAMS,
             "invalid tool request payload",
         );
     }
 
     if dispatch_response.contains("\"kind\":\"unsupported_operation\"") {
-        return jsonrpc_error_with_id(id_token, JSONRPC_METHOD_NOT_FOUND, "tool not supported");
+        return jsonrpc_error_with_id(
+            request.id_token.as_str(),
+            JSONRPC_METHOD_NOT_FOUND,
+            "tool not supported",
+        );
     }
 
-    jsonrpc_error_with_id(id_token, JSONRPC_INTERNAL_ERROR, "tool backend error")
+    jsonrpc_error_with_id(
+        request.id_token.as_str(),
+        JSONRPC_INTERNAL_ERROR,
+        "tool backend error",
+    )
 }
 
-fn build_dispatch_payload(id_token: &str, tool_name: &str, request_json: &str) -> String {
+fn build_dispatch_payload(id_token: &str, tool_name: &str, root: &Value) -> String {
     let dispatch_id = normalize_id_for_dispatch(id_token);
     let mut fields = vec![
         format!("\"id\":\"{}\"", escape_json(dispatch_id.as_str())),
@@ -185,15 +194,14 @@ fn build_dispatch_payload(id_token: &str, tool_name: &str, request_json: &str) -
         "tx_hash",
         "finality",
     ] {
-        if let Some(value) = json_optional_string_field(request_json, key) {
+        if let Some(value) = json_optional_string_value(root, key) {
             fields.push(format!("\"{key}\":\"{}\"", escape_json(value.as_str())));
         }
     }
 
-    if let Some(block_height) = json_optional_u64_field(request_json, "block_height") {
+    if let Some(block_height) = json_optional_u64_value(root, "block_height") {
         fields.push(format!("\"block_height\":\"{block_height}\""));
-    } else if let Some(block_height_raw) = json_optional_string_field(request_json, "block_height")
-    {
+    } else if let Some(block_height_raw) = json_optional_string_value(root, "block_height") {
         fields.push(format!(
             "\"block_height\":\"{}\"",
             escape_json(block_height_raw.as_str())
@@ -212,6 +220,72 @@ fn normalize_id_for_dispatch(id_token: &str) -> String {
         return "request-unknown".to_owned();
     }
     trimmed.to_owned()
+}
+
+struct JsonRpcRequest {
+    id_token: String,
+    method: String,
+    root: Value,
+}
+
+impl JsonRpcRequest {
+    fn root(&self) -> &Value {
+        &self.root
+    }
+}
+
+enum JsonRpcDecodeError {
+    ParseError,
+    InvalidRequest {
+        id_token: String,
+        message: &'static str,
+    },
+}
+
+fn decode_jsonrpc_request(request_json: &str) -> Result<JsonRpcRequest, JsonRpcDecodeError> {
+    let root =
+        serde_json::from_str::<Value>(request_json).map_err(|_| JsonRpcDecodeError::ParseError)?;
+    let id_token = json_id_token(&root);
+    let method = root
+        .as_object()
+        .and_then(|object| object.get("method"))
+        .and_then(Value::as_str)
+        .ok_or(JsonRpcDecodeError::InvalidRequest {
+            id_token: id_token.clone(),
+            message: "missing required field: method",
+        })?
+        .to_owned();
+
+    Ok(JsonRpcRequest {
+        id_token,
+        method,
+        root,
+    })
+}
+
+fn json_id_token(root: &Value) -> String {
+    root.as_object()
+        .and_then(|object| object.get("id"))
+        .and_then(|id| serde_json::to_string(id).ok())
+        .unwrap_or_else(|| "null".to_owned())
+}
+
+fn json_string_field(root: &Value, key: &str) -> Result<String, String> {
+    json_optional_string_value(root, key).ok_or_else(|| format!("missing required field: {key}"))
+}
+
+fn json_optional_string_value(root: &Value, key: &str) -> Option<String> {
+    json_field_value(root, key)
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+}
+
+fn json_optional_u64_value(root: &Value, key: &str) -> Option<u64> {
+    match json_field_value(root, key)? {
+        Value::Number(number) => number.as_u64(),
+        Value::String(raw) => raw.parse::<u64>().ok(),
+        _ => None,
+    }
 }
 
 fn unescape_json_scalar(input: &str) -> String {
@@ -328,16 +402,10 @@ fn jsonrpc_error_with_id(id_token: &str, code: i32, message: &str) -> String {
     )
 }
 
-fn json_optional_value_token(payload: &str, key: &str) -> Option<String> {
-    let root = serde_json::from_str::<Value>(payload).ok()?;
-    let value = root.get(key)?;
-    serde_json::to_string(value).ok()
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_framed_payloads, escape_json, json_optional_u64_field, json_required_string_field,
+        decode_framed_payloads, escape_json, json_optional_u64_value, json_required_string_field,
         normalize_id_for_dispatch, parse_content_length,
     };
 
@@ -415,22 +483,21 @@ mod tests {
 
     #[test]
     fn spec_c03_protocol_json_optional_u64_contract_supports_numeric_and_quoted_forms() {
-        assert_eq!(
-            json_optional_u64_field(r#"{"block_height":9}"#, "block_height"),
-            Some(9),
-        );
-        assert_eq!(
-            json_optional_u64_field(r#"{"block_height":"11"}"#, "block_height"),
-            Some(11),
-        );
-        assert_eq!(
-            json_optional_u64_field(r#"{"block_height":"x"}"#, "block_height"),
-            None,
-        );
-        assert_eq!(
-            json_optional_u64_field(r#"{"other":1}"#, "block_height"),
-            None,
-        );
+        let numeric = serde_json::from_str::<serde_json::Value>(r#"{"block_height":9}"#)
+            .expect("numeric payload should parse");
+        assert_eq!(json_optional_u64_value(&numeric, "block_height"), Some(9),);
+
+        let quoted = serde_json::from_str::<serde_json::Value>(r#"{"block_height":"11"}"#)
+            .expect("quoted numeric payload should parse");
+        assert_eq!(json_optional_u64_value(&quoted, "block_height"), Some(11),);
+
+        let invalid = serde_json::from_str::<serde_json::Value>(r#"{"block_height":"x"}"#)
+            .expect("invalid payload should parse");
+        assert_eq!(json_optional_u64_value(&invalid, "block_height"), None,);
+
+        let missing = serde_json::from_str::<serde_json::Value>(r#"{"other":1}"#)
+            .expect("payload should parse");
+        assert_eq!(json_optional_u64_value(&missing, "block_height"), None,);
     }
 
     #[test]
@@ -456,9 +523,12 @@ mod tests {
             "escaped quotes in nested payload values must round-trip without truncation"
         );
         assert_eq!(
-            json_optional_u64_field(
-                r#"{"params":{"arguments":{"block_height":"17"}}}"#,
-                "block_height"
+            json_optional_u64_value(
+                &serde_json::from_str::<serde_json::Value>(
+                    r#"{"params":{"arguments":{"block_height":"17"}}}"#
+                )
+                .expect("payload should parse"),
+                "block_height",
             ),
             Some(17),
             "quoted numeric arguments in nested payload must parse as u64"

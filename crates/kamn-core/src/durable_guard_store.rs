@@ -6,6 +6,7 @@ use crate::{
     DeliveryGuardSnapshotError, MessageDeliveryGuards, PermissionRule, RetentionPolicy,
     SqliteStoreBackend, SqliteStoreBackendError,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
@@ -247,7 +248,7 @@ impl DurableGuardBundleSnapshotStore for FileDurableGuardSnapshotStore {
         bundle: DurableGuardSnapshotBundle,
     ) -> Result<(), DurableGuardSnapshotStoreError> {
         validate_bundle(&bundle)?;
-        let payload = serialize_bundle(&bundle);
+        let payload = serialize_bundle(&bundle)?;
         let mut file = OpenOptions::new()
             .create(true)
             .truncate(true)
@@ -334,7 +335,7 @@ impl DurableGuardBundleSnapshotStore for SqliteDurableGuardSnapshotStore {
         bundle: DurableGuardSnapshotBundle,
     ) -> Result<(), DurableGuardSnapshotStoreError> {
         validate_bundle(&bundle)?;
-        let payload = serialize_bundle(&bundle);
+        let payload = serialize_bundle(&bundle)?;
         self.backend
             .put("durable_guard_snapshot_store", "latest", payload.as_bytes())
             .map_err(map_sqlite_store_error)?;
@@ -447,65 +448,179 @@ fn validate_bundle(
     Ok(())
 }
 
-fn serialize_bundle(bundle: &DurableGuardSnapshotBundle) -> String {
-    let mut lines = vec![
-        format!("bundle_schema|{}", bundle.schema_version),
-        format!("delivery_schema|{}", bundle.delivery_guard.schema_version),
-    ];
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct DurableGuardSnapshotBundleWire {
+    schema_version: u16,
+    delivery_guard: DeliveryGuardSnapshotWire,
+    channel_policy: ChannelPolicySnapshotWire,
+}
 
-    for (sender, nonce) in &bundle.delivery_guard.next_nonce_by_sender {
-        lines.push(format!("delivery_nonce|{}|{nonce}", encode_hex(sender)));
-    }
-    for message_id in &bundle.delivery_guard.seen_message_ids {
-        lines.push(format!("delivery_seen|{}", encode_hex(message_id)));
-    }
-    lines.push("delivery_end|".to_owned());
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct DeliveryGuardSnapshotWire {
+    schema_version: u16,
+    next_nonce_by_sender: Vec<DeliveryNonceWire>,
+    seen_message_ids: Vec<String>,
+}
 
-    lines.push(format!(
-        "channel_schema|{}",
-        bundle.channel_policy.schema_version
-    ));
-    for channel in &bundle.channel_policy.channels {
-        lines.push(format!("channel_begin|{}", encode_hex(&channel.channel_id)));
-        for member in &channel.members {
-            lines.push(format!("channel_member|{}", encode_hex(member)));
-        }
-        for admin in &channel.admins {
-            lines.push(format!("channel_admin|{}", encode_hex(admin)));
-        }
-        lines.push(format!(
-            "channel_perm_send|{}",
-            encode_permission_rule(&channel.permissions.send)
-        ));
-        lines.push(format!(
-            "channel_perm_read|{}",
-            encode_permission_rule(&channel.permissions.read)
-        ));
-        lines.push(format!(
-            "channel_perm_invite|{}",
-            encode_permission_rule(&channel.permissions.invite)
-        ));
-        lines.push(format!(
-            "channel_perm_remove|{}",
-            encode_permission_rule(&channel.permissions.remove)
-        ));
-        lines.push(format!(
-            "channel_perm_configure|{}",
-            encode_permission_rule(&channel.permissions.configure)
-        ));
-        lines.push(format!(
-            "channel_retention|{}",
-            encode_retention_policy(&channel.permissions.retention)
-        ));
-        lines.push("channel_end|".to_owned());
-    }
-    lines.push("channel_end_all|".to_owned());
-    lines.push("bundle_end|".to_owned());
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct DeliveryNonceWire {
+    sender: String,
+    nonce: u64,
+}
 
-    lines.join("\n")
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ChannelPolicySnapshotWire {
+    schema_version: u16,
+    channels: Vec<ChannelPolicySnapshotChannelWire>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ChannelPolicySnapshotChannelWire {
+    channel_id: String,
+    members: Vec<String>,
+    admins: Vec<String>,
+    permissions: ChannelPermissionsWire,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ChannelPermissionsWire {
+    send: String,
+    read: String,
+    invite: String,
+    remove: String,
+    configure: String,
+    retention: String,
+}
+
+fn serialize_bundle(
+    bundle: &DurableGuardSnapshotBundle,
+) -> Result<String, DurableGuardSnapshotStoreError> {
+    let wire = DurableGuardSnapshotBundleWire {
+        schema_version: bundle.schema_version,
+        delivery_guard: DeliveryGuardSnapshotWire {
+            schema_version: bundle.delivery_guard.schema_version,
+            next_nonce_by_sender: bundle
+                .delivery_guard
+                .next_nonce_by_sender
+                .iter()
+                .map(|(sender, nonce)| DeliveryNonceWire {
+                    sender: encode_hex(sender),
+                    nonce: *nonce,
+                })
+                .collect(),
+            seen_message_ids: bundle
+                .delivery_guard
+                .seen_message_ids
+                .iter()
+                .map(|message_id| encode_hex(message_id))
+                .collect(),
+        },
+        channel_policy: ChannelPolicySnapshotWire {
+            schema_version: bundle.channel_policy.schema_version,
+            channels: bundle
+                .channel_policy
+                .channels
+                .iter()
+                .map(|channel| ChannelPolicySnapshotChannelWire {
+                    channel_id: encode_hex(&channel.channel_id),
+                    members: channel
+                        .members
+                        .iter()
+                        .map(|member| encode_hex(member))
+                        .collect(),
+                    admins: channel
+                        .admins
+                        .iter()
+                        .map(|admin| encode_hex(admin))
+                        .collect(),
+                    permissions: ChannelPermissionsWire {
+                        send: encode_permission_rule(&channel.permissions.send),
+                        read: encode_permission_rule(&channel.permissions.read),
+                        invite: encode_permission_rule(&channel.permissions.invite),
+                        remove: encode_permission_rule(&channel.permissions.remove),
+                        configure: encode_permission_rule(&channel.permissions.configure),
+                        retention: encode_retention_policy(&channel.permissions.retention),
+                    },
+                })
+                .collect(),
+        },
+    };
+    serde_json::to_string(&wire)
+        .map_err(|error| DurableGuardSnapshotStoreError::InvalidPayload(error.to_string()))
 }
 
 fn deserialize_bundle(
+    payload: &str,
+) -> Result<DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError> {
+    if let Ok(wire) = serde_json::from_str::<DurableGuardSnapshotBundleWire>(payload) {
+        let mut next_nonce_by_sender = BTreeMap::new();
+        for entry in wire.delivery_guard.next_nonce_by_sender {
+            let sender = decode_hex(entry.sender.as_str())?;
+            if next_nonce_by_sender.insert(sender, entry.nonce).is_some() {
+                return Err(DurableGuardSnapshotStoreError::InvalidPayload(
+                    "duplicate sender nonce record".to_owned(),
+                ));
+            }
+        }
+
+        let mut seen_message_ids = BTreeSet::new();
+        for value in wire.delivery_guard.seen_message_ids {
+            let message_id = decode_hex(value.as_str())?;
+            if !seen_message_ids.insert(message_id) {
+                return Err(DurableGuardSnapshotStoreError::InvalidPayload(
+                    "duplicate seen message record".to_owned(),
+                ));
+            }
+        }
+
+        let channels = wire
+            .channel_policy
+            .channels
+            .into_iter()
+            .map(|channel| {
+                Ok(ChannelPolicySnapshotChannel {
+                    channel_id: decode_hex(channel.channel_id.as_str())?,
+                    members: channel
+                        .members
+                        .into_iter()
+                        .map(|member| decode_hex(member.as_str()))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    admins: channel
+                        .admins
+                        .into_iter()
+                        .map(|admin| decode_hex(admin.as_str()))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    permissions: ChannelPermissions {
+                        send: decode_permission_rule(channel.permissions.send.as_str())?,
+                        read: decode_permission_rule(channel.permissions.read.as_str())?,
+                        invite: decode_permission_rule(channel.permissions.invite.as_str())?,
+                        remove: decode_permission_rule(channel.permissions.remove.as_str())?,
+                        configure: decode_permission_rule(channel.permissions.configure.as_str())?,
+                        retention: decode_retention_policy(channel.permissions.retention.as_str())?,
+                    },
+                })
+            })
+            .collect::<Result<Vec<_>, DurableGuardSnapshotStoreError>>()?;
+
+        let bundle = DurableGuardSnapshotBundle {
+            schema_version: wire.schema_version,
+            delivery_guard: DeliveryGuardSnapshot {
+                schema_version: wire.delivery_guard.schema_version,
+                next_nonce_by_sender,
+                seen_message_ids,
+            },
+            channel_policy: ChannelPolicySnapshot {
+                schema_version: wire.channel_policy.schema_version,
+                channels,
+            },
+        };
+        validate_bundle(&bundle)?;
+        return Ok(bundle);
+    }
+    deserialize_bundle_legacy(payload)
+}
+
+fn deserialize_bundle_legacy(
     payload: &str,
 ) -> Result<DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError> {
     let mut lines = payload.lines();
@@ -1013,9 +1128,22 @@ mod tests {
         );
 
         let bundle = DurableGuardSnapshotBundle::capture(&guards, &channels);
-        let payload = serialize_bundle(&bundle);
+        let payload = serialize_bundle(&bundle).expect("bundle serialization should pass");
         let decoded = deserialize_bundle(&payload).expect("bundle decode should pass");
         assert_eq!(decoded, bundle);
+    }
+
+    #[test]
+    fn regression_bundle_serialization_uses_json_payload() {
+        // Regression: #6126
+        let guards = MessageDeliveryGuards::new();
+        let channels = ChannelPermissionEngine::new();
+        let bundle = DurableGuardSnapshotBundle::capture(&guards, &channels);
+        let payload = serialize_bundle(&bundle).expect("bundle serialization should pass");
+        assert!(
+            payload.trim_start().starts_with('{'),
+            "expected serde JSON payload, found: {payload}"
+        );
     }
 
     #[test]

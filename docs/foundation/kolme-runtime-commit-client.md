@@ -146,6 +146,12 @@ handling.
 - Deterministic request identity contracts are sourced from `kamn-kolme`
   (`deterministic_runtime_commit_idempotency_key`, `deterministic_runtime_commit_id`)
   and mapped through `kamn-core` compatibility wrappers.
+- payload-hash length compatibility mode:
+  - current deterministic request identity uses `payload_hash.trim().len()` for
+    both runtime commit id and idempotency derivation in the compatibility path.
+  - this behavior is intentionally retained for backward compatibility (`Regression: #1777`).
+  - collision caveat: different payload-hash values with the same trimmed length
+    can produce identical derived identity fragments; migration work is tracked in `#6123`.
 - Deterministic JSON string escaping contracts for signed-envelope serialization are
   sourced from `kamn-kolme` (`escape_json_string`) and mapped through
   `kamn-core` compatibility wrappers.
@@ -457,6 +463,7 @@ cargo test -p kamn-core
 - broadcast payload normalization extraction parity drift remains fail-closed (`Regression: #1757`).
 - runtime lifecycle/finality projection extraction parity drift remains fail-closed (`Regression: #1775`).
 - runtime request identity extraction parity drift remains fail-closed (`Regression: #1777`).
+- runtime request identity payload-fingerprint parity drift remains fail-closed (`Regression: #6123`).
 - receipt-finality mapping extraction parity drift remains fail-closed (`Regression: #1779`).
 - JSON escape helper extraction parity drift remains fail-closed (`Regression: #1781`).
 - commit-finality parse helper extraction parity drift remains fail-closed (`Regression: #1783`).

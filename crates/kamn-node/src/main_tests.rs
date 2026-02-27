@@ -11,7 +11,8 @@ use super::{
     enforce_kolme_live_signer_key_source_policy, enforce_kolme_live_signer_preflight, execute,
     parse_args, render_bootstrap_report, render_kolme_live_native_direct_message,
     render_log_event_line, render_observability_endpoint_response,
-    render_service_api_endpoint_response, resolve_kolme_live_allow_local_signer_testing_override,
+    render_service_api_endpoint_response, reset_cached_log_config_for_tests,
+    resolve_kolme_live_allow_local_signer_testing_override,
     resolve_kolme_live_managed_signer_required_marker, resolve_kolme_live_nonce,
     resolve_kolme_live_signer_private_key_env_name, resolve_log_config_from_inputs,
     select_runtime_transport_profile_for_runtime_mode, serve_observability_endpoint,
@@ -20,6 +21,7 @@ use super::{
     DiagnosticsMode, KolmeForkSecp256k1SignerAdapter, LocalProfile, NodeBootstrapReport,
     NodeLogConfig, NodeLogFormat, NodeLogLevel, ObservabilityEndpointConfig, OutputMode,
     RuntimeExecutionBundle, RuntimeMode, ServiceApiEndpointConfig, ServiceApiEndpointRuntimePath,
+    KAMN_NODE_LOG_FORMAT_ENV, KAMN_NODE_LOG_LEVEL_ENV,
 };
 use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
@@ -57,6 +59,12 @@ fn log_env_lock() -> &'static Mutex<()> {
     signer_env_lock()
 }
 
+fn maybe_reset_log_config_cache_for_env_key(key: &str) {
+    if key == KAMN_NODE_LOG_LEVEL_ENV || key == KAMN_NODE_LOG_FORMAT_ENV {
+        reset_cached_log_config_for_tests();
+    }
+}
+
 fn managed_signer_public_key_hex(key_reference: &str) -> String {
     let signing_key = build_kolme_live_managed_signing_key(key_reference)
         .expect("managed signing key should derive");
@@ -80,6 +88,7 @@ impl EnvVarGuard {
             Some(value) => env::set_var(key, value),
             None => env::remove_var(key),
         }
+        maybe_reset_log_config_cache_for_env_key(key);
         Self { key, previous }
     }
 }
@@ -91,6 +100,7 @@ impl Drop for EnvVarGuard {
         } else {
             env::remove_var(self.key);
         }
+        maybe_reset_log_config_cache_for_env_key(self.key);
     }
 }
 

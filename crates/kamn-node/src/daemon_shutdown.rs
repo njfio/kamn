@@ -50,6 +50,12 @@ pub(super) fn configure_os_signal_test_triggers(triggers: Vec<OsSignalTestTrigge
 }
 
 #[cfg(test)]
+pub(super) fn take_configured_os_signal_test_triggers_for_current_thread(
+) -> Vec<OsSignalTestTrigger> {
+    take_os_signal_test_triggers()
+}
+
+#[cfg(test)]
 fn take_os_signal_test_triggers() -> Vec<OsSignalTestTrigger> {
     OS_SIGNAL_TEST_TRIGGERS.with(|slot| slot.borrow_mut().take().unwrap_or_default())
 }

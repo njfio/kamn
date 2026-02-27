@@ -1,11 +1,12 @@
 use crate::{SqliteStoreBackend, SqliteStoreBackendError};
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 /// Runtime snapshot.
 pub struct RuntimeSnapshot {
     state_version: u64,
@@ -382,12 +383,8 @@ impl FileRuntimeSnapshotStore {
     fn persist_snapshots(&self, snapshots: &[RuntimeSnapshot]) -> Result<(), SnapshotStoreError> {
         let mut serialized = String::new();
         for snapshot in snapshots {
-            serialized.push_str(&format!(
-                "{}|{}|{}\n",
-                snapshot.state_version(),
-                snapshot.state_hash(),
-                snapshot.cursor()
-            ));
+            serialized.push_str(&serialize_snapshot_line(snapshot)?);
+            serialized.push('\n');
         }
         fs::write(&self.path, serialized).map_err(|error| SnapshotStoreError::Io(error.to_string()))
     }
@@ -404,12 +401,8 @@ impl RuntimeSnapshotStore for FileRuntimeSnapshotStore {
             .append(true)
             .open(&self.path)
             .map_err(|error| SnapshotStoreError::Io(error.to_string()))?;
-        let serialized = format!(
-            "{}|{}|{}\n",
-            snapshot.state_version(),
-            snapshot.state_hash(),
-            snapshot.cursor()
-        );
+        let mut serialized = serialize_snapshot_line(&snapshot)?;
+        serialized.push('\n');
         file.write_all(serialized.as_bytes())
             .map_err(|error| SnapshotStoreError::Io(error.to_string()))
     }
@@ -461,12 +454,7 @@ impl RuntimeSnapshotStore for SqliteRuntimeSnapshotStore {
             validate_snapshot_continuity(Some(&previous), &snapshot)?;
         }
         let key = format!("{:020}", snapshot.state_version());
-        let serialized = format!(
-            "{}|{}|{}",
-            snapshot.state_version(),
-            snapshot.state_hash(),
-            snapshot.cursor()
-        );
+        let serialized = serialize_snapshot_line(&snapshot)?;
         self.backend
             .put(
                 "runtime_snapshot_store",
@@ -532,6 +520,18 @@ fn map_sqlite_store_error(error: SqliteStoreBackendError) -> SnapshotStoreError 
 }
 
 fn parse_snapshot_line(line: &str) -> Result<RuntimeSnapshot, SnapshotStoreError> {
+    if let Ok(snapshot) = serde_json::from_str::<RuntimeSnapshot>(line) {
+        return RuntimeSnapshot::with_cursor(
+            snapshot.state_version,
+            snapshot.state_hash.as_str(),
+            snapshot.cursor,
+        )
+        .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()));
+    }
+    parse_snapshot_line_legacy(line)
+}
+
+fn parse_snapshot_line_legacy(line: &str) -> Result<RuntimeSnapshot, SnapshotStoreError> {
     let mut segments = line.split('|');
     let Some(state_version_raw) = segments.next() else {
         return Err(SnapshotStoreError::InvalidPayload(line.to_owned()));
@@ -557,6 +557,11 @@ fn parse_snapshot_line(line: &str) -> Result<RuntimeSnapshot, SnapshotStoreError
         RuntimeSnapshot::new(state_version, state_hash_raw)
             .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))
     }
+}
+
+fn serialize_snapshot_line(snapshot: &RuntimeSnapshot) -> Result<String, SnapshotStoreError> {
+    serde_json::to_string(snapshot)
+        .map_err(|error| SnapshotStoreError::InvalidPayload(error.to_string()))
 }
 
 fn is_valid_snapshot_hash(state_hash: &str) -> bool {
