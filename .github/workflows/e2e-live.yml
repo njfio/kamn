@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -14,6 +16,7 @@ permissions:
 jobs:
   e2e-sdk-direct:
     name: E2E SDK-Direct
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -371,7 +374,8 @@ jobs:
   e2e-cli-smoke:
     name: E2E CLI Smoke
     runs-on: ubuntu-latest
-    if: github.event_name != 'push'
+    timeout-minutes: 30
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v4
 
@@ -494,14 +498,10 @@ jobs:
           wait_for_http "http://127.0.0.1:3000/healthz"
 
           run_output_file="/tmp/e2e-live-run-output.json"
-          cargo run --quiet --release -p kamn-e2e-harness -- \
-            run \
-            --mode cli-scripted \
-            --kolme-binary /tmp/kolme/target/release/example-p2p \
-            --enable-external-execution \
-            --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02 \
-            | tee "$run_output_file"
+          bash scripts/ci/run_with_retry.sh \
+            --label e2e-cli-smoke-live \
+            --max-attempts 2 \
+            -- bash -lc "cargo run --quiet --release -p kamn-e2e-harness -- run --mode cli-scripted --kolme-binary /tmp/kolme/target/release/example-p2p --enable-external-execution --evidence-dir /tmp/evidence --scenarios S-01,S-02 | tee \"$run_output_file\""
           python3 - "$run_output_file" <<'PY'
           import json
           import sys
