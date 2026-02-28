@@ -5,6 +5,15 @@
 
 use crate::DataLayerPrdCriticalScenarioConformanceReport;
 
+const SHELL_NEUTRAL_POLICY_VERIFIED_REASON: &str = "shell_neutral_policy_verified";
+const SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON: &str =
+    "shell_neutral_policy_block_orchestration_violation";
+const SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON: &str =
+    "shell_neutral_policy_block_positive_shell_delta";
+const SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON: &str =
+    "shell_neutral_policy_block_ratio_fail_threshold";
+const SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON: &str = "shell_neutral_policy_warn_ratio_threshold";
+
 /// Canonical reason-code vocabulary for shell-neutral policy decisions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataLayerShellNeutralPolicyReasonCode {
@@ -24,11 +33,11 @@ impl DataLayerShellNeutralPolicyReasonCode {
     /// Returns canonical reason-code marker consumed at wire/telemetry boundaries.
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Verified => "shell_neutral_policy_verified",
-            Self::BlockOrchestrationViolation => "shell_neutral_policy_block_orchestration_violation",
-            Self::BlockPositiveShellDelta => "shell_neutral_policy_block_positive_shell_delta",
-            Self::BlockRatioFailThreshold => "shell_neutral_policy_block_ratio_fail_threshold",
-            Self::WarnRatioThreshold => "shell_neutral_policy_warn_ratio_threshold",
+            Self::Verified => SHELL_NEUTRAL_POLICY_VERIFIED_REASON,
+            Self::BlockOrchestrationViolation => SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON,
+            Self::BlockPositiveShellDelta => SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON,
+            Self::BlockRatioFailThreshold => SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON,
+            Self::WarnRatioThreshold => SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON,
         }
     }
 }
@@ -57,13 +66,13 @@ impl std::str::FromStr for DataLayerShellNeutralPolicyReasonCode {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "shell_neutral_policy_verified" => Ok(Self::Verified),
-            "shell_neutral_policy_block_orchestration_violation" => {
+            SHELL_NEUTRAL_POLICY_VERIFIED_REASON => Ok(Self::Verified),
+            SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON => {
                 Ok(Self::BlockOrchestrationViolation)
             }
-            "shell_neutral_policy_block_positive_shell_delta" => Ok(Self::BlockPositiveShellDelta),
-            "shell_neutral_policy_block_ratio_fail_threshold" => Ok(Self::BlockRatioFailThreshold),
-            "shell_neutral_policy_warn_ratio_threshold" => Ok(Self::WarnRatioThreshold),
+            SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON => Ok(Self::BlockPositiveShellDelta),
+            SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON => Ok(Self::BlockRatioFailThreshold),
+            SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON => Ok(Self::WarnRatioThreshold),
             _ => Err(DataLayerShellNeutralPolicyReasonCodeParseError::UnknownReasonCode(
                 value.to_owned(),
             )),
