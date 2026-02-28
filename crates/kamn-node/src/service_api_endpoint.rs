@@ -30,11 +30,13 @@ use axum::{
 use kamn_core::{
     cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
     data_layer_m9_gateway_project_presence_event, service_auth_verify_with_public_key_hex,
-    AgentDid, AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
-    DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
+    AgentDid, DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
     DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
     DataLayerM9RealtimeDeliveryRegistry, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+};
+use kamn_runtime_guards::anti_spam::{
+    AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
 };
 #[cfg(test)]
 use serde::de::DeserializeOwned;
