@@ -1,5 +1,26 @@
 # R59 Follow-up
 
+## Issue #6247: Critical-path Coverage Threshold Hardening
+
+Threshold source of truth: `.ci/critical-path-coverage-thresholds.json`
+
+Measured coverage reference (current probe): `ci-critical-path-coverage-policy.json`
+
+| Target | Previous line/function min | Updated line/function min | Measured line/function | Rationale |
+|---|---:|---:|---:|---|
+| `crates/kamn-core/src/direct_message_crypto.rs` | 60 / 60 | 80 / 80 | 96.30 / 90.91 | Crypto path has strong test depth; threshold now reflects security-critical expectation. |
+| `crates/kamn-core/src/group_channel_crypto.rs` | 50 / 50 | 55 / 55 | 58.63 / 56.60 | Ratchet above prior baseline while preserving variance headroom. |
+| `crates/kamn-core/src/kolme_runtime_commit/http_transport.rs` | 27 / 22 | 37 / 32 | 40.43 / 37.70 | Transport error mapping is operationally critical; minima moved toward measured envelope. |
+| `crates/kamn-node/src/runtime_orchestration.rs` | 15 / 18 | 20 / 28 | 25.50 / 31.58 | Increase orchestration guardrail with function threshold aligned to current exercised control paths. |
+| `crates/kamn-node/src/service_api_endpoint.rs` | 45 / 24 | 46 / 25 | 47.80 / 25.64 | Incremental ratchet to avoid no-op threshold while retaining determinism. |
+| `crates/kamn-node/src/signer.rs` | 4.5 / 8.5 | 15 / 19 | 28.39 / 38.46 | Large signer uplift eliminates under-defended minima and makes threshold materially meaningful. |
+
+Notes:
+- Thresholds were raised for all currently gated targets.
+- Probe set was expanded for `http_transport`, `runtime_orchestration`, and `signer` paths to keep raised thresholds backed by deterministic exercised behavior.
+- Checker behavior remains fail-closed via `scripts/ci/check_critical_path_coverage.py`.
+- Follow-up hardening should continue by increasing test depth and ratcheting minima in controlled increments.
+
 ## Issue #6249: kamn-core Wave2 Shim Retirement
 
 ### Shim Inventory And Decisions
