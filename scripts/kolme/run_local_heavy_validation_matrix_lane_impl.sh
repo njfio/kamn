@@ -127,7 +127,7 @@ declare -a ARTIFACTS=(
 if [ "$MODE" = "run" ]; then
   pushd "$ROOT_DIR" >/dev/null
   for command in "${COMMANDS[@]}"; do
-    eval "$command"
+    bash -lc "$command"
   done
   popd >/dev/null
 fi

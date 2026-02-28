@@ -134,7 +134,7 @@ for index in "${!CHECKPOINT_IDS[@]}"; do
     if [ "$already_failed" -eq 1 ]; then
       checkpoint_status="skipped"
     else
-      if eval "$checkpoint_command"; then
+      if bash -lc "$checkpoint_command"; then
         checkpoint_status="pass"
       else
         checkpoint_status="fail"

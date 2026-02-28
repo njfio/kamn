@@ -1,6 +1,7 @@
 {
-  "reason": "Temporary fast-gate delta waiver while live go/no-go convergence and boundary-governance contract surfaces are absorbed; remove after baseline refresh.",
-  "expires_on": "2026-04-30",
+  "reason": "Temporary fast-gate delta waiver retained under shell-governance remediation tracking in issue #6261 until next baseline refresh lands.",
+  "expires_on": "2026-07-31",
+  "mitigation_issue": "#6261",
   "allow_metrics": [
     "elapsed_seconds_delta_pct",
     "runner_minutes_delta_pct"
