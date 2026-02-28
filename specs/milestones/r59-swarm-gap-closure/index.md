@@ -18,6 +18,16 @@
 - Important (`P1`): I-01..I-12
 - Suggestions (`P2`): S-01..S-15
 
+## Follow-Up Wave
+
+- Coordinating story: #6246 (`Story: Reconcile and complete remaining Top-10 remediation outcomes`)
+- Child tasks:
+  - #6247 (critical-path coverage threshold ratchet)
+  - #6248 (full PR E2E smoke coverage)
+  - #6249 (wave-2 `kamn-core` extraction and shim retirement)
+  - #6250 (shell/workflow/template ratio reduction and non-regression gate)
+- Baseline metrics and reconciliation: `docs/planning/r59-followup.md`
+
 ## Contract Notes
 
 1. Every implementation task must have:
