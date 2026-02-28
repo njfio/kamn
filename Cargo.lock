@@ -1617,6 +1617,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "kamn-bridges"
+version = "0.1.0"
+
+[[package]]
 name = "kamn-cli"
 version = "0.1.0"
 dependencies = [
@@ -1630,6 +1634,9 @@ version = "0.1.0"
 dependencies = [
  "chacha20poly1305",
  "k256",
+ "kamn-bridges",
+ "kamn-crypto",
+ "kamn-data-layer",
  "kamn-kolme",
  "kamn-live-probe-matrix",
  "kamn-runtime-guards",
@@ -1647,6 +1654,22 @@ dependencies = [
  "tracing",
  "webpki-roots 1.0.6",
  "x25519-dalek",
+]
+
+[[package]]
+name = "kamn-crypto"
+version = "0.1.0"
+dependencies = [
+ "chacha20poly1305",
+ "sha2",
+ "x25519-dalek",
+]
+
+[[package]]
+name = "kamn-data-layer"
+version = "0.1.0"
+dependencies = [
+ "k256",
 ]
 
 [[package]]

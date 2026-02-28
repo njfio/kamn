@@ -2,8 +2,11 @@
 resolver = "2"
 members = [
   "crates/kamn-agent-lib",
+  "crates/kamn-bridges",
   "crates/kamn-cli",
   "crates/kamn-core",
+  "crates/kamn-crypto",
+  "crates/kamn-data-layer",
   "crates/kamn-e2e-harness",
   "crates/kamn-kolme",
   "crates/kamn-live-probe-matrix",
