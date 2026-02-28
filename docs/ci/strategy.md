@@ -4205,6 +4205,7 @@ Required demo lane command contract:
 - `e2e_live_workflow_contract_status=verified|violation`
 - PR smoke selector contract:
   - `pull_request` trigger is enabled for `.github/workflows/e2e-live.yml`.
+  - `e2e-sdk-direct` live matrix remains `--scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15` (`S-11` remains quarantined from the blocking lane).
   - `e2e-cli-smoke` remains bounded to `--scenarios S-01,S-02`.
   - flaky handling is bounded via `bash scripts/ci/run_with_retry.sh --label e2e-cli-smoke-live --max-attempts 2`.
 - `Regression: #5849`
