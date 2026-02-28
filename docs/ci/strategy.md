@@ -4210,7 +4210,7 @@ Required demo lane command contract:
 - PR smoke selector contract:
   - `pull_request` trigger is enabled for `.github/workflows/e2e-live.yml`.
   - `e2e-sdk-direct` runs on PR with smoke selector `SDK_DIRECT_PR_SMOKE_SCENARIOS="S-01,S-02"` and keeps the non-PR full matrix (`S-11` remains quarantined from the blocking lane).
-  - `e2e-mcp-agent` runs on PR with smoke selector `MCP_AGENT_PR_SMOKE_SCENARIOS="S-01,S-02"` and keeps the non-PR full matrix.
+  - `e2e-mcp-agent` runs in PR-safe substitute mode (`MCP_AGENT_PR_SAFE_SUBSTITUTE="kamn-mcp-server-contract-smoke"`) and keeps non-PR live matrix execution for schedule/workflow_dispatch.
   - `e2e-cli-smoke` remains bounded to `--scenarios S-01,S-02`.
   - flaky handling is bounded via `bash scripts/ci/run_with_retry.sh --label e2e-cli-smoke-live --max-attempts 2`.
 - `Regression: #5849`

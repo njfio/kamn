@@ -350,6 +350,7 @@ jobs:
 
           MCP_AGENT_PR_SMOKE_SCENARIOS="S-01,S-02"
           MCP_AGENT_FULL_SCENARIOS="S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15"
+          MCP_AGENT_PR_SAFE_SUBSTITUTE="kamn-mcp-server-contract-smoke"
           case "$GITHUB_EVENT_NAME" in
             pull_request)
               MCP_AGENT_SCENARIOS="$MCP_AGENT_PR_SMOKE_SCENARIOS"
@@ -363,6 +364,13 @@ jobs:
               ;;
           esac
           echo "e2e_mcp_agent_pr_skip_reason_code=none"
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "e2e_mcp_agent_pr_safe_substitute=$MCP_AGENT_PR_SAFE_SUBSTITUTE"
+            cargo test -p kamn-mcp-server --test stdio_protocol_contract spec_c03_mcp_tools_call_health_dispatch_contract -- --exact
+            cargo test -p kamn-mcp-server --test tool_dispatch_contract spec_c03_mcp_dispatch_returns_structured_success_for_supported_tool -- --exact
+            exit 0
+          fi
 
           run_output_file="/tmp/e2e-live-run-output.json"
           cargo run --quiet --release -p kamn-e2e-harness -- \

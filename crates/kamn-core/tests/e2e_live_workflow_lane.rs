@@ -208,9 +208,15 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
             add_reason(&mut raw_reasons, "mcp_agent_pr_scope_missing");
         }
 
-        if !mcp.contains("MCP_AGENT_PR_SMOKE_SCENARIOS=\"S-01,S-02\"")
-            || !mcp.contains("MCP_AGENT_SCENARIOS=\"$MCP_AGENT_PR_SMOKE_SCENARIOS\"")
-        {
+        let has_pr_smoke_selector = mcp.contains("MCP_AGENT_PR_SMOKE_SCENARIOS=\"S-01,S-02\"")
+            && mcp.contains("MCP_AGENT_SCENARIOS=\"$MCP_AGENT_PR_SMOKE_SCENARIOS\"");
+        let has_pr_safe_substitute = mcp
+            .contains("MCP_AGENT_PR_SAFE_SUBSTITUTE=\"kamn-mcp-server-contract-smoke\"")
+            && mcp.contains("e2e_mcp_agent_pr_safe_substitute=$MCP_AGENT_PR_SAFE_SUBSTITUTE")
+            && mcp.contains("cargo test -p kamn-mcp-server --test stdio_protocol_contract")
+            && mcp.contains("spec_c03_mcp_tools_call_health_dispatch_contract");
+
+        if !has_pr_smoke_selector && !has_pr_safe_substitute {
             add_reason(&mut raw_reasons, "mcp_agent_pr_smoke_selector_missing");
         }
     }

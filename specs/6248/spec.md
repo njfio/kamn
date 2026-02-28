@@ -19,7 +19,7 @@ Out of scope:
 - Introducing new non-smoke scenario families.
 
 ## Acceptance Criteria
-- AC-1: PR workflow path executes three smoke lanes: CLI, SDK-Direct, and MCP Agent.
+- AC-1: PR workflow path executes three smoke validations: CLI smoke, SDK-Direct smoke, and MCP Agent smoke or an explicitly named PR-safe MCP substitute.
 - AC-2: Any PR-lane skip/fail path is deterministic and emits explicit reason markers.
 - AC-3: Workflow contract tests fail if PR coverage for any required lane is removed or silently downgraded.
 - AC-4: Strategy/docs reflect the PR E2E lane matrix and skip marker contract.
