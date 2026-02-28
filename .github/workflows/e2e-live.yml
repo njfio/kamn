@@ -52,6 +52,7 @@ jobs:
           KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY: ${{ github.workspace }}/target/release/kamn-node
           KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY: ${{ github.workspace }}/target/release/kamn-node
           KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY: "1"
           KAMN_E2E_SDK_DIRECT_LIVE: "1"
           KAMN_ENDPOINT: http://127.0.0.1:8080
           KAMN_KOLME_ENDPOINT: http://127.0.0.1:3000
@@ -230,6 +231,7 @@ jobs:
           KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY: ${{ github.workspace }}/target/release/kamn-node
           KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY: ${{ github.workspace }}/target/release/kamn-node
           KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY: "1"
           KAMN_E2E_MCP_AGENT_LIVE: "1"
           KAMN_E2E_MCP_AGENT_BINARY: ${{ github.workspace }}/target/release/kamn-mcp-server
           KAMN_ENDPOINT: http://127.0.0.1:8080
@@ -396,6 +398,7 @@ jobs:
           KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY: ${{ github.workspace }}/target/release/kamn-node
           KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY: ${{ github.workspace }}/target/release/kamn-node
           KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY: "1"
           KAMN_E2E_CLI_SCRIPTED_LIVE: "1"
           KAMN_E2E_CLI_BINARY: ${{ github.workspace }}/target/release/kamn-cli
           KAMN_ENDPOINT: http://127.0.0.1:8080
