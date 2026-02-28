@@ -2,12 +2,7 @@ use kamn_core::{
     data_layer_evaluate_shell_neutral_policy, DataLayerPrdCriticalScenarioConformanceMatrix,
     DataLayerPrdCriticalScenarioMode, DataLayerPrdCriticalScenarioResultInput,
     DataLayerShellNeutralPolicyDecision, DataLayerShellNeutralPolicyError,
-    DataLayerShellNeutralPolicyInput,
-    DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON_CODE,
-    DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON_CODE,
-    DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON_CODE,
-    DATA_LAYER_SHELL_NEUTRAL_POLICY_VERIFIED_REASON_CODE,
-    DATA_LAYER_SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON_CODE,
+    DataLayerShellNeutralPolicyInput, DataLayerShellNeutralPolicyReasonCode,
 };
 
 fn build_critical_report(
@@ -51,7 +46,7 @@ fn spec_c01_verified_when_shell_neutral_and_ratio_within_budget() {
     );
     assert_eq!(
         report.reason_codes,
-        vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_VERIFIED_REASON_CODE]
+        vec![DataLayerShellNeutralPolicyReasonCode::Verified]
     );
 }
 
@@ -72,7 +67,7 @@ fn spec_c02_orchestration_violations_block_policy() {
     );
     assert_eq!(
         report.reason_codes,
-        vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON_CODE]
+        vec![DataLayerShellNeutralPolicyReasonCode::BlockOrchestrationViolation]
     );
 }
 
@@ -94,7 +89,7 @@ fn spec_c03_positive_shell_delta_or_ratio_fail_blocks_policy() {
     );
     assert_eq!(
         positive_shell_delta_report.reason_codes,
-        vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON_CODE]
+        vec![DataLayerShellNeutralPolicyReasonCode::BlockPositiveShellDelta]
     );
 
     let ratio_fail_report =
@@ -113,7 +108,7 @@ fn spec_c03_positive_shell_delta_or_ratio_fail_blocks_policy() {
     );
     assert_eq!(
         ratio_fail_report.reason_codes,
-        vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON_CODE]
+        vec![DataLayerShellNeutralPolicyReasonCode::BlockRatioFailThreshold]
     );
 }
 
@@ -134,7 +129,7 @@ fn spec_c04_warn_when_ratio_exceeds_warn_below_fail() {
     );
     assert_eq!(
         report.reason_codes,
-        vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON_CODE]
+        vec![DataLayerShellNeutralPolicyReasonCode::WarnRatioThreshold]
     );
 }
 
@@ -152,4 +147,35 @@ fn spec_c05_invalid_threshold_order_fails_closed() {
         error,
         Err(DataLayerShellNeutralPolicyError::InvalidThresholdOrder)
     ));
+}
+
+#[test]
+fn spec_c06_reason_code_as_str_matches_legacy_markers() {
+    assert_eq!(
+        DataLayerShellNeutralPolicyReasonCode::Verified.as_str(),
+        "shell_neutral_policy_verified"
+    );
+    assert_eq!(
+        DataLayerShellNeutralPolicyReasonCode::BlockOrchestrationViolation.as_str(),
+        "shell_neutral_policy_block_orchestration_violation"
+    );
+    assert_eq!(
+        DataLayerShellNeutralPolicyReasonCode::BlockPositiveShellDelta.as_str(),
+        "shell_neutral_policy_block_positive_shell_delta"
+    );
+    assert_eq!(
+        DataLayerShellNeutralPolicyReasonCode::BlockRatioFailThreshold.as_str(),
+        "shell_neutral_policy_block_ratio_fail_threshold"
+    );
+    assert_eq!(
+        DataLayerShellNeutralPolicyReasonCode::WarnRatioThreshold.as_str(),
+        "shell_neutral_policy_warn_ratio_threshold"
+    );
+}
+
+#[test]
+fn spec_c07_reason_code_parse_rejects_unknown_marker() {
+    let parsed = "shell_neutral_policy_unknown_marker"
+        .parse::<DataLayerShellNeutralPolicyReasonCode>();
+    assert!(parsed.is_err(), "unknown reason marker should fail closed");
 }
