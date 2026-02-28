@@ -151,7 +151,11 @@ run_slice() {
   missed=0
   unviable=0
   timeout=0
-  eval "$(parse_summary_line "$summary_line")"
+  if [ -n "$found_mutants" ] && [ "$found_mutants" -eq 0 ] && [ -z "$summary_line" ]; then
+    parse_error=0
+  else
+    eval "$(parse_summary_line "$summary_line")"
+  fi
 
   local status="ok"
   local reasons=()
@@ -199,20 +203,44 @@ run_slice() {
     >>"$slice_tsv"
 }
 
+direct_message_decrypt_mutation_line="$(
+  grep -n 'self\.0\.decrypt(sealed)' crates/kamn-core/src/direct_message_crypto.rs \
+    | head -n 1 \
+    | cut -d: -f1 \
+    || true
+)"
+if [ -z "$direct_message_decrypt_mutation_line" ]; then
+  echo "unable to resolve direct message mutation selector lines" >&2
+  exit 1
+fi
+direct_message_mutation_re="direct_message_crypto\\.rs:(${direct_message_decrypt_mutation_line}:[0-9]+):"
+
 run_slice "core-direct-message-crypto" 2 \
   cargo mutants -p kamn-core \
     --file crates/kamn-core/src/direct_message_crypto.rs \
-    --re "direct_message_crypto\\.rs:(73:18|115:13):" \
+    --re "$direct_message_mutation_re" \
     --output "$tmp_dir/core-direct-message-crypto" \
     --copy-vcs true \
     --cargo-test-arg --lib \
-    --cargo-test-arg direct_message_crypto::tests::decrypt_rejects_algorithm_mismatch \
+    --cargo-test-arg direct_message_crypto::tests:: \
     --timeout "$timeout_seconds"
+
+group_channel_nonce_mutation_line="$(
+  grep -n 'if nonce == 0' crates/kamn-core/src/group_channel_crypto.rs \
+    | head -n 1 \
+    | cut -d: -f1 \
+    || true
+)"
+if [ -z "$group_channel_nonce_mutation_line" ]; then
+  echo "unable to resolve group channel mutation selector line" >&2
+  exit 1
+fi
+group_channel_nonce_mutation_re="group_channel_crypto\\.rs:(${group_channel_nonce_mutation_line}:[0-9]+): replace == with != in GroupChannelCryptoEngine::encrypt"
 
 run_slice "core-group-channel-crypto" 1 \
   cargo mutants -p kamn-core \
     --file crates/kamn-core/src/group_channel_crypto.rs \
-    --re "group_channel_crypto\\.rs:(186:18):" \
+    --re "$group_channel_nonce_mutation_re" \
     --output "$tmp_dir/core-group-channel-crypto" \
     --copy-vcs true \
     --cargo-test-arg --lib \
