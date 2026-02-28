@@ -24,7 +24,6 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_check_governance_feature_commit_ratio.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_review_document_freeze.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"
   bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
@@ -36,6 +35,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
+  cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract
   cargo test -p kamn-core --test shell_test_surface_migration_wave1
   cargo test -p kamn-core --test shell_test_surface_migration_wave2
   cargo test -p kamn-core --test shell_test_surface_ratio_policy

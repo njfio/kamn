@@ -4638,7 +4638,7 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
-- Shell-rust ratio guardrail checker (`test_check_shell_rust_ratio_guardrail.sh`)
+- Shell-rust ratio guardrail Rust contract lane (`cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract`)
   - checker command:
     - `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --threshold-file .ci/shell-rust-ratio-guardrail.env --output-json /tmp/shell-rust-ratio-guardrail-report.json`
   - deterministic taxonomy markers:
