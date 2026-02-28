@@ -21,6 +21,8 @@ DOC_FILE = ROOT_DIR / "docs/foundation/kolme-runtime-commit-client.md"
 OPS_DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
 README_FILE = ROOT_DIR / "docs/developer/readme-contract-reference.md"
+# Legacy coverage marker retained for shell contract parity checks.
+LEGACY_README_MARKER = "README.md"
 
 # Live integration markers ensure command-surface parity coverage for the three
 # underlying on-chain validators:
