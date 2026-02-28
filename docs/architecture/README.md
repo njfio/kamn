@@ -12,6 +12,16 @@ diagram references.
 - `docs/architecture/kamn-core-module-map.md`
 - `docs/architecture/kamn-node-module-map.md`
 
+## Crate Architecture Notes
+
+- `docs/architecture/kamn-agent-lib.md`
+- `docs/architecture/kamn-cli.md`
+- `docs/architecture/kamn-crypto.md`
+- `docs/architecture/kamn-data-layer.md`
+- `docs/architecture/kamn-e2e-harness.md`
+- `docs/architecture/kamn-snapshot-journal.md`
+- `docs/architecture/kamn-types.md`
+
 ## Runtime And Service Flows
 
 - `docs/architecture/runtime-layout.md`
