@@ -1,15 +1,15 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
-    service_signature_for_fields, service_signer_public_key_for_fields, AgentDid,
-    ServiceAgentProfile, ServiceApiClient, ServiceBridgeStatus, ServiceBridgeSubmission,
+    service_public_key_for_private_key, service_signature_for_state_hash_with_private_key,
+    AgentDid, ServiceAgentProfile, ServiceApiClient, ServiceBridgeStatus, ServiceBridgeSubmission,
     ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
     ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
     ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
 };
 use std::env;
 
-const DEFAULT_CHAIN_ID: &str = "kamn-agent-lib";
-const DEFAULT_CHAIN_VERSION: &str = "1";
+const DEFAULT_CHAIN_ID: &str = "kamn-devnet";
+const DEFAULT_CHAIN_VERSION: &str = "v0.1.0";
 const AGENT_CHAIN_ID_ENV: &str = "KAMN_AGENT_CHAIN_ID";
 const AGENT_CHAIN_VERSION_ENV: &str = "KAMN_AGENT_CHAIN_VERSION";
 
@@ -65,18 +65,20 @@ impl ServiceApiHttpClient {
     pub fn build_auth(
         &self,
         sender_did: &AgentDid,
+        signing_key: &str,
         nonce: u64,
         body: &str,
         authz_scope: Option<&str>,
     ) -> Result<ServiceRequestAuth, AgentLibError> {
-        let signature = service_signature_for_fields(
+        let state_hash = format!("service-api:{}:{}", self.chain_id, self.chain_version);
+        let signature = service_signature_for_state_hash_with_private_key(
             sender_did,
             nonce,
-            self.chain_id.as_str(),
-            self.chain_version.as_str(),
+            state_hash.as_str(),
             body,
+            signing_key,
         )?;
-        let signer_public_key_hex = service_signer_public_key_for_fields()?;
+        let signer_public_key_hex = service_public_key_for_private_key(signing_key)?;
         Ok(ServiceRequestAuth::new_with_signer_public_key_and_scope(
             sender_did.clone(),
             nonce,

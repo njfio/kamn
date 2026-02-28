@@ -32,6 +32,17 @@ cargo test -p kamn-node
 bash scripts/ci/test_ci_tools.sh
 ```
 
+Live HTTPS dependency posture checks (`kamn-core`):
+- Dependencies:
+- `rustls`
+- `rustls-pemfile`
+- `webpki-roots`
+
+```bash
+cargo check -p kamn-core --features live-https
+cargo check -p kamn-core --no-default-features
+```
+
 Fast repository lanes:
 
 ```bash
@@ -84,7 +95,10 @@ This keeps the root README onboarding-focused while preserving deterministic con
 ## Key Links
 
 - CI strategy: `docs/ci/strategy.md`
+- Engineering hardening wave: `docs/planning/engineering-hardening-wave.md`
 - Runtime/live ops: `docs/planning/live-network-wave.md`
 - Kolme devnet ops: `docs/planning/kolme-devnet-ops.md`
+- Rustdoc publishing guide: `docs/developer/rustdoc-publishing.md`
+- Missing-docs policy checker: `scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Security guidance: `docs/security/secure-coding.md`
 - TLS hardening: `docs/security/tls-hardening.md`

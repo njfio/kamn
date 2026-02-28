@@ -22,7 +22,11 @@ impl AgentIdentity {
         deterministic_identity_allowed()?;
         let normalized_name = normalize_agent_name(name)?;
         let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
-        let did = AgentDid::parse(format!("kamn:did:agent:{normalized_name}"))?;
+        let signer_public_key = service_public_key_for_private_key(signing_key.as_str())?;
+        let did = AgentDid::parse(format!(
+            "kamn:did:agent:pkh-{}",
+            signer_public_key.to_ascii_lowercase()
+        ))?;
         Ok(Self {
             did,
             signing_key,
@@ -32,7 +36,7 @@ impl AgentIdentity {
 
     /// Builds identity material from explicit DID and signing-key inputs.
     pub fn from_did_and_signing_key(did: &str, signing_key: &str) -> Result<Self, AgentLibError> {
-        let parsed_did = AgentDid::parse(did.to_owned())?;
+        let parsed_did = AgentDid::parse(did)?;
         if signing_key.trim().is_empty() {
             return Err(AgentLibError::InvalidInput {
                 field: "signing_key",
@@ -170,12 +174,18 @@ fn hex_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{deterministic_identity_allowed_from_env, fnv1a_round_u64, AgentIdentity};
+    use kamn_sdk::service_public_key_for_private_key;
     use std::env;
 
     #[test]
     fn unit_agent_identity_from_name_builds_expected_did_and_keys() {
         let identity = AgentIdentity::from_agent_name("Alice").expect("identity should build");
-        assert_eq!(identity.did().as_str(), "kamn:did:agent:alice");
+        let expected_public_key = service_public_key_for_private_key(identity.signing_key())
+            .expect("deterministic signing key should produce compressed public key");
+        assert_eq!(
+            identity.did().as_str(),
+            format!("kamn:did:agent:pkh-{expected_public_key}")
+        );
         assert_eq!(
             identity.signing_key(),
             "094cf4e1f3d974bbf3e72233e2c2937e8fdb094740e0f017e010aa47ac1201ac"

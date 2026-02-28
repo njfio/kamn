@@ -1,5 +1,5 @@
 use kamn_agent_lib::{AgentIdentity, KamnAgentHandle};
-use kamn_sdk::{service_signature_for_fields, AgentDid};
+use kamn_sdk::{service_verify_signature_with_public_key, AgentDid};
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::io::{ErrorKind, Read, Write};
@@ -162,23 +162,29 @@ fn run_chain_context_contract_server(
                 let signature = headers
                     .get("x-kamn-request-signature")
                     .ok_or_else(|| "missing signature header".to_owned())?;
+                let signer_public_key = headers
+                    .get("x-kamn-signer-public-key")
+                    .ok_or_else(|| "missing signer public key header".to_owned())?;
 
                 let parsed_did = AgentDid::parse(did.as_str())
                     .map_err(|error| format!("did parse failed: {error}"))?;
-                let expected_signature = service_signature_for_fields(
+                let expected_state_hash =
+                    format!("service-api:{expected_chain_id}:{expected_chain_version}");
+                let verify_result = service_verify_signature_with_public_key(
                     &parsed_did,
                     nonce,
-                    expected_chain_id,
-                    expected_chain_version,
+                    expected_state_hash.as_str(),
                     body.as_str(),
-                )
-                .map_err(|error| format!("service signature generation failed: {error}"))?;
-                if &expected_signature != signature {
+                    signature.as_str(),
+                    signer_public_key.as_str(),
+                );
+                if let Err(error) = verify_result {
                     write_http_response(
                         &mut stream,
                         401,
                         r#"{"error":"unauthorized","reason_code":"service_api_auth_signature_verification_failed","message":"signature verification failed for request envelope"}"#,
                     )?;
+                    let _ = error;
                     return Ok(());
                 }
 

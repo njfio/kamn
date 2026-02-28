@@ -43,7 +43,7 @@ impl KamnAuthHeaders {
             });
         }
 
-        let sender_did = AgentDid::parse(sender_did.to_owned())?;
+        let sender_did = AgentDid::parse(sender_did)?;
         let body_str = std::str::from_utf8(body).map_err(|_| AgentLibError::InvalidInput {
             field: "body",
             reason: "must be utf-8".to_owned(),

@@ -108,6 +108,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             payload,
             Some("messages:write"),
@@ -120,6 +121,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "",
             Some("messages:read"),
@@ -132,6 +134,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             payload,
             Some("channels:write"),
@@ -144,6 +147,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             payload,
             Some("tasks:write"),
@@ -154,18 +158,26 @@ impl KamnAgentHandle {
     /// Queries task status by identifier.
     pub fn query_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth =
-            self.service_client
-                .build_auth(self.identity.did(), nonce, "", Some("tasks:read"))?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            self.identity.signing_key(),
+            nonce,
+            "",
+            Some("tasks:read"),
+        )?;
         self.service_client.get_task(task_id, &auth)
     }
 
     /// Queries agent profile by DID.
     pub fn query_agent_profile(&self, did: &str) -> Result<ServiceAgentProfile, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth =
-            self.service_client
-                .build_auth(self.identity.did(), nonce, "", Some("agents:read"))?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            self.identity.signing_key(),
+            nonce,
+            "",
+            Some("agents:read"),
+        )?;
         self.service_client.get_agent_profile(did, &auth)
     }
 
@@ -188,6 +200,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "{}",
             Some("tasks:write"),
@@ -200,6 +213,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "{}",
             Some("tasks:write"),
@@ -212,6 +226,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             payload,
             Some("escrow:write"),
@@ -224,6 +239,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "{}",
             Some("escrow:write"),
@@ -239,6 +255,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             payload,
             Some("content:write"),
@@ -251,6 +268,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "{}",
             Some("content:write"),
@@ -266,6 +284,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "{}",
             Some("content:write"),
@@ -276,9 +295,13 @@ impl KamnAgentHandle {
     /// Queries one content lifecycle record through the service API.
     pub fn query_content(&self, content_id: &str) -> Result<ServiceContentStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth =
-            self.service_client
-                .build_auth(self.identity.did(), nonce, "", Some("content:read"))?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            self.identity.signing_key(),
+            nonce,
+            "",
+            Some("content:read"),
+        )?;
         self.service_client.get_content(content_id, &auth)
     }
 
@@ -290,6 +313,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             payload,
             Some("bridge:write"),
@@ -305,6 +329,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "{}",
             Some("bridge:write"),
@@ -318,9 +343,13 @@ impl KamnAgentHandle {
         bridge_id: &str,
     ) -> Result<ServiceBridgeStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth =
-            self.service_client
-                .build_auth(self.identity.did(), nonce, "", Some("bridge:read"))?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            self.identity.signing_key(),
+            nonce,
+            "",
+            Some("bridge:read"),
+        )?;
         self.service_client.get_bridge_message(bridge_id, &auth)
     }
 
@@ -329,6 +358,7 @@ impl KamnAgentHandle {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
+            self.identity.signing_key(),
             nonce,
             "",
             Some("channels:read"),

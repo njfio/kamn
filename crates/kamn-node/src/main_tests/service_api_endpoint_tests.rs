@@ -640,6 +640,19 @@ pub(super) fn write_test_service_api_tls_materials() -> (String, String) {
     )
 }
 
+fn unique_service_api_test_state_file_path() -> String {
+    let entropy = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be monotonic")
+        .as_nanos();
+    let mut path = std::env::temp_dir();
+    path.push(format!(
+        "kamn-node-service-api-state-test-{}-{entropy}.json",
+        std::process::id()
+    ));
+    path.to_string_lossy().to_string()
+}
+
 fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str)]) -> Vec<u8> {
     send_websocket_upgrade_request_with_version(addr, path, "13", headers)
 }
@@ -908,6 +921,9 @@ fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
     let auth_public_key_hex =
         service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX)
             .expect("service-auth public key should derive");
+    // Use an isolated state file per test run to prevent replay nonce watermark bleed
+    // between retry attempts in CI.
+    let state_file = unique_service_api_test_state_file_path();
     ServiceApiTestEnvGuards {
         _env_lock: env_lock,
         _tls_mode_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", None),
@@ -917,7 +933,10 @@ fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
             "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX",
             Some(auth_public_key_hex.as_str()),
         ),
-        _state_file_guard: EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", None),
+        _state_file_guard: EnvVarGuard::set(
+            "KAMN_SERVICE_API_STATE_FILE",
+            Some(state_file.as_str()),
+        ),
         _log_level_guard: EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", None),
         _log_format_guard: EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", None),
         _chain_id_guard: EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None),

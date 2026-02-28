@@ -16,6 +16,16 @@ fn write_temp_node_config(contents: &str) -> std::path::PathBuf {
     path
 }
 
+fn reserve_runtime_test_loopback_addr() -> String {
+    let listener =
+        std::net::TcpListener::bind("127.0.0.1:0").expect("runtime test listener should bind");
+    let addr = listener
+        .local_addr()
+        .expect("runtime test listener local addr should resolve");
+    drop(listener);
+    addr.to_string()
+}
+
 // runtime_tests structural budget shell only; keep domain tests in src/main_tests/runtime_tests/*.rs
 include!("runtime_tests/arg_and_signer_policy_tests.rs");
 include!("runtime_tests/logging_and_bootstrap_tests.rs");

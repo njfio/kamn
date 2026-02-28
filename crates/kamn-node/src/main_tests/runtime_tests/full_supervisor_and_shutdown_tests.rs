@@ -149,6 +149,7 @@ fn integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_sto
         .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let api_bind_addr = reserve_runtime_test_loopback_addr();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -160,9 +161,9 @@ fn integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_sto
         "--daemon-tick-interval-ms".to_owned(),
         "10".to_owned(),
         "--api-bind".to_owned(),
-        "127.0.0.1:19086".to_owned(),
+        api_bind_addr.clone(),
         "--api-idle-timeout-ms".to_owned(),
-        "100".to_owned(),
+        "5000".to_owned(),
     ])
     .expect("full args should parse");
 
@@ -174,7 +175,7 @@ fn integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_sto
         .iter()
         .position(|line| {
             line.contains("\"event\":\"node.runtime.service_api.endpoint.start\"")
-                && line.contains("\"bind_addr\":\"127.0.0.1:19086\"")
+                && line.contains(format!("\"bind_addr\":\"{api_bind_addr}\"").as_str())
         })
         .expect("full supervisor should emit service-api endpoint start marker");
     let supervisor_stop_complete_idx = captured_logs
@@ -192,7 +193,7 @@ fn integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_sto
         .skip(endpoint_start_idx)
         .find(|(_, line)| {
             line.contains("\"event\":\"node.runtime.service_api.endpoint.complete\"")
-                && line.contains("\"bind_addr\":\"127.0.0.1:19086\"")
+                && line.contains(format!("\"bind_addr\":\"{api_bind_addr}\"").as_str())
         })
         .map(|(index, _)| index)
         .expect("full supervisor should emit service-api endpoint complete marker");
@@ -213,6 +214,8 @@ fn integration_runtime_full_supervisor_starts_observability_lane_before_daemon_s
         .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let api_bind_addr = reserve_runtime_test_loopback_addr();
+    let observability_bind_addr = reserve_runtime_test_loopback_addr();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -224,13 +227,13 @@ fn integration_runtime_full_supervisor_starts_observability_lane_before_daemon_s
         "--daemon-tick-interval-ms".to_owned(),
         "10".to_owned(),
         "--api-bind".to_owned(),
-        "127.0.0.1:19090".to_owned(),
+        api_bind_addr.clone(),
         "--api-idle-timeout-ms".to_owned(),
-        "100".to_owned(),
+        "5000".to_owned(),
         "--observability-endpoint-bind".to_owned(),
-        "127.0.0.1:19091".to_owned(),
+        observability_bind_addr.clone(),
         "--observability-endpoint-idle-timeout-ms".to_owned(),
-        "100".to_owned(),
+        "5000".to_owned(),
     ])
     .expect("full args should parse");
 
@@ -242,7 +245,7 @@ fn integration_runtime_full_supervisor_starts_observability_lane_before_daemon_s
         .iter()
         .position(|line| {
             line.contains("\"event\":\"node.runtime.observability.endpoint.start\"")
-                && line.contains("\"bind_addr\":\"127.0.0.1:19091\"")
+                && line.contains(format!("\"bind_addr\":\"{observability_bind_addr}\"").as_str())
         })
         .expect("full supervisor should emit observability endpoint start marker");
     let supervisor_stop_complete_idx = captured_logs
@@ -260,7 +263,7 @@ fn integration_runtime_full_supervisor_starts_observability_lane_before_daemon_s
         .skip(endpoint_start_idx)
         .find(|(_, line)| {
             line.contains("\"event\":\"node.runtime.observability.endpoint.complete\"")
-                && line.contains("\"bind_addr\":\"127.0.0.1:19091\"")
+                && line.contains(format!("\"bind_addr\":\"{observability_bind_addr}\"").as_str())
         })
         .map(|(index, _)| index)
         .expect("full supervisor should emit observability endpoint complete marker");

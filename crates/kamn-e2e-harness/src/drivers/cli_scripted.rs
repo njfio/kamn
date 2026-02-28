@@ -16,6 +16,9 @@ use std::sync::Arc;
 const CLI_SCRIPTED_LIVE_ENV: &str = "KAMN_E2E_CLI_SCRIPTED_LIVE";
 const CLI_BINARY_ENV: &str = "KAMN_E2E_CLI_BINARY";
 const DEFAULT_CLI_BINARY: &str = "kamn-cli";
+const AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV: &str =
+    "KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY";
+const AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE: &str = "1";
 const DEFAULT_S02_AGENT_NAME: &str = "kamn-e2e-cli-s02";
 const DEFAULT_S02_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s02"}"#;
 const DEFAULT_S02_REPLY_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s02-reply"}"#;
@@ -286,6 +289,10 @@ fn run_live_s01_cli_health_probe() -> Result<(), String> {
         .arg(endpoint.as_str())
         .arg("--format")
         .arg("text")
+        .env(
+            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV,
+            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
+        )
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -2020,6 +2027,10 @@ fn run_cli_command_expect_failure_with_agent_name(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        .env(
+            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV,
+            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
+        )
         .env("KAMN_AGENT_NAME", agent_name);
     let output = command
         .output()
@@ -2063,7 +2074,11 @@ fn run_cli_command_capture_stdout_with_optional_agent_name(
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+        .stderr(Stdio::null())
+        .env(
+            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV,
+            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
+        );
     if let Some(agent_name) = agent_name {
         command.env("KAMN_AGENT_NAME", agent_name);
     }
@@ -2229,6 +2244,48 @@ mod tests {
                 );
             },
         );
+    }
+
+    #[test]
+    fn unit_run_live_s01_cli_health_probe_sets_deterministic_identity_opt_in_env() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s01-deterministic-opt-in");
+        let script_source = r#"#!/usr/bin/env python3
+import os
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+if command != "health":
+    sys.stderr.write("unexpected command")
+    sys.exit(2)
+
+if os.environ.get("KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY") != "1":
+    sys.stderr.write("deterministic identity opt-in missing")
+    sys.exit(3)
+
+sys.stdout.write("status=ok")
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_LIB_ALLOW_DETERMINISTIC_IDENTITY", None),
+            ],
+            || {
+                run_live_s01_cli_health_probe()
+                    .expect("probe should opt in deterministic identity for cli child process");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
     }
 
     #[test]

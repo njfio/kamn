@@ -1,13 +1,3 @@
-fn reserve_runtime_test_loopback_addr() -> String {
-    let listener = std::net::TcpListener::bind(("127.0.0.1", 0))
-        .expect("runtime test loopback port should bind");
-    let addr = listener
-        .local_addr()
-        .expect("runtime test loopback addr should resolve");
-    drop(listener);
-    addr.to_string()
-}
-
 #[test]
 fn integration_runtime_daemon_without_route_map_preserves_relay_spool_entries() {
     let _lock = log_env_lock()
