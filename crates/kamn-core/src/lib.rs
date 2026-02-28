@@ -9,12 +9,6 @@
 pub mod agent_key_hierarchy;
 /// Agent-driven upgrade proposal, review, and execution workflow contracts.
 pub mod agent_upgrade_workflow;
-/// Deprecated compatibility shim for anti-spam contracts extracted to `kamn-runtime-guards`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_runtime_guards::anti_spam::* directly; kamn_core::anti_spam module shim will be removed in R61"
-)]
-pub mod anti_spam;
 /// Audit export filters, bundles, and governance evidence contracts.
 pub mod audit_exports;
 /// Mempool block production and consensus-validation pipeline contracts.
@@ -38,12 +32,6 @@ pub mod content_retrieval;
 pub mod content_storage;
 /// Cross-chain route validation, inbound normalization, and outbound quorum dispatch contracts.
 pub mod cross_chain_bridge;
-/// Deprecated compatibility shim for cross-chain receipt normalization extracted to `kamn-bridges`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_bridges::cross_chain_receipt::* directly; kamn_core::cross_chain_receipt module shim will be removed in R61"
-)]
-pub mod cross_chain_receipt;
 /// Cross-store replay consistency checker and deterministic divergence taxonomy contracts.
 pub mod cross_store_replay_consistency;
 #[cfg(test)]
@@ -87,9 +75,9 @@ pub mod data_layer_m9_realtime_delivery;
 /// Phase-2 operational pipeline contracts for envelope crypto + blind-index derivation.
 pub mod data_layer_phase2_crypto_blind_index_pipeline;
 /// PostgreSQL execution adapter contracts for live bridge-descriptor execution and migrations.
-pub mod data_layer_postgres_execution_adapter;
+mod data_layer_postgres_execution_adapter;
 /// PostgreSQL repository bridge contracts for deterministic data-layer SQL descriptor projection.
-pub mod data_layer_postgres_repository_bridge;
+mod data_layer_postgres_repository_bridge;
 /// PRD critical-scenario conformance contracts for shell-neutral validation (`62..71`).
 pub mod data_layer_prd_critical_scenario_conformance;
 /// Shell-neutral orchestration and shell/rust ratio-budget policy contracts.
@@ -108,12 +96,6 @@ pub mod discord_bridge;
 pub mod durable_guard_store;
 /// Escrow hold, release, refund, and dispute lifecycle contracts.
 pub mod escrow;
-/// Deprecated compatibility shim for fairness-policy contracts extracted to `kamn-runtime-guards`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_runtime_guards::fairness_policy::* directly; kamn_core::fairness_policy module shim will be removed in R61"
-)]
-pub mod fairness_policy;
 /// Governance proposal, voting, and execution lifecycle contracts.
 pub mod governance_workflow;
 /// Group sender-key distribution, rotation, and encryption integrity contracts.
@@ -127,18 +109,6 @@ pub mod key_lifecycle;
 /// Key compromise and recovery lifecycle contracts.
 pub mod key_recovery;
 pub mod kolme_runtime_commit;
-/// Deprecated compatibility shim for live-probe-matrix contracts extracted to `kamn-live-probe-matrix`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_live_probe_matrix::* directly; kamn_core::live_probe_matrix module shim will be removed in R61"
-)]
-pub mod live_probe_matrix;
-/// Deprecated compatibility shim for delivery-guard contracts extracted to `kamn-runtime-guards`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_runtime_guards::message_delivery_guards::* directly; kamn_core::message_delivery_guards module shim will be removed in R61"
-)]
-pub mod message_delivery_guards;
 /// Canonical message envelope schema validation and normalization contracts.
 pub mod message_envelope;
 /// Message lifecycle models, snapshot contracts, and proof-admission flow.
@@ -146,8 +116,8 @@ pub mod message_lifecycle;
 /// Message proof anchor submission contracts aligned to lifecycle transitions.
 pub mod message_proof_anchoring;
 /// State schema migration planning and validation contracts.
-pub mod migrations;
-pub mod namespaces;
+mod migrations;
+mod namespaces;
 /// Observability sampling, SLO projection, and report synthesis contracts.
 pub mod observability;
 /// Permissioned operator configuration actions and audit-log service contracts.
@@ -162,24 +132,12 @@ pub mod operator_dashboard_ui;
 pub mod p2p_transport;
 /// Performance target thresholds and benchmark outcome classification contracts.
 pub mod performance_targets;
-/// Deprecated compatibility shim for quota-policy contracts extracted to `kamn-runtime-guards`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_runtime_guards::quota_policy::* directly; kamn_core::quota_policy module shim will be removed in R61"
-)]
-pub mod quota_policy;
 /// Redaction request approval, audit-event, and visibility compliance contracts.
 pub mod redaction_compliance;
 /// Reputation-signal weighting and candidate-ranking contracts for routing.
 pub mod reputation_signals;
 /// Reputation state persistence, restore, and export contracts.
 pub mod reputation_state;
-/// Deprecated compatibility shim for retention-engine contracts extracted to `kamn-runtime-guards`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_runtime_guards::retention_engine::* directly; kamn_core::retention_engine module shim will be removed in R61"
-)]
-pub mod retention_engine;
 /// Runtime lifecycle, queue, quorum, watchdog, and recovery contracts.
 pub mod runtime;
 /// Service marketplace listing registration, search, and negotiation hooks.
@@ -189,12 +147,12 @@ pub mod signature_profile;
 /// Signer backend routing, secure-provider policy, and signature validation contracts.
 pub mod signer_backend;
 /// Deterministic triadic runtime smoke simulation contracts.
-pub mod smoke;
+mod smoke;
 /// Legacy file snapshot to sqlite migration parity-check contracts.
 pub mod snapshot_migration;
 /// Sqlite backend bootstrap/versioning and namespace-key-value persistence contracts.
-pub mod sqlite_store_backend;
-pub mod state;
+mod sqlite_store_backend;
+mod state;
 /// Task artifact registration, integrity checks, and lookup contracts.
 pub mod task_artifacts;
 pub mod task_lifecycle;
@@ -214,12 +172,6 @@ pub mod trust_score;
 pub mod upgrade_orchestration;
 /// Validator onboarding/offboarding, quorum-change, and rollback lifecycle contracts.
 pub mod validator_lifecycle;
-/// Deprecated compatibility shim for watchdog contracts extracted to `kamn-runtime-guards`.
-#[deprecated(
-    since = "0.1.0",
-    note = "use kamn_runtime_guards::watchdog::* directly; kamn_core::watchdog module shim will be removed in R61"
-)]
-pub mod watchdog;
 /// Zero-knowledge message-proof option evaluation, witness, and consensus contracts.
 pub mod zk_message_proofs;
 
@@ -643,8 +595,8 @@ pub use dependency_ci_smoke_policy::{
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
-    validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
-    DidDocument, DidDocumentError, DidService, DidVerificationMethod,
+    validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidKeyBindingError,
+    AgentDidMetadata, DidDocument, DidDocumentError, DidService, DidVerificationMethod,
     FederatedDidHandshakeDecision, FederatedDidHandshakeError, FederatedDidHandshakeEvaluator,
     FederatedDidHandshakeInput, FederatedDidTrustStore, InMemoryFederatedDidTrustStore, KamnDid,
     KamnDidError,

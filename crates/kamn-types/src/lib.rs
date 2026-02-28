@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 //! Shared canonical type surface for cross-crate KAMN domain identifiers.
 
-pub use kamn_core::did::AgentDidKeyBindingError;
+pub use kamn_core::AgentDidKeyBindingError;
 pub use kamn_core::{
     AgentDid, AgentDidError, AgentDidMetadata, DidDocument, DidService, DidVerificationMethod,
     KamnDid, KamnDidError,
