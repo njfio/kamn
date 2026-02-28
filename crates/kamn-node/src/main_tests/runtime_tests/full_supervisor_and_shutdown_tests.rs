@@ -366,6 +366,9 @@ fn regression_full_supervisor_stop_contract_rejects_unknown_completion_reason() 
 
 #[test]
 fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
+    let _lock = lock_signer_env_guard();
+    let _fallback_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
     let reason = classify_full_supervisor_stop_contract_violation(
         "graceful-shutdown:signal@2;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
         "not-signaled",
@@ -408,6 +411,116 @@ fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
     assert!(
         !crate::should_use_os_signal_shutdown(RuntimeMode::api(), true, &[]),
         "api runtime should not enable daemon/full os-signal shutdown path"
+    );
+
+    assert!(
+        crate::select_runtime_transport_profile_for_runtime_mode(RuntimeMode::full(), true)
+            .is_some(),
+        "full runtime with gossip enabled must resolve a live transport profile"
+    );
+    assert!(
+        crate::select_runtime_transport_profile_for_runtime_mode(RuntimeMode::full(), false)
+            .is_none(),
+        "full runtime with gossip disabled should not resolve transport profile"
+    );
+    assert_eq!(
+        crate::classify_production_transport_profile_violation(RuntimeMode::full(), false, &[]),
+        Some("runtime_transport_profile_gossip_disabled_for_production")
+    );
+    assert_eq!(
+        crate::classify_production_transport_profile_violation(
+            RuntimeMode::full(),
+            true,
+            &[String::from("p2p-transport-profile:in-memory-deterministic")],
+        ),
+        Some("runtime_transport_profile_in_memory_fallback_forbidden")
+    );
+    assert_eq!(
+        crate::classify_production_transport_profile_violation(
+            RuntimeMode::full(),
+            true,
+            &[
+                String::from("p2p-transport-profile:libp2p-live"),
+                String::from("p2p-live-libp2p-provider"),
+                String::from("p2p-live-libp2p-provider:native"),
+            ],
+        ),
+        None,
+        "complete live-profile marker set should satisfy production transport profile policy"
+    );
+
+    crate::validate_full_supervisor_stop_contract(
+        "graceful-shutdown:signal@2;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
+        "completed",
+        "snapshot-flushed",
+    )
+    .expect("valid graceful shutdown contract should pass");
+    crate::validate_shutdown_checkpoint_reconciliation(
+        "graceful-shutdown:signal@2;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
+        "daemon_shutdown_signal",
+        0,
+        0,
+        0,
+    )
+    .expect("graceful shutdown checkpoint reconciliation should pass for zero failure counters");
+
+    let _local_signer_override_true = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING",
+        Some("true"),
+    );
+    assert!(
+        crate::resolve_kolme_live_allow_local_signer_testing_override()
+            .expect("bool parser should accept true"),
+        "allow-local-signer-testing env should parse true deterministically"
+    );
+    drop(_local_signer_override_true);
+    let _local_signer_override_false = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING",
+        Some("false"),
+    );
+    assert!(
+        !crate::resolve_kolme_live_allow_local_signer_testing_override()
+            .expect("bool parser should accept false"),
+        "allow-local-signer-testing env should parse false deterministically"
+    );
+    drop(_local_signer_override_false);
+    let _local_signer_override_invalid = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING",
+        Some("invalid"),
+    );
+    let local_override_error = crate::resolve_kolme_live_allow_local_signer_testing_override()
+        .expect_err("invalid local signer override flag must fail closed");
+    assert!(
+        matches!(local_override_error, ConfigError::RuntimeKolmeLive(message) if message.contains("legacy_local_signer_path_override_invalid")),
+        "invalid local signer override flag must preserve deterministic reason marker"
+    );
+
+    let signer_contract_error =
+        crate::enforce_kolme_live_signer_contract_policy(false, false, false)
+            .expect_err("kolme-live runtime must require strict signer contracts unless explicitly overridden");
+    assert!(
+        matches!(signer_contract_error, ConfigError::RuntimeKolmeLive(message) if message.contains("legacy_local_signer_path_forbidden")),
+        "missing strict signer contract enforcement should preserve deterministic reason code"
+    );
+    assert_eq!(
+        crate::classify_kolme_live_signer_key_source_policy_violation(
+            true,
+            Some("env-local"),
+            false,
+            false,
+        ),
+        Some("production_signer_key_source_env_local_forbidden")
+    );
+    let signer_key_source_error = crate::enforce_kolme_live_signer_key_source_policy(
+        true,
+        Some("env-local"),
+        false,
+        false,
+    )
+    .expect_err("strict signer policy should reject env-local key source without explicit override");
+    assert!(
+        matches!(signer_key_source_error, ConfigError::RuntimeKolmeLive(message) if message.contains("production_signer_key_source_env_local_forbidden")),
+        "env-local signer key-source rejection should preserve deterministic reason code"
     );
 }
 

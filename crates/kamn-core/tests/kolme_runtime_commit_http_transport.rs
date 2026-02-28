@@ -1015,6 +1015,103 @@ fn functional_http_transport_includes_authorization_header_when_configured() {
 
 #[test]
 fn regression_http_transport_maps_401_to_authorization_unavailable_error() {
+    assert!(
+        matches!(
+            KolmeRuntimeCommitHttpTransport::new(0),
+            Err(kamn_core::KolmeRuntimeCommitError::InvalidRequest {
+                field: "transport_timeout_seconds",
+                reason: "must be positive",
+            })
+        ),
+        "timeout=0 must be rejected before transport construction"
+    );
+    assert!(
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(1, "Bearer integration-token")
+            .is_ok(),
+        "well-formed authorization header should be accepted"
+    );
+    assert!(
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(
+            1,
+            "Bearer integration-token\r\nX-Injected-Header: true",
+        )
+        .is_err(),
+        "authorization header parser must reject CRLF injection attempts"
+    );
+
+    let mut block_lookup_transport =
+        KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    assert_eq!(
+        block_lookup_transport.fetch_block_by_height("http://127.0.0.1:3030", "/block/{height}", 0),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "block height must be positive".to_owned(),
+        }),
+        "block fallback lookups must fail closed for zero height"
+    );
+
+    let nonce_unauthorized_base_url = spawn_single_request_server(
+        "{\"error\":\"unauthorized\"}".to_owned(),
+        "HTTP/1.1 401 Unauthorized",
+        |_| {},
+    );
+    let nonce_request =
+        KolmeApiNextNonceRequest::new("pub:key/401").expect("nonce request should build");
+    let mut nonce_transport =
+        KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    assert_eq!(
+        nonce_transport.fetch_next_nonce(
+            nonce_unauthorized_base_url.as_str(),
+            "/get-next-nonce",
+            &nonce_request,
+        ),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "http response status indicates authorization failure: 401".to_owned(),
+        }),
+        "nonce fetch should map 401 authorization failures deterministically"
+    );
+
+    let idempotency_empty_transport =
+        KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut idempotency_empty_provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:3030",
+        "/broadcast/runtime-commit",
+        idempotency_empty_transport,
+    )
+    .expect("provider should build");
+    assert_eq!(
+        idempotency_empty_provider.submit_runtime_commit("operation_id=op-idempotency\n", ""),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "idempotency_key must not be empty".to_owned(),
+        }),
+        "submit path must fail closed when idempotency key is empty"
+    );
+
+    let _tls_lock = tls_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut tls_server = spawn_https_single_request_server(
+        200,
+        "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:https-regression\nfinality=final\n",
+    );
+    let _tls_ca_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, None);
+    let mut tls_provider = KolmeRuntimeCommitLiveProvider::new(
+        tls_server.base_url.as_str(),
+        "/broadcast/runtime-commit",
+        KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build"),
+    )
+    .expect("provider should build");
+    let tls_error = tls_provider
+        .submit_runtime_commit(
+            "operation_id=op-https-regression\n",
+            "idempotency-key-https-regression",
+        )
+        .expect_err("https transport without trusted CA must fail closed");
+    assert!(
+        matches!(tls_error, KolmeRuntimeCommitProviderError::Unavailable { reason } if reason.contains("tls")),
+        "https transport certificate failures should map to unavailable with tls classifier"
+    );
+    tls_server.wait_for_exit();
+
     let base_url = spawn_single_request_server(
         "{\"error\":\"unauthorized\"}".to_owned(),
         "HTTP/1.1 401 Unauthorized",

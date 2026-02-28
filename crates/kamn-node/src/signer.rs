@@ -523,6 +523,18 @@ mod tests {
 
     #[test]
     fn unit_signer_private_key_parse_zeroizes_hex_buffer_on_success() {
+        let _lock = lock_signer_env_guard();
+        let _profile_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _primary_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_PRIVATE_KEY_HEX),
+        );
+        let _secondary_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY", None);
+        let _fallback_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
         let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
         let signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
             &mut private_key_hex,
@@ -534,6 +546,76 @@ mod tests {
             "private key hex buffer must be scrubbed after successful signer construction"
         );
         assert_eq!(signer.private_key_env, TEST_PRIVATE_KEY_ENV);
+
+        let (resolved_private_key_hex, resolved_selection) =
+            super::read_kolme_live_signer_private_key_hex(Some("ops-primary"), Some("env-local"))
+                .expect("strict primary env-local selection should resolve private key env source");
+        assert_eq!(resolved_private_key_hex, TEST_PRIVATE_KEY_HEX);
+        assert_eq!(resolved_selection.profile, "ops-primary");
+        assert_eq!(
+            resolved_selection.private_key_env,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+        );
+
+        let (_resolved_adapter, adapter_selection) =
+            super::build_kolme_live_signer_adapter(Some("ops-primary"), Some("env-local"))
+                .expect("strict primary signer adapter build should succeed");
+        assert_eq!(adapter_selection.profile, "ops-primary");
+        assert_eq!(adapter_selection.key_source, "env-local");
+
+        let readiness =
+            super::enforce_kolme_live_signer_preflight(Some("ops-primary"), Some("env-local"))
+                .expect(
+                "strict primary preflight should pass with deterministic env-local secret source",
+            );
+        assert!(readiness.quorum_linked);
+        assert!(readiness.quorum_satisfied);
+
+        drop(_primary_guard);
+        let managed_selection = test_primary_managed_selection();
+        super::ensure_kolme_live_managed_external_private_key_env_unset(&managed_selection)
+            .expect("managed-external private key env should pass when unset");
+        let managed_marker = KolmeLiveManagedKeySourceProvenanceMarker {
+            profile: managed_selection.profile,
+            key_source: managed_selection.key_source,
+            key_reference_env: managed_selection.key_reference_env,
+            signer_public_key_hex:
+                "021111111111111111111111111111111111111111111111111111111111111111".to_owned(),
+        };
+        super::enforce_kolme_live_managed_key_source_provenance_marker_parity(
+            &managed_selection,
+            &managed_marker,
+        )
+        .expect("managed marker parity should succeed for matching profile/source/reference env");
+
+        let _managed_private_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_PRIVATE_KEY_HEX),
+        );
+        let managed_private_key_error =
+            super::ensure_kolme_live_managed_external_private_key_env_unset(&managed_selection)
+                .expect_err(
+                "managed-external signer mode must fail closed when raw private key env is present",
+            );
+        assert!(
+            matches!(managed_private_key_error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_raw_private_key_forbidden")),
+            "managed-external raw private-key env violation should preserve deterministic reason code"
+        );
+        drop(_managed_private_key_guard);
+
+        let _fallback_violation_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+            Some(TEST_PRIVATE_KEY_HEX_SECONDARY),
+        );
+        let fallback_error =
+            super::enforce_kolme_live_signer_preflight(Some("ops-primary"), Some("env-local"))
+                .expect_err(
+                "fallback signer secret path must fail closed when strict preflight is enforced",
+            );
+        assert!(
+            matches!(fallback_error, ConfigError::RuntimeKolmeLive(message) if message.contains("fallback_signer_secret_present_violation")),
+            "fallback signer secret path violation should preserve deterministic reason marker"
+        );
     }
 
     #[test]
