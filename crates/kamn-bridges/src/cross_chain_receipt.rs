@@ -256,4 +256,82 @@ mod tests {
             )
         );
     }
+
+    #[test]
+    fn rejects_empty_receipt_id() {
+        assert_eq!(
+            normalize_cross_chain_receipt(&CrossChainReceiptProof {
+                receipt_id: "   ".to_owned(),
+                ..proof(
+                    CrossChainReceiptNetwork::Near,
+                    "final",
+                    0,
+                    CrossChainReceiptStatus::Success,
+                )
+            }),
+            Err(CrossChainReceiptNormalizationError::EmptyField(
+                "receipt_id"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_empty_block_reference() {
+        assert_eq!(
+            normalize_cross_chain_receipt(&CrossChainReceiptProof {
+                block_reference: "".to_owned(),
+                ..proof(
+                    CrossChainReceiptNetwork::Near,
+                    "final",
+                    0,
+                    CrossChainReceiptStatus::Success,
+                )
+            }),
+            Err(CrossChainReceiptNormalizationError::EmptyField(
+                "block_reference"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_empty_finality_label() {
+        assert_eq!(
+            normalize_cross_chain_receipt(&CrossChainReceiptProof {
+                finality_label: " ".to_owned(),
+                ..proof(
+                    CrossChainReceiptNetwork::Near,
+                    "final",
+                    0,
+                    CrossChainReceiptStatus::Success,
+                )
+            }),
+            Err(CrossChainReceiptNormalizationError::EmptyField(
+                "finality_label"
+            ))
+        );
+    }
+
+    #[test]
+    fn ethereum_finality_label_is_normalized_for_case_and_whitespace() {
+        let normalized = normalize_cross_chain_receipt(&proof(
+            CrossChainReceiptNetwork::Ethereum,
+            "  SaFe ",
+            12,
+            CrossChainReceiptStatus::Success,
+        ))
+        .expect("ethereum normalized safe label should parse");
+        assert_eq!(normalized.finality, CrossChainReceiptFinality::Final);
+    }
+
+    #[test]
+    fn pending_status_remains_pending_even_when_label_is_final() {
+        let normalized = normalize_cross_chain_receipt(&proof(
+            CrossChainReceiptNetwork::Near,
+            "final",
+            0,
+            CrossChainReceiptStatus::Pending,
+        ))
+        .expect("pending status should normalize");
+        assert_eq!(normalized.finality, CrossChainReceiptFinality::Pending);
+    }
 }

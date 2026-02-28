@@ -87,7 +87,8 @@ fn decode_snapshot_journal_nibble(value: u8) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::{
-        append_snapshot_journal_record, decode_snapshot_journal_hex, parse_snapshot_journal_record,
+        append_snapshot_journal_record, decode_snapshot_journal_hex, default_snapshot_journal_path,
+        parse_snapshot_journal_record,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -121,5 +122,18 @@ mod tests {
     fn regression_issue_6205_pipe_delimited_record_is_rejected_after_json_migration() {
         let legacy = "entry|1|616263";
         assert!(parse_snapshot_journal_record(legacy).is_none());
+    }
+
+    #[test]
+    fn default_snapshot_journal_path_appends_journal_suffix() {
+        let path = PathBuf::from("/tmp/snapshot-state.json");
+        let journal = default_snapshot_journal_path(&path);
+        assert_eq!(journal, PathBuf::from("/tmp/snapshot-state.json.journal"));
+    }
+
+    #[test]
+    fn decode_snapshot_journal_hex_rejects_odd_length_and_invalid_nibbles() {
+        assert!(decode_snapshot_journal_hex("abc").is_none());
+        assert!(decode_snapshot_journal_hex("gg").is_none());
     }
 }
