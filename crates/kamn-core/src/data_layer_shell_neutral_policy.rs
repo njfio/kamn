@@ -5,21 +5,85 @@
 
 use crate::DataLayerPrdCriticalScenarioConformanceReport;
 
-/// Stable reason marker when shell-neutral policy is fully verified.
-pub const DATA_LAYER_SHELL_NEUTRAL_POLICY_VERIFIED_REASON_CODE: &str =
-    "shell_neutral_policy_verified";
-/// Stable reason marker when orchestration evidence contains shell-mode violations.
-pub const DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON_CODE: &str =
+const SHELL_NEUTRAL_POLICY_VERIFIED_REASON: &str = "shell_neutral_policy_verified";
+const SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON: &str =
     "shell_neutral_policy_block_orchestration_violation";
-/// Stable reason marker when shell LOC delta is positive.
-pub const DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON_CODE: &str =
+const SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON: &str =
     "shell_neutral_policy_block_positive_shell_delta";
-/// Stable reason marker when shell/rust ratio exceeds fail threshold.
-pub const DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON_CODE: &str =
+const SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON: &str =
     "shell_neutral_policy_block_ratio_fail_threshold";
-/// Stable reason marker when shell/rust ratio exceeds warn threshold but not fail threshold.
-pub const DATA_LAYER_SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON_CODE: &str =
-    "shell_neutral_policy_warn_ratio_threshold";
+const SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON: &str = "shell_neutral_policy_warn_ratio_threshold";
+
+/// Canonical reason-code vocabulary for shell-neutral policy decisions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerShellNeutralPolicyReasonCode {
+    /// Policy is fully verified.
+    Verified,
+    /// Orchestration evidence includes shell-mode violations.
+    BlockOrchestrationViolation,
+    /// Shell LOC delta is positive.
+    BlockPositiveShellDelta,
+    /// Shell/rust ratio exceeds fail threshold.
+    BlockRatioFailThreshold,
+    /// Shell/rust ratio exceeds warn threshold but not fail threshold.
+    WarnRatioThreshold,
+}
+
+impl DataLayerShellNeutralPolicyReasonCode {
+    /// Returns canonical reason-code marker consumed at wire/telemetry boundaries.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Verified => SHELL_NEUTRAL_POLICY_VERIFIED_REASON,
+            Self::BlockOrchestrationViolation => SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON,
+            Self::BlockPositiveShellDelta => SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON,
+            Self::BlockRatioFailThreshold => SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON,
+            Self::WarnRatioThreshold => SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON,
+        }
+    }
+}
+
+/// Fail-closed parsing errors for shell-neutral reason-code markers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerShellNeutralPolicyReasonCodeParseError {
+    /// Marker is unknown and cannot be mapped to a typed reason.
+    UnknownReasonCode(String),
+}
+
+impl std::fmt::Display for DataLayerShellNeutralPolicyReasonCodeParseError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownReasonCode(value) => {
+                write!(
+                    formatter,
+                    "unknown shell-neutral policy reason code: {value}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for DataLayerShellNeutralPolicyReasonCodeParseError {}
+
+impl std::str::FromStr for DataLayerShellNeutralPolicyReasonCode {
+    type Err = DataLayerShellNeutralPolicyReasonCodeParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            SHELL_NEUTRAL_POLICY_VERIFIED_REASON => Ok(Self::Verified),
+            SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON => {
+                Ok(Self::BlockOrchestrationViolation)
+            }
+            SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON => Ok(Self::BlockPositiveShellDelta),
+            SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON => Ok(Self::BlockRatioFailThreshold),
+            SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON => Ok(Self::WarnRatioThreshold),
+            _ => Err(
+                DataLayerShellNeutralPolicyReasonCodeParseError::UnknownReasonCode(
+                    value.to_owned(),
+                ),
+            ),
+        }
+    }
+}
 
 /// Decision output for shell-neutral policy evaluation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,8 +118,8 @@ pub struct DataLayerShellNeutralPolicyInput {
 pub struct DataLayerShellNeutralPolicyReport {
     /// Final policy decision.
     pub decision: DataLayerShellNeutralPolicyDecision,
-    /// Stable reason markers for the decision.
-    pub reason_codes: Vec<&'static str>,
+    /// Stable typed reason markers for the decision.
+    pub reason_codes: Vec<DataLayerShellNeutralPolicyReasonCode>,
     /// Echoed shell LOC delta marker.
     pub shell_loc_delta_actual: i32,
     /// Echoed rust LOC delta marker.
@@ -92,6 +156,16 @@ impl std::fmt::Display for DataLayerShellNeutralPolicyError {
 
 impl std::error::Error for DataLayerShellNeutralPolicyError {}
 
+impl DataLayerShellNeutralPolicyReport {
+    /// Returns canonical reason-code markers for wire/telemetry compatibility.
+    pub fn reason_code_strings(&self) -> Vec<&'static str> {
+        self.reason_codes
+            .iter()
+            .map(|reason| reason.as_str())
+            .collect()
+    }
+}
+
 /// Evaluates shell-neutral orchestration and ratio-budget policy compliance.
 pub fn data_layer_evaluate_shell_neutral_policy(
     input: DataLayerShellNeutralPolicyInput,
@@ -113,13 +187,13 @@ pub fn data_layer_evaluate_shell_neutral_policy(
         .shell_policy_violation_scenario_ids
         .is_empty()
     {
-        blocked_reasons.push(DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON_CODE);
+        blocked_reasons.push(DataLayerShellNeutralPolicyReasonCode::BlockOrchestrationViolation);
     }
     if input.shell_loc_delta_actual > 0 {
-        blocked_reasons.push(DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON_CODE);
+        blocked_reasons.push(DataLayerShellNeutralPolicyReasonCode::BlockPositiveShellDelta);
     }
     if input.current_shell_to_rust_ratio > input.fail_shell_to_rust_ratio_max {
-        blocked_reasons.push(DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON_CODE);
+        blocked_reasons.push(DataLayerShellNeutralPolicyReasonCode::BlockRatioFailThreshold);
     }
 
     let (decision, reason_codes) = if !blocked_reasons.is_empty() {
@@ -130,12 +204,12 @@ pub fn data_layer_evaluate_shell_neutral_policy(
     } else if input.current_shell_to_rust_ratio > input.warn_shell_to_rust_ratio_max {
         (
             DataLayerShellNeutralPolicyDecision::Warning,
-            vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON_CODE],
+            vec![DataLayerShellNeutralPolicyReasonCode::WarnRatioThreshold],
         )
     } else {
         (
             DataLayerShellNeutralPolicyDecision::Verified,
-            vec![DATA_LAYER_SHELL_NEUTRAL_POLICY_VERIFIED_REASON_CODE],
+            vec![DataLayerShellNeutralPolicyReasonCode::Verified],
         )
     };
 
