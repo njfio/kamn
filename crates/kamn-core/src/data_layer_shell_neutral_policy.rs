@@ -53,7 +53,10 @@ impl std::fmt::Display for DataLayerShellNeutralPolicyReasonCodeParseError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnknownReasonCode(value) => {
-                write!(formatter, "unknown shell-neutral policy reason code: {value}")
+                write!(
+                    formatter,
+                    "unknown shell-neutral policy reason code: {value}"
+                )
             }
         }
     }
@@ -73,9 +76,11 @@ impl std::str::FromStr for DataLayerShellNeutralPolicyReasonCode {
             SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON => Ok(Self::BlockPositiveShellDelta),
             SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON => Ok(Self::BlockRatioFailThreshold),
             SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON => Ok(Self::WarnRatioThreshold),
-            _ => Err(DataLayerShellNeutralPolicyReasonCodeParseError::UnknownReasonCode(
-                value.to_owned(),
-            )),
+            _ => Err(
+                DataLayerShellNeutralPolicyReasonCodeParseError::UnknownReasonCode(
+                    value.to_owned(),
+                ),
+            ),
         }
     }
 }

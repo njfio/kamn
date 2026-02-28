@@ -175,7 +175,7 @@ fn spec_c06_reason_code_as_str_matches_legacy_markers() {
 
 #[test]
 fn spec_c07_reason_code_parse_rejects_unknown_marker() {
-    let parsed = "shell_neutral_policy_unknown_marker"
-        .parse::<DataLayerShellNeutralPolicyReasonCode>();
+    let parsed =
+        "shell_neutral_policy_unknown_marker".parse::<DataLayerShellNeutralPolicyReasonCode>();
     assert!(parsed.is_err(), "unknown reason marker should fail closed");
 }
