@@ -317,7 +317,7 @@ python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py \
 ```bash
 bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-profile-preflight-summary.json
 python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-profile-preflight-policy.json
-bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json
+bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json
 # schema: kamn.kolme.local-fork-profile-preflight-summary.v1
 # schema: kamn.kolme.local-fork-profile-preflight-policy-report.v1
 ```
@@ -328,7 +328,7 @@ bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --out
 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-self-test-summary.json
 KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json
 python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json
-bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json
+bash scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json
 # schema: kamn.kolme.local-fork-self-test-summary.v1
 # schema: kamn.kolme.local-fork-self-test-policy-report.v1
 ```
@@ -787,7 +787,7 @@ bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.s
 # real-node strict runtime evidence checker remains local-only and excluded from ci-fast-gate.
 
 # bounded contract lane (spawns local mock API server + pinned checkout fixture)
-bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
+bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
 # schema: kamn.kolme.local-kamn-live-runtime-integration-summary.v1
 # local-only CI boundary marker: ci_fast_gate_eligible=false (contracts.ci_fast_gate_scope=local-only)
 # composite gate marker bundle:
@@ -1177,7 +1177,7 @@ bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json
 python3 scripts/kolme/check_local_bootstrap_health_policy.py --report-file /tmp/kolme-local-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-bootstrap-policy.json
 
 # bounded contract lane (dry-run + policy)
-bash scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json
+bash scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json
 # schema: kamn.kolme.local-bootstrap-policy-report.v1
 
 # local-only heavy end-to-end lane plan (no command execution)
@@ -1193,7 +1193,7 @@ bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /t
 python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json
 
 # bounded contract lane (dry-run + policy)
-bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json
+bash scripts/kolme/test_run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json
 # schema: kamn.kolme.local-e2e-integration-policy-report.v1
 
 # command surface + artifact schema validation (no heavy execution)
@@ -1212,7 +1212,7 @@ python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-fil
 python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code local_heavy_validation_passed --output-json /tmp/kolme-local-heavy-validation-policy.json
 
 # bounded contract lane (dry-run + policy)
-bash scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json
+bash scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json
 # schema: kamn.kolme.local-heavy-validation-policy-report.v1
 ```
 
