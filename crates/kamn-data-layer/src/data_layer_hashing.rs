@@ -19,7 +19,7 @@ pub fn tagged_sha256(value: &str, algorithm_label: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::sha256_hex;
+    use super::{sha256_hex, tagged_sha256};
 
     #[test]
     fn regression_issue_5922_sha256_hex_matches_known_test_vectors() {
@@ -31,6 +31,15 @@ mod tests {
         assert_eq!(
             sha256_hex("abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn tagged_sha256_prefixes_algorithm_label_and_digest() {
+        let tagged = tagged_sha256("abc", "sha256");
+        assert_eq!(
+            tagged,
+            "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
     }
 }
