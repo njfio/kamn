@@ -263,6 +263,7 @@ fn regression_production_transport_policy_error_detail_includes_remediation_guid
 
 #[test]
 fn integration_runtime_full_uses_live_transport_profile_components_by_default() {
+    let api_bind_addr = reserve_runtime_test_loopback_addr();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -274,7 +275,7 @@ fn integration_runtime_full_uses_live_transport_profile_components_by_default() 
         "--daemon-tick-interval-ms".to_owned(),
         "5".to_owned(),
         "--api-bind".to_owned(),
-        "127.0.0.1:19091".to_owned(),
+        api_bind_addr,
     ])
     .expect("full args should parse");
 
@@ -332,4 +333,3 @@ fn performance_runtime_full_live_transport_profile_startup_stays_within_local_bu
         "full runtime live transport profile startup exceeded local budget"
     );
 }
-

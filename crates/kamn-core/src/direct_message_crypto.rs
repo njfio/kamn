@@ -55,6 +55,9 @@ mod tests {
         "4f9d2f73c51985dd8ef271d713fbcff2d41ce7b5df8a2f0a1f0f47f77f0a8f2e";
 
     fn with_key_agreement_seed<T>(seed: Option<&str>, test: impl FnOnce() -> T) -> T {
+        let _guard = crate::crypto_test_env_lock::key_agreement_seed_env_lock()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
         let previous = std::env::var(KEY_AGREEMENT_MASTER_SEED_ENV).ok();
         match seed {
             Some(value) => std::env::set_var(KEY_AGREEMENT_MASTER_SEED_ENV, value),
