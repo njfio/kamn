@@ -9,7 +9,11 @@
 pub mod agent_key_hierarchy;
 /// Agent-driven upgrade proposal, review, and execution workflow contracts.
 pub mod agent_upgrade_workflow;
-/// Anti-spam admission, rate-limit, and suspension policy contracts.
+/// Deprecated compatibility shim for anti-spam contracts extracted to `kamn-runtime-guards`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_runtime_guards::anti_spam::* directly; kamn_core::anti_spam module shim will be removed in R61"
+)]
 pub mod anti_spam;
 /// Audit export filters, bundles, and governance evidence contracts.
 pub mod audit_exports;
@@ -34,7 +38,11 @@ pub mod content_retrieval;
 pub mod content_storage;
 /// Cross-chain route validation, inbound normalization, and outbound quorum dispatch contracts.
 pub mod cross_chain_bridge;
-/// Cross-chain receipt proof normalization and finality mapping contracts.
+/// Deprecated compatibility shim for cross-chain receipt normalization extracted to `kamn-bridges`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_bridges::cross_chain_receipt::* directly; kamn_core::cross_chain_receipt module shim will be removed in R61"
+)]
 pub mod cross_chain_receipt;
 /// Cross-store replay consistency checker and deterministic divergence taxonomy contracts.
 pub mod cross_store_replay_consistency;
@@ -100,7 +108,11 @@ pub mod discord_bridge;
 pub mod durable_guard_store;
 /// Escrow hold, release, refund, and dispute lifecycle contracts.
 pub mod escrow;
-/// Fairness/starvation policy contracts for deterministic overload-governance checks.
+/// Deprecated compatibility shim for fairness-policy contracts extracted to `kamn-runtime-guards`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_runtime_guards::fairness_policy::* directly; kamn_core::fairness_policy module shim will be removed in R61"
+)]
 pub mod fairness_policy;
 /// Governance proposal, voting, and execution lifecycle contracts.
 pub mod governance_workflow;
@@ -115,9 +127,17 @@ pub mod key_lifecycle;
 /// Key compromise and recovery lifecycle contracts.
 pub mod key_recovery;
 pub mod kolme_runtime_commit;
-/// Live probe matrix contracts for mode/scenario outcome validation and deterministic aggregation.
+/// Deprecated compatibility shim for live-probe-matrix contracts extracted to `kamn-live-probe-matrix`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_live_probe_matrix::* directly; kamn_core::live_probe_matrix module shim will be removed in R61"
+)]
 pub mod live_probe_matrix;
-/// Message delivery replay, nonce, and acceptance window guardrail contracts.
+/// Deprecated compatibility shim for delivery-guard contracts extracted to `kamn-runtime-guards`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_runtime_guards::message_delivery_guards::* directly; kamn_core::message_delivery_guards module shim will be removed in R61"
+)]
 pub mod message_delivery_guards;
 /// Canonical message envelope schema validation and normalization contracts.
 pub mod message_envelope;
@@ -142,7 +162,11 @@ pub mod operator_dashboard_ui;
 pub mod p2p_transport;
 /// Performance target thresholds and benchmark outcome classification contracts.
 pub mod performance_targets;
-/// Per-scope quota policy evaluation and deterministic fail-closed taxonomy contracts.
+/// Deprecated compatibility shim for quota-policy contracts extracted to `kamn-runtime-guards`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_runtime_guards::quota_policy::* directly; kamn_core::quota_policy module shim will be removed in R61"
+)]
 pub mod quota_policy;
 /// Redaction request approval, audit-event, and visibility compliance contracts.
 pub mod redaction_compliance;
@@ -150,7 +174,11 @@ pub mod redaction_compliance;
 pub mod reputation_signals;
 /// Reputation state persistence, restore, and export contracts.
 pub mod reputation_state;
-/// Retention policy evaluation, tombstone lifecycle, and purge guard contracts.
+/// Deprecated compatibility shim for retention-engine contracts extracted to `kamn-runtime-guards`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_runtime_guards::retention_engine::* directly; kamn_core::retention_engine module shim will be removed in R61"
+)]
 pub mod retention_engine;
 /// Runtime lifecycle, queue, quorum, watchdog, and recovery contracts.
 pub mod runtime;
@@ -186,7 +214,11 @@ pub mod trust_score;
 pub mod upgrade_orchestration;
 /// Validator onboarding/offboarding, quorum-change, and rollback lifecycle contracts.
 pub mod validator_lifecycle;
-/// Runtime watchdog anomaly taxonomy and report contracts.
+/// Deprecated compatibility shim for watchdog contracts extracted to `kamn-runtime-guards`.
+#[deprecated(
+    since = "0.1.0",
+    note = "use kamn_runtime_guards::watchdog::* directly; kamn_core::watchdog module shim will be removed in R61"
+)]
 pub mod watchdog;
 /// Zero-knowledge message-proof option evaluation, witness, and consensus contracts.
 pub mod zk_message_proofs;
@@ -198,10 +230,6 @@ pub use agent_upgrade_workflow::{
     AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind,
     AgentUpgradeProposalDraft, AgentUpgradeProposalRecord, AgentUpgradeProposalState,
     AgentUpgradeWorkflowConfig, AgentUpgradeWorkflowError,
-};
-pub use anti_spam::{
-    AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
-    AntiSpamTelemetry,
 };
 pub use audit_exports::{
     AuditDomain, AuditEventRecord, AuditExportBundle, AuditExportEngine, AuditExportError,
@@ -270,11 +298,6 @@ pub use cross_chain_bridge::{
     CrossChainBridgeConfig, CrossChainBridgeEngine, CrossChainBridgeError,
     CrossChainInboundRequest, CrossChainNetwork, CrossChainOutboundApproval,
     CrossChainOutboundDispatch,
-};
-pub use cross_chain_receipt::{
-    normalize_cross_chain_receipt, CrossChainReceiptFinality, CrossChainReceiptNetwork,
-    CrossChainReceiptNormalizationError, CrossChainReceiptProof, CrossChainReceiptStatus,
-    NormalizedCrossChainReceipt, ETHEREUM_FINAL_CONFIRMATION_THRESHOLD,
 };
 pub use cross_store_replay_consistency::{
     cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
@@ -653,11 +676,6 @@ pub use escrow::{
     EscrowLifecycle, EscrowLifecycleError, EscrowReceiptFinality, EscrowSettlementAction,
     EscrowSettlementOutcome, EscrowStatus, EscrowTransitionAction, EscrowTransitionEvidence,
 };
-pub use fairness_policy::{
-    evaluate_fairness_policy, fairness_policy_reason_codes_csv,
-    fairness_policy_reason_taxonomy_version, FairnessPolicyDecision, FairnessPolicyInput,
-    FairnessPolicyViolationReason,
-};
 pub use governance_workflow::{
     GovernanceExecutionRecord, GovernanceParameterChangeDraft, GovernanceProposalDraft,
     GovernanceProposalRecord, GovernanceProposalStatus, GovernanceVoteChoice, GovernanceVoteRecord,
@@ -676,6 +694,44 @@ pub use invariants::{
     catalog as invariant_catalog, classify_smoke_error, classify_transaction_guard_error,
     invariant_by_id, validate_catalog, InvariantCatalogError, InvariantDomain,
     InvariantFailureCode, InvariantSpec, InvariantViolation,
+};
+pub use kamn_bridges::cross_chain_receipt::{
+    normalize_cross_chain_receipt, CrossChainReceiptFinality, CrossChainReceiptNetwork,
+    CrossChainReceiptNormalizationError, CrossChainReceiptProof, CrossChainReceiptStatus,
+    NormalizedCrossChainReceipt, ETHEREUM_FINAL_CONFIRMATION_THRESHOLD,
+};
+pub use kamn_live_probe_matrix::{
+    LiveProbeMatrixEntry, LiveProbeMatrixError, LiveProbeMatrixMode, LiveProbeMatrixReport,
+    LiveProbeMatrixStatus,
+};
+pub use kamn_runtime_guards::anti_spam::{
+    AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
+    AntiSpamTelemetry,
+};
+pub use kamn_runtime_guards::fairness_policy::{
+    evaluate_fairness_policy, fairness_policy_reason_codes_csv,
+    fairness_policy_reason_taxonomy_version, FairnessPolicyDecision, FairnessPolicyInput,
+    FairnessPolicyViolationReason,
+};
+pub use kamn_runtime_guards::message_delivery_guards::{
+    DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
+    DeliveryValidationResult, FailedDeliveryNotice, MessageDeliveryGuards,
+    DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
+};
+pub use kamn_runtime_guards::quota_policy::{
+    evaluate_quota_policy, quota_policy_reason_codes_csv, quota_policy_reason_taxonomy_version,
+    QuotaPolicyDecision, QuotaPolicyInput, QuotaPolicyViolationReason,
+};
+pub use kamn_runtime_guards::retention_engine::{
+    evaluate_retention_policy, retention_policy_reason_codes_csv,
+    retention_policy_reason_taxonomy_version, RetentionClass, RetentionDomain,
+    RetentionEnginePolicy, RetentionEvaluation, RetentionPolicyCheckerInput,
+    RetentionPolicyDecision, RetentionPolicyEngine, RetentionPolicyError,
+    RetentionPolicyViolationReason, RetentionRecord, RetentionStatus,
+};
+pub use kamn_runtime_guards::watchdog::{
+    WatchdogAlert, WatchdogAlertKind, WatchdogConfig, WatchdogError, WatchdogNode,
+    WatchdogObservation, WatchdogSeverity, WatchdogSnapshot,
 };
 pub use key_lifecycle::{
     KeyLifecycle, KeyLifecycleAuditError, KeyLifecycleAuditRecord, KeyLifecycleError,
@@ -698,15 +754,6 @@ pub use kolme_runtime_commit::{
     KolmeRuntimeCommitSignedBroadcastEnvelope, KolmeRuntimeCommitTransportErrorKind,
     KolmeRuntimeCommitWebsocketConnector, RuntimeCommitFinalityProjection,
     RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
-};
-pub use live_probe_matrix::{
-    LiveProbeMatrixEntry, LiveProbeMatrixError, LiveProbeMatrixMode, LiveProbeMatrixReport,
-    LiveProbeMatrixStatus,
-};
-pub use message_delivery_guards::{
-    DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
-    DeliveryValidationResult, FailedDeliveryNotice, MessageDeliveryGuards,
-    DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use message_envelope::{
     AttachmentRef, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata,
@@ -778,10 +825,6 @@ pub use performance_targets::{
     PerformanceMetric, PerformanceMetricResult, PerformanceRunError, PerformanceRunReport,
     PerformanceSample, PrdPerformanceTargets,
 };
-pub use quota_policy::{
-    evaluate_quota_policy, quota_policy_reason_codes_csv, quota_policy_reason_taxonomy_version,
-    QuotaPolicyDecision, QuotaPolicyInput, QuotaPolicyViolationReason,
-};
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
     RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
@@ -794,13 +837,6 @@ pub use reputation_state::{
     agent_state_key, AgentReputation, CapabilityVerification, DisputeRecord, Endorsement,
     ReputationError, ReputationPersistedRecord, ReputationStore, ReputationTaskOutcome,
     ScoreSnapshot, DEFAULT_TRUST_SCORE, MAX_TRUST_SCORE,
-};
-pub use retention_engine::{
-    evaluate_retention_policy, retention_policy_reason_codes_csv,
-    retention_policy_reason_taxonomy_version, RetentionClass, RetentionDomain,
-    RetentionEnginePolicy, RetentionEvaluation, RetentionPolicyCheckerInput,
-    RetentionPolicyDecision, RetentionPolicyEngine, RetentionPolicyError,
-    RetentionPolicyViolationReason, RetentionRecord, RetentionStatus,
 };
 pub use runtime::{
     build_runtime_wiring, build_runtime_wiring_with_transport_profile, libp2p_feature_gate_name,
@@ -885,10 +921,6 @@ pub use upgrade_orchestration::{
 pub use validator_lifecycle::{
     ValidatorLifecycleError, ValidatorLifecycleManager, ValidatorSetSnapshot,
     ValidatorTransitionKind, ValidatorTransitionProof, ValidatorTransitionRecord,
-};
-pub use watchdog::{
-    WatchdogAlert, WatchdogAlertKind, WatchdogConfig, WatchdogError, WatchdogNode,
-    WatchdogObservation, WatchdogSeverity, WatchdogSnapshot,
 };
 pub use zk_message_proofs::{
     build_message_witness, evaluate_zk_option, phase4_baseline_options, recommend_phase4_plan,

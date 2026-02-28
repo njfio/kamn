@@ -37,6 +37,7 @@ diagram references.
 - `docs/architecture/adr-kamn-sdk-service-https-transport.md`
 - `docs/architecture/adr-001-production-message-crypto-primitives.md`
 - `docs/architecture/adr-002-runtime-guards-phase1-extraction.md`
+- `docs/architecture/adr-003-kamn-core-wave2-shim-retirement.md`
 - `docs/architecture/adr-cargo-audit-ci-gate.md`
 - `docs/architecture/adr-critical-path-assurance-gates.md`
 
