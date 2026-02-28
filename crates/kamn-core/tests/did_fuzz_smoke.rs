@@ -171,7 +171,7 @@ fn fuzz_smoke_did_error_corpus_covers_expected_rejection_classes() {
 #[test]
 fn fuzz_smoke_did_document_generation_lane_is_panic_free_and_deterministic() {
     for seed in 0_u64..256 {
-        let did = AgentDid::parse(&format!("kamn:did:agent:doc-{seed:03}"))
+        let did = AgentDid::parse(format!("kamn:did:agent:doc-{seed:03}"))
             .expect("generated did should always parse");
         let metadata = metadata_from_seed(seed);
         let public_key = if mutation_slot(seed, 4) == 0 {

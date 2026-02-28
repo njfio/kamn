@@ -13,7 +13,7 @@ fn spec_c05_envelope_construction_stable_signature_and_nonce() {
     )
     .expect("envelope");
 
-    assert_eq!(envelope.from, "kamn:did:agent:alice");
+    assert_eq!(envelope.from, identity.did().as_str());
     assert_eq!(envelope.to, "kamn:did:agent:bob");
     assert_eq!(envelope.nonce, 9);
     assert_eq!(envelope.state_hash, "state-hash-123");

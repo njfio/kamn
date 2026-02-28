@@ -91,7 +91,7 @@ pub fn build_and_sign_envelope(
     nonce: u64,
     body: &str,
 ) -> Result<CanonicalMessageEnvelope, AgentLibError> {
-    let to_did = AgentDid::parse(to.to_owned())?;
+    let to_did = AgentDid::parse(to)?;
     let signature = service_signature_for_state_hash_with_private_key(
         identity.did(),
         nonce,
