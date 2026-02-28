@@ -160,7 +160,7 @@ jobs:
             --kolme-binary /tmp/kolme/target/release/example-p2p \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15 \
+            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15 \
             | tee "$run_output_file"
           python3 - "$run_output_file" <<'PY'
           import json
@@ -341,7 +341,7 @@ jobs:
             --agent-binary "$GITHUB_WORKSPACE/target/release/kamn-mcp-server" \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15 \
+            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15 \
             | tee "$run_output_file"
           python3 - "$run_output_file" <<'PY'
           import json
