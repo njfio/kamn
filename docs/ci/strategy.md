@@ -4201,11 +4201,16 @@ Required demo lane command contract:
 ## E2E Live Workflow Contract
 - `cargo test -p kamn-core --test e2e_live_workflow_lane`
 - `e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1`
-- `e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing`
+- `e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_pr_scope_missing,sdk_direct_pr_smoke_selector_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,mcp_agent_job_missing,mcp_agent_pr_scope_missing,mcp_agent_pr_smoke_selector_missing,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,pr_skip_reason_markers_missing,ci_strategy_markers_missing`
 - `e2e_live_workflow_contract_status=verified|violation`
+- `PR required lanes: e2e-sdk-direct, e2e-mcp-agent, e2e-cli-smoke`
+- `e2e_sdk_direct_pr_skip_reason_code=none`
+- `e2e_mcp_agent_pr_skip_reason_code=none`
+- `e2e_cli_smoke_pr_skip_reason_code=none`
 - PR smoke selector contract:
   - `pull_request` trigger is enabled for `.github/workflows/e2e-live.yml`.
-  - `e2e-sdk-direct` live matrix remains `--scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15` (`S-11` remains quarantined from the blocking lane).
+  - `e2e-sdk-direct` runs on PR with smoke selector `SDK_DIRECT_PR_SMOKE_SCENARIOS="S-01,S-02"` and keeps the non-PR full matrix (`S-11` remains quarantined from the blocking lane).
+  - `e2e-mcp-agent` runs in PR-safe substitute mode (`MCP_AGENT_PR_SAFE_SUBSTITUTE="kamn-mcp-server-contract-smoke"`) and keeps non-PR live matrix execution for schedule/workflow_dispatch.
   - `e2e-cli-smoke` remains bounded to `--scenarios S-01,S-02`.
   - flaky handling is bounded via `bash scripts/ci/run_with_retry.sh --label e2e-cli-smoke-live --max-attempts 2`.
 - `Regression: #5849`
