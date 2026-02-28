@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 const REASON_TAXONOMY_VERSION: &str = "kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1";
-const REASON_CODES_CSV: &str = "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing";
+const REASON_CODES_CSV: &str = "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_pr_scope_missing,sdk_direct_pr_smoke_selector_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,mcp_agent_job_missing,mcp_agent_pr_scope_missing,mcp_agent_pr_smoke_selector_missing,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,pr_skip_reason_markers_missing,ci_strategy_markers_missing";
 const REASON_CODES_ORDER: &[&str] = &[
     "workflow_file_missing",
     "strategy_doc_missing",
@@ -9,9 +9,14 @@ const REASON_CODES_ORDER: &[&str] = &[
     "push_main_branch_scope_missing",
     "pull_request_trigger_missing",
     "sdk_direct_job_missing",
+    "sdk_direct_pr_scope_missing",
+    "sdk_direct_pr_smoke_selector_missing",
     "sdk_direct_live_toggle_missing",
     "sdk_direct_external_execution_flag_missing",
     "sdk_direct_scenarios_not_full_matrix",
+    "mcp_agent_job_missing",
+    "mcp_agent_pr_scope_missing",
+    "mcp_agent_pr_smoke_selector_missing",
     "kolme_bootstrap_step_missing",
     "kamn_runtime_bootstrap_missing",
     "service_health_wait_marker_missing",
@@ -19,18 +24,23 @@ const REASON_CODES_ORDER: &[&str] = &[
     "cli_smoke_pr_scope_missing",
     "cli_smoke_scenarios_not_smoke_slice",
     "cli_smoke_retry_wrapper_missing",
+    "pr_skip_reason_markers_missing",
     "ci_strategy_markers_missing",
 ];
 // S-11 is intentionally excluded from the blocking live lane while it is stabilized.
-const SDK_DIRECT_REQUIRED_SCENARIOS: &str =
-    "--scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15";
+const SDK_DIRECT_FULL_SCENARIOS_MARKER: &str =
+    "SDK_DIRECT_FULL_SCENARIOS=\"S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15\"";
 const CLI_SMOKE_SCENARIOS: &str = "--scenarios S-01,S-02";
 const STRATEGY_REQUIRED_MARKERS: &[&str] = &[
     "## E2E Live Workflow Contract",
     "cargo test -p kamn-core --test e2e_live_workflow_lane",
     "e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1",
-    "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing",
+    "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_pr_scope_missing,sdk_direct_pr_smoke_selector_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,mcp_agent_job_missing,mcp_agent_pr_scope_missing,mcp_agent_pr_smoke_selector_missing,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,pr_skip_reason_markers_missing,ci_strategy_markers_missing",
     "e2e_live_workflow_contract_status=verified|violation",
+    "PR required lanes: e2e-sdk-direct, e2e-mcp-agent, e2e-cli-smoke",
+    "e2e_sdk_direct_pr_skip_reason_code=none",
+    "e2e_mcp_agent_pr_skip_reason_code=none",
+    "e2e_cli_smoke_pr_skip_reason_code=none",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -85,6 +95,14 @@ fn cli_smoke_section(workflow: &str) -> Option<&str> {
     Some(&workflow[start..])
 }
 
+fn mcp_agent_section(workflow: &str) -> Option<&str> {
+    let start = workflow.find("  e2e-mcp-agent:")?;
+    let cli_start = workflow[start..]
+        .find("  e2e-cli-smoke:")
+        .map(|idx| start + idx);
+    Some(&workflow[start..cli_start.unwrap_or(workflow.len())])
+}
+
 fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> ContractDecision {
     let mut raw_reasons = Vec::new();
 
@@ -126,6 +144,16 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
     };
 
     if let Some(sdk) = section {
+        if sdk.contains("if: github.event_name != 'pull_request'") {
+            add_reason(&mut raw_reasons, "sdk_direct_pr_scope_missing");
+        }
+
+        if !sdk.contains("SDK_DIRECT_PR_SMOKE_SCENARIOS=\"S-01,S-02\"")
+            || !sdk.contains("SDK_DIRECT_SCENARIOS=\"$SDK_DIRECT_PR_SMOKE_SCENARIOS\"")
+        {
+            add_reason(&mut raw_reasons, "sdk_direct_pr_smoke_selector_missing");
+        }
+
         if !sdk.contains("KAMN_E2E_SDK_DIRECT_LIVE: \"1\"") {
             add_reason(&mut raw_reasons, "sdk_direct_live_toggle_missing");
         }
@@ -137,7 +165,7 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
             );
         }
 
-        if !sdk.contains(SDK_DIRECT_REQUIRED_SCENARIOS) {
+        if !sdk.contains(SDK_DIRECT_FULL_SCENARIOS_MARKER) {
             add_reason(&mut raw_reasons, "sdk_direct_scenarios_not_full_matrix");
         }
 
@@ -162,6 +190,28 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
             || !sdk.contains("wait_for_http \"http://127.0.0.1:3000/healthz\"")
         {
             add_reason(&mut raw_reasons, "service_health_wait_marker_missing");
+        }
+    }
+
+    let mcp_section = if workflow_text.is_empty() {
+        None
+    } else {
+        let mcp = mcp_agent_section(workflow_text);
+        if mcp.is_none() {
+            add_reason(&mut raw_reasons, "mcp_agent_job_missing");
+        }
+        mcp
+    };
+
+    if let Some(mcp) = mcp_section {
+        if !mcp.contains("github.event_name == 'pull_request'") {
+            add_reason(&mut raw_reasons, "mcp_agent_pr_scope_missing");
+        }
+
+        if !mcp.contains("MCP_AGENT_PR_SMOKE_SCENARIOS=\"S-01,S-02\"")
+            || !mcp.contains("MCP_AGENT_SCENARIOS=\"$MCP_AGENT_PR_SMOKE_SCENARIOS\"")
+        {
+            add_reason(&mut raw_reasons, "mcp_agent_pr_smoke_selector_missing");
         }
     }
 
@@ -190,6 +240,18 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
         {
             add_reason(&mut raw_reasons, "cli_smoke_retry_wrapper_missing");
         }
+    }
+
+    let pr_skip_reason_markers = [
+        "e2e_sdk_direct_pr_skip_reason_code=none",
+        "e2e_mcp_agent_pr_skip_reason_code=none",
+        "e2e_cli_smoke_pr_skip_reason_code=none",
+    ];
+    if pr_skip_reason_markers
+        .iter()
+        .any(|marker| !workflow_text.contains(marker))
+    {
+        add_reason(&mut raw_reasons, "pr_skip_reason_markers_missing");
     }
 
     if !strategy_text.is_empty()
@@ -227,7 +289,7 @@ fn unit_e2e_live_workflow_lane_reason_taxonomy_markers_remain_deterministic() {
     );
     assert_eq!(
         REASON_CODES_CSV,
-        "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,ci_strategy_markers_missing"
+        "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,pull_request_trigger_missing,sdk_direct_job_missing,sdk_direct_pr_scope_missing,sdk_direct_pr_smoke_selector_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,mcp_agent_job_missing,mcp_agent_pr_scope_missing,mcp_agent_pr_smoke_selector_missing,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,cli_smoke_job_missing,cli_smoke_pr_scope_missing,cli_smoke_scenarios_not_smoke_slice,cli_smoke_retry_wrapper_missing,pr_skip_reason_markers_missing,ci_strategy_markers_missing"
     );
 }
 
@@ -324,8 +386,8 @@ fn regression_e2e_live_workflow_lane_rejects_truncated_scenario_matrix() {
     let strategy =
         read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
     let mutated = workflow.replacen(
-        SDK_DIRECT_REQUIRED_SCENARIOS,
-        "--scenarios S-01,S-02,S-03,S-04,S-05,S-06",
+        SDK_DIRECT_FULL_SCENARIOS_MARKER,
+        "SDK_DIRECT_FULL_SCENARIOS=\"S-01,S-02,S-03,S-04,S-05,S-06\"",
         1,
     );
     let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
@@ -354,6 +416,65 @@ fn regression_e2e_live_workflow_lane_rejects_missing_external_execution_flag() {
     assert_eq!(
         decision.reason_codes_value,
         "sdk_direct_external_execution_flag_missing"
+    );
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
+fn regression_e2e_live_workflow_lane_rejects_sdk_direct_pr_exclusion() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen(
+        "  e2e-sdk-direct:\n    name: E2E SDK-Direct\n    runs-on: ubuntu-latest\n",
+        "  e2e-sdk-direct:\n    name: E2E SDK-Direct\n    if: github.event_name != 'pull_request'\n    runs-on: ubuntu-latest\n",
+        1,
+    );
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(decision.reason_codes_value, "sdk_direct_pr_scope_missing");
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
+fn regression_e2e_live_workflow_lane_rejects_missing_mcp_pr_scope() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen(
+        "if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'",
+        "if: github.event_name == 'schedule'",
+        1,
+    );
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(decision.reason_codes_value, "mcp_agent_pr_scope_missing");
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
+fn regression_e2e_live_workflow_lane_rejects_missing_pr_skip_reason_markers() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen("echo \"e2e_cli_smoke_pr_skip_reason_code=none\"\n", "", 1);
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(
+        decision.reason_codes_value,
+        "pr_skip_reason_markers_missing"
     );
     assert_eq!(decision.contract_status, "violation");
 }

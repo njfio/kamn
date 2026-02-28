@@ -16,7 +16,6 @@ permissions:
 jobs:
   e2e-sdk-direct:
     name: E2E SDK-Direct
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -153,6 +152,22 @@ jobs:
           wait_for_port 127.0.0.1 3000
           wait_for_http "http://127.0.0.1:3000/healthz"
 
+          SDK_DIRECT_PR_SMOKE_SCENARIOS="S-01,S-02"
+          SDK_DIRECT_FULL_SCENARIOS="S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15"
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              SDK_DIRECT_SCENARIOS="$SDK_DIRECT_PR_SMOKE_SCENARIOS"
+              ;;
+            push|schedule|workflow_dispatch)
+              SDK_DIRECT_SCENARIOS="$SDK_DIRECT_FULL_SCENARIOS"
+              ;;
+            *)
+              echo "e2e_sdk_direct_pr_skip_reason_code=unsupported_event"
+              exit 1
+              ;;
+          esac
+          echo "e2e_sdk_direct_pr_skip_reason_code=none"
+
           run_output_file="/tmp/e2e-live-run-output.json"
           cargo run --quiet --release -p kamn-e2e-harness -- \
             run \
@@ -160,7 +175,7 @@ jobs:
             --kolme-binary /tmp/kolme/target/release/example-p2p \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15 \
+            --scenarios "$SDK_DIRECT_SCENARIOS" \
             | tee "$run_output_file"
           python3 - "$run_output_file" <<'PY'
           import json
@@ -209,7 +224,7 @@ jobs:
   e2e-mcp-agent:
     name: E2E MCP Agent
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
@@ -333,6 +348,22 @@ jobs:
           wait_for_port 127.0.0.1 3000
           wait_for_http "http://127.0.0.1:3000/healthz"
 
+          MCP_AGENT_PR_SMOKE_SCENARIOS="S-01,S-02"
+          MCP_AGENT_FULL_SCENARIOS="S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15"
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              MCP_AGENT_SCENARIOS="$MCP_AGENT_PR_SMOKE_SCENARIOS"
+              ;;
+            schedule|workflow_dispatch)
+              MCP_AGENT_SCENARIOS="$MCP_AGENT_FULL_SCENARIOS"
+              ;;
+            *)
+              echo "e2e_mcp_agent_pr_skip_reason_code=unsupported_event"
+              exit 1
+              ;;
+          esac
+          echo "e2e_mcp_agent_pr_skip_reason_code=none"
+
           run_output_file="/tmp/e2e-live-run-output.json"
           cargo run --quiet --release -p kamn-e2e-harness -- \
             run \
@@ -341,7 +372,7 @@ jobs:
             --agent-binary "$GITHUB_WORKSPACE/target/release/kamn-mcp-server" \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-12,S-13,S-14,S-15 \
+            --scenarios "$MCP_AGENT_SCENARIOS" \
             | tee "$run_output_file"
           python3 - "$run_output_file" <<'PY'
           import json
@@ -499,6 +530,8 @@ jobs:
 
           wait_for_port 127.0.0.1 3000
           wait_for_http "http://127.0.0.1:3000/healthz"
+
+          echo "e2e_cli_smoke_pr_skip_reason_code=none"
 
           run_output_file="/tmp/e2e-live-run-output.json"
           bash scripts/ci/run_with_retry.sh \
