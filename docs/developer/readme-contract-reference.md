@@ -13,6 +13,7 @@ KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordinati
 - `crates/kamn-sdk`: Rust SDK surface.
 - `scripts/`: deterministic validation lanes and CI helper tooling.
 - `docs/developer/script-surface-index.md`: canonical script inventory baseline with fail-closed marker contracts.
+- `docs/developer/script-surface-reduction-candidates.md`: canonical short-wrapper reduction candidate matrix with deterministic thresholds.
 - `fixtures/`: replay/contract fixtures used by fast and deep lanes.
 - `docs/foundation/`: implementation contracts mapped to PRD scope.
 
@@ -69,6 +70,9 @@ cargo test
 
 # Script-surface inventory contract (doc markers + filesystem parity)
 cargo test -p kamn-core --test script_surface_index_docs
+
+# Script-surface short-wrapper reduction candidate matrix contract
+cargo test -p kamn-core --test script_surface_reduction_candidates_docs
 
 # CI tool regression suite (fast/deep routing guards, script contracts)
 bash scripts/ci/test_ci_tools.sh
