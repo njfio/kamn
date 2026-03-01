@@ -154,7 +154,16 @@ run_slice() {
   if [ -n "$found_mutants" ] && [ "$found_mutants" -eq 0 ] && [ -z "$summary_line" ]; then
     parse_error=0
   else
-    eval "$(parse_summary_line "$summary_line")"
+    while IFS='=' read -r key value; do
+      case "$key" in
+        parse_error) parse_error="${value:-1}" ;;
+        tested) tested="${value:-0}" ;;
+        caught) caught="${value:-0}" ;;
+        missed) missed="${value:-0}" ;;
+        unviable) unviable="${value:-0}" ;;
+        timeout) timeout="${value:-0}" ;;
+      esac
+    done < <(parse_summary_line "$summary_line")
   fi
 
   local status="ok"

@@ -1,6 +1,7 @@
 {
-  "reason": "Temporary shell_line_total waiver while runbook-boundary contract hardening lands; remove after script-surface consolidation wave closes.",
-  "expires_on": "2026-03-31",
+  "reason": "Temporary shell_line_total waiver while shell-surface remediation issue #6261 removes eval usage and reduces shell LOC overage.",
+  "expires_on": "2026-07-31",
+  "mitigation_issue": "#6261",
   "allow_metrics": [
     "shell_line_total"
   ]

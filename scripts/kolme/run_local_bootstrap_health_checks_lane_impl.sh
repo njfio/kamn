@@ -110,7 +110,7 @@ for index in "${!CHECK_IDS[@]}"; do
     if [ "$already_failed" -eq 1 ]; then
       check_status="skipped"
     else
-      if eval "$check_command"; then
+      if bash -lc "$check_command"; then
         check_status="pass"
       else
         check_status="fail"
