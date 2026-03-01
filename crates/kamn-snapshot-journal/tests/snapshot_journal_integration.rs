@@ -8,7 +8,10 @@ fn integration_checked_parse_accepts_valid_record() {
     let payload_hex =
         parse_snapshot_journal_record_checked(line).expect("expected valid checked parse");
     assert_eq!(payload_hex, "616263");
-    assert_eq!(parse_snapshot_journal_record(line), Some("616263".to_owned()));
+    assert_eq!(
+        parse_snapshot_journal_record(line),
+        Some("616263".to_owned())
+    );
 }
 
 #[test]

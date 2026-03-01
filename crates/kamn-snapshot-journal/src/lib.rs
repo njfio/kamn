@@ -2,6 +2,7 @@
 //! Shared snapshot-journal helpers extracted from `kamn-core`.
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs::OpenOptions;
 use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
@@ -25,6 +26,20 @@ pub enum SnapshotJournalParseError {
     /// Record payload hex field was missing or empty.
     MissingPayloadHex,
 }
+
+impl fmt::Display for SnapshotJournalParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidJson => write!(f, "invalid snapshot-journal json record"),
+            Self::SchemaVersionMismatch => {
+                write!(f, "snapshot-journal schema version mismatch")
+            }
+            Self::MissingPayloadHex => write!(f, "snapshot-journal payload_hex is missing"),
+        }
+    }
+}
+
+impl std::error::Error for SnapshotJournalParseError {}
 
 /// Returns the deterministic `<snapshot>.journal` sidecar path.
 pub fn default_snapshot_journal_path(path: &Path) -> PathBuf {
