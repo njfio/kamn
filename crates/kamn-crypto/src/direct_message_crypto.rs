@@ -120,6 +120,16 @@ impl DirectMessageCryptoEngine {
         {
             return Err(DirectMessageCryptoError::AlgorithmMismatch);
         }
+        validate_key_ref_match(
+            "sender",
+            self.sender_key_ref.as_str(),
+            sealed.sender_key_ref.as_str(),
+        )?;
+        validate_key_ref_match(
+            "recipient",
+            self.recipient_key_ref.as_str(),
+            sealed.recipient_key_ref.as_str(),
+        )?;
         if sealed.nonce == 0 {
             return Err(DirectMessageCryptoError::InvalidNonce(sealed.nonce));
         }
@@ -178,6 +188,8 @@ pub enum DirectMessageCryptoError {
     EmptyKeyRef(&'static str),
     /// Key reference for role did not match expected shape.
     InvalidKeyRef(&'static str),
+    /// Ciphertext key reference does not match decrypt engine context.
+    KeyRefMismatch(&'static str),
     /// Plaintext payload was empty.
     EmptyPayload,
     /// Nonce value was invalid.
@@ -213,6 +225,7 @@ impl fmt::Display for DirectMessageCryptoError {
             Self::InvalidKeyRef(role) => {
                 write!(f, "{role} key reference must include #key-agreement")
             }
+            Self::KeyRefMismatch(role) => write!(f, "{role} key reference mismatch"),
             Self::EmptyPayload => write!(f, "plaintext payload must not be empty"),
             Self::InvalidNonce(value) => write!(f, "nonce must be positive: {value}"),
             Self::NonceReuse(value) => write!(f, "nonce reuse detected: {value}"),
@@ -232,6 +245,17 @@ fn validate_key_ref(role: &'static str, key_ref: &str) -> Result<(), DirectMessa
     }
     if !key_ref.contains("#key-agreement") {
         return Err(DirectMessageCryptoError::InvalidKeyRef(role));
+    }
+    Ok(())
+}
+
+fn validate_key_ref_match(
+    role: &'static str,
+    expected: &str,
+    actual: &str,
+) -> Result<(), DirectMessageCryptoError> {
+    if expected != actual {
+        return Err(DirectMessageCryptoError::KeyRefMismatch(role));
     }
     Ok(())
 }
@@ -622,6 +646,10 @@ mod tests {
         assert_eq!(
             DirectMessageCryptoError::InvalidKeyRef("sender").to_string(),
             "sender key reference must include #key-agreement"
+        );
+        assert_eq!(
+            DirectMessageCryptoError::KeyRefMismatch("recipient").to_string(),
+            "recipient key reference mismatch"
         );
     }
 
