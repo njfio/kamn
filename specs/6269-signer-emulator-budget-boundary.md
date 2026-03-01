@@ -40,7 +40,7 @@ Stabilize the signer emulator performance contract test by removing boundary-con
 - Invalid explicitly configured budget value fails loudly in test context (panic with field/value context), not silently by fallback.
 - Default budget selection remains explicit:
   - CI default: `600ms`
-  - local default: `250ms`
+  - local default: `300ms`
 
 ## Test plan
 - RED:
@@ -53,3 +53,6 @@ Stabilize the signer emulator performance contract test by removing boundary-con
   - Extract small helpers if needed to keep logic self-documenting.
 - INTEGRATION:
   - Run `make test` to validate end-to-end lane health.
+
+## Deviations
+- Local default budget was finalized at `300ms` (not `250ms`) after repeated profiling showed local runtimes up to ~`260ms` and one cold-run outlier above `270ms`.
