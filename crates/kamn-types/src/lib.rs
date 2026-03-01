@@ -1,6 +1,8 @@
 #![warn(missing_docs)]
 //! Shared canonical type surface for cross-crate KAMN domain identifiers.
 
+use std::fmt;
+
 pub use kamn_core::AgentDidKeyBindingError;
 pub use kamn_core::{
     AgentDid, AgentDidError, AgentDidMetadata, DidDocument, DidService, DidVerificationMethod,
@@ -17,6 +19,18 @@ pub enum SharedDidParseError {
     /// Underlying generic KAMN DID parse failure.
     Kamn(KamnDidError),
 }
+
+impl fmt::Display for SharedDidParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyInput => write!(f, "did input must not be empty"),
+            Self::Agent(error) => write!(f, "agent did parse failed: {error}"),
+            Self::Kamn(error) => write!(f, "kamn did parse failed: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for SharedDidParseError {}
 
 /// Parses agent DID inputs with canonical trim semantics.
 pub fn parse_agent_did_canonical(value: &str) -> Result<AgentDid, SharedDidParseError> {
