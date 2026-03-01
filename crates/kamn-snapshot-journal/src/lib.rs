@@ -2,6 +2,7 @@
 //! Shared snapshot-journal helpers extracted from `kamn-core`.
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs::OpenOptions;
 use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
@@ -14,6 +15,31 @@ struct SnapshotJournalRecord {
     schema_version: String,
     payload_hex: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Typed parse failures for snapshot-journal record decoding.
+pub enum SnapshotJournalParseError {
+    /// Input line was not valid JSON for snapshot-journal schema.
+    InvalidJson,
+    /// Record schema version did not match the expected v1 marker.
+    SchemaVersionMismatch,
+    /// Record payload hex field was missing or empty.
+    MissingPayloadHex,
+}
+
+impl fmt::Display for SnapshotJournalParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidJson => write!(f, "invalid snapshot-journal json record"),
+            Self::SchemaVersionMismatch => {
+                write!(f, "snapshot-journal schema version mismatch")
+            }
+            Self::MissingPayloadHex => write!(f, "snapshot-journal payload_hex is missing"),
+        }
+    }
+}
+
+impl std::error::Error for SnapshotJournalParseError {}
 
 /// Returns the deterministic `<snapshot>.journal` sidecar path.
 pub fn default_snapshot_journal_path(path: &Path) -> PathBuf {
@@ -40,13 +66,22 @@ pub fn append_snapshot_journal_record(journal_path: &Path, payload: &str) -> std
 
 /// Parses one snapshot-journal JSON line and returns its `payload_hex` value.
 pub fn parse_snapshot_journal_record(line: &str) -> Option<String> {
-    let record: SnapshotJournalRecord = serde_json::from_str(line).ok()?;
-    if record.schema_version != SNAPSHOT_JOURNAL_ENTRY_SCHEMA_VERSION
-        || record.payload_hex.is_empty()
-    {
-        return None;
+    parse_snapshot_journal_record_checked(line).ok()
+}
+
+/// Parses one snapshot-journal JSON line and returns typed failure reasons.
+pub fn parse_snapshot_journal_record_checked(
+    line: &str,
+) -> Result<String, SnapshotJournalParseError> {
+    let record: SnapshotJournalRecord =
+        serde_json::from_str(line).map_err(|_| SnapshotJournalParseError::InvalidJson)?;
+    if record.schema_version != SNAPSHOT_JOURNAL_ENTRY_SCHEMA_VERSION {
+        return Err(SnapshotJournalParseError::SchemaVersionMismatch);
     }
-    Some(record.payload_hex)
+    if record.payload_hex.is_empty() {
+        return Err(SnapshotJournalParseError::MissingPayloadHex);
+    }
+    Ok(record.payload_hex)
 }
 
 /// Decodes lowercase/uppercase hex payload strings.
