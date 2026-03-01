@@ -107,6 +107,71 @@ pub struct ObservabilityReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Machine-readable projection for unified observability event ingestion.
+pub struct ObservabilityEventProjection {
+    /// Health state for the evaluated sample.
+    pub health: ObservabilityHealth,
+    /// Number of threshold breaches in this report.
+    pub alert_count: usize,
+    /// Ordered reason codes derived from alert metric/severity pairs.
+    pub reason_codes: Vec<&'static str>,
+    /// Source sample timestamp.
+    pub timestamp_epoch_s: u64,
+}
+
+impl ObservabilityReport {
+    /// Projects the report into deterministic event fields and reason codes.
+    pub fn project_event(&self) -> ObservabilityEventProjection {
+        let reason_codes = self
+            .alerts
+            .iter()
+            .map(project_observability_alert_reason_code)
+            .collect();
+        ObservabilityEventProjection {
+            health: self.overall_health,
+            alert_count: self.alerts.len(),
+            reason_codes,
+            timestamp_epoch_s: self.sample.timestamp_epoch_s,
+        }
+    }
+}
+
+fn project_observability_alert_reason_code(alert: &ObservabilityAlert) -> &'static str {
+    match (alert.metric, alert.severity) {
+        (ObservabilityMetric::LatencyP50, ObservabilitySeverity::Warning) => {
+            "observability_latency_p50_warning_threshold_breached"
+        }
+        (ObservabilityMetric::LatencyP50, ObservabilitySeverity::Critical) => {
+            "observability_latency_p50_critical_threshold_breached"
+        }
+        (ObservabilityMetric::LatencyP99, ObservabilitySeverity::Warning) => {
+            "observability_latency_p99_warning_threshold_breached"
+        }
+        (ObservabilityMetric::LatencyP99, ObservabilitySeverity::Critical) => {
+            "observability_latency_p99_critical_threshold_breached"
+        }
+        (ObservabilityMetric::Throughput, ObservabilitySeverity::Warning) => {
+            "observability_throughput_warning_threshold_breached"
+        }
+        (ObservabilityMetric::Throughput, ObservabilitySeverity::Critical) => {
+            "observability_throughput_critical_threshold_breached"
+        }
+        (ObservabilityMetric::ErrorRate, ObservabilitySeverity::Warning) => {
+            "observability_error_rate_warning_threshold_breached"
+        }
+        (ObservabilityMetric::ErrorRate, ObservabilitySeverity::Critical) => {
+            "observability_error_rate_critical_threshold_breached"
+        }
+        (ObservabilityMetric::Availability, ObservabilitySeverity::Warning) => {
+            "observability_availability_warning_threshold_breached"
+        }
+        (ObservabilityMetric::Availability, ObservabilitySeverity::Critical) => {
+            "observability_availability_critical_threshold_breached"
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Rolling health summary over monitor history.
 pub struct ObservabilitySnapshot {
     /// Total number of evaluated samples.
