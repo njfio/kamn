@@ -18,7 +18,7 @@ REASON_CODES = [
 ]
 
 GOVERNANCE_TYPES = frozenset({"spec", "docs", "chore"})
-FEATURE_TYPES = frozenset({"feat", "fix", "refactor", "test", "perf"})
+FEATURE_TYPES = frozenset({"feat", "fix", "refactor", "test", "perf", "integrate"})
 
 
 class CheckerError(Exception):
