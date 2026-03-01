@@ -58,6 +58,64 @@ fn with_default_signer_key_env<T>(run: impl FnOnce() -> T) -> T {
     run()
 }
 
+fn signer_emulator_default_budget_millis() -> u128 {
+    if std::env::var_os("CI").is_some() {
+        600
+    } else {
+        300
+    }
+}
+
+fn signer_emulator_contract_budget_millis() -> u128 {
+    match std::env::var("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS") {
+        Ok(value) => value.parse::<u128>().unwrap_or_else(|cause| {
+            panic!(
+                "invalid KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS value: value={value} cause={cause}"
+            )
+        }),
+        Err(std::env::VarError::NotPresent) => signer_emulator_default_budget_millis(),
+        Err(error) => panic!("failed to read KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS: {error}"),
+    }
+}
+
+fn signer_emulator_within_budget(elapsed_millis: u128, budget_millis: u128) -> bool {
+    elapsed_millis <= budget_millis
+}
+
+fn signer_emulator_key_id_for_nonce(nonce: u64) -> &'static str {
+    if nonce.is_multiple_of(2) {
+        "secure:key-ops-perf"
+    } else {
+        "secure:aws-kms:key-ops-perf"
+    }
+}
+
+fn signer_emulator_expected_backend_for_nonce(nonce: u64) -> &'static str {
+    if nonce.is_multiple_of(2) {
+        "secure-mock"
+    } else {
+        "secure-aws-kms-emulator"
+    }
+}
+
+fn assert_signer_emulator_contract_signing(router: &SignerBackendRouter, nonce: u64) {
+    let request = SigningRequest::new(
+        signer_emulator_key_id_for_nonce(nonce),
+        "agent-a",
+        nonce,
+        &format!("payload-perf-{nonce}"),
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("signature should be produced");
+    assert_eq!(
+        signed.backend,
+        signer_emulator_expected_backend_for_nonce(nonce)
+    );
+}
+
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
     with_default_signer_key_env(|| {
@@ -733,47 +791,59 @@ fn performance_signer_emulator_contract_lane_stays_within_budget() {
         let router = SignerBackendRouter::default();
         let start = Instant::now();
 
-        for nonce in 1..=256 {
-            let key_id = if nonce % 2 == 0 {
-                "secure:key-ops-perf"
-            } else {
-                "secure:aws-kms:key-ops-perf"
-            };
-            let request = SigningRequest::new(
-                key_id,
-                "agent-a",
-                nonce,
-                &format!("payload-perf-{nonce}"),
-                GENESIS_STATE_HASH,
-            )
-            .expect("request should be valid");
-            let signed = router
-                .sign_with_secure_fallback(&request)
-                .expect("signature should be produced");
-            let expected_backend = if nonce % 2 == 0 {
-                "secure-mock"
-            } else {
-                "secure-aws-kms-emulator"
-            };
-            assert_eq!(signed.backend, expected_backend);
+        for nonce in 1_u64..=256 {
+            assert_signer_emulator_contract_signing(&router, nonce);
         }
 
         let elapsed_millis = start.elapsed().as_millis();
-        let budget_millis = std::env::var("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS")
-            .ok()
-            .and_then(|value| value.parse::<u128>().ok())
-            .unwrap_or_else(|| {
-                if std::env::var_os("CI").is_some() {
-                    600
-                } else {
-                    250
-                }
-            });
+        let budget_millis = signer_emulator_contract_budget_millis();
         assert!(
-            elapsed_millis < budget_millis,
+            signer_emulator_within_budget(elapsed_millis, budget_millis),
             "signer emulator contract lane exceeded budget: elapsed={elapsed_millis}ms budget={budget_millis}ms"
         );
     });
+}
+
+#[test]
+fn regression_signer_emulator_budget_comparator_allows_exact_boundary() {
+    assert!(signer_emulator_within_budget(250, 250));
+    assert!(!signer_emulator_within_budget(251, 250));
+}
+
+#[test]
+fn regression_signer_emulator_budget_parser_rejects_invalid_override() {
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _budget_guard = EnvVarGuard::set("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS", Some("abc"));
+
+    let result = std::panic::catch_unwind(signer_emulator_contract_budget_millis);
+    assert!(
+        result.is_err(),
+        "invalid budget override must fail loudly instead of silently falling back"
+    );
+}
+
+#[test]
+fn regression_signer_emulator_budget_parser_uses_local_default_when_unset() {
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _budget_guard = EnvVarGuard::set("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS", None);
+    let _ci_guard = EnvVarGuard::set("CI", None);
+
+    assert_eq!(signer_emulator_contract_budget_millis(), 300);
+}
+
+#[test]
+fn regression_signer_emulator_budget_parser_uses_ci_default_when_ci_set() {
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _budget_guard = EnvVarGuard::set("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS", None);
+    let _ci_guard = EnvVarGuard::set("CI", Some("true"));
+
+    assert_eq!(signer_emulator_contract_budget_millis(), 600);
 }
 
 #[test]
