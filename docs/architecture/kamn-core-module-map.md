@@ -168,6 +168,33 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - Provides cryptographic assurance artifacts consumed by message and
     settlement safety lanes.
 
+## Decomposition Tranche Roadmap (Issue #6275)
+
+kamn_core_decomposition_map_version=kamn.arch.kamn-core-decomposition-map.v1
+kamn_core_decomposition_reason_taxonomy_version=kamn.arch.kamn-core-decomposition-reason-taxonomy.v1
+kamn_core_decomposition_reason_codes_csv=module_group_boundary_missing,tranche_ordering_missing,target_destination_missing,hotspot_prioritization_missing,architecture_index_link_missing
+kamn_core_decomposition_tranche_count=5
+kamn_core_decomposition_target_crates_csv=kamn-runtime-guards,kamn-snapshot-journal,kamn-kolme,kamn-bridges,kamn-crypto
+kamn_core_decomposition_status=active
+
+| Tranche | Module-group boundary | Extraction destination | Ordering rationale |
+| --- | --- | --- | --- |
+| T1 | Runtime guard and policy surfaces (`anti_spam`, `fairness_policy`, `quota_policy`, `message_delivery_guards`, `retention_engine`, `watchdog`) | `crates/kamn-runtime-guards` | Lowest external coupling; completes shim retirement first. |
+| T2 | Snapshot/journal persistence helpers consumed by lifecycle domains | `crates/kamn-snapshot-journal` | Shared storage helpers are already partially extracted and can be completed with low API churn. |
+| T3 | Kolme runtime-commit transport/finality/codec compatibility modules (`kolme_runtime_commit`) | `crates/kamn-kolme` | Existing compatibility facade allows incremental extraction without runtime behavior change. |
+| T4 | Bridge/receipt normalization surfaces (`bridge_adapter`, `cross_chain_bridge`, `cross_chain_receipt`, platform bridges) | `crates/kamn-bridges` | External adapter seams are explicit and can be lifted behind crate boundaries. |
+| T5 | Crypto-heavy messaging and proof surfaces (`direct_message_crypto`, `group_channel_crypto`, `signer_backend`, `zk_message_proofs`) | `crates/kamn-crypto` | Security-sensitive extraction lands last after domain seams are stabilized by earlier tranches. |
+
+## Top Monolith Hotspots (By LOC)
+
+| File | LOC | Primary extraction destination |
+| --- | --- | --- |
+| `message_lifecycle.rs` | `1780` | `crates/kamn-snapshot-journal` (journal + lifecycle persistence seam) |
+| `channel_models.rs` | `1780` | `crates/kamn-snapshot-journal` (channel snapshot/journal seam) |
+| `p2p_transport/p2p_transport_live.rs` | `1711` | `crates/kamn-kolme` / transport-dedicated extraction tranche |
+| `task_operations.rs` | `1685` | `crates/kamn-snapshot-journal` + task-domain extraction follow-up |
+| `did_registry.rs` | `1679` | `crates/kamn-types` + identity-domain extraction follow-up |
+
 ## Runtime Flow (Condensed)
 
 1. Identity and key modules (`did`, `agent_key_hierarchy`, `key_lifecycle`)
@@ -307,6 +334,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 | Contributor need | Entrypoint | Why it exists |
 | --- | --- | --- |
 | See ownership boundaries across core modules | `docs/architecture/kamn-core-module-map.md#ownership-matrix` | Canonical map for domain ownership and runtime/data-flow responsibilities. |
+| Plan enforced extraction order for monolith decomposition | `docs/architecture/kamn-core-module-map.md#decomposition-tranche-roadmap-issue-6275` | Canonical tranche ordering, module-group boundaries, and destination crates for decomposition work. |
 | Understand high-level runtime path | `docs/architecture/kamn-core-module-map.md#runtime-flow-condensed` | Condensed sequence from identity checks to external receipts. |
 | Find exported public API surface | `crates/kamn-core/src/lib.rs` | Canonical `pub mod` and `pub use` inventory for `kamn-core`. |
 | Find extracted Kolme scaffold contracts | `crates/kamn-kolme/src/lib.rs` | Canonical crate boundary for runtime-commit codec, transport, finality, and pipeline scaffolding. |

@@ -10,6 +10,7 @@ diagram references.
 ## Module Maps
 
 - `docs/architecture/kamn-core-module-map.md`
+- `docs/architecture/kamn-core-module-map.md#decomposition-tranche-roadmap-issue-6275`
 - `docs/architecture/kamn-node-module-map.md`
 
 ## Crate Architecture Notes
