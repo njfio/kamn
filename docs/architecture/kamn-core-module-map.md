@@ -334,6 +334,7 @@ kamn_core_decomposition_status=active
 | Contributor need | Entrypoint | Why it exists |
 | --- | --- | --- |
 | See ownership boundaries across core modules | `docs/architecture/kamn-core-module-map.md#ownership-matrix` | Canonical map for domain ownership and runtime/data-flow responsibilities. |
+| Plan enforced extraction order for monolith decomposition | `docs/architecture/kamn-core-module-map.md#decomposition-tranche-roadmap-issue-6275` | Canonical tranche ordering, module-group boundaries, and destination crates for decomposition work. |
 | Understand high-level runtime path | `docs/architecture/kamn-core-module-map.md#runtime-flow-condensed` | Condensed sequence from identity checks to external receipts. |
 | Find exported public API surface | `crates/kamn-core/src/lib.rs` | Canonical `pub mod` and `pub use` inventory for `kamn-core`. |
 | Find extracted Kolme scaffold contracts | `crates/kamn-kolme/src/lib.rs` | Canonical crate boundary for runtime-commit codec, transport, finality, and pipeline scaffolding. |
