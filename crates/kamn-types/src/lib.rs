@@ -7,9 +7,41 @@ pub use kamn_core::{
     KamnDid, KamnDidError,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Wrapper error for canonical DID parse helpers.
+pub enum SharedDidParseError {
+    /// Input was empty after canonical trim.
+    EmptyInput,
+    /// Underlying agent DID parse failure.
+    Agent(AgentDidError),
+    /// Underlying generic KAMN DID parse failure.
+    Kamn(KamnDidError),
+}
+
+/// Parses agent DID inputs with canonical trim semantics.
+pub fn parse_agent_did_canonical(value: &str) -> Result<AgentDid, SharedDidParseError> {
+    let normalized = value.trim();
+    if normalized.is_empty() {
+        return Err(SharedDidParseError::EmptyInput);
+    }
+    AgentDid::parse(normalized).map_err(SharedDidParseError::Agent)
+}
+
+/// Parses generic KAMN DID inputs with canonical trim semantics.
+pub fn parse_kamn_did_canonical(value: &str) -> Result<KamnDid, SharedDidParseError> {
+    let normalized = value.trim();
+    if normalized.is_empty() {
+        return Err(SharedDidParseError::EmptyInput);
+    }
+    KamnDid::parse(normalized).map_err(SharedDidParseError::Kamn)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AgentDid, AgentDidError, KamnDid};
+    use super::{
+        parse_agent_did_canonical, parse_kamn_did_canonical, AgentDid, AgentDidError, KamnDid,
+        SharedDidParseError,
+    };
 
     #[test]
     fn shared_agent_did_parse_accepts_valid_did() {
@@ -39,5 +71,17 @@ mod tests {
     fn shared_kamn_did_parse_accepts_non_agent_kamn_did() {
         let parsed = KamnDid::parse("kamn:did:operator:node-1").expect("kamn did should parse");
         assert_eq!(parsed.as_str(), "kamn:did:operator:node-1");
+    }
+
+    #[test]
+    fn canonical_parse_helpers_reject_empty_inputs() {
+        assert_eq!(
+            parse_agent_did_canonical(" "),
+            Err(SharedDidParseError::EmptyInput)
+        );
+        assert_eq!(
+            parse_kamn_did_canonical(""),
+            Err(SharedDidParseError::EmptyInput)
+        );
     }
 }
