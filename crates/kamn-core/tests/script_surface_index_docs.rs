@@ -44,6 +44,40 @@ fn accumulate(counts: &mut Counts, ext: &str) {
     }
 }
 
+fn script_extension(path: &Path) -> Option<&'static str> {
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some("sh") => Some("sh"),
+        Some("py") => Some("py"),
+        _ => None,
+    }
+}
+
+fn category_for(path: &Path, scripts_root: &Path) -> String {
+    let rel = path
+        .strip_prefix(scripts_root)
+        .unwrap_or_else(|error| panic!("failed stripping scripts root prefix: {error}"));
+    rel.components()
+        .next()
+        .and_then(|part| part.as_os_str().to_str())
+        .unwrap_or_else(|| panic!("missing scripts category for path: {}", path.display()))
+        .to_owned()
+}
+
+fn process_script_file(
+    path: &Path,
+    scripts_root: &Path,
+    totals: &mut Counts,
+    by_category: &mut BTreeMap<String, Counts>,
+) {
+    let Some(ext) = script_extension(path) else {
+        return;
+    };
+    let category = category_for(path, scripts_root);
+    accumulate(totals, ext);
+    let counts = by_category.entry(category).or_default();
+    accumulate(counts, ext);
+}
+
 fn visit_scripts(
     dir: &Path,
     scripts_root: &Path,
@@ -70,24 +104,7 @@ fn visit_scripts(
             continue;
         }
 
-        let ext = match path.extension().and_then(|ext| ext.to_str()) {
-            Some("sh") => "sh",
-            Some("py") => "py",
-            _ => continue,
-        };
-
-        let rel = path
-            .strip_prefix(scripts_root)
-            .unwrap_or_else(|error| panic!("failed stripping scripts root prefix: {error}"));
-        let category = rel
-            .components()
-            .next()
-            .and_then(|part| part.as_os_str().to_str())
-            .unwrap_or_else(|| panic!("missing scripts category for path: {}", path.display()));
-
-        accumulate(totals, ext);
-        let counts = by_category.entry(category.to_owned()).or_default();
-        accumulate(counts, ext);
+        process_script_file(&path, scripts_root, totals, by_category);
     }
 }
 
@@ -107,31 +124,38 @@ fn parse_table_count(cell: &str, field: &str) -> usize {
         .unwrap_or_else(|error| panic!("invalid {field} cell value {cell}: {error}"))
 }
 
+fn parse_inventory_row(line: &str) -> (String, Counts) {
+    let cells: Vec<&str> = line.split('|').map(str::trim).collect();
+    if cells.len() != 6 {
+        panic!("unexpected inventory row shape: {line}");
+    }
+
+    let category_cell = cells[1].trim_matches('`');
+    let category = category_cell
+        .strip_prefix("scripts/")
+        .unwrap_or_else(|| panic!("invalid category cell: {category_cell}"))
+        .to_owned();
+    let sh = parse_table_count(cells[2], "sh");
+    let py = parse_table_count(cells[3], "py");
+    let total = parse_table_count(cells[4], "total");
+    assert_eq!(
+        sh + py,
+        total,
+        "table row total mismatch for category {category}"
+    );
+    (category, Counts { sh, py })
+}
+
 fn parse_index_category_rows(doc: &str) -> BTreeMap<String, Counts> {
     let mut rows = BTreeMap::new();
 
     for line in doc.lines().filter(|line| line.starts_with("| `scripts/")) {
-        let cells: Vec<&str> = line.split('|').map(str::trim).collect();
-        if cells.len() != 6 {
-            panic!("unexpected inventory row shape: {line}");
-        }
-
-        let category_cell = cells[1].trim_matches('`');
-        let category = category_cell
-            .strip_prefix("scripts/")
-            .unwrap_or_else(|| panic!("invalid category cell: {category_cell}"));
-        let sh = parse_table_count(cells[2], "sh");
-        let py = parse_table_count(cells[3], "py");
-        let total = parse_table_count(cells[4], "total");
-
-        assert_eq!(
-            sh + py,
-            total,
-            "table row total mismatch for category {category}"
+        let (category, counts) = parse_inventory_row(line);
+        let previous = rows.insert(category.clone(), counts);
+        assert!(
+            previous.is_none(),
+            "duplicate category row found: {category}"
         );
-
-        let previous = rows.insert(category.to_owned(), Counts { sh, py });
-        assert!(previous.is_none(), "duplicate category row found: {category}");
     }
 
     rows
