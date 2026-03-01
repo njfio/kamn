@@ -726,9 +726,9 @@ pub use message_proof_anchoring::{
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
 pub use observability::{
-    ObservabilityAlert, ObservabilityError, ObservabilityHealth, ObservabilityMetric,
-    ObservabilityMonitor, ObservabilityReport, ObservabilitySample, ObservabilitySeverity,
-    ObservabilitySloProfile, ObservabilitySnapshot,
+    ObservabilityAlert, ObservabilityError, ObservabilityEventProjection, ObservabilityHealth,
+    ObservabilityMetric, ObservabilityMonitor, ObservabilityReport, ObservabilitySample,
+    ObservabilitySeverity, ObservabilitySloProfile, ObservabilitySnapshot,
 };
 pub use operator_actions::{
     OperatorActionAuditRecord, OperatorActionOutcome, OperatorActionServiceError,

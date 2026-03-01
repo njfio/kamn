@@ -452,3 +452,43 @@ fn spec_c11_owner_observability_evaluation_is_owner_scoped_and_deterministic() {
         })
     ));
 }
+
+#[test]
+fn spec_c12_owner_observability_projection_exposes_runtime_reason_codes() {
+    let mut registry = DataLayerM7TelemetryRegistry::new();
+    let mut point = telemetry_point(
+        "kamn:did:owner:alpha",
+        "kamn:did:agent:alpha-1",
+        1_708_560_250,
+        4,
+        900,
+        2,
+        1,
+    );
+    point.active_sessions = 0;
+    registry
+        .ingest_point(point)
+        .expect("critical telemetry point should ingest");
+
+    let evaluation = registry
+        .evaluate_owner_observability(
+            DataLayerM7BillingQuery {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+            },
+            ObservabilitySloProfile::baseline(),
+        )
+        .expect("owner observability evaluation should succeed");
+    let projection = evaluation
+        .reports
+        .last()
+        .expect("expected one observability report")
+        .project_event();
+
+    assert_eq!(projection.health, ObservabilityHealth::Critical);
+    assert!(projection.alert_count > 0);
+    assert!(projection
+        .reason_codes
+        .iter()
+        .any(|reason| reason == "observability_availability_critical_threshold_breached"));
+}

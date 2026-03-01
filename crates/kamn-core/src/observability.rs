@@ -107,6 +107,61 @@ pub struct ObservabilityReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Machine-readable projection for unified observability event ingestion.
+pub struct ObservabilityEventProjection {
+    /// Health state for the evaluated sample.
+    pub health: ObservabilityHealth,
+    /// Number of threshold breaches in this report.
+    pub alert_count: usize,
+    /// Ordered reason codes derived from alert metric/severity pairs.
+    pub reason_codes: Vec<String>,
+    /// Source sample timestamp.
+    pub timestamp_epoch_s: u64,
+}
+
+impl ObservabilityReport {
+    /// Projects the report into deterministic event fields and reason codes.
+    pub fn project_event(&self) -> ObservabilityEventProjection {
+        let reason_codes = self
+            .alerts
+            .iter()
+            .map(project_observability_alert_reason_code)
+            .collect();
+        ObservabilityEventProjection {
+            health: self.overall_health,
+            alert_count: self.alerts.len(),
+            reason_codes,
+            timestamp_epoch_s: self.sample.timestamp_epoch_s,
+        }
+    }
+}
+
+fn project_observability_alert_reason_code(alert: &ObservabilityAlert) -> String {
+    format!(
+        "observability_{}_{}_threshold_breached",
+        project_metric_reason_segment(alert.metric),
+        project_severity_reason_segment(alert.severity),
+    )
+}
+
+fn project_metric_reason_segment(metric: ObservabilityMetric) -> &'static str {
+    match metric {
+        ObservabilityMetric::LatencyP50 => "latency_p50",
+        ObservabilityMetric::LatencyP99 => "latency_p99",
+        ObservabilityMetric::Throughput => "throughput",
+        ObservabilityMetric::ErrorRate => "error_rate",
+        ObservabilityMetric::Availability => "availability",
+    }
+}
+
+fn project_severity_reason_segment(severity: ObservabilitySeverity) -> &'static str {
+    match severity {
+        ObservabilitySeverity::Warning => "warning",
+        ObservabilitySeverity::Critical => "critical",
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Rolling health summary over monitor history.
 pub struct ObservabilitySnapshot {
     /// Total number of evaluated samples.
