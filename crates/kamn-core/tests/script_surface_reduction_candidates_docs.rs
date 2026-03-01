@@ -161,6 +161,7 @@ fn candidate_doc_declares_required_markers_and_sections() {
     assert!(doc.contains("script_surface_short_wrapper_total_candidates="));
     assert!(doc.contains("script_surface_short_wrapper_priority_categories_csv="));
     assert!(doc.contains("## Regeneration Commands"));
+    assert!(README_DOC.contains("docs/developer/script-surface-reduction-candidates.md"));
 }
 
 #[test]
@@ -171,7 +172,10 @@ fn candidate_doc_counts_match_filesystem_inventory() {
         SH_THRESHOLD_MAX_LOC
     );
     assert_eq!(
-        parse_usize_marker(&doc, "script_surface_short_wrapper_python_threshold_max_loc"),
+        parse_usize_marker(
+            &doc,
+            "script_surface_short_wrapper_python_threshold_max_loc"
+        ),
         PY_THRESHOLD_MAX_LOC
     );
 
@@ -193,11 +197,9 @@ fn candidate_doc_counts_match_filesystem_inventory() {
         let stats = filesystem
             .get(&category)
             .unwrap_or_else(|| panic!("priority category missing from filesystem set: {category}"));
-        assert!(stats.short > 0, "priority category must have short wrappers");
+        assert!(
+            stats.short > 0,
+            "priority category must have short wrappers"
+        );
     }
-}
-
-#[test]
-fn readme_contract_reference_links_candidate_doc() {
-    assert!(README_DOC.contains("docs/developer/script-surface-reduction-candidates.md"));
 }
