@@ -82,6 +82,40 @@ fn signer_emulator_within_budget(elapsed_millis: u128, budget_millis: u128) -> b
     elapsed_millis <= budget_millis
 }
 
+fn signer_emulator_key_id_for_nonce(nonce: u64) -> &'static str {
+    if nonce.is_multiple_of(2) {
+        "secure:key-ops-perf"
+    } else {
+        "secure:aws-kms:key-ops-perf"
+    }
+}
+
+fn signer_emulator_expected_backend_for_nonce(nonce: u64) -> &'static str {
+    if nonce.is_multiple_of(2) {
+        "secure-mock"
+    } else {
+        "secure-aws-kms-emulator"
+    }
+}
+
+fn assert_signer_emulator_contract_signing(router: &SignerBackendRouter, nonce: u64) {
+    let request = SigningRequest::new(
+        signer_emulator_key_id_for_nonce(nonce),
+        "agent-a",
+        nonce,
+        &format!("payload-perf-{nonce}"),
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("signature should be produced");
+    assert_eq!(
+        signed.backend,
+        signer_emulator_expected_backend_for_nonce(nonce)
+    );
+}
+
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
     with_default_signer_key_env(|| {
@@ -757,29 +791,8 @@ fn performance_signer_emulator_contract_lane_stays_within_budget() {
         let router = SignerBackendRouter::default();
         let start = Instant::now();
 
-        for nonce in 1..=256 {
-            let key_id = if nonce % 2 == 0 {
-                "secure:key-ops-perf"
-            } else {
-                "secure:aws-kms:key-ops-perf"
-            };
-            let request = SigningRequest::new(
-                key_id,
-                "agent-a",
-                nonce,
-                &format!("payload-perf-{nonce}"),
-                GENESIS_STATE_HASH,
-            )
-            .expect("request should be valid");
-            let signed = router
-                .sign_with_secure_fallback(&request)
-                .expect("signature should be produced");
-            let expected_backend = if nonce % 2 == 0 {
-                "secure-mock"
-            } else {
-                "secure-aws-kms-emulator"
-            };
-            assert_eq!(signed.backend, expected_backend);
+        for nonce in 1_u64..=256 {
+            assert_signer_emulator_contract_signing(&router, nonce);
         }
 
         let elapsed_millis = start.elapsed().as_millis();
