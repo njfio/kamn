@@ -120,7 +120,11 @@ impl DirectMessageCryptoEngine {
         {
             return Err(DirectMessageCryptoError::AlgorithmMismatch);
         }
-        validate_key_ref_match("sender", self.sender_key_ref.as_str(), sealed.sender_key_ref.as_str())?;
+        validate_key_ref_match(
+            "sender",
+            self.sender_key_ref.as_str(),
+            sealed.sender_key_ref.as_str(),
+        )?;
         validate_key_ref_match(
             "recipient",
             self.recipient_key_ref.as_str(),
@@ -642,6 +646,10 @@ mod tests {
         assert_eq!(
             DirectMessageCryptoError::InvalidKeyRef("sender").to_string(),
             "sender key reference must include #key-agreement"
+        );
+        assert_eq!(
+            DirectMessageCryptoError::KeyRefMismatch("recipient").to_string(),
+            "recipient key reference mismatch"
         );
     }
 

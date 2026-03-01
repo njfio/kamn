@@ -1,8 +1,7 @@
 use kamn_crypto::direct_message_crypto::{DirectMessageCryptoEngine, DirectMessageCryptoError};
 use std::sync::{Mutex, OnceLock};
 
-const TEST_KEY_SEED_HEX: &str =
-    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+const TEST_KEY_SEED_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 
 fn key_agreement_seed_env_lock() -> &'static Mutex<()> {
@@ -39,7 +38,9 @@ fn integration_encrypt_decrypt_roundtrip_contract() {
             "kamn:did:agent:bob#key-agreement-1",
         )
         .expect("engine init should succeed");
-        let sealed = engine.encrypt("integration-roundtrip", 91).expect("encrypt");
+        let sealed = engine
+            .encrypt("integration-roundtrip", 91)
+            .expect("encrypt");
         let plaintext = engine.decrypt(&sealed).expect("decrypt");
         assert_eq!(plaintext, "integration-roundtrip");
     });
