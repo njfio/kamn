@@ -1,6 +1,4 @@
-use kamn_data_layer::data_layer_hashing::{
-    validated_tagged_sha256, DataLayerHashingError,
-};
+use kamn_data_layer::data_layer_hashing::{validated_tagged_sha256, DataLayerHashingError};
 
 #[test]
 fn integration_validated_tagged_sha256_accepts_canonical_label() {
@@ -23,6 +21,10 @@ fn integration_validated_tagged_sha256_rejects_empty_label() {
 fn integration_validated_tagged_sha256_rejects_malformed_label() {
     assert_eq!(
         validated_tagged_sha256("abc", "SHA_256"),
+        Err(DataLayerHashingError::InvalidAlgorithmLabel)
+    );
+    assert_eq!(
+        validated_tagged_sha256("abc", "sha256 "),
         Err(DataLayerHashingError::InvalidAlgorithmLabel)
     );
 }

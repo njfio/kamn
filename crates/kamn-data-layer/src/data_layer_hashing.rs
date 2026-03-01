@@ -36,11 +36,13 @@ pub fn validated_tagged_sha256(
 }
 
 fn validate_algorithm_label(algorithm_label: &str) -> Result<(), DataLayerHashingError> {
-    let label = algorithm_label.trim();
-    if label.is_empty() {
+    if algorithm_label.trim().is_empty() {
         return Err(DataLayerHashingError::EmptyAlgorithmLabel);
     }
-    if !label
+    if algorithm_label != algorithm_label.trim() {
+        return Err(DataLayerHashingError::InvalidAlgorithmLabel);
+    }
+    if !algorithm_label
         .chars()
         .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
     {
@@ -83,6 +85,10 @@ mod tests {
         );
         assert_eq!(
             validated_tagged_sha256("abc", "SHA_256"),
+            Err(DataLayerHashingError::InvalidAlgorithmLabel)
+        );
+        assert_eq!(
+            validated_tagged_sha256("abc", "sha256 "),
             Err(DataLayerHashingError::InvalidAlgorithmLabel)
         );
     }
