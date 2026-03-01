@@ -30,17 +30,21 @@ pub fn evaluate_cross_chain_settlement_decision(
     proof: &CrossChainReceiptProof,
 ) -> CrossChainSettlementDecision {
     match normalize_cross_chain_receipt(proof) {
-        Ok(normalized) => match normalized.finality {
-            CrossChainReceiptFinality::Final => CrossChainSettlementDecision::Settle,
-            CrossChainReceiptFinality::Pending => {
-                CrossChainSettlementDecision::DeferPendingFinality
-            }
-            CrossChainReceiptFinality::Failed => CrossChainSettlementDecision::Reject(
-                CrossChainSettlementRejectionReason::FailedReceipt,
-            ),
-        },
+        Ok(normalized) => map_finality_to_settlement_decision(normalized.finality),
         Err(error) => CrossChainSettlementDecision::Reject(
             CrossChainSettlementRejectionReason::InvalidProof(error),
         ),
+    }
+}
+
+fn map_finality_to_settlement_decision(
+    finality: CrossChainReceiptFinality,
+) -> CrossChainSettlementDecision {
+    match finality {
+        CrossChainReceiptFinality::Final => CrossChainSettlementDecision::Settle,
+        CrossChainReceiptFinality::Pending => CrossChainSettlementDecision::DeferPendingFinality,
+        CrossChainReceiptFinality::Failed => {
+            CrossChainSettlementDecision::Reject(CrossChainSettlementRejectionReason::FailedReceipt)
+        }
     }
 }
