@@ -53,9 +53,20 @@ fn visit_scripts(
     for entry in fs::read_dir(dir).unwrap_or_else(|error| panic!("read_dir failed: {error}")) {
         let entry = entry.unwrap_or_else(|error| panic!("dir entry failed: {error}"));
         let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .unwrap_or_else(|error| panic!("failed reading file type: {error}"));
 
-        if path.is_dir() {
+        if file_type.is_symlink() {
+            continue;
+        }
+
+        if file_type.is_dir() {
             visit_scripts(&path, scripts_root, totals, by_category);
+            continue;
+        }
+
+        if !file_type.is_file() {
             continue;
         }
 
