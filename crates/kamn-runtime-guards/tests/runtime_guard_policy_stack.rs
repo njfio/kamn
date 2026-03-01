@@ -1,6 +1,4 @@
-use kamn_runtime_guards::anti_spam::{
-    AntiSpamConfig, AntiSpamEngine, AntiSpamRejection,
-};
+use kamn_runtime_guards::anti_spam::{AntiSpamConfig, AntiSpamEngine, AntiSpamRejection};
 use kamn_runtime_guards::fairness_policy::FairnessPolicyInput;
 use kamn_runtime_guards::policy_stack::{
     evaluate_runtime_guard_policy_stack, RuntimeGuardPolicyDecision, RuntimeGuardPolicyRejection,
@@ -8,7 +6,8 @@ use kamn_runtime_guards::policy_stack::{
 use kamn_runtime_guards::quota_policy::QuotaPolicyInput;
 
 fn anti_spam_engine() -> AntiSpamEngine {
-    let mut engine = AntiSpamEngine::new(AntiSpamConfig::default()).expect("valid anti-spam config");
+    let mut engine =
+        AntiSpamEngine::new(AntiSpamConfig::default()).expect("valid anti-spam config");
     engine
         .set_deposit("kamn:did:agent:alice", 100)
         .expect("valid sender deposit");
@@ -78,12 +77,10 @@ fn integration_policy_stack_rejects_anti_spam_before_quota_and_fairness() {
     assert_eq!(
         decision,
         RuntimeGuardPolicyDecision::Reject {
-            reason: RuntimeGuardPolicyRejection::AntiSpam(
-                AntiSpamRejection::InsufficientDeposit {
-                    required: 10,
-                    provided: 0,
-                },
-            ),
+            reason: RuntimeGuardPolicyRejection::AntiSpam(AntiSpamRejection::InsufficientDeposit {
+                required: 10,
+                provided: 0,
+            },),
         }
     );
 }

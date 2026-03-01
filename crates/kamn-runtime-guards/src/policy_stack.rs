@@ -1,6 +1,4 @@
-use crate::anti_spam::{
-    AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
-};
+use crate::anti_spam::{AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection};
 use crate::fairness_policy::{
     evaluate_fairness_policy, FairnessPolicyDecision, FairnessPolicyInput,
     FairnessPolicyViolationReason,
