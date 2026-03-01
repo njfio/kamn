@@ -777,6 +777,26 @@ fn performance_signer_emulator_contract_lane_stays_within_budget() {
 }
 
 #[test]
+fn regression_signer_emulator_budget_comparator_allows_exact_boundary() {
+    assert!(signer_emulator_within_budget(250, 250));
+    assert!(!signer_emulator_within_budget(251, 250));
+}
+
+#[test]
+fn regression_signer_emulator_budget_parser_rejects_invalid_override() {
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _budget_guard = EnvVarGuard::set("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS", Some("abc"));
+
+    let result = std::panic::catch_unwind(signer_emulator_contract_budget_millis);
+    assert!(
+        result.is_err(),
+        "invalid budget override must fail loudly instead of silently falling back"
+    );
+}
+
+#[test]
 #[ignore = "scheduled provider integration lane"]
 fn performance_signer_emulator_bulk_signing_deep_lane() {
     with_default_signer_key_env(|| {
