@@ -95,3 +95,46 @@ fn regression_availability_breach_triggers_critical_alert() {
             && alert.severity == ObservabilitySeverity::Critical
     }));
 }
+
+#[test]
+fn integration_report_projection_for_healthy_sample_is_empty() {
+    let mut monitor = ObservabilityMonitor::new(ObservabilitySloProfile::baseline());
+    let report = monitor
+        .evaluate(healthy_sample())
+        .expect("healthy sample should evaluate");
+
+    let projection = report.project_event();
+    assert_eq!(projection.health, ObservabilityHealth::Healthy);
+    assert_eq!(projection.alert_count, 0);
+    assert!(projection.reason_codes.is_empty());
+    assert_eq!(projection.timestamp_epoch_s, report.sample.timestamp_epoch_s);
+}
+
+#[test]
+fn integration_report_projection_maps_reason_codes_in_deterministic_alert_order() {
+    let mut monitor = ObservabilityMonitor::new(ObservabilitySloProfile::baseline());
+    let report = monitor
+        .evaluate(ObservabilitySample {
+            latency_p50_ms: 180,
+            latency_p99_ms: 520,
+            throughput_tps: 1_600,
+            error_rate_pct: 2.8,
+            availability_pct: 99.40,
+            timestamp_epoch_s: 1_720_000_300,
+        })
+        .expect("sample should evaluate");
+
+    let projection = report.project_event();
+    assert_eq!(projection.health, ObservabilityHealth::Critical);
+    assert_eq!(projection.alert_count, 5);
+    assert_eq!(
+        projection.reason_codes,
+        vec![
+            "observability_latency_p50_warning_threshold_breached",
+            "observability_latency_p99_critical_threshold_breached",
+            "observability_throughput_warning_threshold_breached",
+            "observability_error_rate_critical_threshold_breached",
+            "observability_availability_critical_threshold_breached",
+        ]
+    );
+}
