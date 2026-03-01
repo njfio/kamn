@@ -10,7 +10,7 @@ use kamn_runtime_guards::quota_policy::QuotaPolicyInput;
 fn anti_spam_engine() -> AntiSpamEngine {
     let mut engine = AntiSpamEngine::new(AntiSpamConfig::default()).expect("valid anti-spam config");
     engine
-        .set_deposit("did:kamn:sender:alice", 100)
+        .set_deposit("kamn:did:agent:alice", 100)
         .expect("valid sender deposit");
     engine
 }
@@ -38,7 +38,7 @@ fn integration_policy_stack_allows_when_all_policies_allow() {
     let mut anti_spam = anti_spam_engine();
     let decision = evaluate_runtime_guard_policy_stack(
         &mut anti_spam,
-        "did:kamn:sender:alice",
+        "kamn:did:agent:alice",
         "msg-allow",
         1_700_000_000,
         &valid_quota(),
@@ -53,7 +53,7 @@ fn integration_policy_stack_allows_when_all_policies_allow() {
 fn integration_policy_stack_rejects_anti_spam_before_quota_and_fairness() {
     let mut anti_spam = anti_spam_engine();
     anti_spam
-        .set_deposit("did:kamn:sender:alice", 0)
+        .set_deposit("kamn:did:agent:alice", 0)
         .expect("valid sender update");
 
     let quota = QuotaPolicyInput {
@@ -67,7 +67,7 @@ fn integration_policy_stack_rejects_anti_spam_before_quota_and_fairness() {
 
     let decision = evaluate_runtime_guard_policy_stack(
         &mut anti_spam,
-        "did:kamn:sender:alice",
+        "kamn:did:agent:alice",
         "msg-anti-spam-first",
         1_700_000_001,
         &quota,
@@ -98,7 +98,7 @@ fn integration_policy_stack_rejects_quota_after_anti_spam_allow() {
 
     let decision = evaluate_runtime_guard_policy_stack(
         &mut anti_spam,
-        "did:kamn:sender:alice",
+        "kamn:did:agent:alice",
         "msg-quota-reject",
         1_700_000_002,
         &quota,
@@ -124,7 +124,7 @@ fn integration_policy_stack_rejects_fairness_after_anti_spam_and_quota_allow() {
 
     let decision = evaluate_runtime_guard_policy_stack(
         &mut anti_spam,
-        "did:kamn:sender:alice",
+        "kamn:did:agent:alice",
         "msg-fairness-reject",
         1_700_000_003,
         &valid_quota(),
