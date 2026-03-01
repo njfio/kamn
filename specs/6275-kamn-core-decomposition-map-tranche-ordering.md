@@ -55,3 +55,6 @@ Create a fail-closed, discoverable decomposition map for `kamn-core` that define
   - Keep test helpers small and explicit; avoid duplicated marker parsing logic.
 - INTEGRATION:
   - Run targeted docs-contract suites that cover architecture map discoverability and decomposition markers.
+
+## Deviations
+- None.
