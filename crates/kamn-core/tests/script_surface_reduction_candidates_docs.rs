@@ -138,7 +138,11 @@ fn parse_doc_table_stats(doc: &str) -> BTreeMap<String, CategoryStats> {
             .to_owned();
         let total = parse_table_count(cells[2], "total");
         let short = parse_table_count(cells[3], "short");
-        assert_eq!(cells[4], expected_ratio(total, short), "ratio cell drifted");
+        assert_eq!(
+            cells[4].trim_matches('`'),
+            expected_ratio(total, short),
+            "ratio cell drifted"
+        );
         let prev = stats.insert(category.clone(), CategoryStats { total, short });
         assert!(prev.is_none(), "duplicate category row found: {category}");
     }
