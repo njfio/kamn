@@ -11,10 +11,12 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 test_harness_require_executable "$CHECKER" "expected governance/feature commit-ratio checker to be executable"
 
 PASS_SUBJECTS="$TMP_DIR/pass-subjects.txt"
+INTEGRATE_SUBJECTS="$TMP_DIR/integrate-subjects.txt"
 FAIL_RATIO_SUBJECTS="$TMP_DIR/fail-ratio-subjects.txt"
 UNKNOWN_SUBJECTS="$TMP_DIR/unknown-subjects.txt"
 
 PASS_OUTPUT_JSON="$TMP_DIR/pass-report.json"
+INTEGRATE_OUTPUT_JSON="$TMP_DIR/integrate-report.json"
 FAIL_RATIO_OUTPUT_JSON="$TMP_DIR/fail-ratio-report.json"
 UNKNOWN_OUTPUT_JSON="$TMP_DIR/unknown-report.json"
 
@@ -27,6 +29,11 @@ cat >"$FAIL_RATIO_SUBJECTS" <<'EOF'
 spec(6002): define runtime closure contract (#6002)
 docs(ci): update governance report markers (#6002)
 fix(runtime): enforce relay retry boundary (#6002)
+EOF
+
+cat >"$INTEGRATE_SUBJECTS" <<'EOF'
+integrate(6003): wire relay forwarding into default runtime lane
+feat(runtime): keep deterministic selector behavior
 EOF
 
 cat >"$UNKNOWN_SUBJECTS" <<'EOF'
@@ -46,8 +53,25 @@ if ! printf '%s\n' "$pass_output" | grep -q '^status=ok$'; then
   exit 1
 fi
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_codes_csv=none$'; then
-  echo "expected reason_codes_csv=none for passing fixture" >&2
-  printf '%s\n' "$pass_output" >&2
+    echo "expected reason_codes_csv=none for passing fixture" >&2
+    printf '%s\n' "$pass_output" >&2
+    exit 1
+fi
+
+integrate_output="$(
+  python3 "$CHECKER" \
+    --commit-subjects-file "$INTEGRATE_SUBJECTS" \
+    --max-governance-ratio 0.50 \
+    --output-json "$INTEGRATE_OUTPUT_JSON"
+)"
+if ! printf '%s\n' "$integrate_output" | grep -q '^status=ok$'; then
+  echo "expected status=ok when integrate commit subjects are classified as feature" >&2
+  printf '%s\n' "$integrate_output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$integrate_output" | grep -q '^unknown_commit_count=0$'; then
+  echo "expected integrate fixture to avoid unknown classification count" >&2
+  printf '%s\n' "$integrate_output" >&2
   exit 1
 fi
 
@@ -109,6 +133,22 @@ if payload.get("feature_ratio") != 0.5:
     raise SystemExit("expected feature_ratio=0.5")
 if payload.get("max_governance_ratio") != 0.5:
     raise SystemExit("expected max_governance_ratio=0.5")
+PY
+
+python3 - "$INTEGRATE_OUTPUT_JSON" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("status") != "ok":
+    raise SystemExit("expected integrate fixture status=ok")
+if payload.get("unknown_commit_count") != 0:
+    raise SystemExit("expected unknown_commit_count=0 for integrate fixture")
+if payload.get("feature_commit_count") != 2:
+    raise SystemExit("expected feature_commit_count=2 for integrate fixture")
+if "integrate" not in payload.get("feature_commit_types_csv", "").split(","):
+    raise SystemExit("expected feature_commit_types_csv to include integrate")
 PY
 
 echo "governance/feature commit-ratio checker tests passed."
