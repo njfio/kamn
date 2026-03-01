@@ -1,3 +1,11 @@
+fn latest_full_runtime_stop_complete_line(captured_logs: &[String]) -> Option<&str> {
+    captured_logs
+        .iter()
+        .rev()
+        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .map(String::as_str)
+}
+
 #[cfg(unix)]
 #[test]
 fn regression_runtime_full_os_signal_stop_markers_project_shutdown_field_parity() {
@@ -24,9 +32,7 @@ fn regression_runtime_full_os_signal_stop_markers_project_shutdown_field_parity(
     configure_os_signal_test_triggers(vec![OsSignalTestTrigger::new(5, OsSignalTestKind::Sigterm)]);
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("full runtime os-signal execution should succeed");
-    let stop_complete_line = captured_logs
-        .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+    let stop_complete_line = latest_full_runtime_stop_complete_line(&captured_logs)
         .expect("full runtime should emit supervisor stop-complete marker");
     let completion_reason = report
         .daemon_completion_reason
@@ -90,9 +96,7 @@ fn regression_runtime_full_os_signal_timeout_stop_markers_project_shutdown_field
     configure_os_signal_test_triggers(vec![OsSignalTestTrigger::new(5, OsSignalTestKind::Sigint)]);
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("full runtime os-signal timeout execution should succeed");
-    let stop_complete_line = captured_logs
-        .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+    let stop_complete_line = latest_full_runtime_stop_complete_line(&captured_logs)
         .expect("full runtime should emit supervisor stop-complete marker");
     let completion_reason = report
         .daemon_completion_reason
