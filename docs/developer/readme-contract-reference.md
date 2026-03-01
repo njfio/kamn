@@ -67,6 +67,9 @@ cargo clippy -- -D warnings
 # Core tests
 cargo test
 
+# Script-surface inventory contract (doc markers + filesystem parity)
+cargo test -p kamn-core --test script_surface_index_docs
+
 # CI tool regression suite (fast/deep routing guards, script contracts)
 bash scripts/ci/test_ci_tools.sh
 

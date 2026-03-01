@@ -208,4 +208,5 @@ fn index_inventory_matches_filesystem_counts() {
 #[test]
 fn readme_contract_reference_links_inventory_index() {
     assert!(README_DOC.contains("docs/developer/script-surface-index.md"));
+    assert!(README_DOC.contains("cargo test -p kamn-core --test script_surface_index_docs"));
 }
