@@ -1,6 +1,6 @@
 use kamn_core::{
-    ObservabilityHealth, ObservabilityMetric, ObservabilityMonitor, ObservabilitySample,
-    ObservabilitySeverity, ObservabilitySloProfile,
+    ObservabilityAlert, ObservabilityHealth, ObservabilityMetric, ObservabilityMonitor,
+    ObservabilityReport, ObservabilitySample, ObservabilitySeverity, ObservabilitySloProfile,
 };
 
 fn healthy_sample() -> ObservabilitySample {
@@ -107,7 +107,10 @@ fn integration_report_projection_for_healthy_sample_is_empty() {
     assert_eq!(projection.health, ObservabilityHealth::Healthy);
     assert_eq!(projection.alert_count, 0);
     assert!(projection.reason_codes.is_empty());
-    assert_eq!(projection.timestamp_epoch_s, report.sample.timestamp_epoch_s);
+    assert_eq!(
+        projection.timestamp_epoch_s,
+        report.sample.timestamp_epoch_s
+    );
 }
 
 #[test]
@@ -130,11 +133,100 @@ fn integration_report_projection_maps_reason_codes_in_deterministic_alert_order(
     assert_eq!(
         projection.reason_codes,
         vec![
-            "observability_latency_p50_warning_threshold_breached",
-            "observability_latency_p99_critical_threshold_breached",
-            "observability_throughput_warning_threshold_breached",
-            "observability_error_rate_critical_threshold_breached",
-            "observability_availability_critical_threshold_breached",
+            "observability_latency_p50_warning_threshold_breached".to_string(),
+            "observability_latency_p99_critical_threshold_breached".to_string(),
+            "observability_throughput_warning_threshold_breached".to_string(),
+            "observability_error_rate_critical_threshold_breached".to_string(),
+            "observability_availability_critical_threshold_breached".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn unit_report_projection_covers_all_metric_severity_reason_code_pairs() {
+    let alerts = vec![
+        ObservabilityAlert {
+            metric: ObservabilityMetric::LatencyP50,
+            severity: ObservabilitySeverity::Warning,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::LatencyP50,
+            severity: ObservabilitySeverity::Critical,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::LatencyP99,
+            severity: ObservabilitySeverity::Warning,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::LatencyP99,
+            severity: ObservabilitySeverity::Critical,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::Throughput,
+            severity: ObservabilitySeverity::Warning,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::Throughput,
+            severity: ObservabilitySeverity::Critical,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::ErrorRate,
+            severity: ObservabilitySeverity::Warning,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::ErrorRate,
+            severity: ObservabilitySeverity::Critical,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::Availability,
+            severity: ObservabilitySeverity::Warning,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+        ObservabilityAlert {
+            metric: ObservabilityMetric::Availability,
+            severity: ObservabilitySeverity::Critical,
+            observed: 0.0,
+            threshold: 0.0,
+        },
+    ];
+    let report = ObservabilityReport {
+        sample: healthy_sample(),
+        overall_health: ObservabilityHealth::Critical,
+        alerts,
+    };
+
+    let projection = report.project_event();
+    assert_eq!(projection.alert_count, 10);
+    assert_eq!(
+        projection.reason_codes,
+        vec![
+            "observability_latency_p50_warning_threshold_breached".to_string(),
+            "observability_latency_p50_critical_threshold_breached".to_string(),
+            "observability_latency_p99_warning_threshold_breached".to_string(),
+            "observability_latency_p99_critical_threshold_breached".to_string(),
+            "observability_throughput_warning_threshold_breached".to_string(),
+            "observability_throughput_critical_threshold_breached".to_string(),
+            "observability_error_rate_warning_threshold_breached".to_string(),
+            "observability_error_rate_critical_threshold_breached".to_string(),
+            "observability_availability_warning_threshold_breached".to_string(),
+            "observability_availability_critical_threshold_breached".to_string(),
         ]
     );
 }
