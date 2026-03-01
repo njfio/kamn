@@ -38,16 +38,6 @@ fn parse_usize_marker(doc: &str, key: &str) -> usize {
         .unwrap_or_else(|error| panic!("invalid usize marker {key}: {error}"))
 }
 
-fn parse_csv_marker(doc: &str, key: &str) -> Vec<String> {
-    marker_value(doc, key)
-        .unwrap_or_else(|| panic!("missing marker: {key}"))
-        .split(',')
-        .map(str::trim)
-        .filter(|entry| !entry.is_empty())
-        .map(ToOwned::to_owned)
-        .collect()
-}
-
 fn script_threshold(path: &Path) -> Option<usize> {
     match path.extension().and_then(|ext| ext.to_str()) {
         Some("sh") => Some(SH_THRESHOLD_MAX_LOC),
@@ -150,7 +140,7 @@ fn parse_doc_table_stats(doc: &str) -> BTreeMap<String, CategoryStats> {
 }
 
 #[test]
-fn candidate_doc_declares_required_markers_and_sections() {
+fn candidate_doc_counts_match_filesystem_inventory() {
     let doc = read_doc();
     assert!(doc.contains("# Script Surface Reduction Candidates"));
     assert!(doc.contains("script_surface_short_wrapper_schema_version="));
@@ -162,11 +152,8 @@ fn candidate_doc_declares_required_markers_and_sections() {
     assert!(doc.contains("script_surface_short_wrapper_priority_categories_csv="));
     assert!(doc.contains("## Regeneration Commands"));
     assert!(README_DOC.contains("docs/developer/script-surface-reduction-candidates.md"));
-}
-
-#[test]
-fn candidate_doc_counts_match_filesystem_inventory() {
-    let doc = read_doc();
+    assert!(README_DOC
+        .contains("cargo test -p kamn-core --test script_surface_reduction_candidates_docs"));
     assert_eq!(
         parse_usize_marker(&doc, "script_surface_short_wrapper_shell_threshold_max_loc"),
         SH_THRESHOLD_MAX_LOC
@@ -193,9 +180,16 @@ fn candidate_doc_counts_match_filesystem_inventory() {
     );
     assert_eq!(doc_table, filesystem, "candidate table drifted");
 
-    for category in parse_csv_marker(&doc, "script_surface_short_wrapper_priority_categories_csv") {
+    let categories = marker_value(&doc, "script_surface_short_wrapper_priority_categories_csv")
+        .unwrap_or_else(|| {
+            panic!("missing marker: script_surface_short_wrapper_priority_categories_csv")
+        })
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty());
+    for category in categories {
         let stats = filesystem
-            .get(&category)
+            .get(category)
             .unwrap_or_else(|| panic!("priority category missing from filesystem set: {category}"));
         assert!(
             stats.short > 0,

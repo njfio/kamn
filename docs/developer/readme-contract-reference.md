@@ -71,6 +71,9 @@ cargo test
 # Script-surface inventory contract (doc markers + filesystem parity)
 cargo test -p kamn-core --test script_surface_index_docs
 
+# Script-surface short-wrapper reduction candidate matrix contract
+cargo test -p kamn-core --test script_surface_reduction_candidates_docs
+
 # CI tool regression suite (fast/deep routing guards, script contracts)
 bash scripts/ci/test_ci_tools.sh
 
