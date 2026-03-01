@@ -19,6 +19,18 @@ pub struct LiveProbeMatrixSummary {
 
 /// Projects one report into deterministic status counts and overall status.
 pub fn project_live_probe_matrix_summary(report: &LiveProbeMatrixReport) -> LiveProbeMatrixSummary {
+    let (pass_entries, fail_entries, skip_entries) = count_statuses(report);
+
+    LiveProbeMatrixSummary {
+        total_entries: report.entries().len(),
+        pass_entries,
+        fail_entries,
+        skip_entries,
+        overall_status: report.overall_status(),
+    }
+}
+
+fn count_statuses(report: &LiveProbeMatrixReport) -> (usize, usize, usize) {
     let mut pass_entries = 0usize;
     let mut fail_entries = 0usize;
     let mut skip_entries = 0usize;
@@ -31,11 +43,5 @@ pub fn project_live_probe_matrix_summary(report: &LiveProbeMatrixReport) -> Live
         }
     }
 
-    LiveProbeMatrixSummary {
-        total_entries: report.entries().len(),
-        pass_entries,
-        fail_entries,
-        skip_entries,
-        overall_status: report.overall_status(),
-    }
+    (pass_entries, fail_entries, skip_entries)
 }

@@ -1,8 +1,8 @@
-use kamn_live_probe_matrix::{
-    LiveProbeMatrixEntry, LiveProbeMatrixMode, LiveProbeMatrixReport, LiveProbeMatrixStatus,
-};
 use kamn_live_probe_matrix::summary_projection::{
     project_live_probe_matrix_summary, LiveProbeMatrixSummary,
+};
+use kamn_live_probe_matrix::{
+    LiveProbeMatrixEntry, LiveProbeMatrixMode, LiveProbeMatrixReport, LiveProbeMatrixStatus,
 };
 
 #[test]
