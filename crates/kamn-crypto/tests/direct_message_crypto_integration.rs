@@ -1,4 +1,7 @@
-use kamn_crypto::direct_message_crypto::{DirectMessageCryptoEngine, DirectMessageCryptoError};
+use kamn_crypto::direct_message_crypto::{
+    DirectMessageCryptoEngine, DirectMessageCryptoError, DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+    DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+};
 use std::sync::{Mutex, OnceLock};
 
 const TEST_KEY_SEED_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
@@ -80,4 +83,16 @@ fn integration_decrypt_rejects_recipient_key_ref_mismatch() {
             Err(DirectMessageCryptoError::KeyRefMismatch("recipient"))
         );
     });
+}
+
+#[test]
+fn integration_derivation_backend_markers_are_exposed_via_public_api() {
+    assert_eq!(
+        DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+        "rustcrypto.hkdf.sha256.v1"
+    );
+    assert_eq!(
+        DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+        "rustcrypto.hmac.sha256.v1"
+    );
 }
