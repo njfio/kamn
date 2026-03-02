@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use tracing::debug;
 
+/// Deterministic summary projection helpers for live probe matrix reports.
+pub mod summary_projection;
+
 /// Supported live probe execution modes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LiveProbeMatrixMode {
