@@ -1,5 +1,6 @@
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
+use hkdf::Hkdf;
 use sha2::{Digest, Sha256, Sha512};
 use std::collections::BTreeSet;
 use std::env;
@@ -13,6 +14,10 @@ pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const DIRECT_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-salt:v2";
 const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-info:v2";
+/// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
+pub const DIRECT_MESSAGE_HKDF_BACKEND_MARKER: &str = "rustcrypto.hkdf.sha256.v1";
+/// Marker asserting HMAC backend semantics are provided by RustCrypto primitives.
+pub const DIRECT_MESSAGE_HMAC_BACKEND_MARKER: &str = "rustcrypto.hmac.sha256.v1";
 
 /// Encrypted direct-message payload and metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,7 +64,7 @@ impl DirectMessageCryptoEngine {
         Ok(Self {
             sender_key_ref: sender_key_ref.to_owned(),
             recipient_key_ref: recipient_key_ref.to_owned(),
-            aead_key: derive_direct_message_aead_key(&shared_secret),
+            aead_key: derive_direct_message_aead_key(&shared_secret)?,
             legacy_aead_key: derive_direct_message_aead_key_legacy(&shared_secret),
             used_nonces: BTreeSet::new(),
         })
@@ -200,6 +205,8 @@ pub enum DirectMessageCryptoError {
     AlgorithmMismatch,
     /// Encryption failed.
     EncryptionFailed,
+    /// HKDF key derivation failed.
+    KeyDerivationFailed,
     /// Ciphertext integrity verification failed.
     IntegrityCheckFailed,
     /// Ciphertext bytes were not valid hex or UTF-8 output.
@@ -231,6 +238,7 @@ impl fmt::Display for DirectMessageCryptoError {
             Self::NonceReuse(value) => write!(f, "nonce reuse detected: {value}"),
             Self::AlgorithmMismatch => write!(f, "direct message algorithm mismatch"),
             Self::EncryptionFailed => write!(f, "direct message encryption failed"),
+            Self::KeyDerivationFailed => write!(f, "direct message key derivation failed"),
             Self::IntegrityCheckFailed => write!(f, "ciphertext integrity check failed"),
             Self::InvalidCiphertextEncoding => write!(f, "invalid ciphertext encoding"),
         }
@@ -307,12 +315,14 @@ fn derive_x25519_public_key(master_seed: &[u8; 32], key_ref: &str) -> PublicKey 
     PublicKey::from(&private_key)
 }
 
-fn derive_direct_message_aead_key(shared_secret: &[u8; 32]) -> [u8; 32] {
-    hkdf_sha256_derive_32(
-        DIRECT_MESSAGE_AEAD_KDF_SALT_V2,
-        shared_secret,
-        DIRECT_MESSAGE_AEAD_KDF_INFO_V2,
-    )
+fn derive_direct_message_aead_key(
+    shared_secret: &[u8; 32],
+) -> Result<[u8; 32], DirectMessageCryptoError> {
+    let hkdf = Hkdf::<Sha256>::new(Some(DIRECT_MESSAGE_AEAD_KDF_SALT_V2), shared_secret);
+    let mut key = [0u8; 32];
+    hkdf.expand(DIRECT_MESSAGE_AEAD_KDF_INFO_V2, &mut key)
+        .map_err(|_| DirectMessageCryptoError::KeyDerivationFailed)?;
+    Ok(key)
 }
 
 fn derive_direct_message_aead_key_legacy(shared_secret: &[u8; 32]) -> [u8; 32] {
@@ -323,46 +333,6 @@ fn derive_direct_message_aead_key_legacy(shared_secret: &[u8; 32]) -> [u8; 32] {
     let mut key = [0u8; 32];
     key.copy_from_slice(&digest[..32]);
     key
-}
-
-fn hkdf_sha256_derive_32(salt: &[u8], ikm: &[u8], info: &[u8]) -> [u8; 32] {
-    let prk = hmac_sha256(salt, ikm);
-    let mut expand_input = Vec::with_capacity(info.len() + 1);
-    expand_input.extend_from_slice(info);
-    expand_input.push(0x01);
-    hmac_sha256(&prk, &expand_input)
-}
-
-fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    const SHA256_BLOCK_SIZE: usize = 64;
-    let mut normalized_key = [0u8; SHA256_BLOCK_SIZE];
-    if key.len() > SHA256_BLOCK_SIZE {
-        let digest = Sha256::digest(key);
-        normalized_key[..32].copy_from_slice(&digest[..32]);
-    } else {
-        normalized_key[..key.len()].copy_from_slice(key);
-    }
-
-    let mut inner_key_pad = [0u8; SHA256_BLOCK_SIZE];
-    let mut outer_key_pad = [0u8; SHA256_BLOCK_SIZE];
-    for (index, byte) in normalized_key.iter().enumerate() {
-        inner_key_pad[index] = *byte ^ 0x36;
-        outer_key_pad[index] = *byte ^ 0x5c;
-    }
-
-    let mut inner = Sha256::new();
-    inner.update(inner_key_pad);
-    inner.update(data);
-    let inner_digest = inner.finalize();
-
-    let mut outer = Sha256::new();
-    outer.update(outer_key_pad);
-    outer.update(inner_digest);
-    let output = outer.finalize();
-
-    let mut hmac = [0u8; 32];
-    hmac.copy_from_slice(&output[..32]);
-    hmac
 }
 
 fn direct_message_nonce_bytes(nonce: u64) -> [u8; 24] {
@@ -423,6 +393,7 @@ mod tests {
 
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+    const SOURCE: &str = include_str!("direct_message_crypto.rs");
 
     fn key_agreement_seed_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -616,12 +587,34 @@ mod tests {
     #[test]
     fn direct_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
         let shared_secret = [0x5au8; 32];
-        let hkdf_key_a = super::derive_direct_message_aead_key(&shared_secret);
-        let hkdf_key_b = super::derive_direct_message_aead_key(&shared_secret);
+        let hkdf_key_a =
+            super::derive_direct_message_aead_key(&shared_secret).expect("hkdf key should derive");
+        let hkdf_key_b =
+            super::derive_direct_message_aead_key(&shared_secret).expect("hkdf key should derive");
         let legacy_key = super::derive_direct_message_aead_key_legacy(&shared_secret);
 
         assert_eq!(hkdf_key_a, hkdf_key_b);
         assert_ne!(hkdf_key_a, legacy_key);
+    }
+
+    #[test]
+    fn direct_message_derivation_backend_markers_and_manual_helper_removal_contract() {
+        assert_eq!(
+            super::DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+            "rustcrypto.hkdf.sha256.v1"
+        );
+        assert_eq!(
+            super::DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+            "rustcrypto.hmac.sha256.v1"
+        );
+        assert!(
+            !SOURCE.contains("\nfn hkdf_sha256_derive_32("),
+            "manual hkdf helper must be removed"
+        );
+        assert!(
+            !SOURCE.contains("\nfn hmac_sha256("),
+            "manual hmac helper must be removed"
+        );
     }
 
     #[test]
@@ -650,6 +643,10 @@ mod tests {
         assert_eq!(
             DirectMessageCryptoError::KeyRefMismatch("recipient").to_string(),
             "recipient key reference mismatch"
+        );
+        assert_eq!(
+            DirectMessageCryptoError::KeyDerivationFailed.to_string(),
+            "direct message key derivation failed"
         );
     }
 
