@@ -86,8 +86,8 @@ if ! grep -Fq "ci-shell-rust-ratio-guardrail.json" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq "name: Collect shell-rust LOC telemetry" "$FAST_WORKFLOW"; then
-  echo "expected shell-rust LOC telemetry collector step in ci-fast-gate workflow" >&2
+if ! grep -Fq "name: Collect shell-rust-python LOC telemetry" "$FAST_WORKFLOW"; then
+  echo "expected shell-rust-python LOC telemetry collector step in ci-fast-gate workflow" >&2
   exit 1
 fi
 if ! grep -Fq "bash scripts/ci/collect_shell_rust_loc_telemetry.sh" "$FAST_WORKFLOW"; then
