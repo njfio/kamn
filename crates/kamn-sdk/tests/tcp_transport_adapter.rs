@@ -15,10 +15,18 @@ const TEST_TCP_SIGNING_PRIVATE_KEY_HEX: &str =
 const TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT: &str =
     "094cf4e1f3d974bbf3e72233e2c2937e8fdb094740e0f017e010aa47ac1201ac";
 
-fn did(value: &str) -> AgentDid {
+fn did_unbound(value: &str) -> AgentDid {
     match AgentDid::parse(format!("kamn:did:agent:{value}")) {
         Ok(parsed) => parsed,
         Err(error) => panic!("did parse failed: {error}"),
+    }
+}
+
+fn did(value: &str) -> AgentDid {
+    let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
+    match AgentDid::with_public_key_hex_binding(value, signer_public_key.as_str()) {
+        Ok(bound) => bound,
+        Err(error) => panic!("bound did parse failed: {error}"),
     }
 }
 
@@ -108,21 +116,26 @@ fn unit_tcp_envelope_rejects_duplicate_keys() {
 #[test]
 fn regression_tcp_envelope_rejects_baseline_v1_deterministic_signature() {
     // Regression: #5846
+    let from = did("sender-legacy");
+    let to = did("listener-legacy");
     let signer_public_key = signer_public_key_hex();
     let signature = signature_for_fields(
-        "kamn:did:agent:sender-legacy",
+        from.as_str(),
         2,
         "state:legacy",
         "legacy-payload",
     );
     let payload = format!(
-        "from=kamn:did:agent:sender-legacy\n\
-to=kamn:did:agent:listener-legacy\n\
+        "from={}\n\
+to={}\n\
 nonce=2\n\
 state_hash=state:legacy\n\
 body=legacy-payload\n\
 signer_public_key={signer_public_key}\n\
 signature={signature}\n"
+        ,
+        from.as_str(),
+        to.as_str()
     );
 
     assert_eq!(
@@ -137,7 +150,7 @@ signature={signature}\n"
 #[test]
 fn regression_tcp_envelope_rejects_missing_did_key_binding_fingerprint() {
     // Regression: #6299
-    let from = did("sender-unbound");
+    let from = did_unbound("sender-unbound");
     let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
     let signature = service_auth_sign_with_private_key_hex(
         from.as_str(),
@@ -463,14 +476,17 @@ fn regression_tampered_tcp_envelope_signature_is_rejected() {
         Err(error) => panic!("regression envelope build failed: {error}"),
     };
     let tampered_payload = format!(
-        "from=kamn:did:agent:sender-regression\n\
-to=kamn:did:agent:listener-regression\n\
+        "from={}\n\
+to={}\n\
 nonce=1\n\
 state_hash=state:regression\n\
 body=tampered-body-extended\n\
 signer_public_key={}\n\
 signature={}\n",
-        envelope.signer_public_key, envelope.signature
+        envelope.from.as_str(),
+        envelope.to.as_str(),
+        envelope.signer_public_key,
+        envelope.signature
     );
 
     assert_eq!(
