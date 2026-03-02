@@ -644,6 +644,10 @@ mod tests {
             DirectMessageCryptoError::KeyRefMismatch("recipient").to_string(),
             "recipient key reference mismatch"
         );
+        assert_eq!(
+            DirectMessageCryptoError::KeyDerivationFailed.to_string(),
+            "direct message key derivation failed"
+        );
     }
 
     #[test]
