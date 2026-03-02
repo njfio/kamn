@@ -85,3 +85,9 @@ the monolith.
   - `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
   - `bash scripts/ci/test_ci_strategy_contract.sh`
   - `cargo test -p kamn-sdk`
+
+## Phase 6 Integration Evidence
+
+- Fast-gate wiring smoke check:
+  - `bash scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh --output-json /tmp/kamn-sdk-service-rs-extraction-threshold-report.json`
+  - observed `policy_decision=GO` at `line_count=1863` with `reason_codes=none`.
