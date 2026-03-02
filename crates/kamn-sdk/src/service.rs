@@ -14,10 +14,13 @@ use std::time::Duration;
 
 #[path = "service_response.rs"]
 mod service_response;
+#[path = "service_websocket.rs"]
+mod service_websocket;
 use self::service_response::{
     expect_status, json_string_array_field, json_string_field, json_u64_field,
     map_non_success_response, parse_http_response, status_from_header,
 };
+use self::service_websocket::parse_unmasked_text_frame_payload;
 
 const REQUEST_TIMEOUT_SECONDS_DEFAULT: u64 = 2;
 const REQUEST_TIMEOUT_SECONDS_ENV: &str = "KAMN_SDK_SERVICE_TIMEOUT_SECONDS";
@@ -1119,68 +1122,6 @@ impl ServiceApiClient {
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
     }
-}
-
-fn parse_unmasked_text_frame_payload(frame: &[u8]) -> Result<&[u8], SdkError> {
-    if frame.len() < 2 {
-        return Err(SdkError::TransportFailure(
-            "service websocket response missing event frame",
-        ));
-    }
-    if frame[0] != 0x81 {
-        return Err(SdkError::TransportFailure(
-            "service websocket response frame opcode unsupported",
-        ));
-    }
-    if frame[1] & 0x80 != 0 {
-        return Err(SdkError::TransportFailure(
-            "service websocket response frame unexpectedly masked",
-        ));
-    }
-
-    let length_marker = frame[1] & 0x7f;
-    let (payload_offset, payload_len) = match length_marker {
-        0..=125 => (2_usize, length_marker as usize),
-        126 => {
-            if frame.len() < 4 {
-                return Err(SdkError::TransportFailure(
-                    "service websocket response frame payload truncated",
-                ));
-            }
-            let payload_len = u16::from_be_bytes([frame[2], frame[3]]) as usize;
-            (4, payload_len)
-        }
-        127 => {
-            if frame.len() < 10 {
-                return Err(SdkError::TransportFailure(
-                    "service websocket response frame payload truncated",
-                ));
-            }
-            let encoded_len = u64::from_be_bytes([
-                frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
-            ]);
-            let payload_len = usize::try_from(encoded_len).map_err(|_| {
-                SdkError::TransportFailure("service websocket response frame payload too large")
-            })?;
-            (10, payload_len)
-        }
-        _ => {
-            return Err(SdkError::TransportFailure(
-                "service websocket response frame payload length unsupported",
-            ));
-        }
-    };
-    let frame_end = payload_offset
-        .checked_add(payload_len)
-        .ok_or(SdkError::TransportFailure(
-            "service websocket response frame payload too large",
-        ))?;
-    if frame.len() < frame_end {
-        return Err(SdkError::TransportFailure(
-            "service websocket response frame payload truncated",
-        ));
-    }
-    Ok(&frame[payload_offset..frame_end])
 }
 
 fn write_and_flush_request<W: Write>(
