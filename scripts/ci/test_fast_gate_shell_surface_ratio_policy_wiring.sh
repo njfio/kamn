@@ -69,6 +69,19 @@ if ! grep -Fq "ci-shell-surface-threshold-ratchet.json" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
+if ! grep -Fq "name: Check kamn-sdk service.rs extraction threshold" "$FAST_WORKFLOW"; then
+  echo "expected kamn-sdk service.rs extraction-threshold step in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "bash scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh" "$FAST_WORKFLOW"; then
+  echo "expected kamn-sdk service.rs extraction-threshold checker command in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "ci-kamn-sdk-service-rs-extraction-threshold.json" "$FAST_WORKFLOW"; then
+  echo "expected kamn-sdk service.rs extraction-threshold report output wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+
 if ! grep -Fq "name: Check shell-rust ratio guardrail" "$FAST_WORKFLOW"; then
   echo "expected shell-rust ratio guardrail step in ci-fast-gate workflow" >&2
   exit 1
