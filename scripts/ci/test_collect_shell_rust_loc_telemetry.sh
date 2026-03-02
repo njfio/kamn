@@ -43,8 +43,16 @@ if ! printf '%s\n' "$output" | grep -Eq '^rust_line_total=[0-9]+$'; then
   echo "expected shell-rust LOC telemetry collector rust_line_total marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$output" | grep -Eq '^python_line_total=[0-9]+$'; then
+  echo "expected shell-rust LOC telemetry collector python_line_total marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$output" | grep -Eq '^shell_to_rust_ratio=[0-9]+(\.[0-9]+)?$'; then
   echo "expected shell-rust LOC telemetry collector shell_to_rust_ratio marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$output" | grep -Eq '^delta_python_line_total=-?[0-9]+$'; then
+  echo "expected shell-rust LOC telemetry collector delta_python_line_total marker" >&2
   exit 1
 fi
 
@@ -75,8 +83,12 @@ if not isinstance(metrics.get("shell_line_total"), int) or metrics["shell_line_t
     raise SystemExit("expected positive metrics.shell_line_total")
 if not isinstance(metrics.get("rust_line_total"), int) or metrics["rust_line_total"] <= 0:
     raise SystemExit("expected positive metrics.rust_line_total")
+if not isinstance(metrics.get("python_line_total"), int) or metrics["python_line_total"] <= 0:
+    raise SystemExit("expected positive metrics.python_line_total")
 if not isinstance(metrics.get("shell_to_rust_ratio"), float):
     raise SystemExit("expected float metrics.shell_to_rust_ratio")
+if not isinstance(metrics.get("delta_python_line_total"), int):
+    raise SystemExit("expected int metrics.delta_python_line_total")
 if metrics.get("script_budget_status") != "pass":
     raise SystemExit("expected script_budget_status=pass for passing telemetry report")
 PY
@@ -91,8 +103,10 @@ import sys
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
 payload["current"]["shell_to_rust_ratio"] = "invalid"
+payload["current"]["python_line_total"] = "invalid"
 payload["script_budget"]["status"] = "fail"
 payload["script_budget"]["checker_exit_code"] = 7
+payload["deltas"]["python_line_total"] = "invalid"
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
