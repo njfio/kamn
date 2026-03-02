@@ -73,7 +73,9 @@ fn signer_public_key_hex() -> String {
 fn signer_public_key_hex_for_private_key(private_key_hex: &str) -> String {
     match service_auth_public_key_hex_from_private_key_hex(private_key_hex) {
         Ok(value) => value,
-        Err(error) => panic!("failed to derive tcp signer public key for {private_key_hex}: {error}"),
+        Err(error) => {
+            panic!("failed to derive tcp signer public key for {private_key_hex}: {error}")
+        }
     }
 }
 
@@ -119,12 +121,7 @@ fn regression_tcp_envelope_rejects_baseline_v1_deterministic_signature() {
     let from = did("sender-legacy");
     let to = did("listener-legacy");
     let signer_public_key = signer_public_key_hex();
-    let signature = signature_for_fields(
-        from.as_str(),
-        2,
-        "state:legacy",
-        "legacy-payload",
-    );
+    let signature = signature_for_fields(from.as_str(), 2, "state:legacy", "legacy-payload");
     let payload = format!(
         "from={}\n\
 to={}\n\
@@ -132,8 +129,7 @@ nonce=2\n\
 state_hash=state:legacy\n\
 body=legacy-payload\n\
 signer_public_key={signer_public_key}\n\
-signature={signature}\n"
-        ,
+signature={signature}\n",
         from.as_str(),
         to.as_str()
     );

@@ -77,8 +77,9 @@ fn spec_c05_envelope_construction_rejects_invalid_signer_public_key() {
 fn regression_envelope_verify_integrity_rejects_missing_did_key_binding_fingerprint() {
     // Regression: #6299
     let from = AgentDid::parse("kamn:did:agent:sender-unbound").expect("from did");
-    let signer_public_key = service_public_key_for_private_key(TEST_ENVELOPE_SIGNING_PRIVATE_KEY_HEX)
-        .expect("signer key");
+    let signer_public_key =
+        service_public_key_for_private_key(TEST_ENVELOPE_SIGNING_PRIVATE_KEY_HEX)
+            .expect("signer key");
     let signature = service_signature_for_state_hash_with_private_key(
         &from,
         17,
@@ -109,8 +110,9 @@ fn regression_envelope_verify_integrity_rejects_missing_did_key_binding_fingerpr
 #[test]
 fn regression_envelope_verify_integrity_rejects_mismatched_did_key_binding_fingerprint() {
     // Regression: #6299
-    let signer_public_key = service_public_key_for_private_key(TEST_ENVELOPE_SIGNING_PRIVATE_KEY_HEX)
-        .expect("signer key");
+    let signer_public_key =
+        service_public_key_for_private_key(TEST_ENVELOPE_SIGNING_PRIVATE_KEY_HEX)
+            .expect("signer key");
     let mismatched_binding_public_key =
         service_public_key_for_private_key(TEST_ENVELOPE_SIGNING_PRIVATE_KEY_HEX_ALT)
             .expect("alternate signer key");
