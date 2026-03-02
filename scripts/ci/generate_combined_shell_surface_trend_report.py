@@ -171,6 +171,16 @@ def count_rust_lines(rust_root: Path) -> int:
     return rust_line_total
 
 
+def count_python_lines(scripts_root: Path) -> int:
+    python_line_total = 0
+    for path in scripts_root.rglob("*.py"):
+        rel_parts = set(path.parts)
+        if ".git" in rel_parts or "__pycache__" in rel_parts:
+            continue
+        python_line_total += sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore"))
+    return python_line_total
+
+
 def is_governance_doc_contract_test(path: Path, content: str) -> bool:
     name = path.name
     if name.startswith("review_r"):
@@ -315,16 +325,21 @@ def main() -> int:
         rust_line_total = count_rust_lines(rust_root)
         if rust_line_total <= 0:
             raise SystemExit("rust_line_total must be positive")
+        python_line_total = count_python_lines(scripts_root)
+        if python_line_total <= 0:
+            raise SystemExit("python_line_total must be positive")
 
         shell_to_rust_ratio = round(shell_line_total / rust_line_total, 6)
         baseline_script_count = int(baseline.get("script_count", 0))
         baseline_shell_line_total = int(baseline.get("shell_line_total", 0))
         baseline_rust_line_total = int(baseline.get("rust_line_total", 0))
+        baseline_python_line_total = int(baseline.get("python_line_total", 0))
         baseline_shell_to_rust_ratio = float(baseline.get("shell_to_rust_ratio", 0.0))
 
         delta_script_count = script_count - baseline_script_count
         delta_shell_line_total = shell_line_total - baseline_shell_line_total
         delta_rust_line_total = rust_line_total - baseline_rust_line_total
+        delta_python_line_total = python_line_total - baseline_python_line_total
         delta_shell_to_rust_ratio = round(shell_to_rust_ratio - baseline_shell_to_rust_ratio, 6)
 
         governance_policy = parse_policy(governance_policy_file)
@@ -357,18 +372,21 @@ def main() -> int:
                 "script_count": script_count,
                 "shell_line_total": shell_line_total,
                 "rust_line_total": rust_line_total,
+                "python_line_total": python_line_total,
                 "shell_to_rust_ratio": shell_to_rust_ratio,
             },
             "baseline": {
                 "script_count": baseline_script_count,
                 "shell_line_total": baseline_shell_line_total,
                 "rust_line_total": baseline_rust_line_total,
+                "python_line_total": baseline_python_line_total,
                 "shell_to_rust_ratio": baseline_shell_to_rust_ratio,
             },
             "deltas": {
                 "script_count": delta_script_count,
                 "shell_line_total": delta_shell_line_total,
                 "rust_line_total": delta_rust_line_total,
+                "python_line_total": delta_python_line_total,
                 "shell_to_rust_ratio": delta_shell_to_rust_ratio,
             },
             "script_budget": {
@@ -424,10 +442,12 @@ def main() -> int:
         print(f"script_count={script_count}")
         print(f"shell_line_total={shell_line_total}")
         print(f"rust_line_total={rust_line_total}")
+        print(f"python_line_total={python_line_total}")
         print(f"shell_to_rust_ratio={shell_to_rust_ratio}")
         print(f"delta_script_count={delta_script_count}")
         print(f"delta_shell_line_total={delta_shell_line_total}")
         print(f"delta_rust_line_total={delta_rust_line_total}")
+        print(f"delta_python_line_total={delta_python_line_total}")
         print(f"delta_shell_to_rust_ratio={delta_shell_to_rust_ratio}")
         print(f"script_budget_status={report['script_budget']['status']}")
         print(f"script_budget_checker_exit_code={script_budget_exit_code}")

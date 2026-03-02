@@ -226,7 +226,7 @@ jobs:
             --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json \
             --output-json ci-combined-shell-surface-trend-policy.json
 
-      - name: Collect shell-rust LOC telemetry
+      - name: Collect shell-rust-python LOC telemetry
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |
           bash scripts/ci/collect_shell_rust_loc_telemetry.sh \
@@ -243,7 +243,7 @@ jobs:
             ci-combined-shell-surface-trend-policy.json
           if-no-files-found: error
 
-      - name: Upload shell-rust LOC telemetry
+      - name: Upload shell-rust-python LOC telemetry
         if: always() && hashFiles('ci-shell-rust-loc-telemetry.json') != ''
         uses: actions/upload-artifact@v4
         with:

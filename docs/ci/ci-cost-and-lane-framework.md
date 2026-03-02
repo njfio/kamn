@@ -324,6 +324,7 @@ The checker fails closed when any metric exceeds its configured threshold and em
   - tracked dimensions:
     - `script_count`
     - `shell_line_total`
+    - `python_line_total`
     - `rust_line_total`
     - `shell_to_rust_ratio`
 - Combined trend policy checker:

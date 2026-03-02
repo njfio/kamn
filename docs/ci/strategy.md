@@ -4704,7 +4704,7 @@ Fast-mode CI tooling regression coverage includes:
   - deterministic baseline refresh workflow markers:
     - `combined_shell_surface_baseline_refresh_trigger_reason=combined_shell_surface_shell_line_total_delta_fail_exceeded`
     - `combined_shell_surface_baseline_refresh_command=bash scripts/ci/generate_combined_shell_surface_trend_report.sh --budget-file .ci/script-surface-budget.env --script-baseline-file .ci/script-surface-baseline.env --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json --output-json /tmp/combined-shell-surface-trend-report.json`
-    - `combined_shell_surface_baseline_refresh_contract=update fixtures/ci/combined_shell_surface_trend_baseline.json with report.current metrics in the same PR`
+    - `combined_shell_surface_baseline_refresh_contract=update fixtures/ci/combined_shell_surface_trend_baseline.json with report.current metrics (`script_count`, `shell_line_total`, `python_line_total`, `rust_line_total`, `shell_to_rust_ratio`) in the same PR`
     - `combined_shell_surface_baseline_refresh_validation=bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
 - Shell-Rust LOC telemetry collector (`test_collect_shell_rust_loc_telemetry.sh`)
   - collector command:
@@ -4717,6 +4717,9 @@ Fast-mode CI tooling regression coverage includes:
     - `final_decision=GO|NO-GO`
     - `reason_codes=none|<csv>`
     - `reason_codes_value=none|<csv>`
+  - normalized metric markers:
+    - `python_line_total=<integer>`
+    - `delta_python_line_total=<signed-integer>`
 - Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
   - policy command:
     - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`

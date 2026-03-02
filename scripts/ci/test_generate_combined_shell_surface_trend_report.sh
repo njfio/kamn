@@ -30,6 +30,10 @@ if ! printf '%s\n' "$output" | grep -Eq '^rust_line_total=[0-9]+$'; then
   echo "expected combined shell-surface trend generator rust_line_total marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$output" | grep -Eq '^python_line_total=[0-9]+$'; then
+  echo "expected combined shell-surface trend generator python_line_total marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$output" | grep -Eq '^shell_to_rust_ratio=[0-9]+(\.[0-9]+)?$'; then
   echo "expected combined shell-surface trend generator shell_to_rust_ratio marker" >&2
   exit 1
@@ -53,7 +57,7 @@ script_budget = payload.get("script_budget", {})
 governance = payload.get("governance_structural_coupling", {})
 governance_runtime_test_ratio = payload.get("governance_runtime_test_ratio", {})
 
-for key in ("script_count", "shell_line_total", "rust_line_total"):
+for key in ("script_count", "shell_line_total", "rust_line_total", "python_line_total"):
     if not isinstance(current.get(key), int) or current.get(key) <= 0:
         raise SystemExit(f"expected positive integer current[{key}]")
 
@@ -82,10 +86,13 @@ if not isinstance(governance_runtime_test_ratio.get("governance_test_ratio"), (i
 
 expected_delta_script_count = current["script_count"] - int(baseline["script_count"])
 expected_delta_shell_line_total = current["shell_line_total"] - int(baseline["shell_line_total"])
+expected_delta_python_line_total = current["python_line_total"] - int(baseline["python_line_total"])
 if deltas.get("script_count") != expected_delta_script_count:
     raise SystemExit("script_count delta mismatch")
 if deltas.get("shell_line_total") != expected_delta_shell_line_total:
     raise SystemExit("shell_line_total delta mismatch")
+if deltas.get("python_line_total") != expected_delta_python_line_total:
+    raise SystemExit("python_line_total delta mismatch")
 PY
 
 set +e

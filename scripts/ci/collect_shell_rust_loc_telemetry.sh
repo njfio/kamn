@@ -167,10 +167,12 @@ def emit_markers(
         "script_count",
         "shell_line_total",
         "rust_line_total",
+        "python_line_total",
         "shell_to_rust_ratio",
         "delta_script_count",
         "delta_shell_line_total",
         "delta_rust_line_total",
+        "delta_python_line_total",
         "delta_shell_to_rust_ratio",
         "script_budget_status",
         "script_budget_checker_exit_code",
@@ -195,10 +197,12 @@ metrics = {
     "script_count": "unknown",
     "shell_line_total": "unknown",
     "rust_line_total": "unknown",
+    "python_line_total": "unknown",
     "shell_to_rust_ratio": "unknown",
     "delta_script_count": "unknown",
     "delta_shell_line_total": "unknown",
     "delta_rust_line_total": "unknown",
+    "delta_python_line_total": "unknown",
     "delta_shell_to_rust_ratio": "unknown",
     "script_budget_status": "unknown",
     "script_budget_checker_exit_code": "unknown",
@@ -231,10 +235,12 @@ else:
     script_count = current.get("script_count")
     shell_line_total = current.get("shell_line_total")
     rust_line_total = current.get("rust_line_total")
+    python_line_total = current.get("python_line_total")
     shell_to_rust_ratio = current.get("shell_to_rust_ratio")
     delta_script_count = deltas.get("script_count")
     delta_shell_line_total = deltas.get("shell_line_total")
     delta_rust_line_total = deltas.get("rust_line_total")
+    delta_python_line_total = deltas.get("python_line_total")
     delta_shell_to_rust_ratio = deltas.get("shell_to_rust_ratio")
     script_budget_status = script_budget.get("status")
     script_budget_checker_exit_code = script_budget.get("checker_exit_code")
@@ -244,10 +250,12 @@ else:
             "script_count": script_count,
             "shell_line_total": shell_line_total,
             "rust_line_total": rust_line_total,
+            "python_line_total": python_line_total,
             "shell_to_rust_ratio": shell_to_rust_ratio,
             "delta_script_count": delta_script_count,
             "delta_shell_line_total": delta_shell_line_total,
             "delta_rust_line_total": delta_rust_line_total,
+            "delta_python_line_total": delta_python_line_total,
             "delta_shell_to_rust_ratio": delta_shell_to_rust_ratio,
             "script_budget_status": script_budget_status,
             "script_budget_checker_exit_code": script_budget_checker_exit_code,
@@ -260,6 +268,8 @@ else:
         add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
     if not isinstance(rust_line_total, int) or rust_line_total <= 0:
         add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
+    if not isinstance(python_line_total, int) or python_line_total <= 0:
+        add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
     if not isinstance(shell_to_rust_ratio, (int, float)):
         add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
     if not isinstance(delta_script_count, int):
@@ -267,6 +277,8 @@ else:
     if not isinstance(delta_shell_line_total, int):
         add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
     if not isinstance(delta_rust_line_total, int):
+        add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
+    if not isinstance(delta_python_line_total, int):
         add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
     if not isinstance(delta_shell_to_rust_ratio, (int, float)):
         add_reason(reason_codes, "shell_rust_loc_telemetry_metric_type_invalid")
