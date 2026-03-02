@@ -423,6 +423,7 @@ mod tests {
 
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+    const SOURCE: &str = include_str!("direct_message_crypto.rs");
 
     fn key_agreement_seed_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -622,6 +623,26 @@ mod tests {
 
         assert_eq!(hkdf_key_a, hkdf_key_b);
         assert_ne!(hkdf_key_a, legacy_key);
+    }
+
+    #[test]
+    fn direct_message_derivation_backend_markers_and_manual_helper_removal_contract() {
+        assert_eq!(
+            super::DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+            "rustcrypto.hkdf.sha256.v1"
+        );
+        assert_eq!(
+            super::DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+            "rustcrypto.hmac.sha256.v1"
+        );
+        assert!(
+            !SOURCE.contains("fn hkdf_sha256_derive_32("),
+            "manual hkdf helper must be removed"
+        );
+        assert!(
+            !SOURCE.contains("fn hmac_sha256("),
+            "manual hmac helper must be removed"
+        );
     }
 
     #[test]
