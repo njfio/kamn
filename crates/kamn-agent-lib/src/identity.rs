@@ -23,10 +23,16 @@ impl AgentIdentity {
         let normalized_name = normalize_agent_name(name)?;
         let signing_key = derive_deterministic_service_signing_key_hex(normalized_name.as_str())?;
         let signer_public_key = service_public_key_for_private_key(signing_key.as_str())?;
-        let did = AgentDid::parse(format!(
-            "kamn:did:agent:pkh-{}",
-            signer_public_key.to_ascii_lowercase()
-        ))?;
+        let method_specific_id = format!("pkh-{}", signer_public_key.to_ascii_lowercase());
+        let did = AgentDid::with_public_key_hex_binding(
+            method_specific_id.as_str(),
+            signer_public_key.as_str(),
+        )
+        .map_err(|error| {
+            AgentLibError::Internal(format!(
+                "failed to derive deterministic did key binding: {error}"
+            ))
+        })?;
         Ok(Self {
             did,
             signing_key,
@@ -174,7 +180,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{deterministic_identity_allowed_from_env, fnv1a_round_u64, AgentIdentity};
-    use kamn_sdk::service_public_key_for_private_key;
+    use kamn_sdk::{service_public_key_for_private_key, AgentDid};
     use std::env;
 
     #[test]
@@ -182,9 +188,15 @@ mod tests {
         let identity = AgentIdentity::from_agent_name("Alice").expect("identity should build");
         let expected_public_key = service_public_key_for_private_key(identity.signing_key())
             .expect("deterministic signing key should produce compressed public key");
+        let expected_did = AgentDid::with_public_key_hex_binding(
+            format!("pkh-{expected_public_key}").as_str(),
+            expected_public_key.as_str(),
+        )
+        .expect("expected did should build");
         assert_eq!(
-            identity.did().as_str(),
-            format!("kamn:did:agent:pkh-{expected_public_key}")
+            identity.did(),
+            &expected_did,
+            "identity did must embed signer public key key-binding fingerprint"
         );
         assert_eq!(
             identity.signing_key(),

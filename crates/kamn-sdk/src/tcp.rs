@@ -3,6 +3,7 @@ use kamn_core::{
     service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
     service_auth_verify_with_public_key_hex, ServiceAuthSignatureError,
 };
+use kamn_types::AgentDidKeyBindingError;
 use std::collections::HashMap;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
@@ -16,6 +17,8 @@ const DEFAULT_MAX_WIRE_BYTES: usize = 32 * 1024;
 const TCP_HANDSHAKE_VERSION: &str = "1";
 const TCP_HANDSHAKE_PROFILE: &str = "secp256k1:baseline-v2";
 const TCP_FRAME_DELIMITER: &str = "\n\n";
+const FROM_DID_KEY_BINDING_REASON: &str =
+    "must include key-binding fingerprint matching signer_public_key";
 
 /// Cryptographically signed envelope transported over TCP.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -291,7 +294,25 @@ impl TcpSignedEnvelope {
                 reason: "failed cryptographic envelope verification",
             }),
         }?;
+        self.from
+            .ensure_public_key_hex_binding(self.signer_public_key.as_str())
+            .map_err(map_from_did_key_binding_error)?;
         Ok(())
+    }
+}
+
+fn map_from_did_key_binding_error(error: AgentDidKeyBindingError) -> SdkError {
+    match error {
+        AgentDidKeyBindingError::InvalidPublicKeyHex => SdkError::InvalidInput {
+            field: "signer_public_key",
+            reason: "must be valid compressed secp256k1 public key hex",
+        },
+        AgentDidKeyBindingError::MissingKeyBinding
+        | AgentDidKeyBindingError::KeyBindingMismatch { .. }
+        | AgentDidKeyBindingError::InvalidMethodSpecificId(_) => SdkError::InvalidInput {
+            field: "from",
+            reason: FROM_DID_KEY_BINDING_REASON,
+        },
     }
 }
 

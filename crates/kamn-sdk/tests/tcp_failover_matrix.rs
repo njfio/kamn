@@ -11,8 +11,14 @@ const TEST_TCP_SIGNING_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 fn did(value: &str) -> AgentDid {
-    match AgentDid::parse(format!("kamn:did:agent:{value}")) {
-        Ok(parsed) => parsed,
+    let signer_public_key = match kamn_core::service_auth_public_key_hex_from_private_key_hex(
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+    ) {
+        Ok(value) => value,
+        Err(error) => panic!("failed to derive tcp signer public key: {error}"),
+    };
+    match AgentDid::with_public_key_hex_binding(value, signer_public_key.as_str()) {
+        Ok(bound) => bound,
         Err(error) => panic!("did parse failed: {error}"),
     }
 }

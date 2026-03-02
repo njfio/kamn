@@ -4,6 +4,10 @@ use kamn_sdk::{
     service_public_key_for_private_key, service_signature_for_state_hash_with_private_key,
     service_verify_signature_with_public_key, AgentDid, SdkError,
 };
+use kamn_types::AgentDidKeyBindingError;
+
+const FROM_DID_KEY_BINDING_REASON: &str =
+    "must include key-binding fingerprint matching signer_public_key";
 
 /// Canonical message envelope emitted by phase-1 agent operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,7 +67,25 @@ impl CanonicalMessageEnvelope {
             self.signer_public_key.as_str(),
         )
         .map_err(map_sdk_signature_error)?;
+        from_did
+            .ensure_public_key_hex_binding(self.signer_public_key.as_str())
+            .map_err(map_did_key_binding_error)?;
         Ok(())
+    }
+}
+
+fn map_did_key_binding_error(error: AgentDidKeyBindingError) -> AgentLibError {
+    match error {
+        AgentDidKeyBindingError::InvalidPublicKeyHex => AgentLibError::InvalidInput {
+            field: "signer_public_key",
+            reason: "must be valid compressed secp256k1 public key hex".to_owned(),
+        },
+        AgentDidKeyBindingError::MissingKeyBinding
+        | AgentDidKeyBindingError::KeyBindingMismatch { .. }
+        | AgentDidKeyBindingError::InvalidMethodSpecificId(_) => AgentLibError::InvalidInput {
+            field: "from",
+            reason: FROM_DID_KEY_BINDING_REASON.to_owned(),
+        },
     }
 }
 

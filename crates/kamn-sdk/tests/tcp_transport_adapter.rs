@@ -1,4 +1,6 @@
-use kamn_core::service_auth_public_key_hex_from_private_key_hex;
+use kamn_core::{
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+};
 use kamn_sdk::{
     signature_for_fields, AgentDid, SdkError, TcpSignedEnvelope, TcpTransportAdapter,
     TcpTransportConfig,
@@ -10,11 +12,21 @@ use std::time::{Duration, Instant};
 
 const TEST_TCP_SIGNING_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+const TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT: &str =
+    "094cf4e1f3d974bbf3e72233e2c2937e8fdb094740e0f017e010aa47ac1201ac";
 
-fn did(value: &str) -> AgentDid {
+fn did_unbound(value: &str) -> AgentDid {
     match AgentDid::parse(format!("kamn:did:agent:{value}")) {
         Ok(parsed) => parsed,
         Err(error) => panic!("did parse failed: {error}"),
+    }
+}
+
+fn did(value: &str) -> AgentDid {
+    let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
+    match AgentDid::with_public_key_hex_binding(value, signer_public_key.as_str()) {
+        Ok(bound) => bound,
+        Err(error) => panic!("bound did parse failed: {error}"),
     }
 }
 
@@ -58,6 +70,15 @@ fn signer_public_key_hex() -> String {
     }
 }
 
+fn signer_public_key_hex_for_private_key(private_key_hex: &str) -> String {
+    match service_auth_public_key_hex_from_private_key_hex(private_key_hex) {
+        Ok(value) => value,
+        Err(error) => {
+            panic!("failed to derive tcp signer public key for {private_key_hex}: {error}")
+        }
+    }
+}
+
 #[test]
 fn unit_tcp_envelope_roundtrip_is_cryptographic() {
     let envelope = match TcpSignedEnvelope::new(
@@ -97,21 +118,20 @@ fn unit_tcp_envelope_rejects_duplicate_keys() {
 #[test]
 fn regression_tcp_envelope_rejects_baseline_v1_deterministic_signature() {
     // Regression: #5846
+    let from = did("sender-legacy");
+    let to = did("listener-legacy");
     let signer_public_key = signer_public_key_hex();
-    let signature = signature_for_fields(
-        "kamn:did:agent:sender-legacy",
-        2,
-        "state:legacy",
-        "legacy-payload",
-    );
+    let signature = signature_for_fields(from.as_str(), 2, "state:legacy", "legacy-payload");
     let payload = format!(
-        "from=kamn:did:agent:sender-legacy\n\
-to=kamn:did:agent:listener-legacy\n\
+        "from={}\n\
+to={}\n\
 nonce=2\n\
 state_hash=state:legacy\n\
 body=legacy-payload\n\
 signer_public_key={signer_public_key}\n\
-signature={signature}\n"
+signature={signature}\n",
+        from.as_str(),
+        to.as_str()
     );
 
     assert_eq!(
@@ -119,6 +139,109 @@ signature={signature}\n"
         Err(SdkError::InvalidInput {
             field: "signature",
             reason: "failed cryptographic envelope verification",
+        })
+    );
+}
+
+#[test]
+fn regression_tcp_envelope_rejects_missing_did_key_binding_fingerprint() {
+    // Regression: #6299
+    let from = did_unbound("sender-unbound");
+    let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
+    let signature = service_auth_sign_with_private_key_hex(
+        from.as_str(),
+        3,
+        "state:binding",
+        "binding-check",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+    )
+    .expect("signature");
+
+    let envelope = TcpSignedEnvelope {
+        from,
+        to: did("listener-bound"),
+        nonce: 3,
+        state_hash: "state:binding".to_owned(),
+        body: "binding-check".to_owned(),
+        signer_public_key,
+        signature,
+    };
+
+    assert_eq!(
+        envelope.verify_integrity(),
+        Err(SdkError::InvalidInput {
+            field: "from",
+            reason: "must include key-binding fingerprint matching signer_public_key",
+        })
+    );
+}
+
+#[test]
+fn regression_tcp_envelope_rejects_mismatched_did_key_binding_fingerprint() {
+    // Regression: #6299
+    let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
+    let mismatched_binding_public_key =
+        signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT);
+    let from = AgentDid::with_public_key_hex_binding(
+        "sender-bound-mismatch",
+        mismatched_binding_public_key.as_str(),
+    )
+    .expect("from did");
+    let signature = service_auth_sign_with_private_key_hex(
+        from.as_str(),
+        4,
+        "state:binding-mismatch",
+        "binding-mismatch-check",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+    )
+    .expect("signature");
+
+    let envelope = TcpSignedEnvelope {
+        from,
+        to: did("listener-bound"),
+        nonce: 4,
+        state_hash: "state:binding-mismatch".to_owned(),
+        body: "binding-mismatch-check".to_owned(),
+        signer_public_key,
+        signature,
+    };
+
+    assert_eq!(
+        envelope.verify_integrity(),
+        Err(SdkError::InvalidInput {
+            field: "from",
+            reason: "must include key-binding fingerprint matching signer_public_key",
+        })
+    );
+}
+
+#[test]
+fn integration_tcp_parse_rejects_unbound_sender_did_key_binding() {
+    // Integration: #6299
+    let from = did_unbound("sender-wire-unbound");
+    let to = did("listener-wire-bound");
+    let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
+    let signature = service_auth_sign_with_private_key_hex(
+        from.as_str(),
+        5,
+        "state:wire-binding",
+        "wire-binding-check",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+    )
+    .expect("signature");
+    let payload = format!(
+        "from={}\nto={}\nnonce=5\nstate_hash=state:wire-binding\nbody=wire-binding-check\nsigner_public_key={}\nsignature={}\n",
+        from.as_str(),
+        to.as_str(),
+        signer_public_key,
+        signature
+    );
+
+    assert_eq!(
+        TcpSignedEnvelope::parse_wire_payload(payload.as_str()),
+        Err(SdkError::InvalidInput {
+            field: "from",
+            reason: "must include key-binding fingerprint matching signer_public_key",
         })
     );
 }
@@ -380,14 +503,17 @@ fn regression_tampered_tcp_envelope_signature_is_rejected() {
         Err(error) => panic!("regression envelope build failed: {error}"),
     };
     let tampered_payload = format!(
-        "from=kamn:did:agent:sender-regression\n\
-to=kamn:did:agent:listener-regression\n\
+        "from={}\n\
+to={}\n\
 nonce=1\n\
 state_hash=state:regression\n\
 body=tampered-body-extended\n\
 signer_public_key={}\n\
 signature={}\n",
-        envelope.signer_public_key, envelope.signature
+        envelope.from.as_str(),
+        envelope.to.as_str(),
+        envelope.signer_public_key,
+        envelope.signature
     );
 
     assert_eq!(
