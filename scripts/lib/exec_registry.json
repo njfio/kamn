@@ -127,6 +127,12 @@
       "args_prefix": [],
       "passthrough": true
     },
+    "scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/ci/check_kamn_node_main_rs_extraction_threshold.sh": {
       "interpreter": "python3",
       "target": "scripts/ci/check_kamn_node_main_rs_extraction_threshold.py",

@@ -1,0 +1,5 @@
+{
+  "schema_version": "kamn.ci.kamn-sdk-service-rs-extraction-thresholds.v1",
+  "warn_line_count": 2000,
+  "fail_line_count": 2100
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": "kamn.ci.kamn-sdk-service-rs-extraction-threshold-exception.v1",
+  "reason": "temporary service.rs extraction bridge",
+  "tracking_issue": "#6303",
+  "expires_on": "2026-06-30",
+  "max_line_count": 2200
+}
