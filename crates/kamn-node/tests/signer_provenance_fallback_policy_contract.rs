@@ -60,9 +60,7 @@ fn functional_docs_declare_signer_provenance_fallback_policy_contract_markers() 
 fn integration_signer_provenance_fallback_reason_codes_remain_in_source_and_docs_parity() {
     for reason_code in REQUIRED_KEY_SOURCE_REASON_CODES {
         assert!(
-            MAIN_SRC.contains(reason_code)
-                || RUNTIME_ORCHESTRATION_SRC.contains(reason_code)
-                || RUNTIME_POLICY_CONTRACTS_SRC.contains(reason_code),
+            source_taxonomy_contains_reason_code(reason_code),
             "runtime signer key-source reason code missing from source taxonomy: {reason_code}"
         );
         assert!(
@@ -136,4 +134,10 @@ fn parse_csv_entries(value: &str) -> BTreeSet<&str> {
         .map(str::trim)
         .filter(|entry| !entry.is_empty())
         .collect()
+}
+
+fn source_taxonomy_contains_reason_code(reason_code: &str) -> bool {
+    MAIN_SRC.contains(reason_code)
+        || RUNTIME_ORCHESTRATION_SRC.contains(reason_code)
+        || RUNTIME_POLICY_CONTRACTS_SRC.contains(reason_code)
 }
