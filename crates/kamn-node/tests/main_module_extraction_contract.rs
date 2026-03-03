@@ -254,27 +254,36 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
         "full_supervisor module should own full supervisor HTTP probe helper"
     );
     assert!(
-        runtime_policy_contracts_rs.contains("pub(super) fn should_use_os_signal_shutdown("),
+        runtime_policy_contracts_rs.contains("pub(super) fn should_use_os_signal_shutdown(")
+            || runtime_policy_contracts_rs.contains("pub(crate) fn should_use_os_signal_shutdown("),
         "runtime_policy_contracts module should own os-signal shutdown selection policy helper"
     );
     assert!(
-        runtime_policy_contracts_rs.contains(
-            "pub(super) fn classify_production_transport_profile_violation("
-        ),
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn classify_production_transport_profile_violation(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn classify_production_transport_profile_violation("),
         "runtime_policy_contracts module should own transport profile violation classifier"
     );
     assert!(
-        runtime_policy_contracts_rs.contains("pub(super) fn validate_full_supervisor_stop_contract("),
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn validate_full_supervisor_stop_contract(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn validate_full_supervisor_stop_contract("),
         "runtime_policy_contracts module should own full-supervisor stop contract validation"
     );
     assert!(
         runtime_policy_contracts_rs
-            .contains("pub(super) fn validate_shutdown_checkpoint_reconciliation("),
+            .contains("pub(super) fn validate_shutdown_checkpoint_reconciliation(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn validate_shutdown_checkpoint_reconciliation("),
         "runtime_policy_contracts module should own shutdown checkpoint reconciliation validation"
     );
     assert!(
         runtime_policy_contracts_rs
-            .contains("pub(super) fn enforce_kolme_live_signer_key_source_policy("),
+            .contains("pub(super) fn enforce_kolme_live_signer_key_source_policy(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
         "runtime_policy_contracts module should own Kolme signer key-source policy enforcement"
     );
 }
@@ -342,8 +351,9 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     );
     assert!(
         runtime_orchestration_rs.contains("pub(crate) fn validate_full_supervisor_stop_contract(")
-            || runtime_orchestration_rs
-                .contains("pub(crate) use runtime_policy_contracts::validate_full_supervisor_stop_contract;"),
+            || runtime_orchestration_rs.contains(
+                "pub(crate) use runtime_policy_contracts::validate_full_supervisor_stop_contract;"
+            ),
         "runtime_orchestration module should surface full supervisor stop contract validation"
     );
     assert!(

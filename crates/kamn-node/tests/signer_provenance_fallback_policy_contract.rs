@@ -6,6 +6,8 @@ const KOLME_RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/architecture/kolme-runtime-commit.md");
 const MAIN_SRC: &str = include_str!("../src/main.rs");
 const RUNTIME_ORCHESTRATION_SRC: &str = include_str!("../src/runtime_orchestration.rs");
+const RUNTIME_POLICY_CONTRACTS_SRC: &str =
+    include_str!("../src/runtime_orchestration/runtime_policy_contracts.rs");
 const MANAGED_BACKEND_SRC: &str = include_str!("../src/signer/managed_backend.rs");
 
 const REQUIRED_KEY_SOURCE_REASON_CODES: &[&str] = &[
@@ -58,7 +60,9 @@ fn functional_docs_declare_signer_provenance_fallback_policy_contract_markers() 
 fn integration_signer_provenance_fallback_reason_codes_remain_in_source_and_docs_parity() {
     for reason_code in REQUIRED_KEY_SOURCE_REASON_CODES {
         assert!(
-            MAIN_SRC.contains(reason_code) || RUNTIME_ORCHESTRATION_SRC.contains(reason_code),
+            MAIN_SRC.contains(reason_code)
+                || RUNTIME_ORCHESTRATION_SRC.contains(reason_code)
+                || RUNTIME_POLICY_CONTRACTS_SRC.contains(reason_code),
             "runtime signer key-source reason code missing from source taxonomy: {reason_code}"
         );
         assert!(
