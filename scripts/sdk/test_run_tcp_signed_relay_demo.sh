@@ -20,6 +20,7 @@ required_markers=(
   "status=ok"
   "verified=true"
   "adapter=tcp"
+  "from=kamn:did:agent:sender-1--keyh-"
   "signature=sig:secp256k1:baseline-v2:"
   "tcp signed relay demo completed."
 )
