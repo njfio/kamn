@@ -83,3 +83,9 @@ ratchet extraction thresholds so CI enforces continued decomposition.
 
 - `bash scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh --output-json /tmp/kamn-sdk-service-rs-extraction-threshold-report.json`
 - `cargo test -p kamn-sdk`
+
+Observed results:
+- checker reported `policy_decision=GO`, `line_count=1340`, `warn_line_count=1700`,
+  `fail_line_count=1800`, `reason_codes=none`.
+- `bash scripts/ci/test_check_kamn_sdk_service_rs_extraction_threshold.sh` passed.
+- `cargo test -p kamn-sdk` passed.
