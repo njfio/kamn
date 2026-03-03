@@ -190,13 +190,30 @@ fn main_module_extraction_contract_delegates_endpoint_orchestration_to_runtime_e
 fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module() {
     let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
     let daemon_phase_rs = read_repo_file("src/runtime_orchestration/daemon_phase.rs");
+    let full_supervisor_rs = read_repo_file("src/runtime_orchestration/full_supervisor.rs");
     assert!(
         runtime_orchestration_rs.contains("mod daemon_phase;"),
         "runtime_orchestration.rs should declare daemon phase submodule"
     );
     assert!(
+        runtime_orchestration_rs.contains("mod full_supervisor;"),
+        "runtime_orchestration.rs should declare full_supervisor submodule"
+    );
+    assert!(
         !runtime_orchestration_rs.contains("fn execute_daemon_runtime("),
         "runtime_orchestration.rs should not keep inline daemon runtime executor"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn run_full_supervisor_http_probe("),
+        "runtime_orchestration.rs should not keep inline full supervisor probe helper"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn start_full_supervisor_service_api_lane("),
+        "runtime_orchestration.rs should not keep inline full supervisor service-api lane start helper"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn finish_full_supervisor_observability_lane("),
+        "runtime_orchestration.rs should not keep inline full supervisor observability lane finish helper"
     );
     assert!(
         daemon_phase_rs.contains("pub(super) fn execute_daemon_runtime("),
@@ -205,6 +222,14 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     assert!(
         daemon_phase_rs.contains("pub(super) fn daemon_shutdown_drain_status("),
         "daemon phase module should own shutdown drain status derivation"
+    );
+    assert!(
+        full_supervisor_rs.contains("pub(super) fn execute_full_supervisor_daemon_runtime("),
+        "full_supervisor module should own full supervisor daemon runtime execution helper"
+    );
+    assert!(
+        full_supervisor_rs.contains("pub(super) fn run_full_supervisor_http_probe("),
+        "full_supervisor module should own full supervisor HTTP probe helper"
     );
 }
 
