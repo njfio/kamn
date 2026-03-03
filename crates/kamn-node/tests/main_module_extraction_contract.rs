@@ -36,6 +36,10 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare runtime_orchestration module"
     );
     assert!(
+        main_rs.contains("mod runtime_entrypoint;"),
+        "main.rs should declare runtime_entrypoint module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
@@ -153,6 +157,32 @@ fn main_module_extraction_contract_removes_inline_runtime_orchestration_impls() 
     assert!(
         !main_rs.contains("fn execute(cli: NodeCli)"),
         "main.rs should delegate runtime execution to runtime_orchestration module"
+    );
+}
+
+#[test]
+fn main_module_extraction_contract_delegates_endpoint_orchestration_to_runtime_entrypoint_module() {
+    let main_rs = read_repo_file("src/main.rs");
+    let runtime_entrypoint_rs = read_repo_file("src/runtime_entrypoint.rs");
+    assert!(
+        !main_rs.contains("fn classify_service_api_endpoint_runtime_path("),
+        "main.rs should not keep inline service-api endpoint runtime-path classifier"
+    );
+    assert!(
+        !main_rs.contains("fn should_skip_observability_endpoint_for_full_supervisor("),
+        "main.rs should not keep inline observability endpoint runtime-path guard"
+    );
+    assert!(
+        main_rs.contains("serve_runtime_endpoints("),
+        "main.rs should delegate endpoint orchestration to runtime_entrypoint module"
+    );
+    assert!(
+        runtime_entrypoint_rs.contains("pub(crate) fn serve_runtime_endpoints("),
+        "runtime_entrypoint module should own endpoint-serving orchestration"
+    );
+    assert!(
+        runtime_entrypoint_rs.contains("ServiceApiEndpointRuntimePath"),
+        "runtime_entrypoint module should own endpoint runtime-path classification"
     );
 }
 
