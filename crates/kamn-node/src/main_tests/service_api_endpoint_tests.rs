@@ -2098,7 +2098,8 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 5,
+        // Keep budget above readiness + concurrent lane probes to avoid racey shutdowns.
+        max_requests: 8,
         idle_timeout_ms: 2_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
