@@ -195,6 +195,20 @@ jobs:
           path: ci-shell-surface-threshold-ratchet.json
           if-no-files-found: error
 
+      - name: Check kamn-sdk service.rs extraction threshold
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh \
+            --output-json ci-kamn-sdk-service-rs-extraction-threshold.json
+
+      - name: Upload kamn-sdk service.rs extraction-threshold telemetry
+        if: always() && hashFiles('ci-kamn-sdk-service-rs-extraction-threshold.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-kamn-sdk-service-rs-extraction-threshold-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-kamn-sdk-service-rs-extraction-threshold.json
+          if-no-files-found: error
+
       - name: Check stale script references
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |

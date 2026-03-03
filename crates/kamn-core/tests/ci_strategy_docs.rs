@@ -569,6 +569,19 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("reason_codes=main_rs_threshold_exception_expired"));
     assert!(DOC.contains("reason_codes=main_rs_threshold_exception_cap_exceeded"));
     assert!(DOC.contains("reason_codes=threshold_order_invalid"));
+    assert!(DOC.contains("test_check_kamn_sdk_service_rs_extraction_threshold.sh"));
+    assert!(DOC.contains("fixtures/ci/kamn_sdk_service_rs_extraction_thresholds.json"));
+    assert!(DOC.contains(
+        "check_kamn_sdk_service_rs_extraction_threshold.sh --output-json /tmp/kamn-sdk-service-rs-extraction-threshold-report.json"
+    ));
+    assert!(DOC.contains(
+        "check_kamn_sdk_service_rs_extraction_threshold.sh --exception-file .ci/kamn_sdk_service_rs_extraction_threshold_exception.json --output-json /tmp/kamn-sdk-service-rs-extraction-threshold-report.json"
+    ));
+    assert!(DOC.contains("reason_codes=service_rs_line_count_warn_threshold_exceeded"));
+    assert!(DOC.contains("reason_codes=service_rs_line_count_fail_threshold_exceeded"));
+    assert!(DOC.contains("reason_codes=service_rs_threshold_exception_applied"));
+    assert!(DOC.contains("reason_codes=service_rs_threshold_exception_expired"));
+    assert!(DOC.contains("reason_codes=service_rs_threshold_exception_cap_exceeded"));
     assert!(DOC.contains("test_check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh"));
     assert!(
         DOC.contains("fixtures/ci/kamn_node_runtime_orchestration_rs_extraction_thresholds.json")

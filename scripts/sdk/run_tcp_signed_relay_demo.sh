@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 ADDR="${KAMN_TCP_RELAY_DEMO_ADDR:-127.0.0.1:17881}"
-FROM_DID="${KAMN_TCP_RELAY_DEMO_FROM:-kamn:did:agent:sender-1}"
+FROM_DID="${KAMN_TCP_RELAY_DEMO_FROM:-}"
 TO_DID="${KAMN_TCP_RELAY_DEMO_TO:-kamn:did:agent:listener-1}"
 STATE_HASH="${KAMN_TCP_RELAY_DEMO_STATE_HASH:-state:tcp-relay-demo}"
 BODY="${KAMN_TCP_RELAY_DEMO_BODY:-hello-from-tcp-relay-demo}"
@@ -15,11 +15,17 @@ LISTENER_OUT="$TMP_DIR/listener.out"
 SENDER_OUT="$TMP_DIR/sender.out"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+listener_args=(
+  --addr "$ADDR"
+  --expected-to "$TO_DID"
+  --state-hash "$STATE_HASH"
+)
+if [[ -n "$FROM_DID" ]]; then
+  listener_args+=(--expected-from "$FROM_DID")
+fi
+
 cargo run --quiet -p kamn-sdk --example tcp_signed_relay_listener -- \
-  --addr "$ADDR" \
-  --expected-from "$FROM_DID" \
-  --expected-to "$TO_DID" \
-  --state-hash "$STATE_HASH" >"$LISTENER_OUT" 2>&1 &
+  "${listener_args[@]}" >"$LISTENER_OUT" 2>&1 &
 LISTENER_PID=$!
 
 cleanup_listener() {
@@ -29,13 +35,32 @@ cleanup_listener() {
 }
 trap 'cleanup_listener; rm -rf "$TMP_DIR"' EXIT
 
+sender_args=(
+  --addr "$ADDR"
+  --to "$TO_DID"
+  --nonce 1
+  --state-hash "$STATE_HASH"
+  --body "$BODY"
+)
+if [[ -n "$FROM_DID" ]]; then
+  sender_args+=(--from "$FROM_DID")
+fi
+
+set +e
 cargo run --quiet -p kamn-sdk --example tcp_signed_relay_sender -- \
-  --addr "$ADDR" \
-  --from "$FROM_DID" \
-  --to "$TO_DID" \
-  --nonce 1 \
-  --state-hash "$STATE_HASH" \
-  --body "$BODY" >"$SENDER_OUT"
+  "${sender_args[@]}" >"$SENDER_OUT" 2>&1
+sender_status=$?
+set -e
+
+if [[ "$sender_status" -ne 0 ]]; then
+  cleanup_listener
+  wait "$LISTENER_PID" >/dev/null 2>&1 || true
+  echo "--- sender ---"
+  cat "$SENDER_OUT"
+  echo "--- listener ---"
+  cat "$LISTENER_OUT"
+  exit "$sender_status"
+fi
 
 wait "$LISTENER_PID"
 

@@ -1,8 +1,13 @@
-use kamn_sdk::{AgentDid, SdkError, TcpSignedEnvelope, TcpTransportAdapter, TcpTransportConfig};
+use kamn_sdk::{
+    service_public_key_for_private_key, AgentDid, SdkError, TcpSignedEnvelope, TcpTransportAdapter,
+    TcpTransportConfig,
+};
 use std::env;
 
 const DEFAULT_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+const DEFAULT_FROM_METHOD_ID: &str = "sender-1";
+const DEFAULT_TO_DID: &str = "kamn:did:agent:listener-1";
 
 #[derive(Debug, Clone)]
 struct SenderConfig {
@@ -15,10 +20,24 @@ struct SenderConfig {
     private_key_hex: String,
 }
 
+fn default_from_did(private_key_hex: &str) -> Result<AgentDid, SdkError> {
+    let signer_public_key = service_public_key_for_private_key(private_key_hex).map_err(|_| {
+        SdkError::InvalidInput {
+            field: "from",
+            reason: "failed to derive default key-bound sender did",
+        }
+    })?;
+    AgentDid::with_public_key_hex_binding(DEFAULT_FROM_METHOD_ID, signer_public_key.as_str())
+        .map_err(|_| SdkError::InvalidInput {
+            field: "from",
+            reason: "failed to derive default key-bound sender did",
+        })
+}
+
 fn parse_args() -> Result<SenderConfig, SdkError> {
     let mut addr = "127.0.0.1:17881".to_owned();
-    let mut from = AgentDid::parse("kamn:did:agent:sender-1")?;
-    let mut to = AgentDid::parse("kamn:did:agent:listener-1")?;
+    let mut from: Option<AgentDid> = None;
+    let mut to = AgentDid::parse(DEFAULT_TO_DID)?;
     let mut nonce: u64 = 1;
     let mut state_hash = "state:tcp-relay-demo".to_owned();
     let mut body = "hello-from-tcp-relay-demo".to_owned();
@@ -32,7 +51,7 @@ fn parse_args() -> Result<SenderConfig, SdkError> {
         })?;
         match flag.as_str() {
             "--addr" => addr = value,
-            "--from" => from = AgentDid::parse(value)?,
+            "--from" => from = Some(AgentDid::parse(value)?),
             "--to" => to = AgentDid::parse(value)?,
             "--nonce" => {
                 nonce = value.parse::<u64>().map_err(|_| SdkError::InvalidInput {
@@ -70,6 +89,10 @@ fn parse_args() -> Result<SenderConfig, SdkError> {
             reason: "must not be empty",
         });
     }
+    let from = match from {
+        Some(value) => value,
+        None => default_from_did(private_key_hex.as_str())?,
+    };
 
     Ok(SenderConfig {
         addr,

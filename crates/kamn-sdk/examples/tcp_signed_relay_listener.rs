@@ -1,5 +1,12 @@
-use kamn_sdk::{AgentDid, SdkError, TcpTransportAdapter, TcpTransportConfig};
+use kamn_sdk::{
+    service_public_key_for_private_key, AgentDid, SdkError, TcpTransportAdapter, TcpTransportConfig,
+};
 use std::env;
+
+const DEFAULT_SIGNER_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+const DEFAULT_EXPECTED_FROM_METHOD_ID: &str = "sender-1";
+const DEFAULT_EXPECTED_TO_DID: &str = "kamn:did:agent:listener-1";
 
 #[derive(Debug, Clone)]
 struct ListenerConfig {
@@ -9,10 +16,26 @@ struct ListenerConfig {
     expected_state_hash: String,
 }
 
+fn default_expected_from() -> Result<AgentDid, SdkError> {
+    let signer_public_key = service_public_key_for_private_key(DEFAULT_SIGNER_PRIVATE_KEY_HEX)
+        .map_err(|_| SdkError::InvalidInput {
+            field: "expected_from",
+            reason: "failed to derive default key-bound sender did",
+        })?;
+    AgentDid::with_public_key_hex_binding(
+        DEFAULT_EXPECTED_FROM_METHOD_ID,
+        signer_public_key.as_str(),
+    )
+    .map_err(|_| SdkError::InvalidInput {
+        field: "expected_from",
+        reason: "failed to derive default key-bound sender did",
+    })
+}
+
 fn parse_args() -> Result<ListenerConfig, SdkError> {
     let mut addr = "127.0.0.1:17881".to_owned();
-    let mut expected_from = AgentDid::parse("kamn:did:agent:sender-1")?;
-    let mut expected_to = AgentDid::parse("kamn:did:agent:listener-1")?;
+    let mut expected_from = default_expected_from()?;
+    let mut expected_to = AgentDid::parse(DEFAULT_EXPECTED_TO_DID)?;
     let mut expected_state_hash = "state:tcp-relay-demo".to_owned();
 
     let mut args = env::args().skip(1);

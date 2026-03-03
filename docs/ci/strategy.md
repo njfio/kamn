@@ -3384,6 +3384,26 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=threshold_order_invalid`
     - fail threshold crossings remain NO-GO unless a valid tracked exception is present.
     - Regression: #3261
+  - kamn-sdk `service.rs` extraction-threshold guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_kamn_sdk_service_rs_extraction_threshold.sh`
+    - threshold fixture:
+      - `fixtures/ci/kamn_sdk_service_rs_extraction_thresholds.json`
+    - checker command:
+      - `bash scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh --output-json /tmp/kamn-sdk-service-rs-extraction-threshold-report.json`
+      - `bash scripts/ci/check_kamn_sdk_service_rs_extraction_threshold.sh --exception-file .ci/kamn_sdk_service_rs_extraction_threshold_exception.json --output-json /tmp/kamn-sdk-service-rs-extraction-threshold-report.json`
+    - emits deterministic policy decisions:
+      - `policy_decision=GO|WARN|NO-GO`
+      - `exception_status=not-required|not-provided|applied|invalid|cap-exceeded`
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none`
+      - `reason_codes=service_rs_line_count_warn_threshold_exceeded`
+      - `reason_codes=service_rs_line_count_fail_threshold_exceeded`
+      - `reason_codes=service_rs_threshold_exception_applied`
+      - `reason_codes=service_rs_threshold_exception_expired`
+      - `reason_codes=service_rs_threshold_exception_cap_exceeded`
+      - `reason_codes=threshold_order_invalid`
+    - fail threshold crossings remain NO-GO unless a valid tracked exception is present.
+    - Regression: #6303
   - kamn-node `runtime_orchestration.rs` extraction-threshold + topology guard stays on PR fast gate:
     - `bash scripts/ci/test_check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh`
     - threshold fixture:
@@ -4704,7 +4724,7 @@ Fast-mode CI tooling regression coverage includes:
   - deterministic baseline refresh workflow markers:
     - `combined_shell_surface_baseline_refresh_trigger_reason=combined_shell_surface_shell_line_total_delta_fail_exceeded`
     - `combined_shell_surface_baseline_refresh_command=bash scripts/ci/generate_combined_shell_surface_trend_report.sh --budget-file .ci/script-surface-budget.env --script-baseline-file .ci/script-surface-baseline.env --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json --output-json /tmp/combined-shell-surface-trend-report.json`
-    - `combined_shell_surface_baseline_refresh_contract=update fixtures/ci/combined_shell_surface_trend_baseline.json with report.current metrics (`script_count`, `shell_line_total`, `python_line_total`, `rust_line_total`, `shell_to_rust_ratio`) in the same PR`
+    - `combined_shell_surface_baseline_refresh_contract=update fixtures/ci/combined_shell_surface_trend_baseline.json with report.current metrics in the same PR`
     - `combined_shell_surface_baseline_refresh_validation=bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
 - Shell-Rust LOC telemetry collector (`test_collect_shell_rust_loc_telemetry.sh`)
   - collector command:
