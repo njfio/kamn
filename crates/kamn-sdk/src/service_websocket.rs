@@ -60,7 +60,8 @@ fn parse_u64_payload_length(frame: &[u8]) -> Result<(usize, usize), SdkError> {
     let encoded_len = u64::from_be_bytes([
         frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
     ]);
-    let payload_len = usize::try_from(encoded_len)
-        .map_err(|_| SdkError::TransportFailure("service websocket response frame payload too large"))?;
+    let payload_len = usize::try_from(encoded_len).map_err(|_| {
+        SdkError::TransportFailure("service websocket response frame payload too large")
+    })?;
     Ok((10, payload_len))
 }
