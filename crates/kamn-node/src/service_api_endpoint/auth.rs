@@ -153,6 +153,14 @@ fn sender_did_matches_signer_public_key(
     signer_public_key_hex: &str,
     allow_legacy_sender_binding: bool,
 ) -> bool {
+    if let Ok(parsed_did) = AgentDid::parse(sender_did) {
+        if parsed_did
+            .ensure_public_key_hex_binding(signer_public_key_hex)
+            .is_ok()
+        {
+            return true;
+        }
+    }
     if let Some(bound_public_key_hex) =
         sender_did.strip_prefix(SELF_CERTIFYING_AGENT_DID_KEY_PREFIX)
     {
@@ -602,11 +610,43 @@ mod tests {
     }
 
     #[test]
+    fn regression_sender_did_binding_accepts_keyh_bound_pkh_did() {
+        // Regression: #6303 e2e S-02 must accept did:key-binding sender identities.
+        let signer_public_key_hex =
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11";
+        let sender_did = AgentDid::with_public_key_hex_binding(
+            format!("pkh-{signer_public_key_hex}").as_str(),
+            signer_public_key_hex,
+        )
+        .expect("key-bound sender did should build");
+        assert!(sender_did_matches_signer_public_key(
+            sender_did.as_str(),
+            signer_public_key_hex,
+            false,
+        ));
+    }
+
+    #[test]
     fn unit_sender_did_binding_rejects_self_certifying_key_mismatch() {
         let sender_did =
             "kamn:did:agent:pkh-02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11";
         assert!(!sender_did_matches_signer_public_key(
             sender_did,
+            "03f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
+            false,
+        ));
+    }
+
+    #[test]
+    fn regression_sender_did_binding_rejects_keyh_bound_pkh_did_mismatch() {
+        // Regression: #6303 sender did keyh mismatch must fail closed.
+        let sender_did = AgentDid::with_public_key_hex_binding(
+            "pkh-02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
+        )
+        .expect("key-bound sender did should build");
+        assert!(!sender_did_matches_signer_public_key(
+            sender_did.as_str(),
             "03f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11",
             false,
         ));
