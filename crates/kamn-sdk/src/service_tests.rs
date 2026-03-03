@@ -320,10 +320,28 @@ fn regression_parse_websocket_frame_payload_rejects_truncated_extended_header() 
 const TEST_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
+fn sender_did_alice() -> AgentDid {
+    AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse")
+}
+
+fn signer_public_key_for_test_private_key() -> String {
+    service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX).expect("public key should be derived")
+}
+
+fn sign_service_payload(sender_did: &AgentDid, nonce: u64, state_hash: &str, body: &str) -> String {
+    service_signature_for_state_hash_with_private_key(
+        sender_did,
+        nonce,
+        state_hash,
+        body,
+        TEST_PRIVATE_KEY_HEX,
+    )
+    .expect("signature should be produced")
+}
+
 #[test]
 fn unit_service_public_key_for_private_key_derives_compressed_hex_key() {
-    let public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
-        .expect("valid private key should derive signer public key");
+    let public_key = signer_public_key_for_test_private_key();
     assert_eq!(public_key.len(), 66);
     assert!(
         public_key.starts_with("02") || public_key.starts_with("03"),
@@ -347,19 +365,11 @@ fn regression_service_public_key_for_private_key_rejects_invalid_private_key_hex
 
 #[test]
 fn unit_service_verify_signature_with_public_key_accepts_valid_signature() {
-    let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse");
+    let sender_did = sender_did_alice();
     let state_hash = "service-api:kamn-sdk:1";
     let body = r#"{"message":"hello"}"#;
-    let signature = service_signature_for_state_hash_with_private_key(
-        &sender_did,
-        7,
-        state_hash,
-        body,
-        TEST_PRIVATE_KEY_HEX,
-    )
-    .expect("signature should be produced");
-    let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
-        .expect("public key should be derived");
+    let signature = sign_service_payload(&sender_did, 7, state_hash, body);
+    let signer_public_key = signer_public_key_for_test_private_key();
     service_verify_signature_with_public_key(
         &sender_did,
         7,
@@ -374,15 +384,8 @@ fn unit_service_verify_signature_with_public_key_accepts_valid_signature() {
 #[test]
 fn regression_service_verify_signature_with_public_key_rejects_invalid_public_key_hex() {
     // Regression: #5977
-    let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse");
-    let signature = service_signature_for_state_hash_with_private_key(
-        &sender_did,
-        8,
-        "service-api:kamn-sdk:1",
-        "{}",
-        TEST_PRIVATE_KEY_HEX,
-    )
-    .expect("signature should be produced");
+    let sender_did = sender_did_alice();
+    let signature = sign_service_payload(&sender_did, 8, "service-api:kamn-sdk:1", "{}");
     let error = service_verify_signature_with_public_key(
         &sender_did,
         8,
@@ -404,17 +407,9 @@ fn regression_service_verify_signature_with_public_key_rejects_invalid_public_ke
 #[test]
 fn regression_service_verify_signature_with_public_key_rejects_empty_state_hash() {
     // Regression: #5977
-    let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse");
-    let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
-        .expect("public key should be derived");
-    let signature = service_signature_for_state_hash_with_private_key(
-        &sender_did,
-        9,
-        "service-api:kamn-sdk:1",
-        "{}",
-        TEST_PRIVATE_KEY_HEX,
-    )
-    .expect("signature should be produced");
+    let sender_did = sender_did_alice();
+    let signer_public_key = signer_public_key_for_test_private_key();
+    let signature = sign_service_payload(&sender_did, 9, "service-api:kamn-sdk:1", "{}");
     let error = service_verify_signature_with_public_key(
         &sender_did,
         9,
@@ -436,9 +431,8 @@ fn regression_service_verify_signature_with_public_key_rejects_empty_state_hash(
 #[test]
 fn regression_service_verify_signature_with_public_key_rejects_empty_signature() {
     // Regression: #5977
-    let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse");
-    let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
-        .expect("public key should be derived");
+    let sender_did = sender_did_alice();
+    let signer_public_key = signer_public_key_for_test_private_key();
     let error = service_verify_signature_with_public_key(
         &sender_did,
         10,
@@ -460,17 +454,9 @@ fn regression_service_verify_signature_with_public_key_rejects_empty_signature()
 #[test]
 fn regression_service_verify_signature_with_public_key_rejects_non_positive_nonce() {
     // Regression: #5977
-    let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse");
-    let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
-        .expect("public key should be derived");
-    let signature = service_signature_for_state_hash_with_private_key(
-        &sender_did,
-        1,
-        "service-api:kamn-sdk:1",
-        "{}",
-        TEST_PRIVATE_KEY_HEX,
-    )
-    .expect("signature should be produced");
+    let sender_did = sender_did_alice();
+    let signer_public_key = signer_public_key_for_test_private_key();
+    let signature = sign_service_payload(&sender_did, 1, "service-api:kamn-sdk:1", "{}");
     let error = service_verify_signature_with_public_key(
         &sender_did,
         0,
@@ -492,17 +478,9 @@ fn regression_service_verify_signature_with_public_key_rejects_non_positive_nonc
 #[test]
 fn regression_service_verify_signature_with_public_key_rejects_tampered_signature() {
     // Regression: #5977
-    let sender_did = AgentDid::parse("kamn:did:agent:alice").expect("sender did should parse");
-    let signer_public_key = service_public_key_for_private_key(TEST_PRIVATE_KEY_HEX)
-        .expect("public key should be derived");
-    let mut signature = service_signature_for_state_hash_with_private_key(
-        &sender_did,
-        11,
-        "service-api:kamn-sdk:1",
-        "{}",
-        TEST_PRIVATE_KEY_HEX,
-    )
-    .expect("signature should be produced");
+    let sender_did = sender_did_alice();
+    let signer_public_key = signer_public_key_for_test_private_key();
+    let mut signature = sign_service_payload(&sender_did, 11, "service-api:kamn-sdk:1", "{}");
     signature.push('f');
     let error = service_verify_signature_with_public_key(
         &sender_did,
