@@ -85,9 +85,21 @@ orchestrator stays focused on runtime-mode dispatch and integration wiring.
   - `bash scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh`
   - `cargo run -p kamn-node -- --role processor`
 
-## Phase 6 integration evidence (to fill at close)
+## Phase 6 integration evidence
 
-- `cargo test -p kamn-node --test main_module_extraction_contract`
-- `cargo test -p kamn-node`
-- `bash scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh`
-- `cargo run -p kamn-node -- --role processor`
+- `cargo test -p kamn-node --test main_module_extraction_contract`:
+  - pass (`12 passed, 0 failed`)
+- `cargo test -p kamn-node`:
+  - pass (`628 passed, 0 failed`)
+- `bash scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh --output-json ...`:
+  - `status=pass`
+  - `policy_decision=GO`
+  - `line_count=536`
+  - `warn_line_count=950`
+  - `fail_line_count=1100`
+- `cargo run -p kamn-node -- --role processor`:
+  - pass (runtime bootstrap path executed and exited cleanly)
+
+## Deviations
+
+- None.
