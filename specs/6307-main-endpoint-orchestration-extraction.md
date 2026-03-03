@@ -80,3 +80,11 @@ behavior.
 
 - `cargo test -p kamn-node --test main_module_extraction_contract`
 - `cargo test -p kamn-node --test runtime_output_contract`
+
+Observed results:
+- `crates/kamn-node/src/main.rs` reduced from 773 LOC to 689 LOC.
+- `run()` delegates post-runtime endpoint orchestration through
+  `runtime_entrypoint::serve_runtime_endpoints(...)`.
+- `cargo test -p kamn-node --test main_module_extraction_contract` passed.
+- `cargo test -p kamn-node --test runtime_output_contract` passed.
+- `cargo test -p kamn-node` passed.
