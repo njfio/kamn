@@ -10,6 +10,11 @@ mod service_http_io;
 mod service_response;
 #[path = "service_websocket.rs"]
 mod service_websocket;
+pub use self::service_auth_crypto::{
+    service_public_key_for_private_key, service_signature_for_fields,
+    service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
+    service_verify_signature_with_public_key,
+};
 #[cfg(test)]
 use self::service_endpoint::resolve_request_timeout_seconds;
 use self::service_endpoint::ServiceEndpoint;
@@ -23,11 +28,6 @@ use self::service_response::{
     map_non_success_response, parse_http_response, status_from_header,
 };
 use self::service_websocket::parse_unmasked_text_frame_payload;
-pub use self::service_auth_crypto::{
-    service_public_key_for_private_key, service_signature_for_fields,
-    service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
-    service_verify_signature_with_public_key,
-};
 
 const REQUEST_TIMEOUT_SECONDS_DEFAULT: u64 = 2;
 const REQUEST_TIMEOUT_SECONDS_ENV: &str = "KAMN_SDK_SERVICE_TIMEOUT_SECONDS";
