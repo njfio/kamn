@@ -16,7 +16,7 @@ Move layered config/env preprocessing helpers out of `crates/kamn-node/src/cli.r
     - `extract_config_file_path`
     - `build_layered_cli_args`
 - Outputs:
-  - New module file for config/env layering helpers.
+  - New module file for config/env layering helpers with focused mapping submodule.
   - `cli.rs` module wiring updated to call extracted helpers.
   - CLI extraction contract test for module declaration and inline-removal invariants.
 
@@ -32,15 +32,16 @@ Move layered config/env preprocessing helpers out of `crates/kamn-node/src/cli.r
 - Inline helpers left in `cli.rs` violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated config-layering helper module.
-- [ ] `cli.rs` no longer contains inline definitions for extracted config/env layering helpers.
-- [ ] Existing CLI parse behavior remains unchanged.
-- [ ] CLI extraction contract includes and passes module declaration + inline-removal assertions.
-- [ ] Existing `kamn-node` CLI parsing tests remain green.
+- [x] `cli.rs` declares a dedicated config-layering helper module.
+- [x] `cli.rs` no longer contains inline definitions for extracted config/env layering helpers.
+- [x] Existing CLI parse behavior remains unchanged.
+- [x] CLI extraction contract includes and passes module declaration + inline-removal assertions.
+- [x] Existing `kamn-node` CLI parsing tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
 - `crates/kamn-node/src/cli_config_layering.rs` (new)
+- `crates/kamn-node/src/cli_config_layering/config_mapping.rs` (new)
 - `crates/kamn-node/tests/cli_module_extraction_contract.rs` (new)
 - `specs/6341-cli-config-layering-module-extraction.md`
 
@@ -56,7 +57,12 @@ Move layered config/env preprocessing helpers out of `crates/kamn-node/src/cli.r
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract`:
+  - pass (`3 passed, 0 failed`)
+- `cargo test -p kamn-node cli_tests`:
+  - pass (`7 passed, 0 failed`)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`:
+  - pass (`2 passed, 0 failed`)
 
 ## Deviations
 - None.
