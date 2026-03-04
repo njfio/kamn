@@ -23,6 +23,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_runtime_mode_validation;"),
         "cli.rs should declare cli_runtime_mode_validation module"
     );
+    assert!(
+        cli_rs.contains("mod cli_post_parse_guards;"),
+        "cli.rs should declare cli_post_parse_guards module"
+    );
 }
 
 #[test]
@@ -109,5 +113,30 @@ fn cli_module_extraction_contract_removes_inline_runtime_mode_guards() {
     assert!(
         runtime_mode_validation_rs.contains("pub(super) fn validate_runtime_mode_requirements("),
         "cli_runtime_mode_validation module should expose runtime-mode validation entrypoint"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_post_parse_guards() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "if let Some(selected_profile) = profile {",
+        "if api_bind_addr.is_none()",
+        "if observability_endpoint_bind_addr.is_none()",
+        "if observability_endpoint_bind_addr.is_some()",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline post-parse guard marker: {marker}"
+        );
+    }
+    let post_parse_guards_rs = read_repo_file("src/cli_post_parse_guards.rs");
+    assert!(
+        post_parse_guards_rs.contains("pub(super) fn apply_profile_defaults("),
+        "cli_post_parse_guards module should expose profile defaults helper"
+    );
+    assert!(
+        post_parse_guards_rs.contains("pub(super) fn validate_endpoint_guards("),
+        "cli_post_parse_guards module should expose endpoint guard validator"
     );
 }
