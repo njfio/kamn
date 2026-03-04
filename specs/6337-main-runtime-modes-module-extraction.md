@@ -27,11 +27,11 @@ Extract runtime mode/profile parsing types from `crates/kamn-node/src/main.rs` i
 - CLI parse defaults regress.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `main.rs` declares `mod runtime_modes;`.
-- [ ] `main.rs` no longer contains inline definitions for extracted mode/profile types and impls.
-- [ ] Existing runtime mode/profile parse behavior remains unchanged.
-- [ ] `main_module_extraction_contract` includes and passes runtime mode module assertions.
-- [ ] Existing `kamn-node` tests for command surface/runtime mode paths remain green.
+- [x] `main.rs` declares `mod runtime_modes;`.
+- [x] `main.rs` no longer contains inline definitions for extracted mode/profile types and impls.
+- [x] Existing runtime mode/profile parse behavior remains unchanged.
+- [x] `main_module_extraction_contract` includes and passes runtime mode module assertions.
+- [x] Existing `kamn-node` tests for command surface/runtime mode paths remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/main.rs`
@@ -52,7 +52,14 @@ Extract runtime mode/profile parsing types from `crates/kamn-node/src/main.rs` i
   - `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test main_module_extraction_contract`:
+  - pass (`14 passed, 0 failed`)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`:
+  - pass (`2 passed, 0 failed`)
+- `cargo test -p kamn-node --test runtime_output_contract`:
+  - pass (`5 passed, 0 failed`)
+- `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode`:
+  - pass (`1 passed, 0 failed`)
 
 ## Deviations
 - None.
