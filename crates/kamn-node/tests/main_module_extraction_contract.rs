@@ -40,12 +40,37 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare runtime_entrypoint module"
     );
     assert!(
+        main_rs.contains("mod output_io;"),
+        "main.rs should declare output_io module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
     assert!(
         !main_rs.contains("mod tests {"),
         "main.rs should not keep inline monolithic tests module"
+    );
+}
+
+#[test]
+fn main_module_extraction_contract_removes_inline_output_io_impls() {
+    let main_rs = read_repo_file("src/main.rs");
+    assert!(
+        !main_rs.contains("fn emit_bootstrap_report_output("),
+        "main.rs should not keep inline bootstrap report output helper"
+    );
+    assert!(
+        !main_rs.contains("fn write_stdout_line("),
+        "main.rs should not keep inline stdout writer helper"
+    );
+    assert!(
+        !main_rs.contains("fn write_stderr_line("),
+        "main.rs should not keep inline stderr writer helper"
+    );
+    assert!(
+        !main_rs.contains("fn write_line_to_stream("),
+        "main.rs should not keep inline stream writer helper"
     );
 }
 
