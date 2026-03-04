@@ -174,11 +174,27 @@ fn spec_c03_guardrail_pass_path_contract() {
         ),
         "expected deterministic taxonomy marker on pass path:\n{text}"
     );
+    assert!(
+        text.contains("python_line_total="),
+        "expected python_line_total marker on pass path:\n{text}"
+    );
+    assert!(
+        text.contains("tracked_python_file_count="),
+        "expected tracked_python_file_count marker on pass path:\n{text}"
+    );
     let report_text =
         fs::read_to_string(&report_file).expect("failed to read guardrail pass report");
     assert!(
         report_text.contains("\"final_decision\": \"GO\""),
         "expected GO final_decision in pass report JSON"
+    );
+    assert!(
+        report_text.contains("\"python_line_total\""),
+        "expected python_line_total metric in pass report JSON"
+    );
+    assert!(
+        report_text.contains("\"tracked_python_file_count\""),
+        "expected tracked_python_file_count metric in pass report JSON"
     );
 }
 
@@ -204,6 +220,14 @@ fn spec_c04_guardrail_warn_path_contract() {
         text.contains("reason_codes=shell_rust_ratio_warn_threshold_exceeded"),
         "expected warn-threshold reason marker on warn path:\n{text}"
     );
+    assert!(
+        text.contains("python_line_total="),
+        "expected python_line_total marker on warn path:\n{text}"
+    );
+    assert!(
+        text.contains("tracked_python_file_count="),
+        "expected tracked_python_file_count marker on warn path:\n{text}"
+    );
 }
 
 #[test]
@@ -228,6 +252,14 @@ fn spec_c05_guardrail_fail_threshold_contract() {
         text.contains("reason_codes=shell_rust_ratio_fail_threshold_exceeded"),
         "expected fail-threshold reason marker on fail path:\n{text}"
     );
+    assert!(
+        text.contains("python_line_total="),
+        "expected python_line_total marker on fail path:\n{text}"
+    );
+    assert!(
+        text.contains("tracked_python_file_count="),
+        "expected tracked_python_file_count marker on fail path:\n{text}"
+    );
 }
 
 #[test]
@@ -246,6 +278,14 @@ fn spec_c06_guardrail_threshold_validation_contract() {
         missing_key_text.contains("reason_codes=shell_rust_ratio_threshold_key_missing"),
         "expected missing-key reason marker:\n{missing_key_text}"
     );
+    assert!(
+        missing_key_text.contains("python_line_total=unknown"),
+        "expected unknown python_line_total marker on missing-key path:\n{missing_key_text}"
+    );
+    assert!(
+        missing_key_text.contains("tracked_python_file_count=unknown"),
+        "expected unknown tracked_python_file_count marker on missing-key path:\n{missing_key_text}"
+    );
 
     let order_threshold_file = tmp.path().join("order-thresholds.env");
     let order_report_file = tmp.path().join("order-report.json");
@@ -257,5 +297,13 @@ fn spec_c06_guardrail_threshold_validation_contract() {
     assert!(
         order_text.contains("reason_codes=shell_rust_ratio_threshold_order_invalid"),
         "expected threshold-order reason marker:\n{order_text}"
+    );
+    assert!(
+        order_text.contains("python_line_total=unknown"),
+        "expected unknown python_line_total marker on threshold-order path:\n{order_text}"
+    );
+    assert!(
+        order_text.contains("tracked_python_file_count=unknown"),
+        "expected unknown tracked_python_file_count marker on threshold-order path:\n{order_text}"
     );
 }
