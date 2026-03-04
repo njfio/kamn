@@ -28,11 +28,11 @@ Move `ServiceApiClient` orchestration implementation out of `crates/kamn-sdk/src
 - Missing re-export breaks external import paths.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `service.rs` declares `mod service_client;`.
-- [ ] `service.rs` no longer contains inline `struct HttpResponse`, `pub struct ServiceApiClient`, or `impl ServiceApiClient`.
-- [ ] `ServiceApiClient` remains publicly reachable through `kamn_sdk::service`.
-- [ ] `service_module_extraction_contract` includes and passes client extraction assertions.
-- [ ] Existing `kamn-sdk` client behavior tests remain green.
+- [x] `service.rs` declares `mod service_client;`.
+- [x] `service.rs` no longer contains inline `struct HttpResponse`, `pub struct ServiceApiClient`, or `impl ServiceApiClient`.
+- [x] `ServiceApiClient` remains publicly reachable through `kamn_sdk::service`.
+- [x] `service_module_extraction_contract` includes and passes client extraction assertions.
+- [x] Existing `kamn-sdk` client behavior tests remain green.
 
 ## Files to touch
 - `crates/kamn-sdk/src/service.rs`
@@ -52,7 +52,12 @@ Move `ServiceApiClient` orchestration implementation out of `crates/kamn-sdk/src
   - `cargo test -p kamn-sdk --test service_api_client`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-sdk --test service_module_extraction_contract`:
+  - pass (`14 passed, 0 failed`)
+- `cargo test -p kamn-sdk --lib`:
+  - pass (`21 passed, 0 failed`)
+- `cargo test -p kamn-sdk --test service_api_client`:
+  - pass (`15 passed, 0 failed`)
 
 ## Deviations
 - None.
