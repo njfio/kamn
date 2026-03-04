@@ -35,12 +35,12 @@ Move service API and observability endpoint option parsing out of `crates/kamn-n
 - Inline endpoint parsing remains in `cli.rs` and violates extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated endpoint option parser module.
-- [ ] `cli.rs` no longer contains inline API/observability endpoint match arms.
-- [ ] Endpoint parse behavior and `ConfigError` outcomes remain unchanged.
-- [ ] Endpoint override marker behavior remains unchanged.
-- [ ] Extraction contract includes endpoint parser module assertions and passes.
-- [ ] Existing CLI tests remain green.
+- [x] `cli.rs` declares a dedicated endpoint option parser module.
+- [x] `cli.rs` no longer contains inline API/observability endpoint match arms.
+- [x] Endpoint parse behavior and `ConfigError` outcomes remain unchanged.
+- [x] Endpoint override marker behavior remains unchanged.
+- [x] Extraction contract includes endpoint parser module assertions and passes.
+- [x] Existing CLI tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -62,7 +62,11 @@ Move service API and observability endpoint option parsing out of `crates/kamn-n
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode planning --expected-state-hash reason --proposal 'alpha|beta|1|reason' --api-max-requests 10 --output text --diagnostics basic` (expected hard-fail: missing `--api-bind`)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode planning --expected-state-hash reason --proposal 'alpha|beta|1|reason' --output text --diagnostics basic` (pass)
 
 ## Deviations
 - None.
