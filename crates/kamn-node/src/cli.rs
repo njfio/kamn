@@ -13,6 +13,8 @@ use std::{env, fs};
 
 const CONFIG_FILE_FLAG: &str = "--config-file";
 const NODE_CONFIG_FILE_ENV: &str = "KAMN_NODE_CONFIG_FILE";
+const DUAL_CONFIG_FILE_SOURCE_ERROR: &str =
+    "both --config-file and KAMN_NODE_CONFIG_FILE are set; declare one config source";
 
 fn read_env_var_trimmed(name: &str) -> Result<Option<String>, ConfigError> {
     match env::var(name) {
@@ -336,8 +338,7 @@ fn build_layered_cli_args(raw_args: Vec<String>) -> Result<Vec<String>, ConfigEr
     let config_file_from_env = read_env_var_trimmed(NODE_CONFIG_FILE_ENV)?;
     if config_file_from_cli.is_some() && config_file_from_env.is_some() {
         return Err(ConfigError::InvalidNodeConfig(
-            "both --config-file and KAMN_NODE_CONFIG_FILE are set; declare one config source"
-                .to_owned(),
+            DUAL_CONFIG_FILE_SOURCE_ERROR.to_owned(),
         ));
     }
     let config_file_path = config_file_from_cli.or(config_file_from_env);
