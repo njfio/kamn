@@ -30,11 +30,11 @@ Extract service auth crypto/signature helpers from `crates/kamn-sdk/src/service.
 - Error mapping drift changes `SdkError` semantics.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `service.rs` declares `mod service_auth_crypto;`.
-- [ ] `service.rs` no longer contains inline definitions for the extracted auth helper functions and mapper.
-- [ ] Public helper API remains callable from `service` module with unchanged signatures.
-- [ ] `service_module_extraction_contract` includes and passes auth helper extraction assertions.
-- [ ] Existing `kamn-sdk` tests for auth helper behavior remain green.
+- [x] `service.rs` declares `mod service_auth_crypto;`.
+- [x] `service.rs` no longer contains inline definitions for the extracted auth helper functions and mapper.
+- [x] Public helper API remains callable from `service` module with unchanged signatures.
+- [x] `service_module_extraction_contract` includes and passes auth helper extraction assertions.
+- [x] Existing `kamn-sdk` tests for auth helper behavior remain green.
 
 ## Files to touch
 - `crates/kamn-sdk/src/service.rs`
@@ -56,7 +56,12 @@ Extract service auth crypto/signature helpers from `crates/kamn-sdk/src/service.
   - `cargo test -p kamn-sdk --test service_api_client`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-sdk --test service_module_extraction_contract`:
+  - pass (`8 passed, 0 failed`)
+- `cargo test -p kamn-sdk --lib`:
+  - pass (`21 passed, 0 failed`)
+- `cargo test -p kamn-sdk --test service_api_client`:
+  - pass (`15 passed, 0 failed`)
 
 ## Deviations
 - None.
