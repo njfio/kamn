@@ -1,5 +1,13 @@
 use super::{ConfigError, PeerLifecycleEvent, ProposalCandidate, RejoinAttempt};
 
+fn split_four_segments(value: &str) -> Option<[&str; 4]> {
+    let segments = value.split('|').collect::<Vec<&str>>();
+    if segments.len() != 4 {
+        return None;
+    }
+    Some([segments[0], segments[1], segments[2], segments[3]])
+}
+
 pub(super) fn parse_state_version_arg(value: &str) -> Result<u64, ConfigError> {
     let state_version = value
         .parse::<u64>()
@@ -11,10 +19,8 @@ pub(super) fn parse_state_version_arg(value: &str) -> Result<u64, ConfigError> {
 }
 
 pub(super) fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate, ConfigError> {
-    let parts = value.split('|').collect::<Vec<&str>>();
-    if parts.len() != 4 {
-        return Err(ConfigError::InvalidProposalArgument(value.to_owned()));
-    }
+    let parts = split_four_segments(value)
+        .ok_or_else(|| ConfigError::InvalidProposalArgument(value.to_owned()))?;
     let nonce = parts[2]
         .parse::<u64>()
         .map_err(|_| ConfigError::InvalidProposalArgument(value.to_owned()))?;
@@ -23,10 +29,8 @@ pub(super) fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate,
 }
 
 pub(super) fn parse_rejoin_attempt(value: &str) -> Result<RejoinAttempt, ConfigError> {
-    let parts = value.split('|').collect::<Vec<&str>>();
-    if parts.len() != 4 {
-        return Err(ConfigError::InvalidRejoinAttemptArgument(value.to_owned()));
-    }
+    let parts = split_four_segments(value)
+        .ok_or_else(|| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))?;
     let state_version = parts[1]
         .parse::<u64>()
         .map_err(|_| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))?;
