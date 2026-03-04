@@ -12,10 +12,10 @@ use std::net::{IpAddr, TcpStream};
 use std::sync::Arc;
 use std::time::Duration;
 
-#[path = "service_response.rs"]
-mod service_response;
 #[path = "service_http_io.rs"]
 mod service_http_io;
+#[path = "service_response.rs"]
+mod service_response;
 #[path = "service_websocket.rs"]
 mod service_websocket;
 use self::service_http_io::{

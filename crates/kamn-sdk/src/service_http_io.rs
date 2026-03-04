@@ -1,5 +1,5 @@
 use super::{
-    ServiceRequestAuth, SdkError, MAX_SERVICE_RESPONSE_BYTES, MAX_SERVICE_RESPONSE_READ_ITERATIONS,
+    SdkError, ServiceRequestAuth, MAX_SERVICE_RESPONSE_BYTES, MAX_SERVICE_RESPONSE_READ_ITERATIONS,
     REQUEST_AUTH_NONCE_HEADER, REQUEST_AUTH_SCOPE_HEADER, REQUEST_AUTH_SENDER_DID_HEADER,
     REQUEST_AUTH_SIGNATURE_HEADER, REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER,
     SERVICE_RESPONSE_READ_ITERATION_LIMIT_EXCEEDED, SERVICE_RESPONSE_SIZE_LIMIT_EXCEEDED,
@@ -23,18 +23,7 @@ fn classify_tls_io_error(error: &std::io::Error) -> &'static str {
     SERVICE_TLS_HANDSHAKE_FAILED
 }
 
-fn map_stream_write_error(error: &std::io::Error, default_reason: &'static str) -> SdkError {
-    if error
-        .get_ref()
-        .and_then(|source| source.downcast_ref::<rustls::Error>())
-        .is_some()
-    {
-        return SdkError::TransportFailure(classify_tls_io_error(error));
-    }
-    SdkError::TransportFailure(default_reason)
-}
-
-fn map_stream_read_error(error: &std::io::Error, default_reason: &'static str) -> SdkError {
+fn map_stream_io_error(error: &std::io::Error, default_reason: &'static str) -> SdkError {
     if error
         .get_ref()
         .and_then(|source| source.downcast_ref::<rustls::Error>())
@@ -52,14 +41,17 @@ pub(super) fn write_and_flush_request<W: Write>(
 ) -> Result<(), SdkError> {
     stream
         .write_all(payload)
-        .map_err(|error| map_stream_write_error(&error, failure_reason))?;
+        .map_err(|error| map_stream_io_error(&error, failure_reason))?;
     stream
         .flush()
-        .map_err(|error| map_stream_write_error(&error, failure_reason))?;
+        .map_err(|error| map_stream_io_error(&error, failure_reason))?;
     Ok(())
 }
 
-pub(super) fn parse_host_port(authority: &str, default_port: u16) -> Result<(String, u16), SdkError> {
+pub(super) fn parse_host_port(
+    authority: &str,
+    default_port: u16,
+) -> Result<(String, u16), SdkError> {
     if authority.starts_with('[') {
         let closing = authority.find(']').ok_or(SdkError::InvalidInput {
             field: "service.endpoint",
@@ -103,7 +95,10 @@ pub(super) fn parse_host_port(authority: &str, default_port: u16) -> Result<(Str
     }
 }
 
-pub(super) fn normalize_route_segment(field: &'static str, value: &str) -> Result<String, SdkError> {
+pub(super) fn normalize_route_segment(
+    field: &'static str,
+    value: &str,
+) -> Result<String, SdkError> {
     let normalized = value.trim();
     if normalized.is_empty() {
         return Err(SdkError::InvalidInput {
@@ -243,7 +238,7 @@ pub(super) fn read_response_bytes<R: Read>(stream: &mut R) -> Result<Vec<u8>, Sd
                 break;
             }
             Err(error) => {
-                return Err(map_stream_read_error(
+                return Err(map_stream_io_error(
                     &error,
                     "failed to read service response payload",
                 ));
