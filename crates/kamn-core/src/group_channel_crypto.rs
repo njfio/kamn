@@ -575,8 +575,14 @@ fn derive_group_aead_key(
     info.extend_from_slice(GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2);
     info.extend_from_slice(channel_id.as_bytes());
     info.extend_from_slice(&generation.to_le_bytes());
-    kamn_crypto::hkdf_sha256::derive_key_32(GROUP_MESSAGE_AEAD_KDF_SALT_V2, shared_secret, &info)
-        .map_err(|_| GroupChannelCryptoError::KeyDerivationFailed)
+    match kamn_crypto::hkdf_sha256::derive_key_32(
+        GROUP_MESSAGE_AEAD_KDF_SALT_V2,
+        shared_secret,
+        &info,
+    ) {
+        Ok(key) => Ok(key),
+        Err(_) => Err(GroupChannelCryptoError::KeyDerivationFailed),
+    }
 }
 
 fn derive_group_aead_key_legacy(
@@ -819,6 +825,13 @@ mod tests {
                     vec!["kamn:did:agent:bob".to_owned()],
                 )
                 .expect("distribution should succeed");
+            engine
+                .rotate_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-2",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("rotation should succeed");
 
             let sealed = engine
                 .encrypt("kamn:did:agent:alice", "group payload", 33)
@@ -828,6 +841,7 @@ mod tests {
                 .decrypt("kamn:did:agent:bob", &sealed)
                 .expect("authorized recipient should decrypt");
             assert_eq!(plaintext, "group payload");
+            assert_eq!(sealed.key_generation, 2);
         });
     }
 
