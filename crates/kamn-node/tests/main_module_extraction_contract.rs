@@ -193,6 +193,8 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     let full_supervisor_rs = read_repo_file("src/runtime_orchestration/full_supervisor.rs");
     let runtime_policy_contracts_rs =
         read_repo_file("src/runtime_orchestration/runtime_policy_contracts.rs");
+    let runtime_mode_handlers_rs =
+        read_repo_file("src/runtime_orchestration/runtime_mode_handlers.rs");
     assert!(
         runtime_orchestration_rs.contains("mod daemon_phase;"),
         "runtime_orchestration.rs should declare daemon phase submodule"
@@ -204,6 +206,10 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     assert!(
         runtime_orchestration_rs.contains("mod runtime_policy_contracts;"),
         "runtime_orchestration.rs should declare runtime_policy_contracts submodule"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("mod runtime_mode_handlers;"),
+        "runtime_orchestration.rs should declare runtime_mode_handlers submodule"
     );
     assert!(
         !runtime_orchestration_rs.contains("fn execute_daemon_runtime("),
@@ -236,6 +242,18 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     assert!(
         !runtime_orchestration_rs.contains("fn classify_kolme_live_signer_fallback_secret_policy_violation("),
         "runtime_orchestration.rs should not keep inline Kolme signer fallback-secret policy classifier"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("RuntimeModeKind::Full => {"),
+        "runtime_orchestration.rs should not keep inline full runtime branch body"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("RuntimeModeKind::KolmeLive => {"),
+        "runtime_orchestration.rs should not keep inline kolme-live runtime branch body"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("node.runtime.full.bootstrap.start"),
+        "runtime_orchestration.rs should not keep inline full runtime bootstrap markers"
     );
     assert!(
         daemon_phase_rs.contains("pub(super) fn execute_daemon_runtime("),
@@ -285,6 +303,14 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
             || runtime_policy_contracts_rs
                 .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
         "runtime_policy_contracts module should own Kolme signer key-source policy enforcement"
+    );
+    assert!(
+        runtime_mode_handlers_rs.contains("pub(super) fn execute_full_runtime_mode("),
+        "runtime_mode_handlers module should own full runtime-mode execution handler"
+    );
+    assert!(
+        runtime_mode_handlers_rs.contains("pub(super) fn execute_kolme_live_runtime_mode("),
+        "runtime_mode_handlers module should own kolme-live runtime-mode execution handler"
     );
 }
 
