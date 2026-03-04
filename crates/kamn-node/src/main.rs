@@ -17,6 +17,7 @@ mod report_builder;
 mod report_render;
 mod runtime_entrypoint;
 mod runtime_kolme_live;
+mod runtime_modes;
 mod runtime_orchestration;
 mod service_api_endpoint;
 mod signer;
@@ -58,6 +59,9 @@ pub(crate) use runtime_entrypoint::{
 use runtime_kolme_live::build_kolme_live_request;
 use runtime_kolme_live::{
     execute_kolme_live_runtime, execute_kolme_live_runtime_continuous, KolmeLiveContinuousMode,
+};
+pub(crate) use runtime_modes::{
+    DiagnosticsMode, LocalProfile, OutputMode, OutputModeKind, RuntimeMode, RuntimeModeKind,
 };
 use runtime_orchestration::{build_runtime_execution_id, execute};
 #[cfg(test)]
@@ -151,197 +155,6 @@ pub(crate) fn signer_test_env_lock() -> &'static std::sync::Mutex<()> {
 
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct OutputMode {
-    kind: OutputModeKind,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OutputModeKind {
-    Text,
-    Json,
-}
-
-impl OutputMode {
-    fn text() -> Self {
-        Self {
-            kind: OutputModeKind::Text,
-        }
-    }
-
-    fn json() -> Self {
-        Self {
-            kind: OutputModeKind::Json,
-        }
-    }
-
-    fn parse(value: &str) -> Result<Self, ConfigError> {
-        match value {
-            "text" => Ok(Self::text()),
-            "json" => Ok(Self::json()),
-            other => Err(ConfigError::InvalidOutputMode(other.to_owned())),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct RuntimeMode {
-    kind: RuntimeModeKind,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum RuntimeModeKind {
-    Bootstrap,
-    Planning,
-    RecoveryCheck,
-    Daemon,
-    Api,
-    Full,
-    KolmeLive,
-}
-
-impl RuntimeMode {
-    fn bootstrap() -> Self {
-        Self {
-            kind: RuntimeModeKind::Bootstrap,
-        }
-    }
-
-    fn planning() -> Self {
-        Self {
-            kind: RuntimeModeKind::Planning,
-        }
-    }
-
-    fn recovery_check() -> Self {
-        Self {
-            kind: RuntimeModeKind::RecoveryCheck,
-        }
-    }
-
-    fn daemon() -> Self {
-        Self {
-            kind: RuntimeModeKind::Daemon,
-        }
-    }
-
-    fn api() -> Self {
-        Self {
-            kind: RuntimeModeKind::Api,
-        }
-    }
-
-    fn full() -> Self {
-        Self {
-            kind: RuntimeModeKind::Full,
-        }
-    }
-
-    fn kolme_live() -> Self {
-        Self {
-            kind: RuntimeModeKind::KolmeLive,
-        }
-    }
-
-    fn parse(value: &str) -> Result<Self, ConfigError> {
-        match value {
-            "bootstrap" => Ok(Self::bootstrap()),
-            "planning" => Ok(Self::planning()),
-            "recovery-check" => Ok(Self::recovery_check()),
-            "daemon" => Ok(Self::daemon()),
-            "api" => Ok(Self::api()),
-            "full" => Ok(Self::full()),
-            "kolme-live" => Ok(Self::kolme_live()),
-            other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self.kind {
-            RuntimeModeKind::Bootstrap => "bootstrap",
-            RuntimeModeKind::Planning => "planning",
-            RuntimeModeKind::RecoveryCheck => "recovery-check",
-            RuntimeModeKind::Daemon => "daemon",
-            RuntimeModeKind::Api => "api",
-            RuntimeModeKind::Full => "full",
-            RuntimeModeKind::KolmeLive => "kolme-live",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DiagnosticsMode {
-    Basic,
-    Snapshot,
-}
-
-impl DiagnosticsMode {
-    fn basic() -> Self {
-        Self::Basic
-    }
-
-    fn snapshot() -> Self {
-        Self::Snapshot
-    }
-
-    fn parse(value: &str) -> Result<Self, ConfigError> {
-        match value {
-            "basic" => Ok(Self::basic()),
-            "snapshot" => Ok(Self::snapshot()),
-            other => Err(ConfigError::InvalidDiagnosticsMode(other.to_owned())),
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Basic => "basic",
-            Self::Snapshot => "snapshot",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LocalProfile {
-    Processor,
-    Listener,
-    Approver,
-}
-
-impl LocalProfile {
-    fn parse(value: &str) -> Result<Self, ConfigError> {
-        match value {
-            "local-processor" => Ok(Self::Processor),
-            "local-listener" => Ok(Self::Listener),
-            "local-approver" => Ok(Self::Approver),
-            other => Err(ConfigError::InvalidNodeProfile(other.to_owned())),
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Processor => "local-processor",
-            Self::Listener => "local-listener",
-            Self::Approver => "local-approver",
-        }
-    }
-
-    fn default_role(self) -> NodeRole {
-        match self {
-            Self::Processor => NodeRole::Processor,
-            Self::Listener => NodeRole::Listener,
-            Self::Approver => NodeRole::Approver,
-        }
-    }
-
-    fn default_storage_dir(self) -> &'static str {
-        match self {
-            Self::Processor => "./data/processor",
-            Self::Listener => "./data/listener",
-            Self::Approver => "./data/approver",
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
