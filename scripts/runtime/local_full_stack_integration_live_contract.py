@@ -307,6 +307,9 @@ def _check_runtime_module_boundary_parity() -> dict[str, object]:
     runtime_orchestration_rs = _read_text_if_present(
         ROOT_DIR / "crates/kamn-node/src/runtime_orchestration.rs"
     )
+    runtime_mode_handlers_rs = _read_text_if_present(
+        ROOT_DIR / "crates/kamn-node/src/runtime_orchestration/runtime_mode_handlers.rs"
+    )
     daemon_phase_rs = _read_text_if_present(
         ROOT_DIR / "crates/kamn-node/src/runtime_orchestration/daemon_phase.rs"
     )
@@ -318,12 +321,21 @@ def _check_runtime_module_boundary_parity() -> dict[str, object]:
     if not (main_rs and runtime_orchestration_rs and daemon_phase_rs and runtime_kolme_live_rs):
         evidence_status = "missing"
 
+    legacy_kolme_dispatch_boundary = (
+        "execute_kolme_live_runtime(" in runtime_orchestration_rs
+        and "execute_kolme_live_runtime_continuous(" in runtime_orchestration_rs
+    )
+    extracted_kolme_dispatch_boundary = (
+        "execute_kolme_live_runtime_mode(" in runtime_orchestration_rs
+        and "execute_kolme_live_runtime(" in runtime_mode_handlers_rs
+        and "execute_kolme_live_runtime_continuous(" in runtime_mode_handlers_rs
+    )
+
     dispatch_boundary_status = "verified"
     if (
         "use runtime_orchestration::{build_runtime_execution_id, execute};" not in main_rs
         or "use daemon_phase::execute_daemon_runtime;" not in runtime_orchestration_rs
-        or "execute_kolme_live_runtime(" not in runtime_orchestration_rs
-        or "execute_kolme_live_runtime_continuous(" not in runtime_orchestration_rs
+        or not (legacy_kolme_dispatch_boundary or extracted_kolme_dispatch_boundary)
     ):
         dispatch_boundary_status = "drifted"
 
