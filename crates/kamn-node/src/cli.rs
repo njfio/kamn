@@ -12,6 +12,8 @@ use super::{
 
 #[path = "cli_config_layering.rs"]
 mod cli_config_layering;
+#[path = "cli_daemon_option_parsing.rs"]
+mod cli_daemon_option_parsing;
 #[path = "cli_endpoint_option_parsing.rs"]
 mod cli_endpoint_option_parsing;
 #[path = "cli_post_parse_guards.rs"]
@@ -22,6 +24,7 @@ mod cli_runtime_mode_validation;
 mod cli_value_parsers;
 
 use cli_config_layering::build_layered_cli_args;
+use cli_daemon_option_parsing::{try_parse_daemon_option, DaemonOptionState};
 use cli_endpoint_option_parsing::{try_parse_endpoint_option, EndpointOptionState};
 use cli_post_parse_guards::{
     apply_profile_defaults, validate_endpoint_guards, EndpointGuardInputs, ProfileDefaultsInputs,
@@ -29,10 +32,7 @@ use cli_post_parse_guards::{
 use cli_runtime_mode_validation::{
     validate_runtime_mode_requirements, RuntimeModeValidationInputs,
 };
-use cli_value_parsers::{
-    parse_daemon_control_arg, parse_daemon_lifecycle_event, parse_proposal_candidate,
-    parse_rejoin_attempt, parse_state_version_arg,
-};
+use cli_value_parsers::{parse_proposal_candidate, parse_rejoin_attempt, parse_state_version_arg};
 
 pub(super) fn parse_args<I>(args: I) -> Result<NodeCli, ConfigError>
 where
@@ -100,6 +100,22 @@ where
     let _bin = iter.next();
 
     while let Some(arg) = iter.next() {
+        if try_parse_daemon_option(
+            arg.as_str(),
+            &mut iter,
+            &mut DaemonOptionState {
+                daemon_max_ticks: &mut daemon_max_ticks,
+                daemon_tick_interval_ms: &mut daemon_tick_interval_ms,
+                daemon_shutdown_signal_ticks: &mut daemon_shutdown_signal_ticks,
+                daemon_shutdown_os_signals: &mut daemon_shutdown_os_signals,
+                daemon_shutdown_drain_ticks: &mut daemon_shutdown_drain_ticks,
+                daemon_shutdown_timeout_ticks: &mut daemon_shutdown_timeout_ticks,
+                daemon_peer_id: &mut daemon_peer_id,
+                daemon_lifecycle_events: &mut daemon_lifecycle_events,
+            },
+        )? {
+            continue;
+        }
         if try_parse_endpoint_option(
             arg.as_str(),
             &mut iter,
@@ -204,51 +220,6 @@ where
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--rejoin-attempt"))?;
                 rejoin_attempts.push(parse_rejoin_attempt(&value)?);
-            }
-            "--daemon-max-ticks" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
-                daemon_max_ticks = Some(parse_daemon_control_arg(&value)?);
-            }
-            "--daemon-tick-interval-ms" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--daemon-tick-interval-ms",
-                ))?;
-                daemon_tick_interval_ms = Some(parse_daemon_control_arg(&value)?);
-            }
-            "--daemon-shutdown-signal-tick" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--daemon-shutdown-signal-tick",
-                ))?;
-                daemon_shutdown_signal_ticks.push(parse_daemon_control_arg(&value)?);
-            }
-            "--daemon-shutdown-os-signals" => {
-                daemon_shutdown_os_signals = true;
-            }
-            "--daemon-shutdown-drain-ticks" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--daemon-shutdown-drain-ticks",
-                ))?;
-                daemon_shutdown_drain_ticks = Some(parse_daemon_control_arg(&value)?);
-            }
-            "--daemon-shutdown-timeout-ticks" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--daemon-shutdown-timeout-ticks",
-                ))?;
-                daemon_shutdown_timeout_ticks = Some(parse_daemon_control_arg(&value)?);
-            }
-            "--daemon-peer-id" => {
-                daemon_peer_id = Some(
-                    iter.next()
-                        .ok_or(ConfigError::MissingArgumentValue("--daemon-peer-id"))?,
-                );
-            }
-            "--daemon-lifecycle-event" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--daemon-lifecycle-event",
-                ))?;
-                daemon_lifecycle_events.push(parse_daemon_lifecycle_event(&value)?);
             }
             "--kolme-live-base-url" => {
                 kolme_live_base_url = Some(

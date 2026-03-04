@@ -31,6 +31,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_endpoint_option_parsing;"),
         "cli.rs should declare cli_endpoint_option_parsing module"
     );
+    assert!(
+        cli_rs.contains("mod cli_daemon_option_parsing;"),
+        "cli.rs should declare cli_daemon_option_parsing module"
+    );
 }
 
 #[test]
@@ -174,5 +178,34 @@ fn cli_module_extraction_contract_removes_inline_endpoint_option_parsing() {
     assert!(
         endpoint_option_parsing_rs.contains("pub(super) fn try_parse_endpoint_option("),
         "cli_endpoint_option_parsing module should expose endpoint option parser entrypoint"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_daemon_option_parsing() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "\"--daemon-max-ticks\" => {",
+        "\"--daemon-tick-interval-ms\" => {",
+        "\"--daemon-shutdown-signal-tick\" => {",
+        "\"--daemon-shutdown-os-signals\" => {",
+        "\"--daemon-shutdown-drain-ticks\" => {",
+        "\"--daemon-shutdown-timeout-ticks\" => {",
+        "\"--daemon-peer-id\" => {",
+        "\"--daemon-lifecycle-event\" => {",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline daemon option parsing marker: {marker}"
+        );
+    }
+    let daemon_option_parsing_rs = read_repo_file("src/cli_daemon_option_parsing.rs");
+    assert!(
+        daemon_option_parsing_rs.contains("pub(super) struct DaemonOptionState"),
+        "cli_daemon_option_parsing module should define daemon option state"
+    );
+    assert!(
+        daemon_option_parsing_rs.contains("pub(super) fn try_parse_daemon_option("),
+        "cli_daemon_option_parsing module should expose daemon option parser entrypoint"
     );
 }
