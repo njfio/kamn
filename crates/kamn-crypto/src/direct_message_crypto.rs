@@ -1,6 +1,5 @@
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
-use hkdf::Hkdf;
 use sha2::{Digest, Sha256, Sha512};
 use std::collections::BTreeSet;
 use std::env;
@@ -15,9 +14,9 @@ const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX"
 const DIRECT_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-salt:v2";
 const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-info:v2";
 /// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
-pub const DIRECT_MESSAGE_HKDF_BACKEND_MARKER: &str = "rustcrypto.hkdf.sha256.v1";
+pub const DIRECT_MESSAGE_HKDF_BACKEND_MARKER: &str = crate::hkdf_sha256::HKDF_SHA256_BACKEND_MARKER;
 /// Marker asserting HMAC backend semantics are provided by RustCrypto primitives.
-pub const DIRECT_MESSAGE_HMAC_BACKEND_MARKER: &str = "rustcrypto.hmac.sha256.v1";
+pub const DIRECT_MESSAGE_HMAC_BACKEND_MARKER: &str = crate::hkdf_sha256::HMAC_SHA256_BACKEND_MARKER;
 
 /// Encrypted direct-message payload and metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -318,11 +317,12 @@ fn derive_x25519_public_key(master_seed: &[u8; 32], key_ref: &str) -> PublicKey 
 fn derive_direct_message_aead_key(
     shared_secret: &[u8; 32],
 ) -> Result<[u8; 32], DirectMessageCryptoError> {
-    let hkdf = Hkdf::<Sha256>::new(Some(DIRECT_MESSAGE_AEAD_KDF_SALT_V2), shared_secret);
-    let mut key = [0u8; 32];
-    hkdf.expand(DIRECT_MESSAGE_AEAD_KDF_INFO_V2, &mut key)
-        .map_err(|_| DirectMessageCryptoError::KeyDerivationFailed)?;
-    Ok(key)
+    crate::hkdf_sha256::derive_key_32(
+        DIRECT_MESSAGE_AEAD_KDF_SALT_V2,
+        shared_secret,
+        DIRECT_MESSAGE_AEAD_KDF_INFO_V2,
+    )
+    .map_err(|_| DirectMessageCryptoError::KeyDerivationFailed)
 }
 
 fn derive_direct_message_aead_key_legacy(shared_secret: &[u8; 32]) -> [u8; 32] {
