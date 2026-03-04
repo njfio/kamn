@@ -1,17 +1,20 @@
-use super::{
-    normalize_route_segment, read_response_bytes, read_response_text, render_auth_headers,
-    validate_http_header_value, validate_request_method, validate_request_path,
-    write_and_flush_request, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
-    ServiceContentStatus, ServiceEndpoint, ServiceEscrowStatus, ServiceHealthStatus,
-    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceRouteEvent,
-    ServiceTaskReceipt, ServiceTaskStatus, SdkError, SERVICE_WS_ROUTE,
-};
-use super::{
-    expect_status, json_string_array_field, json_string_field, json_u64_field,
-    map_non_success_response, parse_http_response, status_from_header,
-};
 use super::parse_unmasked_text_frame_payload;
+use super::{
+    json_string_field, json_u64_field, map_non_success_response, parse_http_response,
+    status_from_header,
+};
+use super::{
+    read_response_bytes, read_response_text, render_auth_headers, validate_http_header_value,
+    validate_request_method, validate_request_path, write_and_flush_request, SdkError,
+    ServiceEndpoint, ServiceEscrowStatus, ServiceRequestAuth, ServiceRouteEvent, SERVICE_WS_ROUTE,
+};
+
+#[path = "service_client_bridge_misc_routes.rs"]
+mod service_client_bridge_misc_routes;
+#[path = "service_client_content_routes.rs"]
+mod service_client_content_routes;
+#[path = "service_client_message_task_routes.rs"]
+mod service_client_message_task_routes;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct HttpResponse {
@@ -31,313 +34,6 @@ impl ServiceApiClient {
         Ok(Self {
             endpoint: ServiceEndpoint::parse(endpoint)?,
         })
-    }
-
-    /// Sends a signed message payload through the service API.
-    pub fn send_message(
-        &self,
-        payload: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceMessageReceipt, SdkError> {
-        let response = self.request("POST", "/v1/messages/send", payload, Some(auth))?;
-        expect_status(response.status, 202)?;
-        Ok(ServiceMessageReceipt {
-            message_id: json_string_field(response.body.as_str(), "message_id")?,
-            status: json_string_field(response.body.as_str(), "status")?,
-            runtime_mode: json_string_field(response.body.as_str(), "runtime_mode")?,
-        })
-    }
-
-    /// Queries a message status by identifier.
-    pub fn get_message(
-        &self,
-        message_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceMessageStatus, SdkError> {
-        let message_id = normalize_route_segment("message_id", message_id)?;
-        let route = format!("/v1/messages/{message_id}");
-        let response = self.request("GET", route.as_str(), "", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceMessageStatus {
-            message_id: json_string_field(response.body.as_str(), "message_id")?,
-            status: json_string_field(response.body.as_str(), "status")?,
-        })
-    }
-
-    /// Creates a channel payload through the service API.
-    pub fn create_channel(
-        &self,
-        payload: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceChannelReceipt, SdkError> {
-        let response = self.request("POST", "/v1/channels/create", payload, Some(auth))?;
-        expect_status(response.status, 201)?;
-        Ok(ServiceChannelReceipt {
-            channel_id: json_string_field(response.body.as_str(), "channel_id")?,
-            status: json_string_field(response.body.as_str(), "status")?,
-        })
-    }
-
-    /// Lists channel messages through `GET /v1/channels/{id}/messages`.
-    pub fn list_channel_messages(
-        &self,
-        channel_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceChannelMessages, SdkError> {
-        let channel_id = normalize_route_segment("channel_id", channel_id)?;
-        let route = format!("/v1/channels/{channel_id}/messages");
-        let response = self.request("GET", route.as_str(), "", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceChannelMessages {
-            channel_id: json_string_field(response.body.as_str(), "channel_id")?,
-            messages: json_string_array_field(response.body.as_str(), "messages")?,
-        })
-    }
-
-    /// Creates a task payload through the service API.
-    pub fn create_task(
-        &self,
-        payload: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskReceipt, SdkError> {
-        let response = self.request("POST", "/v1/tasks/create", payload, Some(auth))?;
-        expect_status(response.status, 201)?;
-        Ok(ServiceTaskReceipt {
-            task_id: json_string_field(response.body.as_str(), "task_id")?,
-            state: json_string_field(response.body.as_str(), "state")?,
-        })
-    }
-
-    /// Queries task lifecycle state by identifier.
-    pub fn get_task(
-        &self,
-        task_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
-        let task_id = normalize_route_segment("task_id", task_id)?;
-        let route = format!("/v1/tasks/{task_id}");
-        let response = self.request("GET", route.as_str(), "", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceTaskStatus {
-            task_id: json_string_field(response.body.as_str(), "task_id")?,
-            state: json_string_field(response.body.as_str(), "state")?,
-        })
-    }
-
-    /// Accepts one task through `POST /v1/tasks/{id}/accept`.
-    pub fn accept_task(
-        &self,
-        task_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
-        let task_id = normalize_route_segment("task_id", task_id)?;
-        let route = format!("/v1/tasks/{task_id}/accept");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceTaskStatus {
-            task_id: json_string_field(response.body.as_str(), "task_id")?,
-            state: json_string_field(response.body.as_str(), "state")?,
-        })
-    }
-
-    /// Completes one task through `POST /v1/tasks/{id}/complete`.
-    pub fn complete_task(
-        &self,
-        task_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
-        let task_id = normalize_route_segment("task_id", task_id)?;
-        let route = format!("/v1/tasks/{task_id}/complete");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceTaskStatus {
-            task_id: json_string_field(response.body.as_str(), "task_id")?,
-            state: json_string_field(response.body.as_str(), "state")?,
-        })
-    }
-
-    /// Funds escrow through `POST /v1/escrow/fund`.
-    pub fn fund_escrow(
-        &self,
-        payload: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceEscrowStatus, SdkError> {
-        let response = self.request("POST", "/v1/escrow/fund", payload, Some(auth))?;
-        expect_status(response.status, 200)?;
-        parse_escrow_status(response.body.as_str())
-    }
-
-    /// Releases escrow through `POST /v1/escrow/{id}/release`.
-    pub fn release_escrow(
-        &self,
-        escrow_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceEscrowStatus, SdkError> {
-        let escrow_id = normalize_route_segment("escrow_id", escrow_id)?;
-        let route = format!("/v1/escrow/{escrow_id}/release");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
-        expect_status(response.status, 200)?;
-        parse_escrow_status(response.body.as_str())
-    }
-
-    /// Registers content retention lifecycle via `POST /v1/content/register`.
-    pub fn register_content(
-        &self,
-        payload: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceContentRegistration, SdkError> {
-        let response = self.request("POST", "/v1/content/register", payload, Some(auth))?;
-        expect_status(response.status, 201)?;
-        Ok(ServiceContentRegistration {
-            content_id: json_string_field(response.body.as_str(), "content_id")?,
-            retention_class: json_string_field(response.body.as_str(), "retention_class")?,
-            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
-            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
-        })
-    }
-
-    /// Expires one content record via `POST /v1/content/{id}/expire`.
-    pub fn expire_content(
-        &self,
-        content_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceContentStatus, SdkError> {
-        let content_id = normalize_route_segment("content_id", content_id)?;
-        let route = format!("/v1/content/{content_id}/expire");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceContentStatus {
-            content_id: json_string_field(response.body.as_str(), "content_id")?,
-            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
-            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
-        })
-    }
-
-    /// Tombstones one content record via `POST /v1/content/{id}/tombstone`.
-    pub fn tombstone_content(
-        &self,
-        content_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceContentStatus, SdkError> {
-        let content_id = normalize_route_segment("content_id", content_id)?;
-        let route = format!("/v1/content/{content_id}/tombstone");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceContentStatus {
-            content_id: json_string_field(response.body.as_str(), "content_id")?,
-            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
-            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
-        })
-    }
-
-    /// Queries one content lifecycle status via `GET /v1/content/{id}`.
-    pub fn get_content(
-        &self,
-        content_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceContentStatus, SdkError> {
-        let content_id = normalize_route_segment("content_id", content_id)?;
-        let route = format!("/v1/content/{content_id}");
-        let response = self.request("GET", route.as_str(), "", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceContentStatus {
-            content_id: json_string_field(response.body.as_str(), "content_id")?,
-            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
-            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
-        })
-    }
-
-    /// Submits one bridge message via `POST /v1/bridge/submit`.
-    pub fn submit_bridge_message(
-        &self,
-        payload: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceBridgeSubmission, SdkError> {
-        let response = self.request("POST", "/v1/bridge/submit", payload, Some(auth))?;
-        expect_status(response.status, 202)?;
-        Ok(ServiceBridgeSubmission {
-            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
-            source_message_id: json_string_field(response.body.as_str(), "source_message_id")?,
-            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
-        })
-    }
-
-    /// Forwards one submitted bridge message via `POST /v1/bridge/{id}/forward`.
-    pub fn forward_bridge_message(
-        &self,
-        bridge_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceBridgeStatus, SdkError> {
-        let bridge_id = normalize_route_segment("bridge_id", bridge_id)?;
-        let route = format!("/v1/bridge/{bridge_id}/forward");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceBridgeStatus {
-            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
-            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
-            target_message_id: json_string_field(response.body.as_str(), "target_message_id")?,
-            forward_tx_hash: json_string_field(response.body.as_str(), "forward_tx_hash")?,
-        })
-    }
-
-    /// Queries one bridge forwarding status via `GET /v1/bridge/{id}`.
-    pub fn get_bridge_message(
-        &self,
-        bridge_id: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceBridgeStatus, SdkError> {
-        let bridge_id = normalize_route_segment("bridge_id", bridge_id)?;
-        let route = format!("/v1/bridge/{bridge_id}");
-        let response = self.request("GET", route.as_str(), "", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceBridgeStatus {
-            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
-            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
-            target_message_id: json_string_field(response.body.as_str(), "target_message_id")?,
-            forward_tx_hash: json_string_field(response.body.as_str(), "forward_tx_hash")?,
-        })
-    }
-
-    /// Queries an agent reputation/profile by DID.
-    pub fn get_agent_profile(
-        &self,
-        did: &str,
-        auth: &ServiceRequestAuth,
-    ) -> Result<ServiceAgentProfile, SdkError> {
-        let did = normalize_route_segment("did", did)?;
-        let route = format!("/v1/agents/{did}");
-        let response = self.request("GET", route.as_str(), "", Some(auth))?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceAgentProfile {
-            did: json_string_field(response.body.as_str(), "did")?,
-            reputation_score: json_u64_field(response.body.as_str(), "reputation_score")?,
-        })
-    }
-
-    /// Queries service health route without request auth.
-    pub fn health(&self) -> Result<ServiceHealthStatus, SdkError> {
-        let response = self.request("GET", "/healthz", "", None)?;
-        expect_status(response.status, 200)?;
-        Ok(ServiceHealthStatus {
-            status: json_string_field(response.body.as_str(), "status")?,
-            runtime_mode: json_string_field(response.body.as_str(), "runtime_mode")?,
-            role: json_string_field(response.body.as_str(), "role")?,
-            observability_source: json_string_field(
-                response.body.as_str(),
-                "observability_source",
-            )?,
-            observability_health: json_string_field(
-                response.body.as_str(),
-                "observability_health",
-            )?,
-        })
-    }
-
-    /// Reads raw prometheus metrics exposition text.
-    pub fn metrics(&self) -> Result<String, SdkError> {
-        let response = self.request("GET", "/metrics", "", None)?;
-        expect_status(response.status, 200)?;
-        Ok(response.body)
     }
 
     /// Performs WebSocket upgrade on `/v1/events/ws` and reads one event frame.
@@ -422,7 +118,7 @@ impl ServiceApiClient {
     }
 }
 
-fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, SdkError> {
+pub(super) fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, SdkError> {
     Ok(ServiceEscrowStatus {
         escrow_id: json_string_field(body, "escrow_id")?,
         state: json_string_field(body, "state")?,
