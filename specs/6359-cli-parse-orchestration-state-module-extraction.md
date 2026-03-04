@@ -25,10 +25,10 @@ Move CLI parse-state orchestration out of `crates/kamn-node/src/cli.rs` into a d
 - Inline parse-state initialization remains in `cli.rs`, violating extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares and uses a dedicated parse-state orchestration module.
-- [ ] Inline bulk parse-state initialization markers are removed from `cli.rs`.
-- [ ] Existing CLI extraction contract and `cli_tests` remain green.
-- [ ] Contract coverage asserts the new module declaration and new module API markers.
+- [x] `cli.rs` declares and uses a dedicated parse-state orchestration module.
+- [x] Inline bulk parse-state initialization markers are removed from `cli.rs`.
+- [x] Existing CLI extraction contract and `cli_tests` remain green.
+- [x] Contract coverage asserts the new module declaration and new module API markers.
 
 ## Files to touch
 - `specs/6359-cli-parse-orchestration-state-module-extraction.md`
@@ -52,7 +52,11 @@ Move CLI parse-state orchestration out of `crates/kamn-node/src/cli.rs` into a d
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode bootstrap --output text --diagnostics basic` (pass)
+- `timeout 30s cargo run -p kamn-node -- --runtime-mode bootstrap --output text --diagnostics basic` (expected hard-fail: missing `--role`)
 
 ## Deviations
 - None.
