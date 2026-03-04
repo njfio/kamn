@@ -2,7 +2,8 @@ use std::fs;
 use std::path::Path;
 
 const FORBIDDEN_HELPER_NAMES: &[&str] = &["hkdf_sha256_derive_32", "hmac_sha256"];
-const REQUIRED_BACKEND_MARKERS: &[&str] = &["rustcrypto.hkdf.sha256.v1", "rustcrypto.hmac.sha256.v1"];
+const REQUIRED_BACKEND_MARKERS: &[&str] =
+    &["rustcrypto.hkdf.sha256.v1", "rustcrypto.hmac.sha256.v1"];
 
 const GUARDED_PRODUCTION_SOURCES: &[&str] = &[
     "../kamn-crypto/src/direct_message_crypto.rs",
