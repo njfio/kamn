@@ -12,10 +12,15 @@ use super::{
 
 #[path = "cli_config_layering.rs"]
 mod cli_config_layering;
+#[path = "cli_runtime_mode_validation.rs"]
+mod cli_runtime_mode_validation;
 #[path = "cli_value_parsers.rs"]
 mod cli_value_parsers;
 
 use cli_config_layering::build_layered_cli_args;
+use cli_runtime_mode_validation::{
+    validate_runtime_mode_requirements, RuntimeModeValidationInputs,
+};
 use cli_value_parsers::{
     parse_daemon_control_arg, parse_daemon_lifecycle_event, parse_proposal_candidate,
     parse_rejoin_attempt, parse_state_version_arg,
@@ -347,129 +352,28 @@ where
 
     let role = role.ok_or(ConfigError::MissingArgumentValue("--role"))?;
 
-    if runtime_mode.kind == RuntimeModeKind::Planning {
-        if expected_state_hash.is_none() {
-            return Err(ConfigError::MissingArgumentValue("--expected-state-hash"));
-        }
-        if proposals.is_empty() {
-            return Err(ConfigError::MissingArgumentValue("--proposal"));
-        }
-    }
-    if runtime_mode.kind == RuntimeModeKind::RecoveryCheck {
-        if expected_state_version.is_none() {
-            return Err(ConfigError::MissingArgumentValue(
-                "--expected-state-version",
-            ));
-        }
-        if expected_state_hash.is_none() {
-            return Err(ConfigError::MissingArgumentValue("--expected-state-hash"));
-        }
-        if rejoin_attempts.is_empty() {
-            return Err(ConfigError::MissingArgumentValue("--rejoin-attempt"));
-        }
-    }
-    if matches!(
-        runtime_mode.kind,
-        RuntimeModeKind::Daemon | RuntimeModeKind::Full
-    ) {
-        if daemon_max_ticks.is_none() {
-            return Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"));
-        }
-        if daemon_tick_interval_ms.is_none() {
-            return Err(ConfigError::MissingArgumentValue(
-                "--daemon-tick-interval-ms",
-            ));
-        }
-        if !daemon_lifecycle_events.is_empty() && daemon_peer_id.is_none() {
-            return Err(ConfigError::MissingArgumentValue("--daemon-peer-id"));
-        }
-        if !daemon_shutdown_signal_ticks.is_empty() {
-            if daemon_shutdown_drain_ticks.is_none() {
-                return Err(ConfigError::MissingArgumentValue(
-                    "--daemon-shutdown-drain-ticks",
-                ));
-            }
-            if daemon_shutdown_timeout_ticks.is_none() {
-                return Err(ConfigError::MissingArgumentValue(
-                    "--daemon-shutdown-timeout-ticks",
-                ));
-            }
-        } else if (daemon_shutdown_drain_ticks.is_some() || daemon_shutdown_timeout_ticks.is_some())
-            && !daemon_shutdown_os_signals
-        {
-            return Err(ConfigError::MissingArgumentValue(
-                "--daemon-shutdown-signal-tick",
-            ));
-        }
-    }
-    if matches!(
-        runtime_mode.kind,
-        RuntimeModeKind::Api | RuntimeModeKind::Full
-    ) && api_bind_addr.is_none()
-    {
-        return Err(ConfigError::MissingArgumentValue("--api-bind"));
-    }
-    if runtime_mode.kind == RuntimeModeKind::KolmeLive {
-        if kolme_live_base_url.is_none() {
-            return Err(ConfigError::MissingArgumentValue("--kolme-live-base-url"));
-        }
-        if kolme_live_provider_hint.is_none() {
-            return Err(ConfigError::MissingArgumentValue(
-                "--kolme-live-provider-hint",
-            ));
-        }
-        if kolme_live_signing_profile.is_none() {
-            return Err(ConfigError::MissingArgumentValue(
-                "--kolme-live-signing-profile",
-            ));
-        }
-        let provider_hint =
-            kolme_live_provider_hint
-                .as_deref()
-                .ok_or(ConfigError::MissingArgumentValue(
-                    "--kolme-live-provider-hint",
-                ))?;
-        if provider_hint.contains(KOLME_IN_MEMORY_PROVIDER_MARKER) {
-            return Err(ConfigError::InvalidKolmeLiveProviderHint(
-                provider_hint.to_owned(),
-            ));
-        }
-        let signing_profile =
-            kolme_live_signing_profile
-                .as_deref()
-                .ok_or(ConfigError::MissingArgumentValue(
-                    "--kolme-live-signing-profile",
-                ))?;
-        if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
-            return Err(ConfigError::InvalidKolmeLiveSigningProfile(
-                signing_profile.to_owned(),
-            ));
-        }
-        if daemon_max_ticks.is_some() && daemon_tick_interval_ms.is_none() {
-            return Err(ConfigError::MissingArgumentValue(
-                "--daemon-tick-interval-ms",
-            ));
-        }
-        if daemon_tick_interval_ms.is_some() && daemon_max_ticks.is_none() {
-            return Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"));
-        }
-        let key_source =
-            kolme_live_signer_key_source
-                .as_deref()
-                .ok_or(ConfigError::MissingArgumentValue(
-                    "--kolme-live-signer-key-source",
-                ))?;
-        normalize_kolme_live_signer_key_source(key_source)?;
-        if kolme_live_strict_signer_contracts {
-            let signer_profile =
-                kolme_live_signer_profile
-                    .as_deref()
-                    .ok_or(ConfigError::MissingArgumentValue(
-                        "--kolme-live-signer-profile",
-                    ))?;
-            normalize_kolme_live_signer_profile_selector(signer_profile)?;
-        }
-    }
+    validate_runtime_mode_requirements(RuntimeModeValidationInputs {
+        runtime_mode,
+        expected_state_version,
+        expected_state_hash: expected_state_hash.as_deref(),
+        proposals_len: proposals.len(),
+        rejoin_attempts_len: rejoin_attempts.len(),
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
+        daemon_shutdown_signal_ticks_len: daemon_shutdown_signal_ticks.len(),
+        daemon_shutdown_os_signals,
+        daemon_shutdown_drain_ticks,
+        daemon_shutdown_timeout_ticks,
+        daemon_peer_id_present: daemon_peer_id.is_some(),
+        daemon_lifecycle_events_len: daemon_lifecycle_events.len(),
+        api_bind_addr_present: api_bind_addr.is_some(),
+        kolme_live_base_url: kolme_live_base_url.as_deref(),
+        kolme_live_provider_hint: kolme_live_provider_hint.as_deref(),
+        kolme_live_signing_profile: kolme_live_signing_profile.as_deref(),
+        kolme_live_strict_signer_contracts,
+        kolme_live_signer_profile: kolme_live_signer_profile.as_deref(),
+        kolme_live_signer_key_source: kolme_live_signer_key_source.as_deref(),
+    })?;
     if api_bind_addr.is_none()
         && (api_max_requests_overridden
             || api_idle_timeout_ms_overridden
