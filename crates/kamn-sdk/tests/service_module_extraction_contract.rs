@@ -48,6 +48,11 @@ const EXTRACTED_SERVICE_MODEL_SNIPPETS: &[&str] = &[
     "pub struct ServiceHealthStatus {",
     "pub struct ServiceRouteEvent {",
 ];
+const EXTRACTED_SERVICE_CLIENT_SNIPPETS: &[&str] = &[
+    "struct HttpResponse {",
+    "pub struct ServiceApiClient {",
+    "impl ServiceApiClient {",
+];
 
 #[test]
 fn contract_issue_6305_service_root_respects_line_budget() {
@@ -159,6 +164,25 @@ fn contract_issue_6333_service_root_removes_inline_model_structs() {
         assert!(
             !SERVICE_ROOT_SOURCE.contains(model_snippet),
             "service.rs must not retain inline service model struct: {model_snippet}",
+        );
+    }
+}
+
+#[test]
+fn contract_issue_6335_service_root_declares_client_module() {
+    assert!(
+        SERVICE_ROOT_SOURCE.contains("#[path = \"service_client.rs\"]")
+            && SERVICE_ROOT_SOURCE.contains("mod service_client;"),
+        "service.rs must declare #[path = \"service_client.rs\"] mod service_client;"
+    );
+}
+
+#[test]
+fn contract_issue_6335_service_root_removes_inline_client_orchestration_defs() {
+    for client_snippet in EXTRACTED_SERVICE_CLIENT_SNIPPETS {
+        assert!(
+            !SERVICE_ROOT_SOURCE.contains(client_snippet),
+            "service.rs must not retain inline client orchestration definition: {client_snippet}",
         );
     }
 }
