@@ -29,10 +29,10 @@ Move CLI argument/help parsing responsibilities out of `crates/kamn-cli/src/lib.
 - Inline parser/help logic remains in `lib.rs`, violating extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `lib.rs` declares and uses a dedicated argument/help module.
-- [ ] Inline parser/help implementation markers are removed from `lib.rs`.
-- [ ] Existing `kamn-cli` unit/contract tests remain green.
-- [ ] Contract coverage asserts module declaration/delegation and new module API markers.
+- [x] `lib.rs` declares and uses a dedicated argument/help module.
+- [x] Inline parser/help implementation markers are removed from `lib.rs`.
+- [x] Existing `kamn-cli` unit/contract tests remain green.
+- [x] Contract coverage asserts module declaration/delegation and new module API markers.
 
 ## Files to touch
 - `specs/6361-kamn-cli-arg-help-module-extraction.md`
@@ -57,7 +57,11 @@ Move CLI argument/help parsing responsibilities out of `crates/kamn-cli/src/lib.
   - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-cli --test main_contract` (pass)
+- `cargo test -p kamn-cli --test subcommand_surface_contract` (pass)
+- `cargo test -p kamn-cli --test command_activation_contract` (pass)
+- `timeout 30s cargo run -p kamn-cli -- --help` (pass)
+- `timeout 30s cargo run -p kamn-cli --` (expected parse-error hard-fail: `missing command`)
 
 ## Deviations
 - None.
