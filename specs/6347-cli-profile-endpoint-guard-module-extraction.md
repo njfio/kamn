@@ -27,11 +27,11 @@ Move post-parse profile-default application and endpoint guard validations out o
 - Inline guard blocks remain in `cli.rs` and violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated post-parse profile/endpoint guard module.
-- [ ] `cli.rs` no longer contains inline profile-default and endpoint guard validation blocks.
-- [ ] Existing CLI parse behavior and `ConfigError` mappings remain unchanged.
-- [ ] CLI extraction contract includes and passes profile/endpoint guard module assertions.
-- [ ] Existing `kamn-node` CLI parsing tests remain green.
+- [x] `cli.rs` declares a dedicated post-parse profile/endpoint guard module.
+- [x] `cli.rs` no longer contains inline profile-default and endpoint guard validation blocks.
+- [x] Existing CLI parse behavior and `ConfigError` mappings remain unchanged.
+- [x] CLI extraction contract includes and passes profile/endpoint guard module assertions.
+- [x] Existing `kamn-node` CLI parsing tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -51,7 +51,10 @@ Move post-parse profile-default application and endpoint guard validations out o
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode planning --expected-state-hash reason --proposal 'alpha|beta|1|reason' --output text --diagnostics basic` (pass; runtime entrypoint exercised)
 
 ## Deviations
 - None.
