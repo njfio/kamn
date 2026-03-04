@@ -47,6 +47,14 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_core_common_option_parsing;"),
         "cli.rs should declare cli_core_common_option_parsing module"
     );
+    assert!(
+        cli_rs.contains("mod cli_parse_state;"),
+        "cli.rs should declare cli_parse_state module"
+    );
+    assert!(
+        cli_rs.contains("mod cli_parse_loop;"),
+        "cli.rs should declare cli_parse_loop module"
+    );
 }
 
 #[test]
@@ -304,5 +312,35 @@ fn cli_module_extraction_contract_removes_inline_core_common_option_parsing() {
     assert!(
         core_common_option_parsing_rs.contains("pub(super) fn try_parse_core_common_option("),
         "cli_core_common_option_parsing module should expose core/common parser entrypoint"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_parse_state_initialization() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "let mut role: Option<NodeRole> = None;",
+        "let mut daemon_shutdown_signal_ticks: Vec<u64> = Vec::new();",
+        "let mut observability_endpoint_idle_timeout_ms_overridden = false;",
+        "let mut iter = layered_args.into_iter();",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline parse-state initialization marker: {marker}"
+        );
+    }
+    let parse_state_rs = read_repo_file("src/cli_parse_state.rs");
+    assert!(
+        parse_state_rs.contains("pub(super) struct CliParseState"),
+        "cli_parse_state module should define parse-state struct"
+    );
+    assert!(
+        parse_state_rs.contains("pub(super) fn new() -> Self"),
+        "cli_parse_state module should expose state constructor"
+    );
+    let parse_loop_rs = read_repo_file("src/cli_parse_loop.rs");
+    assert!(
+        parse_loop_rs.contains("pub(super) fn parse_layered_args_into_state("),
+        "cli_parse_loop module should expose layered-arg parse entrypoint"
     );
 }
