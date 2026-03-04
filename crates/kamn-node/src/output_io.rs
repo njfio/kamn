@@ -22,9 +22,7 @@ fn write_line_to_stream(line: &str, stream: &mut impl Write) -> Result<(), Confi
     stream
         .write_all(line.as_bytes())
         .map_err(map_stream_write_error)?;
-    stream
-        .write_all(b"\n")
-        .map_err(map_stream_write_error)?;
+    stream.write_all(b"\n").map_err(map_stream_write_error)?;
     stream.flush().map_err(map_stream_write_error)?;
     Ok(())
 }
