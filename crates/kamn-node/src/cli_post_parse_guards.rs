@@ -1,5 +1,10 @@
 use super::{ConfigError, LocalProfile, NodeRole, SyncMode};
 
+const OBSERVABILITY_METRICS_PATH_ERROR: &str =
+    "observability endpoint metrics path must start with '/'";
+const OBSERVABILITY_HEALTH_PATH_ERROR: &str =
+    "observability endpoint health path must start with '/'";
+
 pub(super) struct ProfileDefaultsInputs<'a> {
     pub(super) profile: Option<LocalProfile>,
     pub(super) role: &'a mut Option<NodeRole>,
@@ -96,14 +101,21 @@ fn validate_observability_path_guards(inputs: &EndpointGuardInputs<'_>) -> Resul
     if !inputs.observability_endpoint_bind_addr_present {
         return Ok(());
     }
-    if !inputs.observability_endpoint_metrics_path.starts_with('/') {
+    validate_path_has_leading_slash(
+        inputs.observability_endpoint_metrics_path,
+        OBSERVABILITY_METRICS_PATH_ERROR,
+    )?;
+    validate_path_has_leading_slash(
+        inputs.observability_endpoint_health_path,
+        OBSERVABILITY_HEALTH_PATH_ERROR,
+    )?;
+    Ok(())
+}
+
+fn validate_path_has_leading_slash(path: &str, error_message: &str) -> Result<(), ConfigError> {
+    if !path.starts_with('/') {
         return Err(ConfigError::RuntimeDaemonLifecycle(
-            "observability endpoint metrics path must start with '/'".to_owned(),
-        ));
-    }
-    if !inputs.observability_endpoint_health_path.starts_with('/') {
-        return Err(ConfigError::RuntimeDaemonLifecycle(
-            "observability endpoint health path must start with '/'".to_owned(),
+            error_message.to_owned(),
         ));
     }
     Ok(())
