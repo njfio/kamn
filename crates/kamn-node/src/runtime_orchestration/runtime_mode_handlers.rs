@@ -30,6 +30,19 @@ pub(super) struct KolmeLiveRuntimeModeExecutionContext {
     pub kolme_live_signer_key_source: Option<String>,
 }
 
+pub(super) struct DaemonRuntimeOptionsContext {
+    pub daemon_max_ticks: Option<u64>,
+    pub daemon_tick_interval_ms: Option<u64>,
+    pub daemon_shutdown_signal_ticks: Vec<u64>,
+    pub daemon_shutdown_os_signals: bool,
+    pub daemon_shutdown_drain_ticks: Option<u64>,
+    pub daemon_shutdown_timeout_ticks: Option<u64>,
+    pub daemon_peer_id: Option<String>,
+    pub daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
+    pub api_bind_addr: Option<String>,
+    pub service_api_signature_state_hash: String,
+}
+
 fn shutdown_reason_field_or_default<'a>(completion_reason: &'a str, field: &str) -> &'a str {
     daemon_phase::daemon_shutdown_reason_field(completion_reason, field).unwrap_or("0")
 }
@@ -55,19 +68,22 @@ fn finish_observability_lane_if_present(
 }
 
 pub(super) fn build_daemon_runtime_options(
-    daemon_max_ticks: Option<u64>,
-    daemon_tick_interval_ms: Option<u64>,
-    daemon_shutdown_signal_ticks: Vec<u64>,
-    daemon_shutdown_os_signals: bool,
-    daemon_shutdown_drain_ticks: Option<u64>,
-    daemon_shutdown_timeout_ticks: Option<u64>,
-    daemon_peer_id: Option<String>,
-    daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
-    api_bind_addr: Option<&str>,
-    service_api_signature_state_hash: &str,
+    context: DaemonRuntimeOptionsContext,
 ) -> Result<DaemonRuntimeOptions, ConfigError> {
+    let DaemonRuntimeOptionsContext {
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
+        daemon_shutdown_signal_ticks,
+        daemon_shutdown_os_signals,
+        daemon_shutdown_drain_ticks,
+        daemon_shutdown_timeout_ticks,
+        daemon_peer_id,
+        daemon_lifecycle_events,
+        api_bind_addr,
+        service_api_signature_state_hash,
+    } = context;
     let service_api_state_file =
-        full_supervisor::resolve_daemon_service_api_state_file(api_bind_addr)?;
+        full_supervisor::resolve_daemon_service_api_state_file(api_bind_addr.as_deref())?;
     let service_api_relay_spool_file =
         full_supervisor::resolve_daemon_service_api_relay_spool_file(
             service_api_state_file.as_deref(),
@@ -84,7 +100,7 @@ pub(super) fn build_daemon_runtime_options(
         daemon_lifecycle_events,
         service_api_state_file,
         service_api_relay_spool_file,
-        service_api_signature_state_hash: service_api_signature_state_hash.to_owned(),
+        service_api_signature_state_hash,
     })
 }
 

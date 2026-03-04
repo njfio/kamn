@@ -20,7 +20,8 @@ pub(crate) use daemon_phase::live_postgres_multi_host_execution_bundle_selector_
 pub(crate) use daemon_phase::validate_live_postgres_selector_bundle_for_test;
 use runtime_mode_handlers::{
     build_daemon_runtime_options, execute_full_runtime_mode, execute_kolme_live_runtime_mode,
-    FullRuntimeModeExecutionContext, KolmeLiveRuntimeModeExecutionContext,
+    DaemonRuntimeOptionsContext, FullRuntimeModeExecutionContext,
+    KolmeLiveRuntimeModeExecutionContext,
 };
 #[cfg(test)]
 pub(crate) use runtime_policy_contracts::classify_full_bootstrap_component_contract_violation;
@@ -189,18 +190,19 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             }
         }
         RuntimeModeKind::Daemon => {
-            let daemon_runtime_options = build_daemon_runtime_options(
-                daemon_max_ticks,
-                daemon_tick_interval_ms,
-                daemon_shutdown_signal_ticks,
-                daemon_shutdown_os_signals,
-                daemon_shutdown_drain_ticks,
-                daemon_shutdown_timeout_ticks,
-                daemon_peer_id,
-                daemon_lifecycle_events,
-                api_bind_addr.as_deref(),
-                service_api_signature_state_hash.as_str(),
-            )?;
+            let daemon_runtime_options =
+                build_daemon_runtime_options(DaemonRuntimeOptionsContext {
+                    daemon_max_ticks,
+                    daemon_tick_interval_ms,
+                    daemon_shutdown_signal_ticks,
+                    daemon_shutdown_os_signals,
+                    daemon_shutdown_drain_ticks,
+                    daemon_shutdown_timeout_ticks,
+                    daemon_peer_id,
+                    daemon_lifecycle_events,
+                    api_bind_addr,
+                    service_api_signature_state_hash,
+                })?;
             let daemon_execution = execute_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
@@ -229,16 +231,18 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                 runtime_mode,
                 execution_id: execution_id.clone(),
                 daemon_runtime_options: build_daemon_runtime_options(
-                    daemon_max_ticks,
-                    daemon_tick_interval_ms,
-                    daemon_shutdown_signal_ticks,
-                    daemon_shutdown_os_signals,
-                    daemon_shutdown_drain_ticks,
-                    daemon_shutdown_timeout_ticks,
-                    daemon_peer_id,
-                    daemon_lifecycle_events,
-                    api_bind_addr.as_deref(),
-                    service_api_signature_state_hash.as_str(),
+                    DaemonRuntimeOptionsContext {
+                        daemon_max_ticks,
+                        daemon_tick_interval_ms,
+                        daemon_shutdown_signal_ticks,
+                        daemon_shutdown_os_signals,
+                        daemon_shutdown_drain_ticks,
+                        daemon_shutdown_timeout_ticks,
+                        daemon_peer_id,
+                        daemon_lifecycle_events,
+                        api_bind_addr: api_bind_addr.clone(),
+                        service_api_signature_state_hash,
+                    },
                 )?,
                 api_bind_addr,
                 api_max_requests,
