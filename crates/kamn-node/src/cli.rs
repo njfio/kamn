@@ -12,6 +12,8 @@ use super::{
 
 #[path = "cli_config_layering.rs"]
 mod cli_config_layering;
+#[path = "cli_endpoint_option_parsing.rs"]
+mod cli_endpoint_option_parsing;
 #[path = "cli_post_parse_guards.rs"]
 mod cli_post_parse_guards;
 #[path = "cli_runtime_mode_validation.rs"]
@@ -20,6 +22,7 @@ mod cli_runtime_mode_validation;
 mod cli_value_parsers;
 
 use cli_config_layering::build_layered_cli_args;
+use cli_endpoint_option_parsing::{try_parse_endpoint_option, EndpointOptionState};
 use cli_post_parse_guards::{
     apply_profile_defaults, validate_endpoint_guards, EndpointGuardInputs, ProfileDefaultsInputs,
 };
@@ -97,6 +100,38 @@ where
     let _bin = iter.next();
 
     while let Some(arg) = iter.next() {
+        if try_parse_endpoint_option(
+            arg.as_str(),
+            &mut iter,
+            &mut EndpointOptionState {
+                api_bind_addr: &mut api_bind_addr,
+                api_max_requests: &mut api_max_requests,
+                api_idle_timeout_ms: &mut api_idle_timeout_ms,
+                api_body_limit_bytes: &mut api_body_limit_bytes,
+                api_concurrency_limit: &mut api_concurrency_limit,
+                api_rate_limit_per_second: &mut api_rate_limit_per_second,
+                observability_endpoint_bind_addr: &mut observability_endpoint_bind_addr,
+                observability_endpoint_metrics_path: &mut observability_endpoint_metrics_path,
+                observability_endpoint_health_path: &mut observability_endpoint_health_path,
+                observability_endpoint_max_requests: &mut observability_endpoint_max_requests,
+                observability_endpoint_idle_timeout_ms: &mut observability_endpoint_idle_timeout_ms,
+                api_max_requests_overridden: &mut api_max_requests_overridden,
+                api_idle_timeout_ms_overridden: &mut api_idle_timeout_ms_overridden,
+                api_body_limit_bytes_overridden: &mut api_body_limit_bytes_overridden,
+                api_concurrency_limit_overridden: &mut api_concurrency_limit_overridden,
+                api_rate_limit_per_second_overridden: &mut api_rate_limit_per_second_overridden,
+                observability_endpoint_metrics_path_overridden:
+                    &mut observability_endpoint_metrics_path_overridden,
+                observability_endpoint_health_path_overridden:
+                    &mut observability_endpoint_health_path_overridden,
+                observability_endpoint_max_requests_overridden:
+                    &mut observability_endpoint_max_requests_overridden,
+                observability_endpoint_idle_timeout_ms_overridden:
+                    &mut observability_endpoint_idle_timeout_ms_overridden,
+            },
+        )? {
+            continue;
+        }
         match arg.as_str() {
             "--role" => {
                 let value = iter
@@ -243,78 +278,6 @@ where
                 kolme_live_signer_key_source = Some(iter.next().ok_or(
                     ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
                 )?);
-            }
-            "--api-bind" => {
-                api_bind_addr = Some(
-                    iter.next()
-                        .ok_or(ConfigError::MissingArgumentValue("--api-bind"))?,
-                );
-            }
-            "--api-max-requests" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--api-max-requests"))?;
-                api_max_requests = parse_daemon_control_arg(&value)?;
-                api_max_requests_overridden = true;
-            }
-            "--api-idle-timeout-ms" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--api-idle-timeout-ms"))?;
-                api_idle_timeout_ms = parse_daemon_control_arg(&value)?;
-                api_idle_timeout_ms_overridden = true;
-            }
-            "--api-body-limit-bytes" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--api-body-limit-bytes"))?;
-                api_body_limit_bytes = parse_daemon_control_arg(&value)?;
-                api_body_limit_bytes_overridden = true;
-            }
-            "--api-concurrency-limit" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--api-concurrency-limit"))?;
-                api_concurrency_limit = parse_daemon_control_arg(&value)?;
-                api_concurrency_limit_overridden = true;
-            }
-            "--api-rate-limit-per-second" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--api-rate-limit-per-second",
-                ))?;
-                api_rate_limit_per_second = parse_daemon_control_arg(&value)?;
-                api_rate_limit_per_second_overridden = true;
-            }
-            "--observability-endpoint-bind" => {
-                observability_endpoint_bind_addr = Some(iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--observability-endpoint-bind"),
-                )?);
-            }
-            "--observability-endpoint-metrics-path" => {
-                observability_endpoint_metrics_path = iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--observability-endpoint-metrics-path"),
-                )?;
-                observability_endpoint_metrics_path_overridden = true;
-            }
-            "--observability-endpoint-health-path" => {
-                observability_endpoint_health_path = iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--observability-endpoint-health-path"),
-                )?;
-                observability_endpoint_health_path_overridden = true;
-            }
-            "--observability-endpoint-max-requests" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--observability-endpoint-max-requests",
-                ))?;
-                observability_endpoint_max_requests = parse_daemon_control_arg(&value)?;
-                observability_endpoint_max_requests_overridden = true;
-            }
-            "--observability-endpoint-idle-timeout-ms" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--observability-endpoint-idle-timeout-ms",
-                ))?;
-                observability_endpoint_idle_timeout_ms = parse_daemon_control_arg(&value)?;
-                observability_endpoint_idle_timeout_ms_overridden = true;
             }
             "--output" => {
                 let value = iter
