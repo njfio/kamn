@@ -32,6 +32,22 @@ const EXTRACTED_REQUEST_AUTH_SNIPPETS: &[&str] = &[
     "pub struct ServiceRequestAuth {",
     "impl ServiceRequestAuth {",
 ];
+const EXTRACTED_SERVICE_MODEL_SNIPPETS: &[&str] = &[
+    "pub struct ServiceMessageReceipt {",
+    "pub struct ServiceMessageStatus {",
+    "pub struct ServiceChannelReceipt {",
+    "pub struct ServiceChannelMessages {",
+    "pub struct ServiceTaskReceipt {",
+    "pub struct ServiceTaskStatus {",
+    "pub struct ServiceEscrowStatus {",
+    "pub struct ServiceContentRegistration {",
+    "pub struct ServiceContentStatus {",
+    "pub struct ServiceBridgeSubmission {",
+    "pub struct ServiceBridgeStatus {",
+    "pub struct ServiceAgentProfile {",
+    "pub struct ServiceHealthStatus {",
+    "pub struct ServiceRouteEvent {",
+];
 
 #[test]
 fn contract_issue_6305_service_root_respects_line_budget() {
@@ -124,6 +140,25 @@ fn contract_issue_6331_service_root_removes_inline_request_auth_impls() {
         assert!(
             !SERVICE_ROOT_SOURCE.contains(request_auth_snippet),
             "service.rs must not retain inline request-auth impl: {request_auth_snippet}",
+        );
+    }
+}
+
+#[test]
+fn contract_issue_6333_service_root_declares_models_module() {
+    assert!(
+        SERVICE_ROOT_SOURCE.contains("#[path = \"service_models.rs\"]")
+            && SERVICE_ROOT_SOURCE.contains("mod service_models;"),
+        "service.rs must declare #[path = \"service_models.rs\"] mod service_models;"
+    );
+}
+
+#[test]
+fn contract_issue_6333_service_root_removes_inline_model_structs() {
+    for model_snippet in EXTRACTED_SERVICE_MODEL_SNIPPETS {
+        assert!(
+            !SERVICE_ROOT_SOURCE.contains(model_snippet),
+            "service.rs must not retain inline service model struct: {model_snippet}",
         );
     }
 }
