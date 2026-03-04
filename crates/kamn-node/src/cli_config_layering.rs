@@ -1,10 +1,85 @@
 use super::ConfigError;
 use std::{env, fs};
 
+#[path = "cli_config_layering/config_mapping.rs"]
+mod config_mapping;
+
+use config_mapping::map_config_entry_to_args;
+
 const CONFIG_FILE_FLAG: &str = "--config-file";
 const NODE_CONFIG_FILE_ENV: &str = "KAMN_NODE_CONFIG_FILE";
 const DUAL_CONFIG_FILE_SOURCE_ERROR: &str =
     "both --config-file and KAMN_NODE_CONFIG_FILE are set; declare one config source";
+
+const ENV_OVERRIDE_MAPPINGS: [(&str, &str); 31] = [
+    ("KAMN_NODE_PROFILE", "profile"),
+    ("KAMN_NODE_ROLE", "role"),
+    ("KAMN_NODE_CHAIN_ID", "chain_id"),
+    ("KAMN_NODE_CHAIN_VERSION", "chain_version"),
+    ("KAMN_NODE_STORAGE_DIR", "storage_dir"),
+    ("KAMN_NODE_ENABLE_GOSSIP", "enable_gossip"),
+    ("KAMN_NODE_SYNC_MODE", "sync_mode"),
+    ("KAMN_NODE_RUNTIME_MODE", "runtime_mode"),
+    ("KAMN_NODE_DAEMON_MAX_TICKS", "daemon_max_ticks"),
+    (
+        "KAMN_NODE_DAEMON_TICK_INTERVAL_MS",
+        "daemon_tick_interval_ms",
+    ),
+    ("KAMN_NODE_EXPECTED_STATE_VERSION", "expected_state_version"),
+    ("KAMN_NODE_EXPECTED_STATE_HASH", "expected_state_hash"),
+    ("KAMN_NODE_API_BIND", "api_bind"),
+    ("KAMN_NODE_API_MAX_REQUESTS", "api_max_requests"),
+    ("KAMN_NODE_API_IDLE_TIMEOUT_MS", "api_idle_timeout_ms"),
+    ("KAMN_NODE_API_BODY_LIMIT_BYTES", "api_body_limit_bytes"),
+    ("KAMN_NODE_API_CONCURRENCY_LIMIT", "api_concurrency_limit"),
+    (
+        "KAMN_NODE_API_RATE_LIMIT_PER_SECOND",
+        "api_rate_limit_per_second",
+    ),
+    (
+        "KAMN_NODE_OBSERVABILITY_ENDPOINT_BIND",
+        "observability_endpoint_bind",
+    ),
+    (
+        "KAMN_NODE_OBSERVABILITY_ENDPOINT_METRICS_PATH",
+        "observability_endpoint_metrics_path",
+    ),
+    (
+        "KAMN_NODE_OBSERVABILITY_ENDPOINT_HEALTH_PATH",
+        "observability_endpoint_health_path",
+    ),
+    (
+        "KAMN_NODE_OBSERVABILITY_ENDPOINT_MAX_REQUESTS",
+        "observability_endpoint_max_requests",
+    ),
+    (
+        "KAMN_NODE_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS",
+        "observability_endpoint_idle_timeout_ms",
+    ),
+    ("KAMN_NODE_KOLME_LIVE_BASE_URL", "kolme_live_base_url"),
+    (
+        "KAMN_NODE_KOLME_LIVE_PROVIDER_HINT",
+        "kolme_live_provider_hint",
+    ),
+    (
+        "KAMN_NODE_KOLME_LIVE_SIGNING_PROFILE",
+        "kolme_live_signing_profile",
+    ),
+    (
+        "KAMN_NODE_KOLME_LIVE_STRICT_SIGNER_CONTRACTS",
+        "kolme_live_strict_signer_contracts",
+    ),
+    (
+        "KAMN_NODE_KOLME_LIVE_SIGNER_PROFILE",
+        "kolme_live_signer_profile",
+    ),
+    (
+        "KAMN_NODE_KOLME_LIVE_SIGNER_KEY_SOURCE",
+        "kolme_live_signer_key_source",
+    ),
+    ("KAMN_NODE_OUTPUT", "output"),
+    ("KAMN_NODE_DIAGNOSTICS", "diagnostics"),
+];
 
 fn read_env_var_trimmed(name: &str) -> Result<Option<String>, ConfigError> {
     match env::var(name) {
@@ -24,124 +99,6 @@ fn read_env_var_trimmed(name: &str) -> Result<Option<String>, ConfigError> {
     }
 }
 
-fn parse_bool_override(value: &str, source: &str) -> Result<bool, ConfigError> {
-    match value {
-        "true" => Ok(true),
-        "false" => Ok(false),
-        _ => Err(ConfigError::InvalidNodeConfig(format!(
-            "{source} must be one of: true,false"
-        ))),
-    }
-}
-
-fn push_key_value_flag(args: &mut Vec<String>, value: &str, flag: &str) {
-    args.push(flag.to_owned());
-    args.push(value.to_owned());
-}
-
-fn map_config_entry_to_args(
-    key: &str,
-    value: &str,
-    source: &str,
-) -> Result<Vec<String>, ConfigError> {
-    let mut mapped = Vec::new();
-    match key {
-        "profile" => push_key_value_flag(&mut mapped, value, "--profile"),
-        "role" => push_key_value_flag(&mut mapped, value, "--role"),
-        "chain_id" => push_key_value_flag(&mut mapped, value, "--chain-id"),
-        "chain_version" => push_key_value_flag(&mut mapped, value, "--chain-version"),
-        "storage_dir" => push_key_value_flag(&mut mapped, value, "--storage-dir"),
-        "enable_gossip" => {
-            if !parse_bool_override(value, source)? {
-                mapped.push("--disable-gossip".to_owned());
-            }
-        }
-        "sync_mode" => push_key_value_flag(&mut mapped, value, "--sync-mode"),
-        "runtime_mode" => push_key_value_flag(&mut mapped, value, "--runtime-mode"),
-        "expected_state_version" => {
-            push_key_value_flag(&mut mapped, value, "--expected-state-version")
-        }
-        "expected_state_hash" => push_key_value_flag(&mut mapped, value, "--expected-state-hash"),
-        "proposal" => push_key_value_flag(&mut mapped, value, "--proposal"),
-        "rejoin_attempt" => push_key_value_flag(&mut mapped, value, "--rejoin-attempt"),
-        "daemon_max_ticks" => push_key_value_flag(&mut mapped, value, "--daemon-max-ticks"),
-        "daemon_tick_interval_ms" => {
-            push_key_value_flag(&mut mapped, value, "--daemon-tick-interval-ms")
-        }
-        "daemon_shutdown_signal_tick" => {
-            push_key_value_flag(&mut mapped, value, "--daemon-shutdown-signal-tick")
-        }
-        "daemon_shutdown_os_signals" => {
-            if parse_bool_override(value, source)? {
-                mapped.push("--daemon-shutdown-os-signals".to_owned());
-            }
-        }
-        "daemon_shutdown_drain_ticks" => {
-            push_key_value_flag(&mut mapped, value, "--daemon-shutdown-drain-ticks")
-        }
-        "daemon_shutdown_timeout_ticks" => {
-            push_key_value_flag(&mut mapped, value, "--daemon-shutdown-timeout-ticks")
-        }
-        "daemon_peer_id" => push_key_value_flag(&mut mapped, value, "--daemon-peer-id"),
-        "daemon_lifecycle_event" => {
-            push_key_value_flag(&mut mapped, value, "--daemon-lifecycle-event")
-        }
-        "kolme_live_base_url" => push_key_value_flag(&mut mapped, value, "--kolme-live-base-url"),
-        "kolme_live_provider_hint" => {
-            push_key_value_flag(&mut mapped, value, "--kolme-live-provider-hint")
-        }
-        "kolme_live_signing_profile" => {
-            push_key_value_flag(&mut mapped, value, "--kolme-live-signing-profile")
-        }
-        "kolme_live_strict_signer_contracts" => {
-            if parse_bool_override(value, source)? {
-                mapped.push("--kolme-live-strict-signer-contracts".to_owned());
-            }
-        }
-        "kolme_live_signer_profile" => {
-            push_key_value_flag(&mut mapped, value, "--kolme-live-signer-profile")
-        }
-        "kolme_live_signer_key_source" => {
-            push_key_value_flag(&mut mapped, value, "--kolme-live-signer-key-source")
-        }
-        "api_bind" => push_key_value_flag(&mut mapped, value, "--api-bind"),
-        "api_max_requests" => push_key_value_flag(&mut mapped, value, "--api-max-requests"),
-        "api_idle_timeout_ms" => push_key_value_flag(&mut mapped, value, "--api-idle-timeout-ms"),
-        "api_body_limit_bytes" => push_key_value_flag(&mut mapped, value, "--api-body-limit-bytes"),
-        "api_concurrency_limit" => {
-            push_key_value_flag(&mut mapped, value, "--api-concurrency-limit")
-        }
-        "api_rate_limit_per_second" => {
-            push_key_value_flag(&mut mapped, value, "--api-rate-limit-per-second")
-        }
-        "observability_endpoint_bind" => {
-            push_key_value_flag(&mut mapped, value, "--observability-endpoint-bind")
-        }
-        "observability_endpoint_metrics_path" => {
-            push_key_value_flag(&mut mapped, value, "--observability-endpoint-metrics-path")
-        }
-        "observability_endpoint_health_path" => {
-            push_key_value_flag(&mut mapped, value, "--observability-endpoint-health-path")
-        }
-        "observability_endpoint_max_requests" => {
-            push_key_value_flag(&mut mapped, value, "--observability-endpoint-max-requests")
-        }
-        "observability_endpoint_idle_timeout_ms" => push_key_value_flag(
-            &mut mapped,
-            value,
-            "--observability-endpoint-idle-timeout-ms",
-        ),
-        "output" => push_key_value_flag(&mut mapped, value, "--output"),
-        "diagnostics" => push_key_value_flag(&mut mapped, value, "--diagnostics"),
-        _ => {
-            return Err(ConfigError::InvalidNodeConfig(format!(
-                "{source} contains unsupported key: {key}"
-            )));
-        }
-    }
-    Ok(mapped)
-}
-
 fn parse_config_file_args(path: &str) -> Result<Vec<String>, ConfigError> {
     let content = fs::read_to_string(path).map_err(|error| {
         ConfigError::InvalidNodeConfig(format!("failed to read config file {path}: {error}"))
@@ -158,10 +115,12 @@ fn parse_config_file_args(path: &str) -> Result<Vec<String>, ConfigError> {
                 line_index + 1
             ))
         })?;
-        let key = key.trim();
-        let value = value.trim();
         let source = format!("config file {path} line {}", line_index + 1);
-        args.extend(map_config_entry_to_args(key, value, source.as_str())?);
+        args.extend(map_config_entry_to_args(
+            key.trim(),
+            value.trim(),
+            source.as_str(),
+        )?);
     }
     Ok(args)
 }
@@ -184,109 +143,9 @@ fn append_env_override(
 
 fn collect_env_override_args() -> Result<Vec<String>, ConfigError> {
     let mut args = Vec::new();
-    append_env_override(&mut args, "KAMN_NODE_PROFILE", "profile")?;
-    append_env_override(&mut args, "KAMN_NODE_ROLE", "role")?;
-    append_env_override(&mut args, "KAMN_NODE_CHAIN_ID", "chain_id")?;
-    append_env_override(&mut args, "KAMN_NODE_CHAIN_VERSION", "chain_version")?;
-    append_env_override(&mut args, "KAMN_NODE_STORAGE_DIR", "storage_dir")?;
-    append_env_override(&mut args, "KAMN_NODE_ENABLE_GOSSIP", "enable_gossip")?;
-    append_env_override(&mut args, "KAMN_NODE_SYNC_MODE", "sync_mode")?;
-    append_env_override(&mut args, "KAMN_NODE_RUNTIME_MODE", "runtime_mode")?;
-    append_env_override(&mut args, "KAMN_NODE_DAEMON_MAX_TICKS", "daemon_max_ticks")?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_DAEMON_TICK_INTERVAL_MS",
-        "daemon_tick_interval_ms",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_EXPECTED_STATE_VERSION",
-        "expected_state_version",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_EXPECTED_STATE_HASH",
-        "expected_state_hash",
-    )?;
-    append_env_override(&mut args, "KAMN_NODE_API_BIND", "api_bind")?;
-    append_env_override(&mut args, "KAMN_NODE_API_MAX_REQUESTS", "api_max_requests")?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_API_IDLE_TIMEOUT_MS",
-        "api_idle_timeout_ms",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_API_BODY_LIMIT_BYTES",
-        "api_body_limit_bytes",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_API_CONCURRENCY_LIMIT",
-        "api_concurrency_limit",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_API_RATE_LIMIT_PER_SECOND",
-        "api_rate_limit_per_second",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_OBSERVABILITY_ENDPOINT_BIND",
-        "observability_endpoint_bind",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_OBSERVABILITY_ENDPOINT_METRICS_PATH",
-        "observability_endpoint_metrics_path",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_OBSERVABILITY_ENDPOINT_HEALTH_PATH",
-        "observability_endpoint_health_path",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_OBSERVABILITY_ENDPOINT_MAX_REQUESTS",
-        "observability_endpoint_max_requests",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS",
-        "observability_endpoint_idle_timeout_ms",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_KOLME_LIVE_BASE_URL",
-        "kolme_live_base_url",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_KOLME_LIVE_PROVIDER_HINT",
-        "kolme_live_provider_hint",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_KOLME_LIVE_SIGNING_PROFILE",
-        "kolme_live_signing_profile",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_KOLME_LIVE_STRICT_SIGNER_CONTRACTS",
-        "kolme_live_strict_signer_contracts",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_KOLME_LIVE_SIGNER_PROFILE",
-        "kolme_live_signer_profile",
-    )?;
-    append_env_override(
-        &mut args,
-        "KAMN_NODE_KOLME_LIVE_SIGNER_KEY_SOURCE",
-        "kolme_live_signer_key_source",
-    )?;
-    append_env_override(&mut args, "KAMN_NODE_OUTPUT", "output")?;
-    append_env_override(&mut args, "KAMN_NODE_DIAGNOSTICS", "diagnostics")?;
+    for (env_name, key) in ENV_OVERRIDE_MAPPINGS {
+        append_env_override(&mut args, env_name, key)?;
+    }
     Ok(args)
 }
 
@@ -331,8 +190,7 @@ pub(super) fn build_layered_cli_args(raw_args: Vec<String>) -> Result<Vec<String
             DUAL_CONFIG_FILE_SOURCE_ERROR.to_owned(),
         ));
     }
-    let config_file_path = config_file_from_cli.or(config_file_from_env);
-    if let Some(path) = config_file_path.as_deref() {
+    if let Some(path) = config_file_from_cli.or(config_file_from_env).as_deref() {
         layered_args.extend(parse_config_file_args(path)?);
     }
     layered_args.extend(collect_env_override_args()?);

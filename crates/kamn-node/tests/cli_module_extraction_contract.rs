@@ -41,12 +41,17 @@ fn cli_module_extraction_contract_removes_inline_config_layering_helpers() {
 #[test]
 fn cli_module_extraction_contract_keeps_helpers_in_new_module() {
     let config_layering_rs = read_repo_file("src/cli_config_layering.rs");
+    let config_mapping_rs = read_repo_file("src/cli_config_layering/config_mapping.rs");
     assert!(
         config_layering_rs.contains("pub(super) fn build_layered_cli_args("),
         "cli_config_layering module should expose layered cli arg builder"
     );
     assert!(
-        config_layering_rs.contains("fn map_config_entry_to_args("),
-        "cli_config_layering module should own config entry-to-arg mapping"
+        config_layering_rs.contains("mod config_mapping;"),
+        "cli_config_layering module should declare config_mapping submodule"
+    );
+    assert!(
+        config_mapping_rs.contains("fn map_config_entry_to_args("),
+        "config_mapping submodule should own config entry-to-arg mapping"
     );
 }
