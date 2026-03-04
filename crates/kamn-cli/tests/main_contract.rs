@@ -129,3 +129,36 @@ fn spec_c07_main_contract_removes_inline_arg_help_parser_logic_from_lib() {
         "cli_args module should define render_help_text implementation entrypoint"
     );
 }
+
+#[test]
+fn spec_c08_main_contract_declares_cli_dispatch_module_extraction_wiring() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("mod cli_dispatch;"),
+        "lib.rs should declare cli_dispatch module"
+    );
+    assert!(
+        lib_rs.contains("dispatch_impl(parsed)"),
+        "lib.rs should delegate dispatch through cli_dispatch module"
+    );
+}
+
+#[test]
+fn spec_c09_main_contract_removes_inline_dispatch_logic_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "CommandKind::Help => Ok(help_output())",
+        "CommandKind::Register => commands::register::execute(parsed)",
+        "CommandKind::Health => commands::health::execute(parsed)",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline dispatch marker: {marker}"
+        );
+    }
+    let cli_dispatch_rs = read_repo_file("src/cli_dispatch.rs");
+    assert!(
+        cli_dispatch_rs.contains("pub(super) fn dispatch_impl("),
+        "cli_dispatch module should define dispatch implementation entrypoint"
+    );
+}
