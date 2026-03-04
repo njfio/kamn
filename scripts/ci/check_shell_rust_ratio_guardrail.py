@@ -37,6 +37,8 @@ def emit(
     tracked_rust_file_count: str,
     delta_to_warn_shell_rust_ratio_max: str,
     delta_to_fail_shell_rust_ratio_max: str,
+    python_line_total: str = "unknown",
+    tracked_python_file_count: str = "unknown",
 ):
     print(f"status={status}")
     print(f"final_decision={final_decision}")
@@ -50,6 +52,8 @@ def emit(
     print(f"fail_shell_rust_ratio_max={fail_shell_rust_ratio_max}")
     print(f"tracked_shell_file_count={tracked_shell_file_count}")
     print(f"tracked_rust_file_count={tracked_rust_file_count}")
+    print(f"python_line_total={python_line_total}")
+    print(f"tracked_python_file_count={tracked_python_file_count}")
     print(f"delta_to_warn_shell_rust_ratio_max={delta_to_warn_shell_rust_ratio_max}")
     print(f"delta_to_fail_shell_rust_ratio_max={delta_to_fail_shell_rust_ratio_max}")
 
@@ -308,6 +312,10 @@ try:
         ["git", "-C", str(repo_root), "ls-files", "*.rs"],
         text=True,
     ).splitlines()
+    tracked_python = subprocess.check_output(
+        ["git", "-C", str(repo_root), "ls-files", "*.py"],
+        text=True,
+    ).splitlines()
 except subprocess.CalledProcessError:
     payload = {
         "schema_version": "kamn.ci.shell-rust-ratio-guardrail-report.v1",
@@ -362,6 +370,13 @@ for rel in tracked_rust:
         continue
     rust_files.append(p)
 
+python_files: list[Path] = []
+for rel in tracked_python:
+    p = repo_root / rel
+    if not p.is_file() or p.is_symlink():
+        continue
+    python_files.append(p)
+
 shell_line_total = 0
 for path in shell_files:
     with path.open("r", encoding="utf-8", errors="ignore") as handle:
@@ -371,6 +386,11 @@ rust_line_total = 0
 for path in rust_files:
     with path.open("r", encoding="utf-8", errors="ignore") as handle:
         rust_line_total += sum(1 for _ in handle)
+
+python_line_total = 0
+for path in python_files:
+    with path.open("r", encoding="utf-8", errors="ignore") as handle:
+        python_line_total += sum(1 for _ in handle)
 
 if rust_line_total <= 0:
     payload = {
@@ -384,6 +404,8 @@ if rust_line_total <= 0:
             "rust_line_total": rust_line_total,
             "tracked_shell_file_count": len(shell_files),
             "tracked_rust_file_count": len(rust_files),
+            "python_line_total": python_line_total,
+            "tracked_python_file_count": len(python_files),
             "warn_shell_rust_ratio_max": warn_max,
             "fail_shell_rust_ratio_max": fail_max,
         },
@@ -402,6 +424,8 @@ if rust_line_total <= 0:
             tracked_rust_file_count=str(len(rust_files)),
             delta_to_warn_shell_rust_ratio_max="unknown",
             delta_to_fail_shell_rust_ratio_max="unknown",
+            python_line_total=str(python_line_total),
+            tracked_python_file_count=str(len(python_files)),
         )
         raise SystemExit(1)
     emit(
@@ -417,6 +441,8 @@ if rust_line_total <= 0:
         tracked_rust_file_count=str(len(rust_files)),
         delta_to_warn_shell_rust_ratio_max="unknown",
         delta_to_fail_shell_rust_ratio_max="unknown",
+        python_line_total=str(python_line_total),
+        tracked_python_file_count=str(len(python_files)),
     )
     raise SystemExit(1)
 
@@ -450,6 +476,8 @@ payload = {
         "fail_shell_rust_ratio_max": fail_max,
         "tracked_shell_file_count": len(shell_files),
         "tracked_rust_file_count": len(rust_files),
+        "python_line_total": python_line_total,
+        "tracked_python_file_count": len(python_files),
         "delta_to_warn_shell_rust_ratio_max": delta_to_warn,
         "delta_to_fail_shell_rust_ratio_max": delta_to_fail,
     },
@@ -469,6 +497,8 @@ if not write_payload(payload):
         tracked_rust_file_count=str(len(rust_files)),
         delta_to_warn_shell_rust_ratio_max=str(delta_to_warn),
         delta_to_fail_shell_rust_ratio_max=str(delta_to_fail),
+        python_line_total=str(python_line_total),
+        tracked_python_file_count=str(len(python_files)),
     )
     raise SystemExit(1)
 
@@ -485,6 +515,8 @@ emit(
     tracked_rust_file_count=str(len(rust_files)),
     delta_to_warn_shell_rust_ratio_max=str(delta_to_warn),
     delta_to_fail_shell_rust_ratio_max=str(delta_to_fail),
+    python_line_total=str(python_line_total),
+    tracked_python_file_count=str(len(python_files)),
 )
 
 if status == "fail":
