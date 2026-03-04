@@ -12,6 +12,14 @@ const EXTRACTED_HELPER_SIGNATURE_SNIPPETS: &[&str] = &[
     "fn read_response_bytes<",
     "fn read_response_text<",
 ];
+const EXTRACTED_ENDPOINT_TRANSPORT_SNIPPETS: &[&str] = &[
+    "enum ServiceScheme {",
+    "enum ServiceStream {",
+    "struct ServiceEndpoint {",
+    "fn resolve_tls_client_config(",
+    "fn resolve_request_timeout_seconds(",
+    "fn resolve_tls_server_name(",
+];
 
 #[test]
 fn contract_issue_6305_service_root_respects_line_budget() {
@@ -47,6 +55,25 @@ fn contract_issue_6325_service_root_removes_inline_http_io_helper_impls() {
         assert!(
             !SERVICE_ROOT_SOURCE.contains(helper_signature_snippet),
             "service.rs must not retain inline helper impl: {helper_signature_snippet}",
+        );
+    }
+}
+
+#[test]
+fn contract_issue_6327_service_root_declares_endpoint_transport_module() {
+    assert!(
+        SERVICE_ROOT_SOURCE.contains("#[path = \"service_endpoint.rs\"]")
+            && SERVICE_ROOT_SOURCE.contains("mod service_endpoint;"),
+        "service.rs must declare #[path = \"service_endpoint.rs\"] mod service_endpoint;"
+    );
+}
+
+#[test]
+fn contract_issue_6327_service_root_removes_inline_endpoint_transport_impls() {
+    for endpoint_transport_snippet in EXTRACTED_ENDPOINT_TRANSPORT_SNIPPETS {
+        assert!(
+            !SERVICE_ROOT_SOURCE.contains(endpoint_transport_snippet),
+            "service.rs must not retain inline endpoint/transport impl: {endpoint_transport_snippet}",
         );
     }
 }
