@@ -6,10 +6,10 @@ mod service_auth_crypto;
 mod service_endpoint;
 #[path = "service_http_io.rs"]
 mod service_http_io;
-#[path = "service_request_auth.rs"]
-mod service_request_auth;
 #[path = "service_models.rs"]
 mod service_models;
+#[path = "service_request_auth.rs"]
+mod service_request_auth;
 #[path = "service_response.rs"]
 mod service_response;
 #[path = "service_websocket.rs"]
@@ -19,12 +19,6 @@ pub use self::service_auth_crypto::{
     service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
     service_verify_signature_with_public_key,
 };
-pub use self::service_models::{
-    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages,
-    ServiceChannelReceipt, ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus,
-    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRouteEvent,
-    ServiceTaskReceipt, ServiceTaskStatus,
-};
 #[cfg(test)]
 use self::service_endpoint::resolve_request_timeout_seconds;
 use self::service_endpoint::ServiceEndpoint;
@@ -32,6 +26,12 @@ use self::service_http_io::{
     normalize_route_segment, read_response_bytes, read_response_text, render_auth_headers,
     validate_http_header_value, validate_request_method, validate_request_path,
     write_and_flush_request,
+};
+pub use self::service_models::{
+    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages,
+    ServiceChannelReceipt, ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus,
+    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRouteEvent,
+    ServiceTaskReceipt, ServiceTaskStatus,
 };
 pub use self::service_request_auth::ServiceRequestAuth;
 use self::service_response::{
@@ -238,10 +238,7 @@ impl ServiceApiClient {
     ) -> Result<ServiceEscrowStatus, SdkError> {
         let response = self.request("POST", "/v1/escrow/fund", payload, Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceEscrowStatus {
-            escrow_id: json_string_field(response.body.as_str(), "escrow_id")?,
-            state: json_string_field(response.body.as_str(), "state")?,
-        })
+        parse_escrow_status(response.body.as_str())
     }
 
     /// Releases escrow through `POST /v1/escrow/{id}/release`.
@@ -254,10 +251,7 @@ impl ServiceApiClient {
         let route = format!("/v1/escrow/{escrow_id}/release");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceEscrowStatus {
-            escrow_id: json_string_field(response.body.as_str(), "escrow_id")?,
-            state: json_string_field(response.body.as_str(), "state")?,
-        })
+        parse_escrow_status(response.body.as_str())
     }
 
     /// Registers content retention lifecycle via `POST /v1/content/register`.
@@ -500,6 +494,13 @@ impl ServiceApiClient {
         let response_text = read_response_text(&mut stream)?;
         parse_http_response(response_text.as_str())
     }
+}
+
+fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, SdkError> {
+    Ok(ServiceEscrowStatus {
+        escrow_id: json_string_field(body, "escrow_id")?,
+        state: json_string_field(body, "state")?,
+    })
 }
 
 #[cfg(test)]
