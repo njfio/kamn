@@ -15,6 +15,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_config_layering;"),
         "cli.rs should declare cli_config_layering module"
     );
+    assert!(
+        cli_rs.contains("mod cli_value_parsers;"),
+        "cli.rs should declare cli_value_parsers module"
+    );
 }
 
 #[test]
@@ -53,5 +57,31 @@ fn cli_module_extraction_contract_keeps_helpers_in_new_module() {
     assert!(
         config_mapping_rs.contains("fn map_config_entry_to_args("),
         "config_mapping submodule should own config entry-to-arg mapping"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_value_parser_helpers() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "fn parse_state_version_arg(",
+        "fn parse_proposal_candidate(",
+        "fn parse_rejoin_attempt(",
+        "fn parse_daemon_control_arg(",
+        "fn parse_daemon_lifecycle_event(",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline value parser helper: {marker}"
+        );
+    }
+    let value_parsers_rs = read_repo_file("src/cli_value_parsers.rs");
+    assert!(
+        value_parsers_rs.contains("pub(super) fn parse_state_version_arg("),
+        "cli_value_parsers module should expose state-version parser helper"
+    );
+    assert!(
+        value_parsers_rs.contains("pub(super) fn parse_daemon_lifecycle_event("),
+        "cli_value_parsers module should expose daemon lifecycle parser helper"
     );
 }
