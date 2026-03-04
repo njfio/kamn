@@ -27,6 +27,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_post_parse_guards;"),
         "cli.rs should declare cli_post_parse_guards module"
     );
+    assert!(
+        cli_rs.contains("mod cli_endpoint_option_parsing;"),
+        "cli.rs should declare cli_endpoint_option_parsing module"
+    );
 }
 
 #[test]
@@ -138,5 +142,37 @@ fn cli_module_extraction_contract_removes_inline_post_parse_guards() {
     assert!(
         post_parse_guards_rs.contains("pub(super) fn validate_endpoint_guards("),
         "cli_post_parse_guards module should expose endpoint guard validator"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_endpoint_option_parsing() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "\"--api-bind\" => {",
+        "\"--api-max-requests\" => {",
+        "\"--api-idle-timeout-ms\" => {",
+        "\"--api-body-limit-bytes\" => {",
+        "\"--api-concurrency-limit\" => {",
+        "\"--api-rate-limit-per-second\" => {",
+        "\"--observability-endpoint-bind\" => {",
+        "\"--observability-endpoint-metrics-path\" => {",
+        "\"--observability-endpoint-health-path\" => {",
+        "\"--observability-endpoint-max-requests\" => {",
+        "\"--observability-endpoint-idle-timeout-ms\" => {",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline endpoint option parsing marker: {marker}"
+        );
+    }
+    let endpoint_option_parsing_rs = read_repo_file("src/cli_endpoint_option_parsing.rs");
+    assert!(
+        endpoint_option_parsing_rs.contains("pub(super) struct EndpointOptionState"),
+        "cli_endpoint_option_parsing module should define endpoint option state"
+    );
+    assert!(
+        endpoint_option_parsing_rs.contains("pub(super) fn try_parse_endpoint_option("),
+        "cli_endpoint_option_parsing module should expose endpoint option parser entrypoint"
     );
 }
