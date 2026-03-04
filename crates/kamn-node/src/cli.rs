@@ -334,6 +334,12 @@ fn build_layered_cli_args(raw_args: Vec<String>) -> Result<Vec<String>, ConfigEr
         .unwrap_or_else(|| "kamn-node".to_owned());
     layered_args.push(bin);
     let config_file_from_env = read_env_var_trimmed(NODE_CONFIG_FILE_ENV)?;
+    if config_file_from_cli.is_some() && config_file_from_env.is_some() {
+        return Err(ConfigError::InvalidNodeConfig(
+            "both --config-file and KAMN_NODE_CONFIG_FILE are set; declare one config source"
+                .to_owned(),
+        ));
+    }
     let config_file_path = config_file_from_cli.or(config_file_from_env);
     if let Some(path) = config_file_path.as_deref() {
         layered_args.extend(parse_config_file_args(path)?);
