@@ -21,12 +21,14 @@ fn write_stdout_line(line: &str) -> Result<(), ConfigError> {
 fn write_line_to_stream(line: &str, stream: &mut impl Write) -> Result<(), ConfigError> {
     stream
         .write_all(line.as_bytes())
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+        .map_err(map_stream_write_error)?;
     stream
         .write_all(b"\n")
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-    stream
-        .flush()
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+        .map_err(map_stream_write_error)?;
+    stream.flush().map_err(map_stream_write_error)?;
     Ok(())
+}
+
+fn map_stream_write_error(error: std::io::Error) -> ConfigError {
+    ConfigError::RuntimeDaemonLifecycle(error.to_string())
 }
