@@ -27,11 +27,11 @@ Move low-level CLI value parser helper functions out of `crates/kamn-node/src/cl
 - Inline helper definitions remain in `cli.rs` and violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated value-parsers helper module.
-- [ ] `cli.rs` no longer contains inline definitions for extracted value parser helpers.
-- [ ] Existing CLI parse behavior remains unchanged.
-- [ ] CLI extraction contract includes and passes value-parser module assertions.
-- [ ] Existing `kamn-node` CLI parsing tests remain green.
+- [x] `cli.rs` declares a dedicated value-parsers helper module.
+- [x] `cli.rs` no longer contains inline definitions for extracted value parser helpers.
+- [x] Existing CLI parse behavior remains unchanged.
+- [x] CLI extraction contract includes and passes value-parser module assertions.
+- [x] Existing `kamn-node` CLI parsing tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -52,7 +52,12 @@ Move low-level CLI value parser helper functions out of `crates/kamn-node/src/cl
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract`:
+  - pass (`4 passed, 0 failed`)
+- `cargo test -p kamn-node cli_tests`:
+  - pass (`7 passed, 0 failed`)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`:
+  - pass (`2 passed, 0 failed`)
 
 ## Deviations
 - None.
