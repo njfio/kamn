@@ -5,6 +5,7 @@ const OPS_CONFIGURATION_DOC: &str = include_str!("../../../docs/ops/configuratio
 const KOLME_RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/architecture/kolme-runtime-commit.md");
 const MAIN_SRC: &str = include_str!("../src/main.rs");
+const RUNTIME_CONSTANTS_SRC: &str = include_str!("../src/runtime_constants.rs");
 const RUNTIME_ORCHESTRATION_SRC: &str = include_str!("../src/runtime_orchestration.rs");
 const RUNTIME_POLICY_CONTRACTS_SRC: &str =
     include_str!("../src/runtime_orchestration/runtime_policy_contracts.rs");
@@ -138,6 +139,7 @@ fn parse_csv_entries(value: &str) -> BTreeSet<&str> {
 
 fn source_taxonomy_contains_reason_code(reason_code: &str) -> bool {
     MAIN_SRC.contains(reason_code)
+        || RUNTIME_CONSTANTS_SRC.contains(reason_code)
         || RUNTIME_ORCHESTRATION_SRC.contains(reason_code)
         || RUNTIME_POLICY_CONTRACTS_SRC.contains(reason_code)
 }
