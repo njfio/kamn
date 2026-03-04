@@ -32,7 +32,7 @@ fn set_expected_state_version(
     iter: &mut std::vec::IntoIter<String>,
     target: &mut Option<u64>,
 ) -> Result<(), ConfigError> {
-    let value = read_required_value(iter, "--expected-state-version")?;
+    let value = read_required_arg(iter, "--expected-state-version")?;
     *target = Some(parse_state_version_arg(&value)?);
     Ok(())
 }
@@ -41,7 +41,7 @@ fn set_expected_state_hash(
     iter: &mut std::vec::IntoIter<String>,
     target: &mut Option<String>,
 ) -> Result<(), ConfigError> {
-    *target = Some(read_required_value(iter, "--expected-state-hash")?);
+    *target = Some(read_required_arg(iter, "--expected-state-hash")?);
     Ok(())
 }
 
@@ -49,7 +49,7 @@ fn push_proposal(
     iter: &mut std::vec::IntoIter<String>,
     target: &mut Vec<ProposalCandidate>,
 ) -> Result<(), ConfigError> {
-    let value = read_required_value(iter, "--proposal")?;
+    let value = read_required_arg(iter, "--proposal")?;
     target.push(parse_proposal_candidate(&value)?);
     Ok(())
 }
@@ -58,12 +58,12 @@ fn push_rejoin_attempt(
     iter: &mut std::vec::IntoIter<String>,
     target: &mut Vec<RejoinAttempt>,
 ) -> Result<(), ConfigError> {
-    let value = read_required_value(iter, "--rejoin-attempt")?;
+    let value = read_required_arg(iter, "--rejoin-attempt")?;
     target.push(parse_rejoin_attempt(&value)?);
     Ok(())
 }
 
-fn read_required_value(
+fn read_required_arg(
     iter: &mut std::vec::IntoIter<String>,
     flag: &'static str,
 ) -> Result<String, ConfigError> {
