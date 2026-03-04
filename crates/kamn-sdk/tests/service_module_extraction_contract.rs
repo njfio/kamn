@@ -20,6 +20,14 @@ const EXTRACTED_ENDPOINT_TRANSPORT_SNIPPETS: &[&str] = &[
     "fn resolve_request_timeout_seconds(",
     "fn resolve_tls_server_name(",
 ];
+const EXTRACTED_AUTH_CRYPTO_SNIPPETS: &[&str] = &[
+    "pub fn service_signature_for_fields(",
+    "pub fn service_signer_public_key_for_fields(",
+    "pub fn service_signature_for_state_hash_with_private_key(",
+    "pub fn service_public_key_for_private_key(",
+    "pub fn service_verify_signature_with_public_key(",
+    "fn map_service_auth_error_to_sdk(",
+];
 
 #[test]
 fn contract_issue_6305_service_root_respects_line_budget() {
@@ -74,6 +82,25 @@ fn contract_issue_6327_service_root_removes_inline_endpoint_transport_impls() {
         assert!(
             !SERVICE_ROOT_SOURCE.contains(endpoint_transport_snippet),
             "service.rs must not retain inline endpoint/transport impl: {endpoint_transport_snippet}",
+        );
+    }
+}
+
+#[test]
+fn contract_issue_6329_service_root_declares_auth_crypto_module() {
+    assert!(
+        SERVICE_ROOT_SOURCE.contains("#[path = \"service_auth_crypto.rs\"]")
+            && SERVICE_ROOT_SOURCE.contains("mod service_auth_crypto;"),
+        "service.rs must declare #[path = \"service_auth_crypto.rs\"] mod service_auth_crypto;"
+    );
+}
+
+#[test]
+fn contract_issue_6329_service_root_removes_inline_auth_crypto_impls() {
+    for auth_crypto_snippet in EXTRACTED_AUTH_CRYPTO_SNIPPETS {
+        assert!(
+            !SERVICE_ROOT_SOURCE.contains(auth_crypto_snippet),
+            "service.rs must not retain inline auth crypto impl: {auth_crypto_snippet}",
         );
     }
 }
