@@ -16,6 +16,12 @@ pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const GROUP_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:group-message:aead-key:hkdf-salt:v2";
 const GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2: &[u8] = b"kamn:group-message:aead-key:hkdf-info:v2:";
+/// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
+pub const GROUP_MESSAGE_HKDF_BACKEND_MARKER: &str =
+    kamn_crypto::hkdf_sha256::HKDF_SHA256_BACKEND_MARKER;
+/// Marker asserting HMAC backend semantics are provided by RustCrypto primitives.
+pub const GROUP_MESSAGE_HMAC_BACKEND_MARKER: &str =
+    kamn_crypto::hkdf_sha256::HMAC_SHA256_BACKEND_MARKER;
 const GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE: &str =
     "group_channel_crypto_invalid_sender_did";
 const GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE: &str =
@@ -210,7 +216,7 @@ impl GroupChannelCryptoEngine {
             &shared_secret,
             self.channel_id.as_str(),
             record.key_generation,
-        );
+        )?;
 
         let aad: [u8; 0] = [];
         let nonce_bytes = group_nonce_bytes(sender_did, record.key_generation, nonce);
@@ -329,7 +335,7 @@ impl GroupChannelCryptoEngine {
             &shared_secret,
             self.channel_id.as_str(),
             sealed.key_generation,
-        );
+        )?;
         let aead_key_v1 = derive_group_aead_key_legacy(
             &shared_secret,
             self.channel_id.as_str(),
@@ -421,6 +427,8 @@ pub enum GroupChannelCryptoError {
     SignatureMismatch,
     /// Encryption failed.
     EncryptionFailed,
+    /// HKDF key derivation failed.
+    KeyDerivationFailed,
     /// Integrity tag verification failed.
     IntegrityCheckFailed,
     /// Ciphertext encoding could not be decoded as valid hex.
@@ -476,6 +484,7 @@ impl fmt::Display for GroupChannelCryptoError {
             }
             Self::SignatureMismatch => write!(f, "group message signature verification failed"),
             Self::EncryptionFailed => write!(f, "group message encryption failed"),
+            Self::KeyDerivationFailed => write!(f, "group message key derivation failed"),
             Self::IntegrityCheckFailed => write!(f, "group message integrity check failed"),
             Self::InvalidCiphertextEncoding => write!(f, "invalid ciphertext encoding"),
         }
@@ -555,14 +564,25 @@ fn derive_group_shared_secret(
     sender_private.diffie_hellman(&channel_public).to_bytes()
 }
 
-fn derive_group_aead_key(shared_secret: &[u8; 32], channel_id: &str, generation: u64) -> [u8; 32] {
+fn derive_group_aead_key(
+    shared_secret: &[u8; 32],
+    channel_id: &str,
+    generation: u64,
+) -> Result<[u8; 32], GroupChannelCryptoError> {
     let mut info = Vec::with_capacity(
         GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2.len() + channel_id.len() + std::mem::size_of::<u64>(),
     );
     info.extend_from_slice(GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2);
     info.extend_from_slice(channel_id.as_bytes());
     info.extend_from_slice(&generation.to_le_bytes());
-    hkdf_sha256_derive_32(GROUP_MESSAGE_AEAD_KDF_SALT_V2, shared_secret, &info)
+    match kamn_crypto::hkdf_sha256::derive_key_32(
+        GROUP_MESSAGE_AEAD_KDF_SALT_V2,
+        shared_secret,
+        &info,
+    ) {
+        Ok(key) => Ok(key),
+        Err(_) => Err(GroupChannelCryptoError::KeyDerivationFailed),
+    }
 }
 
 fn derive_group_aead_key_legacy(
@@ -579,46 +599,6 @@ fn derive_group_aead_key_legacy(
     let mut key = [0u8; 32];
     key.copy_from_slice(&digest[..32]);
     key
-}
-
-fn hkdf_sha256_derive_32(salt: &[u8], ikm: &[u8], info: &[u8]) -> [u8; 32] {
-    let prk = hmac_sha256(salt, ikm);
-    let mut expand_input = Vec::with_capacity(info.len() + 1);
-    expand_input.extend_from_slice(info);
-    expand_input.push(0x01);
-    hmac_sha256(&prk, &expand_input)
-}
-
-fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    const SHA256_BLOCK_SIZE: usize = 64;
-    let mut normalized_key = [0u8; SHA256_BLOCK_SIZE];
-    if key.len() > SHA256_BLOCK_SIZE {
-        let digest = Sha256::digest(key);
-        normalized_key[..32].copy_from_slice(&digest[..32]);
-    } else {
-        normalized_key[..key.len()].copy_from_slice(key);
-    }
-
-    let mut inner_key_pad = [0u8; SHA256_BLOCK_SIZE];
-    let mut outer_key_pad = [0u8; SHA256_BLOCK_SIZE];
-    for (index, byte) in normalized_key.iter().enumerate() {
-        inner_key_pad[index] = *byte ^ 0x36;
-        outer_key_pad[index] = *byte ^ 0x5c;
-    }
-
-    let mut inner = Sha256::new();
-    inner.update(inner_key_pad);
-    inner.update(data);
-    let inner_digest = inner.finalize();
-
-    let mut outer = Sha256::new();
-    outer.update(outer_key_pad);
-    outer.update(inner_digest);
-    let output = outer.finalize();
-
-    let mut hmac = [0u8; 32];
-    hmac.copy_from_slice(&output[..32]);
-    hmac
 }
 
 fn derive_x25519_private_key(master_seed: &[u8; 32], key_ref: &str) -> StaticSecret {
@@ -701,6 +681,7 @@ mod tests {
     use chacha20poly1305::aead::{Aead, KeyInit, Payload};
     use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 
+    const SOURCE: &str = include_str!("group_channel_crypto.rs");
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
@@ -844,6 +825,13 @@ mod tests {
                     vec!["kamn:did:agent:bob".to_owned()],
                 )
                 .expect("distribution should succeed");
+            engine
+                .rotate_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-2",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("rotation should succeed");
 
             let sealed = engine
                 .encrypt("kamn:did:agent:alice", "group payload", 33)
@@ -853,6 +841,7 @@ mod tests {
                 .decrypt("kamn:did:agent:bob", &sealed)
                 .expect("authorized recipient should decrypt");
             assert_eq!(plaintext, "group payload");
+            assert_eq!(sealed.key_generation, 2);
         });
     }
 
@@ -979,12 +968,34 @@ mod tests {
     #[test]
     fn group_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
         let shared_secret = [0x3cu8; 32];
-        let hkdf_key_a = super::derive_group_aead_key(&shared_secret, "channel:test", 9);
-        let hkdf_key_b = super::derive_group_aead_key(&shared_secret, "channel:test", 9);
+        let hkdf_key_a = super::derive_group_aead_key(&shared_secret, "channel:test", 9)
+            .expect("hkdf key should derive");
+        let hkdf_key_b = super::derive_group_aead_key(&shared_secret, "channel:test", 9)
+            .expect("hkdf key should derive");
         let legacy_key = super::derive_group_aead_key_legacy(&shared_secret, "channel:test", 9);
 
         assert_eq!(hkdf_key_a, hkdf_key_b);
         assert_ne!(hkdf_key_a, legacy_key);
+    }
+
+    #[test]
+    fn group_message_derivation_backend_markers_and_manual_helper_removal_contract() {
+        assert_eq!(
+            super::GROUP_MESSAGE_HKDF_BACKEND_MARKER,
+            "rustcrypto.hkdf.sha256.v1"
+        );
+        assert_eq!(
+            super::GROUP_MESSAGE_HMAC_BACKEND_MARKER,
+            "rustcrypto.hmac.sha256.v1"
+        );
+        assert!(
+            !SOURCE.contains("\nfn hkdf_sha256_derive_32("),
+            "manual hkdf helper must be removed"
+        );
+        assert!(
+            !SOURCE.contains("\nfn hmac_sha256("),
+            "manual hmac helper must be removed"
+        );
     }
 
     #[test]

@@ -5,6 +5,7 @@
 
 pub use kamn_crypto::direct_message_crypto::{
     DirectMessageCiphertext, DirectMessageCryptoError, DIRECT_MESSAGE_CIPHER_ALGORITHM,
+    DIRECT_MESSAGE_HKDF_BACKEND_MARKER, DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
     DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
 };
 

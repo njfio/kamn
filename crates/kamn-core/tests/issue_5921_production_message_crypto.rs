@@ -1,3 +1,9 @@
+use kamn_core::{
+    direct_message_crypto::{
+        DIRECT_MESSAGE_HKDF_BACKEND_MARKER, DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+    },
+    group_channel_crypto::{GROUP_MESSAGE_HKDF_BACKEND_MARKER, GROUP_MESSAGE_HMAC_BACKEND_MARKER},
+};
 use kamn_core::{DirectMessageCryptoEngine, GroupChannelCryptoEngine, GroupChannelCryptoError};
 use std::sync::{Mutex, OnceLock};
 
@@ -22,6 +28,26 @@ fn with_key_agreement_master_seed<T>(value: Option<&str>, run: impl FnOnce() -> 
         None => std::env::remove_var(KEY_AGREEMENT_MASTER_SEED_ENV),
     }
     output
+}
+
+#[test]
+fn regression_issue_6315_crypto_derivation_backend_markers_are_rustcrypto() {
+    assert_eq!(
+        DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+        "rustcrypto.hkdf.sha256.v1"
+    );
+    assert_eq!(
+        DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+        "rustcrypto.hmac.sha256.v1"
+    );
+    assert_eq!(
+        GROUP_MESSAGE_HKDF_BACKEND_MARKER,
+        "rustcrypto.hkdf.sha256.v1"
+    );
+    assert_eq!(
+        GROUP_MESSAGE_HMAC_BACKEND_MARKER,
+        "rustcrypto.hmac.sha256.v1"
+    );
 }
 
 #[test]
