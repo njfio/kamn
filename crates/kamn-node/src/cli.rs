@@ -16,6 +16,8 @@ mod cli_config_layering;
 mod cli_daemon_option_parsing;
 #[path = "cli_endpoint_option_parsing.rs"]
 mod cli_endpoint_option_parsing;
+#[path = "cli_kolme_live_option_parsing.rs"]
+mod cli_kolme_live_option_parsing;
 #[path = "cli_post_parse_guards.rs"]
 mod cli_post_parse_guards;
 #[path = "cli_runtime_mode_validation.rs"]
@@ -26,6 +28,7 @@ mod cli_value_parsers;
 use cli_config_layering::build_layered_cli_args;
 use cli_daemon_option_parsing::{try_parse_daemon_option, DaemonOptionState};
 use cli_endpoint_option_parsing::{try_parse_endpoint_option, EndpointOptionState};
+use cli_kolme_live_option_parsing::{try_parse_kolme_live_option, KolmeLiveOptionState};
 use cli_post_parse_guards::{
     apply_profile_defaults, validate_endpoint_guards, EndpointGuardInputs, ProfileDefaultsInputs,
 };
@@ -148,6 +151,20 @@ where
         )? {
             continue;
         }
+        if try_parse_kolme_live_option(
+            arg.as_str(),
+            &mut iter,
+            &mut KolmeLiveOptionState {
+                kolme_live_base_url: &mut kolme_live_base_url,
+                kolme_live_provider_hint: &mut kolme_live_provider_hint,
+                kolme_live_signing_profile: &mut kolme_live_signing_profile,
+                kolme_live_strict_signer_contracts: &mut kolme_live_strict_signer_contracts,
+                kolme_live_signer_profile: &mut kolme_live_signer_profile,
+                kolme_live_signer_key_source: &mut kolme_live_signer_key_source,
+            },
+        )? {
+            continue;
+        }
         match arg.as_str() {
             "--role" => {
                 let value = iter
@@ -220,35 +237,6 @@ where
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--rejoin-attempt"))?;
                 rejoin_attempts.push(parse_rejoin_attempt(&value)?);
-            }
-            "--kolme-live-base-url" => {
-                kolme_live_base_url = Some(
-                    iter.next()
-                        .ok_or(ConfigError::MissingArgumentValue("--kolme-live-base-url"))?,
-                );
-            }
-            "--kolme-live-provider-hint" => {
-                kolme_live_provider_hint = Some(iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--kolme-live-provider-hint"),
-                )?);
-            }
-            "--kolme-live-signing-profile" => {
-                kolme_live_signing_profile = Some(iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--kolme-live-signing-profile"),
-                )?);
-            }
-            "--kolme-live-strict-signer-contracts" => {
-                kolme_live_strict_signer_contracts = true;
-            }
-            "--kolme-live-signer-profile" => {
-                kolme_live_signer_profile = Some(iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--kolme-live-signer-profile"),
-                )?);
-            }
-            "--kolme-live-signer-key-source" => {
-                kolme_live_signer_key_source = Some(iter.next().ok_or(
-                    ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
-                )?);
             }
             "--output" => {
                 let value = iter

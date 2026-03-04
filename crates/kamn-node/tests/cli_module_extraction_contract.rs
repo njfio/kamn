@@ -35,6 +35,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_daemon_option_parsing;"),
         "cli.rs should declare cli_daemon_option_parsing module"
     );
+    assert!(
+        cli_rs.contains("mod cli_kolme_live_option_parsing;"),
+        "cli.rs should declare cli_kolme_live_option_parsing module"
+    );
 }
 
 #[test]
@@ -207,5 +211,32 @@ fn cli_module_extraction_contract_removes_inline_daemon_option_parsing() {
     assert!(
         daemon_option_parsing_rs.contains("pub(super) fn try_parse_daemon_option("),
         "cli_daemon_option_parsing module should expose daemon option parser entrypoint"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_kolme_live_option_parsing() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "\"--kolme-live-base-url\" => {",
+        "\"--kolme-live-provider-hint\" => {",
+        "\"--kolme-live-signing-profile\" => {",
+        "\"--kolme-live-strict-signer-contracts\" => {",
+        "\"--kolme-live-signer-profile\" => {",
+        "\"--kolme-live-signer-key-source\" => {",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline kolme live option parsing marker: {marker}"
+        );
+    }
+    let kolme_live_option_parsing_rs = read_repo_file("src/cli_kolme_live_option_parsing.rs");
+    assert!(
+        kolme_live_option_parsing_rs.contains("pub(super) struct KolmeLiveOptionState"),
+        "cli_kolme_live_option_parsing module should define kolme live option state"
+    );
+    assert!(
+        kolme_live_option_parsing_rs.contains("pub(super) fn try_parse_kolme_live_option("),
+        "cli_kolme_live_option_parsing module should expose kolme live option parser entrypoint"
     );
 }
