@@ -18,6 +18,8 @@ mod cli_daemon_option_parsing;
 mod cli_endpoint_option_parsing;
 #[path = "cli_kolme_live_option_parsing.rs"]
 mod cli_kolme_live_option_parsing;
+#[path = "cli_planning_recovery_option_parsing.rs"]
+mod cli_planning_recovery_option_parsing;
 #[path = "cli_post_parse_guards.rs"]
 mod cli_post_parse_guards;
 #[path = "cli_runtime_mode_validation.rs"]
@@ -29,13 +31,15 @@ use cli_config_layering::build_layered_cli_args;
 use cli_daemon_option_parsing::{try_parse_daemon_option, DaemonOptionState};
 use cli_endpoint_option_parsing::{try_parse_endpoint_option, EndpointOptionState};
 use cli_kolme_live_option_parsing::{try_parse_kolme_live_option, KolmeLiveOptionState};
+use cli_planning_recovery_option_parsing::{
+    try_parse_planning_recovery_option, PlanningRecoveryOptionState,
+};
 use cli_post_parse_guards::{
     apply_profile_defaults, validate_endpoint_guards, EndpointGuardInputs, ProfileDefaultsInputs,
 };
 use cli_runtime_mode_validation::{
     validate_runtime_mode_requirements, RuntimeModeValidationInputs,
 };
-use cli_value_parsers::{parse_proposal_candidate, parse_rejoin_attempt, parse_state_version_arg};
 
 pub(super) fn parse_args<I>(args: I) -> Result<NodeCli, ConfigError>
 where
@@ -165,6 +169,18 @@ where
         )? {
             continue;
         }
+        if try_parse_planning_recovery_option(
+            arg.as_str(),
+            &mut iter,
+            &mut PlanningRecoveryOptionState {
+                expected_state_version: &mut expected_state_version,
+                expected_state_hash: &mut expected_state_hash,
+                proposals: &mut proposals,
+                rejoin_attempts: &mut rejoin_attempts,
+            },
+        )? {
+            continue;
+        }
         match arg.as_str() {
             "--role" => {
                 let value = iter
@@ -213,30 +229,6 @@ where
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--runtime-mode"))?;
                 runtime_mode = RuntimeMode::parse(&value)?;
-            }
-            "--expected-state-version" => {
-                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
-                    "--expected-state-version",
-                ))?;
-                expected_state_version = Some(parse_state_version_arg(&value)?);
-            }
-            "--expected-state-hash" => {
-                expected_state_hash = Some(
-                    iter.next()
-                        .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?,
-                );
-            }
-            "--proposal" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--proposal"))?;
-                proposals.push(parse_proposal_candidate(&value)?);
-            }
-            "--rejoin-attempt" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--rejoin-attempt"))?;
-                rejoin_attempts.push(parse_rejoin_attempt(&value)?);
             }
             "--output" => {
                 let value = iter
