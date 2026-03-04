@@ -64,6 +64,17 @@ fn try_parse_chain_storage_option(
     iter: &mut std::vec::IntoIter<String>,
     state: &mut CoreCommonOptionState<'_>,
 ) -> Result<bool, ConfigError> {
+    if try_parse_chain_identity_option(arg, iter, state)? {
+        return Ok(true);
+    }
+    try_parse_storage_sync_option(arg, iter, state)
+}
+
+fn try_parse_chain_identity_option(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut CoreCommonOptionState<'_>,
+) -> Result<bool, ConfigError> {
     match arg {
         "--chain-id" => {
             *state.chain_id = read_required_arg(iter, "--chain-id")?;
@@ -75,6 +86,16 @@ fn try_parse_chain_storage_option(
             *state.chain_version_overridden = true;
             Ok(true)
         }
+        _ => Ok(false),
+    }
+}
+
+fn try_parse_storage_sync_option(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut CoreCommonOptionState<'_>,
+) -> Result<bool, ConfigError> {
+    match arg {
         "--storage-dir" => {
             *state.storage_dir = read_required_arg(iter, "--storage-dir")?;
             *state.storage_dir_overridden = true;
