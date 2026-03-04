@@ -14,6 +14,17 @@ pub(super) fn try_parse_kolme_live_option(
     iter: &mut std::vec::IntoIter<String>,
     state: &mut KolmeLiveOptionState<'_>,
 ) -> Result<bool, ConfigError> {
+    if try_parse_kolme_live_base_options(arg, iter, state)? {
+        return Ok(true);
+    }
+    try_parse_kolme_live_signer_options(arg, iter, state)
+}
+
+fn try_parse_kolme_live_base_options(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut KolmeLiveOptionState<'_>,
+) -> Result<bool, ConfigError> {
     match arg {
         "--kolme-live-base-url" => {
             set_string_option(iter, "--kolme-live-base-url", state.kolme_live_base_url)
@@ -35,6 +46,16 @@ pub(super) fn try_parse_kolme_live_option(
             *state.kolme_live_strict_signer_contracts = true;
             Ok(true)
         }
+        _ => Ok(false),
+    }
+}
+
+fn try_parse_kolme_live_signer_options(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut KolmeLiveOptionState<'_>,
+) -> Result<bool, ConfigError> {
+    match arg {
         "--kolme-live-signer-profile" => set_string_option(
             iter,
             "--kolme-live-signer-profile",
