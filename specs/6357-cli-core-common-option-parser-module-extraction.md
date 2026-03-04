@@ -35,12 +35,12 @@ Move core/common option parsing out of `crates/kamn-node/src/cli.rs` into a dedi
 - Inline core/common match arms remain in `cli.rs` and violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated core/common option parser module.
-- [ ] `cli.rs` no longer contains inline core/common option match arms.
-- [ ] Core/common parse behavior and `ConfigError` outcomes remain unchanged.
-- [ ] Override marker behavior for profile defaults remains unchanged.
-- [ ] Extraction contract includes core/common module assertions and passes.
-- [ ] Existing CLI tests remain green.
+- [x] `cli.rs` declares a dedicated core/common option parser module.
+- [x] `cli.rs` no longer contains inline core/common option match arms.
+- [x] Core/common parse behavior and `ConfigError` outcomes remain unchanged.
+- [x] Override marker behavior for profile defaults remains unchanged.
+- [x] Extraction contract includes core/common module assertions and passes.
+- [x] Existing CLI tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -62,7 +62,11 @@ Move core/common option parsing out of `crates/kamn-node/src/cli.rs` into a dedi
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode bootstrap --output text --diagnostics basic` (pass)
+- `timeout 30s cargo run -p kamn-node -- --runtime-mode bootstrap --output text --diagnostics basic` (expected hard-fail: missing `--role`)
 
 ## Deviations
 - None.
