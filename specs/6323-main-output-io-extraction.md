@@ -70,3 +70,14 @@ writer helpers into a dedicated module, keeping runtime behavior unchanged.
   - run:
     - `cargo test -p kamn-node main_module_extraction_contract`
     - `cargo test -p kamn-node cli_tests -- --nocapture`
+
+## Phase 6 integration evidence
+
+- `cargo test -p kamn-node main_module_extraction_contract`:
+  - pass (`12 passed, 0 failed`)
+- `cargo test -p kamn-node cli_tests -- --nocapture`:
+  - pass (`7 passed, 0 failed`)
+
+## Deviations
+
+- None.
