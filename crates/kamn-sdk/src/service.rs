@@ -17,7 +17,6 @@ pub use self::service_auth_crypto::{
     service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
     service_verify_signature_with_public_key,
 };
-pub use self::service_request_auth::ServiceRequestAuth;
 #[cfg(test)]
 use self::service_endpoint::resolve_request_timeout_seconds;
 use self::service_endpoint::ServiceEndpoint;
@@ -26,6 +25,7 @@ use self::service_http_io::{
     validate_http_header_value, validate_request_method, validate_request_path,
     write_and_flush_request,
 };
+pub use self::service_request_auth::ServiceRequestAuth;
 use self::service_response::{
     expect_status, json_string_array_field, json_string_field, json_u64_field,
     map_non_success_response, parse_http_response, status_from_header,

@@ -1,5 +1,9 @@
 use crate::{AgentDid, SdkError};
 
+fn validate_header_field(field: &'static str, value: &str) -> Result<(), SdkError> {
+    super::service_http_io::validate_http_header_value(field, value)
+}
+
 /// Request authentication envelope for service API routes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceRequestAuth {
@@ -47,14 +51,8 @@ impl ServiceRequestAuth {
                 reason: "must not be empty",
             });
         }
-        super::service_http_io::validate_http_header_value(
-            "request_auth.sender_did",
-            sender_did.as_str(),
-        )?;
-        super::service_http_io::validate_http_header_value(
-            "request_auth.signature",
-            normalized_signature,
-        )?;
+        validate_header_field("request_auth.sender_did", sender_did.as_str())?;
+        validate_header_field("request_auth.signature", normalized_signature)?;
         let scope = match scope {
             Some(scope) => {
                 let normalized = scope.trim();
@@ -64,7 +62,7 @@ impl ServiceRequestAuth {
                         reason: "must not be empty when set",
                     });
                 }
-                super::service_http_io::validate_http_header_value("request_auth.scope", normalized)?;
+                validate_header_field("request_auth.scope", normalized)?;
                 Some(normalized.to_owned())
             }
             None => None,
@@ -78,10 +76,7 @@ impl ServiceRequestAuth {
                         reason: "must not be empty when set",
                     });
                 }
-                super::service_http_io::validate_http_header_value(
-                    "request_auth.signer_public_key",
-                    normalized,
-                )?;
+                validate_header_field("request_auth.signer_public_key", normalized)?;
                 Some(normalized.to_owned())
             }
             None => None,
