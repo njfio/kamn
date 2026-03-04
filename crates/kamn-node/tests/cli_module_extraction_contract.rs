@@ -19,6 +19,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_value_parsers;"),
         "cli.rs should declare cli_value_parsers module"
     );
+    assert!(
+        cli_rs.contains("mod cli_runtime_mode_validation;"),
+        "cli.rs should declare cli_runtime_mode_validation module"
+    );
 }
 
 #[test]
@@ -83,5 +87,27 @@ fn cli_module_extraction_contract_removes_inline_value_parser_helpers() {
     assert!(
         value_parsers_rs.contains("pub(super) fn parse_daemon_lifecycle_event("),
         "cli_value_parsers module should expose daemon lifecycle parser helper"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_runtime_mode_guards() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "if runtime_mode.kind == RuntimeModeKind::Planning {",
+        "if runtime_mode.kind == RuntimeModeKind::RecoveryCheck {",
+        "if matches!(",
+        "RuntimeModeKind::Daemon | RuntimeModeKind::Full",
+        "if runtime_mode.kind == RuntimeModeKind::KolmeLive {",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline runtime-mode validation marker: {marker}"
+        );
+    }
+    let runtime_mode_validation_rs = read_repo_file("src/cli_runtime_mode_validation.rs");
+    assert!(
+        runtime_mode_validation_rs.contains("pub(super) fn validate_runtime_mode_requirements("),
+        "cli_runtime_mode_validation module should expose runtime-mode validation entrypoint"
     );
 }
