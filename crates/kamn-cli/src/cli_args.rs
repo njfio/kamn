@@ -78,18 +78,10 @@ where
         index += 1;
         match token {
             "--format" => {
-                if index >= args.len() {
-                    return Err("missing value for --format".to_owned());
-                }
-                output_format = OutputFormat::parse(args[index].as_str())?;
-                index += 1;
+                output_format = parse_format_flag_value(args.as_slice(), &mut index)?;
             }
             "--endpoint" => {
-                if index >= args.len() {
-                    return Err("missing value for --endpoint".to_owned());
-                }
-                endpoint = args[index].clone();
-                index += 1;
+                endpoint = parse_endpoint_flag_value(args.as_slice(), &mut index)?;
             }
             other => {
                 if other.starts_with('-') {
@@ -106,6 +98,24 @@ where
         endpoint,
         passthrough,
     })
+}
+
+fn parse_format_flag_value(args: &[String], index: &mut usize) -> Result<OutputFormat, String> {
+    if *index >= args.len() {
+        return Err("missing value for --format".to_owned());
+    }
+    let value = OutputFormat::parse(args[*index].as_str())?;
+    *index += 1;
+    Ok(value)
+}
+
+fn parse_endpoint_flag_value(args: &[String], index: &mut usize) -> Result<String, String> {
+    if *index >= args.len() {
+        return Err("missing value for --endpoint".to_owned());
+    }
+    let value = args[*index].clone();
+    *index += 1;
+    Ok(value)
 }
 
 pub(super) fn help_output() -> CommandOutput {
