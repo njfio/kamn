@@ -208,11 +208,8 @@ where
         )? {
             continue;
         }
-        match arg.as_str() {
-            unknown => {
-                return Err(ConfigError::UnknownArgument(unknown.to_owned()));
-            }
-        }
+        let unknown = arg.as_str();
+        return Err(ConfigError::UnknownArgument(unknown.to_owned()));
     }
 
     apply_profile_defaults(ProfileDefaultsInputs {
