@@ -137,6 +137,52 @@ fn env_overrides_config_file_chain_id_and_sync_mode() {
 }
 
 #[test]
+fn regression_6321_dual_cli_and_env_config_sources_fail_closed() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let cli_config_path = write_temp_node_config("role=listener\nchain_id=kamn-cli-config\n");
+    let env_config_path = write_temp_node_config("role=listener\nchain_id=kamn-env-config\n");
+    let env_config_value = env_config_path.to_string_lossy().to_string();
+    let _config_env_guard = EnvVarGuard::set("KAMN_NODE_CONFIG_FILE", Some(env_config_value.as_str()));
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--config-file".to_owned(),
+        cli_config_path.to_string_lossy().to_string(),
+    ];
+
+    let parse_result = parse_args(args);
+    std::fs::remove_file(cli_config_path).expect("cli temp config file should clean up");
+    std::fs::remove_file(env_config_path).expect("env temp config file should clean up");
+
+    assert_eq!(
+        parse_result,
+        Err(ConfigError::InvalidNodeConfig(
+            "both --config-file and KAMN_NODE_CONFIG_FILE are set; declare one config source"
+                .to_owned()
+        ))
+    );
+}
+
+#[test]
+fn regression_6321_env_config_file_source_still_applies_when_cli_source_absent() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let env_config_path = write_temp_node_config("role=listener\nchain_id=kamn-env-config\n");
+    let env_config_value = env_config_path.to_string_lossy().to_string();
+    let _config_env_guard = EnvVarGuard::set("KAMN_NODE_CONFIG_FILE", Some(env_config_value.as_str()));
+    let args = vec!["kamn-node".to_owned()];
+
+    let parsed_result = parse_args(args);
+    std::fs::remove_file(env_config_path).expect("env temp config file should clean up");
+    let parsed = parsed_result.expect("env config file source should parse");
+
+    assert_eq!(parsed.role, NodeRole::Listener);
+    assert_eq!(parsed.chain_id, "kamn-env-config");
+}
+
+#[test]
 fn cli_values_override_env_and_config_layers() {
     let _env_lock = signer_env_lock()
         .lock()
@@ -210,4 +256,3 @@ fn integration_config_layering_executes_bootstrap_report_with_expected_precedenc
     assert_eq!(report.role, "processor");
     assert_eq!(report.chain_id, "kamn-cli");
 }
-
