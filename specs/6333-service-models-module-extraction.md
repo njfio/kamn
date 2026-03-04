@@ -36,11 +36,11 @@ Extract service API response/event model structs from `crates/kamn-sdk/src/servi
 - Missing module wiring causes contract failures.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `service.rs` declares `mod service_models;`.
-- [ ] `service.rs` no longer contains inline definitions for extracted model structs.
-- [ ] Existing public model names and fields remain unchanged.
-- [ ] `service_module_extraction_contract` includes and passes model extraction assertions.
-- [ ] Existing `kamn-sdk` tests covering service API behaviors remain green.
+- [x] `service.rs` declares `mod service_models;`.
+- [x] `service.rs` no longer contains inline definitions for extracted model structs.
+- [x] Existing public model names and fields remain unchanged.
+- [x] `service_module_extraction_contract` includes and passes model extraction assertions.
+- [x] Existing `kamn-sdk` tests covering service API behaviors remain green.
 
 ## Files to touch
 - `crates/kamn-sdk/src/service.rs`
@@ -60,7 +60,12 @@ Extract service API response/event model structs from `crates/kamn-sdk/src/servi
   - `cargo test -p kamn-sdk --test service_api_client`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-sdk --test service_module_extraction_contract`:
+  - pass (`12 passed, 0 failed`)
+- `cargo test -p kamn-sdk --lib`:
+  - pass (`21 passed, 0 failed`)
+- `cargo test -p kamn-sdk --test service_api_client`:
+  - pass (`15 passed, 0 failed`)
 
 ## Deviations
 - None.
