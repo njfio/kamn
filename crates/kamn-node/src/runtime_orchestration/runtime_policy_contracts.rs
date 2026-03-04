@@ -243,7 +243,7 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
         || completion_reason.starts_with("tick-budget-exhausted;ignored_signals=")
     {
         if let Some(raw_ignored_signals) =
-            daemon_shutdown_reason_field(completion_reason, "ignored_signals")
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "ignored_signals")
         {
             if parse_nonempty_u64(raw_ignored_signals).is_none() {
                 return Some("full_supervisor_stop_invalid_ignored_signals");
@@ -258,10 +258,11 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
         return None;
     }
     if completion_reason.starts_with("graceful-shutdown:signal@") {
-        if daemon_shutdown_signal_tick(completion_reason).is_none() {
+        if daemon_phase::daemon_shutdown_signal_tick(completion_reason).is_none() {
             return Some("full_supervisor_stop_missing_signal_tick");
         }
-        let Some(raw_drain_ticks) = daemon_shutdown_reason_field(completion_reason, "drain_ticks")
+        let Some(raw_drain_ticks) =
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "drain_ticks")
         else {
             return Some("full_supervisor_stop_missing_drain_ticks");
         };
@@ -269,7 +270,7 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
             return Some("full_supervisor_stop_invalid_drain_ticks");
         };
         let Some(raw_timeout_ticks) =
-            daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
         else {
             return Some("full_supervisor_stop_missing_timeout_ticks");
         };
@@ -277,7 +278,7 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
             return Some("full_supervisor_stop_invalid_timeout_ticks");
         };
         let Some(raw_ignored_signals) =
-            daemon_shutdown_reason_field(completion_reason, "ignored_signals")
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "ignored_signals")
         else {
             return Some("full_supervisor_stop_missing_ignored_signals");
         };
@@ -296,10 +297,11 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
         return None;
     }
     if completion_reason.starts_with("graceful-shutdown-timeout:signal@") {
-        if daemon_shutdown_signal_tick(completion_reason).is_none() {
+        if daemon_phase::daemon_shutdown_signal_tick(completion_reason).is_none() {
             return Some("full_supervisor_stop_missing_signal_tick");
         }
-        let Some(raw_drain_ticks) = daemon_shutdown_reason_field(completion_reason, "drain_ticks")
+        let Some(raw_drain_ticks) =
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "drain_ticks")
         else {
             return Some("full_supervisor_stop_missing_drain_ticks");
         };
@@ -307,7 +309,7 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
             return Some("full_supervisor_stop_invalid_drain_ticks");
         }
         let Some(raw_timeout_ticks) =
-            daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
         else {
             return Some("full_supervisor_stop_missing_timeout_ticks");
         };
@@ -315,7 +317,7 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
             return Some("full_supervisor_stop_invalid_timeout_ticks");
         }
         let Some(raw_ignored_signals) =
-            daemon_shutdown_reason_field(completion_reason, "ignored_signals")
+            daemon_phase::daemon_shutdown_reason_field(completion_reason, "ignored_signals")
         else {
             return Some("full_supervisor_stop_missing_ignored_signals");
         };

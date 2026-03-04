@@ -2,6 +2,7 @@ use super::*;
 
 mod daemon_phase;
 mod full_supervisor;
+mod runtime_mode_handlers;
 mod runtime_policy_contracts;
 
 #[cfg(test)]
@@ -17,20 +18,9 @@ pub(crate) use daemon_phase::live_postgres_multi_host_execution_bundle_selector_
 pub(crate) use daemon_phase::live_postgres_multi_host_execution_bundle_selector_rows_for_test;
 #[cfg(test)]
 pub(crate) use daemon_phase::validate_live_postgres_selector_bundle_for_test;
-use daemon_phase::{
-    daemon_shutdown_drain_status, daemon_shutdown_reason_field, daemon_shutdown_signal_tick,
-    daemon_shutdown_snapshot_flush_status,
-};
-use full_supervisor::{
-    build_full_supervisor_provisional_observability_snapshot,
-    execute_full_supervisor_daemon_runtime, finish_full_supervisor_observability_lane,
-    finish_full_supervisor_service_api_lane, full_supervisor_lane_idle_timeout_floor_ms,
-    request_full_supervisor_lane_shutdown_probes, resolve_daemon_service_api_relay_spool_file,
-    resolve_daemon_service_api_state_file, start_full_supervisor_observability_lane,
-    start_full_supervisor_service_api_lane, FullSupervisorObservabilityLane,
-    FullSupervisorServiceApiLane,
-    FULL_SUPERVISOR_OBSERVABILITY_LANE_MAX_REQUESTS_CONTRACT_VIOLATION,
-    FULL_SUPERVISOR_SERVICE_API_LANE_MAX_REQUESTS_CONTRACT_VIOLATION,
+use runtime_mode_handlers::{
+    build_daemon_runtime_options, execute_full_runtime_mode, execute_kolme_live_runtime_mode,
+    FullRuntimeModeExecutionContext, KolmeLiveRuntimeModeExecutionContext,
 };
 #[cfg(test)]
 pub(crate) use runtime_policy_contracts::classify_full_bootstrap_component_contract_violation;
@@ -42,16 +32,18 @@ pub(crate) use runtime_policy_contracts::classify_kolme_live_signer_key_source_p
 pub(crate) use runtime_policy_contracts::classify_production_transport_profile_violation;
 #[cfg(test)]
 pub(crate) use runtime_policy_contracts::classify_shutdown_checkpoint_reconciliation_violation;
+#[cfg(test)]
 pub(crate) use runtime_policy_contracts::enforce_kolme_live_signer_contract_policy;
+#[cfg(test)]
 pub(crate) use runtime_policy_contracts::enforce_kolme_live_signer_key_source_policy;
+use runtime_policy_contracts::enforce_production_transport_profile_policy;
+#[cfg(test)]
 pub(crate) use runtime_policy_contracts::resolve_kolme_live_allow_local_signer_testing_override;
 pub(crate) use runtime_policy_contracts::select_runtime_transport_profile_for_runtime_mode;
 pub(crate) use runtime_policy_contracts::should_use_os_signal_shutdown;
+#[cfg(test)]
 pub(crate) use runtime_policy_contracts::validate_full_supervisor_stop_contract;
 pub(crate) use runtime_policy_contracts::validate_shutdown_checkpoint_reconciliation;
-use runtime_policy_contracts::{
-    enforce_production_transport_profile_policy, validate_full_bootstrap_component_contract,
-};
 
 pub(crate) fn build_runtime_execution_id(
     runtime_mode: RuntimeMode,
@@ -197,26 +189,22 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             }
         }
         RuntimeModeKind::Daemon => {
-            let service_api_state_file =
-                resolve_daemon_service_api_state_file(api_bind_addr.as_deref())?;
-            let service_api_relay_spool_file =
-                resolve_daemon_service_api_relay_spool_file(service_api_state_file.as_deref())?;
+            let daemon_runtime_options = build_daemon_runtime_options(
+                daemon_max_ticks,
+                daemon_tick_interval_ms,
+                daemon_shutdown_signal_ticks,
+                daemon_shutdown_os_signals,
+                daemon_shutdown_drain_ticks,
+                daemon_shutdown_timeout_ticks,
+                daemon_peer_id,
+                daemon_lifecycle_events,
+                api_bind_addr.as_deref(),
+                service_api_signature_state_hash.as_str(),
+            )?;
             let daemon_execution = execute_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
-                DaemonRuntimeOptions {
-                    daemon_max_ticks,
-                    daemon_tick_interval_ms,
-                    daemon_shutdown_signal_ticks,
-                    daemon_shutdown_os_signals,
-                    daemon_shutdown_drain_ticks,
-                    daemon_shutdown_timeout_ticks,
-                    daemon_peer_id,
-                    daemon_lifecycle_events,
-                    service_api_state_file,
-                    service_api_relay_spool_file,
-                    service_api_signature_state_hash: service_api_signature_state_hash.clone(),
-                },
+                daemon_runtime_options,
             )?;
             RuntimeExecutionBundle {
                 daemon: Some(daemon_execution),
@@ -233,101 +221,14 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             )?;
             RuntimeExecutionBundle::default()
         }
-        RuntimeModeKind::Full => {
-            let full_supervisor_lane_idle_timeout_floor_ms =
-                full_supervisor_lane_idle_timeout_floor_ms(
-                    daemon_max_ticks,
-                    daemon_tick_interval_ms,
-                );
-            validate_full_bootstrap_component_contract(
-                FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE.as_slice(),
-            )?;
-            log_info(
-                "node.runtime.full.bootstrap.start",
-                &[("execution_id", execution_id.as_str())],
-            )?;
-            for (stage_index, component) in FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE
-                .into_iter()
-                .enumerate()
-            {
-                let stage_index_label = (stage_index + 1).to_string();
-                log_info(
-                    "node.runtime.full.bootstrap.component.ready",
-                    &[
-                        ("component", component),
-                        ("stage_index", stage_index_label.as_str()),
-                        ("execution_id", execution_id.as_str()),
-                    ],
-                )?;
-            }
-            let provisional_report = build_bootstrap_report(
-                &plan,
+        RuntimeModeKind::Full => execute_full_runtime_mode(
+            &plan,
+            FullRuntimeModeExecutionContext {
                 profile,
                 diagnostics_mode,
                 runtime_mode,
-                RuntimeExecutionBundle::default(),
-            );
-
-            let mut service_api_lane: Option<FullSupervisorServiceApiLane> = None;
-            if let Some(bind_addr) = api_bind_addr.as_ref() {
-                if api_max_requests != 1 {
-                    return Err(ConfigError::RuntimeDaemonLifecycle(format!(
-                        "{FULL_SUPERVISOR_SERVICE_API_LANE_MAX_REQUESTS_CONTRACT_VIOLATION}:expected=1,actual={api_max_requests}"
-                    )));
-                }
-                let lane_config = ServiceApiEndpointConfig {
-                    bind_addr: bind_addr.clone(),
-                    // Reserve request budget for startup probe, inter-tick probe, and shutdown probe.
-                    max_requests: api_max_requests.saturating_add(2),
-                    idle_timeout_ms: api_idle_timeout_ms
-                        .max(full_supervisor_lane_idle_timeout_floor_ms),
-                    body_limit_bytes: api_body_limit_bytes,
-                    concurrency_limit: api_concurrency_limit,
-                    rate_limit_per_second: api_rate_limit_per_second,
-                };
-                let lane_snapshot = build_service_api_snapshot(&provisional_report);
-                service_api_lane = Some(start_full_supervisor_service_api_lane(
-                    lane_config,
-                    lane_snapshot,
-                    execution_id.as_str(),
-                )?);
-            }
-
-            let mut observability_lane: Option<FullSupervisorObservabilityLane> = None;
-            if let Some(bind_addr) = observability_endpoint_bind_addr.as_ref() {
-                if observability_endpoint_max_requests != 1 {
-                    return Err(ConfigError::RuntimeDaemonLifecycle(format!(
-                        "{FULL_SUPERVISOR_OBSERVABILITY_LANE_MAX_REQUESTS_CONTRACT_VIOLATION}:expected=1,actual={observability_endpoint_max_requests}"
-                    )));
-                }
-                let lane_config = ObservabilityEndpointConfig {
-                    bind_addr: bind_addr.clone(),
-                    metrics_path: observability_endpoint_metrics_path.clone(),
-                    health_path: observability_endpoint_health_path.clone(),
-                    // Reserve request budget for startup probe, inter-tick probe, and shutdown probe.
-                    max_requests: observability_endpoint_max_requests.saturating_add(2),
-                    idle_timeout_ms: observability_endpoint_idle_timeout_ms
-                        .max(full_supervisor_lane_idle_timeout_floor_ms),
-                };
-                let lane_snapshot = build_runtime_observability_snapshot(&provisional_report)
-                    .unwrap_or_else(|| {
-                        build_full_supervisor_provisional_observability_snapshot(runtime_mode)
-                    });
-                observability_lane = Some(start_full_supervisor_observability_lane(
-                    lane_config,
-                    lane_snapshot,
-                    execution_id.as_str(),
-                )?);
-            }
-
-            let service_api_state_file =
-                resolve_daemon_service_api_state_file(api_bind_addr.as_deref())?;
-            let service_api_relay_spool_file =
-                resolve_daemon_service_api_relay_spool_file(service_api_state_file.as_deref())?;
-            let daemon_execution = match execute_full_supervisor_daemon_runtime(
-                runtime_mode,
-                execution_id.as_str(),
-                DaemonRuntimeOptions {
+                execution_id: execution_id.clone(),
+                daemon_runtime_options: build_daemon_runtime_options(
                     daemon_max_ticks,
                     daemon_tick_interval_ms,
                     daemon_shutdown_signal_ticks,
@@ -336,189 +237,35 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_shutdown_timeout_ticks,
                     daemon_peer_id,
                     daemon_lifecycle_events,
-                    service_api_state_file,
-                    service_api_relay_spool_file,
-                    service_api_signature_state_hash: service_api_signature_state_hash.clone(),
-                },
-                service_api_lane.as_ref(),
-                observability_lane.as_ref(),
-            ) {
-                Ok(execution) => execution,
-                Err(error) => {
-                    if let Some(lane) = service_api_lane {
-                        let _ =
-                            finish_full_supervisor_service_api_lane(lane, execution_id.as_str());
-                    }
-                    if let Some(lane) = observability_lane {
-                        let _ =
-                            finish_full_supervisor_observability_lane(lane, execution_id.as_str());
-                    }
-                    return Err(error);
-                }
-            };
-            log_info(
-                "node.runtime.full.bootstrap.ready",
-                &[("execution_id", execution_id.as_str())],
-            )?;
-            let stop_reason = "daemon-execution-complete";
-            let completion_reason = daemon_execution.completion_reason.as_str();
-            let shutdown_drain_status = daemon_shutdown_drain_status(completion_reason);
-            let shutdown_snapshot_flush_status =
-                daemon_shutdown_snapshot_flush_status(completion_reason);
-            let shutdown_signal_tick =
-                daemon_shutdown_signal_tick(completion_reason).unwrap_or("none");
-            let shutdown_drain_ticks =
-                daemon_shutdown_reason_field(completion_reason, "drain_ticks").unwrap_or("0");
-            let shutdown_timeout_ticks =
-                daemon_shutdown_reason_field(completion_reason, "timeout_ticks").unwrap_or("0");
-            let shutdown_ignored_signals =
-                daemon_shutdown_reason_field(completion_reason, "ignored_signals").unwrap_or("0");
-            let stop_contract_result = validate_full_supervisor_stop_contract(
-                completion_reason,
-                shutdown_drain_status,
-                shutdown_snapshot_flush_status,
-            );
-            log_info(
-                "node.runtime.full.supervisor.stop.requested",
-                &[
-                    ("stop_reason", stop_reason),
-                    ("daemon_completion_reason", completion_reason),
-                    (
-                        "shutdown_snapshot_flush_status",
-                        shutdown_snapshot_flush_status,
-                    ),
-                    ("shutdown_signal_tick", shutdown_signal_tick),
-                    ("shutdown_drain_ticks", shutdown_drain_ticks),
-                    ("shutdown_timeout_ticks", shutdown_timeout_ticks),
-                    ("shutdown_ignored_signals", shutdown_ignored_signals),
-                    ("execution_id", execution_id.as_str()),
-                ],
-            )?;
-            log_info(
-                "node.runtime.full.supervisor.stop.complete",
-                &[
-                    ("stop_reason", stop_reason),
-                    ("daemon_completion_reason", completion_reason),
-                    ("shutdown_drain_status", shutdown_drain_status),
-                    (
-                        "shutdown_snapshot_flush_status",
-                        shutdown_snapshot_flush_status,
-                    ),
-                    ("shutdown_signal_tick", shutdown_signal_tick),
-                    ("shutdown_drain_ticks", shutdown_drain_ticks),
-                    ("shutdown_timeout_ticks", shutdown_timeout_ticks),
-                    ("shutdown_ignored_signals", shutdown_ignored_signals),
-                    ("execution_id", execution_id.as_str()),
-                ],
-            )?;
-            request_full_supervisor_lane_shutdown_probes(
-                service_api_lane.as_ref(),
-                observability_lane.as_ref(),
-            );
-            let service_api_lane_result = if let Some(lane) = service_api_lane {
-                finish_full_supervisor_service_api_lane(lane, execution_id.as_str())
-            } else {
-                Ok(())
-            };
-            let observability_lane_result = if let Some(lane) = observability_lane {
-                finish_full_supervisor_observability_lane(lane, execution_id.as_str())
-            } else {
-                Ok(())
-            };
-            stop_contract_result?;
-            service_api_lane_result?;
-            observability_lane_result?;
-            RuntimeExecutionBundle {
-                daemon: Some(daemon_execution),
-                ..RuntimeExecutionBundle::default()
-            }
-        }
-        RuntimeModeKind::KolmeLive => {
-            let base_url = kolme_live_base_url
-                .ok_or(ConfigError::MissingArgumentValue("--kolme-live-base-url"))?;
-            let provider_hint = kolme_live_provider_hint.ok_or(
-                ConfigError::MissingArgumentValue("--kolme-live-provider-hint"),
-            )?;
-            let signing_profile = kolme_live_signing_profile.ok_or(
-                ConfigError::MissingArgumentValue("--kolme-live-signing-profile"),
-            )?;
-            let allow_local_signer_testing_override =
-                resolve_kolme_live_allow_local_signer_testing_override()?;
-            enforce_kolme_live_signer_contract_policy(
+                    api_bind_addr.as_deref(),
+                    service_api_signature_state_hash.as_str(),
+                )?,
+                api_bind_addr,
+                api_max_requests,
+                api_idle_timeout_ms,
+                api_body_limit_bytes,
+                api_concurrency_limit,
+                api_rate_limit_per_second,
+                observability_endpoint_bind_addr,
+                observability_endpoint_metrics_path,
+                observability_endpoint_health_path,
+                observability_endpoint_max_requests,
+                observability_endpoint_idle_timeout_ms,
+            },
+        )?,
+        RuntimeModeKind::KolmeLive => execute_kolme_live_runtime_mode(
+            &plan,
+            KolmeLiveRuntimeModeExecutionContext {
+                daemon_max_ticks,
+                daemon_tick_interval_ms,
+                kolme_live_base_url,
+                kolme_live_provider_hint,
+                kolme_live_signing_profile,
                 kolme_live_strict_signer_contracts,
-                allow_local_signer_testing_override,
-                cfg!(test),
-            )?;
-            let declared_signer_profile = kolme_live_signer_profile
-                .as_deref()
-                .map(normalize_kolme_live_signer_profile_selector)
-                .transpose()?;
-            let declared_signer_key_source = kolme_live_signer_key_source
-                .as_deref()
-                .map(normalize_kolme_live_signer_key_source)
-                .transpose()?;
-            let strict_signer_profile = if kolme_live_strict_signer_contracts {
-                Some(
-                    declared_signer_profile.ok_or(ConfigError::MissingArgumentValue(
-                        "--kolme-live-signer-profile",
-                    ))?,
-                )
-            } else {
-                declared_signer_profile
-            };
-            let strict_signer_key_source = if kolme_live_strict_signer_contracts {
-                Some(
-                    declared_signer_key_source.ok_or(ConfigError::MissingArgumentValue(
-                        "--kolme-live-signer-key-source",
-                    ))?,
-                )
-            } else {
-                declared_signer_key_source
-            };
-            enforce_kolme_live_signer_key_source_policy(
-                kolme_live_strict_signer_contracts,
-                strict_signer_key_source,
-                allow_local_signer_testing_override,
-                cfg!(test),
-            )?;
-            let _signer_preflight = enforce_kolme_live_signer_preflight(
-                strict_signer_profile,
-                strict_signer_key_source,
-            )?;
-            let kolme_live_execution =
-                if daemon_max_ticks.is_some() || daemon_tick_interval_ms.is_some() {
-                    let max_cycles = daemon_max_ticks
-                        .ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
-                    let cycle_interval_ms = daemon_tick_interval_ms.ok_or(
-                        ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"),
-                    )?;
-                    execute_kolme_live_runtime_continuous(
-                        &plan,
-                        base_url,
-                        provider_hint,
-                        signing_profile,
-                        strict_signer_profile,
-                        strict_signer_key_source,
-                        KolmeLiveContinuousMode {
-                            max_cycles,
-                            cycle_interval_ms,
-                        },
-                    )?
-                } else {
-                    execute_kolme_live_runtime(
-                        &plan,
-                        base_url,
-                        provider_hint,
-                        signing_profile,
-                        strict_signer_profile,
-                        strict_signer_key_source,
-                    )?
-                };
-            RuntimeExecutionBundle {
-                kolme_live: Some(kolme_live_execution),
-                ..RuntimeExecutionBundle::default()
-            }
-        }
+                kolme_live_signer_profile,
+                kolme_live_signer_key_source,
+            },
+        )?,
     };
     let report = build_bootstrap_report(
         &plan,

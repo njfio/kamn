@@ -119,6 +119,8 @@ fn main_module_extraction_contract_removes_inline_signer_payload_impls() {
 fn main_module_extraction_contract_removes_inline_kolme_live_branch_execution_impls() {
     let main_rs = read_repo_file("src/main.rs");
     let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
+    let runtime_mode_handlers_rs =
+        read_repo_file("src/runtime_orchestration/runtime_mode_handlers.rs");
     assert!(
         !main_rs.contains("KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile("),
         "main.rs should not keep inline Kolme live provider constructor path"
@@ -134,8 +136,9 @@ fn main_module_extraction_contract_removes_inline_kolme_live_branch_execution_im
         "main.rs should not keep inline Kolme live finality checker orchestration"
     );
     assert!(
-        runtime_orchestration_rs.contains("execute_kolme_live_runtime("),
-        "runtime_orchestration.rs should own Kolme live runtime branch delegation"
+        runtime_orchestration_rs.contains("execute_kolme_live_runtime(")
+            || runtime_mode_handlers_rs.contains("execute_kolme_live_runtime("),
+        "runtime orchestration boundary should delegate Kolme live runtime execution"
     );
 }
 
@@ -396,6 +399,8 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
 fn main_module_extraction_contract_runtime_module_boundary_parity_markers_remain_stable() {
     let main_rs = read_repo_file("src/main.rs");
     let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
+    let runtime_mode_handlers_rs =
+        read_repo_file("src/runtime_orchestration/runtime_mode_handlers.rs");
     let daemon_phase_rs = read_repo_file("src/runtime_orchestration/daemon_phase.rs");
     let runtime_kolme_live_rs = read_repo_file("src/runtime_kolme_live.rs");
 
@@ -408,12 +413,14 @@ fn main_module_extraction_contract_runtime_module_boundary_parity_markers_remain
         "runtime_orchestration should delegate daemon execution to daemon_phase module"
     );
     assert!(
-        runtime_orchestration_rs.contains("execute_kolme_live_runtime("),
-        "runtime_orchestration should delegate single-cycle Kolme execution to runtime_kolme_live"
+        runtime_orchestration_rs.contains("execute_kolme_live_runtime(")
+            || runtime_mode_handlers_rs.contains("execute_kolme_live_runtime("),
+        "runtime orchestration boundary should delegate single-cycle Kolme execution to runtime_kolme_live"
     );
     assert!(
-        runtime_orchestration_rs.contains("execute_kolme_live_runtime_continuous("),
-        "runtime_orchestration should delegate continuous Kolme execution to runtime_kolme_live"
+        runtime_orchestration_rs.contains("execute_kolme_live_runtime_continuous(")
+            || runtime_mode_handlers_rs.contains("execute_kolme_live_runtime_continuous("),
+        "runtime orchestration boundary should delegate continuous Kolme execution to runtime_kolme_live"
     );
     assert!(
         daemon_phase_rs.contains("pub(super) fn execute_daemon_runtime("),
