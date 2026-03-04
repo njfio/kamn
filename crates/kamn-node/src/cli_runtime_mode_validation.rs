@@ -1,8 +1,9 @@
-use super::{
-    normalize_kolme_live_signer_key_source, normalize_kolme_live_signer_profile_selector,
-    ConfigError, RuntimeMode, RuntimeModeKind, KOLME_IN_MEMORY_PROVIDER_MARKER,
-    KOLME_LIVE_SIGNING_PROFILE,
-};
+use super::{ConfigError, RuntimeMode, RuntimeModeKind};
+
+#[path = "cli_runtime_mode_validation/kolme_live.rs"]
+mod kolme_live;
+
+use kolme_live::validate_kolme_live_mode;
 
 pub(super) struct RuntimeModeValidationInputs<'a> {
     pub(super) runtime_mode: RuntimeMode,
@@ -153,67 +154,6 @@ fn validate_daemon_shutdown_requirements(
 fn validate_api_mode(api_bind_addr_present: bool) -> Result<(), ConfigError> {
     if !api_bind_addr_present {
         return Err(ConfigError::MissingArgumentValue("--api-bind"));
-    }
-    Ok(())
-}
-
-fn validate_kolme_live_mode(inputs: &RuntimeModeValidationInputs<'_>) -> Result<(), ConfigError> {
-    let base_url = inputs
-        .kolme_live_base_url
-        .ok_or(ConfigError::MissingArgumentValue("--kolme-live-base-url"))?;
-    let _ = base_url;
-    let provider_hint =
-        inputs
-            .kolme_live_provider_hint
-            .ok_or(ConfigError::MissingArgumentValue(
-                "--kolme-live-provider-hint",
-            ))?;
-    if provider_hint.contains(KOLME_IN_MEMORY_PROVIDER_MARKER) {
-        return Err(ConfigError::InvalidKolmeLiveProviderHint(
-            provider_hint.to_owned(),
-        ));
-    }
-    let signing_profile =
-        inputs
-            .kolme_live_signing_profile
-            .ok_or(ConfigError::MissingArgumentValue(
-                "--kolme-live-signing-profile",
-            ))?;
-    if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
-        return Err(ConfigError::InvalidKolmeLiveSigningProfile(
-            signing_profile.to_owned(),
-        ));
-    }
-    validate_kolme_live_tick_pair(inputs.daemon_max_ticks, inputs.daemon_tick_interval_ms)?;
-    let key_source =
-        inputs
-            .kolme_live_signer_key_source
-            .ok_or(ConfigError::MissingArgumentValue(
-                "--kolme-live-signer-key-source",
-            ))?;
-    normalize_kolme_live_signer_key_source(key_source)?;
-    if inputs.kolme_live_strict_signer_contracts {
-        let profile = inputs
-            .kolme_live_signer_profile
-            .ok_or(ConfigError::MissingArgumentValue(
-                "--kolme-live-signer-profile",
-            ))?;
-        normalize_kolme_live_signer_profile_selector(profile)?;
-    }
-    Ok(())
-}
-
-fn validate_kolme_live_tick_pair(
-    daemon_max_ticks: Option<u64>,
-    daemon_tick_interval_ms: Option<u64>,
-) -> Result<(), ConfigError> {
-    if daemon_max_ticks.is_some() && daemon_tick_interval_ms.is_none() {
-        return Err(ConfigError::MissingArgumentValue(
-            "--daemon-tick-interval-ms",
-        ));
-    }
-    if daemon_tick_interval_ms.is_some() && daemon_max_ticks.is_none() {
-        return Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"));
     }
     Ok(())
 }
