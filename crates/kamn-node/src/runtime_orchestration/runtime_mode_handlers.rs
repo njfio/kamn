@@ -30,6 +30,30 @@ pub(super) struct KolmeLiveRuntimeModeExecutionContext {
     pub kolme_live_signer_key_source: Option<String>,
 }
 
+fn shutdown_reason_field_or_default<'a>(completion_reason: &'a str, field: &str) -> &'a str {
+    daemon_phase::daemon_shutdown_reason_field(completion_reason, field).unwrap_or("0")
+}
+
+fn finish_service_api_lane_if_present(
+    lane: Option<full_supervisor::FullSupervisorServiceApiLane>,
+    execution_id: &str,
+) -> Result<(), ConfigError> {
+    if let Some(lane) = lane {
+        return full_supervisor::finish_full_supervisor_service_api_lane(lane, execution_id);
+    }
+    Ok(())
+}
+
+fn finish_observability_lane_if_present(
+    lane: Option<full_supervisor::FullSupervisorObservabilityLane>,
+    execution_id: &str,
+) -> Result<(), ConfigError> {
+    if let Some(lane) = lane {
+        return full_supervisor::finish_full_supervisor_observability_lane(lane, execution_id);
+    }
+    Ok(())
+}
+
 pub(super) fn build_daemon_runtime_options(
     daemon_max_ticks: Option<u64>,
     daemon_tick_interval_ms: Option<u64>,
@@ -185,18 +209,8 @@ pub(super) fn execute_full_runtime_mode(
     ) {
         Ok(execution) => execution,
         Err(error) => {
-            if let Some(lane) = service_api_lane {
-                let _ = full_supervisor::finish_full_supervisor_service_api_lane(
-                    lane,
-                    execution_id.as_str(),
-                );
-            }
-            if let Some(lane) = observability_lane {
-                let _ = full_supervisor::finish_full_supervisor_observability_lane(
-                    lane,
-                    execution_id.as_str(),
-                );
-            }
+            let _ = finish_service_api_lane_if_present(service_api_lane, execution_id.as_str());
+            let _ = finish_observability_lane_if_present(observability_lane, execution_id.as_str());
             return Err(error);
         }
     };
@@ -211,14 +225,11 @@ pub(super) fn execute_full_runtime_mode(
         daemon_phase::daemon_shutdown_snapshot_flush_status(completion_reason);
     let shutdown_signal_tick =
         daemon_phase::daemon_shutdown_signal_tick(completion_reason).unwrap_or("none");
-    let shutdown_drain_ticks =
-        daemon_phase::daemon_shutdown_reason_field(completion_reason, "drain_ticks").unwrap_or("0");
+    let shutdown_drain_ticks = shutdown_reason_field_or_default(completion_reason, "drain_ticks");
     let shutdown_timeout_ticks =
-        daemon_phase::daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
-            .unwrap_or("0");
+        shutdown_reason_field_or_default(completion_reason, "timeout_ticks");
     let shutdown_ignored_signals =
-        daemon_phase::daemon_shutdown_reason_field(completion_reason, "ignored_signals")
-            .unwrap_or("0");
+        shutdown_reason_field_or_default(completion_reason, "ignored_signals");
     let stop_contract_result = runtime_policy_contracts::validate_full_supervisor_stop_contract(
         completion_reason,
         shutdown_drain_status,
@@ -261,16 +272,10 @@ pub(super) fn execute_full_runtime_mode(
         service_api_lane.as_ref(),
         observability_lane.as_ref(),
     );
-    let service_api_lane_result = if let Some(lane) = service_api_lane {
-        full_supervisor::finish_full_supervisor_service_api_lane(lane, execution_id.as_str())
-    } else {
-        Ok(())
-    };
-    let observability_lane_result = if let Some(lane) = observability_lane {
-        full_supervisor::finish_full_supervisor_observability_lane(lane, execution_id.as_str())
-    } else {
-        Ok(())
-    };
+    let service_api_lane_result =
+        finish_service_api_lane_if_present(service_api_lane, execution_id.as_str());
+    let observability_lane_result =
+        finish_observability_lane_if_present(observability_lane, execution_id.as_str());
     stop_contract_result?;
     service_api_lane_result?;
     observability_lane_result?;
