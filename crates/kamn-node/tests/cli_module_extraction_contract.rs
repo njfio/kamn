@@ -39,6 +39,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_kolme_live_option_parsing;"),
         "cli.rs should declare cli_kolme_live_option_parsing module"
     );
+    assert!(
+        cli_rs.contains("mod cli_planning_recovery_option_parsing;"),
+        "cli.rs should declare cli_planning_recovery_option_parsing module"
+    );
 }
 
 #[test]
@@ -238,5 +242,32 @@ fn cli_module_extraction_contract_removes_inline_kolme_live_option_parsing() {
     assert!(
         kolme_live_option_parsing_rs.contains("pub(super) fn try_parse_kolme_live_option("),
         "cli_kolme_live_option_parsing module should expose kolme live option parser entrypoint"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_planning_recovery_option_parsing() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "\"--expected-state-version\" => {",
+        "\"--expected-state-hash\" => {",
+        "\"--proposal\" => {",
+        "\"--rejoin-attempt\" => {",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline planning/recovery option parsing marker: {marker}"
+        );
+    }
+    let planning_recovery_option_parsing_rs =
+        read_repo_file("src/cli_planning_recovery_option_parsing.rs");
+    assert!(
+        planning_recovery_option_parsing_rs
+            .contains("pub(super) struct PlanningRecoveryOptionState"),
+        "cli_planning_recovery_option_parsing module should define planning/recovery option state"
+    );
+    assert!(
+        planning_recovery_option_parsing_rs.contains("pub(super) fn try_parse_planning_recovery_option("),
+        "cli_planning_recovery_option_parsing module should expose planning/recovery parser entrypoint"
     );
 }
