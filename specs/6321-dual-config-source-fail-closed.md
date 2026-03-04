@@ -66,3 +66,14 @@ resolution.
   - run targeted CLI lane plus related CLI module tests.
     - `cargo test -p kamn-node cli_contract_tests -- --nocapture`
     - `cargo test -p kamn-node cli_tests -- --nocapture`
+
+## Phase 6 integration evidence
+
+- `cargo test -p kamn-node cli_contract_tests -- --nocapture`:
+  - pass (`52 passed, 0 failed`)
+- `cargo test -p kamn-node cli_tests -- --nocapture`:
+  - pass (`7 passed, 0 failed`)
+
+## Deviations
+
+- None.
