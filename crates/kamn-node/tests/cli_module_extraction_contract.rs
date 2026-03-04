@@ -43,6 +43,10 @@ fn cli_module_extraction_contract_declares_config_layering_module() {
         cli_rs.contains("mod cli_planning_recovery_option_parsing;"),
         "cli.rs should declare cli_planning_recovery_option_parsing module"
     );
+    assert!(
+        cli_rs.contains("mod cli_core_common_option_parsing;"),
+        "cli.rs should declare cli_core_common_option_parsing module"
+    );
 }
 
 #[test]
@@ -269,5 +273,36 @@ fn cli_module_extraction_contract_removes_inline_planning_recovery_option_parsin
     assert!(
         planning_recovery_option_parsing_rs.contains("pub(super) fn try_parse_planning_recovery_option("),
         "cli_planning_recovery_option_parsing module should expose planning/recovery parser entrypoint"
+    );
+}
+
+#[test]
+fn cli_module_extraction_contract_removes_inline_core_common_option_parsing() {
+    let cli_rs = read_repo_file("src/cli.rs");
+    for marker in [
+        "\"--role\" => {",
+        "\"--profile\" => {",
+        "\"--chain-id\" => {",
+        "\"--chain-version\" => {",
+        "\"--storage-dir\" => {",
+        "\"--disable-gossip\" => {",
+        "\"--sync-mode\" => {",
+        "\"--runtime-mode\" => {",
+        "\"--output\" => {",
+        "\"--diagnostics\" => {",
+    ] {
+        assert!(
+            !cli_rs.contains(marker),
+            "cli.rs should not keep inline core/common option parsing marker: {marker}"
+        );
+    }
+    let core_common_option_parsing_rs = read_repo_file("src/cli_core_common_option_parsing.rs");
+    assert!(
+        core_common_option_parsing_rs.contains("pub(super) struct CoreCommonOptionState"),
+        "cli_core_common_option_parsing module should define core/common option state"
+    );
+    assert!(
+        core_common_option_parsing_rs.contains("pub(super) fn try_parse_core_common_option("),
+        "cli_core_common_option_parsing module should expose core/common parser entrypoint"
     );
 }
