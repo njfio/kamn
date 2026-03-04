@@ -32,12 +32,12 @@ Move daemon runtime control and lifecycle option parsing out of `crates/kamn-nod
 - Inline daemon parsing remains in `cli.rs` and violates extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated daemon option parser module.
-- [ ] `cli.rs` no longer contains inline daemon option match arms.
-- [ ] Daemon option parse behavior and `ConfigError` outcomes remain unchanged.
-- [ ] Daemon lifecycle event parse behavior remains unchanged.
-- [ ] Extraction contract includes daemon parser module assertions and passes.
-- [ ] Existing CLI tests remain green.
+- [x] `cli.rs` declares a dedicated daemon option parser module.
+- [x] `cli.rs` no longer contains inline daemon option match arms.
+- [x] Daemon option parse behavior and `ConfigError` outcomes remain unchanged.
+- [x] Daemon lifecycle event parse behavior remains unchanged.
+- [x] Extraction contract includes daemon parser module assertions and passes.
+- [x] Existing CLI tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -60,7 +60,11 @@ Move daemon runtime control and lifecycle option parsing out of `crates/kamn-nod
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode daemon --daemon-max-ticks 1 --daemon-tick-interval-ms 1 --output text --diagnostics basic` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode daemon --daemon-max-ticks 1 --daemon-tick-interval-ms 1 --daemon-lifecycle-event start-connect --output text --diagnostics basic` (expected hard-fail: missing `--daemon-peer-id`)
 
 ## Deviations
 - None.
