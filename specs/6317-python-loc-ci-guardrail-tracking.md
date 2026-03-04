@@ -68,3 +68,20 @@ Extend the fast-gate shell/rust ratio guardrail output surface to include Python
 - INTEGRATION:
   - run guardrail contract lane and fast-gate wiring contract lane for non-regression.
 
+## Phase 6 integration evidence
+
+- `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --threshold-file .ci/shell-rust-ratio-guardrail.env --output-json /tmp/ci-shell-rust-ratio-guardrail-6317.json`:
+  - pass (`status=ok`, `final_decision=GO`)
+  - stdout markers include:
+    - `python_line_total=106579`
+    - `tracked_python_file_count=336`
+- `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`:
+  - pass
+- `cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract`:
+  - pass (`6 passed, 0 failed`)
+- `cargo clippy -p kamn-core --all-targets --all-features -- -D warnings`:
+  - pass
+
+## Deviations
+
+- None.
