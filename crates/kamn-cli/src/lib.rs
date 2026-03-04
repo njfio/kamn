@@ -4,32 +4,10 @@
 /// Command modules.
 pub mod commands;
 
-const DEFAULT_ENDPOINT: &str = "http://localhost:8080";
-const CLI_USAGE: &str = "kamn-cli <command> [--format json|text] [--endpoint <url>] [args]";
-const CLI_HELP_FLAGS: &[&str] = &["--help", "-h", "--format", "--endpoint"];
-const CLI_SUPPORTED_COMMANDS: &[&str] = &[
-    "register",
-    "send-message",
-    "create-channel",
-    "list-messages",
-    "query-message",
-    "query-task",
-    "query-agent-profile",
-    "register-content",
-    "expire-content",
-    "tombstone-content",
-    "query-content",
-    "submit-bridge-message",
-    "forward-bridge-message",
-    "query-bridge-message",
-    "create-task",
-    "accept-task",
-    "complete-task",
-    "fund-escrow",
-    "release-escrow",
-    "verify-proof",
-    "health",
-];
+#[path = "cli_args.rs"]
+mod cli_args;
+
+use cli_args::{help_output, is_help_request_impl, parse_cli_args_impl, render_help_text_impl};
 
 /// Output format for CLI responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,21 +136,13 @@ impl CommandOutput {
     }
 }
 
-fn env_var_or_default(key: &str, default: &str) -> String {
-    match std::env::var(key) {
-        Ok(value) => value,
-        Err(_) => default.to_owned(),
-    }
-}
-
 /// Returns whether CLI arguments include the help flag.
 pub fn is_help_request<I, S>(args: I) -> bool
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
-    args.into_iter()
-        .any(|value| matches!(value.as_ref(), "--help" | "-h"))
+    is_help_request_impl(args)
 }
 
 /// Parses CLI arguments for phase-2 command surface contracts.
@@ -181,64 +151,7 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
-    let args = args
-        .into_iter()
-        .map(|value| value.as_ref().to_owned())
-        .collect::<Vec<_>>();
-
-    if args.is_empty() {
-        return Err("missing command".to_owned());
-    }
-
-    let mut index = 0;
-    if !args[0].starts_with("--") {
-        index = 1;
-    }
-
-    if index >= args.len() {
-        return Err("missing command".to_owned());
-    }
-
-    let command = CommandKind::parse(args[index].as_str())?;
-    index += 1;
-
-    let mut output_format = OutputFormat::Json;
-    let mut endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_ENDPOINT);
-    let mut passthrough = Vec::new();
-
-    while index < args.len() {
-        let token = args[index].as_str();
-        index += 1;
-        match token {
-            "--format" => {
-                if index >= args.len() {
-                    return Err("missing value for --format".to_owned());
-                }
-                output_format = OutputFormat::parse(args[index].as_str())?;
-                index += 1;
-            }
-            "--endpoint" => {
-                if index >= args.len() {
-                    return Err("missing value for --endpoint".to_owned());
-                }
-                endpoint = args[index].clone();
-                index += 1;
-            }
-            other => {
-                if other.starts_with('-') {
-                    return Err(format!("unsupported flag: {other}"));
-                }
-                passthrough.push(other.to_owned());
-            }
-        }
-    }
-
-    Ok(ParsedCliArgs {
-        command,
-        output_format,
-        endpoint,
-        passthrough,
-    })
+    parse_cli_args_impl(args)
 }
 
 /// Dispatches one parsed command to the corresponding phase-2 command module.
@@ -269,31 +182,9 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib:
     }
 }
 
-fn help_output() -> CommandOutput {
-    let command_list = CLI_SUPPORTED_COMMANDS.join(", ");
-    let flag_list = CLI_HELP_FLAGS.join(", ");
-    let text = format!("usage={CLI_USAGE}\ncommands={command_list}\nflags={flag_list}");
-    let commands_json = CLI_SUPPORTED_COMMANDS
-        .iter()
-        .map(|value| format!("\"{value}\""))
-        .collect::<Vec<_>>()
-        .join(",");
-    let flags_json = CLI_HELP_FLAGS
-        .iter()
-        .map(|value| format!("\"{value}\""))
-        .collect::<Vec<_>>()
-        .join(",");
-    let json = format!(
-        "{{\"usage\":\"{CLI_USAGE}\",\"commands\":[{commands_json}],\"flags\":[{flags_json}]}}"
-    );
-    CommandOutput::new(json, text)
-}
-
 /// Renders deterministic help text for CLI usage output.
 pub fn render_help_text() -> String {
-    let commands = CLI_SUPPORTED_COMMANDS.join(", ");
-    let flags = CLI_HELP_FLAGS.join(", ");
-    format!("Usage: {CLI_USAGE}\nCommands: {commands}\nFlags: {flags}")
+    render_help_text_impl()
 }
 
 #[cfg(test)]
