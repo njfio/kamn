@@ -12,7 +12,7 @@ Move runtime-mode requirement validation guards out of `crates/kamn-node/src/cli
     - api/full bind checks
     - kolme-live mode policy and requirement checks
 - Outputs:
-  - New module file for runtime-mode validation helpers.
+  - New module file for runtime-mode validation helpers, with focused Kolme-live validation submodule.
   - `cli.rs` module wiring/imports updated to call extracted validators.
   - CLI extraction contract updates for module declaration + inline-removal assertions.
 
@@ -28,15 +28,16 @@ Move runtime-mode requirement validation guards out of `crates/kamn-node/src/cli
 - Inline guard branches remain in `cli.rs` and violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated runtime-mode validation helper module.
-- [ ] `cli.rs` no longer contains inline runtime-mode requirement guard branches.
-- [ ] Existing CLI parse behavior and `ConfigError` mappings remain unchanged.
-- [ ] CLI extraction contract includes and passes runtime-mode validation module assertions.
-- [ ] Existing `kamn-node` CLI parsing tests remain green.
+- [x] `cli.rs` declares a dedicated runtime-mode validation helper module.
+- [x] `cli.rs` no longer contains inline runtime-mode requirement guard branches.
+- [x] Existing CLI parse behavior and `ConfigError` mappings remain unchanged.
+- [x] CLI extraction contract includes and passes runtime-mode validation module assertions.
+- [x] Existing `kamn-node` CLI parsing tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
 - `crates/kamn-node/src/cli_runtime_mode_validation.rs` (new)
+- `crates/kamn-node/src/cli_runtime_mode_validation/kolme_live.rs` (new)
 - `crates/kamn-node/tests/cli_module_extraction_contract.rs`
 - `specs/6345-cli-runtime-mode-validation-module-extraction.md`
 
@@ -52,7 +53,12 @@ Move runtime-mode requirement validation guards out of `crates/kamn-node/src/cli
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract`:
+  - pass (`5 passed, 0 failed`)
+- `cargo test -p kamn-node cli_tests`:
+  - pass (`7 passed, 0 failed`)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`:
+  - pass (`2 passed, 0 failed`)
 
 ## Deviations
 - None.
