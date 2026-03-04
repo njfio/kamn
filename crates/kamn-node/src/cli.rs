@@ -12,12 +12,17 @@ use super::{
 
 #[path = "cli_config_layering.rs"]
 mod cli_config_layering;
+#[path = "cli_post_parse_guards.rs"]
+mod cli_post_parse_guards;
 #[path = "cli_runtime_mode_validation.rs"]
 mod cli_runtime_mode_validation;
 #[path = "cli_value_parsers.rs"]
 mod cli_value_parsers;
 
 use cli_config_layering::build_layered_cli_args;
+use cli_post_parse_guards::{
+    apply_profile_defaults, validate_endpoint_guards, EndpointGuardInputs, ProfileDefaultsInputs,
+};
 use cli_runtime_mode_validation::{
     validate_runtime_mode_requirements, RuntimeModeValidationInputs,
 };
@@ -329,26 +334,21 @@ where
         }
     }
 
-    if let Some(selected_profile) = profile {
-        if !role_overridden {
-            role = Some(selected_profile.default_role());
-        }
-        if !chain_id_overridden {
-            chain_id = "kamn-localnet".to_owned();
-        }
-        if !chain_version_overridden {
-            chain_version = "v0.1.0".to_owned();
-        }
-        if !storage_dir_overridden {
-            storage_dir = selected_profile.default_storage_dir().to_owned();
-        }
-        if !gossip_overridden {
-            enable_gossip = true;
-        }
-        if !sync_mode_overridden {
-            sync_mode = SyncMode::Fast;
-        }
-    }
+    apply_profile_defaults(ProfileDefaultsInputs {
+        profile,
+        role: &mut role,
+        chain_id: &mut chain_id,
+        chain_version: &mut chain_version,
+        storage_dir: &mut storage_dir,
+        enable_gossip: &mut enable_gossip,
+        sync_mode: &mut sync_mode,
+        role_overridden,
+        chain_id_overridden,
+        chain_version_overridden,
+        storage_dir_overridden,
+        gossip_overridden,
+        sync_mode_overridden,
+    });
 
     let role = role.ok_or(ConfigError::MissingArgumentValue("--role"))?;
 
@@ -374,37 +374,21 @@ where
         kolme_live_signer_profile: kolme_live_signer_profile.as_deref(),
         kolme_live_signer_key_source: kolme_live_signer_key_source.as_deref(),
     })?;
-    if api_bind_addr.is_none()
-        && (api_max_requests_overridden
-            || api_idle_timeout_ms_overridden
-            || api_body_limit_bytes_overridden
-            || api_concurrency_limit_overridden
-            || api_rate_limit_per_second_overridden)
-    {
-        return Err(ConfigError::MissingArgumentValue("--api-bind"));
-    }
-    if observability_endpoint_bind_addr.is_none()
-        && (observability_endpoint_metrics_path_overridden
-            || observability_endpoint_health_path_overridden
-            || observability_endpoint_max_requests_overridden
-            || observability_endpoint_idle_timeout_ms_overridden)
-    {
-        return Err(ConfigError::MissingArgumentValue(
-            "--observability-endpoint-bind",
-        ));
-    }
-    if observability_endpoint_bind_addr.is_some() {
-        if !observability_endpoint_metrics_path.starts_with('/') {
-            return Err(ConfigError::RuntimeDaemonLifecycle(
-                "observability endpoint metrics path must start with '/'".to_owned(),
-            ));
-        }
-        if !observability_endpoint_health_path.starts_with('/') {
-            return Err(ConfigError::RuntimeDaemonLifecycle(
-                "observability endpoint health path must start with '/'".to_owned(),
-            ));
-        }
-    }
+    validate_endpoint_guards(EndpointGuardInputs {
+        api_bind_addr_present: api_bind_addr.is_some(),
+        api_max_requests_overridden,
+        api_idle_timeout_ms_overridden,
+        api_body_limit_bytes_overridden,
+        api_concurrency_limit_overridden,
+        api_rate_limit_per_second_overridden,
+        observability_endpoint_bind_addr_present: observability_endpoint_bind_addr.is_some(),
+        observability_endpoint_metrics_path_overridden,
+        observability_endpoint_health_path_overridden,
+        observability_endpoint_max_requests_overridden,
+        observability_endpoint_idle_timeout_ms_overridden,
+        observability_endpoint_metrics_path: observability_endpoint_metrics_path.as_str(),
+        observability_endpoint_health_path: observability_endpoint_health_path.as_str(),
+    })?;
 
     Ok(NodeCli {
         profile,
