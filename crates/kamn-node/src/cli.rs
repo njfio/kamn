@@ -12,8 +12,14 @@ use super::{
 
 #[path = "cli_config_layering.rs"]
 mod cli_config_layering;
+#[path = "cli_value_parsers.rs"]
+mod cli_value_parsers;
 
 use cli_config_layering::build_layered_cli_args;
+use cli_value_parsers::{
+    parse_daemon_control_arg, parse_daemon_lifecycle_event, parse_proposal_candidate,
+    parse_rejoin_attempt, parse_state_version_arg,
+};
 
 pub(super) fn parse_args<I>(args: I) -> Result<NodeCli, ConfigError>
 where
@@ -537,60 +543,4 @@ where
         output_mode,
         diagnostics_mode,
     })
-}
-
-fn parse_state_version_arg(value: &str) -> Result<u64, ConfigError> {
-    let state_version = value
-        .parse::<u64>()
-        .map_err(|_| ConfigError::InvalidExpectedStateVersion(value.to_owned()))?;
-    if state_version == 0 {
-        return Err(ConfigError::InvalidExpectedStateVersion(value.to_owned()));
-    }
-    Ok(state_version)
-}
-
-fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate, ConfigError> {
-    let parts = value.split('|').collect::<Vec<&str>>();
-    if parts.len() != 4 {
-        return Err(ConfigError::InvalidProposalArgument(value.to_owned()));
-    }
-    let nonce = parts[2]
-        .parse::<u64>()
-        .map_err(|_| ConfigError::InvalidProposalArgument(value.to_owned()))?;
-    ProposalCandidate::new(parts[0], parts[1], nonce, parts[3])
-        .map_err(|error| ConfigError::RuntimePlanner(error.to_string()))
-}
-
-fn parse_rejoin_attempt(value: &str) -> Result<RejoinAttempt, ConfigError> {
-    let parts = value.split('|').collect::<Vec<&str>>();
-    if parts.len() != 4 {
-        return Err(ConfigError::InvalidRejoinAttemptArgument(value.to_owned()));
-    }
-    let state_version = parts[1]
-        .parse::<u64>()
-        .map_err(|_| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))?;
-    RejoinAttempt::new(parts[0], state_version, parts[2], parts[3])
-        .map_err(|_| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))
-}
-
-fn parse_daemon_control_arg(value: &str) -> Result<u64, ConfigError> {
-    let parsed = value
-        .parse::<u64>()
-        .map_err(|_| ConfigError::InvalidDaemonControlArgument(value.to_owned()))?;
-    if parsed == 0 {
-        return Err(ConfigError::InvalidDaemonControlArgument(value.to_owned()));
-    }
-    Ok(parsed)
-}
-
-fn parse_daemon_lifecycle_event(value: &str) -> Result<PeerLifecycleEvent, ConfigError> {
-    match value {
-        "start-connect" => Ok(PeerLifecycleEvent::StartConnect),
-        "handshake-succeeded" => Ok(PeerLifecycleEvent::HandshakeSucceeded),
-        "heartbeat-missed" => Ok(PeerLifecycleEvent::HeartbeatMissed),
-        "heartbeat-restored" => Ok(PeerLifecycleEvent::HeartbeatRestored),
-        "disconnect" => Ok(PeerLifecycleEvent::Disconnect),
-        "rejoin" => Ok(PeerLifecycleEvent::Rejoin),
-        _ => Err(ConfigError::InvalidDaemonLifecycleEvent(value.to_owned())),
-    }
 }
