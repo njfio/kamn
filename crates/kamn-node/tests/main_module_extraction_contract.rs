@@ -191,6 +191,8 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
     let daemon_phase_rs = read_repo_file("src/runtime_orchestration/daemon_phase.rs");
     let full_supervisor_rs = read_repo_file("src/runtime_orchestration/full_supervisor.rs");
+    let runtime_policy_contracts_rs =
+        read_repo_file("src/runtime_orchestration/runtime_policy_contracts.rs");
     assert!(
         runtime_orchestration_rs.contains("mod daemon_phase;"),
         "runtime_orchestration.rs should declare daemon phase submodule"
@@ -198,6 +200,10 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     assert!(
         runtime_orchestration_rs.contains("mod full_supervisor;"),
         "runtime_orchestration.rs should declare full_supervisor submodule"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("mod runtime_policy_contracts;"),
+        "runtime_orchestration.rs should declare runtime_policy_contracts submodule"
     );
     assert!(
         !runtime_orchestration_rs.contains("fn execute_daemon_runtime("),
@@ -216,6 +222,22 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
         "runtime_orchestration.rs should not keep inline full supervisor observability lane finish helper"
     );
     assert!(
+        !runtime_orchestration_rs.contains("fn production_transport_profile_remediation("),
+        "runtime_orchestration.rs should not keep inline runtime transport profile remediation helper"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn classify_full_supervisor_stop_contract_violation("),
+        "runtime_orchestration.rs should not keep inline full-supervisor stop contract classifier"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn classify_shutdown_checkpoint_reconciliation_violation("),
+        "runtime_orchestration.rs should not keep inline shutdown checkpoint reconciliation classifier"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn classify_kolme_live_signer_fallback_secret_policy_violation("),
+        "runtime_orchestration.rs should not keep inline Kolme signer fallback-secret policy classifier"
+    );
+    assert!(
         daemon_phase_rs.contains("pub(super) fn execute_daemon_runtime("),
         "daemon phase module should own daemon runtime execution"
     );
@@ -230,6 +252,39 @@ fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module
     assert!(
         full_supervisor_rs.contains("pub(super) fn run_full_supervisor_http_probe("),
         "full_supervisor module should own full supervisor HTTP probe helper"
+    );
+    assert!(
+        runtime_policy_contracts_rs.contains("pub(super) fn should_use_os_signal_shutdown(")
+            || runtime_policy_contracts_rs.contains("pub(crate) fn should_use_os_signal_shutdown("),
+        "runtime_policy_contracts module should own os-signal shutdown selection policy helper"
+    );
+    assert!(
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn classify_production_transport_profile_violation(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn classify_production_transport_profile_violation("),
+        "runtime_policy_contracts module should own transport profile violation classifier"
+    );
+    assert!(
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn validate_full_supervisor_stop_contract(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn validate_full_supervisor_stop_contract("),
+        "runtime_policy_contracts module should own full-supervisor stop contract validation"
+    );
+    assert!(
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn validate_shutdown_checkpoint_reconciliation(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn validate_shutdown_checkpoint_reconciliation("),
+        "runtime_policy_contracts module should own shutdown checkpoint reconciliation validation"
+    );
+    assert!(
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn enforce_kolme_live_signer_key_source_policy(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
+        "runtime_policy_contracts module should own Kolme signer key-source policy enforcement"
     );
 }
 
@@ -295,13 +350,19 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
         "runtime_orchestration module should own runtime mode execution dispatch"
     );
     assert!(
-        runtime_orchestration_rs.contains("pub(crate) fn validate_full_supervisor_stop_contract("),
-        "runtime_orchestration module should own full supervisor stop contract validation"
+        runtime_orchestration_rs.contains("pub(crate) fn validate_full_supervisor_stop_contract(")
+            || runtime_orchestration_rs.contains(
+                "pub(crate) use runtime_policy_contracts::validate_full_supervisor_stop_contract;"
+            ),
+        "runtime_orchestration module should surface full supervisor stop contract validation"
     );
     assert!(
         runtime_orchestration_rs
-            .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
-        "runtime_orchestration module should own signer key-source policy enforcement"
+            .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy(")
+            || runtime_orchestration_rs.contains(
+                "pub(crate) use runtime_policy_contracts::enforce_kolme_live_signer_key_source_policy;",
+            ),
+        "runtime_orchestration module should surface signer key-source policy enforcement"
     );
 }
 

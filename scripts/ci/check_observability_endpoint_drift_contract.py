@@ -69,7 +69,7 @@ TELEMETRY_STRATEGY_MARKER = (
     "health/readiness/stream schema_version markers and readiness_reason_code taxonomy."
 )
 
-MAIN_WIRING_MARKER = "serve_observability_endpoint(&endpoint_config, &snapshot)"
+MAIN_WIRING_MARKER = "serve_runtime_endpoints("
 FRAMEWORK_INGRESS_MARKER = "tokio::net::TcpListener::bind(config.bind_addr.as_str())"
 
 DEFAULT_SOURCE_FILES = [
