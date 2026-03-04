@@ -15,9 +15,9 @@ mod observability_endpoint;
 mod output_io;
 mod report_builder;
 mod report_render;
-mod runtime_modes;
 mod runtime_entrypoint;
 mod runtime_kolme_live;
+mod runtime_modes;
 mod runtime_orchestration;
 mod service_api_endpoint;
 mod signer;
@@ -49,9 +49,6 @@ use output_io::{emit_bootstrap_report_output, write_stderr_line};
 use report_builder::build_bootstrap_report;
 #[cfg(test)]
 use report_render::render_bootstrap_report;
-pub(crate) use runtime_modes::{
-    DiagnosticsMode, LocalProfile, OutputMode, OutputModeKind, RuntimeMode, RuntimeModeKind,
-};
 use runtime_entrypoint::serve_runtime_endpoints;
 #[cfg(test)]
 pub(crate) use runtime_entrypoint::{
@@ -62,6 +59,9 @@ pub(crate) use runtime_entrypoint::{
 use runtime_kolme_live::build_kolme_live_request;
 use runtime_kolme_live::{
     execute_kolme_live_runtime, execute_kolme_live_runtime_continuous, KolmeLiveContinuousMode,
+};
+pub(crate) use runtime_modes::{
+    DiagnosticsMode, LocalProfile, OutputMode, OutputModeKind, RuntimeMode, RuntimeModeKind,
 };
 use runtime_orchestration::{build_runtime_execution_id, execute};
 #[cfg(test)]

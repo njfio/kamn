@@ -157,6 +157,14 @@ pub(crate) enum LocalProfile {
 }
 
 impl LocalProfile {
+    fn metadata(self) -> (&'static str, NodeRole, &'static str) {
+        match self {
+            Self::Processor => ("local-processor", NodeRole::Processor, "./data/processor"),
+            Self::Listener => ("local-listener", NodeRole::Listener, "./data/listener"),
+            Self::Approver => ("local-approver", NodeRole::Approver, "./data/approver"),
+        }
+    }
+
     pub(crate) fn parse(value: &str) -> Result<Self, ConfigError> {
         match value {
             "local-processor" => Ok(Self::Processor),
@@ -167,26 +175,14 @@ impl LocalProfile {
     }
 
     pub(crate) fn as_str(self) -> &'static str {
-        match self {
-            Self::Processor => "local-processor",
-            Self::Listener => "local-listener",
-            Self::Approver => "local-approver",
-        }
+        self.metadata().0
     }
 
     pub(crate) fn default_role(self) -> NodeRole {
-        match self {
-            Self::Processor => NodeRole::Processor,
-            Self::Listener => NodeRole::Listener,
-            Self::Approver => NodeRole::Approver,
-        }
+        self.metadata().1
     }
 
     pub(crate) fn default_storage_dir(self) -> &'static str {
-        match self {
-            Self::Processor => "./data/processor",
-            Self::Listener => "./data/listener",
-            Self::Approver => "./data/approver",
-        }
+        self.metadata().2
     }
 }
