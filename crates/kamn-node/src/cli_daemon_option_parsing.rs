@@ -19,6 +19,20 @@ pub(super) fn try_parse_daemon_option(
     iter: &mut std::vec::IntoIter<String>,
     state: &mut DaemonOptionState<'_>,
 ) -> Result<bool, ConfigError> {
+    if try_parse_daemon_tick_option(arg, iter, state)? {
+        return Ok(true);
+    }
+    if try_parse_daemon_shutdown_option(arg, iter, state)? {
+        return Ok(true);
+    }
+    try_parse_daemon_peer_lifecycle_option(arg, iter, state)
+}
+
+fn try_parse_daemon_tick_option(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut DaemonOptionState<'_>,
+) -> Result<bool, ConfigError> {
     match arg {
         "--daemon-max-ticks" => {
             set_optional_numeric(iter, "--daemon-max-ticks", state.daemon_max_ticks).map(|_| true)
@@ -29,6 +43,16 @@ pub(super) fn try_parse_daemon_option(
             state.daemon_tick_interval_ms,
         )
         .map(|_| true),
+        _ => Ok(false),
+    }
+}
+
+fn try_parse_daemon_shutdown_option(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut DaemonOptionState<'_>,
+) -> Result<bool, ConfigError> {
+    match arg {
         "--daemon-shutdown-signal-tick" => push_numeric_value(
             iter,
             "--daemon-shutdown-signal-tick",
@@ -51,6 +75,16 @@ pub(super) fn try_parse_daemon_option(
             state.daemon_shutdown_timeout_ticks,
         )
         .map(|_| true),
+        _ => Ok(false),
+    }
+}
+
+fn try_parse_daemon_peer_lifecycle_option(
+    arg: &str,
+    iter: &mut std::vec::IntoIter<String>,
+    state: &mut DaemonOptionState<'_>,
+) -> Result<bool, ConfigError> {
+    match arg {
         "--daemon-peer-id" => {
             set_string_option(iter, "--daemon-peer-id", state.daemon_peer_id).map(|_| true)
         }
