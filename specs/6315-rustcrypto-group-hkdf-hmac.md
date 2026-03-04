@@ -75,3 +75,22 @@ through RustCrypto-backed HKDF/HMAC semantics exposed via shared crypto surface.
   - remove obsolete manual helper code and keep helper APIs focused and small.
 - INTEGRATION:
   - run targeted group-channel tests and full `kamn-core` tests to ensure no behavior drift.
+
+## Phase 6 integration evidence
+
+- `cargo clippy -p kamn-crypto --all-targets --all-features -- -D warnings`:
+  - pass
+- `cargo clippy -p kamn-core --all-targets --all-features -- -D warnings`:
+  - pass
+- `cargo test -p kamn-crypto --test direct_message_crypto_integration`:
+  - pass (`4 passed, 0 failed`)
+- `cargo test -p kamn-core --test issue_5921_production_message_crypto`:
+  - pass (`17 passed, 0 failed`)
+- `cargo test -p kamn-crypto`:
+  - pass (`23 unit + 4 integration passed, 0 failed`)
+- `cargo test -p kamn-core`:
+  - pass (all suites completed with `0 failed`)
+
+## Deviations
+
+- None.
