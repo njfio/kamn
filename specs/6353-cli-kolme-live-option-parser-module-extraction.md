@@ -29,11 +29,11 @@ Move Kolme Live option parsing out of `crates/kamn-node/src/cli.rs` into a dedic
 - Inline Kolme Live match arms remain in `cli.rs` and violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated Kolme Live option parser module.
-- [ ] `cli.rs` no longer contains inline Kolme Live option match arms.
-- [ ] Kolme Live option parse behavior and `ConfigError` outcomes remain unchanged.
-- [ ] Extraction contract includes Kolme Live module assertions and passes.
-- [ ] Existing CLI tests remain green.
+- [x] `cli.rs` declares a dedicated Kolme Live option parser module.
+- [x] `cli.rs` no longer contains inline Kolme Live option match arms.
+- [x] Kolme Live option parse behavior and `ConfigError` outcomes remain unchanged.
+- [x] Extraction contract includes Kolme Live module assertions and passes.
+- [x] Existing CLI tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -55,7 +55,11 @@ Move Kolme Live option parsing out of `crates/kamn-node/src/cli.rs` into a dedic
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode planning --expected-state-hash reason --proposal 'alpha|beta|1|reason' --kolme-live-base-url https://example.invalid --kolme-live-provider-hint in-memory --kolme-live-signing-profile localnet-kolme-live-signing --kolme-live-strict-signer-contracts --kolme-live-signer-profile managed --kolme-live-signer-key-source env --output text --diagnostics basic` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode planning --expected-state-hash reason --proposal 'alpha|beta|1|reason' --output text --diagnostics basic --kolme-live-signer-key-source` (expected hard-fail: missing `--kolme-live-signer-key-source`)
 
 ## Deviations
 - None.
