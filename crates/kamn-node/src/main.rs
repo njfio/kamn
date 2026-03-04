@@ -4,7 +4,6 @@ use kamn_core::{
     RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeTransportProfile, SyncMode,
 };
 use std::env;
-use std::io::Write;
 use std::process::ExitCode;
 
 mod cli;
@@ -13,6 +12,7 @@ mod daemon_shutdown;
 mod kolme_live_observability;
 mod logging;
 mod observability_endpoint;
+mod output_io;
 mod report_builder;
 mod report_render;
 mod runtime_entrypoint;
@@ -44,7 +44,9 @@ pub(crate) use observability_endpoint::{
     DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS, DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS,
     DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
 };
+use output_io::{emit_bootstrap_report_output, write_stderr_line};
 use report_builder::build_bootstrap_report;
+#[cfg(test)]
 use report_render::render_bootstrap_report;
 use runtime_entrypoint::serve_runtime_endpoints;
 #[cfg(test)]
@@ -629,35 +631,6 @@ fn run() -> Result<(), ConfigError> {
         execution_id.as_str(),
     )?;
 
-    Ok(())
-}
-
-fn emit_bootstrap_report_output(
-    report: &NodeBootstrapReport,
-    output_mode: OutputMode,
-) -> Result<(), ConfigError> {
-    let rendered = render_bootstrap_report(report, output_mode);
-    write_stdout_line(rendered.as_str())
-}
-
-fn write_stdout_line(line: &str) -> Result<(), ConfigError> {
-    write_line_to_stream(line, &mut std::io::stdout())
-}
-
-fn write_stderr_line(line: &str) -> Result<(), ConfigError> {
-    write_line_to_stream(line, &mut std::io::stderr())
-}
-
-fn write_line_to_stream(line: &str, stream: &mut impl Write) -> Result<(), ConfigError> {
-    stream
-        .write_all(line.as_bytes())
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-    stream
-        .write_all(b"\n")
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-    stream
-        .flush()
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
     Ok(())
 }
 
