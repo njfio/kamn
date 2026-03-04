@@ -44,12 +44,61 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare output_io module"
     );
     assert!(
+        main_rs.contains("mod runtime_modes;"),
+        "main.rs should declare runtime_modes module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
     assert!(
         !main_rs.contains("mod tests {"),
         "main.rs should not keep inline monolithic tests module"
+    );
+}
+
+#[test]
+fn main_module_extraction_contract_removes_inline_runtime_mode_profile_impls() {
+    let main_rs = read_repo_file("src/main.rs");
+    assert!(
+        !main_rs.contains("struct OutputMode {"),
+        "main.rs should not keep inline output mode struct"
+    );
+    assert!(
+        !main_rs.contains("enum OutputModeKind {"),
+        "main.rs should not keep inline output mode kind enum"
+    );
+    assert!(
+        !main_rs.contains("impl OutputMode {"),
+        "main.rs should not keep inline output mode impl"
+    );
+    assert!(
+        !main_rs.contains("struct RuntimeMode {"),
+        "main.rs should not keep inline runtime mode struct"
+    );
+    assert!(
+        !main_rs.contains("enum RuntimeModeKind {"),
+        "main.rs should not keep inline runtime mode kind enum"
+    );
+    assert!(
+        !main_rs.contains("impl RuntimeMode {"),
+        "main.rs should not keep inline runtime mode impl"
+    );
+    assert!(
+        !main_rs.contains("enum DiagnosticsMode {"),
+        "main.rs should not keep inline diagnostics mode enum"
+    );
+    assert!(
+        !main_rs.contains("impl DiagnosticsMode {"),
+        "main.rs should not keep inline diagnostics mode impl"
+    );
+    assert!(
+        !main_rs.contains("enum LocalProfile {"),
+        "main.rs should not keep inline local profile enum"
+    );
+    assert!(
+        !main_rs.contains("impl LocalProfile {"),
+        "main.rs should not keep inline local profile impl"
     );
 }
 
