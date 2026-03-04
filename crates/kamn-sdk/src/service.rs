@@ -13,6 +13,8 @@ mod service_http_io;
 mod service_response;
 #[path = "service_websocket.rs"]
 mod service_websocket;
+#[cfg(test)]
+use self::service_endpoint::resolve_request_timeout_seconds;
 use self::service_endpoint::ServiceEndpoint;
 use self::service_http_io::{
     normalize_route_segment, read_response_bytes, read_response_text, render_auth_headers,
@@ -24,8 +26,6 @@ use self::service_response::{
     map_non_success_response, parse_http_response, status_from_header,
 };
 use self::service_websocket::parse_unmasked_text_frame_payload;
-#[cfg(test)]
-use self::service_endpoint::resolve_request_timeout_seconds;
 
 const REQUEST_TIMEOUT_SECONDS_DEFAULT: u64 = 2;
 const REQUEST_TIMEOUT_SECONDS_ENV: &str = "KAMN_SDK_SERVICE_TIMEOUT_SECONDS";

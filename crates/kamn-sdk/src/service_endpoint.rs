@@ -1,9 +1,9 @@
 use super::{
     SdkError, REQUEST_TIMEOUT_SECONDS_DEFAULT, REQUEST_TIMEOUT_SECONDS_EMPTY_REASON,
-    REQUEST_TIMEOUT_SECONDS_ENV, REQUEST_TIMEOUT_SECONDS_FIELD, REQUEST_TIMEOUT_SECONDS_INVALID_REASON,
-    REQUEST_TIMEOUT_SECONDS_NON_POSITIVE_REASON, SERVICE_TLS_CA_FILE_EMPTY_BUNDLE,
-    SERVICE_TLS_CA_FILE_EMPTY_REASON, SERVICE_TLS_CA_FILE_ENV, SERVICE_TLS_CA_FILE_FIELD,
-    SERVICE_TLS_CA_FILE_PARSE_FAILED, SERVICE_TLS_CA_FILE_READ_FAILED,
+    REQUEST_TIMEOUT_SECONDS_ENV, REQUEST_TIMEOUT_SECONDS_FIELD,
+    REQUEST_TIMEOUT_SECONDS_INVALID_REASON, REQUEST_TIMEOUT_SECONDS_NON_POSITIVE_REASON,
+    SERVICE_TLS_CA_FILE_EMPTY_BUNDLE, SERVICE_TLS_CA_FILE_EMPTY_REASON, SERVICE_TLS_CA_FILE_ENV,
+    SERVICE_TLS_CA_FILE_FIELD, SERVICE_TLS_CA_FILE_PARSE_FAILED, SERVICE_TLS_CA_FILE_READ_FAILED,
     SERVICE_TLS_CA_FILE_UTF8_REASON, SERVICE_TLS_HANDSHAKE_FAILED, SERVICE_TLS_SERVER_NAME_INVALID,
 };
 use rustls::pki_types::ServerName;
@@ -13,6 +13,16 @@ use std::io::{Cursor, Read, Write};
 use std::net::{IpAddr, TcpStream};
 use std::sync::Arc;
 use std::time::Duration;
+
+fn configure_stream_timeouts(stream: &TcpStream, timeout: Duration) -> Result<(), SdkError> {
+    stream
+        .set_read_timeout(Some(timeout))
+        .map_err(|_| SdkError::TransportFailure("failed to configure service read timeout"))?;
+    stream
+        .set_write_timeout(Some(timeout))
+        .map_err(|_| SdkError::TransportFailure("failed to configure service write timeout"))?;
+    Ok(())
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ServiceScheme {
@@ -102,7 +112,8 @@ impl ServiceEndpoint {
             });
         }
 
-        let (host, port) = super::service_http_io::parse_host_port(authority, scheme.default_port())?;
+        let (host, port) =
+            super::service_http_io::parse_host_port(authority, scheme.default_port())?;
         Ok(Self {
             scheme,
             host,
@@ -122,12 +133,7 @@ impl ServiceEndpoint {
         let timeout = Duration::from_secs(resolve_request_timeout_seconds()?);
         let stream = TcpStream::connect((self.host.as_str(), self.port))
             .map_err(|_| SdkError::TransportFailure("failed to connect to service endpoint"))?;
-        stream
-            .set_read_timeout(Some(timeout))
-            .map_err(|_| SdkError::TransportFailure("failed to configure service read timeout"))?;
-        stream
-            .set_write_timeout(Some(timeout))
-            .map_err(|_| SdkError::TransportFailure("failed to configure service write timeout"))?;
+        configure_stream_timeouts(&stream, timeout)?;
         Ok(stream)
     }
 
