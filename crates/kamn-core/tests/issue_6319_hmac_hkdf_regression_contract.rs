@@ -31,28 +31,33 @@ fn source_defines_forbidden_helper(source: &str, helper_name: &str) -> bool {
     })
 }
 
-#[test]
-fn ac1_forbids_manual_hmac_hkdf_helpers() {
+fn for_each_guarded_source(mut check: impl FnMut(&str, &str)) {
     for relative_path in GUARDED_PRODUCTION_SOURCES {
         let source = load_guarded_source(relative_path);
-        for helper_name in FORBIDDEN_HELPER_NAMES {
-            assert!(
-                !source_defines_forbidden_helper(source.as_str(), helper_name),
-                "forbidden helper definition `fn {helper_name}(` found in {relative_path}"
-            );
-        }
+        check(relative_path, source.as_str());
     }
 }
 
 #[test]
+fn ac1_forbids_manual_hmac_hkdf_helpers() {
+    for_each_guarded_source(|relative_path, source| {
+        for helper_name in FORBIDDEN_HELPER_NAMES {
+            assert!(
+                !source_defines_forbidden_helper(source, helper_name),
+                "forbidden helper definition `fn {helper_name}(` found in {relative_path}"
+            );
+        }
+    });
+}
+
+#[test]
 fn ac2_requires_rustcrypto_backend_markers() {
-    for relative_path in GUARDED_PRODUCTION_SOURCES {
-        let source = load_guarded_source(relative_path);
+    for_each_guarded_source(|relative_path, source| {
         for marker in REQUIRED_BACKEND_MARKERS {
             assert!(
                 source.contains(marker),
                 "required backend marker `{marker}` missing in {relative_path}"
             );
         }
-    }
+    });
 }
