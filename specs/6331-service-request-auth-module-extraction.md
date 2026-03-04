@@ -24,11 +24,11 @@ Extract `ServiceRequestAuth` model and constructor validation logic from `crates
 - Behavior drift in validation changes `SdkError` mapping.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `service.rs` declares `mod service_request_auth;`.
-- [ ] `service.rs` no longer contains inline `ServiceRequestAuth` struct/impl.
-- [ ] Existing constructor behavior/signatures remain unchanged.
-- [ ] `service_module_extraction_contract` includes and passes request-auth extraction assertions.
-- [ ] Existing `kamn-sdk` tests covering request-auth behavior remain green.
+- [x] `service.rs` declares `mod service_request_auth;`.
+- [x] `service.rs` no longer contains inline `ServiceRequestAuth` struct/impl.
+- [x] Existing constructor behavior/signatures remain unchanged.
+- [x] `service_module_extraction_contract` includes and passes request-auth extraction assertions.
+- [x] Existing `kamn-sdk` tests covering request-auth behavior remain green.
 
 ## Files to touch
 - `crates/kamn-sdk/src/service.rs`
@@ -49,7 +49,12 @@ Extract `ServiceRequestAuth` model and constructor validation logic from `crates
   - `cargo test -p kamn-sdk --test service_api_client`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-sdk --test service_module_extraction_contract`:
+  - pass (`10 passed, 0 failed`)
+- `cargo test -p kamn-sdk --lib`:
+  - pass (`21 passed, 0 failed`)
+- `cargo test -p kamn-sdk --test service_api_client`:
+  - pass (`15 passed, 0 failed`)
 
 ## Deviations
 - None.
