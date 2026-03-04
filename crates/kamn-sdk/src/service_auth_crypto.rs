@@ -5,6 +5,13 @@ use kamn_core::{
     SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
 
+fn service_private_key_hex_from_env() -> Result<String, SdkError> {
+    std::env::var(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV).map_err(|_| SdkError::InvalidInput {
+        field: "service.request_auth.private_key",
+        reason: "missing KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+    })
+}
+
 /// Deterministic request signature builder for service API fields.
 pub fn service_signature_for_fields(
     sender_did: &AgentDid,
@@ -13,12 +20,7 @@ pub fn service_signature_for_fields(
     chain_version: &str,
     body: &str,
 ) -> Result<String, SdkError> {
-    let private_key_hex = std::env::var(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV).map_err(|_| {
-        SdkError::InvalidInput {
-            field: "service.request_auth.private_key",
-            reason: "missing KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
-        }
-    })?;
+    let private_key_hex = service_private_key_hex_from_env()?;
     let state_hash = format!("service-api:{chain_id}:{chain_version}");
     service_signature_for_state_hash_with_private_key(
         sender_did,
@@ -31,12 +33,7 @@ pub fn service_signature_for_fields(
 
 /// Derives signer public key hex from the configured service signing private key env.
 pub fn service_signer_public_key_for_fields() -> Result<String, SdkError> {
-    let private_key_hex = std::env::var(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV).map_err(|_| {
-        SdkError::InvalidInput {
-            field: "service.request_auth.private_key",
-            reason: "missing KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
-        }
-    })?;
+    let private_key_hex = service_private_key_hex_from_env()?;
     service_public_key_for_private_key(private_key_hex.as_str())
 }
 
