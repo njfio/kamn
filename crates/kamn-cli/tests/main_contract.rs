@@ -1,4 +1,12 @@
-use std::process::Command;
+use std::{fs, process::Command};
+
+fn read_repo_file(path: &str) -> String {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let full_path = format!("{root}/{path}");
+    fs::read_to_string(&full_path).unwrap_or_else(|error| {
+        panic!("failed to read {path}: {error}");
+    })
+}
 
 #[test]
 fn spec_c01_main_help_flag_contract_exits_with_code_0() {
@@ -68,5 +76,56 @@ fn spec_c05_main_parse_error_contract_exits_with_code_2() {
     assert!(
         stderr.contains("kamn-cli parse error: missing command"),
         "stderr should include parse error marker: {stderr}",
+    );
+}
+
+#[test]
+fn spec_c06_main_contract_declares_cli_args_module_extraction_wiring() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("mod cli_args;"),
+        "lib.rs should declare cli_args module"
+    );
+    assert!(
+        lib_rs.contains("parse_cli_args_impl(args)"),
+        "lib.rs should delegate parse_cli_args through cli_args module"
+    );
+    assert!(
+        lib_rs.contains("is_help_request_impl(args)"),
+        "lib.rs should delegate is_help_request through cli_args module"
+    );
+    assert!(
+        lib_rs.contains("render_help_text_impl()"),
+        "lib.rs should delegate render_help_text through cli_args module"
+    );
+}
+
+#[test]
+fn spec_c07_main_contract_removes_inline_arg_help_parser_logic_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "fn env_var_or_default(",
+        "let mut index = 0;",
+        "while index < args.len() {",
+        "let command_list = CLI_SUPPORTED_COMMANDS.join(\", \");",
+        "let flags = CLI_HELP_FLAGS.join(\", \");",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline arg/help parser marker: {marker}"
+        );
+    }
+    let cli_args_rs = read_repo_file("src/cli_args.rs");
+    assert!(
+        cli_args_rs.contains("pub(super) fn parse_cli_args_impl<I, S>("),
+        "cli_args module should define parse_cli_args implementation entrypoint"
+    );
+    assert!(
+        cli_args_rs.contains("pub(super) fn is_help_request_impl<I, S>("),
+        "cli_args module should define is_help_request implementation entrypoint"
+    );
+    assert!(
+        cli_args_rs.contains("pub(super) fn render_help_text_impl() -> String"),
+        "cli_args module should define render_help_text implementation entrypoint"
     );
 }
