@@ -27,11 +27,11 @@ Move planning/recovery option parsing out of `crates/kamn-node/src/cli.rs` into 
 - Inline planning/recovery match arms remain in `cli.rs` and violate extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cli.rs` declares a dedicated planning/recovery option parser module.
-- [ ] `cli.rs` no longer contains inline planning/recovery option match arms.
-- [ ] Planning/recovery parse behavior and `ConfigError` outcomes remain unchanged.
-- [ ] Extraction contract includes planning/recovery module assertions and passes.
-- [ ] Existing CLI tests remain green.
+- [x] `cli.rs` declares a dedicated planning/recovery option parser module.
+- [x] `cli.rs` no longer contains inline planning/recovery option match arms.
+- [x] Planning/recovery parse behavior and `ConfigError` outcomes remain unchanged.
+- [x] Extraction contract includes planning/recovery module assertions and passes.
+- [x] Existing CLI tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/cli.rs`
@@ -53,7 +53,11 @@ Move planning/recovery option parsing out of `crates/kamn-node/src/cli.rs` into 
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test cli_module_extraction_contract` (pass)
+- `cargo test -p kamn-node cli_tests` (pass)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode recovery-check --expected-state-version 1 --expected-state-hash reason --rejoin-attempt 'peer-a|1|reason|accepted' --output text --diagnostics basic` (pass)
+- `timeout 30s cargo run -p kamn-node -- --role processor --runtime-mode planning --expected-state-hash reason --output text --diagnostics basic --proposal` (expected hard-fail: missing `--proposal`)
 
 ## Deviations
 - None.
