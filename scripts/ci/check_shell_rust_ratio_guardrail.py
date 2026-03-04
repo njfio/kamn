@@ -105,6 +105,24 @@ def parse_args(argv: list[str]) -> tuple[str, str, str]:
     return repo_root, threshold_file, output_json
 
 
+def tracked_regular_files(repo_root: Path, tracked_rel_paths: list[str]) -> list[Path]:
+    files: list[Path] = []
+    for rel in tracked_rel_paths:
+        path = repo_root / rel
+        if not path.is_file() or path.is_symlink():
+            continue
+        files.append(path)
+    return files
+
+
+def total_line_count(files: list[Path]) -> int:
+    total = 0
+    for path in files:
+        with path.open("r", encoding="utf-8", errors="ignore") as handle:
+            total += sum(1 for _ in handle)
+    return total
+
+
 repo_root_arg, threshold_file_arg, output_json_arg = parse_args(sys.argv[1:])
 if not output_json_arg:
     fail_unknown_metrics("shell_rust_ratio_output_json_required")
@@ -356,41 +374,13 @@ except subprocess.CalledProcessError:
     )
     raise SystemExit(1)
 
-shell_files: list[Path] = []
-for rel in tracked_shell:
-    p = repo_root / rel
-    if not p.is_file() or p.is_symlink():
-        continue
-    shell_files.append(p)
+shell_files = tracked_regular_files(repo_root, tracked_shell)
+rust_files = tracked_regular_files(repo_root, tracked_rust)
+python_files = tracked_regular_files(repo_root, tracked_python)
 
-rust_files: list[Path] = []
-for rel in tracked_rust:
-    p = repo_root / rel
-    if not p.is_file() or p.is_symlink():
-        continue
-    rust_files.append(p)
-
-python_files: list[Path] = []
-for rel in tracked_python:
-    p = repo_root / rel
-    if not p.is_file() or p.is_symlink():
-        continue
-    python_files.append(p)
-
-shell_line_total = 0
-for path in shell_files:
-    with path.open("r", encoding="utf-8", errors="ignore") as handle:
-        shell_line_total += sum(1 for _ in handle)
-
-rust_line_total = 0
-for path in rust_files:
-    with path.open("r", encoding="utf-8", errors="ignore") as handle:
-        rust_line_total += sum(1 for _ in handle)
-
-python_line_total = 0
-for path in python_files:
-    with path.open("r", encoding="utf-8", errors="ignore") as handle:
-        python_line_total += sum(1 for _ in handle)
+shell_line_total = total_line_count(shell_files)
+rust_line_total = total_line_count(rust_files)
+python_line_total = total_line_count(python_files)
 
 if rust_line_total <= 0:
     payload = {
