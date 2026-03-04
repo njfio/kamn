@@ -69,3 +69,14 @@ backend markers remain present.
   - run dedicated lane plus existing adjacent crypto lane:
     - `cargo test -p kamn-core --test issue_6319_hmac_hkdf_regression_contract`
     - `cargo test -p kamn-core --test issue_5921_production_message_crypto`
+
+## Phase 6 integration evidence
+
+- `cargo test -p kamn-core --test issue_6319_hmac_hkdf_regression_contract`:
+  - pass (`2 passed, 0 failed`)
+- `cargo test -p kamn-core --test issue_5921_production_message_crypto`:
+  - pass (`17 passed, 0 failed`)
+
+## Deviations
+
+- None.
