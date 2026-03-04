@@ -48,6 +48,10 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare runtime_modes module"
     );
     assert!(
+        main_rs.contains("mod runtime_models;"),
+        "main.rs should declare runtime_models module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
@@ -99,6 +103,43 @@ fn main_module_extraction_contract_removes_inline_runtime_mode_profile_impls() {
     assert!(
         !main_rs.contains("impl LocalProfile {"),
         "main.rs should not keep inline local profile impl"
+    );
+}
+
+#[test]
+fn main_module_extraction_contract_removes_inline_runtime_report_model_impls() {
+    let main_rs = read_repo_file("src/main.rs");
+    assert!(
+        !main_rs.contains("struct NodeCli {"),
+        "main.rs should not keep inline NodeCli struct"
+    );
+    assert!(
+        !main_rs.contains("struct PlanningExecution {"),
+        "main.rs should not keep inline planning execution struct"
+    );
+    assert!(
+        !main_rs.contains("struct RecoveryExecution {"),
+        "main.rs should not keep inline recovery execution struct"
+    );
+    assert!(
+        !main_rs.contains("struct DaemonExecution {"),
+        "main.rs should not keep inline daemon execution struct"
+    );
+    assert!(
+        !main_rs.contains("struct DaemonRuntimeOptions {"),
+        "main.rs should not keep inline daemon runtime options struct"
+    );
+    assert!(
+        !main_rs.contains("struct KolmeLiveExecution {"),
+        "main.rs should not keep inline kolme live execution struct"
+    );
+    assert!(
+        !main_rs.contains("struct RuntimeExecutionBundle {"),
+        "main.rs should not keep inline runtime execution bundle struct"
+    );
+    assert!(
+        !main_rs.contains("struct NodeBootstrapReport {"),
+        "main.rs should not keep inline node bootstrap report struct"
     );
 }
 

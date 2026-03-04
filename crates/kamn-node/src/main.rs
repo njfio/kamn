@@ -15,8 +15,10 @@ mod observability_endpoint;
 mod output_io;
 mod report_builder;
 mod report_render;
+mod runtime_constants;
 mod runtime_entrypoint;
 mod runtime_kolme_live;
+mod runtime_models;
 mod runtime_modes;
 mod runtime_orchestration;
 mod service_api_endpoint;
@@ -49,6 +51,7 @@ use output_io::{emit_bootstrap_report_output, write_stderr_line};
 use report_builder::build_bootstrap_report;
 #[cfg(test)]
 use report_render::render_bootstrap_report;
+pub(crate) use runtime_constants::*;
 use runtime_entrypoint::serve_runtime_endpoints;
 #[cfg(test)]
 pub(crate) use runtime_entrypoint::{
@@ -59,6 +62,10 @@ pub(crate) use runtime_entrypoint::{
 use runtime_kolme_live::build_kolme_live_request;
 use runtime_kolme_live::{
     execute_kolme_live_runtime, execute_kolme_live_runtime_continuous, KolmeLiveContinuousMode,
+};
+pub(crate) use runtime_models::{
+    DaemonExecution, DaemonRuntimeOptions, KolmeLiveExecution, NodeBootstrapReport, NodeCli,
+    PlanningExecution, RecoveryExecution, RuntimeExecutionBundle,
 };
 pub(crate) use runtime_modes::{
     DiagnosticsMode, LocalProfile, OutputMode, OutputModeKind, RuntimeMode, RuntimeModeKind,
@@ -104,293 +111,6 @@ use signer::{
 };
 #[cfg(test)]
 use wire_payload::render_kolme_live_native_direct_message;
-
-const KOLME_LIVE_PROVIDER_CONTRACT: &str = "KolmeRuntimeCommitLiveProvider";
-const KOLME_LIVE_SIGNING_PROFILE: &str = "kolme-fork-secp256k1-v1";
-const KOLME_IN_MEMORY_PROVIDER_MARKER: &str = "InMemoryKolmeRuntimeCommitClient";
-const KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS: u64 = 30;
-const KOLME_LIVE_FINALITY_STATUS_PATH: &str = "/runtime-commit/status";
-const KOLME_LIVE_FINALITY_MAX_ATTEMPTS: u32 = 2;
-const KOLME_LIVE_NONCE_PATH: &str = "/get-next-nonce";
-const KOLME_LIVE_SIGNER_PROFILE_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PROFILE";
-const KOLME_LIVE_SIGNER_PROFILE_PRIMARY: &str = "ops-primary";
-const KOLME_LIVE_SIGNER_PROFILE_SECONDARY: &str = "ops-secondary";
-const KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL: &str = "env-local";
-const KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL: &str = "managed-external";
-const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
-const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV: &str =
-    "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY";
-const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV: &str =
-    "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK";
-const KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX";
-const KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY_ENV: &str =
-    "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY";
-const KOLME_LIVE_SIGNER_KEY_REF_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_KEY_REF";
-const KOLME_LIVE_SIGNER_KEY_REF_SECONDARY_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY";
-const KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV: &str = "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND";
-const KOLME_LIVE_MANAGED_SIGNER_REQUIRED_ENV: &str = "KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED";
-const KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV: &str =
-    "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING";
-const KOLME_LIVE_ENV_LOCAL_SIGNER_KEY_SOURCE_FORBIDDEN_REASON_CODE: &str =
-    "production_signer_key_source_env_local_forbidden";
-const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_ENV: &str =
-    "KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS";
-const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_DEFAULT: u64 = 5;
-const KOLME_LIVE_MANAGED_SIGNER_POLL_INTERVAL_MILLIS: u64 = 10;
-const KOLME_LIVE_NATIVE_CREATED_AT: &str = "2026-02-12T00:00:00Z";
-const FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE: [&str; 4] =
-    ["daemon", "api", "transport", "kolme-commit"];
-
-#[cfg(test)]
-pub(crate) fn daemon_test_env_lock() -> &'static std::sync::Mutex<()> {
-    use std::sync::{Mutex, OnceLock};
-
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-}
-
-#[cfg(test)]
-pub(crate) fn signer_test_env_lock() -> &'static std::sync::Mutex<()> {
-    use std::sync::{Mutex, OnceLock};
-
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct NodeCli {
-    profile: Option<LocalProfile>,
-    role: NodeRole,
-    chain_id: String,
-    chain_version: String,
-    storage_dir: String,
-    enable_gossip: bool,
-    sync_mode: SyncMode,
-    runtime_mode: RuntimeMode,
-    expected_state_version: Option<u64>,
-    expected_state_hash: Option<String>,
-    proposals: Vec<ProposalCandidate>,
-    rejoin_attempts: Vec<RejoinAttempt>,
-    daemon_max_ticks: Option<u64>,
-    daemon_tick_interval_ms: Option<u64>,
-    daemon_shutdown_signal_ticks: Vec<u64>,
-    daemon_shutdown_os_signals: bool,
-    daemon_shutdown_drain_ticks: Option<u64>,
-    daemon_shutdown_timeout_ticks: Option<u64>,
-    daemon_peer_id: Option<String>,
-    daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
-    kolme_live_base_url: Option<String>,
-    kolme_live_provider_hint: Option<String>,
-    kolme_live_signing_profile: Option<String>,
-    kolme_live_strict_signer_contracts: bool,
-    kolme_live_signer_profile: Option<String>,
-    kolme_live_signer_key_source: Option<String>,
-    api_bind_addr: Option<String>,
-    api_max_requests: u64,
-    api_idle_timeout_ms: u64,
-    api_body_limit_bytes: u64,
-    api_concurrency_limit: u64,
-    api_rate_limit_per_second: u64,
-    observability_endpoint_bind_addr: Option<String>,
-    observability_endpoint_metrics_path: String,
-    observability_endpoint_health_path: String,
-    observability_endpoint_max_requests: u64,
-    observability_endpoint_idle_timeout_ms: u64,
-    output_mode: OutputMode,
-    diagnostics_mode: DiagnosticsMode,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct PlanningExecution {
-    expected_state_hash: String,
-    candidate_count: usize,
-    scheduled_candidate_ids: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct RecoveryExecution {
-    expected_state_version: u64,
-    expected_state_hash: String,
-    attempt_count: usize,
-    decisions: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct DaemonExecution {
-    max_ticks: u64,
-    tick_interval_ms: u64,
-    executed_ticks: u64,
-    completion_reason: String,
-    service_api_relay_drained_count: u64,
-    service_api_relay_projected_state_count: u64,
-    observability_latency_p50_ms: u64,
-    observability_latency_p99_ms: u64,
-    observability_throughput_tps: u64,
-    observability_error_rate_bps: u64,
-    observability_availability_bps: u64,
-    observability_health: String,
-    observability_alert_count: usize,
-    observability_reason_code: String,
-    observability_transport_checkpoint_failures: u64,
-    observability_signer_checkpoint_failures: u64,
-    observability_commit_checkpoint_failures: u64,
-    peer_id: Option<String>,
-    peer_lifecycle_final_state: Option<String>,
-    peer_lifecycle_applied_events: Option<Vec<String>>,
-    phase6_runtime_reason_taxonomy_version: String,
-    phase6_runtime_reason_codes_csv: String,
-    phase6_runtime_reason_code: String,
-    phase6_runtime_total_cycles: u64,
-    phase6_runtime_executed_cycles: u64,
-    phase6_runtime_deferred_cycles: u64,
-    phase6_runtime_fail_closed_cycles: u64,
-    convergence_reason_taxonomy_version: String,
-    convergence_reason_codes_csv: String,
-    convergence_decision: String,
-    convergence_reason_code: String,
-    convergence_schema_gate_passed: bool,
-    convergence_error_path_gate_passed: bool,
-    convergence_concurrency_gate_passed: bool,
-    convergence_performance_budget_gate_passed: bool,
-    convergence_cost_budget_gate_passed: bool,
-    live_postgres_multi_host_execution_bundle_schema_version: String,
-    live_postgres_multi_host_execution_bundle_selector_prefix: String,
-    live_postgres_multi_host_execution_bundle_row_count: usize,
-    live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct DaemonRuntimeOptions {
-    daemon_max_ticks: Option<u64>,
-    daemon_tick_interval_ms: Option<u64>,
-    daemon_shutdown_signal_ticks: Vec<u64>,
-    daemon_shutdown_os_signals: bool,
-    daemon_shutdown_drain_ticks: Option<u64>,
-    daemon_shutdown_timeout_ticks: Option<u64>,
-    daemon_peer_id: Option<String>,
-    daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
-    service_api_state_file: Option<String>,
-    service_api_relay_spool_file: Option<String>,
-    service_api_signature_state_hash: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct KolmeLiveExecution {
-    provider_client_contract: String,
-    base_url: String,
-    provider_hint: String,
-    signing_profile: String,
-    signer_profile_selector_env: String,
-    signer_profile: String,
-    signer_key_source: String,
-    signer_private_key_env: String,
-    execution_status: String,
-    observability_latency_p50_ms: u64,
-    observability_latency_p99_ms: u64,
-    observability_throughput_tps: u64,
-    observability_error_rate_bps: u64,
-    observability_availability_bps: u64,
-    observability_health: String,
-    observability_alert_count: usize,
-    observability_reason_code: String,
-    observability_transport_checkpoint_failures: u64,
-    observability_signer_checkpoint_failures: u64,
-    observability_commit_checkpoint_failures: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-struct RuntimeExecutionBundle {
-    planning: Option<PlanningExecution>,
-    recovery: Option<RecoveryExecution>,
-    daemon: Option<DaemonExecution>,
-    kolme_live: Option<KolmeLiveExecution>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct NodeBootstrapReport {
-    runtime_mode: String,
-    diagnostics_mode: String,
-    component_count: usize,
-    planning_expected_state_hash: Option<String>,
-    planning_candidate_count: Option<usize>,
-    planning_scheduled_candidate_ids: Option<Vec<String>>,
-    recovery_expected_state_version: Option<u64>,
-    recovery_expected_state_hash: Option<String>,
-    recovery_attempt_count: Option<usize>,
-    recovery_decisions: Option<Vec<String>>,
-    daemon_max_ticks: Option<u64>,
-    daemon_tick_interval_ms: Option<u64>,
-    daemon_executed_ticks: Option<u64>,
-    daemon_completion_reason: Option<String>,
-    daemon_service_api_relay_drained_count: Option<u64>,
-    daemon_service_api_relay_projected_state_count: Option<u64>,
-    daemon_observability_latency_p50_ms: Option<u64>,
-    daemon_observability_latency_p99_ms: Option<u64>,
-    daemon_observability_throughput_tps: Option<u64>,
-    daemon_observability_error_rate_bps: Option<u64>,
-    daemon_observability_availability_bps: Option<u64>,
-    daemon_observability_health: Option<String>,
-    daemon_observability_alert_count: Option<usize>,
-    daemon_observability_reason_code: Option<String>,
-    daemon_observability_transport_checkpoint_failures: Option<u64>,
-    daemon_observability_signer_checkpoint_failures: Option<u64>,
-    daemon_observability_commit_checkpoint_failures: Option<u64>,
-    daemon_peer_id: Option<String>,
-    daemon_peer_lifecycle_final_state: Option<String>,
-    daemon_peer_lifecycle_applied_events: Option<Vec<String>>,
-    daemon_phase6_runtime_reason_taxonomy_version: Option<String>,
-    daemon_phase6_runtime_reason_codes_csv: Option<String>,
-    daemon_phase6_runtime_reason_code: Option<String>,
-    daemon_phase6_runtime_total_cycles: Option<u64>,
-    daemon_phase6_runtime_executed_cycles: Option<u64>,
-    daemon_phase6_runtime_deferred_cycles: Option<u64>,
-    daemon_phase6_runtime_fail_closed_cycles: Option<u64>,
-    daemon_convergence_reason_taxonomy_version: Option<String>,
-    daemon_convergence_reason_codes_csv: Option<String>,
-    daemon_convergence_decision: Option<String>,
-    daemon_convergence_reason_code: Option<String>,
-    daemon_convergence_schema_gate_passed: Option<bool>,
-    daemon_convergence_error_path_gate_passed: Option<bool>,
-    daemon_convergence_concurrency_gate_passed: Option<bool>,
-    daemon_convergence_performance_budget_gate_passed: Option<bool>,
-    daemon_convergence_cost_budget_gate_passed: Option<bool>,
-    daemon_live_postgres_multi_host_execution_bundle_schema_version: Option<String>,
-    daemon_live_postgres_multi_host_execution_bundle_selector_prefix: Option<String>,
-    daemon_live_postgres_multi_host_execution_bundle_row_count: Option<usize>,
-    daemon_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: Option<String>,
-    kolme_live_provider_client_contract: Option<String>,
-    kolme_live_base_url: Option<String>,
-    kolme_live_provider_hint: Option<String>,
-    kolme_live_signing_profile: Option<String>,
-    kolme_live_signer_profile_selector_env: Option<String>,
-    kolme_live_signer_profile: Option<String>,
-    kolme_live_signer_key_source: Option<String>,
-    kolme_live_signer_private_key_env: Option<String>,
-    kolme_live_execution_status: Option<String>,
-    kolme_live_observability_latency_p50_ms: Option<u64>,
-    kolme_live_observability_latency_p99_ms: Option<u64>,
-    kolme_live_observability_throughput_tps: Option<u64>,
-    kolme_live_observability_error_rate_bps: Option<u64>,
-    kolme_live_observability_availability_bps: Option<u64>,
-    kolme_live_observability_health: Option<String>,
-    kolme_live_observability_alert_count: Option<usize>,
-    kolme_live_observability_reason_code: Option<String>,
-    kolme_live_observability_transport_checkpoint_failures: Option<u64>,
-    kolme_live_observability_signer_checkpoint_failures: Option<u64>,
-    kolme_live_observability_commit_checkpoint_failures: Option<u64>,
-    profile: Option<String>,
-    role: String,
-    chain_id: String,
-    chain_version: String,
-    storage_dir: String,
-    gossip_enabled: bool,
-    sync_mode: String,
-    sync_startup: String,
-    sync_recovery: String,
-    state_version: u32,
-    pending_migrations: usize,
-    components: Vec<String>,
-}
 
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
