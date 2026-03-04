@@ -15,7 +15,7 @@ Move runtime/report data structure definitions out of `crates/kamn-node/src/main
     - `RuntimeExecutionBundle`
     - `NodeBootstrapReport`
 - Outputs:
-  - New module file `runtime_models.rs` containing extracted structs.
+  - New module file `runtime_models.rs` containing extracted structs plus focused submodules.
   - `main.rs` module wiring and imports/re-exports updated to use extracted structs.
   - Main extraction contract updates for module declaration + inline-removal assertions.
 
@@ -31,15 +31,19 @@ Move runtime/report data structure definitions out of `crates/kamn-node/src/main
 - Contract assertions fail due to inline definitions remaining in `main.rs`.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `main.rs` declares `mod runtime_models;`.
-- [ ] `main.rs` no longer contains inline definitions for extracted runtime/report structs.
-- [ ] Extracted structs remain visible where needed and behavior/signatures are unchanged.
-- [ ] `main_module_extraction_contract` includes and passes runtime models module assertions.
-- [ ] Existing `kamn-node` runtime/report tests remain green.
+- [x] `main.rs` declares `mod runtime_models;`.
+- [x] `main.rs` no longer contains inline definitions for extracted runtime/report structs.
+- [x] Extracted structs remain visible where needed and behavior/signatures are unchanged.
+- [x] `main_module_extraction_contract` includes and passes runtime models module assertions.
+- [x] Existing `kamn-node` runtime/report tests remain green.
 
 ## Files to touch
 - `crates/kamn-node/src/main.rs`
 - `crates/kamn-node/src/runtime_models.rs` (new)
+- `crates/kamn-node/src/runtime_models/node_cli.rs` (new)
+- `crates/kamn-node/src/runtime_models/runtime_execution.rs` (new)
+- `crates/kamn-node/src/runtime_models/bootstrap_report.rs` (new)
+- `crates/kamn-node/src/runtime_constants.rs` (new)
 - `crates/kamn-node/tests/main_module_extraction_contract.rs`
 - `specs/6339-main-runtime-report-models-module-extraction.md`
 
@@ -56,7 +60,15 @@ Move runtime/report data structure definitions out of `crates/kamn-node/src/main
   - `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-node --test main_module_extraction_contract`:
+  - pass (`15 passed, 0 failed`)
+- `cargo test -p kamn-node --test main_tests_command_surface_parity_contract`:
+  - pass (`2 passed, 0 failed`)
+- `cargo test -p kamn-node --test runtime_output_contract`:
+  - pass (`5 passed, 0 failed`)
+- `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode`:
+  - pass (`1 passed, 0 failed`)
 
 ## Deviations
-- None.
+- Refactor phase also extracted runtime constants/test env-lock helpers into
+  `crates/kamn-node/src/runtime_constants.rs` to keep `main.rs` below the 200 LOC size gate.
