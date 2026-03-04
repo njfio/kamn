@@ -28,6 +28,10 @@ const EXTRACTED_AUTH_CRYPTO_SNIPPETS: &[&str] = &[
     "pub fn service_verify_signature_with_public_key(",
     "fn map_service_auth_error_to_sdk(",
 ];
+const EXTRACTED_REQUEST_AUTH_SNIPPETS: &[&str] = &[
+    "pub struct ServiceRequestAuth {",
+    "impl ServiceRequestAuth {",
+];
 
 #[test]
 fn contract_issue_6305_service_root_respects_line_budget() {
@@ -101,6 +105,25 @@ fn contract_issue_6329_service_root_removes_inline_auth_crypto_impls() {
         assert!(
             !SERVICE_ROOT_SOURCE.contains(auth_crypto_snippet),
             "service.rs must not retain inline auth crypto impl: {auth_crypto_snippet}",
+        );
+    }
+}
+
+#[test]
+fn contract_issue_6331_service_root_declares_request_auth_module() {
+    assert!(
+        SERVICE_ROOT_SOURCE.contains("#[path = \"service_request_auth.rs\"]")
+            && SERVICE_ROOT_SOURCE.contains("mod service_request_auth;"),
+        "service.rs must declare #[path = \"service_request_auth.rs\"] mod service_request_auth;"
+    );
+}
+
+#[test]
+fn contract_issue_6331_service_root_removes_inline_request_auth_impls() {
+    for request_auth_snippet in EXTRACTED_REQUEST_AUTH_SNIPPETS {
+        assert!(
+            !SERVICE_ROOT_SOURCE.contains(request_auth_snippet),
+            "service.rs must not retain inline request-auth impl: {request_auth_snippet}",
         );
     }
 }
