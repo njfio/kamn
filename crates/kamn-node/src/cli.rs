@@ -12,6 +12,8 @@ use super::{
 
 #[path = "cli_config_layering.rs"]
 mod cli_config_layering;
+#[path = "cli_core_common_option_parsing.rs"]
+mod cli_core_common_option_parsing;
 #[path = "cli_daemon_option_parsing.rs"]
 mod cli_daemon_option_parsing;
 #[path = "cli_endpoint_option_parsing.rs"]
@@ -28,6 +30,7 @@ mod cli_runtime_mode_validation;
 mod cli_value_parsers;
 
 use cli_config_layering::build_layered_cli_args;
+use cli_core_common_option_parsing::{try_parse_core_common_option, CoreCommonOptionState};
 use cli_daemon_option_parsing::{try_parse_daemon_option, DaemonOptionState};
 use cli_endpoint_option_parsing::{try_parse_endpoint_option, EndpointOptionState};
 use cli_kolme_live_option_parsing::{try_parse_kolme_live_option, KolmeLiveOptionState};
@@ -107,6 +110,30 @@ where
     let _bin = iter.next();
 
     while let Some(arg) = iter.next() {
+        if try_parse_core_common_option(
+            arg.as_str(),
+            &mut iter,
+            &mut CoreCommonOptionState {
+                role: &mut role,
+                profile: &mut profile,
+                chain_id: &mut chain_id,
+                chain_version: &mut chain_version,
+                storage_dir: &mut storage_dir,
+                enable_gossip: &mut enable_gossip,
+                sync_mode: &mut sync_mode,
+                runtime_mode: &mut runtime_mode,
+                output_mode: &mut output_mode,
+                diagnostics_mode: &mut diagnostics_mode,
+                role_overridden: &mut role_overridden,
+                chain_id_overridden: &mut chain_id_overridden,
+                chain_version_overridden: &mut chain_version_overridden,
+                storage_dir_overridden: &mut storage_dir_overridden,
+                gossip_overridden: &mut gossip_overridden,
+                sync_mode_overridden: &mut sync_mode_overridden,
+            },
+        )? {
+            continue;
+        }
         if try_parse_daemon_option(
             arg.as_str(),
             &mut iter,
@@ -182,66 +209,6 @@ where
             continue;
         }
         match arg.as_str() {
-            "--role" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--role"))?;
-                role = Some(value.parse::<NodeRole>()?);
-                role_overridden = true;
-            }
-            "--profile" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--profile"))?;
-                profile = Some(LocalProfile::parse(&value)?);
-            }
-            "--chain-id" => {
-                chain_id = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--chain-id"))?;
-                chain_id_overridden = true;
-            }
-            "--chain-version" => {
-                chain_version = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--chain-version"))?;
-                chain_version_overridden = true;
-            }
-            "--storage-dir" => {
-                storage_dir = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--storage-dir"))?;
-                storage_dir_overridden = true;
-            }
-            "--disable-gossip" => {
-                enable_gossip = false;
-                gossip_overridden = true;
-            }
-            "--sync-mode" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--sync-mode"))?;
-                sync_mode = value.parse::<SyncMode>()?;
-                sync_mode_overridden = true;
-            }
-            "--runtime-mode" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--runtime-mode"))?;
-                runtime_mode = RuntimeMode::parse(&value)?;
-            }
-            "--output" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--output"))?;
-                output_mode = OutputMode::parse(&value)?;
-            }
-            "--diagnostics" => {
-                let value = iter
-                    .next()
-                    .ok_or(ConfigError::MissingArgumentValue("--diagnostics"))?;
-                diagnostics_mode = DiagnosticsMode::parse(&value)?;
-            }
             unknown => {
                 return Err(ConfigError::UnknownArgument(unknown.to_owned()));
             }
