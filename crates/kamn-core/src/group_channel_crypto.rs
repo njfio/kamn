@@ -701,6 +701,7 @@ mod tests {
     use chacha20poly1305::aead::{Aead, KeyInit, Payload};
     use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 
+    const SOURCE: &str = include_str!("group_channel_crypto.rs");
     const TEST_KEY_SEED_HEX: &str =
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
@@ -985,6 +986,30 @@ mod tests {
 
         assert_eq!(hkdf_key_a, hkdf_key_b);
         assert_ne!(hkdf_key_a, legacy_key);
+    }
+
+    #[test]
+    fn group_message_derivation_backend_markers_and_manual_helper_removal_contract() {
+        assert!(
+            SOURCE.contains(
+                "const GROUP_MESSAGE_HKDF_BACKEND_MARKER: &str = \"rustcrypto.hkdf.sha256.v1\";"
+            ),
+            "group-channel hkdf backend marker must be declared"
+        );
+        assert!(
+            SOURCE.contains(
+                "const GROUP_MESSAGE_HMAC_BACKEND_MARKER: &str = \"rustcrypto.hmac.sha256.v1\";"
+            ),
+            "group-channel hmac backend marker must be declared"
+        );
+        assert!(
+            !SOURCE.contains("\nfn hkdf_sha256_derive_32("),
+            "manual hkdf helper must be removed"
+        );
+        assert!(
+            !SOURCE.contains("\nfn hmac_sha256("),
+            "manual hmac helper must be removed"
+        );
     }
 
     #[test]
