@@ -24,8 +24,8 @@ Extract HTTP/request IO helper routines from `crates/kamn-sdk/src/service.rs` in
 - Test module imports fail if extracted helper visibility is not correctly scoped.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `service.rs` declares `mod service_http_io;`.
-- [ ] `service.rs` no longer contains inline definitions for:
+- [x] `service.rs` declares `mod service_http_io;`.
+- [x] `service.rs` no longer contains inline definitions for:
   - `write_and_flush_request`
   - `parse_host_port`
   - `normalize_route_segment`
@@ -36,8 +36,8 @@ Extract HTTP/request IO helper routines from `crates/kamn-sdk/src/service.rs` in
   - `render_auth_headers`
   - `read_response_bytes`
   - `read_response_text`
-- [ ] Existing `kamn-sdk` tests that exercise these helpers remain green.
-- [ ] `service_module_extraction_contract` test suite is green with added module/inline assertions.
+- [x] Existing `kamn-sdk` tests that exercise these helpers remain green.
+- [x] `service_module_extraction_contract` test suite is green with added module/inline assertions.
 
 ## Files to touch
 - `crates/kamn-sdk/src/service.rs`
@@ -54,12 +54,17 @@ Extract HTTP/request IO helper routines from `crates/kamn-sdk/src/service.rs` in
 - Red phase:
   - Extend `service_module_extraction_contract` with assertions for module wiring and inline helper removal; confirm failure before implementation.
 - Green/refactor/integration phases:
-  - `cargo test -p kamn-sdk service_module_extraction_contract`
-  - `cargo test -p kamn-sdk service_tests`
-  - `cargo test -p kamn-sdk service_api_client`
+  - `cargo test -p kamn-sdk --test service_module_extraction_contract`
+  - `cargo test -p kamn-sdk --lib`
+  - `cargo test -p kamn-sdk --test service_api_client`
 
 ## Phase 6 integration evidence
-- Pending implementation.
+- `cargo test -p kamn-sdk --test service_module_extraction_contract`:
+  - pass (`4 passed, 0 failed`)
+- `cargo test -p kamn-sdk --lib`:
+  - pass (`21 passed, 0 failed`)
+- `cargo test -p kamn-sdk --test service_api_client`:
+  - pass (`15 passed, 0 failed`)
 
 ## Deviations
 - None.
