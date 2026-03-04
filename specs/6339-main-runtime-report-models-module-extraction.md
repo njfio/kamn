@@ -45,6 +45,7 @@ Move runtime/report data structure definitions out of `crates/kamn-node/src/main
 - `crates/kamn-node/src/runtime_models/bootstrap_report.rs` (new)
 - `crates/kamn-node/src/runtime_constants.rs` (new)
 - `crates/kamn-node/tests/main_module_extraction_contract.rs`
+- `crates/kamn-node/tests/signer_provenance_fallback_policy_contract.rs`
 - `specs/6339-main-runtime-report-models-module-extraction.md`
 
 ## Error semantics
@@ -68,7 +69,11 @@ Move runtime/report data structure definitions out of `crates/kamn-node/src/main
   - pass (`5 passed, 0 failed`)
 - `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode`:
   - pass (`1 passed, 0 failed`)
+- `cargo test -p kamn-node --test signer_provenance_fallback_policy_contract`:
+  - pass (`4 passed, 0 failed`)
 
 ## Deviations
 - Refactor phase also extracted runtime constants/test env-lock helpers into
   `crates/kamn-node/src/runtime_constants.rs` to keep `main.rs` below the 200 LOC size gate.
+- Follow-up fix: updated signer provenance fallback policy contract source taxonomy scan to include
+  `runtime_constants.rs` after reason-code marker relocation.
