@@ -93,7 +93,9 @@ fn validate_daemon_or_full_mode(
         inputs.daemon_shutdown_drain_ticks,
         inputs.daemon_shutdown_timeout_ticks,
     )?;
-    validate_api_mode(inputs.api_bind_addr_present)?;
+    if inputs.runtime_mode.kind == RuntimeModeKind::Full {
+        validate_api_mode(inputs.api_bind_addr_present)?;
+    }
     Ok(())
 }
 
