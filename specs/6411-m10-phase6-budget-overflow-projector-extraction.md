@@ -36,11 +36,11 @@ Extract deterministic Phase-6 scheduler budget-overflow error projection (reason
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports scheduler budget overflow error projector contracts.
-- [ ] AC-2: `kamn-core` overflow error shaping delegates through extracted contracts.
-- [ ] AC-3: core M10 contract lane remains green for preflight and runtime preflight-overflow scenarios.
-- [ ] AC-4: docs + data-layer policy contract tests include overflow projector extraction markers/surface checks.
-- [ ] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
+- [x] AC-1: `kamn-data-layer` exports scheduler budget overflow error projector contracts.
+- [x] AC-2: `kamn-core` overflow error shaping delegates through extracted contracts.
+- [x] AC-3: core M10 contract lane remains green for preflight and runtime preflight-overflow scenarios.
+- [x] AC-4: docs + data-layer policy contract tests include overflow projector extraction markers/surface checks.
+- [x] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
 
 ## Files to touch
 
@@ -76,7 +76,13 @@ Extract deterministic Phase-6 scheduler budget-overflow error projection (reason
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` -> PASS (`1 passed, 0 failed`)
+- `cargo test -p kamn-data-layer --test data_layer_m10_phase6_policy_contract` -> PASS (`1 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
+- Timed core lane (current branch):
+  - `m10_phase6_budget_overflow_post_seconds=0.12`
+- Timed core lane (baseline worktree at RED commit `2255b14e`):
+  - `m10_phase6_budget_overflow_pre_seconds=16.42`
 
 ## Deviations
 
