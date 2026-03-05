@@ -34,11 +34,11 @@ Extract deterministic M10 Phase-6 policy evaluators (execution-budget and schedu
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports phase6 evaluator contracts for budget and scheduler trigger.
-- [ ] AC-2: `kamn-core` evaluator entrypoints delegate to extracted contracts with behavior compatibility.
-- [ ] AC-3: existing M10 core contract suite remains green.
-- [ ] AC-4: docs + data-layer contract tests enforce extraction markers/surface.
-- [ ] AC-5: pre/post telemetry captured for `cargo test -p kamn-core --test data_layer_m10_partition_archival`.
+- [x] AC-1: `kamn-data-layer` exports phase6 evaluator contracts for budget and scheduler trigger.
+- [x] AC-2: `kamn-core` evaluator entrypoints delegate to extracted contracts with behavior compatibility.
+- [x] AC-3: existing M10 core contract suite remains green.
+- [x] AC-4: docs + data-layer contract tests enforce extraction markers/surface.
+- [x] AC-5: pre/post telemetry captured for `cargo test -p kamn-core --test data_layer_m10_partition_archival`.
 
 ## Files to touch
 
@@ -76,7 +76,14 @@ Extract deterministic M10 Phase-6 policy evaluators (execution-budget and schedu
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_phase6_policy_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m10_phase6_policy_pre_seconds=16.78`
+    - command: `/usr/bin/time -f 'm10_phase6_policy_pre_seconds=%e' -o /tmp/m10_phase6_policy_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6399-pre/Cargo.toml`
+  - post extraction lane timing: `m10_phase6_policy_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_phase6_policy_post_seconds=%e' -o /tmp/m10_phase6_policy_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
