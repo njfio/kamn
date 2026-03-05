@@ -1,15 +1,207 @@
 use std::collections::BTreeSet;
 
+use kamn_data_layer::{
+    DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
+    DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6CompliancePort,
+    DataLayerM10Phase6CompliancePortError, DataLayerM10Phase6CryptoShredInput,
+    DataLayerM10Phase6RetentionDueCandidate,
+};
+
 use crate::{
-    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8OwnerScopeQuery,
+    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
+    DataLayerM8OwnerScopeQuery,
 };
 
 use super::error::{
-    map_m8_execution_error_to_m10, map_phase6_owner_scope_error_to_m10,
     map_phase6_projection_error_to_m10, phase6_execution_failed,
 };
 use super::shared::{authorize_owner_scope, parse_kamn_did, validate_non_empty};
 use super::*;
+
+struct M8Phase6CompliancePortAdapter<'a> {
+    compliance_registry: &'a mut DataLayerM8ComplianceRegistry,
+}
+
+impl<'a> M8Phase6CompliancePortAdapter<'a> {
+    fn new(compliance_registry: &'a mut DataLayerM8ComplianceRegistry) -> Self {
+        Self {
+            compliance_registry,
+        }
+    }
+}
+
+impl DataLayerM10Phase6CompliancePort for M8Phase6CompliancePortAdapter<'_> {
+    fn authorize_owner_scope(
+        &self,
+        requester_owner_did: &str,
+        owner_did: &str,
+    ) -> Result<String, DataLayerM10Phase6CompliancePortError> {
+        let owner_did = authorize_owner_scope(requester_owner_did, owner_did)
+            .map_err(map_phase6_owner_scope_error_to_phase6_port)?;
+        Ok(owner_did.as_str().to_owned())
+    }
+
+    fn retention_due_for_owner(
+        &self,
+        owner_did: &str,
+        now_epoch_seconds: u64,
+    ) -> Result<Vec<DataLayerM10Phase6RetentionDueCandidate>, DataLayerM10Phase6CompliancePortError>
+    {
+        self.compliance_registry
+            .retention_due_for_owner(
+                DataLayerM8OwnerScopeQuery {
+                    requester_owner_did: owner_did.to_owned(),
+                    owner_did: owner_did.to_owned(),
+                },
+                now_epoch_seconds,
+            )
+            .map_err(map_m8_execution_error_to_phase6_port)
+            .map(|candidates| {
+                candidates
+                    .into_iter()
+                    .map(|candidate| DataLayerM10Phase6RetentionDueCandidate {
+                        message_id: candidate.message_id,
+                    })
+                    .collect()
+            })
+    }
+
+    fn crypto_shred(
+        &mut self,
+        input: DataLayerM10Phase6CryptoShredInput,
+    ) -> Result<(), DataLayerM10Phase6CompliancePortError> {
+        self.compliance_registry
+            .crypto_shred(DataLayerM8CryptoShredRequest {
+                requester_owner_did: input.requester_owner_did,
+                owner_did: input.owner_did,
+                message_id: input.message_id,
+                shredded_at_epoch_seconds: input.shredded_at_epoch_seconds,
+            })
+            .map(|_| ())
+            .map_err(map_m8_execution_error_to_phase6_port)
+    }
+
+    fn message_for_owner(
+        &self,
+        owner_did: &str,
+        message_id: &str,
+    ) -> Result<DataLayerM10ComplianceProjectionMessageState, DataLayerM10Phase6CompliancePortError>
+    {
+        self.compliance_registry
+            .message_for_owner(owner_did, message_id)
+            .map_err(map_m8_execution_error_to_phase6_port)
+            .map(|message| DataLayerM10ComplianceProjectionMessageState {
+                message_id: message.message_id.clone(),
+                legal_hold_active: message.legal_hold_active,
+                shredded_at_epoch_seconds: message.shredded_at_epoch_seconds,
+            })
+    }
+}
+
+struct Phase6ProjectionPortBridge<'a, T: DataLayerM10Phase6CompliancePort> {
+    phase6_port: &'a T,
+}
+
+impl<'a, T: DataLayerM10Phase6CompliancePort> Phase6ProjectionPortBridge<'a, T> {
+    fn new(phase6_port: &'a T) -> Self {
+        Self { phase6_port }
+    }
+}
+
+impl<T: DataLayerM10Phase6CompliancePort> DataLayerM10ComplianceProjectionPort
+    for Phase6ProjectionPortBridge<'_, T>
+{
+    fn authorize_owner_scope(
+        &self,
+        requester_owner_did: &str,
+        owner_did: &str,
+    ) -> Result<String, DataLayerM10ComplianceProjectionPortError> {
+        self.phase6_port
+            .authorize_owner_scope(requester_owner_did, owner_did)
+            .map_err(map_phase6_port_error_to_projection_port_error)
+    }
+
+    fn message_for_owner(
+        &self,
+        owner_did: &str,
+        message_id: &str,
+    ) -> Result<DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPortError>
+    {
+        self.phase6_port
+            .message_for_owner(owner_did, message_id)
+            .map_err(map_phase6_port_error_to_projection_port_error)
+    }
+}
+
+fn map_phase6_port_error_to_projection_port_error(
+    error: DataLayerM10Phase6CompliancePortError,
+) -> DataLayerM10ComplianceProjectionPortError {
+    match error {
+        DataLayerM10Phase6CompliancePortError::OwnerScopeViolation => {
+            DataLayerM10ComplianceProjectionPortError::OwnerScopeViolation
+        }
+        DataLayerM10Phase6CompliancePortError::LookupFailed(detail) => {
+            DataLayerM10ComplianceProjectionPortError::LookupFailed(detail)
+        }
+        DataLayerM10Phase6CompliancePortError::InvalidInput(detail) => {
+            DataLayerM10ComplianceProjectionPortError::InvalidInput(detail)
+        }
+    }
+}
+
+fn map_m8_execution_error_to_phase6_port(
+    error: DataLayerM8ComplianceError,
+) -> DataLayerM10Phase6CompliancePortError {
+    match error {
+        DataLayerM8ComplianceError::OwnerScopeViolation { .. } => {
+            DataLayerM10Phase6CompliancePortError::OwnerScopeViolation
+        }
+        DataLayerM8ComplianceError::OwnerNotFound { .. }
+        | DataLayerM8ComplianceError::MessageNotFound { .. } => {
+            DataLayerM10Phase6CompliancePortError::LookupFailed(error.to_string())
+        }
+        DataLayerM8ComplianceError::InvalidDid(_)
+        | DataLayerM8ComplianceError::EmptyField(_)
+        | DataLayerM8ComplianceError::EmptyWrappedKeys
+        | DataLayerM8ComplianceError::InvalidWrappedKey(_)
+        | DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { .. }
+        | DataLayerM8ComplianceError::DuplicateMessageId { .. }
+        | DataLayerM8ComplianceError::LegalHoldActive { .. }
+        | DataLayerM8ComplianceError::AlreadyShredded { .. } => {
+            DataLayerM10Phase6CompliancePortError::InvalidInput(error.to_string())
+        }
+    }
+}
+
+fn map_phase6_owner_scope_error_to_phase6_port(
+    error: DataLayerM10PartitionLifecycleError,
+) -> DataLayerM10Phase6CompliancePortError {
+    match error {
+        DataLayerM10PartitionLifecycleError::OwnerScopeViolation { .. } => {
+            DataLayerM10Phase6CompliancePortError::OwnerScopeViolation
+        }
+        DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed { detail, .. } => {
+            DataLayerM10Phase6CompliancePortError::InvalidInput(detail)
+        }
+        other => DataLayerM10Phase6CompliancePortError::InvalidInput(other.to_string()),
+    }
+}
+
+fn map_phase6_port_error_to_m10(
+    error: DataLayerM10Phase6CompliancePortError,
+) -> DataLayerM10PartitionLifecycleError {
+    match error {
+        DataLayerM10Phase6CompliancePortError::OwnerScopeViolation => phase6_execution_failed(
+            DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE,
+            "phase6 owner scope authorization failed",
+        ),
+        DataLayerM10Phase6CompliancePortError::LookupFailed(detail)
+        | DataLayerM10Phase6CompliancePortError::InvalidInput(detail) => phase6_execution_failed(
+            DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
+            detail,
+        ),
+    }
+}
 
 impl DataLayerM10Phase6SchedulerPolicy {
     /// Creates a scheduler policy and validates threshold/interval values.
@@ -254,11 +446,27 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
     partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
     request: DataLayerM10Phase6ExecutionTickRequest,
 ) -> Result<DataLayerM10Phase6ExecutionTickReport, DataLayerM10PartitionLifecycleError> {
-    let owner_did = authorize_owner_scope(
-        request.requester_owner_did.as_str(),
-        request.owner_did.as_str(),
+    let mut compliance_port = M8Phase6CompliancePortAdapter::new(compliance_registry);
+    data_layer_m10_execute_phase6_orchestration_tick_with_port(
+        &mut compliance_port,
+        partition_registry,
+        request,
     )
-    .map_err(map_phase6_owner_scope_error_to_m10)?;
+}
+
+/// Executes one deterministic Phase-6 retention/shred/projection/archive orchestration tick
+/// through a core-agnostic compliance seam.
+pub fn data_layer_m10_execute_phase6_orchestration_tick_with_port(
+    compliance_port: &mut impl DataLayerM10Phase6CompliancePort,
+    partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
+    request: DataLayerM10Phase6ExecutionTickRequest,
+) -> Result<DataLayerM10Phase6ExecutionTickReport, DataLayerM10PartitionLifecycleError> {
+    let owner_did = compliance_port
+        .authorize_owner_scope(
+            request.requester_owner_did.as_str(),
+            request.owner_did.as_str(),
+        )
+        .map_err(map_phase6_port_error_to_m10)?;
     if request.now_epoch_seconds == 0 {
         return Err(phase6_execution_failed(
             DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
@@ -277,27 +485,21 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
     )
     .map_err(map_phase6_projection_error_to_m10)?;
 
-    let due_candidates = compliance_registry
-        .retention_due_for_owner(
-            DataLayerM8OwnerScopeQuery {
-                requester_owner_did: request.requester_owner_did.clone(),
-                owner_did: request.owner_did.clone(),
-            },
-            request.now_epoch_seconds,
-        )
-        .map_err(map_m8_execution_error_to_m10)?;
+    let due_candidates = compliance_port
+        .retention_due_for_owner(owner_did.as_str(), request.now_epoch_seconds)
+        .map_err(map_phase6_port_error_to_m10)?;
     let due_candidate_count = due_candidates.len();
 
     let mut shredded_message_ids = Vec::with_capacity(due_candidate_count);
     for candidate in due_candidates {
-        compliance_registry
-            .crypto_shred(DataLayerM8CryptoShredRequest {
-                requester_owner_did: request.requester_owner_did.clone(),
-                owner_did: request.owner_did.clone(),
+        compliance_port
+            .crypto_shred(DataLayerM10Phase6CryptoShredInput {
+                requester_owner_did: owner_did.clone(),
+                owner_did: owner_did.clone(),
                 message_id: candidate.message_id.clone(),
                 shredded_at_epoch_seconds: request.shredded_at_epoch_seconds,
             })
-            .map_err(map_m8_execution_error_to_m10)?;
+            .map_err(map_phase6_port_error_to_m10)?;
         shredded_message_ids.push(candidate.message_id);
     }
     shredded_message_ids.sort();
@@ -315,9 +517,9 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
         for message_id in partition_message_ids {
             validate_non_empty(message_id.as_str(), "partition_message_ids")
                 .map_err(map_phase6_projection_error_to_m10)?;
-            let message = compliance_registry
+            let message = compliance_port
                 .message_for_owner(owner_did.as_str(), message_id.as_str())
-                .map_err(map_m8_execution_error_to_m10)?;
+                .map_err(map_phase6_port_error_to_m10)?;
             if message.legal_hold_active {
                 return Err(phase6_execution_failed(
                     DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE,
@@ -327,12 +529,13 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
             deduped_partition_message_ids.insert(message_id);
         }
 
+        let projection_port = Phase6ProjectionPortBridge::new(&*compliance_port);
         let projection_report = partition_registry
-            .project_partition_shred_completeness_from_m8(
-                compliance_registry,
+            .project_partition_shred_completeness_with_port(
+                &projection_port,
                 DataLayerM10ComplianceShredProjectionRequest {
-                    requester_owner_did: request.requester_owner_did.clone(),
-                    owner_did: request.owner_did.clone(),
+                    requester_owner_did: owner_did.clone(),
+                    owner_did: owner_did.clone(),
                     partition_month_id,
                     partition_message_ids: deduped_partition_message_ids.into_iter().collect(),
                 },
@@ -355,7 +558,7 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
         .map_err(map_phase6_projection_error_to_m10)?;
 
     Ok(DataLayerM10Phase6ExecutionTickReport {
-        owner_did: owner_did.as_str().to_owned(),
+        owner_did,
         due_candidate_count,
         shredded_message_ids,
         projection_reports,
@@ -453,16 +656,37 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle(
     partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
     request: DataLayerM10Phase6SchedulerCycleRequest,
 ) -> Result<DataLayerM10Phase6SchedulerCycleReport, DataLayerM10PartitionLifecycleError> {
+    let mut compliance_port = M8Phase6CompliancePortAdapter::new(compliance_registry);
+    data_layer_m10_execute_phase6_scheduler_cycle_with_port(
+        &mut compliance_port,
+        partition_registry,
+        request,
+    )
+}
+
+/// Executes one deterministic Phase-6 scheduler cycle with trigger + budget guardrails
+/// through a core-agnostic compliance seam.
+pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
+    compliance_port: &mut impl DataLayerM10Phase6CompliancePort,
+    partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
+    mut request: DataLayerM10Phase6SchedulerCycleRequest,
+) -> Result<DataLayerM10Phase6SchedulerCycleReport, DataLayerM10PartitionLifecycleError> {
     validate_phase6_execution_tick_budget(request.budget)?;
-    let due_candidates = compliance_registry
+    let owner_did = compliance_port
+        .authorize_owner_scope(
+            request.execution_request.requester_owner_did.as_str(),
+            request.execution_request.owner_did.as_str(),
+        )
+        .map_err(map_phase6_port_error_to_m10)?;
+    request.execution_request.requester_owner_did = owner_did.clone();
+    request.execution_request.owner_did = owner_did;
+
+    let due_candidates = compliance_port
         .retention_due_for_owner(
-            DataLayerM8OwnerScopeQuery {
-                requester_owner_did: request.execution_request.requester_owner_did.clone(),
-                owner_did: request.execution_request.owner_did.clone(),
-            },
+            request.execution_request.owner_did.as_str(),
             request.execution_request.now_epoch_seconds,
         )
-        .map_err(map_m8_execution_error_to_m10)?;
+        .map_err(map_phase6_port_error_to_m10)?;
     let due_candidate_count = due_candidates.len();
     let trigger_decision = data_layer_m10_evaluate_phase6_scheduler_trigger(
         request.scheduler_policy,
@@ -507,8 +731,8 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle(
         );
     }
 
-    let execution_report = data_layer_m10_execute_phase6_orchestration_tick(
-        compliance_registry,
+    let execution_report = data_layer_m10_execute_phase6_orchestration_tick_with_port(
+        compliance_port,
         partition_registry,
         request.execution_request,
     )?;
