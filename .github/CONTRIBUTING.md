@@ -330,6 +330,7 @@ Always run fmt, clippy, and relevant tests before committing. Run the full suite
 - Architecture contracts and design decisions → `docs/architecture/`
 - Research outputs → `docs/research/`
 - Backlog maps and delivery plans → `docs/planning/`
+- Service secret rotation and key-lifecycle operator workflow → `docs/ops/runbooks/service-secret-rotation.md`
 - Each completed Task must update at least one corresponding doc.
 - Do not merge significant behavior changes without docs updates.
 

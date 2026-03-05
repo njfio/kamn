@@ -9,6 +9,7 @@ This document defines the first production-service deployment asset slice for St
 - Local multi-role topology via Docker Compose.
 - Kubernetes manifest for processor/listener/approver role deployments.
 - Low-cost contract checks for artifact integrity.
+- Service secret rotation procedure: `docs/ops/runbooks/service-secret-rotation.md`.
 
 ## Container Build
 
