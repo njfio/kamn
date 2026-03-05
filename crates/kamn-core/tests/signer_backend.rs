@@ -120,6 +120,8 @@ fn assert_signer_emulator_contract_signing(router: &SignerBackendRouter, nonce: 
 mod signer_emulator_cases;
 #[path = "signer_backend/signer_provider_cases.rs"]
 mod signer_provider_cases;
+#[path = "signer_backend/signer_signature_cases.rs"]
+mod signer_signature_cases;
 
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
@@ -380,138 +382,27 @@ fn regression_provider_client_backend_mismatch_is_rejected_without_fallback() {
 
 #[test]
 fn integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch() {
-    let _lock = signer_env_lock()
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", Some("1"));
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-    let baseline_v1_signature =
-        baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
-    assert!(
-        router
-            .verify_with_backend("secure-mock", &request, baseline_v1_signature.as_str())
-            .is_ok(),
-        "baseline-v1 signatures should be accepted only when explicit compatibility switch is enabled"
-    );
+    signer_signature_cases::run_integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch();
 }
 
 #[test]
 fn regression_signer_backend_rejects_baseline_v1_signature_by_default() {
-    // Regression: #5897
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-    let baseline_v1_signature =
-        baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
-
-    assert!(
-        router
-            .verify_with_backend("secure-mock", &request, baseline_v1_signature.as_str())
-            .is_err(),
-        "baseline-v1 signatures must be rejected by default"
-    );
+    signer_signature_cases::run_regression_signer_backend_rejects_baseline_v1_signature_by_default();
 }
 
 #[test]
 fn regression_local_backend_rejects_tampered_signature() {
-    // Regression: #5897
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::with_secure_availability(false);
-        let request = SigningRequest::new(
-            "secure:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("local fallback should sign");
-        assert_eq!(signed.backend, "local-software");
-        let tampered_signature = format!("{}ff", signed.signature);
-
-        assert!(
-            router
-                .verify_with_backend("local-software", &request, tampered_signature.as_str())
-                .is_err(),
-            "local backend must reject tampered signatures"
-        );
-    });
+    signer_signature_cases::run_regression_local_backend_rejects_tampered_signature();
 }
 
 #[test]
 fn regression_local_backend_rejects_signature_when_verifier_uses_wrong_key() {
-    // Regression: #5897
-    let _lock = signer_env_lock()
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
-    let router = SignerBackendRouter::with_secure_availability(false);
-    let request = SigningRequest::new(
-        "secure:key-regression-5897-wrong-key",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    let _signing_key_specific_guard = EnvVarGuard::set(
-        "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5897_WRONG_KEY",
-        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
-    );
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("local fallback should sign");
-
-    let _verifying_key_specific_guard = EnvVarGuard::set(
-        "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5897_WRONG_KEY",
-        Some(TEST_SIGNER_PRIVATE_KEY_B_HEX),
-    );
-    assert!(
-        router
-            .verify_with_backend("local-software", &request, signed.signature.as_str())
-            .is_err(),
-        "local backend must reject signatures when verifier key material does not match signer key"
-    );
+    signer_signature_cases::run_regression_local_backend_rejects_signature_when_verifier_uses_wrong_key();
 }
 
 #[test]
 fn regression_local_backend_rejects_baseline_v1_signature_without_compat_switch() {
-    // Regression: #5897
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-    let baseline_v1_signature =
-        baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
-
-    assert!(
-        router
-            .verify_with_backend("local-software", &request, baseline_v1_signature.as_str())
-            .is_err(),
-        "baseline-v1 must not bypass local backend verification when compat switch is disabled"
-    );
+    signer_signature_cases::run_regression_local_backend_rejects_baseline_v1_signature_without_compat_switch();
 }
 
 #[test]
