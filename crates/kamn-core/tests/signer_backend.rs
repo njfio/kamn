@@ -124,153 +124,32 @@ mod signer_provider_cases;
 mod signer_signature_cases;
 #[path = "signer_backend/signer_request_cases.rs"]
 mod signer_request_cases;
+#[path = "signer_backend/signer_core_cases.rs"]
+mod signer_core_cases;
 
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::default();
-        let request = SigningRequest::new(
-            "secure:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("secure backend should sign");
-        assert_eq!(signed.backend, "secure-mock");
-
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("signature should verify");
-    });
+    signer_core_cases::run_functional_secure_backend_signs_and_verifies_when_available();
 }
 
 #[test]
 fn functional_aws_kms_provider_routes_to_production_adapter_backend() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::default();
-        let request = SigningRequest::new(
-            "secure:aws-kms:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("secure backend should sign");
-        assert_eq!(signed.backend, "secure-aws-kms-emulator");
-
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("signature should verify");
-    });
+    signer_core_cases::run_functional_aws_kms_provider_routes_to_production_adapter_backend();
 }
 
 #[test]
 fn functional_router_uses_custom_provider_client_mapping_for_secure_provider() {
-    fn custom_provider_client(
-        request: &SigningRequest,
-        key_reference: &CanonicalSecureKeyReference,
-    ) -> Result<BackendSignature, SignerBackendError> {
-        Ok(BackendSignature {
-            backend: key_reference.provider.backend_name().to_owned(),
-            signature: format!(
-                "provider-client:{}",
-                baseline_signature_for_fields(
-                    &request.sender,
-                    request.nonce,
-                    &request.state_hash,
-                    &request.payload,
-                )
-            ),
-        })
-    }
-
-    let router = SignerBackendRouter::with_provider_client(
-        SignerProviderHandshakeMatrix::with_uniform_availability(true),
-        custom_provider_client,
-    );
-    let request = SigningRequest::new(
-        "secure:aws-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("provider client should sign through secure router");
-    assert_eq!(signed.backend, "secure-aws-kms-emulator");
-    assert!(signed
-        .signature
-        .starts_with("provider-client:sig:deterministic-v1:baseline-v1"));
+    signer_core_cases::run_functional_router_uses_custom_provider_client_mapping_for_secure_provider();
 }
 
 #[test]
 fn functional_secure_unavailable_falls_back_to_local_backend() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::with_secure_availability(false);
-        let request = SigningRequest::new(
-            "secure:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("fallback should sign");
-        assert_eq!(signed.backend, "local-software");
-
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("fallback signature should verify");
-    });
+    signer_core_cases::run_functional_secure_unavailable_falls_back_to_local_backend();
 }
 
 #[test]
 fn regression_local_backend_signing_requires_explicit_key_material() {
-    // Regression: #5913
-    let _lock = signer_env_lock()
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let _generic_key_guard = EnvVarGuard::set("KAMN_SIGNER_PRIVATE_KEY_HEX", None);
-    let _service_key_guard = EnvVarGuard::set("KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX", None);
-    let _key_specific_guard = EnvVarGuard::set(
-        "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5913_MISSING",
-        None,
-    );
-
-    let router = SignerBackendRouter::with_secure_availability(false);
-    let request = SigningRequest::new(
-        "secure:key-regression-5913-missing",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    let result = router.sign_with_secure_fallback(&request);
-    assert!(
-        matches!(
-            result,
-            Err(SignerBackendError::MissingSigningKeyMaterial { key_id, .. })
-                if key_id == "secure:key-regression-5913-missing"
-        ),
-        "local signing must fail closed when signer key env is not provisioned"
-    );
+    signer_core_cases::run_regression_local_backend_signing_requires_explicit_key_material();
 }
 
 #[test]
@@ -280,55 +159,12 @@ fn functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable
 
 #[test]
 fn integration_router_signed_transaction_passes_transaction_guards() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::default();
-        let mut guards = TransactionGuards::new();
-        let mut tx = BaselineTransaction::signed(
-            "tx-sign-1",
-            "agent-a",
-            1,
-            "payload-sign-1",
-            guards.expected_state_hash(),
-        );
-
-        let request = SigningRequest::for_transaction("secure:key-ops-2", &tx)
-            .expect("request should map from transaction");
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("signing should succeed");
-        tx.signature = signed.signature;
-
-        guards
-            .validate_and_record(&tx)
-            .expect("signed transaction should validate");
-    });
+    signer_core_cases::run_integration_router_signed_transaction_passes_transaction_guards();
 }
 
 #[test]
 fn integration_aws_kms_signed_transaction_passes_transaction_guards() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::default();
-        let mut guards = TransactionGuards::new();
-        let mut tx = BaselineTransaction::signed(
-            "tx-sign-aws-1",
-            "agent-a",
-            1,
-            "payload-sign-1",
-            guards.expected_state_hash(),
-        );
-
-        let request = SigningRequest::for_transaction("secure:aws-kms:key-ops-2", &tx)
-            .expect("request should map from transaction");
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("signing should succeed");
-        assert_eq!(signed.backend, "secure-aws-kms-emulator");
-        tx.signature = signed.signature;
-
-        guards
-            .validate_and_record(&tx)
-            .expect("signed transaction should validate");
-    });
+    signer_core_cases::run_integration_aws_kms_signed_transaction_passes_transaction_guards();
 }
 
 #[test]
@@ -353,18 +189,7 @@ fn functional_privileged_roles_deny_fallback_when_provider_unavailable() {
 
 #[test]
 fn regression_unsupported_secure_key_reference_does_not_fallback() {
-    // Regression: #160
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new("local:key-1", "agent-a", 1, "payload-1", GENESIS_STATE_HASH)
-        .expect("request should be valid");
-
-    assert_eq!(
-        router.sign_with_secure_fallback(&request),
-        Err(SignerBackendError::UnsupportedKeyReference {
-            backend: "secure-mock".to_owned(),
-            key_id: "local:key-1".to_owned(),
-        })
-    );
+    signer_core_cases::run_regression_unsupported_secure_key_reference_does_not_fallback();
 }
 
 #[test]
