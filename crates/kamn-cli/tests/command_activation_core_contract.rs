@@ -1,6 +1,8 @@
 mod command_activation_harness;
 
-use command_activation_harness::{parsed, reserve_loopback_addr, run_cli_contract_server, wait_for_server_ready};
+use command_activation_harness::{
+    parsed, reserve_loopback_addr, run_cli_contract_server, wait_for_server_ready,
+};
 use kamn_agent_lib::AgentLibError;
 use kamn_cli::{dispatch, CommandKind};
 use std::thread;
@@ -29,15 +31,20 @@ fn assert_invalid_input(error: AgentLibError, label: &str) {
 }
 
 fn assert_missing_arg_invalid(endpoint: &str, command: CommandKind, label: &str) {
-    let error = dispatch(&parsed(command, endpoint, &[])).expect_err("missing required arg should fail");
+    let error =
+        dispatch(&parsed(command, endpoint, &[])).expect_err("missing required arg should fail");
     assert_invalid_input(error, label);
 }
 
 #[test]
 fn spec_c02_cli_list_messages_command_executes_and_validates_args() {
     with_contract_server(1, |endpoint| {
-        let output = dispatch(&parsed(CommandKind::ListMessages, endpoint, &["channel-cli"]))
-            .expect("list-messages should succeed");
+        let output = dispatch(&parsed(
+            CommandKind::ListMessages,
+            endpoint,
+            &["channel-cli"],
+        ))
+        .expect("list-messages should succeed");
         assert!(
             output.text.contains("channel_id=channel-cli"),
             "list-messages output should include channel id: {output:?}"
@@ -97,8 +104,12 @@ fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
         assert!(fund_output.text.contains("escrow_id=escrow-cli"));
         assert!(fund_output.text.contains("state=funded"));
 
-        let release_output = dispatch(&parsed(CommandKind::ReleaseEscrow, endpoint, &["escrow-cli"]))
-            .expect("release-escrow should succeed");
+        let release_output = dispatch(&parsed(
+            CommandKind::ReleaseEscrow,
+            endpoint,
+            &["escrow-cli"],
+        ))
+        .expect("release-escrow should succeed");
         assert!(release_output.text.contains("state=released"));
 
         for (command, label) in [
@@ -115,8 +126,8 @@ fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
 #[test]
 fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
     with_contract_server(4, |endpoint| {
-        let register_output =
-            dispatch(&parsed(CommandKind::Register, endpoint, &[])).expect("register should succeed");
+        let register_output = dispatch(&parsed(CommandKind::Register, endpoint, &[]))
+            .expect("register should succeed");
         assert!(register_output.text.contains("kamn:did:agent"));
 
         let send_output = dispatch(&parsed(
@@ -139,8 +150,12 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
             .expect("query-message should succeed");
         assert!(query_output.text.contains("status=created"));
 
-        let task_output = dispatch(&parsed(CommandKind::CreateTask, endpoint, &[r#"{"task":"triage"}"#]))
-            .expect("create-task should succeed");
+        let task_output = dispatch(&parsed(
+            CommandKind::CreateTask,
+            endpoint,
+            &[r#"{"task":"triage"}"#],
+        ))
+        .expect("create-task should succeed");
         assert!(task_output.text.contains("task_id=task-cli"));
 
         for (command, label) in [
@@ -168,7 +183,9 @@ fn spec_c07_cli_query_task_and_profile_commands_execute_and_validate_args() {
             &["kamn:did:agent:alice"],
         ))
         .expect("query-agent-profile should succeed");
-        assert!(query_profile_output.text.contains("did=kamn:did:agent:alice"));
+        assert!(query_profile_output
+            .text
+            .contains("did=kamn:did:agent:alice"));
         assert!(query_profile_output.text.contains("reputation_score=777"));
 
         for (command, label) in [

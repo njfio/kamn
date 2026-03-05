@@ -78,11 +78,15 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
 
 fn serve_connection(mut stream: TcpStream) -> Result<(), String> {
     let (method, path) = parse_http_request(&mut stream)?;
-    let (status, body) = command_activation_harness_routes::response_for(method.as_str(), path.as_str());
+    let (status, body) =
+        command_activation_harness_routes::response_for(method.as_str(), path.as_str());
     write_http_response(&mut stream, status, body)
 }
 
-pub(crate) fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(), String> {
+pub(crate) fn run_cli_contract_server(
+    bind_addr: String,
+    max_requests: usize,
+) -> Result<(), String> {
     let listener = TcpListener::bind(bind_addr.as_str())
         .map_err(|error| format!("server bind failed: {error}"))?;
     listener
@@ -99,7 +103,9 @@ pub(crate) fn run_cli_contract_server(bind_addr: String, max_requests: usize) ->
                 serve_connection(stream)?;
                 served += 1;
             }
-            Err(error) if error.kind() == ErrorKind::WouldBlock => thread::sleep(Duration::from_millis(5)),
+            Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                thread::sleep(Duration::from_millis(5))
+            }
             Err(error) => return Err(format!("server accept failed: {error}")),
         }
     }

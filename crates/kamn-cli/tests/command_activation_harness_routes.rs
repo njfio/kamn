@@ -2,41 +2,49 @@ const DEFAULT_RESPONSE: &str = r#"{"channel_id":"unknown","messages":[]}"#;
 
 fn health_and_channel_routes(method: &str, path: &str) -> Option<(u16, &'static str)> {
     match (method, path) {
-        (
-            "GET",
-            "/healthz",
-        ) => Some((
+        ("GET", "/healthz") => Some((
             200,
             r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
         )),
-        ("POST", "/v1/messages/send") => {
-            Some((202, r#"{"message_id":"msg-cli","status":"created","runtime_mode":"api"}"#))
-        }
+        ("POST", "/v1/messages/send") => Some((
+            202,
+            r#"{"message_id":"msg-cli","status":"created","runtime_mode":"api"}"#,
+        )),
         ("POST", "/v1/channels/create") => {
             Some((201, r#"{"channel_id":"channel-cli","status":"created"}"#))
         }
-        ("GET", "/v1/channels/channel-cli/messages") => {
-            Some((200, r#"{"channel_id":"channel-cli","messages":["msg-1","msg-2"]}"#))
-        }
+        ("GET", "/v1/channels/channel-cli/messages") => Some((
+            200,
+            r#"{"channel_id":"channel-cli","messages":["msg-1","msg-2"]}"#,
+        )),
         _ => None,
     }
 }
 
 fn task_and_profile_routes(method: &str, path: &str) -> Option<(u16, &'static str)> {
     match (method, path) {
-        ("GET", "/v1/messages/msg-cli") => Some((200, r#"{"message_id":"msg-cli","status":"created"}"#)),
-        ("GET", "/v1/tasks/task-cli") => Some((200, r#"{"task_id":"task-cli","state":"submitted"}"#)),
-        ("GET", "/v1/agents/kamn:did:agent:alice") => {
-            Some((200, r#"{"did":"kamn:did:agent:alice","reputation_score":777}"#))
+        ("GET", "/v1/messages/msg-cli") => {
+            Some((200, r#"{"message_id":"msg-cli","status":"created"}"#))
         }
-        ("POST", "/v1/tasks/create") => Some((201, r#"{"task_id":"task-cli","state":"submitted"}"#)),
+        ("GET", "/v1/tasks/task-cli") => {
+            Some((200, r#"{"task_id":"task-cli","state":"submitted"}"#))
+        }
+        ("GET", "/v1/agents/kamn:did:agent:alice") => Some((
+            200,
+            r#"{"did":"kamn:did:agent:alice","reputation_score":777}"#,
+        )),
+        ("POST", "/v1/tasks/create") => {
+            Some((201, r#"{"task_id":"task-cli","state":"submitted"}"#))
+        }
         ("POST", "/v1/tasks/task-cli/accept") => {
             Some((200, r#"{"task_id":"task-cli","state":"accepted"}"#))
         }
         ("POST", "/v1/tasks/task-cli/complete") => {
             Some((200, r#"{"task_id":"task-cli","state":"completed"}"#))
         }
-        ("POST", "/v1/escrow/fund") => Some((200, r#"{"escrow_id":"escrow-cli","state":"funded"}"#)),
+        ("POST", "/v1/escrow/fund") => {
+            Some((200, r#"{"escrow_id":"escrow-cli","state":"funded"}"#))
+        }
         ("POST", "/v1/escrow/escrow-cli/release") => {
             Some((200, r#"{"escrow_id":"escrow-cli","state":"released"}"#))
         }
