@@ -473,15 +473,19 @@ mod tests {
     }
 
     #[test]
-    fn unit_service_api_tls_mode_resolution_keeps_explicit_disabled_mode() {
-        let mode = resolve_service_api_tls_mode_from_env(
+    fn regression_service_api_tls_mode_resolution_rejects_explicit_disabled_mode_for_production_paths()
+    {
+        let error = resolve_service_api_tls_mode_from_env(
             Ok("disabled".to_owned()),
             Err(env::VarError::NotPresent),
             Err(env::VarError::NotPresent),
             false,
         )
-        .expect("explicit disabled mode should remain accepted");
-        assert_eq!(mode, ServiceApiTlsMode::Disabled);
+        .expect_err("production runtime paths must reject explicit disabled tls mode");
+        assert!(
+            error.contains("service api tls disabled is forbidden"),
+            "explicit disabled production rejection should include deterministic marker: {error}"
+        );
     }
 
     #[test]
