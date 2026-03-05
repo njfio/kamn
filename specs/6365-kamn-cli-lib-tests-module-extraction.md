@@ -22,10 +22,10 @@ Move inline `#[cfg(test)]` coverage out of `crates/kamn-cli/src/lib.rs` into a d
 - Inline test module remains in `lib.rs`, violating extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `lib.rs` delegates test coverage to dedicated test module file.
-- [ ] Inline test-function markers are removed from `lib.rs`.
-- [ ] Existing `kamn-cli` test suites remain green.
-- [ ] Contract coverage asserts delegation marker and module API file existence.
+- [x] `lib.rs` delegates test coverage to dedicated test module file.
+- [x] Inline test-function markers are removed from `lib.rs`.
+- [x] Existing `kamn-cli` test suites remain green.
+- [x] Contract coverage asserts delegation marker and module API file existence.
 
 ## Files to touch
 - `specs/6365-kamn-cli-lib-tests-module-extraction.md`
@@ -46,7 +46,11 @@ Move inline `#[cfg(test)]` coverage out of `crates/kamn-cli/src/lib.rs` into a d
   - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-cli --test main_contract` (pass)
+- `cargo test -p kamn-cli --test subcommand_surface_contract` (pass)
+- `cargo test -p kamn-cli --test command_activation_contract` (pass)
+- `timeout 30s cargo run -p kamn-cli -- --help` (pass)
+- `timeout 30s cargo run -p kamn-cli --` (expected parse-error hard-fail: `missing command`)
 
 ## Deviations
 - None.
