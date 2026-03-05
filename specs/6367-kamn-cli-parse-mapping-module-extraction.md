@@ -23,10 +23,10 @@ Move `CommandKind` and `OutputFormat` parse mappings out of `crates/kamn-cli/src
 - Inline parse mappings remain in `lib.rs`, violating extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `lib.rs` declares and uses a dedicated parse-mapping module.
-- [ ] Inline parse-match markers are removed from `lib.rs`.
-- [ ] Existing `kamn-cli` tests remain green.
-- [ ] Contract coverage asserts module API markers and delegation calls.
+- [x] `lib.rs` declares and uses a dedicated parse-mapping module.
+- [x] Inline parse-match markers are removed from `lib.rs`.
+- [x] Existing `kamn-cli` tests remain green.
+- [x] Contract coverage asserts module API markers and delegation calls.
 
 ## Files to touch
 - `specs/6367-kamn-cli-parse-mapping-module-extraction.md`
@@ -49,7 +49,12 @@ Move `CommandKind` and `OutputFormat` parse mappings out of `crates/kamn-cli/src
   - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-cli --test main_contract` (pass)
+- `cargo test -p kamn-cli --test subcommand_surface_contract` (pass)
+- `cargo test -p kamn-cli --test command_activation_contract` (pass)
+- `timeout 30s cargo run -p kamn-cli -- --help` (pass)
+- `timeout 30s cargo run -p kamn-cli --` (expected parse-error hard-fail: `missing command`)
+- `timeout 30s cargo run -p kamn-cli -- definitely-unknown-command` (expected parse-error hard-fail: `unsupported command: definitely-unknown-command`)
 
 ## Deviations
 - None.
