@@ -855,16 +855,10 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
         trigger_decision,
         DataLayerM10Phase6SchedulerTriggerDecision::Deferred { .. }
     ) {
-        let cycle_policy_report: DataLayerM10Phase6SchedulerCyclePolicyReport<
-            DataLayerM10Phase6ExecutionTickReport,
-            DataLayerM10Phase6ExecutionTickBudgetReport,
-        > = data_layer_m10_project_phase6_scheduler_cycle_policy_report(
-            map_phase6_scheduler_trigger_decision_to_policy(trigger_decision),
+        return Ok(project_phase6_scheduler_cycle_report(
+            trigger_decision,
             None,
             None,
-        );
-        return Ok(map_phase6_scheduler_cycle_report_from_policy(
-            cycle_policy_report,
         ));
     }
 
@@ -908,14 +902,27 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
         );
     }
 
-    let cycle_policy_report = data_layer_m10_project_phase6_scheduler_cycle_policy_report(
-        map_phase6_scheduler_trigger_decision_to_policy(trigger_decision),
+    Ok(project_phase6_scheduler_cycle_report(
+        trigger_decision,
         Some(execution_report),
         Some(budget_report),
-    );
-    Ok(map_phase6_scheduler_cycle_report_from_policy(
-        cycle_policy_report,
     ))
+}
+
+fn project_phase6_scheduler_cycle_report(
+    trigger_decision: DataLayerM10Phase6SchedulerTriggerDecision,
+    execution_report: Option<DataLayerM10Phase6ExecutionTickReport>,
+    budget_report: Option<DataLayerM10Phase6ExecutionTickBudgetReport>,
+) -> DataLayerM10Phase6SchedulerCycleReport {
+    let cycle_policy_report: DataLayerM10Phase6SchedulerCyclePolicyReport<
+        DataLayerM10Phase6ExecutionTickReport,
+        DataLayerM10Phase6ExecutionTickBudgetReport,
+    > = data_layer_m10_project_phase6_scheduler_cycle_policy_report(
+        map_phase6_scheduler_trigger_decision_to_policy(trigger_decision),
+        execution_report,
+        budget_report,
+    );
+    map_phase6_scheduler_cycle_report_from_policy(cycle_policy_report)
 }
 
 fn validate_phase6_execution_tick_budget(
