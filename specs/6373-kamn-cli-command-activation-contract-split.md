@@ -22,10 +22,10 @@ Reduce `crates/kamn-cli/tests/command_activation_contract.rs` complexity by spli
 - New files remain oversized and fail maintainability intent.
 
 ## Acceptance criteria (testable booleans)
-- [ ] Command activation contracts are split into focused test files by command family.
-- [ ] Shared harness helpers are centralized in dedicated helper module(s).
-- [ ] Existing assertion behaviors are preserved with equivalent coverage.
-- [ ] Command activation suites and related `kamn-cli` contract tests remain green.
+- [x] Command activation contracts are split into focused test files by command family.
+- [x] Shared harness helpers are centralized in dedicated helper module(s).
+- [x] Existing assertion behaviors are preserved with equivalent coverage.
+- [x] Command activation suites and related `kamn-cli` contract tests remain green.
 
 ## Files to touch
 - `specs/6373-kamn-cli-command-activation-contract-split.md`
@@ -49,7 +49,18 @@ Reduce `crates/kamn-cli/tests/command_activation_contract.rs` complexity by spli
   - `cargo test -p kamn-cli --test subcommand_surface_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- Split wiring:
+  - `command_activation_contract.rs` now owns health/help/json assertions only.
+  - `command_activation_core_contract.rs` owns messaging/task/profile assertions.
+  - `command_activation_content_bridge_contract.rs` owns content/bridge assertions.
+  - `command_activation_harness.rs` centralizes shared dispatch/server argument helpers.
+- Executed:
+  - `cargo test -p kamn-cli --test command_activation_split_contract`
+  - `cargo test -p kamn-cli --test command_activation_contract`
+  - `cargo test -p kamn-cli --test command_activation_core_contract`
+  - `cargo test -p kamn-cli --test command_activation_content_bridge_contract`
+  - `cargo test -p kamn-cli --test main_contract`
+  - `cargo test -p kamn-cli --test subcommand_surface_contract`
 
 ## Deviations
 - None.
