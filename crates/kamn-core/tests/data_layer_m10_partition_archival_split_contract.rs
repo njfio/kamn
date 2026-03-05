@@ -82,6 +82,18 @@ const EXECUTION_BUDGET_CASES_MARKERS: [&str; 5] = [
     "pub(super) fn run_spec_c22_phase6_execution_tick_budget_invalid_limits_fail_closed(",
 ];
 
+const ORCHESTRATION_ORDERING_ROOT_MARKERS: [&str; 4] = [
+    "#[path = \"data_layer_m10_partition_archival/orchestration_ordering_cases.rs\"]",
+    "mod orchestration_ordering_cases;",
+    "orchestration_ordering_cases::run_spec_c16_phase6_orchestration_tick_executes_retention_shred_projection_and_archive();",
+    "orchestration_ordering_cases::run_spec_c17_phase6_orchestration_tick_orders_outputs_deterministically();",
+];
+
+const ORCHESTRATION_ORDERING_CASES_MARKERS: [&str; 2] = [
+    "pub(super) fn run_spec_c16_phase6_orchestration_tick_executes_retention_shred_projection_and_archive(",
+    "pub(super) fn run_spec_c17_phase6_orchestration_tick_orders_outputs_deterministically(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -187,6 +199,27 @@ fn spec_c05_execution_budget_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "execution-budget cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c06_orchestration_ordering_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let cases =
+        read_repo_file("tests/data_layer_m10_partition_archival/orchestration_ordering_cases.rs");
+
+    for marker in ORCHESTRATION_ORDERING_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain orchestration-ordering delegation marker: {marker}"
+        );
+    }
+
+    for marker in ORCHESTRATION_ORDERING_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "orchestration-ordering cases module should define marker: {marker}"
         );
     }
 }
