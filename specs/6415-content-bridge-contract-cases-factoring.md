@@ -34,11 +34,11 @@ Refactor `crates/kamn-cli/tests/command_activation_content_bridge_contract.rs` s
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `tests/command_activation_content_bridge_contract/cases.rs` exists and owns spec C08/C09 scenario bodies.
-- [ ] AC-2: `command_activation_content_bridge_contract.rs` delegates C08/C09 test execution to the cases module.
-- [ ] AC-3: follow-up contract contains checks for content-bridge factoring markers (delegate calls + cases module markers).
-- [ ] AC-4: `cargo test -p kamn-cli --test command_activation_followup_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-cli --test command_activation_content_bridge_contract` passes.
+- [x] AC-1: `tests/command_activation_content_bridge_contract/cases.rs` exists and owns spec C08/C09 scenario bodies.
+- [x] AC-2: `command_activation_content_bridge_contract.rs` delegates C08/C09 test execution to the cases module.
+- [x] AC-3: follow-up contract contains checks for content-bridge factoring markers (delegate calls + cases module markers).
+- [x] AC-4: `cargo test -p kamn-cli --test command_activation_followup_contract` passes.
+- [x] AC-5: `cargo test -p kamn-cli --test command_activation_content_bridge_contract` passes.
 
 ## Files to touch
 
@@ -66,7 +66,8 @@ Refactor `crates/kamn-cli/tests/command_activation_content_bridge_contract.rs` s
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-cli --test command_activation_followup_contract` -> PASS (`6 passed, 0 failed`)
+- `cargo test -p kamn-cli --test command_activation_content_bridge_contract` -> PASS (`2 passed, 0 failed`)
 
 ## Deviations
 
