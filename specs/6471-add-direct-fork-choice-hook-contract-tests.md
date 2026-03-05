@@ -44,6 +44,7 @@ transport/block-pipeline scenarios.
 ## Files to touch
 - `specs/6471-add-direct-fork-choice-hook-contract-tests.md`
 - `crates/kamn-core/tests/block_pipeline_fork_choice.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 
 ## Error semantics
 - Preserve existing deterministic rejection reason codes.
@@ -71,4 +72,6 @@ transport/block-pipeline scenarios.
   `cargo test -p kamn-core --test block_pipeline_fork_choice -- --nocapture`.
 
 ## Deviations
-- None.
+- Refreshed `fixtures/ci/test_file_size_policy_baseline.env` because the new
+  direct and contract test targets increased the repository test-file inventory
+  from 429 to 431 without changing any size-budget counts.
