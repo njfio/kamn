@@ -22,6 +22,9 @@ m10_phase6_port_seam_version=kamn.arch.data-layer-m10-phase6-port.v1
 m10_phase6_port_trait_path=kamn-data-layer::DataLayerM10Phase6CompliancePort
 m10_phase6_orchestration_port_entrypoint=data_layer_m10_execute_phase6_orchestration_tick_with_port
 m10_phase6_scheduler_port_entrypoint=data_layer_m10_execute_phase6_scheduler_cycle_with_port
+m10_phase6_policy_extraction_slice_version=kamn.arch.data-layer-m10-phase6-policy-extraction.v1
+m10_phase6_policy_target_crate=crates/kamn-data-layer
+m10_phase6_policy_wrapper_path=kamn-core::data_layer_m10_partition_archival::phase6
 
 | Milestone | Current ownership | Planned standalone ownership | Compatibility strategy |
 |---|---|---|---|
@@ -35,7 +38,7 @@ m10_phase6_scheduler_port_entrypoint=data_layer_m10_execute_phase6_scheduler_cyc
 | M7 | `kamn-core::data_layer_m7_timeseries_telemetry` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and rollup parity contracts |
 | M8 | `kamn-core::data_layer_m8_compliance_lifecycle` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and retention/legal-hold contracts |
 | M9 | `kamn-core::data_layer_m9_*` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and realtime dispatch contracts |
-| M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_compliance_projection_port` + `kamn-data-layer::data_layer_m10_phase6_compliance_port` | `crates/kamn-data-layer` | retry, projection, and phase6 seams extracted; keep `kamn-core` compatibility wrappers while remaining M10 implementation ownership is migrated incrementally |
+| M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_compliance_projection_port` + `kamn-data-layer::data_layer_m10_phase6_compliance_port` + `kamn-data-layer::data_layer_m10_phase6_policy_evaluator` | `crates/kamn-data-layer` | retry, projection, phase6 seam, and phase6 policy evaluators extracted; keep `kamn-core` compatibility wrappers while remaining M10 implementation ownership is migrated incrementally |
 | M11 | `kamn-data-layer::data_layer_m11_hardening_readiness` + `kamn-core::data_layer_m11_closure_evidence` | `crates/kamn-data-layer` | hardening already extracted; `kamn-core` keeps shim and closure API compatibility |
 
 ## Objective

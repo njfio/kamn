@@ -1,10 +1,15 @@
 use std::collections::BTreeSet;
 
 use kamn_data_layer::{
+    data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
+    data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
     DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6CompliancePort,
     DataLayerM10Phase6CompliancePortError, DataLayerM10Phase6CryptoShredInput,
-    DataLayerM10Phase6RetentionDueCandidate,
+    DataLayerM10Phase6PolicyBudget, DataLayerM10Phase6PolicyBudgetDecision,
+    DataLayerM10Phase6PolicyEvaluatorError, DataLayerM10Phase6PolicyReportCounts,
+    DataLayerM10Phase6RetentionDueCandidate, DataLayerM10Phase6SchedulerSignalPolicy,
+    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 use crate::{
@@ -200,6 +205,30 @@ fn map_phase6_port_error_to_m10(
             DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
             detail,
         ),
+    }
+}
+
+fn map_data_layer_policy_error_to_m10(
+    error: DataLayerM10Phase6PolicyEvaluatorError,
+) -> DataLayerM10PartitionLifecycleError {
+    match error {
+        DataLayerM10Phase6PolicyEvaluatorError::InvalidBudgetField { field, reason_code } => {
+            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget { field, reason_code }
+        }
+        DataLayerM10Phase6PolicyEvaluatorError::InvalidSchedulerPolicyField {
+            field,
+            reason_code,
+        } => DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerPolicy {
+            field,
+            reason_code,
+        },
+        DataLayerM10Phase6PolicyEvaluatorError::InvalidSchedulerSignalField {
+            field,
+            reason_code,
+        } => DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
+            field,
+            reason_code,
+        },
     }
 }
 
@@ -572,49 +601,37 @@ pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
     report: &DataLayerM10Phase6ExecutionTickReport,
     budget: DataLayerM10Phase6ExecutionTickBudget,
 ) -> Result<DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10PartitionLifecycleError> {
-    validate_phase6_execution_tick_budget(budget)?;
-
-    let budget_result = DataLayerM10Phase6ExecutionTickBudgetReport {
-        decision: DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget,
-        reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
-        due_candidate_count: report.due_candidate_count,
-        shredded_message_count: report.shredded_message_ids.len(),
-        projection_report_count: report.projection_reports.len(),
-        archived_entry_count: report.archived_entries.len(),
+    let budget_report = data_layer_m10_evaluate_phase6_execution_tick_budget_policy(
+        DataLayerM10Phase6PolicyReportCounts {
+            due_candidate_count: report.due_candidate_count,
+            shredded_message_count: report.shredded_message_ids.len(),
+            projection_report_count: report.projection_reports.len(),
+            archived_entry_count: report.archived_entries.len(),
+        },
+        DataLayerM10Phase6PolicyBudget {
+            max_due_candidates: budget.max_due_candidates,
+            max_shredded_messages: budget.max_shredded_messages,
+            max_projection_reports: budget.max_projection_reports,
+            max_archived_entries: budget.max_archived_entries,
+        },
+    )
+    .map_err(map_data_layer_policy_error_to_m10)?;
+    let decision = match budget_report.decision {
+        DataLayerM10Phase6PolicyBudgetDecision::WithinBudget => {
+            DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget
+        }
+        DataLayerM10Phase6PolicyBudgetDecision::Exceeded => {
+            DataLayerM10Phase6ExecutionBudgetDecision::Exceeded
+        }
     };
-
-    if budget_result.due_candidate_count > budget.max_due_candidates {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_DUE_CANDIDATES_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    if budget_result.shredded_message_count > budget.max_shredded_messages {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code:
-                DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_SHREDDED_MESSAGES_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    if budget_result.projection_report_count > budget.max_projection_reports {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_PROJECTIONS_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    if budget_result.archived_entry_count > budget.max_archived_entries {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code:
-                DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_ARCHIVE_ENTRIES_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-
-    Ok(budget_result)
+    Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
+        decision,
+        reason_code: budget_report.reason_code,
+        due_candidate_count: budget_report.due_candidate_count,
+        shredded_message_count: budget_report.shredded_message_count,
+        projection_report_count: budget_report.projection_report_count,
+        archived_entry_count: budget_report.archived_entry_count,
+    })
 }
 
 /// Evaluates deterministic scheduler trigger decision for a Phase-6 tick cycle.
@@ -627,27 +644,38 @@ pub fn data_layer_m10_evaluate_phase6_scheduler_trigger(
     policy: DataLayerM10Phase6SchedulerPolicy,
     signal: DataLayerM10Phase6SchedulerSignal,
 ) -> Result<DataLayerM10Phase6SchedulerTriggerDecision, DataLayerM10PartitionLifecycleError> {
-    validate_phase6_scheduler_policy(policy)?;
-    let elapsed_since_last_tick_seconds = resolve_phase6_scheduler_elapsed(signal)?;
-    if signal.due_candidate_count >= policy.due_candidate_trigger_threshold {
-        return Ok(DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
-            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_DUE_THRESHOLD_REASON_CODE,
+    let trigger_decision = data_layer_m10_evaluate_phase6_scheduler_trigger_policy(
+        DataLayerM10Phase6SchedulerTriggerPolicy {
+            due_candidate_trigger_threshold: policy.due_candidate_trigger_threshold,
+            max_tick_interval_seconds: policy.max_tick_interval_seconds,
+        },
+        DataLayerM10Phase6SchedulerSignalPolicy {
             due_candidate_count: signal.due_candidate_count,
+            last_tick_epoch_seconds: signal.last_tick_epoch_seconds,
+            now_epoch_seconds: signal.now_epoch_seconds,
+        },
+    )
+    .map_err(map_data_layer_policy_error_to_m10)?;
+    match trigger_decision {
+        DataLayerM10Phase6TriggerPolicyDecision::Deferred {
+            reason_code,
+            due_candidate_count,
             elapsed_since_last_tick_seconds,
-        });
-    }
-    if elapsed_since_last_tick_seconds >= policy.max_tick_interval_seconds {
-        return Ok(DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
-            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_INTERVAL_ELAPSED_REASON_CODE,
-            due_candidate_count: signal.due_candidate_count,
+        } => Ok(DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
+            reason_code,
+            due_candidate_count,
             elapsed_since_last_tick_seconds,
-        });
+        }),
+        DataLayerM10Phase6TriggerPolicyDecision::Triggered {
+            reason_code,
+            due_candidate_count,
+            elapsed_since_last_tick_seconds,
+        } => Ok(DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
+            reason_code,
+            due_candidate_count,
+            elapsed_since_last_tick_seconds,
+        }),
     }
-    Ok(DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
-        reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_DEFERRED_REASON_CODE,
-        due_candidate_count: signal.due_candidate_count,
-        elapsed_since_last_tick_seconds,
-    })
 }
 
 /// Executes one deterministic Phase-6 scheduler cycle with trigger + budget guardrails.
