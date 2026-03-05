@@ -1,58 +1,69 @@
 #![warn(missing_docs)]
 //! Shared canonical type surface for cross-crate KAMN domain identifiers.
 
-use std::fmt;
+/// DID-focused shared type and helper boundary for cross-crate consumers.
+pub mod did {
+    use std::fmt;
 
-pub use kamn_core::AgentDidKeyBindingError;
-pub use kamn_core::{
-    AgentDid, AgentDidError, AgentDidMetadata, DidDocument, DidService, DidVerificationMethod,
-    KamnDid, KamnDidError,
-};
+    pub use kamn_core::AgentDidKeyBindingError;
+    pub use kamn_core::{
+        AgentDid, AgentDidError, AgentDidMetadata, DidDocument, DidService, DidVerificationMethod,
+        KamnDid, KamnDidError,
+    };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Wrapper error for canonical DID parse helpers.
-pub enum SharedDidParseError {
-    /// Input was empty after canonical trim.
-    EmptyInput,
-    /// Underlying agent DID parse failure.
-    Agent(AgentDidError),
-    /// Underlying generic KAMN DID parse failure.
-    Kamn(KamnDidError),
-}
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    /// Wrapper error for canonical DID parse helpers.
+    pub enum SharedDidParseError {
+        /// Input was empty after canonical trim.
+        EmptyInput,
+        /// Underlying agent DID parse failure.
+        Agent(AgentDidError),
+        /// Underlying generic KAMN DID parse failure.
+        Kamn(KamnDidError),
+    }
 
-impl fmt::Display for SharedDidParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::EmptyInput => write!(f, "did input must not be empty"),
-            Self::Agent(error) => write!(f, "agent did parse failed: {error}"),
-            Self::Kamn(error) => write!(f, "kamn did parse failed: {error}"),
+    impl fmt::Display for SharedDidParseError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Self::EmptyInput => write!(f, "did input must not be empty"),
+                Self::Agent(error) => write!(f, "agent did parse failed: {error}"),
+                Self::Kamn(error) => write!(f, "kamn did parse failed: {error}"),
+            }
         }
     }
-}
 
-impl std::error::Error for SharedDidParseError {}
+    impl std::error::Error for SharedDidParseError {}
 
-/// Parses agent DID inputs with canonical trim semantics.
-pub fn parse_agent_did_canonical(value: &str) -> Result<AgentDid, SharedDidParseError> {
-    let normalized = value.trim();
-    if normalized.is_empty() {
-        return Err(SharedDidParseError::EmptyInput);
+    fn normalize_non_empty(value: &str) -> Result<&str, SharedDidParseError> {
+        let normalized = value.trim();
+        if normalized.is_empty() {
+            return Err(SharedDidParseError::EmptyInput);
+        }
+        Ok(normalized)
     }
-    AgentDid::parse(normalized).map_err(SharedDidParseError::Agent)
+
+    /// Parses agent DID inputs with canonical trim semantics.
+    pub fn parse_agent_did_canonical(value: &str) -> Result<AgentDid, SharedDidParseError> {
+        let normalized = normalize_non_empty(value)?;
+        AgentDid::parse(normalized).map_err(SharedDidParseError::Agent)
+    }
+
+    /// Parses generic KAMN DID inputs with canonical trim semantics.
+    pub fn parse_kamn_did_canonical(value: &str) -> Result<KamnDid, SharedDidParseError> {
+        let normalized = normalize_non_empty(value)?;
+        KamnDid::parse(normalized).map_err(SharedDidParseError::Kamn)
+    }
 }
 
-/// Parses generic KAMN DID inputs with canonical trim semantics.
-pub fn parse_kamn_did_canonical(value: &str) -> Result<KamnDid, SharedDidParseError> {
-    let normalized = value.trim();
-    if normalized.is_empty() {
-        return Err(SharedDidParseError::EmptyInput);
-    }
-    KamnDid::parse(normalized).map_err(SharedDidParseError::Kamn)
-}
+pub use did::{
+    parse_agent_did_canonical, parse_kamn_did_canonical, AgentDid, AgentDidError,
+    AgentDidKeyBindingError, AgentDidMetadata, DidDocument, DidService, DidVerificationMethod,
+    KamnDid, KamnDidError, SharedDidParseError,
+};
 
 #[cfg(test)]
 mod tests {
-    use super::{
+    use super::did::{
         parse_agent_did_canonical, parse_kamn_did_canonical, AgentDid, AgentDidError, KamnDid,
         SharedDidParseError,
     };
