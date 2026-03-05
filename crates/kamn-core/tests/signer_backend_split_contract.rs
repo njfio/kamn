@@ -22,6 +22,34 @@ const SIGNER_EMULATOR_CASES_MARKERS: [&str; 6] = [
     "pub(super) fn run_performance_signer_emulator_bulk_signing_deep_lane(",
 ];
 
+const SIGNER_PROVIDER_ROOT_MARKERS: [&str; 13] = [
+    "#[path = \"signer_backend/signer_provider_cases.rs\"]",
+    "mod signer_provider_cases;",
+    "signer_provider_cases::run_functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider();",
+    "signer_provider_cases::run_functional_admin_role_key_signs_when_sender_role_matches();",
+    "signer_provider_cases::run_regression_role_mismatch_signing_request_is_rejected();",
+    "signer_provider_cases::run_regression_admin_key_does_not_fallback_when_secure_provider_unavailable();",
+    "signer_provider_cases::run_functional_privileged_roles_deny_fallback_when_provider_unavailable();",
+    "signer_provider_cases::run_regression_unknown_secure_provider_is_rejected_without_fallback();",
+    "signer_provider_cases::run_regression_provider_handshake_policy_block_rejects_without_fallback();",
+    "signer_provider_cases::run_regression_provider_client_backend_mismatch_is_rejected_without_fallback();",
+    "signer_provider_cases::run_regression_secure_provider_backend_mismatch_is_rejected();",
+    "fn functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider()",
+    "fn regression_secure_provider_backend_mismatch_is_rejected()",
+];
+
+const SIGNER_PROVIDER_CASES_MARKERS: [&str; 9] = [
+    "pub(super) fn run_functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider(",
+    "pub(super) fn run_functional_admin_role_key_signs_when_sender_role_matches(",
+    "pub(super) fn run_regression_role_mismatch_signing_request_is_rejected(",
+    "pub(super) fn run_regression_admin_key_does_not_fallback_when_secure_provider_unavailable(",
+    "pub(super) fn run_functional_privileged_roles_deny_fallback_when_provider_unavailable(",
+    "pub(super) fn run_regression_unknown_secure_provider_is_rejected_without_fallback(",
+    "pub(super) fn run_regression_provider_handshake_policy_block_rejects_without_fallback(",
+    "pub(super) fn run_regression_provider_client_backend_mismatch_is_rejected_without_fallback(",
+    "pub(super) fn run_regression_secure_provider_backend_mismatch_is_rejected(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -46,6 +74,26 @@ fn spec_c01_signer_emulator_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "signer-emulator cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c02_signer_provider_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/signer_backend.rs");
+    let cases = read_repo_file("tests/signer_backend/signer_provider_cases.rs");
+
+    for marker in SIGNER_PROVIDER_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root signer-backend contract should contain signer-provider delegation marker: {marker}"
+        );
+    }
+
+    for marker in SIGNER_PROVIDER_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "signer-provider cases module should define marker: {marker}"
         );
     }
 }
