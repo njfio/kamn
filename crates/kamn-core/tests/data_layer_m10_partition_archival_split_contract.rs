@@ -64,6 +64,24 @@ const SCHEDULER_CYCLE_CASES_MARKERS: [&str; 5] = [
     "pub(super) fn run_spec_c27_phase6_scheduler_policy_and_signal_validation_fail_closed(",
 ];
 
+const EXECUTION_BUDGET_ROOT_MARKERS: [&str; 7] = [
+    "#[path = \"data_layer_m10_partition_archival/execution_budget_cases.rs\"]",
+    "mod execution_budget_cases;",
+    "execution_budget_cases::run_spec_c18_phase6_orchestration_tick_reports_zero_due_without_archival();",
+    "execution_budget_cases::run_spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_and_empty_projection_entries();",
+    "execution_budget_cases::run_spec_c20_phase6_execution_tick_budget_within_limits_and_exceeded_paths_are_deterministic();",
+    "execution_budget_cases::run_spec_c21_phase6_execution_tick_budget_projection_and_archive_limits_fail_closed();",
+    "execution_budget_cases::run_spec_c22_phase6_execution_tick_budget_invalid_limits_fail_closed();",
+];
+
+const EXECUTION_BUDGET_CASES_MARKERS: [&str; 5] = [
+    "pub(super) fn run_spec_c18_phase6_orchestration_tick_reports_zero_due_without_archival(",
+    "pub(super) fn run_spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_and_empty_projection_entries(",
+    "pub(super) fn run_spec_c20_phase6_execution_tick_budget_within_limits_and_exceeded_paths_are_deterministic(",
+    "pub(super) fn run_spec_c21_phase6_execution_tick_budget_projection_and_archive_limits_fail_closed(",
+    "pub(super) fn run_spec_c22_phase6_execution_tick_budget_invalid_limits_fail_closed(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -149,6 +167,26 @@ fn spec_c04_scheduler_cycle_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "scheduler-cycle cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c05_execution_budget_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let cases = read_repo_file("tests/data_layer_m10_partition_archival/execution_budget_cases.rs");
+
+    for marker in EXECUTION_BUDGET_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain execution-budget delegation marker: {marker}"
+        );
+    }
+
+    for marker in EXECUTION_BUDGET_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "execution-budget cases module should define marker: {marker}"
         );
     }
 }
