@@ -143,48 +143,34 @@ payload = {
 report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
-status="$(python3 - "$tmp_report" <<'PY'
+read_report_field() {
+  local field="$1"
+  local fallback="$2"
+  python3 - "$tmp_report" "$field" "$fallback" <<'PY'
 import json
 import sys
 from pathlib import Path
-print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("status", "fail"))
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+value = payload
+for key in sys.argv[2].split("."):
+    if isinstance(value, dict) and key in value:
+        value = value[key]
+    else:
+        value = sys.argv[3]
+        break
+if value is None:
+    value = sys.argv[3]
+print(value)
 PY
-)"
-final_decision="$(python3 - "$tmp_report" <<'PY'
-import json
-import sys
-from pathlib import Path
-print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("final_decision", "NO-GO"))
-PY
-)"
-reason_codes="$(python3 - "$tmp_report" <<'PY'
-import json
-import sys
-from pathlib import Path
-print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("reason_codes", "spec_phase6_repo_root_missing"))
-PY
-)"
-scanned_spec_count="$(python3 - "$tmp_report" <<'PY'
-import json
-import sys
-from pathlib import Path
-print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("metrics", {}).get("scanned_spec_count", "unknown"))
-PY
-)"
-closure_ready_spec_count="$(python3 - "$tmp_report" <<'PY'
-import json
-import sys
-from pathlib import Path
-print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("metrics", {}).get("closure_ready_spec_count", "unknown"))
-PY
-)"
-phase6_compliant_spec_count="$(python3 - "$tmp_report" <<'PY'
-import json
-import sys
-from pathlib import Path
-print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("metrics", {}).get("phase6_compliant_spec_count", "unknown"))
-PY
-)"
+}
+
+status="$(read_report_field "status" "fail")"
+final_decision="$(read_report_field "final_decision" "NO-GO")"
+reason_codes="$(read_report_field "reason_codes" "spec_phase6_repo_root_missing")"
+scanned_spec_count="$(read_report_field "metrics.scanned_spec_count" "unknown")"
+closure_ready_spec_count="$(read_report_field "metrics.closure_ready_spec_count" "unknown")"
+phase6_compliant_spec_count="$(read_report_field "metrics.phase6_compliant_spec_count" "unknown")"
 
 mkdir -p "$(dirname "$output_json")"
 if ! cp "$tmp_report" "$output_json"; then
