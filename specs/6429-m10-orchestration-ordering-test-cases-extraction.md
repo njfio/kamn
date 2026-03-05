@@ -33,11 +33,11 @@ Extract orchestration ordering scenario tests (`spec_c16`, `spec_c17`) from `cra
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `orchestration_ordering_cases.rs` exists and contains C16/C17 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` keeps C16/C17 entrypoint names and delegates to orchestration-ordering cases functions.
-- [ ] AC-3: split-contract test enforces C16/C17 delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `orchestration_ordering_cases.rs` exists and contains C16/C17 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` keeps C16/C17 entrypoint names and delegates to orchestration-ordering cases functions.
+- [x] AC-3: split-contract test enforces C16/C17 delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 
@@ -65,7 +65,8 @@ Extract orchestration ordering scenario tests (`spec_c16`, `spec_c17`) from `cra
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`6 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 
