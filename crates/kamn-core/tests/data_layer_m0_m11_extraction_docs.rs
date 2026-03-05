@@ -12,6 +12,9 @@ fn doc_contains_m0_m11_extraction_map_and_compatibility_markers() {
         "m10_retry_extraction_target_crate=crates/kamn-data-layer",
         "m10_retry_compatibility_wrapper_path=kamn-core::data_layer_m10_partition_archival::retry",
         "m10_full_extraction_blocker_csv=data_layer_m8_compliance_lifecycle,KamnDid",
+        "m10_projection_port_seam_version=kamn.arch.data-layer-m10-projection-port.v1",
+        "m10_projection_port_trait_path=kamn-data-layer::DataLayerM10ComplianceProjectionPort",
+        "m10_projection_port_entrypoint=DataLayerM10PartitionLifecycleRegistry::project_partition_shred_completeness_with_port",
     ];
     for marker in required_markers {
         assert!(DOC.contains(marker), "missing marker: {marker}");
