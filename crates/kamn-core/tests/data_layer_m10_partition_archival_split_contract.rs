@@ -97,7 +97,8 @@ fn spec_c02_seam_port_tests_delegate_to_cases_module() {
 #[test]
 fn spec_c03_scheduler_runtime_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
-    let cases = read_repo_file("tests/data_layer_m10_partition_archival/scheduler_runtime_cases.rs");
+    let cases =
+        read_repo_file("tests/data_layer_m10_partition_archival/scheduler_runtime_cases.rs");
 
     for marker in SCHEDULER_RUNTIME_ROOT_MARKERS {
         assert!(
