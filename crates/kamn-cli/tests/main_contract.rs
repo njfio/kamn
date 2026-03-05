@@ -236,3 +236,49 @@ fn spec_c13_main_contract_removes_inline_parse_matches_from_lib() {
         "parse mapping module should expose command-kind parse entrypoint"
     );
 }
+
+#[test]
+fn spec_c14_main_contract_declares_cli_models_module_wiring() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("mod cli_models;"),
+        "lib.rs should declare cli_models module"
+    );
+    assert!(
+        lib_rs.contains("pub use cli_models::{CommandKind, CommandOutput, OutputFormat, ParsedCliArgs};"),
+        "lib.rs should re-export model types from cli_models module"
+    );
+}
+
+#[test]
+fn spec_c15_main_contract_removes_inline_model_type_definitions_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "pub enum OutputFormat {",
+        "pub enum CommandKind {",
+        "pub struct ParsedCliArgs {",
+        "pub struct CommandOutput {",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline model type marker: {marker}"
+        );
+    }
+    let cli_models_rs = read_repo_file("src/cli_models.rs");
+    assert!(
+        cli_models_rs.contains("pub enum OutputFormat"),
+        "cli_models module should define OutputFormat"
+    );
+    assert!(
+        cli_models_rs.contains("pub enum CommandKind"),
+        "cli_models module should define CommandKind"
+    );
+    assert!(
+        cli_models_rs.contains("pub struct ParsedCliArgs"),
+        "cli_models module should define ParsedCliArgs"
+    );
+    assert!(
+        cli_models_rs.contains("pub struct CommandOutput"),
+        "cli_models module should define CommandOutput"
+    );
+}
