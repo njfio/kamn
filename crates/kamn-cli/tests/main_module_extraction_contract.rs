@@ -1,0 +1,139 @@
+use std::fs;
+
+fn read_repo_file(path: &str) -> String {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let full_path = format!("{root}/{path}");
+    fs::read_to_string(&full_path).unwrap_or_else(|error| {
+        panic!("failed to read {path}: {error}");
+    })
+}
+
+#[test]
+fn spec_c01_main_contract_file_stays_within_size_budget() {
+    let main_contract = read_repo_file("tests/main_contract.rs");
+    let line_count = main_contract.lines().count();
+    assert!(
+        line_count <= 200,
+        "main_contract.rs should stay within 200-line test budget after split; got {line_count}"
+    );
+}
+
+#[test]
+fn spec_c02_main_contract_file_removes_extraction_marker_blocks() {
+    let main_contract = read_repo_file("tests/main_contract.rs");
+    for marker in [
+        "fn spec_c06_main_contract_declares_cli_args_module_extraction_wiring()",
+        "fn spec_c07_main_contract_removes_inline_arg_help_parser_logic_from_lib()",
+        "fn spec_c08_main_contract_declares_cli_dispatch_module_extraction_wiring()",
+        "fn spec_c09_main_contract_removes_inline_dispatch_logic_from_lib()",
+        "fn spec_c10_main_contract_delegates_lib_tests_to_dedicated_module()",
+        "fn spec_c11_main_contract_removes_inline_tests_from_lib()",
+        "fn spec_c12_main_contract_declares_cli_parse_mapping_module_wiring()",
+        "fn spec_c13_main_contract_removes_inline_parse_matches_from_lib()",
+        "fn spec_c14_main_contract_declares_cli_models_module_wiring()",
+        "fn spec_c15_main_contract_removes_inline_model_type_definitions_from_lib()",
+    ] {
+        assert!(
+            !main_contract.contains(marker),
+            "main_contract.rs should not keep extraction marker block: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c03_extraction_contract_file_owns_marker_assertion_surface() {
+    let module_contract = read_repo_file("tests/main_module_extraction_contract.rs");
+    for marker in [
+        "fn spec_c01_main_contract_file_stays_within_size_budget()",
+        "fn spec_c02_main_contract_file_removes_extraction_marker_blocks()",
+    ] {
+        assert!(
+            module_contract.contains(marker),
+            "main_module_extraction_contract should retain marker assertion: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c06_main_contract_declares_cli_args_module_extraction_wiring() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("mod cli_args;"),
+        "lib.rs should declare cli_args module"
+    );
+    assert!(
+        lib_rs.contains("parse_cli_args_impl(args)"),
+        "lib.rs should delegate parse_cli_args through cli_args module"
+    );
+    assert!(
+        lib_rs.contains("is_help_request_impl(args)"),
+        "lib.rs should delegate is_help_request through cli_args module"
+    );
+    assert!(
+        lib_rs.contains("render_help_text_impl()"),
+        "lib.rs should delegate render_help_text through cli_args module"
+    );
+}
+
+#[test]
+fn spec_c07_main_contract_removes_inline_arg_help_parser_logic_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "fn env_var_or_default(",
+        "let mut index = 0;",
+        "while index < args.len() {",
+        "let command_list = CLI_SUPPORTED_COMMANDS.join(\", \");",
+        "let flags = CLI_HELP_FLAGS.join(\", \");",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline arg/help parser marker: {marker}"
+        );
+    }
+    let cli_args_rs = read_repo_file("src/cli_args.rs");
+    assert!(
+        cli_args_rs.contains("pub(super) fn parse_cli_args_impl<I, S>("),
+        "cli_args module should define parse_cli_args implementation entrypoint"
+    );
+    assert!(
+        cli_args_rs.contains("pub(super) fn is_help_request_impl<I, S>("),
+        "cli_args module should define is_help_request implementation entrypoint"
+    );
+    assert!(
+        cli_args_rs.contains("pub(super) fn render_help_text_impl() -> String"),
+        "cli_args module should define render_help_text implementation entrypoint"
+    );
+}
+
+#[test]
+fn spec_c08_main_contract_declares_cli_dispatch_module_extraction_wiring() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("mod cli_dispatch;"),
+        "lib.rs should declare cli_dispatch module"
+    );
+    assert!(
+        lib_rs.contains("dispatch_impl(parsed)"),
+        "lib.rs should delegate dispatch through cli_dispatch module"
+    );
+}
+
+#[test]
+fn spec_c09_main_contract_removes_inline_dispatch_logic_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "CommandKind::Help => Ok(help_output())",
+        "CommandKind::Register => commands::register::execute(parsed)",
+        "CommandKind::Health => commands::health::execute(parsed)",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline dispatch marker: {marker}"
+        );
+    }
+    let cli_dispatch_rs = read_repo_file("src/cli_dispatch.rs");
+    assert!(
+        cli_dispatch_rs.contains("pub(super) fn dispatch_impl("),
+        "cli_dispatch module should define dispatch implementation entrypoint"
+    );
+}
