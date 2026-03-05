@@ -32,10 +32,10 @@ Add a deterministic top-level specs index at `specs/INDEX.md` and enforce its re
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `specs/INDEX.md` exists.
-- [ ] AC-2: index includes deterministic markers for purpose, naming convention, status taxonomy, and curated links.
-- [ ] AC-3: docs contract test checks required index markers and fails closed when they regress.
-- [ ] AC-4: `cargo test -p kamn-core --test specs_index_docs` passes.
+- [x] AC-1: `specs/INDEX.md` exists.
+- [x] AC-2: index includes deterministic markers for purpose, naming convention, status taxonomy, and curated links.
+- [x] AC-3: docs contract test checks required index markers and fails closed when they regress.
+- [x] AC-4: `cargo test -p kamn-core --test specs_index_docs` passes.
 
 ## Files to touch
 
@@ -62,7 +62,7 @@ Add a deterministic top-level specs index at `specs/INDEX.md` and enforce its re
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test specs_index_docs` -> PASS (`1 passed, 0 failed`)
 
 ## Deviations
 
