@@ -3,13 +3,16 @@ mod command_activation_harness;
 use command_activation_harness::{parsed, parsed_json, with_contract_server};
 use kamn_cli::{dispatch, CommandKind};
 
+const HEALTH_STATUS_TEXT_MARKER: &str = "status=ok";
+const HEALTH_STATUS_JSON_MARKER: &str = "\"status\":\"ok\"";
+
 #[test]
 fn spec_c01_cli_health_command_executes_supported_path() {
     with_contract_server(1, |endpoint| {
         let output = dispatch(&parsed(CommandKind::Health, endpoint, &[]))
             .expect("health command should succeed");
         assert!(
-            output.text.contains("status=ok"),
+            output.text.contains(HEALTH_STATUS_TEXT_MARKER),
             "health output should include status marker: {output:?}"
         );
     });
@@ -59,7 +62,7 @@ fn spec_c06_cli_json_output_contract_renders_structured_health_projection() {
             output.json
         );
         assert!(
-            output.json.contains("\"status\":\"ok\""),
+            output.json.contains(HEALTH_STATUS_JSON_MARKER),
             "json output should include status projection: {}",
             output.json
         );
@@ -69,7 +72,7 @@ fn spec_c06_cli_json_output_contract_renders_structured_health_projection() {
             output.json
         );
         assert!(
-            output.text.contains("status=ok"),
+            output.text.contains(HEALTH_STATUS_TEXT_MARKER),
             "text projection should still include key=value markers: {}",
             output.text
         );
