@@ -162,3 +162,36 @@ fn spec_c09_main_contract_removes_inline_dispatch_logic_from_lib() {
         "cli_dispatch module should define dispatch implementation entrypoint"
     );
 }
+
+#[test]
+fn spec_c10_main_contract_delegates_lib_tests_to_dedicated_module() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("#[cfg(test)]"),
+        "lib.rs should retain cfg(test) delegation marker"
+    );
+    assert!(
+        lib_rs.contains("mod lib_tests;"),
+        "lib.rs should delegate tests through lib_tests module"
+    );
+    let lib_tests_rs = read_repo_file("src/lib_tests.rs");
+    assert!(
+        lib_tests_rs.contains("fn unit_cli_parser_honors_endpoint_flag()"),
+        "lib_tests module should carry existing unit coverage"
+    );
+}
+
+#[test]
+fn spec_c11_main_contract_removes_inline_tests_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "fn unit_cli_parser_honors_endpoint_flag()",
+        "fn regression_issue_6198_cli_parser_accepts_help_flag_as_command()",
+        "fn regression_issue_6219_render_help_text_includes_usage_commands_and_flags()",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline unit test marker: {marker}"
+        );
+    }
+}
