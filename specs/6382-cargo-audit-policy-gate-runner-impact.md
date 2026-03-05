@@ -35,10 +35,10 @@ Close the remaining `#6382` gap by adding deterministic runner-impact measuremen
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: cargo-audit policy checker emits deterministic elapsed-time metric marker and JSON field.
-- [ ] AC-2: policy checker contract tests validate elapsed-time marker presence and JSON field type.
-- [ ] AC-3: CI strategy docs include runner-impact measurement contract markers and baseline references for cargo-audit gates.
-- [ ] AC-4: docs contract tests enforce cargo-audit runner-impact markers.
+- [x] AC-1: cargo-audit policy checker emits deterministic elapsed-time metric marker and JSON field.
+- [x] AC-2: policy checker contract tests validate elapsed-time marker presence and JSON field type.
+- [x] AC-3: CI strategy docs include runner-impact measurement contract markers and baseline references for cargo-audit gates.
+- [x] AC-4: docs contract tests enforce cargo-audit runner-impact markers.
 
 ## Files to touch
 
@@ -70,7 +70,10 @@ Close the remaining `#6382` gap by adding deterministic runner-impact measuremen
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `bash scripts/ci/test_check_cargo_audit_policy.sh` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test ci_strategy_docs doc_contains_cargo_audit_runner_impact_measurement_markers -- --exact` (pass)
+- 2026-03-05: `bash scripts/ci/test_ci_tools_command_surface_contract.sh` (pass)
+- 2026-03-05: `bash scripts/ci/test_ci_strategy_contract.sh` (pass)
 
 ## Deviations
 
