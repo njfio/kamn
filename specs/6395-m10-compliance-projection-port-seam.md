@@ -36,11 +36,11 @@ Unblock the remaining M10 extraction by introducing a data-layer-owned complianc
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports `DataLayerM10ComplianceProjectionPort` and supporting seam models/errors.
-- [ ] AC-2: `kamn-core` adds `project_partition_shred_completeness_with_port(...)` and routes `project_partition_shred_completeness_from_m8(...)` through an M8 adapter.
-- [ ] AC-3: Existing M10 core contract tests stay green (behavior compatibility preserved).
-- [ ] AC-4: Docs contract enforces seam extraction markers and mitigation status.
-- [ ] AC-5: Pre/post telemetry captured for `cargo test -p kamn-core --test data_layer_m10_partition_archival`.
+- [x] AC-1: `kamn-data-layer` exports `DataLayerM10ComplianceProjectionPort` and supporting seam models/errors.
+- [x] AC-2: `kamn-core` adds `project_partition_shred_completeness_with_port(...)` and routes `project_partition_shred_completeness_from_m8(...)` through an M8 adapter.
+- [x] AC-3: Existing M10 core contract tests stay green (behavior compatibility preserved).
+- [x] AC-4: Docs contract enforces seam extraction markers and mitigation status.
+- [x] AC-5: Pre/post telemetry captured for `cargo test -p kamn-core --test data_layer_m10_partition_archival`.
 
 ## Files to touch
 
@@ -85,7 +85,14 @@ Unblock the remaining M10 extraction by introducing a data-layer-owned complianc
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_compliance_projection_port_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre seam lane timing: `m10_projection_port_pre_seconds=16.68`
+    - command: `/usr/bin/time -f 'm10_projection_port_pre_seconds=%e' -o /tmp/m10_projection_port_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6395-pre/Cargo.toml`
+  - post seam lane timing: `m10_projection_port_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_projection_port_post_seconds=%e' -o /tmp/m10_projection_port_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
