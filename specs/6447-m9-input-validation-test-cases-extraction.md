@@ -23,11 +23,11 @@ Extract invalid-input taxonomy scenarios (`spec_c14` through `spec_c16`) from `c
 - Reason-code or `field` assertion behavior changes during extraction.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `input_validation_cases.rs` exists and contains C14-C16 scenario bodies.
-- [ ] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C14-C16 entrypoints and delegates to `input_validation_cases` functions.
-- [ ] AC-3: split-contract test enforces C14-C16 delegation/ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
+- [x] AC-1: `input_validation_cases.rs` exists and contains C14-C16 scenario bodies.
+- [x] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C14-C16 entrypoints and delegates to `input_validation_cases` functions.
+- [x] AC-3: split-contract test enforces C14-C16 delegation/ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
 
 ## Files to touch
 - `specs/6447-m9-input-validation-test-cases-extraction.md`
@@ -50,7 +50,8 @@ Extract invalid-input taxonomy scenarios (`spec_c14` through `spec_c16`) from `c
   - `cargo test -p kamn-core --test data_layer_m9_realtime_delivery`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` -> PASS (`4 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` -> PASS (`16 passed, 0 failed`)
 
 ## Deviations
 - None.
