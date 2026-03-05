@@ -1,5 +1,7 @@
 use super::*;
 
+const WEBSOCKET_EVENTS_PATH: &str = "/v1/events/ws";
+
 fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str)]) -> Vec<u8> {
     send_websocket_upgrade_request_with_version(addr, path, "13", headers)
 }
@@ -191,7 +193,7 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
         service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "19"),
@@ -255,7 +257,7 @@ fn integration_service_api_endpoint_websocket_upgrade_keeps_connection_open_afte
     let read_start = Instant::now();
     let (response, peer_closed) = send_websocket_upgrade_request_with_version_close_observation(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         "13",
         &[
             ("X-KAMN-Sender-DID", sender_did),
@@ -381,7 +383,7 @@ fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_
 
     let websocket_response = send_websocket_upgrade_request(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         &[
             ("X-KAMN-Sender-DID", websocket_sender_did),
             ("X-KAMN-Request-Nonce", "601"),
@@ -476,7 +478,7 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_proje
         service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "31"),
@@ -594,7 +596,7 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_unsupported_m
         service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "37"),
@@ -657,7 +659,7 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_missing_owner
         service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "43"),
@@ -724,7 +726,7 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_cross_owner_s
         service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "41"),
@@ -797,7 +799,7 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
     let response = send_http_request_with_headers(
         bind_addr.as_str(),
         "GET",
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         "",
         &[
             ("X-KAMN-Sender-DID", sender_did),
@@ -861,7 +863,7 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
         service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request_with_version(
         bind_addr.as_str(),
-        "/v1/events/ws",
+        WEBSOCKET_EVENTS_PATH,
         "12",
         &[
             ("X-KAMN-Sender-DID", sender_did),
