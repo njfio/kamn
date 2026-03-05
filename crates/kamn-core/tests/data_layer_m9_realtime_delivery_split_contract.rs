@@ -56,6 +56,22 @@ const QUEUE_CHANNEL_CASES_MARKERS: [&str; 4] = [
     "pub(super) fn run_spec_c09_channel_dispatch_requires_sender_and_recipient_membership(",
 ];
 
+const INPUT_VALIDATION_ROOT_MARKERS: [&str; 7] = [
+    "#[path = \"data_layer_m9_realtime_delivery/input_validation_cases.rs\"]",
+    "mod input_validation_cases;",
+    "input_validation_cases::run_spec_c14_invalid_requester_owner_did_fails_closed_with_field_taxonomy();",
+    "input_validation_cases::run_spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_with_field_taxonomy();",
+    "input_validation_cases::run_spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy();",
+    "fn spec_c14_invalid_requester_owner_did_fails_closed_with_field_taxonomy()",
+    "fn spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy()",
+];
+
+const INPUT_VALIDATION_CASES_MARKERS: [&str; 3] = [
+    "pub(super) fn run_spec_c14_invalid_requester_owner_did_fails_closed_with_field_taxonomy(",
+    "pub(super) fn run_spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_with_field_taxonomy(",
+    "pub(super) fn run_spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -121,6 +137,27 @@ fn spec_c03_queue_channel_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "queue-channel cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c04_input_validation_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m9_realtime_delivery.rs");
+    let cases =
+        read_repo_file("tests/data_layer_m9_realtime_delivery/input_validation_cases.rs");
+
+    for marker in INPUT_VALIDATION_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root realtime-delivery contract should contain input-validation delegation marker: {marker}"
+        );
+    }
+
+    for marker in INPUT_VALIDATION_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "input-validation cases module should define marker: {marker}"
         );
     }
 }
