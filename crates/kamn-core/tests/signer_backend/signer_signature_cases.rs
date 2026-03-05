@@ -37,6 +37,10 @@ fn baseline_v1_signature() -> String {
     )
 }
 
+fn signer_local_fallback_router() -> SignerBackendRouter {
+    SignerBackendRouter::with_secure_availability(false)
+}
+
 fn assert_baseline_v1_rejected_by_backend(backend: &str, message: &str) {
     let router = SignerBackendRouter::default();
     let request = signer_signature_request(SIGNATURE_DEFAULT_KEY_ID);
@@ -74,7 +78,7 @@ pub(super) fn run_regression_signer_backend_rejects_baseline_v1_signature_by_def
 pub(super) fn run_regression_local_backend_rejects_tampered_signature() {
     // Regression: #5897
     with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::with_secure_availability(false);
+        let router = signer_local_fallback_router();
         let request = signer_signature_request(SIGNATURE_DEFAULT_KEY_ID);
         let signed = router
             .sign_with_secure_fallback(&request)
@@ -93,7 +97,7 @@ pub(super) fn run_regression_local_backend_rejects_tampered_signature() {
 pub(super) fn run_regression_local_backend_rejects_signature_when_verifier_uses_wrong_key() {
     // Regression: #5897
     with_signature_compat_env(None, || {
-        let router = SignerBackendRouter::with_secure_availability(false);
+        let router = signer_local_fallback_router();
         let request = signer_signature_request(SIGNATURE_WRONG_KEY_ID);
         let _signing_key_guard =
             EnvVarGuard::set(SIGNATURE_WRONG_KEY_ENV_KEY, Some(TEST_SIGNER_PRIVATE_KEY_A_HEX));
