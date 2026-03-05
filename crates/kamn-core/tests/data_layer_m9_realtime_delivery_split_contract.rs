@@ -38,6 +38,24 @@ const BASELINE_FLOW_CASES_MARKERS: [&str; 5] = [
     "pub(super) fn run_spec_c05_queue_full_dispatch_keeps_pending_cap_and_increments_deferred_counter(",
 ];
 
+const QUEUE_CHANNEL_ROOT_MARKERS: [&str; 8] = [
+    "#[path = \"data_layer_m9_realtime_delivery/queue_channel_cases.rs\"]",
+    "mod queue_channel_cases;",
+    "queue_channel_cases::run_spec_c06_queue_snapshot_preserves_pending_dispatch_order();",
+    "queue_channel_cases::run_spec_c07_queue_snapshot_preserves_deferred_dispatch_order();",
+    "queue_channel_cases::run_spec_c08_duplicate_message_identifier_is_rejected_fail_closed();",
+    "queue_channel_cases::run_spec_c09_channel_dispatch_requires_sender_and_recipient_membership();",
+    "fn spec_c06_queue_snapshot_preserves_pending_dispatch_order()",
+    "fn spec_c09_channel_dispatch_requires_sender_and_recipient_membership()",
+];
+
+const QUEUE_CHANNEL_CASES_MARKERS: [&str; 4] = [
+    "pub(super) fn run_spec_c06_queue_snapshot_preserves_pending_dispatch_order(",
+    "pub(super) fn run_spec_c07_queue_snapshot_preserves_deferred_dispatch_order(",
+    "pub(super) fn run_spec_c08_duplicate_message_identifier_is_rejected_fail_closed(",
+    "pub(super) fn run_spec_c09_channel_dispatch_requires_sender_and_recipient_membership(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -83,6 +101,26 @@ fn spec_c02_baseline_flow_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "baseline-flow cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c03_queue_channel_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m9_realtime_delivery.rs");
+    let cases = read_repo_file("tests/data_layer_m9_realtime_delivery/queue_channel_cases.rs");
+
+    for marker in QUEUE_CHANNEL_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root realtime-delivery contract should contain queue-channel delegation marker: {marker}"
+        );
+    }
+
+    for marker in QUEUE_CHANNEL_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "queue-channel cases module should define marker: {marker}"
         );
     }
 }
