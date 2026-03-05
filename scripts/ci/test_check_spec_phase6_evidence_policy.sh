@@ -71,7 +71,7 @@ make_repo_fixture() {
       echo "  - Connected fixture entrypoint"
       if [ "$include_executed" = "true" ]; then
         echo "- Executed:"
-        echo "  - \\`cargo test -p kamn-core fixture_case\\`"
+        echo "  - \`cargo test -p kamn-core fixture_case\`"
       fi
     fi
   } > "$target_root/specs/9001-fixture.md"
