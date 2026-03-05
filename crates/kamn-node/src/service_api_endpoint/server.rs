@@ -1,6 +1,8 @@
 use super::*;
 use std::io::BufReader;
 
+const SERVICE_API_TLS_REQUIRED_RUNTIME_MODES: &[&str] = &["daemon", "api", "full", "kolme-live"];
+
 fn resolve_service_api_auth_public_key_hex() -> Result<Option<String>, String> {
     match env::var(SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV) {
         Ok(value) => {
@@ -155,10 +157,9 @@ fn resolve_service_api_tls_mode_from_env(
 
 fn runtime_mode_requires_service_api_tls(runtime_mode: &str) -> bool {
     let normalized = runtime_mode.trim();
-    normalized.eq_ignore_ascii_case("daemon")
-        || normalized.eq_ignore_ascii_case("api")
-        || normalized.eq_ignore_ascii_case("full")
-        || normalized.eq_ignore_ascii_case("kolme-live")
+    SERVICE_API_TLS_REQUIRED_RUNTIME_MODES
+        .iter()
+        .any(|required_mode| normalized.eq_ignore_ascii_case(required_mode))
 }
 
 fn service_api_bind_addr_is_loopback(bind_addr: &str) -> bool {
