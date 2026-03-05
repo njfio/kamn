@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import time
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -214,6 +215,7 @@ def ordered_reason_codes(reason_codes: set[str]) -> list[str]:
 
 
 def main() -> int:
+    started_at = time.perf_counter()
     args = parse_args()
     reason_codes: set[str] = set()
     violations: list[str] = []
@@ -296,6 +298,7 @@ def main() -> int:
     ordered = ordered_reason_codes(reason_codes)
     reason_codes_csv = ",".join(ordered) if ordered else "none"
     reason_class = "violation" if status == "fail" else ("waived" if review_required else "stable")
+    policy_elapsed_seconds = round(time.perf_counter() - started_at, 6)
 
     report = {
         "schema_version": SCHEMA_VERSION,
@@ -315,6 +318,7 @@ def main() -> int:
         "unwaived_total": unwaived_total,
         "unknown_severity_total": unknown_total,
         "review_required": review_required,
+        "policy_elapsed_seconds": policy_elapsed_seconds,
         "violations": violations,
     }
     if args.output_json:
@@ -334,6 +338,7 @@ def main() -> int:
     print(f"unwaived_total={unwaived_total}")
     print(f"unknown_severity_total={unknown_total}")
     print(f"review_required={'true' if review_required else 'false'}")
+    print(f"policy_elapsed_seconds={policy_elapsed_seconds}")
     if status == "fail":
         for violation in violations:
             print(f"violation={violation}")
