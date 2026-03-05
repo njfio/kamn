@@ -639,8 +639,14 @@ mod tests {
     #[test]
     fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize()
     {
+        let struct_marker = "pub struct DirectMessageCryptoEngine";
+        let struct_index = SOURCE
+            .find(struct_marker)
+            .expect("engine struct declaration should exist");
+        let derive_window_start = struct_index.saturating_sub(160);
+        let derive_window = &SOURCE[derive_window_start..struct_index];
         assert!(
-            !SOURCE.contains("#[derive(Debug, Clone, PartialEq, Eq)]\npub struct DirectMessageCryptoEngine"),
+            !derive_window.contains("Clone"),
             "direct-message engine must not derive Clone"
         );
         assert!(
