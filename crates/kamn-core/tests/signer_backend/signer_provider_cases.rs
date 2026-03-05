@@ -19,18 +19,21 @@ fn signer_provider_request(key_id: &str, sender: &str) -> SigningRequest {
     .expect("request should be valid")
 }
 
-fn signer_provider_unavailable_router() -> SignerBackendRouter {
+fn signer_provider_router_with_aws_status(
+    aws_status: SignerProviderHandshakeStatus,
+) -> SignerBackendRouter {
     SignerBackendRouter::with_provider_handshake_matrix(SignerProviderHandshakeMatrix::with_statuses(
         SignerProviderHandshakeStatus::Available,
-        SignerProviderHandshakeStatus::Unavailable,
+        aws_status,
     ))
 }
 
+fn signer_provider_unavailable_router() -> SignerBackendRouter {
+    signer_provider_router_with_aws_status(SignerProviderHandshakeStatus::Unavailable)
+}
+
 fn signer_provider_policy_block_router() -> SignerBackendRouter {
-    SignerBackendRouter::with_provider_handshake_matrix(SignerProviderHandshakeMatrix::with_statuses(
-        SignerProviderHandshakeStatus::Available,
-        SignerProviderHandshakeStatus::PolicyBlocked,
-    ))
+    signer_provider_router_with_aws_status(SignerProviderHandshakeStatus::PolicyBlocked)
 }
 
 fn signer_provider_client_mismatch(
@@ -48,7 +51,12 @@ fn signer_provider_client_mismatch(
     })
 }
 
-fn assert_provider_fallback_denied(router: &SignerBackendRouter, key_id: &str, sender: &str, role: &str) {
+fn assert_provider_fallback_denied(
+    router: &SignerBackendRouter,
+    key_id: &str,
+    sender: &str,
+    role: &str,
+) {
     let request = signer_provider_request(key_id, sender);
     assert_eq!(
         router.sign_with_secure_fallback(&request),
