@@ -671,17 +671,23 @@ pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
             projection_report_count: report.projection_reports.len(),
             archived_entry_count: report.archived_entries.len(),
         },
-        DataLayerM10Phase6PolicyBudget {
-            max_due_candidates: budget.max_due_candidates,
-            max_shredded_messages: budget.max_shredded_messages,
-            max_projection_reports: budget.max_projection_reports,
-            max_archived_entries: budget.max_archived_entries,
-        },
+        map_phase6_policy_budget_from_core(budget),
     )
     .map_err(map_data_layer_policy_error_to_m10)?;
     Ok(map_phase6_budget_policy_report_to_core(
         budget_policy_report,
     ))
+}
+
+fn map_phase6_policy_budget_from_core(
+    budget: DataLayerM10Phase6ExecutionTickBudget,
+) -> DataLayerM10Phase6PolicyBudget {
+    DataLayerM10Phase6PolicyBudget {
+        max_due_candidates: budget.max_due_candidates,
+        max_shredded_messages: budget.max_shredded_messages,
+        max_projection_reports: budget.max_projection_reports,
+        max_archived_entries: budget.max_archived_entries,
+    }
 }
 
 fn map_phase6_budget_policy_report_to_core(
@@ -948,12 +954,7 @@ fn evaluate_phase6_scheduler_preflight_budget(
     let budget_policy_report = data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy(
         due_candidate_count,
         projection_report_count,
-        DataLayerM10Phase6PolicyBudget {
-            max_due_candidates: budget.max_due_candidates,
-            max_shredded_messages: budget.max_shredded_messages,
-            max_projection_reports: budget.max_projection_reports,
-            max_archived_entries: budget.max_archived_entries,
-        },
+        map_phase6_policy_budget_from_core(budget),
     )
     .map_err(map_data_layer_policy_error_to_m10)?;
     Ok(map_phase6_budget_policy_report_to_core(
