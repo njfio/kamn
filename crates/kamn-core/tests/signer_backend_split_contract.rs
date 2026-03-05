@@ -70,6 +70,22 @@ const SIGNER_SIGNATURE_CASES_MARKERS: [&str; 5] = [
     "pub(super) fn run_regression_local_backend_rejects_baseline_v1_signature_without_compat_switch(",
 ];
 
+const SIGNER_REQUEST_ROOT_MARKERS: [&str; 7] = [
+    "#[path = \"signer_backend/signer_request_cases.rs\"]",
+    "mod signer_request_cases;",
+    "signer_request_cases::run_for_transaction_rejects_empty_transaction_id();",
+    "signer_request_cases::run_regression_signing_request_matches_canonical_signature_profile();",
+    "signer_request_cases::run_regression_signatures_include_profile_identifier_segment();",
+    "fn for_transaction_rejects_empty_transaction_id()",
+    "fn regression_signatures_include_profile_identifier_segment()",
+];
+
+const SIGNER_REQUEST_CASES_MARKERS: [&str; 3] = [
+    "pub(super) fn run_for_transaction_rejects_empty_transaction_id(",
+    "pub(super) fn run_regression_signing_request_matches_canonical_signature_profile(",
+    "pub(super) fn run_regression_signatures_include_profile_identifier_segment(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -134,6 +150,26 @@ fn spec_c03_signer_signature_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "signer-signature cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c04_signer_request_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/signer_backend.rs");
+    let cases = read_repo_file("tests/signer_backend/signer_request_cases.rs");
+
+    for marker in SIGNER_REQUEST_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root signer-backend contract should contain signer-request delegation marker: {marker}"
+        );
+    }
+
+    for marker in SIGNER_REQUEST_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "signer-request cases module should define marker: {marker}"
         );
     }
 }
