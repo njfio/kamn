@@ -1,12 +1,30 @@
 use super::*;
 
+const OWNER_ALPHA: &str = "kamn:did:owner:alpha";
+const OWNER_INTRUDER: &str = "kamn:did:owner:intruder";
+const SENDER_ALPHA: &str = "kamn:did:agent:alpha-sender";
+const RECIPIENT_ALPHA: &str = "kamn:did:agent:alpha-recipient";
+const REQUESTER_ALPHA: &str = "kamn:did:agent:alpha-requester";
+const TARGET_ALPHA: &str = "kamn:did:agent:alpha-target";
+
+fn alpha_dispatch_request(message_id: &str, dispatched_at_epoch_seconds: u64) -> DataLayerM9DispatchRequest {
+    dispatch_request(
+        OWNER_ALPHA,
+        OWNER_ALPHA,
+        SENDER_ALPHA,
+        RECIPIENT_ALPHA,
+        message_id,
+        dispatched_at_epoch_seconds,
+    )
+}
+
 pub(super) fn run_spec_c01_connected_recipient_without_backlog_receives_delivered_ack() {
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
     registry
         .connect_presence(DataLayerM9PresenceConnectRequest {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
-            agent_did: "kamn:did:agent:alpha-recipient".to_owned(),
+            requester_owner_did: OWNER_ALPHA.to_owned(),
+            owner_did: OWNER_ALPHA.to_owned(),
+            agent_did: RECIPIENT_ALPHA.to_owned(),
             connected_since_epoch_seconds: 1_708_560_100,
             last_heartbeat_epoch_seconds: 1_708_560_100,
             gateway_node: "gateway-a".to_owned(),
@@ -15,14 +33,7 @@ pub(super) fn run_spec_c01_connected_recipient_without_backlog_receives_delivere
         .expect("presence connection should succeed");
 
     let outcome = registry
-        .dispatch_message(dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-msg-001",
-            1_708_560_110,
-        ))
+        .dispatch_message(alpha_dispatch_request("m9-msg-001", 1_708_560_110))
         .expect("dispatch should succeed");
 
     assert_eq!(outcome.ack_status, DataLayerM9DispatchAckStatus::Delivered);
@@ -34,9 +45,9 @@ pub(super) fn run_spec_c02_presence_query_is_denied_until_relationship_linkage_i
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
     registry
         .connect_presence(DataLayerM9PresenceConnectRequest {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
-            agent_did: "kamn:did:agent:alpha-target".to_owned(),
+            requester_owner_did: OWNER_ALPHA.to_owned(),
+            owner_did: OWNER_ALPHA.to_owned(),
+            agent_did: TARGET_ALPHA.to_owned(),
             connected_since_epoch_seconds: 1_708_560_100,
             last_heartbeat_epoch_seconds: 1_708_560_100,
             gateway_node: "gateway-a".to_owned(),
@@ -45,10 +56,10 @@ pub(super) fn run_spec_c02_presence_query_is_denied_until_relationship_linkage_i
         .expect("presence connection should succeed");
 
     let denied = registry.query_presence(DataLayerM9PresenceQuery {
-        requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-        owner_did: "kamn:did:owner:alpha".to_owned(),
-        requester_agent_did: "kamn:did:agent:alpha-requester".to_owned(),
-        target_agent_did: "kamn:did:agent:alpha-target".to_owned(),
+        requester_owner_did: OWNER_ALPHA.to_owned(),
+        owner_did: OWNER_ALPHA.to_owned(),
+        requester_agent_did: REQUESTER_ALPHA.to_owned(),
+        target_agent_did: TARGET_ALPHA.to_owned(),
     });
     assert!(matches!(
         denied,
@@ -59,19 +70,19 @@ pub(super) fn run_spec_c02_presence_query_is_denied_until_relationship_linkage_i
 
     registry
         .record_interaction_link(DataLayerM9PresenceRelationshipRequest {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
-            requester_agent_did: "kamn:did:agent:alpha-requester".to_owned(),
-            counterparty_agent_did: "kamn:did:agent:alpha-target".to_owned(),
+            requester_owner_did: OWNER_ALPHA.to_owned(),
+            owner_did: OWNER_ALPHA.to_owned(),
+            requester_agent_did: REQUESTER_ALPHA.to_owned(),
+            counterparty_agent_did: TARGET_ALPHA.to_owned(),
         })
         .expect("interaction linkage should register");
 
     let visible = registry
         .query_presence(DataLayerM9PresenceQuery {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
-            requester_agent_did: "kamn:did:agent:alpha-requester".to_owned(),
-            target_agent_did: "kamn:did:agent:alpha-target".to_owned(),
+            requester_owner_did: OWNER_ALPHA.to_owned(),
+            owner_did: OWNER_ALPHA.to_owned(),
+            requester_agent_did: REQUESTER_ALPHA.to_owned(),
+            target_agent_did: TARGET_ALPHA.to_owned(),
         })
         .expect("presence query should succeed after linkage");
 
@@ -88,27 +99,13 @@ pub(super) fn run_spec_c03_backpressure_thresholds_emit_warning_and_sustained_es
     for nonce in 0..DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES {
         let message_id = format!("m9-queued-{nonce:04}");
         let outcome = registry
-            .dispatch_message(dispatch_request(
-                "kamn:did:owner:alpha",
-                "kamn:did:owner:alpha",
-                "kamn:did:agent:alpha-sender",
-                "kamn:did:agent:alpha-recipient",
-                message_id.as_str(),
-                base,
-            ))
+            .dispatch_message(alpha_dispatch_request(message_id.as_str(), base))
             .expect("queue fill dispatch should succeed");
         assert_eq!(outcome.ack_status, DataLayerM9DispatchAckStatus::Queued);
     }
 
     let warning = registry
-        .dispatch_message(dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-warning-threshold",
-            base + 301,
-        ))
+        .dispatch_message(alpha_dispatch_request("m9-warning-threshold", base + 301))
         .expect("warning-threshold dispatch should succeed");
     assert_eq!(
         warning.reason_code,
@@ -118,14 +115,7 @@ pub(super) fn run_spec_c03_backpressure_thresholds_emit_warning_and_sustained_es
     assert!(!warning.escrow_timeout_extension_recommended);
 
     let sustained = registry
-        .dispatch_message(dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-sustained-threshold",
-            base + 3_601,
-        ))
+        .dispatch_message(alpha_dispatch_request("m9-sustained-threshold", base + 3_601))
         .expect("sustained-threshold dispatch should succeed");
     assert_eq!(
         sustained.reason_code,
@@ -138,10 +128,10 @@ pub(super) fn run_spec_c03_backpressure_thresholds_emit_warning_and_sustained_es
 pub(super) fn run_spec_c04_cross_owner_dispatch_and_presence_queries_are_denied_fail_closed() {
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
     let denied_dispatch = registry.dispatch_message(dispatch_request(
-        "kamn:did:owner:intruder",
-        "kamn:did:owner:alpha",
-        "kamn:did:agent:alpha-sender",
-        "kamn:did:agent:alpha-recipient",
+        OWNER_INTRUDER,
+        OWNER_ALPHA,
+        SENDER_ALPHA,
+        RECIPIENT_ALPHA,
         "m9-cross-owner",
         1_708_560_100,
     ));
@@ -153,10 +143,10 @@ pub(super) fn run_spec_c04_cross_owner_dispatch_and_presence_queries_are_denied_
     ));
 
     let denied_presence = registry.query_presence(DataLayerM9PresenceQuery {
-        requester_owner_did: "kamn:did:owner:intruder".to_owned(),
-        owner_did: "kamn:did:owner:alpha".to_owned(),
-        requester_agent_did: "kamn:did:agent:alpha-requester".to_owned(),
-        target_agent_did: "kamn:did:agent:alpha-target".to_owned(),
+        requester_owner_did: OWNER_INTRUDER.to_owned(),
+        owner_did: OWNER_ALPHA.to_owned(),
+        requester_agent_did: REQUESTER_ALPHA.to_owned(),
+        target_agent_did: TARGET_ALPHA.to_owned(),
     });
     assert!(matches!(
         denied_presence,
@@ -171,26 +161,12 @@ pub(super) fn run_spec_c05_queue_full_dispatch_keeps_pending_cap_and_increments_
     let base = 1_708_560_100;
     for nonce in 0..DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES {
         let _ = registry
-            .dispatch_message(dispatch_request(
-                "kamn:did:owner:alpha",
-                "kamn:did:owner:alpha",
-                "kamn:did:agent:alpha-sender",
-                "kamn:did:agent:alpha-recipient",
-                format!("m9-pending-{nonce:04}").as_str(),
-                base,
-            ))
+            .dispatch_message(alpha_dispatch_request(format!("m9-pending-{nonce:04}").as_str(), base))
             .expect("queue fill dispatch should succeed");
     }
 
     let first_deferred = registry
-        .dispatch_message(dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-deferred-1",
-            base + 30,
-        ))
+        .dispatch_message(alpha_dispatch_request("m9-deferred-1", base + 30))
         .expect("first deferred dispatch should succeed");
     assert_eq!(
         first_deferred.ack_status,
@@ -207,14 +183,7 @@ pub(super) fn run_spec_c05_queue_full_dispatch_keeps_pending_cap_and_increments_
     assert_eq!(first_deferred.deferred_count, 1);
 
     let second_deferred = registry
-        .dispatch_message(dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-deferred-2",
-            base + 31,
-        ))
+        .dispatch_message(alpha_dispatch_request("m9-deferred-2", base + 31))
         .expect("second deferred dispatch should succeed");
     assert_eq!(
         second_deferred.ack_status,
