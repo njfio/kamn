@@ -33,11 +33,11 @@ Extract scheduler-runtime scenario tests (`spec_c28`..`spec_c32`) from `crates/k
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `scheduler_runtime_cases.rs` exists and contains C28-C32 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` keeps C28-C32 test entrypoint names and delegates to scheduler-runtime cases functions.
-- [ ] AC-3: split-contract test enforces scheduler-runtime delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `scheduler_runtime_cases.rs` exists and contains C28-C32 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` keeps C28-C32 test entrypoint names and delegates to scheduler-runtime cases functions.
+- [x] AC-3: split-contract test enforces scheduler-runtime delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 
@@ -65,7 +65,8 @@ Extract scheduler-runtime scenario tests (`spec_c28`..`spec_c32`) from `crates/k
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`3 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 
