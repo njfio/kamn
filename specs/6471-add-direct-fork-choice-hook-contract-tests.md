@@ -27,19 +27,19 @@ transport/block-pipeline scenarios.
 - Reject paths mutate canonical head unexpectedly.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: Direct tests exist for `DeterministicCompetingBranchForkChoiceHook`.
-- [ ] AC-2: Empty-head evaluation accepts first candidate and seeds canonical
+- [x] AC-1: Direct tests exist for `DeterministicCompetingBranchForkChoiceHook`.
+- [x] AC-2: Empty-head evaluation accepts first candidate and seeds canonical
       head.
-- [ ] AC-3: Higher block height replaces canonical head.
-- [ ] AC-4: Lower block height rejects with
+- [x] AC-3: Higher block height replaces canonical head.
+- [x] AC-4: Lower block height rejects with
       `fork_choice_stale_block_height` and preserves head.
-- [ ] AC-5: Equal height + equal digest rejects with
+- [x] AC-5: Equal height + equal digest rejects with
       `fork_choice_duplicate_candidate` and preserves head.
-- [ ] AC-6: Equal height + lexicographically lower digest accepts and replaces
+- [x] AC-6: Equal height + lexicographically lower digest accepts and replaces
       head.
-- [ ] AC-7: Equal height + lexicographically higher digest rejects with
+- [x] AC-7: Equal height + lexicographically higher digest rejects with
       `fork_choice_tie_break_loser` and preserves head.
-- [ ] AC-8: `cargo test -p kamn-core --test block_pipeline_fork_choice` passes.
+- [x] AC-8: `cargo test -p kamn-core --test block_pipeline_fork_choice` passes.
 
 ## Files to touch
 - `specs/6471-add-direct-fork-choice-hook-contract-tests.md`
@@ -61,7 +61,14 @@ transport/block-pipeline scenarios.
   - `cargo test -p kamn-core --test block_pipeline_fork_choice`
 
 ## Phase 6 integration evidence
-- Pending.
+- No new production entrypoint wiring was required because this issue adds direct
+  test coverage only.
+- Real-path integration remains exercised by
+  `cargo test -p kamn-core --test block_pipeline_transport_fed -- --nocapture`,
+  including fork-choice acceptance and rejection through the transport-fed block
+  pipeline.
+- Direct coverage target passes via
+  `cargo test -p kamn-core --test block_pipeline_fork_choice -- --nocapture`.
 
 ## Deviations
 - None.
