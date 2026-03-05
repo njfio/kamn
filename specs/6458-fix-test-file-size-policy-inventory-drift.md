@@ -22,10 +22,10 @@ Restore `ci-fast-gate` by updating `test_file_size_policy` baseline inventory da
 - Fix resolves inventory drift but regresses related signer backend tests.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: local run reproduces pre-fix failing `test_file_size_policy` drift assertion.
-- [ ] AC-2: baseline fixture values are updated to match current intended inventory counts.
-- [ ] AC-3: `cargo test -p kamn-core --test test_file_size_policy` passes.
-- [ ] AC-4: `cargo test -p kamn-core --test signer_backend` passes.
+- [x] AC-1: local run reproduces pre-fix failing `test_file_size_policy` drift assertion.
+- [x] AC-2: baseline fixture values are updated to match current intended inventory counts.
+- [x] AC-3: `cargo test -p kamn-core --test test_file_size_policy` passes.
+- [x] AC-4: `cargo test -p kamn-core --test signer_backend` passes.
 
 ## Files to touch
 - `specs/6458-fix-test-file-size-policy-inventory-drift.md`
@@ -47,7 +47,14 @@ Restore `ci-fast-gate` by updating `test_file_size_policy` baseline inventory da
   - `cargo test -p kamn-core --test signer_backend`
 
 ## Phase 6 integration evidence
-- Pending.
+- Red reproduction:
+  - `cargo test -p kamn-core --test test_file_size_policy`
+  - failure: `spec_c04_oversized_test_counts_are_within_budget` with `test file inventory drift` (`left: 428`, `right: 398`)
+- Post-fix verification:
+  - `cargo test -p kamn-core --test test_file_size_policy`
+  - result: `4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`
+  - `cargo test -p kamn-core --test signer_backend`
+  - result: `30 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out`
 
 ## Deviations
 - None.
