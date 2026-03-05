@@ -724,10 +724,7 @@ pub fn data_layer_m10_evaluate_phase6_scheduler_trigger(
     signal: DataLayerM10Phase6SchedulerSignal,
 ) -> Result<DataLayerM10Phase6SchedulerTriggerDecision, DataLayerM10PartitionLifecycleError> {
     let trigger_decision = data_layer_m10_evaluate_phase6_scheduler_trigger_policy(
-        DataLayerM10Phase6SchedulerTriggerPolicy {
-            due_candidate_trigger_threshold: policy.due_candidate_trigger_threshold,
-            max_tick_interval_seconds: policy.max_tick_interval_seconds,
-        },
+        map_phase6_scheduler_trigger_policy_from_core(policy),
         DataLayerM10Phase6SchedulerSignalPolicy {
             due_candidate_count: signal.due_candidate_count,
             last_tick_epoch_seconds: signal.last_tick_epoch_seconds,
@@ -876,12 +873,18 @@ fn validate_phase6_scheduler_policy(
     policy: DataLayerM10Phase6SchedulerPolicy,
 ) -> Result<(), DataLayerM10PartitionLifecycleError> {
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config(
-        DataLayerM10Phase6SchedulerTriggerPolicy {
-            due_candidate_trigger_threshold: policy.due_candidate_trigger_threshold,
-            max_tick_interval_seconds: policy.max_tick_interval_seconds,
-        },
+        map_phase6_scheduler_trigger_policy_from_core(policy),
     )
     .map_err(map_data_layer_policy_error_to_m10)
+}
+
+fn map_phase6_scheduler_trigger_policy_from_core(
+    policy: DataLayerM10Phase6SchedulerPolicy,
+) -> DataLayerM10Phase6SchedulerTriggerPolicy {
+    DataLayerM10Phase6SchedulerTriggerPolicy {
+        due_candidate_trigger_threshold: policy.due_candidate_trigger_threshold,
+        max_tick_interval_seconds: policy.max_tick_interval_seconds,
+    }
 }
 
 fn validate_phase6_scheduler_runtime_clock(
