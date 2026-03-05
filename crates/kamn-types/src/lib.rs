@@ -34,21 +34,23 @@ pub mod did {
 
     impl std::error::Error for SharedDidParseError {}
 
-    /// Parses agent DID inputs with canonical trim semantics.
-    pub fn parse_agent_did_canonical(value: &str) -> Result<AgentDid, SharedDidParseError> {
+    fn normalize_non_empty(value: &str) -> Result<&str, SharedDidParseError> {
         let normalized = value.trim();
         if normalized.is_empty() {
             return Err(SharedDidParseError::EmptyInput);
         }
+        Ok(normalized)
+    }
+
+    /// Parses agent DID inputs with canonical trim semantics.
+    pub fn parse_agent_did_canonical(value: &str) -> Result<AgentDid, SharedDidParseError> {
+        let normalized = normalize_non_empty(value)?;
         AgentDid::parse(normalized).map_err(SharedDidParseError::Agent)
     }
 
     /// Parses generic KAMN DID inputs with canonical trim semantics.
     pub fn parse_kamn_did_canonical(value: &str) -> Result<KamnDid, SharedDidParseError> {
-        let normalized = value.trim();
-        if normalized.is_empty() {
-            return Err(SharedDidParseError::EmptyInput);
-        }
+        let normalized = normalize_non_empty(value)?;
         KamnDid::parse(normalized).map_err(SharedDidParseError::Kamn)
     }
 }
