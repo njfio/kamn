@@ -13,6 +13,7 @@ use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
+    data_layer_m10_project_phase6_scheduler_budget_overflow_policy_error,
     data_layer_m10_project_phase6_scheduler_cycle_policy_report,
     data_layer_m10_validate_phase6_execution_budget_policy,
     data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
@@ -23,8 +24,10 @@ use kamn_data_layer::{
     DataLayerM10Phase6CryptoShredInput, DataLayerM10Phase6PolicyBudget,
     DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyEvaluatorError,
     DataLayerM10Phase6PolicyReportCounts, DataLayerM10Phase6RetentionDueCandidate,
-    DataLayerM10Phase6SchedulerCyclePolicyReport, DataLayerM10Phase6SchedulerSignalPolicy,
-    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
+    DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection,
+    DataLayerM10Phase6SchedulerBudgetOverflowStage, DataLayerM10Phase6SchedulerCyclePolicyReport,
+    DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
+    DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 use crate::{
@@ -715,6 +718,27 @@ fn map_phase6_budget_policy_report_to_core(
     }
 }
 
+fn map_phase6_budget_policy_report_from_core(
+    budget_report: &DataLayerM10Phase6ExecutionTickBudgetReport,
+) -> DataLayerM10Phase6BudgetPolicyReport {
+    let decision = match budget_report.decision {
+        DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget => {
+            DataLayerM10Phase6PolicyBudgetDecision::WithinBudget
+        }
+        DataLayerM10Phase6ExecutionBudgetDecision::Exceeded => {
+            DataLayerM10Phase6PolicyBudgetDecision::Exceeded
+        }
+    };
+    DataLayerM10Phase6BudgetPolicyReport {
+        decision,
+        reason_code: budget_report.reason_code,
+        due_candidate_count: budget_report.due_candidate_count,
+        shredded_message_count: budget_report.shredded_message_count,
+        projection_report_count: budget_report.projection_report_count,
+        archived_entry_count: budget_report.archived_entry_count,
+    }
+}
+
 /// Evaluates deterministic scheduler trigger decision for a Phase-6 tick cycle.
 ///
 /// Decision precedence is fixed:
@@ -870,19 +894,11 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
             .len(),
         request.budget,
     )?;
-    if preflight_budget.decision == DataLayerM10Phase6ExecutionBudgetDecision::Exceeded {
-        return Err(
-            DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
-                reason_code: preflight_budget.reason_code,
-                detail: format!(
-                    "due={},shredded={},projections={},archives={}",
-                    preflight_budget.due_candidate_count,
-                    preflight_budget.shredded_message_count,
-                    preflight_budget.projection_report_count,
-                    preflight_budget.archived_entry_count
-                ),
-            },
-        );
+    if let Some(error) = project_phase6_scheduler_budget_overflow_error(
+        &preflight_budget,
+        DataLayerM10Phase6SchedulerBudgetOverflowStage::Preflight,
+    ) {
+        return Err(error);
     }
 
     let execution_report = data_layer_m10_execute_phase6_orchestration_tick_with_port(
@@ -892,14 +908,11 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
     )?;
     let budget_report =
         data_layer_m10_evaluate_phase6_execution_tick_budget(&execution_report, request.budget)?;
-    if budget_report.decision == DataLayerM10Phase6ExecutionBudgetDecision::Exceeded {
-        return Err(
-            DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
-                reason_code: budget_report.reason_code,
-                detail: "post-execution budget overflow indicates stale preflight assumptions"
-                    .to_owned(),
-            },
-        );
+    if let Some(error) = project_phase6_scheduler_budget_overflow_error(
+        &budget_report,
+        DataLayerM10Phase6SchedulerBudgetOverflowStage::PostExecution,
+    ) {
+        return Err(error);
     }
 
     Ok(project_phase6_scheduler_cycle_report(
@@ -923,6 +936,26 @@ fn project_phase6_scheduler_cycle_report(
         budget_report,
     );
     map_phase6_scheduler_cycle_report_from_policy(cycle_policy_report)
+}
+
+fn project_phase6_scheduler_budget_overflow_error(
+    budget_report: &DataLayerM10Phase6ExecutionTickBudgetReport,
+    stage: DataLayerM10Phase6SchedulerBudgetOverflowStage,
+) -> Option<DataLayerM10PartitionLifecycleError> {
+    data_layer_m10_project_phase6_scheduler_budget_overflow_policy_error(
+        map_phase6_budget_policy_report_from_core(budget_report),
+        stage,
+    )
+    .map(map_phase6_budget_overflow_projection_to_core)
+}
+
+fn map_phase6_budget_overflow_projection_to_core(
+    projected_overflow: DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection,
+) -> DataLayerM10PartitionLifecycleError {
+    DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
+        reason_code: projected_overflow.reason_code,
+        detail: projected_overflow.detail,
+    }
 }
 
 fn validate_phase6_execution_tick_budget(

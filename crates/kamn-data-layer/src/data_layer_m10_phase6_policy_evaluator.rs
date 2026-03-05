@@ -199,6 +199,50 @@ pub fn data_layer_m10_project_phase6_scheduler_cycle_policy_report<E, B>(
     }
 }
 
+/// Overflow projection stage for scheduler budget checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM10Phase6SchedulerBudgetOverflowStage {
+    /// Overflow occurred during preflight budget estimation.
+    Preflight,
+    /// Overflow occurred after execution budget evaluation.
+    PostExecution,
+}
+
+/// Deterministic overflow payload projected from scheduler budget checks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection {
+    /// Overflow reason code propagated from budget policy report.
+    pub reason_code: &'static str,
+    /// Deterministic overflow detail payload.
+    pub detail: String,
+}
+
+/// Projects scheduler budget overflow payload when budget decision exceeds limits.
+pub fn data_layer_m10_project_phase6_scheduler_budget_overflow_policy_error(
+    budget_report: DataLayerM10Phase6BudgetPolicyReport,
+    stage: DataLayerM10Phase6SchedulerBudgetOverflowStage,
+) -> Option<DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection> {
+    if budget_report.decision != DataLayerM10Phase6PolicyBudgetDecision::Exceeded {
+        return None;
+    }
+    let detail = match stage {
+        DataLayerM10Phase6SchedulerBudgetOverflowStage::Preflight => format!(
+            "due={},shredded={},projections={},archives={}",
+            budget_report.due_candidate_count,
+            budget_report.shredded_message_count,
+            budget_report.projection_report_count,
+            budget_report.archived_entry_count
+        ),
+        DataLayerM10Phase6SchedulerBudgetOverflowStage::PostExecution => {
+            "post-execution budget overflow indicates stale preflight assumptions".to_owned()
+        }
+    };
+    Some(DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection {
+        reason_code: budget_report.reason_code,
+        detail,
+    })
+}
+
 /// Evaluates one phase6 execution report against deterministic per-tick budget limits.
 pub fn data_layer_m10_evaluate_phase6_execution_tick_budget_policy(
     counts: DataLayerM10Phase6PolicyReportCounts,
