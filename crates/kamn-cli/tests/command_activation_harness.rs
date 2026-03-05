@@ -1,9 +1,12 @@
+// This helper module is compiled as its own standalone integration-test crate.
+// Some helper functions are intentionally consumed only by sibling contract suites.
 #![allow(dead_code)]
 
 #[path = "command_activation_harness_routes.rs"]
 mod command_activation_harness_routes;
 
-use kamn_cli::{CommandKind, OutputFormat, ParsedCliArgs};
+use kamn_agent_lib::AgentLibError;
+use kamn_cli::{dispatch, CommandKind, OutputFormat, ParsedCliArgs};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -118,6 +121,39 @@ pub(crate) fn wait_for_server_ready() {
     thread::sleep(Duration::from_millis(120));
 }
 
+pub(crate) fn with_contract_server(max_requests: usize, run: impl FnOnce(&str)) {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, max_requests));
+    wait_for_server_ready();
+    let endpoint = format!("http://{bind_addr}");
+
+    run(endpoint.as_str());
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+fn assert_invalid_input(error: AgentLibError, label: &str) {
+    assert!(
+        matches!(error, AgentLibError::InvalidInput { .. }),
+        "missing arg for {label} should be invalid input: {error}"
+    );
+}
+
+pub(crate) fn assert_missing_arg_invalid(endpoint: &str, command: CommandKind, label: &str) {
+    let error =
+        dispatch(&parsed(command, endpoint, &[])).expect_err("missing required arg should fail");
+    assert_invalid_input(error, label);
+}
+
+pub(crate) fn assert_output_contains(output: &str, expected: &str, label: &str) {
+    assert!(output.contains(expected), "{label}; output={output}");
+}
+
 fn parsed_with_format(
     command: CommandKind,
     endpoint: &str,
@@ -140,6 +176,7 @@ pub(crate) fn parsed(command: CommandKind, endpoint: &str, passthrough: &[&str])
     parsed_with_format(command, endpoint, OutputFormat::Text, passthrough)
 }
 
+// parsed_json is consumed only by JSON-mode contract suites.
 #[allow(dead_code)]
 pub(crate) fn parsed_json(
     command: CommandKind,
