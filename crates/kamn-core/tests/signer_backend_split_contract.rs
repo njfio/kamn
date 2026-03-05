@@ -50,6 +50,26 @@ const SIGNER_PROVIDER_CASES_MARKERS: [&str; 9] = [
     "pub(super) fn run_regression_secure_provider_backend_mismatch_is_rejected(",
 ];
 
+const SIGNER_SIGNATURE_ROOT_MARKERS: [&str; 9] = [
+    "#[path = \"signer_backend/signer_signature_cases.rs\"]",
+    "mod signer_signature_cases;",
+    "signer_signature_cases::run_integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch();",
+    "signer_signature_cases::run_regression_signer_backend_rejects_baseline_v1_signature_by_default();",
+    "signer_signature_cases::run_regression_local_backend_rejects_tampered_signature();",
+    "signer_signature_cases::run_regression_local_backend_rejects_signature_when_verifier_uses_wrong_key();",
+    "signer_signature_cases::run_regression_local_backend_rejects_baseline_v1_signature_without_compat_switch();",
+    "fn integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch()",
+    "fn regression_local_backend_rejects_baseline_v1_signature_without_compat_switch()",
+];
+
+const SIGNER_SIGNATURE_CASES_MARKERS: [&str; 5] = [
+    "pub(super) fn run_integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch(",
+    "pub(super) fn run_regression_signer_backend_rejects_baseline_v1_signature_by_default(",
+    "pub(super) fn run_regression_local_backend_rejects_tampered_signature(",
+    "pub(super) fn run_regression_local_backend_rejects_signature_when_verifier_uses_wrong_key(",
+    "pub(super) fn run_regression_local_backend_rejects_baseline_v1_signature_without_compat_switch(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -94,6 +114,26 @@ fn spec_c02_signer_provider_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "signer-provider cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c03_signer_signature_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/signer_backend.rs");
+    let cases = read_repo_file("tests/signer_backend/signer_signature_cases.rs");
+
+    for marker in SIGNER_SIGNATURE_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root signer-backend contract should contain signer-signature delegation marker: {marker}"
+        );
+    }
+
+    for marker in SIGNER_SIGNATURE_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "signer-signature cases module should define marker: {marker}"
         );
     }
 }
