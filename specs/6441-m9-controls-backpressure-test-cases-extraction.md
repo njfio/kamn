@@ -22,11 +22,11 @@ Extract controls/backpressure scenarios (`spec_c10` through `spec_c13`) from `cr
 - Extraction changes reason-code assertions or expected error variants.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `controls_backpressure_cases.rs` exists and contains C10-C13 scenario bodies.
-- [ ] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C10-C13 entrypoints and delegates to `controls_backpressure_cases` functions.
-- [ ] AC-3: `data_layer_m9_realtime_delivery_split_contract.rs` enforces C10-C13 delegation/ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
+- [x] AC-1: `controls_backpressure_cases.rs` exists and contains C10-C13 scenario bodies.
+- [x] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C10-C13 entrypoints and delegates to `controls_backpressure_cases` functions.
+- [x] AC-3: `data_layer_m9_realtime_delivery_split_contract.rs` enforces C10-C13 delegation/ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
 
 ## Files to touch
 - `specs/6441-m9-controls-backpressure-test-cases-extraction.md`
@@ -49,7 +49,8 @@ Extract controls/backpressure scenarios (`spec_c10` through `spec_c13`) from `cr
   - `cargo test -p kamn-core --test data_layer_m9_realtime_delivery`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` -> PASS (`1 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` -> PASS (`16 passed, 0 failed`)
 
 ## Deviations
 - None.
