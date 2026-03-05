@@ -4,6 +4,8 @@ const OWNER_PHASE6_ALPHA: &str = "kamn:did:owner:phase6-alpha";
 const OWNER_PHASE6_BETA: &str = "kamn:did:owner:phase6-beta";
 const PARTITION_PRIMARY: u32 = 202401;
 const PARTITION_SECONDARY: u32 = 202402;
+const MESSAGE_A: &str = "message-a";
+const MESSAGE_B: &str = "message-b";
 
 pub(super) fn run_spec_c16_phase6_orchestration_tick_executes_retention_shred_projection_and_archive(
 ) {
@@ -14,12 +16,12 @@ pub(super) fn run_spec_c16_phase6_orchestration_tick_executes_retention_shred_pr
         .register_partition(partition_input(PARTITION_PRIMARY, false))
         .expect("partition should register");
 
-    let mut message_a = m8_message_input(owner_did, "message-a", 1_699_800_000);
+    let mut message_a = m8_message_input(owner_did, MESSAGE_A, 1_699_800_000);
     message_a.retention_class = DataLayerM8RetentionClass::Ephemeral;
     m8_registry
         .register_message(message_a)
         .expect("message-a should register");
-    let mut message_b = m8_message_input(owner_did, "message-b", 1_699_810_000);
+    let mut message_b = m8_message_input(owner_did, MESSAGE_B, 1_699_810_000);
     message_b.retention_class = DataLayerM8RetentionClass::Ephemeral;
     m8_registry
         .register_message(message_b)
@@ -32,7 +34,7 @@ pub(super) fn run_spec_c16_phase6_orchestration_tick_executes_retention_shred_pr
             owner_did,
             BTreeMap::from([(
                 PARTITION_PRIMARY,
-                vec!["message-b".to_owned(), "message-a".to_owned()],
+                vec![MESSAGE_B.to_owned(), MESSAGE_A.to_owned()],
             )]),
         ),
     )
@@ -42,7 +44,7 @@ pub(super) fn run_spec_c16_phase6_orchestration_tick_executes_retention_shred_pr
     assert_eq!(report.due_candidate_count, 2);
     assert_eq!(
         report.shredded_message_ids,
-        vec!["message-a".to_owned(), "message-b".to_owned()]
+        vec![MESSAGE_A.to_owned(), MESSAGE_B.to_owned()]
     );
     assert_eq!(report.projection_reports.len(), 1);
     assert!(report.projection_reports[0].all_messages_shredded);
