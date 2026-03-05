@@ -135,13 +135,11 @@ pub fn data_layer_m10_project_archival_retry_decision(
         DataLayerM10ArchivalFailureClass::Transient if current_attempt < policy.max_attempts => {
             project_transient_retry(now_unix_seconds, current_attempt, policy)
         }
-        DataLayerM10ArchivalFailureClass::Transient => {
-            project_fail_closed_decision(
-                failure_class,
-                current_attempt,
-                DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
-            )
-        }
+        DataLayerM10ArchivalFailureClass::Transient => project_fail_closed_decision(
+            failure_class,
+            current_attempt,
+            DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
+        ),
         DataLayerM10ArchivalFailureClass::Permanent => project_fail_closed_decision(
             failure_class,
             current_attempt,

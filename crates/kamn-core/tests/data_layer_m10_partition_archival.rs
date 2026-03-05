@@ -57,7 +57,8 @@ delegate_spec!(spec_c11_partition_archival_remains_blocked_until_legal_hold_is_r
 // Kept explicit to preserve root marker checks in split-contract guards.
 #[test]
 fn spec_c12_transient_archival_failure_projects_deterministic_retry_window() {
-    retry_policy_cases::run_spec_c12_transient_archival_failure_projects_deterministic_retry_window();
+    retry_policy_cases::run_spec_c12_transient_archival_failure_projects_deterministic_retry_window(
+    );
 }
 
 delegate_spec!(spec_c13_transient_archival_retry_backoff_caps_at_policy_maximum => retry_policy_cases::run_spec_c13_transient_archival_retry_backoff_caps_at_policy_maximum(););

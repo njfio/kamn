@@ -37,7 +37,10 @@ fn assert_signature_includes_profile_prefix(message: &str) {
         let signed = router
             .sign_with_secure_fallback(&request)
             .expect("signature should be produced");
-        assert!(signed.signature.starts_with(REQUEST_PROFILE_PREFIX), "{message}");
+        assert!(
+            signed.signature.starts_with(REQUEST_PROFILE_PREFIX),
+            "{message}"
+        );
     });
 }
 

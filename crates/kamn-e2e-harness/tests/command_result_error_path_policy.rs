@@ -4,7 +4,8 @@ use std::path::Path;
 #[test]
 fn spec_c03_verify_matrix_retains_explicit_error_path_assertions_for_result_surfaces() {
     let parser_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/command_contract.rs");
-    let verify_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/command_contract_verify_matrix.rs");
+    let verify_path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/command_contract_verify_matrix.rs");
 
     let parser_content = fs::read_to_string(&parser_path)
         .unwrap_or_else(|error| panic!("failed to read {}: {error}", parser_path.display()));

@@ -22,8 +22,10 @@ impl DataLayerM10ComplianceProjectionPort for FakeProjectionPort {
         &self,
         owner_did: &str,
         message_id: &str,
-    ) -> Result<DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPortError>
-    {
+    ) -> Result<
+        DataLayerM10ComplianceProjectionMessageState,
+        DataLayerM10ComplianceProjectionPortError,
+    > {
         if owner_did.is_empty() || message_id.is_empty() {
             return Err(DataLayerM10ComplianceProjectionPortError::InvalidInput(
                 "owner/message id cannot be empty".to_owned(),

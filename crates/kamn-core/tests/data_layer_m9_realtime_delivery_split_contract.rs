@@ -144,8 +144,7 @@ fn spec_c03_queue_channel_tests_delegate_to_cases_module() {
 #[test]
 fn spec_c04_input_validation_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m9_realtime_delivery.rs");
-    let cases =
-        read_repo_file("tests/data_layer_m9_realtime_delivery/input_validation_cases.rs");
+    let cases = read_repo_file("tests/data_layer_m9_realtime_delivery/input_validation_cases.rs");
 
     for marker in INPUT_VALIDATION_ROOT_MARKERS {
         assert!(

@@ -22,10 +22,12 @@ fn signer_provider_request(key_id: &str, sender: &str) -> SigningRequest {
 fn signer_provider_router_with_aws_status(
     aws_status: SignerProviderHandshakeStatus,
 ) -> SignerBackendRouter {
-    SignerBackendRouter::with_provider_handshake_matrix(SignerProviderHandshakeMatrix::with_statuses(
-        SignerProviderHandshakeStatus::Available,
-        aws_status,
-    ))
+    SignerBackendRouter::with_provider_handshake_matrix(
+        SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            aws_status,
+        ),
+    )
 }
 
 fn signer_provider_unavailable_router() -> SignerBackendRouter {
@@ -67,7 +69,8 @@ fn assert_provider_fallback_denied(
     );
 }
 
-pub(super) fn run_functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider() {
+pub(super) fn run_functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider(
+) {
     with_default_signer_key_env(|| {
         let router = signer_provider_unavailable_router();
         let request = signer_provider_request(PROVIDER_HANDSHAKE_KEY_ID, PROVIDER_OPERATOR_SENDER);
@@ -124,8 +127,16 @@ pub(super) fn run_functional_privileged_roles_deny_fallback_when_provider_unavai
     let router = signer_provider_unavailable_router();
     let privileged_cases = [
         (PROVIDER_ADMIN_KEY_ID, PROVIDER_ADMIN_SENDER, "admin"),
-        ("secure:aws-kms:role-treasury/key-ops-1", "treasury-agent-a", "treasury"),
-        ("secure:aws-kms:role-auditor/key-ops-1", "auditor-agent-a", "auditor"),
+        (
+            "secure:aws-kms:role-treasury/key-ops-1",
+            "treasury-agent-a",
+            "treasury",
+        ),
+        (
+            "secure:aws-kms:role-auditor/key-ops-1",
+            "auditor-agent-a",
+            "auditor",
+        ),
     ];
     for (key_id, sender, role) in privileged_cases {
         assert_provider_fallback_denied(&router, key_id, sender, role);

@@ -14,7 +14,8 @@ const CORE_AWS_TX_ID: &str = "tx-sign-aws-1";
 const CORE_TX_PAYLOAD: &str = "payload-sign-1";
 const CORE_SIGNER_KEY_ENV: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX";
 const CORE_SERVICE_SIGNER_KEY_ENV: &str = "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX";
-const CORE_MISSING_KEY_ENV: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5913_MISSING";
+const CORE_MISSING_KEY_ENV: &str =
+    "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5913_MISSING";
 
 fn signer_core_request(key_id: &str, payload: &str) -> SigningRequest {
     SigningRequest::new(

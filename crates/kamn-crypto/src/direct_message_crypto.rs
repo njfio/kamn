@@ -637,8 +637,8 @@ mod tests {
     }
 
     #[test]
-    fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize()
-    {
+    fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
+    ) {
         let struct_marker = "pub struct DirectMessageCryptoEngine";
         let struct_index = SOURCE
             .find(struct_marker)

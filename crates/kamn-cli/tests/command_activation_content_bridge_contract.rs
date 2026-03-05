@@ -9,8 +9,7 @@ const EXPIRE_CONTENT_OUTPUT_LABEL: &str = "expire-content output should include 
 const TOMBSTONE_CONTENT_OUTPUT_LABEL: &str =
     "tombstone-content output should include redaction status";
 const QUERY_CONTENT_OUTPUT_LABEL: &str = "query-content output should include lifecycle state";
-const SUBMIT_BRIDGE_ID_OUTPUT_LABEL: &str =
-    "submit-bridge-message output should include bridge id";
+const SUBMIT_BRIDGE_ID_OUTPUT_LABEL: &str = "submit-bridge-message output should include bridge id";
 const SUBMIT_BRIDGE_STATUS_OUTPUT_LABEL: &str =
     "submit-bridge-message output should include bridge status";
 const FORWARD_BRIDGE_STATUS_OUTPUT_LABEL: &str =

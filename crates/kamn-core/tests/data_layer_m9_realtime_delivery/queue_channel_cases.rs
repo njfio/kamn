@@ -5,7 +5,10 @@ const SENDER_ALPHA: &str = "kamn:did:agent:alpha-sender";
 const RECIPIENT_ALPHA: &str = "kamn:did:agent:alpha-recipient";
 const CHANNEL_DIRECT_ONE: &str = "m9-direct-1";
 
-fn alpha_dispatch_request(message_id: &str, dispatched_at_epoch_seconds: u64) -> DataLayerM9DispatchRequest {
+fn alpha_dispatch_request(
+    message_id: &str,
+    dispatched_at_epoch_seconds: u64,
+) -> DataLayerM9DispatchRequest {
     dispatch_request(
         OWNER_ALPHA,
         OWNER_ALPHA,
@@ -47,7 +50,10 @@ pub(super) fn run_spec_c07_queue_snapshot_preserves_deferred_dispatch_order() {
     let base = 1_708_560_100;
     for nonce in 0..DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES {
         let _ = registry
-            .dispatch_message(alpha_dispatch_request(format!("m9-fill-{nonce:04}").as_str(), base))
+            .dispatch_message(alpha_dispatch_request(
+                format!("m9-fill-{nonce:04}").as_str(),
+                base,
+            ))
             .expect("queue fill should succeed");
     }
     for (offset, message_id) in ["m9-deferred-a", "m9-deferred-b", "m9-deferred-c"]
@@ -55,7 +61,10 @@ pub(super) fn run_spec_c07_queue_snapshot_preserves_deferred_dispatch_order() {
         .enumerate()
     {
         let _ = registry
-            .dispatch_message(alpha_dispatch_request(message_id, base + 10 + offset as u64))
+            .dispatch_message(alpha_dispatch_request(
+                message_id,
+                base + 10 + offset as u64,
+            ))
             .expect("deferred dispatch should succeed");
     }
 
@@ -82,7 +91,8 @@ pub(super) fn run_spec_c08_duplicate_message_identifier_is_rejected_fail_closed(
         .dispatch_message(alpha_dispatch_request("m9-duplicate-id", 1_708_560_100))
         .expect("initial dispatch should succeed");
 
-    let duplicate = registry.dispatch_message(alpha_dispatch_request("m9-duplicate-id", 1_708_560_101));
+    let duplicate =
+        registry.dispatch_message(alpha_dispatch_request("m9-duplicate-id", 1_708_560_101));
     assert!(matches!(
         duplicate,
         Err(DataLayerM9RealtimeDeliveryError::DuplicateMessageId(value))
@@ -93,11 +103,7 @@ pub(super) fn run_spec_c08_duplicate_message_identifier_is_rejected_fail_closed(
 pub(super) fn run_spec_c09_channel_dispatch_requires_sender_and_recipient_membership() {
     let mut channel_store = ChannelStore::new();
     channel_store
-        .create_direct(
-            CHANNEL_DIRECT_ONE,
-            SENDER_ALPHA,
-            RECIPIENT_ALPHA,
-        )
+        .create_direct(CHANNEL_DIRECT_ONE, SENDER_ALPHA, RECIPIENT_ALPHA)
         .expect("direct channel should be created");
     let registry = DataLayerM9RealtimeDeliveryRegistry::new();
 

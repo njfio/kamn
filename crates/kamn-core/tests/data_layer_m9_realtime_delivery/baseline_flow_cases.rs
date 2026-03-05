@@ -8,7 +8,10 @@ const REQUESTER_ALPHA: &str = "kamn:did:agent:alpha-requester";
 const TARGET_ALPHA: &str = "kamn:did:agent:alpha-target";
 
 // Keeps repeated dispatch setup deterministic across baseline scenarios.
-fn alpha_dispatch_request(message_id: &str, dispatched_at_epoch_seconds: u64) -> DataLayerM9DispatchRequest {
+fn alpha_dispatch_request(
+    message_id: &str,
+    dispatched_at_epoch_seconds: u64,
+) -> DataLayerM9DispatchRequest {
     dispatch_request(
         OWNER_ALPHA,
         OWNER_ALPHA,
@@ -92,8 +95,7 @@ pub(super) fn run_spec_c02_presence_query_is_denied_until_relationship_linkage_i
     assert_eq!(visible_record.agent_did, "kamn:did:agent:alpha-target");
 }
 
-pub(super) fn run_spec_c03_backpressure_thresholds_emit_warning_and_sustained_escalation_markers()
-{
+pub(super) fn run_spec_c03_backpressure_thresholds_emit_warning_and_sustained_escalation_markers() {
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
     let base = 1_708_560_100;
 
@@ -116,7 +118,10 @@ pub(super) fn run_spec_c03_backpressure_thresholds_emit_warning_and_sustained_es
     assert!(!warning.escrow_timeout_extension_recommended);
 
     let sustained = registry
-        .dispatch_message(alpha_dispatch_request("m9-sustained-threshold", base + 3_601))
+        .dispatch_message(alpha_dispatch_request(
+            "m9-sustained-threshold",
+            base + 3_601,
+        ))
         .expect("sustained-threshold dispatch should succeed");
     assert_eq!(
         sustained.reason_code,
@@ -162,7 +167,10 @@ pub(super) fn run_spec_c05_queue_full_dispatch_keeps_pending_cap_and_increments_
     let base = 1_708_560_100;
     for nonce in 0..DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES {
         let _ = registry
-            .dispatch_message(alpha_dispatch_request(format!("m9-pending-{nonce:04}").as_str(), base))
+            .dispatch_message(alpha_dispatch_request(
+                format!("m9-pending-{nonce:04}").as_str(),
+                base,
+            ))
             .expect("queue fill dispatch should succeed");
     }
 

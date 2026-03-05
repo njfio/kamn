@@ -40,8 +40,8 @@ pub(super) fn run_spec_c14_invalid_requester_owner_did_fails_closed_with_field_t
     ));
 }
 
-pub(super) fn run_spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_with_field_taxonomy(
-) {
+pub(super) fn run_spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_with_field_taxonomy()
+{
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
 
     let invalid_sender = registry.dispatch_message(alpha_dispatch_request(
@@ -75,8 +75,7 @@ pub(super) fn run_spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_w
     ));
 }
 
-pub(super) fn run_spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy()
-{
+pub(super) fn run_spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy() {
     let registry = DataLayerM9RealtimeDeliveryRegistry::new();
     let invalid_presence_requester = registry.query_presence(DataLayerM9PresenceQuery {
         requester_owner_did: OWNER_ALPHA.to_owned(),
