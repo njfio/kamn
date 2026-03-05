@@ -130,6 +130,27 @@ const LIFECYCLE_BASICS_CASES_MARKERS: [&str; 5] = [
     "pub(super) fn run_spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced(",
 ];
 
+const COMPLIANCE_PROJECTION_ROOT_MARKERS: [&str; 9] = [
+    "#[path = \"data_layer_m10_partition_archival/compliance_projection_cases.rs\"]",
+    "mod compliance_projection_cases;",
+    "compliance_projection_cases::run_spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records();",
+    "compliance_projection_cases::run_spec_c07_partition_shred_projection_fails_closed_when_m8_message_lookup_is_missing();",
+    "compliance_projection_cases::run_spec_c08_partition_projection_accepts_canonical_equivalent_owner_dids();",
+    "compliance_projection_cases::run_spec_c09_partition_projection_denies_non_equivalent_owner_dids();",
+    "compliance_projection_cases::run_spec_c10_partition_projection_marks_legal_hold_as_archival_denied_reason();",
+    "compliance_projection_cases::run_spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes();",
+    "fn spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records()",
+];
+
+const COMPLIANCE_PROJECTION_CASES_MARKERS: [&str; 6] = [
+    "pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records(",
+    "pub(super) fn run_spec_c07_partition_shred_projection_fails_closed_when_m8_message_lookup_is_missing(",
+    "pub(super) fn run_spec_c08_partition_projection_accepts_canonical_equivalent_owner_dids(",
+    "pub(super) fn run_spec_c09_partition_projection_denies_non_equivalent_owner_dids(",
+    "pub(super) fn run_spec_c10_partition_projection_marks_legal_hold_as_archival_denied_reason(",
+    "pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -296,6 +317,27 @@ fn spec_c08_lifecycle_basics_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "lifecycle-basics cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c09_compliance_projection_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let cases =
+        read_repo_file("tests/data_layer_m10_partition_archival/compliance_projection_cases.rs");
+
+    for marker in COMPLIANCE_PROJECTION_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain compliance-projection delegation marker: {marker}"
+        );
+    }
+
+    for marker in COMPLIANCE_PROJECTION_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "compliance-projection cases module should define marker: {marker}"
         );
     }
 }
