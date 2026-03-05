@@ -34,11 +34,11 @@ Prevent issue/spec closure without explicit Phase 6 integration evidence by addi
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: policy checker fails closed when a closure-ready spec (`Status: Implemented`) lacks `## Phase 6 integration evidence`.
-- [ ] AC-2: policy checker fails closed when a closure-ready spec has Phase 6 heading but lacks explicit execution evidence markers.
-- [ ] AC-3: policy checker emits deterministic markers (`status`, `final_decision`, `reason_taxonomy_version`, `reason_codes`) and a JSON report.
-- [ ] AC-4: CI tool regression lane executes the new Phase 6 policy contract test.
-- [ ] AC-5: contributor docs include the checker command and remediation steps before issue closure.
+- [x] AC-1: policy checker fails closed when a closure-ready spec (`Status: Implemented`) lacks `## Phase 6 integration evidence`.
+- [x] AC-2: policy checker fails closed when a closure-ready spec has Phase 6 heading but lacks explicit execution evidence markers.
+- [x] AC-3: policy checker emits deterministic markers (`status`, `final_decision`, `reason_taxonomy_version`, `reason_codes`) and a JSON report.
+- [x] AC-4: CI tool regression lane executes the new Phase 6 policy contract test.
+- [x] AC-5: contributor docs include the checker command and remediation steps before issue closure.
 
 ## Files to touch
 
@@ -47,6 +47,7 @@ Prevent issue/spec closure without explicit Phase 6 integration evidence by addi
 - `scripts/ci/test_check_spec_phase6_evidence_policy.sh` (new)
 - `scripts/ci/test_ci_tools.sh`
 - `.github/CONTRIBUTING.md`
+- `docs/planning/spec-phase6-evidence-policy.md` (new)
 
 ## Error semantics
 
@@ -69,7 +70,16 @@ Prevent issue/spec closure without explicit Phase 6 integration evidence by addi
 
 ## Phase 6 integration evidence
 
-- Pending.
+- Wiring:
+  - Added deterministic fail-closed checker `scripts/ci/check_spec_phase6_evidence_policy.sh` for closure-ready `specs/*.md` files.
+  - Added policy contract test `scripts/ci/test_check_spec_phase6_evidence_policy.sh`.
+  - Wired policy contract test into CI tools fast mode via `scripts/ci/test_ci_tools.sh`.
+  - Added contributor closure command + remediation guidance in `.github/CONTRIBUTING.md`.
+  - Added policy contract markers and remediation contract in `docs/planning/spec-phase6-evidence-policy.md`.
+- Executed:
+  - `bash scripts/ci/test_check_spec_phase6_evidence_policy.sh`
+  - `bash scripts/ci/check_spec_phase6_evidence_policy.sh --repo-root /home/n/Code/kamn --output-json /tmp/spec-phase6-evidence-policy-report.json`
+  - `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
 
 ## Deviations
 
