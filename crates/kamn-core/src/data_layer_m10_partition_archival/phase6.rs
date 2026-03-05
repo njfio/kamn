@@ -14,6 +14,7 @@ use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
     data_layer_m10_validate_phase6_execution_budget_policy,
+    data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
     DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6BudgetPolicyReport,
@@ -891,25 +892,11 @@ fn validate_phase6_scheduler_runtime_clock(
     now_epoch_seconds: u64,
     last_observed_now_epoch_seconds: Option<u64>,
 ) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    if now_epoch_seconds == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
-                field: "now_epoch_seconds",
-                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
-            },
-        );
-    }
-    if let Some(last_observed_now_epoch_seconds) = last_observed_now_epoch_seconds {
-        if now_epoch_seconds < last_observed_now_epoch_seconds {
-            return Err(
-                DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
-                    field: "now_epoch_seconds",
-                    reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
-                },
-            );
-        }
-    }
-    Ok(())
+    data_layer_m10_validate_phase6_scheduler_runtime_clock_signal(
+        now_epoch_seconds,
+        last_observed_now_epoch_seconds,
+    )
+    .map_err(map_data_layer_policy_error_to_m10)
 }
 
 fn evaluate_phase6_scheduler_preflight_budget(
