@@ -151,6 +151,22 @@ const COMPLIANCE_PROJECTION_CASES_MARKERS: [&str; 6] = [
     "pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes(",
 ];
 
+const SHARED_HELPERS_ROOT_MARKERS: [&str; 3] = [
+    "#[path = \"data_layer_m10_partition_archival/shared.rs\"]",
+    "mod shared;",
+    "use shared::*;",
+];
+
+const SHARED_HELPERS_CASES_MARKERS: [&str; 7] = [
+    "pub(super) use kamn_core::{",
+    "pub(super) use kamn_data_layer::{",
+    "pub(super) fn partition_input(",
+    "pub(super) fn m8_message_input(",
+    "pub(super) fn project_request(",
+    "pub(super) fn phase6_request(",
+    "pub(super) fn phase6_runtime_state(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -338,6 +354,41 @@ fn spec_c09_compliance_projection_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "compliance-projection cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c10_shared_helpers_are_extracted_to_shared_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let shared = read_repo_file("tests/data_layer_m10_partition_archival/shared.rs");
+
+    for marker in SHARED_HELPERS_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain shared-helper wiring marker: {marker}"
+        );
+    }
+
+    for marker in SHARED_HELPERS_CASES_MARKERS {
+        assert!(
+            shared.contains(marker),
+            "shared helper module should define marker: {marker}"
+        );
+    }
+
+    for removed_root_helper in [
+        "fn partition_input(",
+        "fn m8_message_input(",
+        "fn project_request(",
+        "fn phase6_request(",
+        "fn phase6_budget(",
+        "fn phase6_scheduler_policy(",
+        "fn phase6_runtime_state(",
+    ] {
+        assert!(
+            !root.contains(removed_root_helper),
+            "root archival contract should not keep extracted helper: {removed_root_helper}"
         );
     }
 }
