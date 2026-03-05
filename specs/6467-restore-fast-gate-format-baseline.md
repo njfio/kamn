@@ -21,8 +21,8 @@ passes locally and in PR Fast Gate CI.
 - Manual edits accidentally alter behavior.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `cargo fmt --all --check` passes locally.
-- [ ] AC-2: Generated changes are format-only (no behavior edits).
+- [x] AC-1: `cargo fmt --all --check` passes locally.
+- [x] AC-2: Generated changes are format-only (no behavior edits).
 - [ ] AC-3: Fast Gate formatting step can pass on PR CI.
 
 ## Files to touch
@@ -52,7 +52,11 @@ passes locally and in PR Fast Gate CI.
   workflow, or runtime behavior changes were introduced in this issue.
 
 ## Phase 6 integration evidence
-- Pending.
+- Verified commands:
+  - `cargo fmt --all`
+  - `cargo fmt --all --check`
+  - `cargo check --workspace`
+- PR CI evidence for Fast Gate formatting stage tracked in Phase 7.
 
 ## Deviations
 - None.
