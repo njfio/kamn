@@ -14,7 +14,8 @@ passes locally and in PR Fast Gate CI.
 ## Boundaries/Non-goals
 - No functional code changes.
 - No dependency/workflow configuration changes.
-- No test logic changes beyond formatter output.
+- No test behavior changes beyond split-contract whitespace normalization needed
+  to avoid rustfmt false negatives.
 
 ## Failure modes
 - Formatting command misses files and CI still fails.
@@ -56,7 +57,10 @@ passes locally and in PR Fast Gate CI.
   - `cargo fmt --all`
   - `cargo fmt --all --check`
   - `cargo check --workspace`
+  - `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract`
+  - `cargo test -p kamn-core --test signer_backend_split_contract`
 - PR CI evidence for Fast Gate formatting stage tracked in Phase 7.
 
 ## Deviations
-- None.
+- Split-contract marker assertions were upgraded to whitespace-insensitive
+  matching to keep delegation contract checks stable under rustfmt wrapping.
