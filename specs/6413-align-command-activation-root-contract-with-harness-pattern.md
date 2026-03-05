@@ -34,11 +34,11 @@ Refactor `crates/kamn-cli/tests/command_activation_contract.rs` to use the share
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `spec_c01_cli_health_command_executes_supported_path` and `spec_c06_cli_json_output_contract_renders_structured_health_projection` use `with_contract_server`.
-- [ ] AC-2: root contract file removes direct `reserve_loopback_addr`/`run_cli_contract_server`/`wait_for_server_ready` + `thread::spawn` setup in health tests.
-- [ ] AC-3: follow-up contract contains a guard that root contract uses `with_contract_server` and rejects manual bootstrap markers.
-- [ ] AC-4: `cargo test -p kamn-cli --test command_activation_followup_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-cli --test command_activation_contract` passes.
+- [x] AC-1: `spec_c01_cli_health_command_executes_supported_path` and `spec_c06_cli_json_output_contract_renders_structured_health_projection` use `with_contract_server`.
+- [x] AC-2: root contract file removes direct `reserve_loopback_addr`/`run_cli_contract_server`/`wait_for_server_ready` + `thread::spawn` setup in health tests.
+- [x] AC-3: follow-up contract contains a guard that root contract uses `with_contract_server` and rejects manual bootstrap markers.
+- [x] AC-4: `cargo test -p kamn-cli --test command_activation_followup_contract` passes.
+- [x] AC-5: `cargo test -p kamn-cli --test command_activation_contract` passes.
 
 ## Files to touch
 
@@ -66,7 +66,8 @@ Refactor `crates/kamn-cli/tests/command_activation_contract.rs` to use the share
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-cli --test command_activation_followup_contract` -> PASS (`5 passed, 0 failed`)
+- `cargo test -p kamn-cli --test command_activation_contract` -> PASS (`3 passed, 0 failed`)
 
 ## Deviations
 
