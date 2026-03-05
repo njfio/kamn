@@ -132,17 +132,20 @@ fn all_test_file_lines(root: &Path) -> Vec<(String, usize)> {
     files.sort();
     files
         .into_iter()
-        .map(|path| {
+        .filter_map(|path| {
             let relative = path
                 .strip_prefix(root)
                 .expect("file should be under repo root")
                 .to_string_lossy()
                 .replace('\\', "/");
+            if relative.contains("/tests/support/") {
+                return None;
+            }
             let lines = fs::read_to_string(&path)
                 .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
                 .lines()
                 .count();
-            (relative, lines)
+            Some((relative, lines))
         })
         .collect()
 }
