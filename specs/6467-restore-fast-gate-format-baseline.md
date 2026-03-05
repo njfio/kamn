@@ -47,6 +47,10 @@ passes locally and in PR Fast Gate CI.
 - Integration:
   - Push PR and verify Fast Gate formatting stage.
 
+## Refactor verification
+- Formatter pass produced layout/import-order updates only; no dependency,
+  workflow, or runtime behavior changes were introduced in this issue.
+
 ## Phase 6 integration evidence
 - Pending.
 
