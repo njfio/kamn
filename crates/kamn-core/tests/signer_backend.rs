@@ -118,6 +118,8 @@ fn assert_signer_emulator_contract_signing(router: &SignerBackendRouter, nonce: 
 
 #[path = "signer_backend/signer_emulator_cases.rs"]
 mod signer_emulator_cases;
+#[path = "signer_backend/signer_provider_cases.rs"]
+mod signer_provider_cases;
 
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
@@ -269,27 +271,7 @@ fn regression_local_backend_signing_requires_explicit_key_material() {
 
 #[test]
 fn functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::with_provider_handshake_matrix(
-            SignerProviderHandshakeMatrix::with_statuses(
-                SignerProviderHandshakeStatus::Available,
-                SignerProviderHandshakeStatus::Unavailable,
-            ),
-        );
-        let request = SigningRequest::new(
-            "secure:aws-kms:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("operator fallback should sign when provider is unavailable");
-        assert_eq!(signed.backend, "local-software");
-    });
+    signer_provider_cases::run_functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider();
 }
 
 #[test]
@@ -347,112 +329,22 @@ fn integration_aws_kms_signed_transaction_passes_transaction_guards() {
 
 #[test]
 fn functional_admin_role_key_signs_when_sender_role_matches() {
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::default();
-        let request = SigningRequest::new(
-            "secure:aws-kms:role-admin/key-ops-1",
-            "admin-agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("signing should succeed");
-        assert_eq!(signed.backend, "secure-aws-kms-emulator");
-
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("signature should verify");
-    });
+    signer_provider_cases::run_functional_admin_role_key_signs_when_sender_role_matches();
 }
 
 #[test]
 fn regression_role_mismatch_signing_request_is_rejected() {
-    // Regression: #619
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:aws-kms:role-admin/key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    assert_eq!(
-        router.sign_with_secure_fallback(&request),
-        Err(SignerBackendError::KeyRoleMismatch {
-            key_role: "admin".to_owned(),
-            sender_role: "operator".to_owned(),
-            sender: "agent-a".to_owned(),
-            key_id: "secure:aws-kms:role-admin/key-ops-1".to_owned(),
-        })
-    );
+    signer_provider_cases::run_regression_role_mismatch_signing_request_is_rejected();
 }
 
 #[test]
 fn regression_admin_key_does_not_fallback_when_secure_provider_unavailable() {
-    // Regression: #619
-    let router = SignerBackendRouter::with_secure_availability(false);
-    let request = SigningRequest::new(
-        "secure:aws-kms:role-admin/key-ops-1",
-        "admin-agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    assert_eq!(
-        router.sign_with_secure_fallback(&request),
-        Err(SignerBackendError::FallbackDeniedByRolePolicy {
-            key_role: "admin".to_owned(),
-            key_id: "secure:aws-kms:role-admin/key-ops-1".to_owned(),
-        })
-    );
+    signer_provider_cases::run_regression_admin_key_does_not_fallback_when_secure_provider_unavailable();
 }
 
 #[test]
 fn functional_privileged_roles_deny_fallback_when_provider_unavailable() {
-    let router = SignerBackendRouter::with_provider_handshake_matrix(
-        SignerProviderHandshakeMatrix::with_statuses(
-            SignerProviderHandshakeStatus::Available,
-            SignerProviderHandshakeStatus::Unavailable,
-        ),
-    );
-    let privileged_cases = [
-        (
-            "secure:aws-kms:role-admin/key-ops-1",
-            "admin-agent-a",
-            "admin",
-        ),
-        (
-            "secure:aws-kms:role-treasury/key-ops-1",
-            "treasury-agent-a",
-            "treasury",
-        ),
-        (
-            "secure:aws-kms:role-auditor/key-ops-1",
-            "auditor-agent-a",
-            "auditor",
-        ),
-    ];
-
-    for (key_id, sender, role) in privileged_cases {
-        let request = SigningRequest::new(key_id, sender, 1, "payload-1", GENESIS_STATE_HASH)
-            .expect("request should be valid");
-
-        assert_eq!(
-            router.sign_with_secure_fallback(&request),
-            Err(SignerBackendError::FallbackDeniedByRolePolicy {
-                key_role: role.to_owned(),
-                key_id: key_id.to_owned(),
-            })
-        );
-    }
+    signer_provider_cases::run_functional_privileged_roles_deny_fallback_when_provider_unavailable();
 }
 
 #[test]
@@ -473,93 +365,17 @@ fn regression_unsupported_secure_key_reference_does_not_fallback() {
 
 #[test]
 fn regression_unknown_secure_provider_is_rejected_without_fallback() {
-    // Regression: #619
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:gcp-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    assert_eq!(
-        router.sign_with_secure_fallback(&request),
-        Err(SignerBackendError::UnsupportedSecureProvider {
-            backend: "secure-mock".to_owned(),
-            provider: "gcp-kms".to_owned(),
-            key_id: "secure:gcp-kms:key-ops-1".to_owned(),
-        })
-    );
+    signer_provider_cases::run_regression_unknown_secure_provider_is_rejected_without_fallback();
 }
 
 #[test]
 fn regression_provider_handshake_policy_block_rejects_without_fallback() {
-    // Regression: #677
-    let router = SignerBackendRouter::with_provider_handshake_matrix(
-        SignerProviderHandshakeMatrix::with_statuses(
-            SignerProviderHandshakeStatus::Available,
-            SignerProviderHandshakeStatus::PolicyBlocked,
-        ),
-    );
-    let request = SigningRequest::new(
-        "secure:aws-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    assert_eq!(
-        router.sign_with_secure_fallback(&request),
-        Err(SignerBackendError::ProviderHandshakeRejected {
-            backend: "secure-aws-kms-emulator".to_owned(),
-            failure_class: "policy-blocked".to_owned(),
-        })
-    );
+    signer_provider_cases::run_regression_provider_handshake_policy_block_rejects_without_fallback();
 }
 
 #[test]
 fn regression_provider_client_backend_mismatch_is_rejected_without_fallback() {
-    // Regression: #986
-    fn mismatched_provider_client(
-        request: &SigningRequest,
-        _key_reference: &CanonicalSecureKeyReference,
-    ) -> Result<BackendSignature, SignerBackendError> {
-        Ok(BackendSignature {
-            backend: "secure-mock".to_owned(),
-            signature: baseline_signature_for_fields(
-                &request.sender,
-                request.nonce,
-                &request.state_hash,
-                &request.payload,
-            ),
-        })
-    }
-
-    let router = SignerBackendRouter::with_provider_client(
-        SignerProviderHandshakeMatrix::with_uniform_availability(true),
-        mismatched_provider_client,
-    );
-    let request = SigningRequest::new(
-        "secure:aws-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-
-    assert_eq!(
-        router.sign_with_secure_fallback(&request),
-        Err(SignerBackendError::ProviderClientBackendMismatch {
-            expected_backend: "secure-aws-kms-emulator".to_owned(),
-            provided_backend: "secure-mock".to_owned(),
-            key_id: "secure:aws-kms:key-ops-1".to_owned(),
-        })
-    );
+    signer_provider_cases::run_regression_provider_client_backend_mismatch_is_rejected_without_fallback();
 }
 
 #[test]
@@ -700,30 +516,7 @@ fn regression_local_backend_rejects_baseline_v1_signature_without_compat_switch(
 
 #[test]
 fn regression_secure_provider_backend_mismatch_is_rejected() {
-    // Regression: #619
-    with_default_signer_key_env(|| {
-        let router = SignerBackendRouter::default();
-        let request = SigningRequest::new(
-            "secure:aws-kms:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("signing should succeed");
-
-        assert_eq!(
-            router.verify_with_backend("secure-mock", &request, &signed.signature),
-            Err(SignerBackendError::SecureProviderBackendMismatch {
-                expected_backend: "secure-aws-kms-emulator".to_owned(),
-                provided_backend: "secure-mock".to_owned(),
-                key_id: "secure:aws-kms:key-ops-1".to_owned(),
-            })
-        );
-    });
+    signer_provider_cases::run_regression_secure_provider_backend_mismatch_is_rejected();
 }
 
 #[test]
