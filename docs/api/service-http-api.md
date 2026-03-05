@@ -49,6 +49,10 @@ Implemented route contract for local deterministic ingress:
 
 Response behavior is deterministic and intentionally lightweight for this phase.
 
+OpenAPI reference:
+
+- `docs/api/service-openapi.yaml`
+
 `GET /metrics` now includes deterministic runtime telemetry gauges/labels:
 
 - `kamn_service_api_observability_latency_p50_ms`
