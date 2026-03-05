@@ -22,10 +22,10 @@ Move WebSocket-specific service API endpoint helpers and contract tests out of `
 - Moved tests become disconnected from existing shared setup helpers.
 
 ## Acceptance criteria (testable booleans)
-- [ ] WebSocket helper functions and WebSocket contract tests are moved into a dedicated module file.
-- [ ] `service_api_endpoint_tests.rs` no longer contains moved WebSocket test function blocks.
-- [ ] Split contract tests enforce ownership markers for root vs. WebSocket module files.
-- [ ] `kamn-node` service API endpoint tests remain green.
+- [x] WebSocket helper functions and WebSocket contract tests are moved into a dedicated module file.
+- [x] `service_api_endpoint_tests.rs` no longer contains moved WebSocket test function blocks.
+- [x] Split contract tests enforce ownership markers for root vs. WebSocket module files.
+- [x] `kamn-node` service API endpoint tests remain green.
 
 ## Files to touch
 - `specs/6375-extract-service-api-websocket-contract-tests.md`
@@ -43,12 +43,20 @@ Move WebSocket-specific service API endpoint helpers and contract tests out of `
   - Add split contract tests that fail until WebSocket helpers/tests are extracted.
 - Green/Refactor/Integration:
   - `cargo test -p kamn-node service_api_endpoint_tests_split_contract`
-  - `cargo test -p kamn-node integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event -- --exact`
-  - `cargo test -p kamn-node integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event -- --exact`
-  - `cargo test -p kamn-node regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_headers -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::websocket_contract_tests::integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::websocket_contract_tests::integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::websocket_contract_tests::regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_headers -- --exact`
 
 ## Phase 6 integration evidence
-- Pending.
+- Wiring:
+  - Added `#[path = "service_api_endpoint_tests/websocket_contract_tests.rs"] mod websocket_contract_tests;` in `service_api_endpoint_tests.rs`.
+  - Moved WebSocket helpers and nine WebSocket contract tests into the dedicated module.
+  - Added split ownership contract module `service_api_endpoint_tests_split_contract.rs` and wired it via `main_tests.rs`.
+- Executed:
+  - `cargo test -p kamn-node service_api_endpoint_tests_split_contract`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::websocket_contract_tests::integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::websocket_contract_tests::integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::websocket_contract_tests::regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_headers -- --exact`
 
 ## Deviations
-- None.
+- Targeted test filter commands required fully-qualified module paths after extraction.
