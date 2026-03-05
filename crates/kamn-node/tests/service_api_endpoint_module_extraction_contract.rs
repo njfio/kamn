@@ -1,6 +1,40 @@
 use std::path::Path;
 use std::{fs, path::PathBuf};
 
+const OPENAPI_TOP_LEVEL_MARKERS: [&str; 5] = [
+    "openapi: 3.1.0",
+    "title: KAMN Service API",
+    "paths:",
+    "components:",
+    "securitySchemes:",
+];
+
+const OPENAPI_REQUIRED_ROUTE_AND_AUTH_MARKERS: [&str; 23] = [
+    "/healthz:",
+    "/v1/messages/send:",
+    "/v1/messages/{id}:",
+    "/v1/channels/create:",
+    "/v1/channels/{id}/messages:",
+    "/v1/tasks/create:",
+    "/v1/tasks/{id}:",
+    "/v1/tasks/{id}/accept:",
+    "/v1/tasks/{id}/complete:",
+    "/v1/escrow/fund:",
+    "/v1/escrow/{id}/release:",
+    "/v1/content/register:",
+    "/v1/content/{id}:",
+    "/v1/content/{id}/expire:",
+    "/v1/content/{id}/tombstone:",
+    "/v1/bridge/submit:",
+    "/v1/bridge/{id}:",
+    "/v1/bridge/{id}/forward:",
+    "/v1/agents/{did}:",
+    "/v1/events/ws:",
+    "X-KAMN-Sender-DID",
+    "X-KAMN-Request-Nonce",
+    "X-KAMN-Request-Signature",
+];
+
 fn repo_file(path: &str) -> String {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     fs::read_to_string(root.join(path))
@@ -63,13 +97,7 @@ fn conformance_service_api_endpoint_submodule_files_exist() {
 #[test]
 fn conformance_service_api_openapi_spec_contains_required_top_level_markers() {
     let openapi = repo_file("docs/api/service-openapi.yaml");
-    for marker in [
-        "openapi: 3.1.0",
-        "title: KAMN Service API",
-        "paths:",
-        "components:",
-        "securitySchemes:",
-    ] {
+    for marker in OPENAPI_TOP_LEVEL_MARKERS {
         assert!(
             openapi.contains(marker),
             "service OpenAPI spec missing top-level marker: {marker}"
@@ -80,31 +108,7 @@ fn conformance_service_api_openapi_spec_contains_required_top_level_markers() {
 #[test]
 fn conformance_service_api_openapi_spec_covers_required_route_and_auth_markers() {
     let openapi = repo_file("docs/api/service-openapi.yaml");
-    for marker in [
-        "/healthz:",
-        "/v1/messages/send:",
-        "/v1/messages/{id}:",
-        "/v1/channels/create:",
-        "/v1/channels/{id}/messages:",
-        "/v1/tasks/create:",
-        "/v1/tasks/{id}:",
-        "/v1/tasks/{id}/accept:",
-        "/v1/tasks/{id}/complete:",
-        "/v1/escrow/fund:",
-        "/v1/escrow/{id}/release:",
-        "/v1/content/register:",
-        "/v1/content/{id}:",
-        "/v1/content/{id}/expire:",
-        "/v1/content/{id}/tombstone:",
-        "/v1/bridge/submit:",
-        "/v1/bridge/{id}:",
-        "/v1/bridge/{id}/forward:",
-        "/v1/agents/{did}:",
-        "/v1/events/ws:",
-        "X-KAMN-Sender-DID",
-        "X-KAMN-Request-Nonce",
-        "X-KAMN-Request-Signature",
-    ] {
+    for marker in OPENAPI_REQUIRED_ROUTE_AND_AUTH_MARKERS {
         assert!(
             openapi.contains(marker),
             "service OpenAPI spec missing required route/auth marker: {marker}"
