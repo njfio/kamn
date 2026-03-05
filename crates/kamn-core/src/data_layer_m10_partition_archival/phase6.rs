@@ -13,6 +13,8 @@ use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
+    data_layer_m10_validate_phase6_execution_budget_policy,
+    data_layer_m10_validate_phase6_scheduler_trigger_policy_config,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
     DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6BudgetPolicyReport,
     DataLayerM10Phase6CompliancePort, DataLayerM10Phase6CompliancePortError,
@@ -864,61 +866,22 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
 fn validate_phase6_execution_tick_budget(
     budget: DataLayerM10Phase6ExecutionTickBudget,
 ) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    if budget.max_due_candidates == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
-                field: "max_due_candidates",
-                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
-            },
-        );
-    }
-    if budget.max_shredded_messages == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
-                field: "max_shredded_messages",
-                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
-            },
-        );
-    }
-    if budget.max_projection_reports == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
-                field: "max_projection_reports",
-                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
-            },
-        );
-    }
-    if budget.max_archived_entries == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
-                field: "max_archived_entries",
-                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
-            },
-        );
-    }
-    Ok(())
+    data_layer_m10_validate_phase6_execution_budget_policy(map_phase6_policy_budget_from_core(
+        budget,
+    ))
+    .map_err(map_data_layer_policy_error_to_m10)
 }
 
 fn validate_phase6_scheduler_policy(
     policy: DataLayerM10Phase6SchedulerPolicy,
 ) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    if policy.due_candidate_trigger_threshold == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerPolicy {
-                field: "due_candidate_trigger_threshold",
-                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_POLICY_INVALID_REASON_CODE,
-            },
-        );
-    }
-    if policy.max_tick_interval_seconds == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerPolicy {
-                field: "max_tick_interval_seconds",
-                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_POLICY_INVALID_REASON_CODE,
-            },
-        );
-    }
-    Ok(())
+    data_layer_m10_validate_phase6_scheduler_trigger_policy_config(
+        DataLayerM10Phase6SchedulerTriggerPolicy {
+            due_candidate_trigger_threshold: policy.due_candidate_trigger_threshold,
+            max_tick_interval_seconds: policy.max_tick_interval_seconds,
+        },
+    )
+    .map_err(map_data_layer_policy_error_to_m10)
 }
 
 fn validate_phase6_scheduler_runtime_clock(
