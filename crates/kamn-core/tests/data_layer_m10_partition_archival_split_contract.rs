@@ -28,6 +28,24 @@ const SEAM_PORT_CASES_MARKERS: [&str; 2] = [
     "pub(super) fn run_spec_c38_phase6_orchestration_with_port_supports_seam_without_direct_m8_registry_argument(",
 ];
 
+const SCHEDULER_RUNTIME_ROOT_MARKERS: [&str; 7] = [
+    "#[path = \"data_layer_m10_partition_archival/scheduler_runtime_cases.rs\"]",
+    "mod scheduler_runtime_cases;",
+    "scheduler_runtime_cases::run_spec_c28_phase6_scheduler_runtime_initializes_zeroed_state_and_checkpoint();",
+    "scheduler_runtime_cases::run_spec_c29_phase6_scheduler_runtime_deferred_cycle_preserves_success_checkpoint();",
+    "scheduler_runtime_cases::run_spec_c30_phase6_scheduler_runtime_applied_cycle_updates_success_checkpoint_and_counters();",
+    "scheduler_runtime_cases::run_spec_c31_phase6_scheduler_runtime_preflight_fail_closed_increments_fail_counter_without_checkpoint_advance();",
+    "scheduler_runtime_cases::run_spec_c32_phase6_scheduler_runtime_clock_regression_fails_closed_and_preserves_checkpoint();",
+];
+
+const SCHEDULER_RUNTIME_CASES_MARKERS: [&str; 5] = [
+    "pub(super) fn run_spec_c28_phase6_scheduler_runtime_initializes_zeroed_state_and_checkpoint(",
+    "pub(super) fn run_spec_c29_phase6_scheduler_runtime_deferred_cycle_preserves_success_checkpoint(",
+    "pub(super) fn run_spec_c30_phase6_scheduler_runtime_applied_cycle_updates_success_checkpoint_and_counters(",
+    "pub(super) fn run_spec_c31_phase6_scheduler_runtime_preflight_fail_closed_increments_fail_counter_without_checkpoint_advance(",
+    "pub(super) fn run_spec_c32_phase6_scheduler_runtime_clock_regression_fails_closed_and_preserves_checkpoint(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -72,6 +90,27 @@ fn spec_c02_seam_port_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "seam-port cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c03_scheduler_runtime_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let cases =
+        read_repo_file("tests/data_layer_m10_partition_archival/scheduler_runtime_cases.rs");
+
+    for marker in SCHEDULER_RUNTIME_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain scheduler-runtime delegation marker: {marker}"
+        );
+    }
+
+    for marker in SCHEDULER_RUNTIME_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "scheduler-runtime cases module should define marker: {marker}"
         );
     }
 }
