@@ -35,17 +35,19 @@ Extract deterministic M10 Phase-6 runtime evidence projection from `kamn-core` i
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports a runtime evidence projection contract surface for M10 Phase-6.
-- [ ] AC-2: `kamn-core::data_layer_m10_project_phase6_runtime_evidence_bundle` delegates through extracted contracts with behavior parity.
-- [ ] AC-3: core M10 phase6 contract tests for applied/deferred evidence and fail-closed payload validation remain green.
-- [ ] AC-4: docs + tests include runtime-evidence extraction markers.
-- [ ] AC-5: Phase 6 integration evidence recorded for docs lane, new data-layer contract lane, and core M10 contract lane.
+- [x] AC-1: `kamn-data-layer` exports a runtime evidence projection contract surface for M10 Phase-6.
+- [x] AC-2: `kamn-core::data_layer_m10_project_phase6_runtime_evidence_bundle` delegates through extracted contracts with behavior parity.
+- [x] AC-3: core M10 phase6 contract tests for applied/deferred evidence and fail-closed payload validation remain green.
+- [x] AC-4: docs + tests include runtime-evidence extraction markers.
+- [x] AC-5: Phase 6 integration evidence recorded for docs lane, new data-layer contract lane, and core M10 contract lane.
 
 ## Files to touch
 
 - `specs/6401-m10-phase6-runtime-evidence-extraction.md`
 - `crates/kamn-data-layer/src/lib.rs`
 - `crates/kamn-data-layer/src/data_layer_m10_phase6_runtime_evidence.rs` (new)
+- `crates/kamn-data-layer/src/data_layer_m10_phase6_runtime_evidence/types.rs` (new)
+- `crates/kamn-data-layer/src/data_layer_m10_phase6_runtime_evidence/projector.rs` (new)
 - `crates/kamn-data-layer/tests/data_layer_m10_phase6_runtime_evidence_contract.rs` (new)
 - `crates/kamn-core/src/data_layer_m10_partition_archival/phase6.rs`
 - `crates/kamn-core/tests/data_layer_m0_m11_extraction_docs.rs`
@@ -76,8 +78,15 @@ Extract deterministic M10 Phase-6 runtime evidence projection from `kamn-core` i
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_phase6_runtime_evidence_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m10_phase6_runtime_evidence_pre_seconds=16.61`
+    - command: `/usr/bin/time -f 'm10_phase6_runtime_evidence_pre_seconds=%e' -o /tmp/m10_phase6_runtime_evidence_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6401-pre/Cargo.toml`
+  - post extraction lane timing: `m10_phase6_runtime_evidence_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_phase6_runtime_evidence_post_seconds=%e' -o /tmp/m10_phase6_runtime_evidence_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
-- None.
+- Runtime evidence extraction module was split into `types.rs` and `projector.rs` under `data_layer_m10_phase6_runtime_evidence/` to keep new files within the file-size constraint while preserving the same public API.
