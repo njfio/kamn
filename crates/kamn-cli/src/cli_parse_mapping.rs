@@ -31,16 +31,21 @@ const COMMAND_KIND_MAPPINGS: &[(&str, CommandKind)] = &[
 ];
 
 pub(super) fn parse_output_format(raw: &str) -> Result<OutputFormat, String> {
-    match lookup_mapping(raw, OUTPUT_FORMAT_MAPPINGS) {
-        Some(value) => Ok(value),
-        None => Err(format!("unsupported format: {raw}")),
-    }
+    parse_mapping(raw, OUTPUT_FORMAT_MAPPINGS, "unsupported format")
 }
 
 pub(super) fn parse_command_kind(raw: &str) -> Result<CommandKind, String> {
-    match lookup_mapping(raw, COMMAND_KIND_MAPPINGS) {
+    parse_mapping(raw, COMMAND_KIND_MAPPINGS, "unsupported command")
+}
+
+fn parse_mapping<T: Copy>(
+    raw: &str,
+    mappings: &[(&str, T)],
+    unsupported_label: &str,
+) -> Result<T, String> {
+    match lookup_mapping(raw, mappings) {
         Some(value) => Ok(value),
-        None => Err(format!("unsupported command: {raw}")),
+        None => Err(format!("{unsupported_label}: {raw}")),
     }
 }
 
