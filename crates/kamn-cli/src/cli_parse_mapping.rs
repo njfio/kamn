@@ -1,4 +1,4 @@
-use super::{CommandKind, OutputFormat};
+use super::cli_models::{CommandKind, OutputFormat};
 
 const OUTPUT_FORMAT_MAPPINGS: &[(&str, OutputFormat)] =
     &[("json", OutputFormat::Json), ("text", OutputFormat::Text)];
