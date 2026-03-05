@@ -392,3 +392,13 @@ fn spec_c10_shared_helpers_are_extracted_to_shared_module() {
         );
     }
 }
+
+#[test]
+fn spec_c11_root_archival_contract_file_stays_within_size_budget() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let line_count = root.lines().count();
+    assert!(
+        line_count <= 200,
+        "data_layer_m10_partition_archival.rs should stay within 200-line budget; got {line_count}"
+    );
+}
