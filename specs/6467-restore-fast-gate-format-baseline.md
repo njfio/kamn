@@ -24,7 +24,7 @@ passes locally and in PR Fast Gate CI.
 ## Acceptance criteria (testable booleans)
 - [x] AC-1: `cargo fmt --all --check` passes locally.
 - [x] AC-2: Generated changes are format-only (no behavior edits).
-- [ ] AC-3: Fast Gate formatting step can pass on PR CI.
+- [x] AC-3: Fast Gate formatting step can pass on PR CI.
 
 ## Files to touch
 - Rust files modified by `cargo fmt --all`.
@@ -60,6 +60,9 @@ passes locally and in PR Fast Gate CI.
   - `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract`
   - `cargo test -p kamn-core --test signer_backend_split_contract`
 - PR CI evidence for Fast Gate formatting stage tracked in Phase 7.
+  - PR #6468 checks passed:
+    - Fast Gate (PR): pass
+    - Workspace Pre-Merge Gate (PR): pass
 
 ## Deviations
 - Split-contract marker assertions were upgraded to whitespace-insensitive
