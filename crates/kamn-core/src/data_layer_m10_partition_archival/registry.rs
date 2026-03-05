@@ -110,6 +110,43 @@ fn map_projection_port_error_to_m10(
     }
 }
 
+fn collect_partition_message_ids(
+    partition_message_ids: Vec<String>,
+) -> Result<BTreeSet<String>, DataLayerM10PartitionLifecycleError> {
+    if partition_message_ids.is_empty() {
+        return Err(DataLayerM10PartitionLifecycleError::EmptyField(
+            "partition_message_ids",
+        ));
+    }
+    let mut message_ids = BTreeSet::new();
+    for message_id in partition_message_ids {
+        validate_non_empty(message_id.as_str(), "partition_message_ids")?;
+        message_ids.insert(message_id);
+    }
+    Ok(message_ids)
+}
+
+fn evaluate_partition_message_shred_completeness(
+    compliance_port: &impl DataLayerM10ComplianceProjectionPort,
+    owner_did: &str,
+    message_ids: &BTreeSet<String>,
+) -> Result<(usize, usize), DataLayerM10PartitionLifecycleError> {
+    let mut shredded_partition_messages = 0usize;
+    let mut legal_hold_active_messages = 0usize;
+    for message_id in message_ids {
+        let message = compliance_port
+            .message_for_owner(owner_did, message_id.as_str())
+            .map_err(map_projection_port_error_to_m10)?;
+        if message.legal_hold_active {
+            legal_hold_active_messages += 1;
+        }
+        if message.shredded_at_epoch_seconds.is_some() {
+            shredded_partition_messages += 1;
+        }
+    }
+    Ok((shredded_partition_messages, legal_hold_active_messages))
+}
+
 impl DataLayerM10PartitionLifecycleRegistry {
     /// Creates an empty partition lifecycle registry.
     pub fn new() -> Self {
@@ -170,32 +207,14 @@ impl DataLayerM10PartitionLifecycleRegistry {
             )
             .map_err(map_projection_port_error_to_m10)?;
         validate_partition_month_id(request.partition_month_id)?;
-        if request.partition_message_ids.is_empty() {
-            return Err(DataLayerM10PartitionLifecycleError::EmptyField(
-                "partition_message_ids",
-            ));
-        }
-
-        let mut message_ids = BTreeSet::new();
-        for message_id in request.partition_message_ids {
-            validate_non_empty(message_id.as_str(), "partition_message_ids")?;
-            message_ids.insert(message_id);
-        }
-
+        let message_ids = collect_partition_message_ids(request.partition_message_ids)?;
         let total_partition_messages = message_ids.len();
-        let mut shredded_partition_messages = 0usize;
-        let mut legal_hold_active_messages = 0usize;
-        for message_id in &message_ids {
-            let message = compliance_port
-                .message_for_owner(owner_did.as_str(), message_id.as_str())
-                .map_err(map_projection_port_error_to_m10)?;
-            if message.legal_hold_active {
-                legal_hold_active_messages += 1;
-            }
-            if message.shredded_at_epoch_seconds.is_some() {
-                shredded_partition_messages += 1;
-            }
-        }
+        let (shredded_partition_messages, legal_hold_active_messages) =
+            evaluate_partition_message_shred_completeness(
+                compliance_port,
+                owner_did.as_str(),
+                &message_ids,
+            )?;
         let all_messages_shredded = shredded_partition_messages == total_partition_messages;
         let reason_code = if legal_hold_active_messages > 0 {
             DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE
