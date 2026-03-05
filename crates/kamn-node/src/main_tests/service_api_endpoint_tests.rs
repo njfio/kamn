@@ -2434,6 +2434,41 @@ fn regression_service_api_endpoint_tls_mode_rejects_missing_cert_file() {
 }
 
 #[test]
+fn regression_service_api_endpoint_rejects_disabled_tls_for_non_loopback_api_runtime_path() {
+    let _env = acquire_service_api_test_env();
+    let _tls_mode = EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", Some("disabled"));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34102".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: "0.0.0.0:34103".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let error = serve_service_api_endpoint(&endpoint_config, &snapshot)
+        .expect_err("disabled tls must fail closed for non-loopback api runtime path");
+    assert!(
+        error.contains("service api tls disabled is forbidden"),
+        "unexpected disabled tls policy marker: {error}"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_http_response_bodies_match_serde_contracts() {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
