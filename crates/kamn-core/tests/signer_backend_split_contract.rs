@@ -86,6 +86,32 @@ const SIGNER_REQUEST_CASES_MARKERS: [&str; 3] = [
     "pub(super) fn run_regression_signatures_include_profile_identifier_segment(",
 ];
 
+const SIGNER_CORE_ROOT_MARKERS: [&str; 12] = [
+    "#[path = \"signer_backend/signer_core_cases.rs\"]",
+    "mod signer_core_cases;",
+    "signer_core_cases::run_functional_secure_backend_signs_and_verifies_when_available();",
+    "signer_core_cases::run_functional_aws_kms_provider_routes_to_production_adapter_backend();",
+    "signer_core_cases::run_functional_router_uses_custom_provider_client_mapping_for_secure_provider();",
+    "signer_core_cases::run_functional_secure_unavailable_falls_back_to_local_backend();",
+    "signer_core_cases::run_regression_local_backend_signing_requires_explicit_key_material();",
+    "signer_core_cases::run_integration_router_signed_transaction_passes_transaction_guards();",
+    "signer_core_cases::run_integration_aws_kms_signed_transaction_passes_transaction_guards();",
+    "signer_core_cases::run_regression_unsupported_secure_key_reference_does_not_fallback();",
+    "fn functional_secure_backend_signs_and_verifies_when_available()",
+    "fn regression_unsupported_secure_key_reference_does_not_fallback()",
+];
+
+const SIGNER_CORE_CASES_MARKERS: [&str; 8] = [
+    "pub(super) fn run_functional_secure_backend_signs_and_verifies_when_available(",
+    "pub(super) fn run_functional_aws_kms_provider_routes_to_production_adapter_backend(",
+    "pub(super) fn run_functional_router_uses_custom_provider_client_mapping_for_secure_provider(",
+    "pub(super) fn run_functional_secure_unavailable_falls_back_to_local_backend(",
+    "pub(super) fn run_regression_local_backend_signing_requires_explicit_key_material(",
+    "pub(super) fn run_integration_router_signed_transaction_passes_transaction_guards(",
+    "pub(super) fn run_integration_aws_kms_signed_transaction_passes_transaction_guards(",
+    "pub(super) fn run_regression_unsupported_secure_key_reference_does_not_fallback(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -170,6 +196,26 @@ fn spec_c04_signer_request_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "signer-request cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c05_signer_core_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/signer_backend.rs");
+    let cases = read_repo_file("tests/signer_backend/signer_core_cases.rs");
+
+    for marker in SIGNER_CORE_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root signer-backend contract should contain signer-core delegation marker: {marker}"
+        );
+    }
+
+    for marker in SIGNER_CORE_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "signer-core cases module should define marker: {marker}"
         );
     }
 }
