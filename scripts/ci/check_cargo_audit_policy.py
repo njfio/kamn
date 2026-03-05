@@ -214,6 +214,10 @@ def ordered_reason_codes(reason_codes: set[str]) -> list[str]:
     return sorted(reason_codes, key=lambda code: (order.get(code, len(order)), code))
 
 
+def elapsed_seconds(started_at: float) -> float:
+    return round(time.perf_counter() - started_at, 6)
+
+
 def main() -> int:
     started_at = time.perf_counter()
     args = parse_args()
@@ -298,7 +302,7 @@ def main() -> int:
     ordered = ordered_reason_codes(reason_codes)
     reason_codes_csv = ",".join(ordered) if ordered else "none"
     reason_class = "violation" if status == "fail" else ("waived" if review_required else "stable")
-    policy_elapsed_seconds = round(time.perf_counter() - started_at, 6)
+    policy_elapsed_seconds = elapsed_seconds(started_at)
 
     report = {
         "schema_version": SCHEMA_VERSION,
