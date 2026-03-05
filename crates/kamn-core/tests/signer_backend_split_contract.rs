@@ -120,24 +120,36 @@ fn read_repo_file(path: &str) -> String {
     })
 }
 
+fn normalize_contract_surface(content: &str) -> String {
+    content.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
+fn assert_contract_markers(surface: &str, markers: &[&str], message_prefix: &str) {
+    let normalized_surface = normalize_contract_surface(surface);
+    for marker in markers {
+        let normalized_marker = normalize_contract_surface(marker);
+        assert!(
+            normalized_surface.contains(&normalized_marker),
+            "{message_prefix}: {marker}"
+        );
+    }
+}
+
 #[test]
 fn spec_c01_signer_emulator_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/signer_backend.rs");
     let cases = read_repo_file("tests/signer_backend/signer_emulator_cases.rs");
 
-    for marker in SIGNER_EMULATOR_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root signer-backend contract should contain signer-emulator delegation marker: {marker}"
-        );
-    }
-
-    for marker in SIGNER_EMULATOR_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "signer-emulator cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SIGNER_EMULATOR_ROOT_MARKERS,
+        "root signer-backend contract should contain signer-emulator delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SIGNER_EMULATOR_CASES_MARKERS,
+        "signer-emulator cases module should define marker",
+    );
 }
 
 #[test]
@@ -145,19 +157,16 @@ fn spec_c02_signer_provider_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/signer_backend.rs");
     let cases = read_repo_file("tests/signer_backend/signer_provider_cases.rs");
 
-    for marker in SIGNER_PROVIDER_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root signer-backend contract should contain signer-provider delegation marker: {marker}"
-        );
-    }
-
-    for marker in SIGNER_PROVIDER_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "signer-provider cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SIGNER_PROVIDER_ROOT_MARKERS,
+        "root signer-backend contract should contain signer-provider delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SIGNER_PROVIDER_CASES_MARKERS,
+        "signer-provider cases module should define marker",
+    );
 }
 
 #[test]
@@ -165,19 +174,16 @@ fn spec_c03_signer_signature_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/signer_backend.rs");
     let cases = read_repo_file("tests/signer_backend/signer_signature_cases.rs");
 
-    for marker in SIGNER_SIGNATURE_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root signer-backend contract should contain signer-signature delegation marker: {marker}"
-        );
-    }
-
-    for marker in SIGNER_SIGNATURE_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "signer-signature cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SIGNER_SIGNATURE_ROOT_MARKERS,
+        "root signer-backend contract should contain signer-signature delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SIGNER_SIGNATURE_CASES_MARKERS,
+        "signer-signature cases module should define marker",
+    );
 }
 
 #[test]
@@ -185,19 +191,16 @@ fn spec_c04_signer_request_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/signer_backend.rs");
     let cases = read_repo_file("tests/signer_backend/signer_request_cases.rs");
 
-    for marker in SIGNER_REQUEST_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root signer-backend contract should contain signer-request delegation marker: {marker}"
-        );
-    }
-
-    for marker in SIGNER_REQUEST_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "signer-request cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SIGNER_REQUEST_ROOT_MARKERS,
+        "root signer-backend contract should contain signer-request delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SIGNER_REQUEST_CASES_MARKERS,
+        "signer-request cases module should define marker",
+    );
 }
 
 #[test]
@@ -205,17 +208,14 @@ fn spec_c05_signer_core_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/signer_backend.rs");
     let cases = read_repo_file("tests/signer_backend/signer_core_cases.rs");
 
-    for marker in SIGNER_CORE_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root signer-backend contract should contain signer-core delegation marker: {marker}"
-        );
-    }
-
-    for marker in SIGNER_CORE_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "signer-core cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SIGNER_CORE_ROOT_MARKERS,
+        "root signer-backend contract should contain signer-core delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SIGNER_CORE_CASES_MARKERS,
+        "signer-core cases module should define marker",
+    );
 }

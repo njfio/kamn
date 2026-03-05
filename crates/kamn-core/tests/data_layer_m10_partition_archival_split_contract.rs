@@ -175,24 +175,36 @@ fn read_repo_file(path: &str) -> String {
     })
 }
 
+fn normalize_contract_surface(content: &str) -> String {
+    content.chars().filter(|ch| !ch.is_whitespace()).collect()
+}
+
+fn assert_contract_markers(surface: &str, markers: &[&str], message_prefix: &str) {
+    let normalized_surface = normalize_contract_surface(surface);
+    for marker in markers {
+        let normalized_marker = normalize_contract_surface(marker);
+        assert!(
+            normalized_surface.contains(&normalized_marker),
+            "{message_prefix}: {marker}"
+        );
+    }
+}
+
 #[test]
 fn spec_c01_runtime_evidence_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let cases = read_repo_file("tests/data_layer_m10_partition_archival/runtime_evidence_cases.rs");
 
-    for marker in RUNTIME_EVIDENCE_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain runtime-evidence delegation marker: {marker}"
-        );
-    }
-
-    for marker in RUNTIME_EVIDENCE_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "runtime-evidence cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &RUNTIME_EVIDENCE_ROOT_MARKERS,
+        "root archival contract should contain runtime-evidence delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &RUNTIME_EVIDENCE_CASES_MARKERS,
+        "runtime-evidence cases module should define marker",
+    );
 }
 
 #[test]
@@ -200,19 +212,16 @@ fn spec_c02_seam_port_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let cases = read_repo_file("tests/data_layer_m10_partition_archival/seam_port_cases.rs");
 
-    for marker in SEAM_PORT_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain seam-port delegation marker: {marker}"
-        );
-    }
-
-    for marker in SEAM_PORT_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "seam-port cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SEAM_PORT_ROOT_MARKERS,
+        "root archival contract should contain seam-port delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SEAM_PORT_CASES_MARKERS,
+        "seam-port cases module should define marker",
+    );
 }
 
 #[test]
@@ -221,19 +230,16 @@ fn spec_c03_scheduler_runtime_tests_delegate_to_cases_module() {
     let cases =
         read_repo_file("tests/data_layer_m10_partition_archival/scheduler_runtime_cases.rs");
 
-    for marker in SCHEDULER_RUNTIME_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain scheduler-runtime delegation marker: {marker}"
-        );
-    }
-
-    for marker in SCHEDULER_RUNTIME_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "scheduler-runtime cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SCHEDULER_RUNTIME_ROOT_MARKERS,
+        "root archival contract should contain scheduler-runtime delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SCHEDULER_RUNTIME_CASES_MARKERS,
+        "scheduler-runtime cases module should define marker",
+    );
 }
 
 #[test]
@@ -241,19 +247,16 @@ fn spec_c04_scheduler_cycle_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let cases = read_repo_file("tests/data_layer_m10_partition_archival/scheduler_cycle_cases.rs");
 
-    for marker in SCHEDULER_CYCLE_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain scheduler-cycle delegation marker: {marker}"
-        );
-    }
-
-    for marker in SCHEDULER_CYCLE_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "scheduler-cycle cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SCHEDULER_CYCLE_ROOT_MARKERS,
+        "root archival contract should contain scheduler-cycle delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &SCHEDULER_CYCLE_CASES_MARKERS,
+        "scheduler-cycle cases module should define marker",
+    );
 }
 
 #[test]
@@ -261,19 +264,16 @@ fn spec_c05_execution_budget_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let cases = read_repo_file("tests/data_layer_m10_partition_archival/execution_budget_cases.rs");
 
-    for marker in EXECUTION_BUDGET_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain execution-budget delegation marker: {marker}"
-        );
-    }
-
-    for marker in EXECUTION_BUDGET_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "execution-budget cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &EXECUTION_BUDGET_ROOT_MARKERS,
+        "root archival contract should contain execution-budget delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &EXECUTION_BUDGET_CASES_MARKERS,
+        "execution-budget cases module should define marker",
+    );
 }
 
 #[test]
@@ -282,19 +282,16 @@ fn spec_c06_orchestration_ordering_tests_delegate_to_cases_module() {
     let cases =
         read_repo_file("tests/data_layer_m10_partition_archival/orchestration_ordering_cases.rs");
 
-    for marker in ORCHESTRATION_ORDERING_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain orchestration-ordering delegation marker: {marker}"
-        );
-    }
-
-    for marker in ORCHESTRATION_ORDERING_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "orchestration-ordering cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &ORCHESTRATION_ORDERING_ROOT_MARKERS,
+        "root archival contract should contain orchestration-ordering delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &ORCHESTRATION_ORDERING_CASES_MARKERS,
+        "orchestration-ordering cases module should define marker",
+    );
 }
 
 #[test]
@@ -302,19 +299,16 @@ fn spec_c07_retry_policy_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let cases = read_repo_file("tests/data_layer_m10_partition_archival/retry_policy_cases.rs");
 
-    for marker in RETRY_POLICY_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain retry-policy delegation marker: {marker}"
-        );
-    }
-
-    for marker in RETRY_POLICY_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "retry-policy cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &RETRY_POLICY_ROOT_MARKERS,
+        "root archival contract should contain retry-policy delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &RETRY_POLICY_CASES_MARKERS,
+        "retry-policy cases module should define marker",
+    );
 }
 
 #[test]
@@ -322,19 +316,16 @@ fn spec_c08_lifecycle_basics_tests_delegate_to_cases_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let cases = read_repo_file("tests/data_layer_m10_partition_archival/lifecycle_basics_cases.rs");
 
-    for marker in LIFECYCLE_BASICS_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain lifecycle-basics delegation marker: {marker}"
-        );
-    }
-
-    for marker in LIFECYCLE_BASICS_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "lifecycle-basics cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &LIFECYCLE_BASICS_ROOT_MARKERS,
+        "root archival contract should contain lifecycle-basics delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &LIFECYCLE_BASICS_CASES_MARKERS,
+        "lifecycle-basics cases module should define marker",
+    );
 }
 
 #[test]
@@ -343,19 +334,16 @@ fn spec_c09_compliance_projection_tests_delegate_to_cases_module() {
     let cases =
         read_repo_file("tests/data_layer_m10_partition_archival/compliance_projection_cases.rs");
 
-    for marker in COMPLIANCE_PROJECTION_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain compliance-projection delegation marker: {marker}"
-        );
-    }
-
-    for marker in COMPLIANCE_PROJECTION_CASES_MARKERS {
-        assert!(
-            cases.contains(marker),
-            "compliance-projection cases module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &COMPLIANCE_PROJECTION_ROOT_MARKERS,
+        "root archival contract should contain compliance-projection delegation marker",
+    );
+    assert_contract_markers(
+        &cases,
+        &COMPLIANCE_PROJECTION_CASES_MARKERS,
+        "compliance-projection cases module should define marker",
+    );
 }
 
 #[test]
@@ -363,19 +351,16 @@ fn spec_c10_shared_helpers_are_extracted_to_shared_module() {
     let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
     let shared = read_repo_file("tests/data_layer_m10_partition_archival/shared.rs");
 
-    for marker in SHARED_HELPERS_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "root archival contract should contain shared-helper wiring marker: {marker}"
-        );
-    }
-
-    for marker in SHARED_HELPERS_CASES_MARKERS {
-        assert!(
-            shared.contains(marker),
-            "shared helper module should define marker: {marker}"
-        );
-    }
+    assert_contract_markers(
+        &root,
+        &SHARED_HELPERS_ROOT_MARKERS,
+        "root archival contract should contain shared-helper wiring marker",
+    );
+    assert_contract_markers(
+        &shared,
+        &SHARED_HELPERS_CASES_MARKERS,
+        "shared helper module should define marker",
+    );
 
     for removed_root_helper in [
         "fn partition_input(",
