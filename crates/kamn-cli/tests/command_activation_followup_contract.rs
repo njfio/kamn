@@ -109,3 +109,23 @@ fn spec_c04_followup_spec6373_deviations_capture_extra_files() {
         );
     }
 }
+
+#[test]
+fn spec_c05_followup_root_contract_uses_shared_server_harness_pattern() {
+    let root = read_repo_file("tests/command_activation_contract.rs");
+    assert!(
+        root.contains("with_contract_server("),
+        "root command activation contract should use shared with_contract_server harness"
+    );
+    for marker in [
+        "reserve_loopback_addr",
+        "run_cli_contract_server",
+        "wait_for_server_ready",
+        "thread::spawn",
+    ] {
+        assert!(
+            !root.contains(marker),
+            "root command activation contract should not use manual server bootstrap marker: {marker}"
+        );
+    }
+}
