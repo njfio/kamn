@@ -35,11 +35,11 @@ Unblock remaining M10 extraction by introducing a data-layer-owned Phase-6 compl
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports Phase-6 seam trait/models/errors.
-- [ ] AC-2: `kamn-core` adds additive `data_layer_m10_execute_phase6_orchestration_tick_with_port(...)` and `data_layer_m10_execute_phase6_scheduler_cycle_with_port(...)`.
-- [ ] AC-3: legacy entrypoints remain compatible and green by delegating to M8-backed adapter.
-- [ ] AC-4: docs/test contracts enforce new seam markers and seam behavior.
-- [ ] AC-5: pre/post telemetry captured for `cargo test -p kamn-core --test data_layer_m10_partition_archival`.
+- [x] AC-1: `kamn-data-layer` exports Phase-6 seam trait/models/errors.
+- [x] AC-2: `kamn-core` adds additive `data_layer_m10_execute_phase6_orchestration_tick_with_port(...)` and `data_layer_m10_execute_phase6_scheduler_cycle_with_port(...)`.
+- [x] AC-3: legacy entrypoints remain compatible and green by delegating to M8-backed adapter.
+- [x] AC-4: docs/test contracts enforce new seam markers and seam behavior.
+- [x] AC-5: pre/post telemetry captured for `cargo test -p kamn-core --test data_layer_m10_partition_archival`.
 
 ## Files to touch
 
@@ -79,7 +79,14 @@ Unblock remaining M10 extraction by introducing a data-layer-owned Phase-6 compl
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_phase6_compliance_port_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre seam lane timing: `m10_phase6_port_pre_seconds=16.57`
+    - command: `/usr/bin/time -f 'm10_phase6_port_pre_seconds=%e' -o /tmp/m10_phase6_port_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6397-pre/Cargo.toml`
+  - post seam lane timing: `m10_phase6_port_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_phase6_port_post_seconds=%e' -o /tmp/m10_phase6_port_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
