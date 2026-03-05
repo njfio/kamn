@@ -1,0 +1,537 @@
+openapi: 3.1.0
+info:
+  title: KAMN Service API
+  version: 0.1.0
+  description: |
+    Initial machine-readable contract for the current KAMN service API route
+    surface. This specification documents existing behavior and does not change
+    runtime semantics.
+servers:
+  - url: http://localhost:19090
+    description: Local service-api runtime bind example
+
+paths:
+  /healthz:
+    get:
+      summary: Service health probe
+      description: Unauthenticated health endpoint for service probes.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service health payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /metrics:
+    get:
+      summary: Service metrics scrape
+      description: Unauthenticated Prometheus-style metrics endpoint.
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Metrics text payload
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /v1/messages/send:
+    post:
+      summary: Send message
+      operationId: sendMessage
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Message accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+  /v1/messages/{id}:
+    get:
+      summary: Query message by id
+      operationId: getMessage
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Message payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /v1/channels/create:
+    post:
+      summary: Create channel
+      operationId: createChannel
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/channels/{id}/messages:
+    get:
+      summary: List channel messages
+      operationId: listChannelMessages
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Channel message list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/tasks/create:
+    post:
+      summary: Create task
+      operationId: createTask
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/tasks/{id}:
+    get:
+      summary: Query task by id
+      operationId: getTask
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Task payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/tasks/{id}/accept:
+    post:
+      summary: Accept task
+      operationId: acceptTask
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Task accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/tasks/{id}/complete:
+    post:
+      summary: Complete task
+      operationId: completeTask
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/escrow/fund:
+    post:
+      summary: Fund escrow
+      operationId: fundEscrow
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Escrow funded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/escrow/{id}/release:
+    post:
+      summary: Release escrow
+      operationId: releaseEscrow
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Escrow released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/content/register:
+    post:
+      summary: Register content lifecycle
+      operationId: registerContent
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Content registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/content/{id}:
+    get:
+      summary: Query content by id
+      operationId: getContent
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Content payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/content/{id}/expire:
+    post:
+      summary: Expire content
+      operationId: expireContent
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Content expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/content/{id}/tombstone:
+    post:
+      summary: Tombstone content
+      operationId: tombstoneContent
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Content tombstoned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/bridge/submit:
+    post:
+      summary: Submit bridge message
+      operationId: submitBridge
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Bridge message submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/bridge/{id}:
+    get:
+      summary: Query bridge status
+      operationId: getBridge
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Bridge payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/bridge/{id}/forward:
+    post:
+      summary: Forward bridge message
+      operationId: forwardBridge
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericRequestBody"
+      responses:
+        "200":
+          description: Bridge message forwarded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/agents/{did}:
+    get:
+      summary: Query agent profile
+      operationId: getAgent
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/DidParam"
+      responses:
+        "200":
+          description: Agent profile payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
+  /v1/events/ws:
+    get:
+      summary: Upgrade to websocket event stream
+      operationId: openEventsWebsocket
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      responses:
+        "101":
+          description: Switching Protocols websocket upgrade
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+components:
+  securitySchemes:
+    SenderDidHeader:
+      type: apiKey
+      in: header
+      name: X-KAMN-Sender-DID
+      description: Sender DID used for request-auth envelope verification.
+    RequestNonceHeader:
+      type: apiKey
+      in: header
+      name: X-KAMN-Request-Nonce
+      description: Monotonic sender nonce used for replay protection.
+    RequestSignatureHeader:
+      type: apiKey
+      in: header
+      name: X-KAMN-Request-Signature
+      description: Signature over deterministic request-auth preimage.
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    DidParam:
+      name: did
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    BadRequestError:
+      description: Invalid request payload or route contract mismatch.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnauthorizedError:
+      description: Request-auth headers are missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ConflictError:
+      description: Replay conflict or state conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFoundError:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    GenericRequestBody:
+      type: object
+      additionalProperties: true
+      description: |
+        Request shape varies by route and is validated by the runtime route
+        contract.
+    GenericSuccessResponse:
+      type: object
+      additionalProperties: true
+      description: |
+        Success envelope shape varies by route and remains runtime-contract
+        driven.
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        reason_code:
+          type: string
+        message:
+          type: string
+      additionalProperties: true
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        runtime_mode:
+          type: string
+        role:
+          type: string
+      additionalProperties: true
