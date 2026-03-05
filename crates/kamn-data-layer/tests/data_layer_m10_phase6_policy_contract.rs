@@ -8,9 +8,10 @@ use kamn_data_layer::{
     data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config, DataLayerM10Phase6PolicyBudget,
     DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyReportCounts,
-    DataLayerM10Phase6SchedulerBudgetOverflowStage, DataLayerM10Phase6BudgetPolicyReport,
-    DataLayerM10Phase6SchedulerCyclePolicyReport, DataLayerM10Phase6SchedulerSignalPolicy,
-    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
+    DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection,
+    DataLayerM10Phase6SchedulerBudgetOverflowStage, DataLayerM10Phase6SchedulerCyclePolicyReport,
+    DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
+    DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 #[test]
@@ -87,7 +88,7 @@ fn contract_phase6_policy_budget_and_trigger_surfaces_are_exported() {
         "m10_phase6_scheduler_cycle_deferred"
     );
 
-    let preflight_overflow: Option<DataLayerM10Phase6BudgetPolicyReport> =
+    let preflight_overflow: Option<DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection> =
         data_layer_m10_project_phase6_scheduler_budget_overflow_policy_error(
             preflight_budget_report,
             DataLayerM10Phase6SchedulerBudgetOverflowStage::Preflight,
@@ -97,5 +98,8 @@ fn contract_phase6_policy_budget_and_trigger_surfaces_are_exported() {
         preflight_overflow.reason_code,
         "m10_phase6_execution_budget_projections_exceeded"
     );
-    assert_eq!(preflight_overflow.detail, "due=1,shredded=1,projections=3,archives=3");
+    assert_eq!(
+        preflight_overflow.detail,
+        "due=1,shredded=1,projections=3,archives=3"
+    );
 }
