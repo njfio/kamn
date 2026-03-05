@@ -131,48 +131,24 @@ pub fn data_layer_m10_project_archival_retry_decision(
         });
     }
 
-    match failure_class {
+    let decision = match failure_class {
         DataLayerM10ArchivalFailureClass::Transient if current_attempt < policy.max_attempts => {
-            let exponent = u32::from(current_attempt.saturating_sub(1)).min(20);
-            let multiplier = 1_u64 << exponent;
-            let retry_backoff_seconds = policy
-                .base_backoff_seconds
-                .saturating_mul(multiplier)
-                .min(policy.max_backoff_seconds);
-            let retry_after_unix_seconds = now_unix_seconds.saturating_add(retry_backoff_seconds);
-            let attempts_remaining = policy.max_attempts.saturating_sub(current_attempt);
-            Ok(DataLayerM10ArchivalRetryDecision {
-                failure_class,
-                action: DataLayerM10ArchivalRecoveryAction::RetryScheduled,
-                current_attempt,
-                next_attempt: Some(current_attempt.saturating_add(1)),
-                retry_backoff_seconds: Some(retry_backoff_seconds),
-                retry_after_unix_seconds: Some(retry_after_unix_seconds),
-                attempts_remaining,
-                reason_code: DATA_LAYER_M10_ARCHIVAL_RETRY_SCHEDULED_REASON_CODE,
-            })
+            project_transient_retry(now_unix_seconds, current_attempt, policy)
         }
-        DataLayerM10ArchivalFailureClass::Transient => Ok(DataLayerM10ArchivalRetryDecision {
+        DataLayerM10ArchivalFailureClass::Transient => {
+            project_fail_closed_decision(
+                failure_class,
+                current_attempt,
+                DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
+            )
+        }
+        DataLayerM10ArchivalFailureClass::Permanent => project_fail_closed_decision(
             failure_class,
-            action: DataLayerM10ArchivalRecoveryAction::FailClosed,
             current_attempt,
-            next_attempt: None,
-            retry_backoff_seconds: None,
-            retry_after_unix_seconds: None,
-            attempts_remaining: 0,
-            reason_code: DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
-        }),
-        DataLayerM10ArchivalFailureClass::Permanent => Ok(DataLayerM10ArchivalRetryDecision {
-            failure_class,
-            action: DataLayerM10ArchivalRecoveryAction::FailClosed,
-            current_attempt,
-            next_attempt: None,
-            retry_backoff_seconds: None,
-            retry_after_unix_seconds: None,
-            attempts_remaining: 0,
-            reason_code: DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
-        }),
-    }
+            DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
+        ),
+    };
+    Ok(decision)
 }
 
 fn validate_archival_retry_policy(
@@ -197,4 +173,46 @@ fn validate_archival_retry_policy(
         });
     }
     Ok(())
+}
+
+fn project_transient_retry(
+    now_unix_seconds: u64,
+    current_attempt: u8,
+    policy: DataLayerM10ArchivalRetryPolicy,
+) -> DataLayerM10ArchivalRetryDecision {
+    let exponent = u32::from(current_attempt.saturating_sub(1)).min(20);
+    let multiplier = 1_u64 << exponent;
+    let retry_backoff_seconds = policy
+        .base_backoff_seconds
+        .saturating_mul(multiplier)
+        .min(policy.max_backoff_seconds);
+    let retry_after_unix_seconds = now_unix_seconds.saturating_add(retry_backoff_seconds);
+    let attempts_remaining = policy.max_attempts.saturating_sub(current_attempt);
+    DataLayerM10ArchivalRetryDecision {
+        failure_class: DataLayerM10ArchivalFailureClass::Transient,
+        action: DataLayerM10ArchivalRecoveryAction::RetryScheduled,
+        current_attempt,
+        next_attempt: Some(current_attempt.saturating_add(1)),
+        retry_backoff_seconds: Some(retry_backoff_seconds),
+        retry_after_unix_seconds: Some(retry_after_unix_seconds),
+        attempts_remaining,
+        reason_code: DATA_LAYER_M10_ARCHIVAL_RETRY_SCHEDULED_REASON_CODE,
+    }
+}
+
+fn project_fail_closed_decision(
+    failure_class: DataLayerM10ArchivalFailureClass,
+    current_attempt: u8,
+    reason_code: &'static str,
+) -> DataLayerM10ArchivalRetryDecision {
+    DataLayerM10ArchivalRetryDecision {
+        failure_class,
+        action: DataLayerM10ArchivalRecoveryAction::FailClosed,
+        current_attempt,
+        next_attempt: None,
+        retry_backoff_seconds: None,
+        retry_after_unix_seconds: None,
+        attempts_remaining: 0,
+        reason_code,
+    }
 }
