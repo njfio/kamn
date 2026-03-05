@@ -36,6 +36,12 @@ pub const DATA_LAYER_M10_PHASE6_SCHEDULER_POLICY_INVALID_REASON_CODE: &str =
 /// Stable reason marker when Phase-6 scheduler signal metadata is invalid.
 pub const DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE: &str =
     "m10_phase6_scheduler_signal_invalid";
+/// Stable reason marker when Phase-6 scheduler cycle is deferred.
+pub const DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE: &str =
+    "m10_phase6_scheduler_cycle_deferred";
+/// Stable reason marker when Phase-6 scheduler cycle is applied.
+pub const DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE: &str =
+    "m10_phase6_scheduler_cycle_applied";
 
 /// Fail-closed policy error taxonomy for M10 phase6 evaluator contracts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -156,6 +162,41 @@ pub enum DataLayerM10Phase6TriggerPolicyDecision {
         /// Elapsed seconds since last tick.
         elapsed_since_last_tick_seconds: u64,
     },
+}
+
+/// Scheduler-cycle policy report envelope.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6SchedulerCyclePolicyReport<E, B> {
+    /// Trigger decision for this cycle.
+    pub trigger_decision: DataLayerM10Phase6TriggerPolicyDecision,
+    /// Optional execution report payload.
+    pub execution_report: Option<E>,
+    /// Optional budget report payload.
+    pub budget_report: Option<B>,
+    /// Stable scheduler-cycle reason marker (`deferred` or `applied`).
+    pub reason_code: &'static str,
+}
+
+/// Projects scheduler-cycle report envelope and stable reason code from trigger decision.
+pub fn data_layer_m10_project_phase6_scheduler_cycle_policy_report<E, B>(
+    trigger_decision: DataLayerM10Phase6TriggerPolicyDecision,
+    execution_report: Option<E>,
+    budget_report: Option<B>,
+) -> DataLayerM10Phase6SchedulerCyclePolicyReport<E, B> {
+    let reason_code = match trigger_decision {
+        DataLayerM10Phase6TriggerPolicyDecision::Deferred { .. } => {
+            DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE
+        }
+        DataLayerM10Phase6TriggerPolicyDecision::Triggered { .. } => {
+            DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE
+        }
+    };
+    DataLayerM10Phase6SchedulerCyclePolicyReport {
+        trigger_decision,
+        execution_report,
+        budget_report,
+        reason_code,
+    }
 }
 
 /// Evaluates one phase6 execution report against deterministic per-tick budget limits.

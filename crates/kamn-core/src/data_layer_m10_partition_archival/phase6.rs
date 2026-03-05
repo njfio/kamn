@@ -13,6 +13,7 @@ use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
+    data_layer_m10_project_phase6_scheduler_cycle_policy_report,
     data_layer_m10_validate_phase6_execution_budget_policy,
     data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config,
@@ -22,8 +23,8 @@ use kamn_data_layer::{
     DataLayerM10Phase6CryptoShredInput, DataLayerM10Phase6PolicyBudget,
     DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyEvaluatorError,
     DataLayerM10Phase6PolicyReportCounts, DataLayerM10Phase6RetentionDueCandidate,
-    DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
-    DataLayerM10Phase6TriggerPolicyDecision,
+    DataLayerM10Phase6SchedulerCyclePolicyReport, DataLayerM10Phase6SchedulerSignalPolicy,
+    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 use crate::{
@@ -724,7 +725,7 @@ pub fn data_layer_m10_evaluate_phase6_scheduler_trigger(
     policy: DataLayerM10Phase6SchedulerPolicy,
     signal: DataLayerM10Phase6SchedulerSignal,
 ) -> Result<DataLayerM10Phase6SchedulerTriggerDecision, DataLayerM10PartitionLifecycleError> {
-    let trigger_decision = data_layer_m10_evaluate_phase6_scheduler_trigger_policy(
+    let trigger_policy_decision = data_layer_m10_evaluate_phase6_scheduler_trigger_policy(
         map_phase6_scheduler_trigger_policy_from_core(policy),
         DataLayerM10Phase6SchedulerSignalPolicy {
             due_candidate_count: signal.due_candidate_count,
@@ -733,25 +734,74 @@ pub fn data_layer_m10_evaluate_phase6_scheduler_trigger(
         },
     )
     .map_err(map_data_layer_policy_error_to_m10)?;
-    match trigger_decision {
+    Ok(map_phase6_scheduler_trigger_decision_from_policy(
+        trigger_policy_decision,
+    ))
+}
+
+fn map_phase6_scheduler_trigger_decision_from_policy(
+    trigger_policy_decision: DataLayerM10Phase6TriggerPolicyDecision,
+) -> DataLayerM10Phase6SchedulerTriggerDecision {
+    match trigger_policy_decision {
         DataLayerM10Phase6TriggerPolicyDecision::Deferred {
             reason_code,
             due_candidate_count,
             elapsed_since_last_tick_seconds,
-        } => Ok(DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
+        } => DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
             reason_code,
             due_candidate_count,
             elapsed_since_last_tick_seconds,
-        }),
+        },
         DataLayerM10Phase6TriggerPolicyDecision::Triggered {
             reason_code,
             due_candidate_count,
             elapsed_since_last_tick_seconds,
-        } => Ok(DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
+        } => DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
             reason_code,
             due_candidate_count,
             elapsed_since_last_tick_seconds,
-        }),
+        },
+    }
+}
+
+fn map_phase6_scheduler_trigger_decision_to_policy(
+    trigger_decision: DataLayerM10Phase6SchedulerTriggerDecision,
+) -> DataLayerM10Phase6TriggerPolicyDecision {
+    match trigger_decision {
+        DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
+            reason_code,
+            due_candidate_count,
+            elapsed_since_last_tick_seconds,
+        } => DataLayerM10Phase6TriggerPolicyDecision::Deferred {
+            reason_code,
+            due_candidate_count,
+            elapsed_since_last_tick_seconds,
+        },
+        DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
+            reason_code,
+            due_candidate_count,
+            elapsed_since_last_tick_seconds,
+        } => DataLayerM10Phase6TriggerPolicyDecision::Triggered {
+            reason_code,
+            due_candidate_count,
+            elapsed_since_last_tick_seconds,
+        },
+    }
+}
+
+fn map_phase6_scheduler_cycle_report_from_policy(
+    cycle_policy_report: DataLayerM10Phase6SchedulerCyclePolicyReport<
+        DataLayerM10Phase6ExecutionTickReport,
+        DataLayerM10Phase6ExecutionTickBudgetReport,
+    >,
+) -> DataLayerM10Phase6SchedulerCycleReport {
+    DataLayerM10Phase6SchedulerCycleReport {
+        trigger_decision: map_phase6_scheduler_trigger_decision_from_policy(
+            cycle_policy_report.trigger_decision,
+        ),
+        execution_report: cycle_policy_report.execution_report,
+        budget_report: cycle_policy_report.budget_report,
+        reason_code: cycle_policy_report.reason_code,
     }
 }
 
@@ -805,12 +855,17 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
         trigger_decision,
         DataLayerM10Phase6SchedulerTriggerDecision::Deferred { .. }
     ) {
-        return Ok(DataLayerM10Phase6SchedulerCycleReport {
-            trigger_decision,
-            execution_report: None,
-            budget_report: None,
-            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
-        });
+        let cycle_policy_report: DataLayerM10Phase6SchedulerCyclePolicyReport<
+            DataLayerM10Phase6ExecutionTickReport,
+            DataLayerM10Phase6ExecutionTickBudgetReport,
+        > = data_layer_m10_project_phase6_scheduler_cycle_policy_report(
+            map_phase6_scheduler_trigger_decision_to_policy(trigger_decision),
+            None,
+            None,
+        );
+        return Ok(map_phase6_scheduler_cycle_report_from_policy(
+            cycle_policy_report,
+        ));
     }
 
     let preflight_budget = evaluate_phase6_scheduler_preflight_budget(
@@ -853,12 +908,14 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
         );
     }
 
-    Ok(DataLayerM10Phase6SchedulerCycleReport {
-        trigger_decision,
-        execution_report: Some(execution_report),
-        budget_report: Some(budget_report),
-        reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
-    })
+    let cycle_policy_report = data_layer_m10_project_phase6_scheduler_cycle_policy_report(
+        map_phase6_scheduler_trigger_decision_to_policy(trigger_decision),
+        Some(execution_report),
+        Some(budget_report),
+    );
+    Ok(map_phase6_scheduler_cycle_report_from_policy(
+        cycle_policy_report,
+    ))
 }
 
 fn validate_phase6_execution_tick_budget(
