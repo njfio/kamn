@@ -25,11 +25,11 @@ Harden `DirectMessageCryptoEngine` against accidental secret exposure by removin
 - Facade (`kamn-core`) still advertises clone semantics while inner engine is non-clone.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `DirectMessageCryptoEngine` in `kamn-crypto` does not implement `Clone`.
-- [ ] AC-2: `Debug` output for engine omits raw key bytes and includes only safe metadata.
-- [ ] AC-3: engine `Drop` impl zeroizes `aead_key` and `legacy_aead_key`.
-- [ ] AC-4: `cargo test -p kamn-crypto --test direct_message_crypto_integration` passes.
-- [ ] AC-5: `cargo test -p kamn-crypto` and `cargo test -p kamn-core --test issue_5921_production_message_crypto` pass.
+- [x] AC-1: `DirectMessageCryptoEngine` in `kamn-crypto` does not implement `Clone`.
+- [x] AC-2: `Debug` output for engine omits raw key bytes and includes only safe metadata.
+- [x] AC-3: engine `Drop` impl zeroizes `aead_key` and `legacy_aead_key`.
+- [x] AC-4: `cargo test -p kamn-crypto --test direct_message_crypto_integration` passes.
+- [x] AC-5: `cargo test -p kamn-crypto` and `cargo test -p kamn-core --test issue_5921_production_message_crypto` pass.
 
 ## Files to touch
 - `specs/6463-harden-direct-message-crypto-engine-memory-hygiene.md`
@@ -56,7 +56,14 @@ Harden `DirectMessageCryptoEngine` against accidental secret exposure by removin
   - `cargo test -p kamn-core --test issue_5921_production_message_crypto`
 
 ## Phase 6 integration evidence
-- Pending.
+- Wrapper integration (`kamn-core`) remains wired to `kamn-crypto` facade; clone derive removed on
+  wrapper to match hardened inner type semantics.
+- Verified commands:
+  - `cargo test -p kamn-crypto spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize -- --nocapture`
+  - `cargo test -p kamn-crypto spec_c10_direct_message_engine_debug_output_redacts_sensitive_key_material -- --nocapture`
+  - `cargo test -p kamn-crypto --test direct_message_crypto_integration`
+  - `cargo test -p kamn-crypto`
+  - `cargo test -p kamn-core --test issue_5921_production_message_crypto`
 
 ## Deviations
 - None.
