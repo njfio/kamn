@@ -1,10 +1,12 @@
 use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
-    data_layer_m10_evaluate_phase6_scheduler_trigger_policy, DataLayerM10Phase6PolicyBudget,
-    DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyReportCounts,
-    DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
-    DataLayerM10Phase6TriggerPolicyDecision,
+    data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
+    data_layer_m10_validate_phase6_execution_budget_policy,
+    data_layer_m10_validate_phase6_scheduler_trigger_policy_config,
+    DataLayerM10Phase6PolicyBudget, DataLayerM10Phase6PolicyBudgetDecision,
+    DataLayerM10Phase6PolicyReportCounts, DataLayerM10Phase6SchedulerSignalPolicy,
+    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 #[test]
@@ -51,4 +53,13 @@ fn contract_phase6_policy_budget_and_trigger_surfaces_are_exported() {
         trigger,
         DataLayerM10Phase6TriggerPolicyDecision::Triggered { .. }
     ));
+    data_layer_m10_validate_phase6_execution_budget_policy(budget)
+        .expect("budget validator should accept positive limits");
+    data_layer_m10_validate_phase6_scheduler_trigger_policy_config(
+        DataLayerM10Phase6SchedulerTriggerPolicy {
+            due_candidate_trigger_threshold: 1,
+            max_tick_interval_seconds: 60,
+        },
+    )
+    .expect("scheduler policy validator should accept positive thresholds");
 }
