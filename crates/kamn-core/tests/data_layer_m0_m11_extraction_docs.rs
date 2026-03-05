@@ -19,6 +19,9 @@ fn doc_contains_m0_m11_extraction_map_and_compatibility_markers() {
         "m10_phase6_port_trait_path=kamn-data-layer::DataLayerM10Phase6CompliancePort",
         "m10_phase6_orchestration_port_entrypoint=data_layer_m10_execute_phase6_orchestration_tick_with_port",
         "m10_phase6_scheduler_port_entrypoint=data_layer_m10_execute_phase6_scheduler_cycle_with_port",
+        "m10_phase6_policy_extraction_slice_version=kamn.arch.data-layer-m10-phase6-policy-extraction.v1",
+        "m10_phase6_policy_target_crate=crates/kamn-data-layer",
+        "m10_phase6_policy_wrapper_path=kamn-core::data_layer_m10_partition_archival::phase6",
     ];
     for marker in required_markers {
         assert!(DOC.contains(marker), "missing marker: {marker}");
