@@ -35,10 +35,10 @@ De-risk `kamn-core` monolith decomposition by shipping a concrete M0-M11 extract
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: M0-M11 extraction boundary map is documented with explicit ownership targets.
-- [ ] AC-2: extraction sequence includes compatibility strategy and contract-test protection points.
-- [ ] AC-3: M11 hardening initial extraction slice lands with no behavior regressions.
-- [ ] AC-4: pre/post build/test telemetry is captured for the extracted slice.
+- [x] AC-1: M0-M11 extraction boundary map is documented with explicit ownership targets.
+- [x] AC-2: extraction sequence includes compatibility strategy and contract-test protection points.
+- [x] AC-3: M11 hardening initial extraction slice lands with no behavior regressions.
+- [x] AC-4: pre/post build/test telemetry is captured for the extracted slice.
 
 ## Files to touch
 
@@ -74,7 +74,15 @@ De-risk `kamn-core` monolith decomposition by shipping a concrete M0-M11 extract
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m11_hardening_readiness_integration` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m11_hardening_readiness` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m11_closure_evidence` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m11_core_test_pre_seconds=0.33`
+    - command: `/usr/bin/time -f 'm11_core_test_pre_seconds=%e' -o /tmp/m11_core_pre.time cargo test -p kamn-core --test data_layer_m11_hardening_readiness`
+  - post extraction lane timing: `m11_core_test_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm11_core_test_post_seconds=%e' -o /tmp/m11_core_post.time cargo test -p kamn-core --test data_layer_m11_hardening_readiness`
 
 ## Deviations
 
