@@ -36,7 +36,8 @@ fn spec_c01_service_api_endpoint_root_file_removes_websocket_helpers_and_tests()
 
 #[test]
 fn spec_c02_service_api_endpoint_websocket_module_exists_and_owns_moved_coverage() {
-    let websocket = read_repo_file("src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs");
+    let websocket =
+        read_repo_file("src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs");
     for marker in [
         "fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str)]) -> Vec<u8>",
         "fn send_websocket_upgrade_request_with_version(",
