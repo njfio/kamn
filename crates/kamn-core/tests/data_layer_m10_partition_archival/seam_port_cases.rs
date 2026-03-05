@@ -1,5 +1,10 @@
 use super::*;
 
+const ALPHA_OWNER_DID: &str = "kamn:did:owner:alpha";
+const PHASE6_OWNER_DID: &str = "kamn:did:owner:phase6-port";
+const PROJECTION_MESSAGE_ID: &str = "m10-port-msg-1";
+const PHASE6_MESSAGE_ID: &str = "phase6-port-msg-1";
+
 #[derive(Debug, Clone, Copy)]
 struct FakeProjectionPort;
 
@@ -24,7 +29,7 @@ impl DataLayerM10ComplianceProjectionPort for FakeProjectionPort {
         DataLayerM10ComplianceProjectionMessageState,
         DataLayerM10ComplianceProjectionPortError,
     > {
-        if owner_did != "kamn:did:owner:alpha" || message_id != "m10-port-msg-1" {
+        if owner_did != ALPHA_OWNER_DID || message_id != PROJECTION_MESSAGE_ID {
             return Err(DataLayerM10ComplianceProjectionPortError::LookupFailed(
                 "message missing".to_owned(),
             ));
@@ -119,10 +124,10 @@ pub(super) fn run_spec_c37_partition_shred_projection_with_port_is_supported_wit
     let projection = m10_registry.project_partition_shred_completeness_with_port(
         &FakeProjectionPort,
         DataLayerM10ComplianceShredProjectionRequest {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
+            requester_owner_did: ALPHA_OWNER_DID.to_owned(),
+            owner_did: ALPHA_OWNER_DID.to_owned(),
             partition_month_id: 202401,
-            partition_message_ids: vec!["m10-port-msg-1".to_owned()],
+            partition_message_ids: vec![PROJECTION_MESSAGE_ID.to_owned()],
         },
     );
     let projection = projection.expect("projection should pass via seam port");
@@ -136,7 +141,7 @@ pub(super) fn run_spec_c37_partition_shred_projection_with_port_is_supported_wit
 
 pub(super) fn run_spec_c38_phase6_orchestration_with_port_supports_seam_without_direct_m8_registry_argument(
 ) {
-    let owner_did = "kamn:did:owner:phase6-port";
+    let owner_did = PHASE6_OWNER_DID;
     let mut partition_registry = DataLayerM10PartitionLifecycleRegistry::new();
     partition_registry
         .register_partition(partition_input(202401, false))
@@ -144,20 +149,20 @@ pub(super) fn run_spec_c38_phase6_orchestration_with_port_supports_seam_without_
 
     let mut message_states = BTreeMap::new();
     message_states.insert(
-        "phase6-port-msg-1".to_owned(),
+        PHASE6_MESSAGE_ID.to_owned(),
         DataLayerM10ComplianceProjectionMessageState {
-            message_id: "phase6-port-msg-1".to_owned(),
+            message_id: PHASE6_MESSAGE_ID.to_owned(),
             legal_hold_active: false,
             shredded_at_epoch_seconds: None,
         },
     );
     let mut phase6_port = FakePhase6Port {
-        due_message_ids: vec!["phase6-port-msg-1".to_owned()],
+        due_message_ids: vec![PHASE6_MESSAGE_ID.to_owned()],
         message_states,
     };
 
     let mut partition_message_ids_by_month = BTreeMap::new();
-    partition_message_ids_by_month.insert(202401, vec!["phase6-port-msg-1".to_owned()]);
+    partition_message_ids_by_month.insert(202401, vec![PHASE6_MESSAGE_ID.to_owned()]);
     let report = data_layer_m10_execute_phase6_orchestration_tick_with_port(
         &mut phase6_port,
         &mut partition_registry,
@@ -172,7 +177,7 @@ pub(super) fn run_spec_c38_phase6_orchestration_with_port_supports_seam_without_
     assert_eq!(report.due_candidate_count, 1);
     assert_eq!(
         report.shredded_message_ids,
-        vec!["phase6-port-msg-1".to_owned()]
+        vec![PHASE6_MESSAGE_ID.to_owned()]
     );
     assert_eq!(report.projection_reports.len(), 1);
     assert!(report.projection_reports[0].all_messages_shredded);
