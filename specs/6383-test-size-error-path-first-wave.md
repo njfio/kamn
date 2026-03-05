@@ -34,10 +34,10 @@ Reduce oversized test monolith risk with enforceable thresholds and land a first
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: enforceable test-file-size thresholds/reporting exist and fail on severe threshold drift.
-- [ ] AC-2: explicit error-path assertion policy exists for selected `Result`-returning command surfaces.
-- [ ] AC-3: `command_contract.rs` first-wave split lands with no behavior regression.
-- [ ] AC-4: split evidence and coverage notes are captured in this spec.
+- [x] AC-1: enforceable test-file-size thresholds/reporting exist and fail on severe threshold drift.
+- [x] AC-2: explicit error-path assertion policy exists for selected `Result`-returning command surfaces.
+- [x] AC-3: `command_contract.rs` first-wave split lands with no behavior regression.
+- [x] AC-4: split evidence and coverage notes are captured in this spec.
 
 ## Files to touch
 
@@ -72,7 +72,23 @@ Reduce oversized test monolith risk with enforceable thresholds and land a first
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test test_file_size_policy` (pass)
+- 2026-03-05: `cargo test -p kamn-e2e-harness --test command_result_error_path_policy` (pass)
+- 2026-03-05: `cargo test -p kamn-e2e-harness --test command_contract` (pass, 90 tests)
+- 2026-03-05: `cargo test -p kamn-e2e-harness --test command_contract_verify_matrix` (pass, 21 tests)
+
+## First-wave split evidence
+
+- Split source: `crates/kamn-e2e-harness/tests/command_contract.rs`
+  - before split: 2577 LOC
+  - after split: 1835 LOC
+- Split target: `crates/kamn-e2e-harness/tests/command_contract_verify_matrix.rs` (858 LOC)
+- Severe oversized (`>2000` LOC) test-file inventory:
+  - before split: 3 files
+  - after split: 2 files
+- Explicit error-path policy coverage:
+  - parser/surface markers retained in `command_contract.rs`
+  - verify fail-path matrix retains `execute_verify_contract` `expect_err` assertions in `command_contract_verify_matrix.rs`
 
 ## Deviations
 
