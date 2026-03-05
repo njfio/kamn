@@ -7,6 +7,7 @@ const RECIPIENT_ALPHA: &str = "kamn:did:agent:alpha-recipient";
 const REQUESTER_ALPHA: &str = "kamn:did:agent:alpha-requester";
 const TARGET_ALPHA: &str = "kamn:did:agent:alpha-target";
 
+// Keeps repeated dispatch setup deterministic across baseline scenarios.
 fn alpha_dispatch_request(message_id: &str, dispatched_at_epoch_seconds: u64) -> DataLayerM9DispatchRequest {
     dispatch_request(
         OWNER_ALPHA,
