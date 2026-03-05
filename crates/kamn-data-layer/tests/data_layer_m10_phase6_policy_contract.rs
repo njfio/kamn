@@ -3,6 +3,7 @@ use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
     data_layer_m10_validate_phase6_execution_budget_policy,
+    data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config, DataLayerM10Phase6PolicyBudget,
     DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyReportCounts,
     DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
@@ -62,4 +63,6 @@ fn contract_phase6_policy_budget_and_trigger_surfaces_are_exported() {
         },
     )
     .expect("scheduler policy validator should accept positive thresholds");
+    data_layer_m10_validate_phase6_scheduler_runtime_clock_signal(1_700_000_010, Some(1_700_000_000))
+        .expect("runtime clock validator should accept non-regressed now clock");
 }
