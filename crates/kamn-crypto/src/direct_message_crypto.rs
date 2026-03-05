@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fmt;
 use x25519_dalek::{PublicKey, StaticSecret};
+use zeroize::Zeroize;
 
 /// Canonical direct-message key-agreement algorithm identifier.
 pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "X25519";
@@ -38,13 +39,23 @@ pub struct DirectMessageCiphertext {
 }
 
 /// Direct-message crypto engine with nonce reuse protection.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct DirectMessageCryptoEngine {
     sender_key_ref: String,
     recipient_key_ref: String,
     aead_key: [u8; 32],
     legacy_aead_key: [u8; 32],
     used_nonces: BTreeSet<u64>,
+}
+
+impl fmt::Debug for DirectMessageCryptoEngine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DirectMessageCryptoEngine")
+            .field("sender_key_ref", &self.sender_key_ref)
+            .field("recipient_key_ref", &self.recipient_key_ref)
+            .field("used_nonce_count", &self.used_nonces.len())
+            .finish()
+    }
 }
 
 impl DirectMessageCryptoEngine {
@@ -176,6 +187,14 @@ impl DirectMessageCryptoEngine {
         }?;
         String::from_utf8(plaintext)
             .map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
+    }
+}
+
+impl Drop for DirectMessageCryptoEngine {
+    fn drop(&mut self) {
+        self.aead_key.zeroize();
+        self.legacy_aead_key.zeroize();
+        self.used_nonces.clear();
     }
 }
 
@@ -615,6 +634,65 @@ mod tests {
             !SOURCE.contains("\nfn hmac_sha256("),
             "manual hmac helper must be removed"
         );
+    }
+
+    #[test]
+    fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize()
+    {
+        let struct_marker = "pub struct DirectMessageCryptoEngine";
+        let struct_index = SOURCE
+            .find(struct_marker)
+            .expect("engine struct declaration should exist");
+        let derive_window_start = struct_index.saturating_sub(160);
+        let derive_window = &SOURCE[derive_window_start..struct_index];
+        assert!(
+            !derive_window.contains("Clone"),
+            "direct-message engine must not derive Clone"
+        );
+        assert!(
+            SOURCE.contains("impl fmt::Debug for DirectMessageCryptoEngine"),
+            "direct-message engine must define custom Debug"
+        );
+        assert!(
+            SOURCE.contains("impl Drop for DirectMessageCryptoEngine"),
+            "direct-message engine must define Drop"
+        );
+        assert!(
+            SOURCE.contains("self.aead_key.zeroize();"),
+            "direct-message engine Drop must zeroize aead_key"
+        );
+        assert!(
+            SOURCE.contains("self.legacy_aead_key.zeroize();"),
+            "direct-message engine Drop must zeroize legacy_aead_key"
+        );
+    }
+
+    #[test]
+    fn spec_c10_direct_message_engine_debug_output_redacts_sensitive_key_material() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let engine = DirectMessageCryptoEngine::new(
+                "kamn:did:agent:alice#key-agreement-1",
+                "kamn:did:agent:bob#key-agreement-1",
+            )
+            .expect("engine init should succeed");
+            let debug_output = format!("{engine:?}");
+            assert!(
+                debug_output.contains("sender_key_ref"),
+                "debug output should preserve safe sender metadata"
+            );
+            assert!(
+                debug_output.contains("recipient_key_ref"),
+                "debug output should preserve safe recipient metadata"
+            );
+            assert!(
+                !debug_output.contains("aead_key"),
+                "debug output must not expose key field labels"
+            );
+            assert!(
+                !debug_output.contains("legacy_aead_key"),
+                "debug output must not expose legacy key field labels"
+            );
+        });
     }
 
     #[test]
