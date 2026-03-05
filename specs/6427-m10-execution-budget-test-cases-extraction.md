@@ -33,11 +33,11 @@ Extract orchestration/execution-budget scenario tests (`spec_c18`..`spec_c22`) f
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `execution_budget_cases.rs` exists and contains C18-C22 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` keeps C18-C22 entrypoint names and delegates to execution-budget cases functions.
-- [ ] AC-3: split-contract test enforces execution-budget delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `execution_budget_cases.rs` exists and contains C18-C22 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` keeps C18-C22 entrypoint names and delegates to execution-budget cases functions.
+- [x] AC-3: split-contract test enforces execution-budget delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 
@@ -65,7 +65,8 @@ Extract orchestration/execution-budget scenario tests (`spec_c18`..`spec_c22`) f
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`5 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 
