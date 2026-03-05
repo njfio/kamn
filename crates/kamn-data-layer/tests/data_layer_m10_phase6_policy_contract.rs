@@ -2,10 +2,12 @@ use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
+    data_layer_m10_project_phase6_scheduler_cycle_policy_report,
     data_layer_m10_validate_phase6_execution_budget_policy,
     data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config, DataLayerM10Phase6PolicyBudget,
     DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyReportCounts,
+    DataLayerM10Phase6SchedulerCyclePolicyReport,
     DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
     DataLayerM10Phase6TriggerPolicyDecision,
 };
@@ -68,4 +70,19 @@ fn contract_phase6_policy_budget_and_trigger_surfaces_are_exported() {
         Some(1_700_000_000),
     )
     .expect("runtime clock validator should accept non-regressed now clock");
+
+    let deferred_cycle_report: DataLayerM10Phase6SchedulerCyclePolicyReport<(), ()> =
+        data_layer_m10_project_phase6_scheduler_cycle_policy_report(
+            DataLayerM10Phase6TriggerPolicyDecision::Deferred {
+                reason_code: "m10_phase6_scheduler_trigger_deferred",
+                due_candidate_count: 1,
+                elapsed_since_last_tick_seconds: 10,
+            },
+            None,
+            None,
+        );
+    assert_eq!(
+        deferred_cycle_report.reason_code,
+        "m10_phase6_scheduler_cycle_deferred"
+    );
 }
