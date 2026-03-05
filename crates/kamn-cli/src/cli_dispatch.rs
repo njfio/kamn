@@ -42,7 +42,7 @@ fn dispatch_message_commands(
         CommandKind::CreateChannel => super::commands::create_channel::execute(parsed),
         CommandKind::ListMessages => super::commands::list_messages::execute(parsed),
         CommandKind::QueryMessage => super::commands::query_message::execute(parsed),
-        _ => unreachable!("dispatch_message_commands only accepts message commands"),
+        _ => invalid_dispatch_command("message"),
     }
 }
 
@@ -54,7 +54,7 @@ fn dispatch_content_commands(
         CommandKind::ExpireContent => super::commands::expire_content::execute(parsed),
         CommandKind::TombstoneContent => super::commands::tombstone_content::execute(parsed),
         CommandKind::QueryContent => super::commands::query_content::execute(parsed),
-        _ => unreachable!("dispatch_content_commands only accepts content commands"),
+        _ => invalid_dispatch_command("content"),
     }
 }
 
@@ -69,9 +69,7 @@ fn dispatch_bridge_and_health_commands(
         CommandKind::QueryBridgeMessage => super::commands::query_bridge_message::execute(parsed),
         CommandKind::VerifyProof => super::commands::verify_proof::execute(parsed),
         CommandKind::Health => super::commands::health::execute(parsed),
-        _ => {
-            unreachable!("dispatch_bridge_and_health_commands only accepts bridge/health commands")
-        }
+        _ => invalid_dispatch_command("bridge-or-health"),
     }
 }
 
@@ -86,6 +84,15 @@ fn dispatch_task_commands(
         CommandKind::CompleteTask => super::commands::complete_task::execute(parsed),
         CommandKind::FundEscrow => super::commands::fund_escrow::execute(parsed),
         CommandKind::ReleaseEscrow => super::commands::release_escrow::execute(parsed),
-        _ => unreachable!("dispatch_task_commands only accepts task commands"),
+        _ => invalid_dispatch_command("task"),
     }
+}
+
+fn invalid_dispatch_command(
+    expected_group: &'static str,
+) -> Result<CommandOutput, kamn_agent_lib::AgentLibError> {
+    Err(kamn_agent_lib::AgentLibError::InvalidInput {
+        field: "command",
+        reason: format!("dispatch command did not match expected group: {expected_group}"),
+    })
 }
