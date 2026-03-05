@@ -34,10 +34,10 @@ Resolve `kamn-types` crate identity ambiguity by establishing an explicit DID-fo
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: target direction is documented as an explicit DID-focused `kamn-types` identity boundary.
-- [ ] AC-2: chosen implementation preserves stable imports and does not change DID parse behavior.
-- [ ] AC-3: README and architecture docs include deterministic migration/ownership markers.
-- [ ] AC-4: contract tests validate boundary exports and docs markers.
+- [x] AC-1: target direction is documented as an explicit DID-focused `kamn-types` identity boundary.
+- [x] AC-2: chosen implementation preserves stable imports and does not change DID parse behavior.
+- [x] AC-3: README and architecture docs include deterministic migration/ownership markers.
+- [x] AC-4: contract tests validate boundary exports and docs markers.
 
 ## Files to touch
 
@@ -70,7 +70,10 @@ Resolve `kamn-types` crate identity ambiguity by establishing an explicit DID-fo
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-types --test identity_boundary_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-types` (pass)
+- 2026-03-05: `cargo test -p kamn-agent-lib` (pass)
+- 2026-03-05: `cargo test -p kamn-sdk` (pass)
 
 ## Deviations
 
