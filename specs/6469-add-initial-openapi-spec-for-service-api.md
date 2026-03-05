@@ -26,8 +26,8 @@ a canonical machine-readable artifact.
 - File exists but is not versioned as OpenAPI 3.1 document.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: OpenAPI 3.1 spec file exists for the service API surface.
-- [ ] AC-2: Spec includes key current paths:
+- [x] AC-1: OpenAPI 3.1 spec file exists for the service API surface.
+- [x] AC-2: Spec includes key current paths:
       `/healthz`, `/v1/messages/send`, `/v1/messages/{id}`,
       `/v1/channels/create`, `/v1/channels/{id}/messages`,
       `/v1/tasks/create`, `/v1/tasks/{id}`, `/v1/tasks/{id}/accept`,
@@ -37,10 +37,10 @@ a canonical machine-readable artifact.
       `/v1/content/{id}/tombstone`, `/v1/bridge/submit`,
       `/v1/bridge/{id}`, `/v1/bridge/{id}/forward`,
       `/v1/agents/{did}`, `/v1/events/ws`.
-- [ ] AC-3: Spec includes request-auth security/header contract markers for
+- [x] AC-3: Spec includes request-auth security/header contract markers for
       `X-KAMN-Sender-DID`, `X-KAMN-Request-Nonce`,
       `X-KAMN-Request-Signature`.
-- [ ] AC-4: Contract test validating OpenAPI markers and required paths passes.
+- [x] AC-4: Contract test validating OpenAPI markers and required paths passes.
 
 ## Files to touch
 - `specs/6469-add-initial-openapi-spec-for-service-api.md`
@@ -65,7 +65,11 @@ a canonical machine-readable artifact.
   - `cargo test -p kamn-node --test service_api_endpoint_module_extraction_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- OpenAPI artifact added at `docs/api/service-openapi.yaml` and linked from
+  `docs/api/service-http-api.md`.
+- Verified commands:
+  - `cargo test -p kamn-node --test service_api_endpoint_module_extraction_contract`
+  - `cargo fmt --all --check`
 
 ## Deviations
 - None.
