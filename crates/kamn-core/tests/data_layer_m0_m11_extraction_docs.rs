@@ -22,6 +22,9 @@ fn doc_contains_m0_m11_extraction_map_and_compatibility_markers() {
         "m10_phase6_policy_extraction_slice_version=kamn.arch.data-layer-m10-phase6-policy-extraction.v1",
         "m10_phase6_policy_target_crate=crates/kamn-data-layer",
         "m10_phase6_policy_wrapper_path=kamn-core::data_layer_m10_partition_archival::phase6",
+        "m10_phase6_runtime_evidence_extraction_slice_version=kamn.arch.data-layer-m10-phase6-runtime-evidence-extraction.v1",
+        "m10_phase6_runtime_evidence_target_crate=crates/kamn-data-layer",
+        "m10_phase6_runtime_evidence_wrapper_path=kamn-core::data_layer_m10_partition_archival::phase6",
     ];
     for marker in required_markers {
         assert!(DOC.contains(marker), "missing marker: {marker}");
