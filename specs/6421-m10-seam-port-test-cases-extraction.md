@@ -34,11 +34,11 @@ Extract seam-port contract tests (`spec_c37`, `spec_c38`) and their local fake-p
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `seam_port_cases.rs` exists and owns C37/C38 scenario bodies plus seam-local fake ports.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` keeps C37/C38 test entrypoint names, delegating to `seam_port_cases` functions.
-- [ ] AC-3: split-contract test enforces seam-port delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `seam_port_cases.rs` exists and owns C37/C38 scenario bodies plus seam-local fake ports.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` keeps C37/C38 test entrypoint names, delegating to `seam_port_cases` functions.
+- [x] AC-3: split-contract test enforces seam-port delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 
@@ -67,7 +67,8 @@ Extract seam-port contract tests (`spec_c37`, `spec_c38`) and their local fake-p
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`2 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 
