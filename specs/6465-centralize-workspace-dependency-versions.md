@@ -25,14 +25,14 @@ Remove cross-crate dependency version drift by introducing root-level
 - Optional/dev dependency wiring changes behavior unexpectedly.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: Root `Cargo.toml` contains `[workspace.dependencies]` entries for
+- [x] AC-1: Root `Cargo.toml` contains `[workspace.dependencies]` entries for
       shared third-party crates used across multiple workspace members.
-- [ ] AC-2: Member manifests consume shared versions via `workspace = true`
+- [x] AC-2: Member manifests consume shared versions via `workspace = true`
       where applicable.
-- [ ] AC-3: No version drift remains for `serde_json`, `zeroize`, and
+- [x] AC-3: No version drift remains for `serde_json`, `zeroize`, and
       `rustls`.
-- [ ] AC-4: `cargo check --workspace` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test test_file_size_policy` passes.
+- [x] AC-4: `cargo check --workspace` passes.
+- [x] AC-5: `cargo test -p kamn-core --test test_file_size_policy` passes.
 
 ## Files to touch
 - `specs/6465-centralize-workspace-dependency-versions.md`
@@ -66,7 +66,13 @@ Remove cross-crate dependency version drift by introducing root-level
   - `cargo test -p kamn-core --test test_file_size_policy`
 
 ## Phase 6 integration evidence
-- Pending.
+- Root workspace now owns shared dependency versions through
+  `[workspace.dependencies]`, and member crates consume those versions via
+  `workspace = true`.
+- Verified commands:
+  - `cargo test -p kamn-core --test core_extraction_wave1_contract`
+  - `cargo check --workspace`
+  - `cargo test -p kamn-core --test test_file_size_policy`
 
 ## Deviations
 - None.
