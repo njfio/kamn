@@ -1,40 +1,25 @@
+#[path = "command_activation_core_contract/cases.rs"]
+mod command_activation_core_cases;
 mod command_activation_harness;
 
-use command_activation_harness::{
-    parsed, reserve_loopback_addr, run_cli_contract_server, wait_for_server_ready,
-};
-use kamn_agent_lib::AgentLibError;
+use command_activation_harness::{assert_missing_arg_invalid, parsed, with_contract_server};
 use kamn_cli::{dispatch, CommandKind};
-use std::thread;
 
-fn with_contract_server(max_requests: usize, run: impl FnOnce(&str)) {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_cli_contract_server(server_addr, max_requests));
-    wait_for_server_ready();
-    let endpoint = format!("http://{bind_addr}");
-
-    run(endpoint.as_str());
-
-    let server_result = server.join().expect("server thread should join");
-    assert!(
-        server_result.is_ok(),
-        "test service contract server should satisfy request budget"
-    );
-}
-
-fn assert_invalid_input(error: AgentLibError, label: &str) {
-    assert!(
-        matches!(error, AgentLibError::InvalidInput { .. }),
-        "missing arg for {label} should be invalid input: {error}"
-    );
-}
-
-fn assert_missing_arg_invalid(endpoint: &str, command: CommandKind, label: &str) {
-    let error =
-        dispatch(&parsed(command, endpoint, &[])).expect_err("missing required arg should fail");
-    assert_invalid_input(error, label);
-}
+const ACCEPT_TASK_OUTPUT_LABEL: &str = "accept-task output should include accepted state";
+const COMPLETE_TASK_OUTPUT_LABEL: &str = "complete-task output should include completed state";
+const FUND_ESCROW_ID_OUTPUT_LABEL: &str = "fund-escrow output should include escrow id";
+const FUND_ESCROW_STATE_OUTPUT_LABEL: &str = "fund-escrow output should include funded state";
+const RELEASE_ESCROW_OUTPUT_LABEL: &str = "release-escrow output should include released state";
+const REGISTER_OUTPUT_LABEL: &str = "register output should include did marker";
+const SEND_MESSAGE_OUTPUT_LABEL: &str = "send-message output should include message id";
+const CREATE_CHANNEL_OUTPUT_LABEL: &str = "create-channel output should include channel id";
+const QUERY_MESSAGE_OUTPUT_LABEL: &str = "query-message output should include status marker";
+const CREATE_TASK_OUTPUT_LABEL: &str = "create-task output should include task id";
+const QUERY_TASK_ID_OUTPUT_LABEL: &str = "query-task output should include task id";
+const QUERY_TASK_STATE_OUTPUT_LABEL: &str = "query-task output should include state projection";
+const QUERY_PROFILE_DID_OUTPUT_LABEL: &str = "query-agent-profile output should include did";
+const QUERY_PROFILE_SCORE_OUTPUT_LABEL: &str =
+    "query-agent-profile output should include reputation_score";
 
 #[test]
 fn spec_c02_cli_list_messages_command_executes_and_validates_args() {
@@ -81,118 +66,26 @@ fn spec_c03_cli_verify_proof_command_executes_and_validates_args() {
         &["msg-1", "tx-1", "not-a-number", "final"],
     ))
     .expect_err("malformed block-height should fail");
-    assert_invalid_input(invalid_block_height, "verify_proof_block_height");
+    assert!(
+        matches!(
+            invalid_block_height,
+            kamn_agent_lib::AgentLibError::InvalidInput { .. }
+        ),
+        "verify-proof malformed block-height should be invalid input: {invalid_block_height}"
+    );
 }
 
 #[test]
 fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
-    with_contract_server(4, |endpoint| {
-        let accept_output = dispatch(&parsed(CommandKind::AcceptTask, endpoint, &["task-cli"]))
-            .expect("accept-task should succeed");
-        assert!(accept_output.text.contains("state=accepted"));
-
-        let complete_output = dispatch(&parsed(CommandKind::CompleteTask, endpoint, &["task-cli"]))
-            .expect("complete-task should succeed");
-        assert!(complete_output.text.contains("state=completed"));
-
-        let fund_output = dispatch(&parsed(
-            CommandKind::FundEscrow,
-            endpoint,
-            &[r#"{"task_id":"task-cli","amount":100}"#],
-        ))
-        .expect("fund-escrow should succeed");
-        assert!(fund_output.text.contains("escrow_id=escrow-cli"));
-        assert!(fund_output.text.contains("state=funded"));
-
-        let release_output = dispatch(&parsed(
-            CommandKind::ReleaseEscrow,
-            endpoint,
-            &["escrow-cli"],
-        ))
-        .expect("release-escrow should succeed");
-        assert!(release_output.text.contains("state=released"));
-
-        for (command, label) in [
-            (CommandKind::AcceptTask, "task_id"),
-            (CommandKind::CompleteTask, "task_id"),
-            (CommandKind::FundEscrow, "fund_escrow_payload"),
-            (CommandKind::ReleaseEscrow, "escrow_id"),
-        ] {
-            assert_missing_arg_invalid(endpoint, command, label);
-        }
-    });
+    command_activation_core_cases::run_spec_c04_cli_task_and_escrow_commands_execute_and_validate_args();
 }
 
 #[test]
 fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
-    with_contract_server(4, |endpoint| {
-        let register_output = dispatch(&parsed(CommandKind::Register, endpoint, &[]))
-            .expect("register should succeed");
-        assert!(register_output.text.contains("kamn:did:agent"));
-
-        let send_output = dispatch(&parsed(
-            CommandKind::SendMessage,
-            endpoint,
-            &[r#"{"message":"hello"}"#],
-        ))
-        .expect("send-message should succeed");
-        assert!(send_output.text.contains("message_id=msg-cli"));
-
-        let channel_output = dispatch(&parsed(
-            CommandKind::CreateChannel,
-            endpoint,
-            &[r#"{"name":"ops"}"#],
-        ))
-        .expect("create-channel should succeed");
-        assert!(channel_output.text.contains("channel_id=channel-cli"));
-
-        let query_output = dispatch(&parsed(CommandKind::QueryMessage, endpoint, &["msg-cli"]))
-            .expect("query-message should succeed");
-        assert!(query_output.text.contains("status=created"));
-
-        let task_output = dispatch(&parsed(
-            CommandKind::CreateTask,
-            endpoint,
-            &[r#"{"task":"triage"}"#],
-        ))
-        .expect("create-task should succeed");
-        assert!(task_output.text.contains("task_id=task-cli"));
-
-        for (command, label) in [
-            (CommandKind::SendMessage, "send_message_payload"),
-            (CommandKind::CreateChannel, "create_channel_payload"),
-            (CommandKind::QueryMessage, "query_message_id"),
-            (CommandKind::CreateTask, "create_task_payload"),
-        ] {
-            assert_missing_arg_invalid(endpoint, command, label);
-        }
-    });
+    command_activation_core_cases::run_spec_c05_cli_core_message_and_task_commands_execute_and_validate_args();
 }
 
 #[test]
 fn spec_c07_cli_query_task_and_profile_commands_execute_and_validate_args() {
-    with_contract_server(2, |endpoint| {
-        let query_task_output = dispatch(&parsed(CommandKind::QueryTask, endpoint, &["task-cli"]))
-            .expect("query-task should succeed");
-        assert!(query_task_output.text.contains("task_id=task-cli"));
-        assert!(query_task_output.text.contains("state=submitted"));
-
-        let query_profile_output = dispatch(&parsed(
-            CommandKind::QueryAgentProfile,
-            endpoint,
-            &["kamn:did:agent:alice"],
-        ))
-        .expect("query-agent-profile should succeed");
-        assert!(query_profile_output
-            .text
-            .contains("did=kamn:did:agent:alice"));
-        assert!(query_profile_output.text.contains("reputation_score=777"));
-
-        for (command, label) in [
-            (CommandKind::QueryTask, "query_task_id"),
-            (CommandKind::QueryAgentProfile, "query_agent_profile_did"),
-        ] {
-            assert_missing_arg_invalid(endpoint, command, label);
-        }
-    });
+    command_activation_core_cases::run_spec_c07_cli_query_task_and_profile_commands_execute_and_validate_args();
 }

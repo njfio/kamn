@@ -58,7 +58,10 @@ fn spec_c02_followup_assertions_retain_diagnostic_messages() {
         "query-agent-profile output should include did",
         "query-agent-profile output should include reputation_score",
     ] {
-        assert!(core.contains(marker), "core contract should keep message marker: {marker}");
+        assert!(
+            core.contains(marker),
+            "core contract should keep message marker: {marker}"
+        );
     }
 
     for marker in [

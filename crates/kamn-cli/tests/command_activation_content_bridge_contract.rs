@@ -1,36 +1,9 @@
 mod command_activation_harness;
 
 use command_activation_harness::{
-    parsed, reserve_loopback_addr, run_cli_contract_server, wait_for_server_ready,
+    assert_missing_arg_invalid, assert_output_contains, parsed, with_contract_server,
 };
-use kamn_agent_lib::AgentLibError;
 use kamn_cli::{dispatch, CommandKind};
-use std::thread;
-
-fn with_contract_server(max_requests: usize, run: impl FnOnce(&str)) {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_cli_contract_server(server_addr, max_requests));
-    wait_for_server_ready();
-    let endpoint = format!("http://{bind_addr}");
-
-    run(endpoint.as_str());
-
-    let server_result = server.join().expect("server thread should join");
-    assert!(
-        server_result.is_ok(),
-        "test service contract server should satisfy request budget"
-    );
-}
-
-fn assert_missing_arg_invalid(endpoint: &str, command: CommandKind, label: &str) {
-    let error =
-        dispatch(&parsed(command, endpoint, &[])).expect_err("missing required arg should fail");
-    assert!(
-        matches!(error, AgentLibError::InvalidInput { .. }),
-        "missing arg for {label} should be invalid input: {error}"
-    );
-}
 
 #[test]
 fn spec_c08_cli_content_commands_execute_and_validate_args() {
@@ -41,8 +14,16 @@ fn spec_c08_cli_content_commands_execute_and_validate_args() {
             &[r#"{"content":"abc","retention_class":"standard"}"#],
         ))
         .expect("register-content should succeed");
-        assert!(register_output.text.contains("content_id=content-cli"));
-        assert!(register_output.text.contains("retention_class=standard"));
+        assert_output_contains(
+            register_output.text.as_str(),
+            "content_id=content-cli",
+            "register-content output should include content id",
+        );
+        assert_output_contains(
+            register_output.text.as_str(),
+            "retention_class=standard",
+            "register-content output should include retention class",
+        );
 
         let expire_output = dispatch(&parsed(
             CommandKind::ExpireContent,
@@ -50,7 +31,11 @@ fn spec_c08_cli_content_commands_execute_and_validate_args() {
             &["content-cli"],
         ))
         .expect("expire-content should succeed");
-        assert!(expire_output.text.contains("lifecycle_state=expired"));
+        assert_output_contains(
+            expire_output.text.as_str(),
+            "lifecycle_state=expired",
+            "expire-content output should include lifecycle state",
+        );
 
         let tombstone_output = dispatch(&parsed(
             CommandKind::TombstoneContent,
@@ -58,7 +43,11 @@ fn spec_c08_cli_content_commands_execute_and_validate_args() {
             &["content-cli"],
         ))
         .expect("tombstone-content should succeed");
-        assert!(tombstone_output.text.contains("redaction_status=redacted"));
+        assert_output_contains(
+            tombstone_output.text.as_str(),
+            "redaction_status=redacted",
+            "tombstone-content output should include redaction status",
+        );
 
         let query_output = dispatch(&parsed(
             CommandKind::QueryContent,
@@ -66,7 +55,11 @@ fn spec_c08_cli_content_commands_execute_and_validate_args() {
             &["content-cli"],
         ))
         .expect("query-content should succeed");
-        assert!(query_output.text.contains("lifecycle_state=tombstoned"));
+        assert_output_contains(
+            query_output.text.as_str(),
+            "lifecycle_state=tombstoned",
+            "query-content output should include lifecycle state",
+        );
 
         for (command, label) in [
             (CommandKind::RegisterContent, "register_content_payload"),
@@ -88,8 +81,16 @@ fn spec_c09_cli_bridge_commands_execute_and_validate_args() {
             &[r#"{"source_message_id":"msg-cli","target_network":"testnet"}"#],
         ))
         .expect("submit-bridge-message should succeed");
-        assert!(submit_output.text.contains("bridge_id=bridge-cli"));
-        assert!(submit_output.text.contains("bridge_status=submitted"));
+        assert_output_contains(
+            submit_output.text.as_str(),
+            "bridge_id=bridge-cli",
+            "submit-bridge-message output should include bridge id",
+        );
+        assert_output_contains(
+            submit_output.text.as_str(),
+            "bridge_status=submitted",
+            "submit-bridge-message output should include bridge status",
+        );
 
         let forward_output = dispatch(&parsed(
             CommandKind::ForwardBridgeMessage,
@@ -97,10 +98,16 @@ fn spec_c09_cli_bridge_commands_execute_and_validate_args() {
             &["bridge-cli"],
         ))
         .expect("forward-bridge-message should succeed");
-        assert!(forward_output.text.contains("bridge_status=forwarded"));
-        assert!(forward_output
-            .text
-            .contains("target_message_id=msg-bridge-target-cli"));
+        assert_output_contains(
+            forward_output.text.as_str(),
+            "bridge_status=forwarded",
+            "forward-bridge-message output should include bridge status",
+        );
+        assert_output_contains(
+            forward_output.text.as_str(),
+            "target_message_id=msg-bridge-target-cli",
+            "forward-bridge-message output should include target id",
+        );
 
         let query_output = dispatch(&parsed(
             CommandKind::QueryBridgeMessage,
@@ -108,9 +115,11 @@ fn spec_c09_cli_bridge_commands_execute_and_validate_args() {
             &["bridge-cli"],
         ))
         .expect("query-bridge-message should succeed");
-        assert!(query_output
-            .text
-            .contains("forward_tx_hash=sha256:bridge-forwarded-cli"));
+        assert_output_contains(
+            query_output.text.as_str(),
+            "forward_tx_hash=sha256:bridge-forwarded-cli",
+            "query-bridge-message output should include forward tx marker",
+        );
 
         for (command, label) in [
             (

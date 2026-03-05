@@ -63,4 +63,5 @@ Reduce `crates/kamn-cli/tests/command_activation_contract.rs` complexity by spli
   - `cargo test -p kamn-cli --test subcommand_surface_contract`
 
 ## Deviations
-- None.
+- Introduced `crates/kamn-cli/tests/command_activation_harness_routes.rs` to keep harness logic split within file-size constraints.
+- Introduced `crates/kamn-cli/tests/command_activation_split_contract.rs` as a source-level ownership guard for the split migration.
