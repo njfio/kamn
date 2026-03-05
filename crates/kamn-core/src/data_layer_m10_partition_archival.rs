@@ -62,21 +62,15 @@ pub const DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE: &str =
 /// Stable reason marker when M8 projection input is invalid.
 pub const DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE: &str =
     "m10_partition_compliance_input_invalid";
-/// Stable reason marker when archival transient failure schedules a retry.
-pub const DATA_LAYER_M10_ARCHIVAL_RETRY_SCHEDULED_REASON_CODE: &str =
-    "m10_archival_retry_scheduled";
-/// Stable reason marker when archival retry budget is exhausted.
-pub const DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE: &str =
-    "m10_archival_retry_exhausted";
-/// Stable reason marker when archival failure is permanent and must fail closed.
-pub const DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE: &str =
-    "m10_archival_failure_permanent";
-/// Stable reason marker when archival retry policy configuration is invalid.
-pub const DATA_LAYER_M10_ARCHIVAL_RETRY_POLICY_INVALID_REASON_CODE: &str =
-    "m10_archival_retry_policy_invalid";
-/// Stable reason marker when archival retry attempt metadata is invalid.
-pub const DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE: &str =
-    "m10_archival_retry_attempt_invalid";
+pub use kamn_data_layer::{
+    DataLayerM10ArchivalFailureClass, DataLayerM10ArchivalRecoveryAction,
+    DataLayerM10ArchivalRetryDecision, DataLayerM10ArchivalRetryPolicy,
+    DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
+    DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE,
+    DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
+    DATA_LAYER_M10_ARCHIVAL_RETRY_POLICY_INVALID_REASON_CODE,
+    DATA_LAYER_M10_ARCHIVAL_RETRY_SCHEDULED_REASON_CODE,
+};
 /// Stable reason marker when a Phase-6 retention/archival orchestration tick completes.
 pub const DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE: &str =
     "m10_phase6_execution_applied";
@@ -165,56 +159,6 @@ pub enum DataLayerM10RecoveryDecision {
     Ready,
     /// Partition cannot be recovered under current state/metadata.
     Blocked,
-}
-
-/// Retry classification for archival export failures.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DataLayerM10ArchivalFailureClass {
-    /// Failure may succeed on a later attempt.
-    Transient,
-    /// Failure must fail closed immediately.
-    Permanent,
-}
-
-/// Recovery action projected for an archival export failure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DataLayerM10ArchivalRecoveryAction {
-    /// Schedule one more retry attempt.
-    RetryScheduled,
-    /// Fail closed and stop retrying.
-    FailClosed,
-}
-
-/// Bounded retry policy for archival failure recovery.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DataLayerM10ArchivalRetryPolicy {
-    /// Total attempts allowed, including the current attempt.
-    pub max_attempts: u8,
-    /// Base retry backoff in seconds.
-    pub base_backoff_seconds: u64,
-    /// Maximum retry backoff cap in seconds.
-    pub max_backoff_seconds: u64,
-}
-
-/// Deterministic decision projected for an archival export failure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DataLayerM10ArchivalRetryDecision {
-    /// Failure classification used for this projection.
-    pub failure_class: DataLayerM10ArchivalFailureClass,
-    /// Recovery action.
-    pub action: DataLayerM10ArchivalRecoveryAction,
-    /// Current failed attempt number.
-    pub current_attempt: u8,
-    /// Next attempt number when a retry is scheduled.
-    pub next_attempt: Option<u8>,
-    /// Retry delay in seconds when a retry is scheduled.
-    pub retry_backoff_seconds: Option<u64>,
-    /// Retry-at timestamp in epoch seconds when a retry is scheduled.
-    pub retry_after_unix_seconds: Option<u64>,
-    /// Remaining attempts after this decision.
-    pub attempts_remaining: u8,
-    /// Stable reason marker.
-    pub reason_code: &'static str,
 }
 
 /// Partition registration input.
