@@ -116,16 +116,16 @@ fn assert_signer_emulator_contract_signing(router: &SignerBackendRouter, nonce: 
     );
 }
 
+#[path = "signer_backend/signer_core_cases.rs"]
+mod signer_core_cases;
 #[path = "signer_backend/signer_emulator_cases.rs"]
 mod signer_emulator_cases;
 #[path = "signer_backend/signer_provider_cases.rs"]
 mod signer_provider_cases;
-#[path = "signer_backend/signer_signature_cases.rs"]
-mod signer_signature_cases;
 #[path = "signer_backend/signer_request_cases.rs"]
 mod signer_request_cases;
-#[path = "signer_backend/signer_core_cases.rs"]
-mod signer_core_cases;
+#[path = "signer_backend/signer_signature_cases.rs"]
+mod signer_signature_cases;
 
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
@@ -184,7 +184,8 @@ fn regression_admin_key_does_not_fallback_when_secure_provider_unavailable() {
 
 #[test]
 fn functional_privileged_roles_deny_fallback_when_provider_unavailable() {
-    signer_provider_cases::run_functional_privileged_roles_deny_fallback_when_provider_unavailable();
+    signer_provider_cases::run_functional_privileged_roles_deny_fallback_when_provider_unavailable(
+    );
 }
 
 #[test]
@@ -199,7 +200,8 @@ fn regression_unknown_secure_provider_is_rejected_without_fallback() {
 
 #[test]
 fn regression_provider_handshake_policy_block_rejects_without_fallback() {
-    signer_provider_cases::run_regression_provider_handshake_policy_block_rejects_without_fallback();
+    signer_provider_cases::run_regression_provider_handshake_policy_block_rejects_without_fallback(
+    );
 }
 
 #[test]
@@ -214,7 +216,8 @@ fn integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibili
 
 #[test]
 fn regression_signer_backend_rejects_baseline_v1_signature_by_default() {
-    signer_signature_cases::run_regression_signer_backend_rejects_baseline_v1_signature_by_default();
+    signer_signature_cases::run_regression_signer_backend_rejects_baseline_v1_signature_by_default(
+    );
 }
 
 #[test]
@@ -274,7 +277,8 @@ fn regression_signer_emulator_budget_parser_uses_local_default_when_unset() {
 
 #[test]
 fn regression_signer_emulator_budget_parser_uses_ci_default_when_ci_set() {
-    signer_emulator_cases::run_regression_signer_emulator_budget_parser_uses_ci_default_when_ci_set();
+    signer_emulator_cases::run_regression_signer_emulator_budget_parser_uses_ci_default_when_ci_set(
+    );
 }
 
 #[test]

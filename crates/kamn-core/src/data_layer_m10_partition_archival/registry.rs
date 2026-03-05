@@ -5,12 +5,12 @@ use kamn_data_layer::{
     DataLayerM10ComplianceProjectionPortError,
 };
 
-use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
 use super::shared::{
     add_months, deterministic_checksum_marker, month_distance, split_month_id, validate_non_empty,
     validate_partition_month_id,
 };
 use super::*;
+use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
 
 struct M8ComplianceProjectionPortAdapter<'a> {
     compliance_registry: &'a DataLayerM8ComplianceRegistry,
@@ -42,8 +42,10 @@ impl DataLayerM10ComplianceProjectionPort for M8ComplianceProjectionPortAdapter<
         &self,
         owner_did: &str,
         message_id: &str,
-    ) -> Result<DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPortError>
-    {
+    ) -> Result<
+        DataLayerM10ComplianceProjectionMessageState,
+        DataLayerM10ComplianceProjectionPortError,
+    > {
         let message = self
             .compliance_registry
             .message_for_owner(owner_did, message_id)

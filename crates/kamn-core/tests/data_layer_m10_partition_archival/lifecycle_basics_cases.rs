@@ -24,8 +24,8 @@ pub(super) fn run_spec_c01_partition_naming_and_future_planning_are_deterministi
     );
 }
 
-pub(super) fn run_spec_c02_archival_due_selection_respects_retention_window_and_shred_completeness(
-) {
+pub(super) fn run_spec_c02_archival_due_selection_respects_retention_window_and_shred_completeness()
+{
     let mut registry = DataLayerM10PartitionLifecycleRegistry::new();
     registry
         .register_partition(partition_input(PARTITION_OLD_PRIMARY, true))

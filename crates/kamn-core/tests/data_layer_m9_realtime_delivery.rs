@@ -52,7 +52,7 @@ fn enqueue_messages(
                 recipient_agent_did,
                 format!("m9-bridge-fill-{offset:04}").as_str(),
                 base_epoch_seconds + offset as u64,
-        ))
+            ))
             .expect("queue fill dispatch should succeed");
     }
 }

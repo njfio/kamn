@@ -60,9 +60,11 @@ fn required_value(map: &HashMap<String, String>, key: &str) -> String {
 }
 
 fn required_usize(map: &HashMap<String, String>, key: &str) -> usize {
-    required_value(map, key).parse::<usize>().unwrap_or_else(|error| {
-        panic!("invalid usize for key `{key}`: {error}");
-    })
+    required_value(map, key)
+        .parse::<usize>()
+        .unwrap_or_else(|error| {
+            panic!("invalid usize for key `{key}`: {error}");
+        })
 }
 
 fn load_thresholds(root: &Path) -> Thresholds {
@@ -151,7 +153,8 @@ fn all_test_file_lines(root: &Path) -> Vec<(String, usize)> {
 }
 
 fn offender_paths(files: &[(String, usize)], threshold: usize) -> Vec<String> {
-    files.iter()
+    files
+        .iter()
         .filter(|(_, lines)| *lines > threshold)
         .map(|(path, _)| path.clone())
         .collect()
@@ -182,7 +185,11 @@ fn spec_c02_first_wave_command_contract_monolith_is_below_severe_threshold() {
         command_lines,
         thresholds.severe_refactor_lines
     );
-    assert!(split_target.is_file(), "missing split target {}", split_target.display());
+    assert!(
+        split_target.is_file(),
+        "missing split target {}",
+        split_target.display()
+    );
 }
 
 #[test]
@@ -223,13 +230,23 @@ fn spec_c04_oversized_test_counts_are_within_budget() {
         .filter(|(_, lines)| *lines > thresholds.hard_fail_lines)
         .count();
 
-    assert_eq!(files.len(), baseline.test_file_total, "test file inventory drift");
-    assert_eq!(soft_count, baseline.soft_warn_count, "soft oversized count drift");
+    assert_eq!(
+        files.len(),
+        baseline.test_file_total,
+        "test file inventory drift"
+    );
+    assert_eq!(
+        soft_count, baseline.soft_warn_count,
+        "soft oversized count drift"
+    );
     assert_eq!(
         severe_count, baseline.severe_count,
         "severe oversized count drift"
     );
-    assert_eq!(hard_count, baseline.hard_fail_count, "hard oversized count drift");
+    assert_eq!(
+        hard_count, baseline.hard_fail_count,
+        "hard oversized count drift"
+    );
 
     assert!(
         soft_count <= thresholds.max_soft_warn_count,

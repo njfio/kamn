@@ -8,8 +8,8 @@ const ARCHIVE_PREFIX: &str = "s3://kamn-archive/messages";
 const MESSAGE_ONE: &str = "m10-m8-msg-1";
 const MESSAGE_TWO: &str = "m10-m8-msg-2";
 
-pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records(
-) {
+pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records()
+{
     let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
@@ -27,7 +27,11 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
     let initial_projection: DataLayerM10ComplianceShredProjectionReport = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
+            project_request(
+                owner_did,
+                PARTITION_MONTH_PRIMARY,
+                vec![MESSAGE_ONE, MESSAGE_TWO],
+            ),
         )
         .expect("initial projection should succeed");
     assert_eq!(
@@ -52,7 +56,11 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
     let mid_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
+            project_request(
+                owner_did,
+                PARTITION_MONTH_PRIMARY,
+                vec![MESSAGE_ONE, MESSAGE_TWO],
+            ),
         )
         .expect("mid projection should succeed");
     assert_eq!(
@@ -72,7 +80,11 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
     let final_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
+            project_request(
+                owner_did,
+                PARTITION_MONTH_PRIMARY,
+                vec![MESSAGE_ONE, MESSAGE_TWO],
+            ),
         )
         .expect("final projection should succeed");
     assert_eq!(
@@ -220,7 +232,11 @@ pub(super) fn run_spec_c10_partition_projection_marks_legal_hold_as_archival_den
     let projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
+            project_request(
+                owner_did,
+                PARTITION_MONTH_PRIMARY,
+                vec![MESSAGE_ONE, MESSAGE_TWO],
+            ),
         )
         .expect("projection should succeed");
     assert_eq!(
@@ -271,7 +287,11 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
     let hold_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
+            project_request(
+                owner_did,
+                PARTITION_MONTH_PRIMARY,
+                vec![MESSAGE_ONE, MESSAGE_TWO],
+            ),
         )
         .expect("hold projection should succeed");
     assert_eq!(
@@ -307,7 +327,11 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
     let final_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
+            project_request(
+                owner_did,
+                PARTITION_MONTH_PRIMARY,
+                vec![MESSAGE_ONE, MESSAGE_TWO],
+            ),
         )
         .expect("final projection should succeed");
     assert_eq!(

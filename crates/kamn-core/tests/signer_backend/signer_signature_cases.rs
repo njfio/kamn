@@ -53,7 +53,8 @@ fn assert_baseline_v1_rejected_by_backend(backend: &str, message: &str) {
     );
 }
 
-pub(super) fn run_integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch() {
+pub(super) fn run_integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch(
+) {
     with_signature_compat_env(Some("1"), || {
         let router = SignerBackendRouter::default();
         let request = signer_signature_request(SIGNATURE_DEFAULT_KEY_ID);
@@ -99,13 +100,17 @@ pub(super) fn run_regression_local_backend_rejects_signature_when_verifier_uses_
     with_signature_compat_env(None, || {
         let router = signer_local_fallback_router();
         let request = signer_signature_request(SIGNATURE_WRONG_KEY_ID);
-        let _signing_key_guard =
-            EnvVarGuard::set(SIGNATURE_WRONG_KEY_ENV_KEY, Some(TEST_SIGNER_PRIVATE_KEY_A_HEX));
+        let _signing_key_guard = EnvVarGuard::set(
+            SIGNATURE_WRONG_KEY_ENV_KEY,
+            Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+        );
         let signed = router
             .sign_with_secure_fallback(&request)
             .expect("local fallback should sign");
-        let _verifying_key_guard =
-            EnvVarGuard::set(SIGNATURE_WRONG_KEY_ENV_KEY, Some(TEST_SIGNER_PRIVATE_KEY_B_HEX));
+        let _verifying_key_guard = EnvVarGuard::set(
+            SIGNATURE_WRONG_KEY_ENV_KEY,
+            Some(TEST_SIGNER_PRIVATE_KEY_B_HEX),
+        );
         assert!(
             router
                 .verify_with_backend("local-software", &request, signed.signature.as_str())

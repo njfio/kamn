@@ -81,15 +81,27 @@ fn spec_c04_workspace_declares_dependency_catalog_for_drift_prone_dependencies()
 #[test]
 fn spec_c05_member_manifests_use_workspace_versions_for_drift_prone_dependencies() {
     for (manifest, marker) in [
-        ("crates/kamn-agent-lib/Cargo.toml", "zeroize.workspace = true"),
+        (
+            "crates/kamn-agent-lib/Cargo.toml",
+            "zeroize.workspace = true",
+        ),
         ("crates/kamn-cli/Cargo.toml", "serde_json.workspace = true"),
         ("crates/kamn-core/Cargo.toml", "serde_json.workspace = true"),
-        ("crates/kamn-core/Cargo.toml", "rustls = { workspace = true,"),
+        (
+            "crates/kamn-core/Cargo.toml",
+            "rustls = { workspace = true,",
+        ),
         ("crates/kamn-crypto/Cargo.toml", "zeroize.workspace = true"),
-        ("crates/kamn-mcp-server/Cargo.toml", "serde_json.workspace = true"),
+        (
+            "crates/kamn-mcp-server/Cargo.toml",
+            "serde_json.workspace = true",
+        ),
         ("crates/kamn-node/Cargo.toml", "serde_json.workspace = true"),
         ("crates/kamn-node/Cargo.toml", "zeroize.workspace = true"),
-        ("crates/kamn-node/Cargo.toml", "rustls = { workspace = true,"),
+        (
+            "crates/kamn-node/Cargo.toml",
+            "rustls = { workspace = true,",
+        ),
         ("crates/kamn-sdk/Cargo.toml", "serde_json.workspace = true"),
         ("crates/kamn-sdk/Cargo.toml", "rustls = { workspace = true,"),
         (

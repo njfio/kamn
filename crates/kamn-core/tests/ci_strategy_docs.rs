@@ -1480,9 +1480,9 @@ fn doc_contains_dependency_ci_smoke_checker_threshold_parity_markers() {
 
 #[test]
 fn doc_contains_cargo_audit_runner_impact_measurement_markers() {
-    assert!(DOC.contains(
-        "cargo_audit_runner_impact_method=github-actions-step-duration+policy-output"
-    ));
+    assert!(
+        DOC.contains("cargo_audit_runner_impact_method=github-actions-step-duration+policy-output")
+    );
     assert!(DOC.contains("cargo_audit_fast_gate_observed_seconds=156"));
     assert!(DOC.contains("cargo_audit_workspace_premerge_observed_seconds=156"));
     assert!(DOC.contains("cargo_audit_runner_impact_baseline_captured_at=2026-03-05"));

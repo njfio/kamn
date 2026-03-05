@@ -53,5 +53,8 @@ pub trait DataLayerM10ComplianceProjectionPort {
         &self,
         owner_did: &str,
         message_id: &str,
-    ) -> Result<DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPortError>;
+    ) -> Result<
+        DataLayerM10ComplianceProjectionMessageState,
+        DataLayerM10ComplianceProjectionPortError,
+    >;
 }

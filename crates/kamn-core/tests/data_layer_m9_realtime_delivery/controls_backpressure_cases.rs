@@ -6,7 +6,10 @@ const RECIPIENT_ALPHA: &str = "kamn:did:agent:alpha-recipient";
 const CHANNEL_ANTI_SPAM: &str = "m9-direct-anti-spam";
 const CHANNEL_ALLOW: &str = "m9-direct-allow";
 
-fn alpha_dispatch_request(message_id: &str, dispatched_at_epoch_seconds: u64) -> DataLayerM9DispatchRequest {
+fn alpha_dispatch_request(
+    message_id: &str,
+    dispatched_at_epoch_seconds: u64,
+) -> DataLayerM9DispatchRequest {
     dispatch_request(
         OWNER_ALPHA,
         OWNER_ALPHA,
@@ -21,11 +24,7 @@ pub(super) fn run_spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_s
 {
     let mut channel_store = ChannelStore::new();
     channel_store
-        .create_direct(
-            CHANNEL_ANTI_SPAM,
-            SENDER_ALPHA,
-            RECIPIENT_ALPHA,
-        )
+        .create_direct(CHANNEL_ANTI_SPAM, SENDER_ALPHA, RECIPIENT_ALPHA)
         .expect("direct channel should be created");
 
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
@@ -109,11 +108,7 @@ pub(super) fn run_spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_s
 pub(super) fn run_spec_c11_dispatch_with_controls_allows_member_sender_when_anti_spam_accepts() {
     let mut channel_store = ChannelStore::new();
     channel_store
-        .create_direct(
-            CHANNEL_ALLOW,
-            SENDER_ALPHA,
-            RECIPIENT_ALPHA,
-        )
+        .create_direct(CHANNEL_ALLOW, SENDER_ALPHA, RECIPIENT_ALPHA)
         .expect("direct channel should be created");
     let mut anti_spam = AntiSpamEngine::new(AntiSpamConfig::default())
         .expect("default anti-spam config should initialize");
