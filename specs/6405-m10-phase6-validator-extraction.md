@@ -35,11 +35,11 @@ Extract deterministic M10 Phase-6 configuration validators (execution budget and
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports budget and scheduler policy validator entrypoints.
-- [ ] AC-2: `kamn-core` validator helpers delegate through extracted contracts with parity.
-- [ ] AC-3: core M10 contract lane remains green, including invalid-budget/policy tests.
-- [ ] AC-4: docs + data-layer policy contract tests include validator extraction markers/surface checks.
-- [ ] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
+- [x] AC-1: `kamn-data-layer` exports budget and scheduler policy validator entrypoints.
+- [x] AC-2: `kamn-core` validator helpers delegate through extracted contracts with parity.
+- [x] AC-3: core M10 contract lane remains green, including invalid-budget/policy tests.
+- [x] AC-4: docs + data-layer policy contract tests include validator extraction markers/surface checks.
+- [x] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
 
 ## Files to touch
 
@@ -75,7 +75,14 @@ Extract deterministic M10 Phase-6 configuration validators (execution budget and
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_phase6_policy_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m10_phase6_validator_pre_seconds=16.69`
+    - command: `/usr/bin/time -f 'm10_phase6_validator_pre_seconds=%e' -o /tmp/m10_phase6_validator_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6405-pre/Cargo.toml`
+  - post extraction lane timing: `m10_phase6_validator_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_phase6_validator_post_seconds=%e' -o /tmp/m10_phase6_validator_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
