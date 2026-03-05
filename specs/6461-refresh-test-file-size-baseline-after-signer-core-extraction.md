@@ -22,10 +22,10 @@ Refresh `test_file_size_policy` baseline inventory counts after signer core-case
 - Fix regresses signer backend test target.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: local run reproduces drift assertion (`left: 429`, `right: 428`).
-- [ ] AC-2: baseline fixture is updated to current inventory counts.
-- [ ] AC-3: `cargo test -p kamn-core --test test_file_size_policy` passes.
-- [ ] AC-4: `cargo test -p kamn-core --test signer_backend` passes.
+- [x] AC-1: local run reproduces drift assertion (`left: 429`, `right: 428`).
+- [x] AC-2: baseline fixture is updated to current inventory counts.
+- [x] AC-3: `cargo test -p kamn-core --test test_file_size_policy` passes.
+- [x] AC-4: `cargo test -p kamn-core --test signer_backend` passes.
 
 ## Files to touch
 - `specs/6461-refresh-test-file-size-baseline-after-signer-core-extraction.md`
@@ -47,7 +47,14 @@ Refresh `test_file_size_policy` baseline inventory counts after signer core-case
   - `cargo test -p kamn-core --test signer_backend`
 
 ## Phase 6 integration evidence
-- Pending.
+- Red reproduction:
+  - `cargo test -p kamn-core --test test_file_size_policy`
+  - failure: `spec_c04_oversized_test_counts_are_within_budget` with `test file inventory drift` (`left: 429`, `right: 428`)
+- Post-fix verification:
+  - `cargo test -p kamn-core --test test_file_size_policy`
+  - result: `4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`
+  - `cargo test -p kamn-core --test signer_backend`
+  - result: `30 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out`
 
 ## Deviations
 - None.
