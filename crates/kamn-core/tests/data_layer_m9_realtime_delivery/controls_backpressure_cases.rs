@@ -1,13 +1,30 @@
 use super::*;
 
+const OWNER_ALPHA: &str = "kamn:did:owner:alpha";
+const SENDER_ALPHA: &str = "kamn:did:agent:alpha-sender";
+const RECIPIENT_ALPHA: &str = "kamn:did:agent:alpha-recipient";
+const CHANNEL_ANTI_SPAM: &str = "m9-direct-anti-spam";
+const CHANNEL_ALLOW: &str = "m9-direct-allow";
+
+fn alpha_dispatch_request(message_id: &str, dispatched_at_epoch_seconds: u64) -> DataLayerM9DispatchRequest {
+    dispatch_request(
+        OWNER_ALPHA,
+        OWNER_ALPHA,
+        SENDER_ALPHA,
+        RECIPIENT_ALPHA,
+        message_id,
+        dispatched_at_epoch_seconds,
+    )
+}
+
 pub(super) fn run_spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_stable_reason_codes()
 {
     let mut channel_store = ChannelStore::new();
     channel_store
         .create_direct(
-            "m9-direct-anti-spam",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
+            CHANNEL_ANTI_SPAM,
+            SENDER_ALPHA,
+            RECIPIENT_ALPHA,
         )
         .expect("direct channel should be created");
 
@@ -18,15 +35,8 @@ pub(super) fn run_spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_s
     let insufficient_deposit = registry.dispatch_message_with_controls(
         &channel_store,
         &mut anti_spam,
-        "m9-direct-anti-spam",
-        dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-anti-spam-insufficient",
-            1_708_560_100,
-        ),
+        CHANNEL_ANTI_SPAM,
+        alpha_dispatch_request("m9-anti-spam-insufficient", 1_708_560_100),
     );
     assert!(matches!(
         insufficient_deposit,
@@ -43,30 +53,16 @@ pub(super) fn run_spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_s
         .dispatch_message_with_controls(
             &channel_store,
             &mut anti_spam,
-            "m9-direct-anti-spam",
-            dispatch_request(
-                "kamn:did:owner:alpha",
-                "kamn:did:owner:alpha",
-                "kamn:did:agent:alpha-sender",
-                "kamn:did:agent:alpha-recipient",
-                "m9-anti-spam-duplicate",
-                1_708_560_101,
-            ),
+            CHANNEL_ANTI_SPAM,
+            alpha_dispatch_request("m9-anti-spam-duplicate", 1_708_560_101),
         )
         .expect("first dispatch should pass anti-spam");
 
     let duplicate = registry.dispatch_message_with_controls(
         &channel_store,
         &mut anti_spam,
-        "m9-direct-anti-spam",
-        dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-anti-spam-duplicate",
-            1_708_560_102,
-        ),
+        CHANNEL_ANTI_SPAM,
+        alpha_dispatch_request("m9-anti-spam-duplicate", 1_708_560_102),
     );
     assert!(matches!(
         duplicate,
@@ -85,36 +81,22 @@ pub(super) fn run_spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_s
     })
     .expect("custom anti-spam config should initialize");
     rate_limit_engine
-        .set_deposit("kamn:did:agent:alpha-sender", 10)
+        .set_deposit(SENDER_ALPHA, 10)
         .expect("sender deposit should be accepted");
     let _ = registry
         .dispatch_message_with_controls(
             &channel_store,
             &mut rate_limit_engine,
-            "m9-direct-anti-spam",
-            dispatch_request(
-                "kamn:did:owner:alpha",
-                "kamn:did:owner:alpha",
-                "kamn:did:agent:alpha-sender",
-                "kamn:did:agent:alpha-recipient",
-                "m9-anti-spam-rate-a",
-                1_708_560_200,
-            ),
+            CHANNEL_ANTI_SPAM,
+            alpha_dispatch_request("m9-anti-spam-rate-a", 1_708_560_200),
         )
         .expect("first message should pass strict rate policy");
 
     let rate_limited = registry.dispatch_message_with_controls(
         &channel_store,
         &mut rate_limit_engine,
-        "m9-direct-anti-spam",
-        dispatch_request(
-            "kamn:did:owner:alpha",
-            "kamn:did:owner:alpha",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
-            "m9-anti-spam-rate-b",
-            1_708_560_201,
-        ),
+        CHANNEL_ANTI_SPAM,
+        alpha_dispatch_request("m9-anti-spam-rate-b", 1_708_560_201),
     );
     assert!(matches!(
         rate_limited,
@@ -128,15 +110,15 @@ pub(super) fn run_spec_c11_dispatch_with_controls_allows_member_sender_when_anti
     let mut channel_store = ChannelStore::new();
     channel_store
         .create_direct(
-            "m9-direct-allow",
-            "kamn:did:agent:alpha-sender",
-            "kamn:did:agent:alpha-recipient",
+            CHANNEL_ALLOW,
+            SENDER_ALPHA,
+            RECIPIENT_ALPHA,
         )
         .expect("direct channel should be created");
     let mut anti_spam = AntiSpamEngine::new(AntiSpamConfig::default())
         .expect("default anti-spam config should initialize");
     anti_spam
-        .set_deposit("kamn:did:agent:alpha-sender", 100)
+        .set_deposit(SENDER_ALPHA, 100)
         .expect("sender deposit should be accepted");
 
     let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
@@ -144,15 +126,8 @@ pub(super) fn run_spec_c11_dispatch_with_controls_allows_member_sender_when_anti
         .dispatch_message_with_controls(
             &channel_store,
             &mut anti_spam,
-            "m9-direct-allow",
-            dispatch_request(
-                "kamn:did:owner:alpha",
-                "kamn:did:owner:alpha",
-                "kamn:did:agent:alpha-sender",
-                "kamn:did:agent:alpha-recipient",
-                "m9-controls-allow",
-                1_708_560_300,
-            ),
+            CHANNEL_ALLOW,
+            alpha_dispatch_request("m9-controls-allow", 1_708_560_300),
         )
         .expect("combined controls dispatch should succeed");
 
@@ -168,8 +143,8 @@ pub(super) fn run_spec_c12_runtime_backpressure_projection_maps_accept_slow_reje
     let accept = registry
         .project_runtime_backpressure_for_recipient(
             DataLayerM9RuntimeBackpressureProjectionRequest {
-                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-                owner_did: "kamn:did:owner:alpha".to_owned(),
+                requester_owner_did: OWNER_ALPHA.to_owned(),
+                owner_did: OWNER_ALPHA.to_owned(),
                 recipient_agent_did: "kamn:did:agent:alpha-accept".to_owned(),
                 queue_capacity: 10,
                 lifecycle_state: PeerLifecycleState::Active,
@@ -189,8 +164,8 @@ pub(super) fn run_spec_c12_runtime_backpressure_projection_maps_accept_slow_reje
     let slow = registry
         .project_runtime_backpressure_for_recipient(
             DataLayerM9RuntimeBackpressureProjectionRequest {
-                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-                owner_did: "kamn:did:owner:alpha".to_owned(),
+                requester_owner_did: OWNER_ALPHA.to_owned(),
+                owner_did: OWNER_ALPHA.to_owned(),
                 recipient_agent_did: "kamn:did:agent:alpha-slow".to_owned(),
                 queue_capacity: 10,
                 lifecycle_state: PeerLifecycleState::Active,
@@ -209,8 +184,8 @@ pub(super) fn run_spec_c12_runtime_backpressure_projection_maps_accept_slow_reje
     let reject = registry
         .project_runtime_backpressure_for_recipient(
             DataLayerM9RuntimeBackpressureProjectionRequest {
-                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-                owner_did: "kamn:did:owner:alpha".to_owned(),
+                requester_owner_did: OWNER_ALPHA.to_owned(),
+                owner_did: OWNER_ALPHA.to_owned(),
                 recipient_agent_did: "kamn:did:agent:alpha-reject".to_owned(),
                 queue_capacity: 10,
                 lifecycle_state: PeerLifecycleState::Active,
@@ -229,8 +204,8 @@ pub(super) fn run_spec_c12_runtime_backpressure_projection_maps_accept_slow_reje
     let purge = registry
         .project_runtime_backpressure_for_recipient(
             DataLayerM9RuntimeBackpressureProjectionRequest {
-                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-                owner_did: "kamn:did:owner:alpha".to_owned(),
+                requester_owner_did: OWNER_ALPHA.to_owned(),
+                owner_did: OWNER_ALPHA.to_owned(),
                 recipient_agent_did: "kamn:did:agent:alpha-purge".to_owned(),
                 queue_capacity: 10,
                 lifecycle_state: PeerLifecycleState::Disconnected,
@@ -258,8 +233,8 @@ pub(super) fn run_spec_c13_runtime_backpressure_projection_fails_closed_for_inva
 
     let invalid_policy = registry.project_runtime_backpressure_for_recipient(
         DataLayerM9RuntimeBackpressureProjectionRequest {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
+            requester_owner_did: OWNER_ALPHA.to_owned(),
+            owner_did: OWNER_ALPHA.to_owned(),
             recipient_agent_did: "kamn:did:agent:alpha-invalid".to_owned(),
             queue_capacity: 10,
             lifecycle_state: PeerLifecycleState::Active,
@@ -280,8 +255,8 @@ pub(super) fn run_spec_c13_runtime_backpressure_projection_fails_closed_for_inva
 
     let invalid_input = registry.project_runtime_backpressure_for_recipient(
         DataLayerM9RuntimeBackpressureProjectionRequest {
-            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-            owner_did: "kamn:did:owner:alpha".to_owned(),
+            requester_owner_did: OWNER_ALPHA.to_owned(),
+            owner_did: OWNER_ALPHA.to_owned(),
             recipient_agent_did: "kamn:did:agent:alpha-invalid".to_owned(),
             queue_capacity: 1,
             lifecycle_state: PeerLifecycleState::Active,
