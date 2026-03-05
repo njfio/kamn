@@ -8,7 +8,7 @@ license = "Apache-2.0"
 kamn-kolme = { path = "../kamn-kolme" }
 kamn-sdk = { path = "../kamn-sdk" }
 kamn-types = { path = "../kamn-types" }
-zeroize = "1.8.1"
+zeroize.workspace = true
 
 [lints]
 workspace = true

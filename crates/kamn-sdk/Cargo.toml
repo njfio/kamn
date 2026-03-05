@@ -10,10 +10,10 @@ path = "src/lib.rs"
 [dependencies]
 kamn-core = { path = "../kamn-core" }
 kamn-types = { path = "../kamn-types" }
-serde_json = "1.0.145"
-rustls = { version = "0.23.36", default-features = false, features = ["ring", "std", "tls12"] }
-rustls-pemfile = "2.2.0"
-webpki-roots = "1.0.3"
+serde_json.workspace = true
+rustls = { workspace = true, features = ["ring", "std", "tls12"] }
+rustls-pemfile.workspace = true
+webpki-roots.workspace = true
 
 [lints]
 workspace = true
