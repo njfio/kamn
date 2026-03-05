@@ -1,25 +1,33 @@
 use super::*;
 
+const OWNER_ALPHA: &str = "kamn:did:owner:alpha";
+const OWNER_BETA: &str = "kamn:did:owner:beta";
+const PARTITION_MONTH_PRIMARY: u32 = 202401;
+const NOW_MONTH_ID: u32 = 202602;
+const ARCHIVE_PREFIX: &str = "s3://kamn-archive/messages";
+const MESSAGE_ONE: &str = "m10-m8-msg-1";
+const MESSAGE_TWO: &str = "m10-m8-msg-2";
+
 pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records(
 ) {
-    let owner_did = "kamn:did:owner:alpha";
+    let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_PRIMARY, false))
         .expect("partition should register");
 
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .register_message(m8_message_input(owner_did, MESSAGE_ONE, 1_708_560_100))
         .expect("message one should register");
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-2", 1_708_560_110))
+        .register_message(m8_message_input(owner_did, MESSAGE_TWO, 1_708_560_110))
         .expect("message two should register");
 
     let initial_projection: DataLayerM10ComplianceShredProjectionReport = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
         )
         .expect("initial projection should succeed");
     assert_eq!(
@@ -37,14 +45,14 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
         .crypto_shred(DataLayerM8CryptoShredRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-1".to_owned(),
+            message_id: MESSAGE_ONE.to_owned(),
             shredded_at_epoch_seconds: 1_708_560_200,
         })
         .expect("first message should shred");
     let mid_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
         )
         .expect("mid projection should succeed");
     assert_eq!(
@@ -57,14 +65,14 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
         .crypto_shred(DataLayerM8CryptoShredRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-2".to_owned(),
+            message_id: MESSAGE_TWO.to_owned(),
             shredded_at_epoch_seconds: 1_708_560_210,
         })
         .expect("second message should shred");
     let final_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
         )
         .expect("final projection should succeed");
     assert_eq!(
@@ -76,9 +84,9 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
 
     let archived = m10_registry
         .archive_due_partitions(DataLayerM10ArchiveDueRequest {
-            now_month_id: 202602,
+            now_month_id: NOW_MONTH_ID,
             active_retention_months: 1,
-            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+            object_storage_prefix: ARCHIVE_PREFIX.to_owned(),
         })
         .expect("archive due should succeed");
     assert_eq!(archived.len(), 1);
@@ -87,10 +95,10 @@ pub(super) fn run_spec_c06_partition_shred_completeness_can_be_projected_from_m8
 
 pub(super) fn run_spec_c07_partition_shred_projection_fails_closed_when_m8_message_lookup_is_missing(
 ) {
-    let owner_did = "kamn:did:owner:alpha";
+    let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_PRIMARY, false))
         .expect("partition should register");
 
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
@@ -106,7 +114,7 @@ pub(super) fn run_spec_c07_partition_shred_projection_fails_closed_when_m8_messa
         &m8_registry,
         project_request(
             owner_did,
-            202401,
+            PARTITION_MONTH_PRIMARY,
             vec!["m10-m8-msg-present", "m10-m8-msg-missing"],
         ),
     );
@@ -122,15 +130,15 @@ pub(super) fn run_spec_c07_partition_shred_projection_fails_closed_when_m8_messa
 }
 
 pub(super) fn run_spec_c08_partition_projection_accepts_canonical_equivalent_owner_dids() {
-    let owner_did = "kamn:did:owner:alpha";
+    let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_PRIMARY, false))
         .expect("partition should register");
 
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .register_message(m8_message_input(owner_did, MESSAGE_ONE, 1_708_560_100))
         .expect("message should register");
 
     let projection = m10_registry.project_partition_shred_completeness_from_m8(
@@ -138,8 +146,8 @@ pub(super) fn run_spec_c08_partition_projection_accepts_canonical_equivalent_own
         DataLayerM10ComplianceShredProjectionRequest {
             requester_owner_did: "  kamn:did:owner:alpha  ".to_owned(),
             owner_did: owner_did.to_owned(),
-            partition_month_id: 202401,
-            partition_message_ids: vec!["m10-m8-msg-1".to_owned()],
+            partition_month_id: PARTITION_MONTH_PRIMARY,
+            partition_message_ids: vec![MESSAGE_ONE.to_owned()],
         },
     );
     assert!(
@@ -149,24 +157,24 @@ pub(super) fn run_spec_c08_partition_projection_accepts_canonical_equivalent_own
 }
 
 pub(super) fn run_spec_c09_partition_projection_denies_non_equivalent_owner_dids() {
-    let owner_did = "kamn:did:owner:alpha";
+    let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_PRIMARY, false))
         .expect("partition should register");
 
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .register_message(m8_message_input(owner_did, MESSAGE_ONE, 1_708_560_100))
         .expect("message should register");
 
     let denied = m10_registry.project_partition_shred_completeness_from_m8(
         &m8_registry,
         DataLayerM10ComplianceShredProjectionRequest {
-            requester_owner_did: "kamn:did:owner:beta".to_owned(),
+            requester_owner_did: OWNER_BETA.to_owned(),
             owner_did: owner_did.to_owned(),
-            partition_month_id: 202401,
-            partition_message_ids: vec!["m10-m8-msg-1".to_owned()],
+            partition_month_id: PARTITION_MONTH_PRIMARY,
+            partition_message_ids: vec![MESSAGE_ONE.to_owned()],
         },
     );
     assert!(matches!(
@@ -178,25 +186,25 @@ pub(super) fn run_spec_c09_partition_projection_denies_non_equivalent_owner_dids
 }
 
 pub(super) fn run_spec_c10_partition_projection_marks_legal_hold_as_archival_denied_reason() {
-    let owner_did = "kamn:did:owner:alpha";
+    let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_PRIMARY, false))
         .expect("partition should register");
 
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .register_message(m8_message_input(owner_did, MESSAGE_ONE, 1_708_560_100))
         .expect("message one should register");
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-2", 1_708_560_110))
+        .register_message(m8_message_input(owner_did, MESSAGE_TWO, 1_708_560_110))
         .expect("message two should register");
 
     m8_registry
         .set_legal_hold(DataLayerM8LegalHoldRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-2".to_owned(),
+            message_id: MESSAGE_TWO.to_owned(),
             legal_hold_active: true,
         })
         .expect("legal hold should apply");
@@ -204,7 +212,7 @@ pub(super) fn run_spec_c10_partition_projection_marks_legal_hold_as_archival_den
         .crypto_shred(DataLayerM8CryptoShredRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-1".to_owned(),
+            message_id: MESSAGE_ONE.to_owned(),
             shredded_at_epoch_seconds: 1_708_560_200,
         })
         .expect("first message should shred");
@@ -212,7 +220,7 @@ pub(super) fn run_spec_c10_partition_projection_marks_legal_hold_as_archival_den
     let projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
         )
         .expect("projection should succeed");
     assert_eq!(
@@ -229,25 +237,25 @@ pub(super) fn run_spec_c10_partition_projection_marks_legal_hold_as_archival_den
 
 pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes(
 ) {
-    let owner_did = "kamn:did:owner:alpha";
+    let owner_did = OWNER_ALPHA;
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_PRIMARY, false))
         .expect("partition should register");
 
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .register_message(m8_message_input(owner_did, MESSAGE_ONE, 1_708_560_100))
         .expect("message one should register");
     m8_registry
-        .register_message(m8_message_input(owner_did, "m10-m8-msg-2", 1_708_560_110))
+        .register_message(m8_message_input(owner_did, MESSAGE_TWO, 1_708_560_110))
         .expect("message two should register");
 
     m8_registry
         .set_legal_hold(DataLayerM8LegalHoldRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-2".to_owned(),
+            message_id: MESSAGE_TWO.to_owned(),
             legal_hold_active: true,
         })
         .expect("legal hold should apply");
@@ -255,7 +263,7 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
         .crypto_shred(DataLayerM8CryptoShredRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-1".to_owned(),
+            message_id: MESSAGE_ONE.to_owned(),
             shredded_at_epoch_seconds: 1_708_560_200,
         })
         .expect("first message should shred");
@@ -263,7 +271,7 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
     let hold_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
         )
         .expect("hold projection should succeed");
     assert_eq!(
@@ -272,9 +280,9 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
     );
     let blocked_archive = m10_registry
         .archive_due_partitions(DataLayerM10ArchiveDueRequest {
-            now_month_id: 202602,
+            now_month_id: NOW_MONTH_ID,
             active_retention_months: 1,
-            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+            object_storage_prefix: ARCHIVE_PREFIX.to_owned(),
         })
         .expect("archive due should succeed");
     assert!(blocked_archive.is_empty());
@@ -283,7 +291,7 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
         .set_legal_hold(DataLayerM8LegalHoldRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-2".to_owned(),
+            message_id: MESSAGE_TWO.to_owned(),
             legal_hold_active: false,
         })
         .expect("legal hold release should apply");
@@ -291,7 +299,7 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
         .crypto_shred(DataLayerM8CryptoShredRequest {
             requester_owner_did: owner_did.to_owned(),
             owner_did: owner_did.to_owned(),
-            message_id: "m10-m8-msg-2".to_owned(),
+            message_id: MESSAGE_TWO.to_owned(),
             shredded_at_epoch_seconds: 1_708_560_220,
         })
         .expect("second message should shred after hold release");
@@ -299,7 +307,7 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
     let final_projection = m10_registry
         .project_partition_shred_completeness_from_m8(
             &m8_registry,
-            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+            project_request(owner_did, PARTITION_MONTH_PRIMARY, vec![MESSAGE_ONE, MESSAGE_TWO]),
         )
         .expect("final projection should succeed");
     assert_eq!(
@@ -310,9 +318,9 @@ pub(super) fn run_spec_c11_partition_archival_remains_blocked_until_legal_hold_i
 
     let archived = m10_registry
         .archive_due_partitions(DataLayerM10ArchiveDueRequest {
-            now_month_id: 202602,
+            now_month_id: NOW_MONTH_ID,
             active_retention_months: 1,
-            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+            object_storage_prefix: ARCHIVE_PREFIX.to_owned(),
         })
         .expect("archive due should succeed");
     assert_eq!(archived.len(), 1);
