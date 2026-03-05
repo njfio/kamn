@@ -36,6 +36,9 @@ passes locally and in PR Fast Gate CI.
 ## Test plan
 - Red:
   - Run `cargo fmt --all --check` and capture failing baseline.
+  - Baseline observed failing across multiple files (for example
+    `crates/kamn-cli/tests/command_activation_content_bridge_contract.rs` and
+    `crates/kamn-core/src/data_layer_m10_partition_archival/registry.rs`).
 - Green:
   - Run `cargo fmt --all`.
   - Re-run `cargo fmt --all --check`.
