@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 const DEFAULT_RESPONSE: &str = r#"{"channel_id":"unknown","messages":[]}"#;
 
 fn health_and_channel_routes(method: &str, path: &str) -> Option<(u16, &'static str)> {

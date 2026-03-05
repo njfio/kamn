@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[path = "command_activation_harness_routes.rs"]
 mod command_activation_harness_routes;
 
