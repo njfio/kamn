@@ -23,17 +23,18 @@ Address audit-reported quality gaps in the `#6373` command activation split by c
 - Spec correction remains inconsistent with repository history.
 
 ## Acceptance criteria (testable booleans)
-- [ ] Shared test helpers are centralized so core/content contract files no longer duplicate `with_contract_server` and missing-arg assertions.
-- [ ] Key assertions in moved command activation tests include explicit diagnostic messages for CI triage.
-- [ ] `specs/6373-kamn-cli-command-activation-contract-split.md` deviations section reflects the actual extra files introduced.
-- [ ] `#[allow(dead_code)]` usage in activation harness includes an explanatory comment.
-- [ ] `kamn-cli` activation contract test suite remains green.
+- [x] Shared test helpers are centralized so core/content contract files no longer duplicate `with_contract_server` and missing-arg assertions.
+- [x] Key assertions in moved command activation tests include explicit diagnostic messages for CI triage.
+- [x] `specs/6373-kamn-cli-command-activation-contract-split.md` deviations section reflects the actual extra files introduced.
+- [x] `#[allow(dead_code)]` usage in activation harness includes an explanatory comment.
+- [x] `kamn-cli` activation contract test suite remains green.
 
 ## Files to touch
 - `specs/6377-command-activation-followup-hardening.md`
 - `specs/6373-kamn-cli-command-activation-contract-split.md`
 - `crates/kamn-cli/tests/command_activation_harness.rs`
 - `crates/kamn-cli/tests/command_activation_core_contract.rs`
+- `crates/kamn-cli/tests/command_activation_core_contract/cases.rs` (new)
 - `crates/kamn-cli/tests/command_activation_content_bridge_contract.rs`
 - `crates/kamn-cli/tests/command_activation_followup_contract.rs` (new)
 
@@ -51,7 +52,17 @@ Address audit-reported quality gaps in the `#6373` command activation split by c
   - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- Wiring:
+  - Centralized `with_contract_server` and invalid-input helper assertions in `command_activation_harness.rs`.
+  - Removed duplicate helper implementations from core/content contract files.
+  - Restored explicit assertion diagnostic labels in moved command activation suites.
+  - Corrected `#6373` spec deviations to include extra files introduced by the split.
+- Executed:
+  - `cargo test -p kamn-cli --test command_activation_followup_contract`
+  - `cargo test -p kamn-cli --test command_activation_split_contract`
+  - `cargo test -p kamn-cli --test command_activation_core_contract`
+  - `cargo test -p kamn-cli --test command_activation_content_bridge_contract`
+  - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Deviations
 - None.
