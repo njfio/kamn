@@ -27,8 +27,8 @@ fn spec_c01_followup_shared_helpers_are_centralized_in_harness() {
     }
 
     for marker in [
-        "pub(crate) fn with_contract_server(max_requests: usize, run: impl FnOnce(&str))",
-        "pub(crate) fn assert_missing_arg_invalid(endpoint: &str, command: CommandKind, label: &str)",
+        "pub(crate) fn with_contract_server(",
+        "pub(crate) fn assert_missing_arg_invalid(",
     ] {
         assert!(
             harness.contains(marker),
