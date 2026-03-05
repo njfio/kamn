@@ -26,10 +26,10 @@ Move core CLI model type definitions out of `crates/kamn-cli/src/lib.rs` into a 
 - Inline type definitions remain in `lib.rs`, violating extraction contract.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `lib.rs` declares and uses a dedicated model-types module.
-- [ ] Inline type-definition markers are removed from `lib.rs`.
-- [ ] Existing `kamn-cli` tests remain green.
-- [ ] Contract coverage asserts module declaration and API markers in new module.
+- [x] `lib.rs` declares and uses a dedicated model-types module.
+- [x] Inline type-definition markers are removed from `lib.rs`.
+- [x] Existing `kamn-cli` tests remain green.
+- [x] Contract coverage asserts module declaration and API markers in new module.
 
 ## Files to touch
 - `specs/6369-kamn-cli-model-types-module-extraction.md`
@@ -50,7 +50,11 @@ Move core CLI model type definitions out of `crates/kamn-cli/src/lib.rs` into a 
   - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-cli --test main_contract` (pass)
+- `cargo test -p kamn-cli --test subcommand_surface_contract` (pass)
+- `cargo test -p kamn-cli --test command_activation_contract` (pass)
+- `timeout 30s cargo run -p kamn-cli -- --help` (pass)
+- `timeout 30s cargo run -p kamn-cli --` (expected parse-error hard-fail: `missing command`)
 
 ## Deviations
 - None.
