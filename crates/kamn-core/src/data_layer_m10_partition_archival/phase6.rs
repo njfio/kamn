@@ -11,14 +11,16 @@ use kamn_data_layer::data_layer_m10_phase6_runtime_evidence::{
 };
 use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
+    data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
     data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
-    DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6CompliancePort,
-    DataLayerM10Phase6CompliancePortError, DataLayerM10Phase6CryptoShredInput,
-    DataLayerM10Phase6PolicyBudget, DataLayerM10Phase6PolicyBudgetDecision,
-    DataLayerM10Phase6PolicyEvaluatorError, DataLayerM10Phase6PolicyReportCounts,
-    DataLayerM10Phase6RetentionDueCandidate, DataLayerM10Phase6SchedulerSignalPolicy,
-    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
+    DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6BudgetPolicyReport,
+    DataLayerM10Phase6CompliancePort, DataLayerM10Phase6CompliancePortError,
+    DataLayerM10Phase6CryptoShredInput, DataLayerM10Phase6PolicyBudget,
+    DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyEvaluatorError,
+    DataLayerM10Phase6PolicyReportCounts, DataLayerM10Phase6RetentionDueCandidate,
+    DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
+    DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 use crate::{
@@ -662,7 +664,7 @@ pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
     report: &DataLayerM10Phase6ExecutionTickReport,
     budget: DataLayerM10Phase6ExecutionTickBudget,
 ) -> Result<DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10PartitionLifecycleError> {
-    let budget_report = data_layer_m10_evaluate_phase6_execution_tick_budget_policy(
+    let budget_policy_report = data_layer_m10_evaluate_phase6_execution_tick_budget_policy(
         DataLayerM10Phase6PolicyReportCounts {
             due_candidate_count: report.due_candidate_count,
             shredded_message_count: report.shredded_message_ids.len(),
@@ -677,7 +679,15 @@ pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
         },
     )
     .map_err(map_data_layer_policy_error_to_m10)?;
-    let decision = match budget_report.decision {
+    Ok(map_phase6_budget_policy_report_to_core(
+        budget_policy_report,
+    ))
+}
+
+fn map_phase6_budget_policy_report_to_core(
+    budget_policy_report: DataLayerM10Phase6BudgetPolicyReport,
+) -> DataLayerM10Phase6ExecutionTickBudgetReport {
+    let decision = match budget_policy_report.decision {
         DataLayerM10Phase6PolicyBudgetDecision::WithinBudget => {
             DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget
         }
@@ -685,14 +695,14 @@ pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
             DataLayerM10Phase6ExecutionBudgetDecision::Exceeded
         }
     };
-    Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
+    DataLayerM10Phase6ExecutionTickBudgetReport {
         decision,
-        reason_code: budget_report.reason_code,
-        due_candidate_count: budget_report.due_candidate_count,
-        shredded_message_count: budget_report.shredded_message_count,
-        projection_report_count: budget_report.projection_report_count,
-        archived_entry_count: budget_report.archived_entry_count,
-    })
+        reason_code: budget_policy_report.reason_code,
+        due_candidate_count: budget_policy_report.due_candidate_count,
+        shredded_message_count: budget_policy_report.shredded_message_count,
+        projection_report_count: budget_policy_report.projection_report_count,
+        archived_entry_count: budget_policy_report.archived_entry_count,
+    }
 }
 
 /// Evaluates deterministic scheduler trigger decision for a Phase-6 tick cycle.
@@ -935,47 +945,20 @@ fn evaluate_phase6_scheduler_preflight_budget(
     projection_report_count: usize,
     budget: DataLayerM10Phase6ExecutionTickBudget,
 ) -> Result<DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10PartitionLifecycleError> {
-    validate_phase6_execution_tick_budget(budget)?;
-
-    let budget_result = DataLayerM10Phase6ExecutionTickBudgetReport {
-        decision: DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget,
-        reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
+    let budget_policy_report = data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy(
         due_candidate_count,
-        shredded_message_count: due_candidate_count,
         projection_report_count,
-        archived_entry_count: projection_report_count,
-    };
-    if budget_result.due_candidate_count > budget.max_due_candidates {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_DUE_CANDIDATES_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    if budget_result.shredded_message_count > budget.max_shredded_messages {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code:
-                DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_SHREDDED_MESSAGES_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    if budget_result.projection_report_count > budget.max_projection_reports {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_PROJECTIONS_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    if budget_result.archived_entry_count > budget.max_archived_entries {
-        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
-            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
-            reason_code:
-                DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_ARCHIVE_ENTRIES_EXCEEDED_REASON_CODE,
-            ..budget_result
-        });
-    }
-    Ok(budget_result)
+        DataLayerM10Phase6PolicyBudget {
+            max_due_candidates: budget.max_due_candidates,
+            max_shredded_messages: budget.max_shredded_messages,
+            max_projection_reports: budget.max_projection_reports,
+            max_archived_entries: budget.max_archived_entries,
+        },
+    )
+    .map_err(map_data_layer_policy_error_to_m10)?;
+    Ok(map_phase6_budget_policy_report_to_core(
+        budget_policy_report,
+    ))
 }
 
 fn phase6_scheduler_error_reason_code(error: &DataLayerM10PartitionLifecycleError) -> &'static str {

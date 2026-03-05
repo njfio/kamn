@@ -205,6 +205,27 @@ pub fn data_layer_m10_evaluate_phase6_execution_tick_budget_policy(
     Ok(budget_result)
 }
 
+/// Evaluates scheduler preflight budget using deterministic count-shaping assumptions.
+///
+/// Preflight assumptions:
+/// - every due candidate is expected to be shredded in this cycle
+/// - every projection report is expected to create one archived entry
+pub fn data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy(
+    due_candidate_count: usize,
+    projection_report_count: usize,
+    budget: DataLayerM10Phase6PolicyBudget,
+) -> Result<DataLayerM10Phase6BudgetPolicyReport, DataLayerM10Phase6PolicyEvaluatorError> {
+    data_layer_m10_evaluate_phase6_execution_tick_budget_policy(
+        DataLayerM10Phase6PolicyReportCounts {
+            due_candidate_count,
+            shredded_message_count: due_candidate_count,
+            projection_report_count,
+            archived_entry_count: projection_report_count,
+        },
+        budget,
+    )
+}
+
 /// Evaluates deterministic scheduler trigger decision for a phase6 tick cycle.
 pub fn data_layer_m10_evaluate_phase6_scheduler_trigger_policy(
     policy: DataLayerM10Phase6SchedulerTriggerPolicy,
