@@ -33,11 +33,11 @@ Extract scheduler decision/cycle scenario tests (`spec_c23`..`spec_c27`) from `c
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `scheduler_cycle_cases.rs` exists and contains C23-C27 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` keeps C23-C27 entrypoint names and delegates to scheduler-cycle cases functions.
-- [ ] AC-3: split-contract test enforces scheduler-cycle delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `scheduler_cycle_cases.rs` exists and contains C23-C27 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` keeps C23-C27 entrypoint names and delegates to scheduler-cycle cases functions.
+- [x] AC-3: split-contract test enforces scheduler-cycle delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 
@@ -65,7 +65,8 @@ Extract scheduler decision/cycle scenario tests (`spec_c23`..`spec_c27`) from `c
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`4 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 
