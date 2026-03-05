@@ -2,6 +2,10 @@ use super::{
     dispatch, is_help_request, parse_cli_args, render_help_text, CommandKind, OutputFormat,
 };
 
+fn parse_help_command() -> super::ParsedCliArgs {
+    parse_cli_args(["kamn-cli", "--help"]).expect("help command should parse")
+}
+
 #[test]
 fn unit_cli_parser_honors_endpoint_flag() {
     let parsed = parse_cli_args(["kamn-cli", "health", "--endpoint", "http://localhost:8080"])
@@ -12,13 +16,13 @@ fn unit_cli_parser_honors_endpoint_flag() {
 
 #[test]
 fn regression_issue_6198_cli_parser_accepts_help_flag_as_command() {
-    let parsed = parse_cli_args(["kamn-cli", "--help"]).expect("help command should parse");
+    let parsed = parse_help_command();
     assert_eq!(parsed.command, CommandKind::Help);
 }
 
 #[test]
 fn regression_issue_6198_cli_dispatch_renders_usage_surface() {
-    let parsed = parse_cli_args(["kamn-cli", "--help"]).expect("help command should parse");
+    let parsed = parse_help_command();
     let output = dispatch(&parsed).expect("help command should dispatch");
     assert!(output.text.contains("usage=kamn-cli <command>"));
     assert!(output.text.contains("commands=register"));
