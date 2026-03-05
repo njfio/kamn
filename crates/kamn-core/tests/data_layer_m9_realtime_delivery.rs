@@ -61,6 +61,8 @@ fn enqueue_messages(
 mod baseline_flow_cases;
 #[path = "data_layer_m9_realtime_delivery/controls_backpressure_cases.rs"]
 mod controls_backpressure_cases;
+#[path = "data_layer_m9_realtime_delivery/input_validation_cases.rs"]
+mod input_validation_cases;
 #[path = "data_layer_m9_realtime_delivery/queue_channel_cases.rs"]
 mod queue_channel_cases;
 
@@ -131,79 +133,15 @@ fn spec_c13_runtime_backpressure_projection_fails_closed_for_invalid_policy_and_
 
 #[test]
 fn spec_c14_invalid_requester_owner_did_fails_closed_with_field_taxonomy() {
-    let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
-    let invalid_requester_owner = registry.dispatch_message(dispatch_request(
-        "did:example:intruder",
-        "kamn:did:owner:alpha",
-        "kamn:did:agent:alpha-sender",
-        "kamn:did:agent:alpha-recipient",
-        "m9-invalid-owner-requester",
-        1_708_560_900,
-    ));
-    assert!(matches!(
-        invalid_requester_owner,
-        Err(DataLayerM9RealtimeDeliveryError::InvalidDid {
-            field: "requester_owner_did",
-            reason_code: DATA_LAYER_M9_INVALID_REQUESTER_OWNER_DID_REASON_CODE,
-            ..
-        })
-    ));
+    input_validation_cases::run_spec_c14_invalid_requester_owner_did_fails_closed_with_field_taxonomy();
 }
 
 #[test]
 fn spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_with_field_taxonomy() {
-    let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
-
-    let invalid_sender = registry.dispatch_message(dispatch_request(
-        "kamn:did:owner:alpha",
-        "kamn:did:owner:alpha",
-        "kamn:did:owner:not-an-agent",
-        "kamn:did:agent:alpha-recipient",
-        "m9-invalid-sender",
-        1_708_560_901,
-    ));
-    assert!(matches!(
-        invalid_sender,
-        Err(DataLayerM9RealtimeDeliveryError::InvalidDid {
-            field: "sender_agent_did",
-            reason_code: DATA_LAYER_M9_INVALID_SENDER_AGENT_DID_REASON_CODE,
-            ..
-        })
-    ));
-
-    let invalid_recipient = registry.dispatch_message(dispatch_request(
-        "kamn:did:owner:alpha",
-        "kamn:did:owner:alpha",
-        "kamn:did:agent:alpha-sender",
-        "kamn:did:agent:Recipient",
-        "m9-invalid-recipient",
-        1_708_560_902,
-    ));
-    assert!(matches!(
-        invalid_recipient,
-        Err(DataLayerM9RealtimeDeliveryError::InvalidDid {
-            field: "recipient_agent_did",
-            reason_code: DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
-            ..
-        })
-    ));
+    input_validation_cases::run_spec_c15_invalid_sender_and_recipient_agent_dids_fail_closed_with_field_taxonomy();
 }
 
 #[test]
 fn spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy() {
-    let registry = DataLayerM9RealtimeDeliveryRegistry::new();
-    let invalid_presence_requester = registry.query_presence(DataLayerM9PresenceQuery {
-        requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-        owner_did: "kamn:did:owner:alpha".to_owned(),
-        requester_agent_did: "kamn:did:owner:alpha".to_owned(),
-        target_agent_did: "kamn:did:agent:alpha-target".to_owned(),
-    });
-    assert!(matches!(
-        invalid_presence_requester,
-        Err(DataLayerM9RealtimeDeliveryError::InvalidDid {
-            field: "requester_agent_did",
-            reason_code: DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE,
-            ..
-        })
-    ));
+    input_validation_cases::run_spec_c16_invalid_presence_requester_agent_did_fails_closed_with_field_taxonomy();
 }
