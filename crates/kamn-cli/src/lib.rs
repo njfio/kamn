@@ -6,8 +6,11 @@ pub mod commands;
 
 #[path = "cli_args.rs"]
 mod cli_args;
+#[path = "cli_dispatch.rs"]
+mod cli_dispatch;
 
-use cli_args::{help_output, is_help_request_impl, parse_cli_args_impl, render_help_text_impl};
+use cli_args::{is_help_request_impl, parse_cli_args_impl, render_help_text_impl};
+use cli_dispatch::dispatch_impl;
 
 /// Output format for CLI responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -156,30 +159,7 @@ where
 
 /// Dispatches one parsed command to the corresponding phase-2 command module.
 pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib::AgentLibError> {
-    match parsed.command {
-        CommandKind::Help => Ok(help_output()),
-        CommandKind::Register => commands::register::execute(parsed),
-        CommandKind::SendMessage => commands::send_message::execute(parsed),
-        CommandKind::CreateChannel => commands::create_channel::execute(parsed),
-        CommandKind::ListMessages => commands::list_messages::execute(parsed),
-        CommandKind::QueryMessage => commands::query_message::execute(parsed),
-        CommandKind::QueryTask => commands::query_task::execute(parsed),
-        CommandKind::QueryAgentProfile => commands::query_agent_profile::execute(parsed),
-        CommandKind::RegisterContent => commands::register_content::execute(parsed),
-        CommandKind::ExpireContent => commands::expire_content::execute(parsed),
-        CommandKind::TombstoneContent => commands::tombstone_content::execute(parsed),
-        CommandKind::QueryContent => commands::query_content::execute(parsed),
-        CommandKind::SubmitBridgeMessage => commands::submit_bridge_message::execute(parsed),
-        CommandKind::ForwardBridgeMessage => commands::forward_bridge_message::execute(parsed),
-        CommandKind::QueryBridgeMessage => commands::query_bridge_message::execute(parsed),
-        CommandKind::CreateTask => commands::create_task::execute(parsed),
-        CommandKind::AcceptTask => commands::accept_task::execute(parsed),
-        CommandKind::CompleteTask => commands::complete_task::execute(parsed),
-        CommandKind::FundEscrow => commands::fund_escrow::execute(parsed),
-        CommandKind::ReleaseEscrow => commands::release_escrow::execute(parsed),
-        CommandKind::VerifyProof => commands::verify_proof::execute(parsed),
-        CommandKind::Health => commands::health::execute(parsed),
-    }
+    dispatch_impl(parsed)
 }
 
 /// Renders deterministic help text for CLI usage output.
