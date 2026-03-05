@@ -1,5 +1,12 @@
 use super::*;
 
+const OWNER_RUNTIME_DEFERRED: &str = "kamn:did:owner:phase6-runtime-deferred";
+const OWNER_RUNTIME_APPLIED: &str = "kamn:did:owner:phase6-runtime-applied";
+const OWNER_RUNTIME_PREFLIGHT: &str = "kamn:did:owner:phase6-runtime-preflight";
+const OWNER_RUNTIME_CLOCK: &str = "kamn:did:owner:phase6-runtime-clock";
+const MESSAGE_RUNTIME_DEFER: &str = "runtime-defer-message";
+const MESSAGE_RUNTIME_CLOCK: &str = "runtime-clock-message";
+
 pub(super) fn run_spec_c28_phase6_scheduler_runtime_initializes_zeroed_state_and_checkpoint() {
     let runtime = DataLayerM10Phase6SchedulerRuntime::new(
         phase6_scheduler_policy(1, 600),
@@ -20,14 +27,14 @@ pub(super) fn run_spec_c28_phase6_scheduler_runtime_initializes_zeroed_state_and
 }
 
 pub(super) fn run_spec_c29_phase6_scheduler_runtime_deferred_cycle_preserves_success_checkpoint() {
-    let owner_did = "kamn:did:owner:phase6-runtime-deferred";
+    let owner_did = OWNER_RUNTIME_DEFERRED;
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
         .register_partition(partition_input(202601, false))
         .expect("partition should register");
 
-    let mut recent_message = m8_message_input(owner_did, "runtime-defer-message", 1_699_999_990);
+    let mut recent_message = m8_message_input(owner_did, MESSAGE_RUNTIME_DEFER, 1_699_999_990);
     recent_message.retention_class = DataLayerM8RetentionClass::Ephemeral;
     m8_registry
         .register_message(recent_message)
@@ -44,7 +51,7 @@ pub(super) fn run_spec_c29_phase6_scheduler_runtime_deferred_cycle_preserves_suc
             &mut m10_registry,
             phase6_request(
                 owner_did,
-                BTreeMap::from([(202601, vec!["runtime-defer-message".to_owned()])]),
+                BTreeMap::from([(202601, vec![MESSAGE_RUNTIME_DEFER.to_owned()])]),
             ),
         )
         .expect("deferred runtime cycle should succeed");
@@ -67,7 +74,7 @@ pub(super) fn run_spec_c29_phase6_scheduler_runtime_deferred_cycle_preserves_suc
 
 pub(super) fn run_spec_c30_phase6_scheduler_runtime_applied_cycle_updates_success_checkpoint_and_counters(
 ) {
-    let owner_did = "kamn:did:owner:phase6-runtime-applied";
+    let owner_did = OWNER_RUNTIME_APPLIED;
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
@@ -125,7 +132,7 @@ pub(super) fn run_spec_c30_phase6_scheduler_runtime_applied_cycle_updates_succes
 
 pub(super) fn run_spec_c31_phase6_scheduler_runtime_preflight_fail_closed_increments_fail_counter_without_checkpoint_advance(
 ) {
-    let owner_did = "kamn:did:owner:phase6-runtime-preflight";
+    let owner_did = OWNER_RUNTIME_PREFLIGHT;
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
@@ -188,14 +195,14 @@ pub(super) fn run_spec_c31_phase6_scheduler_runtime_preflight_fail_closed_increm
 
 pub(super) fn run_spec_c32_phase6_scheduler_runtime_clock_regression_fails_closed_and_preserves_checkpoint(
 ) {
-    let owner_did = "kamn:did:owner:phase6-runtime-clock";
+    let owner_did = OWNER_RUNTIME_CLOCK;
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
         .register_partition(partition_input(202601, false))
         .expect("partition should register");
 
-    let mut recent_message = m8_message_input(owner_did, "runtime-clock-message", 1_699_999_990);
+    let mut recent_message = m8_message_input(owner_did, MESSAGE_RUNTIME_CLOCK, 1_699_999_990);
     recent_message.retention_class = DataLayerM8RetentionClass::Ephemeral;
     m8_registry
         .register_message(recent_message)
@@ -212,14 +219,14 @@ pub(super) fn run_spec_c32_phase6_scheduler_runtime_clock_regression_fails_close
             &mut m10_registry,
             phase6_request(
                 owner_did,
-                BTreeMap::from([(202601, vec!["runtime-clock-message".to_owned()])]),
+                BTreeMap::from([(202601, vec![MESSAGE_RUNTIME_CLOCK.to_owned()])]),
             ),
         )
         .expect("first deferred cycle should succeed");
 
     let mut regressed_request = phase6_request(
         owner_did,
-        BTreeMap::from([(202601, vec!["runtime-clock-message".to_owned()])]),
+        BTreeMap::from([(202601, vec![MESSAGE_RUNTIME_CLOCK.to_owned()])]),
     );
     regressed_request.now_epoch_seconds = 1_699_999_999;
     let regressed = runtime.run_cycle(&mut m8_registry, &mut m10_registry, regressed_request);
