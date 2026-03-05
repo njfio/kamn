@@ -22,11 +22,11 @@ Extract baseline-compatibility and local-signature verification scenarios from `
 - Extracted tests lose required fail-closed assertions for verification regressions.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `signer_signature_cases.rs` exists and contains extracted signature verification scenario bodies.
-- [ ] AC-2: root `signer_backend.rs` retains selected entrypoint names and delegates to `signer_signature_cases` functions.
-- [ ] AC-3: `signer_backend_split_contract.rs` enforces signature delegation and case ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test signer_backend_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test signer_backend` passes.
+- [x] AC-1: `signer_signature_cases.rs` exists and contains extracted signature verification scenario bodies.
+- [x] AC-2: root `signer_backend.rs` retains selected entrypoint names and delegates to `signer_signature_cases` functions.
+- [x] AC-3: `signer_backend_split_contract.rs` enforces signature delegation and case ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test signer_backend_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test signer_backend` passes.
 
 ## Files to touch
 - `specs/6453-signer-signature-verification-test-cases-extraction.md`
@@ -51,7 +51,12 @@ Extract baseline-compatibility and local-signature verification scenarios from `
   - `cargo test -p kamn-core --test signer_backend`
 
 ## Phase 6 integration evidence
-- Pending.
+- Split contract guard:
+  - `cargo test -p kamn-core --test signer_backend_split_contract`
+  - result: `3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`
+- Full signer backend integration target:
+  - `cargo test -p kamn-core --test signer_backend`
+  - result: `30 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out`
 
 ## Deviations
 - None.
