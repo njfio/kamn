@@ -111,6 +111,25 @@ const RETRY_POLICY_CASES_MARKERS: [&str; 4] = [
     "pub(super) fn run_spec_c15_archival_retry_policy_and_attempt_validation_fail_closed(",
 ];
 
+const LIFECYCLE_BASICS_ROOT_MARKERS: [&str; 8] = [
+    "#[path = \"data_layer_m10_partition_archival/lifecycle_basics_cases.rs\"]",
+    "mod lifecycle_basics_cases;",
+    "lifecycle_basics_cases::run_spec_c01_partition_naming_and_future_planning_are_deterministic();",
+    "lifecycle_basics_cases::run_spec_c02_archival_due_selection_respects_retention_window_and_shred_completeness();",
+    "lifecycle_basics_cases::run_spec_c03_archival_index_records_and_reattach_transition_are_deterministic();",
+    "lifecycle_basics_cases::run_spec_c04_invalid_month_identifiers_and_illegal_transitions_fail_closed();",
+    "lifecycle_basics_cases::run_spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced();",
+    "fn spec_c01_partition_naming_and_future_planning_are_deterministic()",
+];
+
+const LIFECYCLE_BASICS_CASES_MARKERS: [&str; 5] = [
+    "pub(super) fn run_spec_c01_partition_naming_and_future_planning_are_deterministic(",
+    "pub(super) fn run_spec_c02_archival_due_selection_respects_retention_window_and_shred_completeness(",
+    "pub(super) fn run_spec_c03_archival_index_records_and_reattach_transition_are_deterministic(",
+    "pub(super) fn run_spec_c04_invalid_month_identifiers_and_illegal_transitions_fail_closed(",
+    "pub(super) fn run_spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -257,6 +276,26 @@ fn spec_c07_retry_policy_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "retry-policy cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c08_lifecycle_basics_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let cases = read_repo_file("tests/data_layer_m10_partition_archival/lifecycle_basics_cases.rs");
+
+    for marker in LIFECYCLE_BASICS_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain lifecycle-basics delegation marker: {marker}"
+        );
+    }
+
+    for marker in LIFECYCLE_BASICS_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "lifecycle-basics cases module should define marker: {marker}"
         );
     }
 }
