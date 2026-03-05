@@ -21,6 +21,7 @@ mod shared;
 
 use shared::*;
 
+// Keep wrappers concise while preserving stable spec_* test names.
 macro_rules! delegate_spec {
     ($name:ident => $($call:tt)+) => {
         #[test]
@@ -30,6 +31,7 @@ macro_rules! delegate_spec {
     };
 }
 
+// Kept explicit to preserve root marker checks in split-contract guards.
 #[test]
 fn spec_c01_partition_naming_and_future_planning_are_deterministic() {
     lifecycle_basics_cases::run_spec_c01_partition_naming_and_future_planning_are_deterministic();
@@ -40,6 +42,7 @@ delegate_spec!(spec_c03_archival_index_records_and_reattach_transition_are_deter
 delegate_spec!(spec_c04_invalid_month_identifiers_and_illegal_transitions_fail_closed => lifecycle_basics_cases::run_spec_c04_invalid_month_identifiers_and_illegal_transitions_fail_closed(););
 delegate_spec!(spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced => lifecycle_basics_cases::run_spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced(););
 
+// Kept explicit to preserve root marker checks in split-contract guards.
 #[test]
 fn spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records() {
     compliance_projection_cases::run_spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records();
@@ -51,6 +54,7 @@ delegate_spec!(spec_c09_partition_projection_denies_non_equivalent_owner_dids =>
 delegate_spec!(spec_c10_partition_projection_marks_legal_hold_as_archival_denied_reason => compliance_projection_cases::run_spec_c10_partition_projection_marks_legal_hold_as_archival_denied_reason(););
 delegate_spec!(spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes => compliance_projection_cases::run_spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes(););
 
+// Kept explicit to preserve root marker checks in split-contract guards.
 #[test]
 fn spec_c12_transient_archival_failure_projects_deterministic_retry_window() {
     retry_policy_cases::run_spec_c12_transient_archival_failure_projects_deterministic_retry_window();
