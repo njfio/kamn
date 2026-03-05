@@ -226,6 +226,20 @@ pub fn data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy(
     )
 }
 
+/// Validates phase6 execution budget configuration fields.
+pub fn data_layer_m10_validate_phase6_execution_budget_policy(
+    budget: DataLayerM10Phase6PolicyBudget,
+) -> Result<(), DataLayerM10Phase6PolicyEvaluatorError> {
+    validate_budget(budget)
+}
+
+/// Validates phase6 scheduler trigger policy configuration fields.
+pub fn data_layer_m10_validate_phase6_scheduler_trigger_policy_config(
+    policy: DataLayerM10Phase6SchedulerTriggerPolicy,
+) -> Result<(), DataLayerM10Phase6PolicyEvaluatorError> {
+    validate_scheduler_policy(policy)
+}
+
 /// Evaluates deterministic scheduler trigger decision for a phase6 tick cycle.
 pub fn data_layer_m10_evaluate_phase6_scheduler_trigger_policy(
     policy: DataLayerM10Phase6SchedulerTriggerPolicy,
