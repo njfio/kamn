@@ -23,11 +23,11 @@ Extract baseline delivery/presence/queue scenarios (`spec_c01` through `spec_c05
 - Extraction alters reason-code assertions or expected error variants.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `baseline_flow_cases.rs` exists and contains C01-C05 scenario bodies.
-- [ ] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C01-C05 entrypoints and delegates to `baseline_flow_cases` functions.
-- [ ] AC-3: split-contract test enforces C01-C05 delegation/ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
+- [x] AC-1: `baseline_flow_cases.rs` exists and contains C01-C05 scenario bodies.
+- [x] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C01-C05 entrypoints and delegates to `baseline_flow_cases` functions.
+- [x] AC-3: split-contract test enforces C01-C05 delegation/ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
 
 ## Files to touch
 - `specs/6443-m9-baseline-flow-test-cases-extraction.md`
@@ -50,7 +50,8 @@ Extract baseline delivery/presence/queue scenarios (`spec_c01` through `spec_c05
   - `cargo test -p kamn-core --test data_layer_m9_realtime_delivery`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` -> PASS (`2 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` -> PASS (`16 passed, 0 failed`)
 
 ## Deviations
 - None.
