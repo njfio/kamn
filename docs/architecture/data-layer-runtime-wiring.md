@@ -25,6 +25,9 @@ m10_phase6_scheduler_port_entrypoint=data_layer_m10_execute_phase6_scheduler_cyc
 m10_phase6_policy_extraction_slice_version=kamn.arch.data-layer-m10-phase6-policy-extraction.v1
 m10_phase6_policy_target_crate=crates/kamn-data-layer
 m10_phase6_policy_wrapper_path=kamn-core::data_layer_m10_partition_archival::phase6
+m10_phase6_runtime_evidence_extraction_slice_version=kamn.arch.data-layer-m10-phase6-runtime-evidence-extraction.v1
+m10_phase6_runtime_evidence_target_crate=crates/kamn-data-layer
+m10_phase6_runtime_evidence_wrapper_path=kamn-core::data_layer_m10_partition_archival::phase6
 
 | Milestone | Current ownership | Planned standalone ownership | Compatibility strategy |
 |---|---|---|---|
