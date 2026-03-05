@@ -4,13 +4,16 @@ const OWNER_PHASE6_GAMMA: &str = "kamn:did:owner:phase6-gamma";
 const OWNER_PHASE6_DELTA: &str = "kamn:did:owner:phase6-delta";
 const OWNER_BUDGET_ALPHA: &str = "kamn:did:owner:phase6-budget-alpha";
 const OWNER_BUDGET_BETA: &str = "kamn:did:owner:phase6-budget-beta";
+const PARTITION_MONTH_ARCHIVE_ELIGIBLE: u32 = 202401;
+const PARTITION_MONTH_ARCHIVE_SECONDARY: u32 = 202402;
+const PARTITION_MONTH_RECENT: u32 = 202601;
 
 pub(super) fn run_spec_c18_phase6_orchestration_tick_reports_zero_due_without_archival() {
     let owner_did = OWNER_PHASE6_GAMMA;
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202601, false))
+        .register_partition(partition_input(PARTITION_MONTH_RECENT, false))
         .expect("partition should register");
 
     let mut recent_message = m8_message_input(owner_did, "message-z", 1_699_999_900);
@@ -24,7 +27,7 @@ pub(super) fn run_spec_c18_phase6_orchestration_tick_reports_zero_due_without_ar
         &mut m10_registry,
         phase6_request(
             owner_did,
-            BTreeMap::from([(202601, vec!["message-z".to_owned()])]),
+            BTreeMap::from([(PARTITION_MONTH_RECENT, vec!["message-z".to_owned()])]),
         ),
     )
     .expect("phase6 execution tick should succeed");
@@ -47,7 +50,7 @@ pub(super) fn run_spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_
     let mut hold_m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut hold_m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     hold_m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_ARCHIVE_ELIGIBLE, false))
         .expect("partition should register");
     let mut held_message = m8_message_input(owner_did, "message-held", 1_699_700_000);
     held_message.retention_class = DataLayerM8RetentionClass::Ephemeral;
@@ -67,7 +70,10 @@ pub(super) fn run_spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_
         &mut hold_m10_registry,
         phase6_request(
             owner_did,
-            BTreeMap::from([(202401, vec!["message-held".to_owned()])]),
+            BTreeMap::from([(
+                PARTITION_MONTH_ARCHIVE_ELIGIBLE,
+                vec!["message-held".to_owned()],
+            )]),
         ),
     );
     assert!(matches!(
@@ -81,7 +87,7 @@ pub(super) fn run_spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_
     let mut empty_m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut empty_m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     empty_m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_ARCHIVE_ELIGIBLE, false))
         .expect("partition should register");
     empty_m8_registry
         .register_message(m8_message_input(owner_did, "message-empty", 1_699_999_000))
@@ -89,7 +95,10 @@ pub(super) fn run_spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_
     let empty_projection_error = data_layer_m10_execute_phase6_orchestration_tick(
         &mut empty_m8_registry,
         &mut empty_m10_registry,
-        phase6_request(owner_did, BTreeMap::from([(202401, Vec::new())])),
+        phase6_request(
+            owner_did,
+            BTreeMap::from([(PARTITION_MONTH_ARCHIVE_ELIGIBLE, Vec::new())]),
+        ),
     );
     assert!(matches!(
         empty_projection_error,
@@ -106,7 +115,7 @@ pub(super) fn run_spec_c20_phase6_execution_tick_budget_within_limits_and_exceed
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_ARCHIVE_ELIGIBLE, false))
         .expect("partition should register");
 
     for (message_id, created_at) in [
@@ -125,7 +134,10 @@ pub(super) fn run_spec_c20_phase6_execution_tick_budget_within_limits_and_exceed
         &mut m10_registry,
         phase6_request(
             owner_did,
-            BTreeMap::from([(202401, vec!["budget-a".to_owned(), "budget-b".to_owned()])]),
+            BTreeMap::from([(
+                PARTITION_MONTH_ARCHIVE_ELIGIBLE,
+                vec!["budget-a".to_owned(), "budget-b".to_owned()],
+            )]),
         ),
     )
     .expect("phase6 execution should succeed");
@@ -169,10 +181,10 @@ pub(super) fn run_spec_c21_phase6_execution_tick_budget_projection_and_archive_l
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
-        .register_partition(partition_input(202401, false))
+        .register_partition(partition_input(PARTITION_MONTH_ARCHIVE_ELIGIBLE, false))
         .expect("partition should register");
     m10_registry
-        .register_partition(partition_input(202402, false))
+        .register_partition(partition_input(PARTITION_MONTH_ARCHIVE_SECONDARY, false))
         .expect("partition should register");
 
     for (message_id, created_at) in [
@@ -193,8 +205,11 @@ pub(super) fn run_spec_c21_phase6_execution_tick_budget_projection_and_archive_l
         phase6_request(
             owner_did,
             BTreeMap::from([
-                (202401, vec!["proj-a".to_owned(), "proj-b".to_owned()]),
-                (202402, vec!["proj-c".to_owned()]),
+                (
+                    PARTITION_MONTH_ARCHIVE_ELIGIBLE,
+                    vec!["proj-a".to_owned(), "proj-b".to_owned()],
+                ),
+                (PARTITION_MONTH_ARCHIVE_SECONDARY, vec!["proj-c".to_owned()]),
             ]),
         ),
     )
