@@ -15,6 +15,10 @@ fn doc_contains_m0_m11_extraction_map_and_compatibility_markers() {
         "m10_projection_port_seam_version=kamn.arch.data-layer-m10-projection-port.v1",
         "m10_projection_port_trait_path=kamn-data-layer::DataLayerM10ComplianceProjectionPort",
         "m10_projection_port_entrypoint=DataLayerM10PartitionLifecycleRegistry::project_partition_shred_completeness_with_port",
+        "m10_phase6_port_seam_version=kamn.arch.data-layer-m10-phase6-port.v1",
+        "m10_phase6_port_trait_path=kamn-data-layer::DataLayerM10Phase6CompliancePort",
+        "m10_phase6_orchestration_port_entrypoint=data_layer_m10_execute_phase6_orchestration_tick_with_port",
+        "m10_phase6_scheduler_port_entrypoint=data_layer_m10_execute_phase6_scheduler_cycle_with_port",
     ];
     for marker in required_markers {
         assert!(DOC.contains(marker), "missing marker: {marker}");

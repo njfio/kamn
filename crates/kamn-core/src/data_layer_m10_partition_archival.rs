@@ -17,7 +17,9 @@ pub use phase6::{
     data_layer_m10_evaluate_phase6_execution_tick_budget,
     data_layer_m10_evaluate_phase6_scheduler_trigger,
     data_layer_m10_execute_phase6_orchestration_tick,
+    data_layer_m10_execute_phase6_orchestration_tick_with_port,
     data_layer_m10_execute_phase6_scheduler_cycle,
+    data_layer_m10_execute_phase6_scheduler_cycle_with_port,
     data_layer_m10_project_phase6_runtime_evidence_bundle,
 };
 pub use registry::data_layer_m10_format_partition_name;
