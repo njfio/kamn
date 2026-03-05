@@ -22,11 +22,11 @@ Extract request/profile contract scenarios from `crates/kamn-core/tests/signer_b
 - Extracted tests lose assertion diagnostics for profile-prefix expectations.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `signer_request_cases.rs` exists and contains extracted request/profile scenario bodies.
-- [ ] AC-2: root `signer_backend.rs` retains selected entrypoint names and delegates to `signer_request_cases` functions.
-- [ ] AC-3: `signer_backend_split_contract.rs` enforces request/profile delegation and case ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test signer_backend_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test signer_backend` passes.
+- [x] AC-1: `signer_request_cases.rs` exists and contains extracted request/profile scenario bodies.
+- [x] AC-2: root `signer_backend.rs` retains selected entrypoint names and delegates to `signer_request_cases` functions.
+- [x] AC-3: `signer_backend_split_contract.rs` enforces request/profile delegation and case ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test signer_backend_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test signer_backend` passes.
 
 ## Files to touch
 - `specs/6455-signer-request-profile-test-cases-extraction.md`
@@ -50,7 +50,12 @@ Extract request/profile contract scenarios from `crates/kamn-core/tests/signer_b
   - `cargo test -p kamn-core --test signer_backend`
 
 ## Phase 6 integration evidence
-- Pending.
+- Split contract guard:
+  - `cargo test -p kamn-core --test signer_backend_split_contract`
+  - result: `4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`
+- Full signer backend integration target:
+  - `cargo test -p kamn-core --test signer_backend`
+  - result: `30 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out`
 
 ## Deviations
 - None.
