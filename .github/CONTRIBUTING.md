@@ -149,6 +149,12 @@ For every Task / Subtask, follow this exact sequence:
 6. **Open PR** with `Closes #<task>` (and `Closes #<subtask>` where applicable).
 7. **Merge** only after all required checks pass.
 8. **Verify closure** — confirm remote issue state is CLOSED and label progression is complete.
+   - Run Phase 6 evidence gate before closing:
+     - `bash scripts/ci/check_spec_phase6_evidence_policy.sh --output-json /tmp/spec-phase6-evidence-policy-report.json`
+   - If the checker fails:
+     - add/fix `## Phase 6 integration evidence` in the issue spec.
+     - include `Executed:` with concrete verification commands.
+     - re-run the checker until `status=ok` and `final_decision=GO`.
 
 ### Process Logging
 
