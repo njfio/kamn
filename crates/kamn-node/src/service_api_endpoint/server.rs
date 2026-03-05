@@ -1,6 +1,8 @@
 use super::*;
 use std::io::BufReader;
 
+const SERVICE_API_TLS_REQUIRED_RUNTIME_MODES: &[&str] = &["daemon", "api", "full", "kolme-live"];
+
 fn resolve_service_api_auth_public_key_hex() -> Result<Option<String>, String> {
     match env::var(SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV) {
         Ok(value) => {
@@ -93,11 +95,16 @@ fn build_service_api_replay_guard(message_store: &ServiceApiMessageStore) -> Ser
     replay_guard
 }
 
-pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String> {
+pub(super) fn resolve_service_api_tls_mode(
+    runtime_mode: &str,
+    bind_addr: &str,
+) -> Result<ServiceApiTlsMode, String> {
     resolve_service_api_tls_mode_from_env(
         env::var(SERVICE_API_TLS_MODE_ENV),
         env::var(SERVICE_API_TLS_CERT_FILE_ENV),
         env::var(SERVICE_API_TLS_KEY_FILE_ENV),
+        runtime_mode,
+        bind_addr,
         cfg!(test),
     )
 }
@@ -106,9 +113,11 @@ fn resolve_service_api_tls_mode_from_env(
     mode_env: Result<String, env::VarError>,
     cert_file_env: Result<String, env::VarError>,
     key_file_env: Result<String, env::VarError>,
+    runtime_mode: &str,
+    bind_addr: &str,
     allow_insecure_default: bool,
 ) -> Result<ServiceApiTlsMode, String> {
-    match mode_env {
+    let tls_mode = match mode_env {
         Ok(value) => {
             let mode = value.trim().to_ascii_lowercase();
             if mode.is_empty() {
@@ -141,7 +150,45 @@ fn resolve_service_api_tls_mode_from_env(
         Err(env::VarError::NotUnicode(_)) => Err(format!(
             "service api tls mode env must be utf-8: {SERVICE_API_TLS_MODE_ENV}"
         )),
+    }?;
+    enforce_service_api_tls_runtime_policy(runtime_mode, bind_addr, &tls_mode)?;
+    Ok(tls_mode)
+}
+
+fn runtime_mode_requires_service_api_tls(runtime_mode: &str) -> bool {
+    let normalized = runtime_mode.trim();
+    SERVICE_API_TLS_REQUIRED_RUNTIME_MODES
+        .iter()
+        .any(|required_mode| normalized.eq_ignore_ascii_case(required_mode))
+}
+
+fn service_api_bind_addr_is_loopback(bind_addr: &str) -> bool {
+    let normalized = bind_addr.trim();
+    if let Ok(addr) = normalized.parse::<SocketAddr>() {
+        return addr.ip().is_loopback();
     }
+    normalized
+        .strip_prefix("localhost:")
+        .is_some_and(|port| !port.trim().is_empty())
+}
+
+fn enforce_service_api_tls_runtime_policy(
+    runtime_mode: &str,
+    bind_addr: &str,
+    tls_mode: &ServiceApiTlsMode,
+) -> Result<(), String> {
+    if !runtime_mode_requires_service_api_tls(runtime_mode) {
+        return Ok(());
+    }
+    if *tls_mode != ServiceApiTlsMode::Disabled {
+        return Ok(());
+    }
+    if service_api_bind_addr_is_loopback(bind_addr) {
+        return Ok(());
+    }
+    Err(format!(
+        "service api tls disabled is forbidden for runtime mode {runtime_mode} on non-loopback bind address {bind_addr} (set {SERVICE_API_TLS_MODE_ENV}={SERVICE_API_TLS_MODE_REQUIRE} with {SERVICE_API_TLS_CERT_FILE_ENV}/{SERVICE_API_TLS_KEY_FILE_ENV})"
+    ))
 }
 
 fn resolve_service_api_required_tls_mode_from_env(
@@ -234,7 +281,8 @@ pub(super) async fn serve_service_api_endpoint_async(
     config: ServiceApiEndpointConfig,
     snapshot: ServiceApiSnapshot,
 ) -> Result<(), String> {
-    let tls_mode = resolve_service_api_tls_mode()?;
+    let tls_mode =
+        resolve_service_api_tls_mode(snapshot.runtime_mode.as_str(), config.bind_addr.as_str())?;
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
     let state_file = resolve_service_api_state_file(&config)?;
     let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
@@ -451,6 +499,8 @@ mod tests {
             Err(env::VarError::NotPresent),
             Err(env::VarError::NotPresent),
             Err(env::VarError::NotPresent),
+            "api",
+            "0.0.0.0:34080",
             false,
         )
         .expect_err("production default must fail closed when tls mode env is unset");
@@ -466,6 +516,8 @@ mod tests {
             Err(env::VarError::NotPresent),
             Err(env::VarError::NotPresent),
             Err(env::VarError::NotPresent),
+            "api",
+            "127.0.0.1:34081",
             true,
         )
         .expect("test-mode default may resolve disabled");
@@ -473,14 +525,34 @@ mod tests {
     }
 
     #[test]
-    fn unit_service_api_tls_mode_resolution_keeps_explicit_disabled_mode() {
+    fn regression_service_api_tls_mode_resolution_rejects_explicit_disabled_mode_for_production_paths(
+    ) {
+        let error = resolve_service_api_tls_mode_from_env(
+            Ok("disabled".to_owned()),
+            Err(env::VarError::NotPresent),
+            Err(env::VarError::NotPresent),
+            "api",
+            "0.0.0.0:34082",
+            false,
+        )
+        .expect_err("production runtime paths must reject explicit disabled tls mode");
+        assert!(
+            error.contains("service api tls disabled is forbidden"),
+            "explicit disabled production rejection should include deterministic marker: {error}"
+        );
+    }
+
+    #[test]
+    fn unit_service_api_tls_mode_resolution_allows_explicit_disabled_for_loopback_local_path() {
         let mode = resolve_service_api_tls_mode_from_env(
             Ok("disabled".to_owned()),
             Err(env::VarError::NotPresent),
             Err(env::VarError::NotPresent),
+            "api",
+            "127.0.0.1:34083",
             false,
         )
-        .expect("explicit disabled mode should remain accepted");
+        .expect("loopback-bound local path may explicitly opt into disabled tls");
         assert_eq!(mode, ServiceApiTlsMode::Disabled);
     }
 

@@ -45,6 +45,8 @@ Compose file: `deploy/docker-compose.yml`
   - `KAMN_SERVICE_API_TLS_MODE=require`
   - `KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem`
   - `KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem`
+- production-targeted runtime paths (`api`, `full`, `daemon`, `kolme-live`) fail closed when service API TLS is disabled on non-loopback bind addresses.
+- local-only opt-in remains available by binding service API to loopback (`127.0.0.1` / `::1`) when explicit plaintext testing is required.
 - named bridge network: `kamn_mesh`
 - each service defines a compose `healthcheck` probing local `/healthz` endpoints over HTTPS (`curl --insecure`), for example: `https://127.0.0.1:19081/healthz`.
 
