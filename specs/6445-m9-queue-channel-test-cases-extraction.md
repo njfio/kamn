@@ -23,11 +23,11 @@ Extract queue and channel scenarios (`spec_c06` through `spec_c09`) from `crates
 - Assertion behavior changes during extraction.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `queue_channel_cases.rs` exists and contains C06-C09 scenario bodies.
-- [ ] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C06-C09 entrypoints and delegates to `queue_channel_cases` functions.
-- [ ] AC-3: split-contract test enforces C06-C09 delegation/ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
+- [x] AC-1: `queue_channel_cases.rs` exists and contains C06-C09 scenario bodies.
+- [x] AC-2: root `data_layer_m9_realtime_delivery.rs` retains C06-C09 entrypoints and delegates to `queue_channel_cases` functions.
+- [x] AC-3: split-contract test enforces C06-C09 delegation/ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` passes.
 
 ## Files to touch
 - `specs/6445-m9-queue-channel-test-cases-extraction.md`
@@ -50,7 +50,8 @@ Extract queue and channel scenarios (`spec_c06` through `spec_c09`) from `crates
   - `cargo test -p kamn-core --test data_layer_m9_realtime_delivery`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_split_contract` -> PASS (`3 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery` -> PASS (`16 passed, 0 failed`)
 
 ## Deviations
 - None.
