@@ -36,10 +36,10 @@ Ship a behavior-preserving initial extraction slice for M10 by moving archival r
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exports M10 archival retry projection function and retry reason constants.
-- [ ] AC-2: `kamn-core` retry contract tests remain green with compatibility wrapper delegation.
-- [ ] AC-3: docs contract enforces M10 retry extraction markers and blocker marker.
-- [ ] AC-4: pre/post telemetry is captured for `kamn-core` M10 retry contract lane.
+- [x] AC-1: `kamn-data-layer` exports M10 archival retry projection function and retry reason constants.
+- [x] AC-2: `kamn-core` retry contract tests remain green with compatibility wrapper delegation.
+- [x] AC-3: docs contract enforces M10 retry extraction markers and blocker marker.
+- [x] AC-4: pre/post telemetry is captured for `kamn-core` M10 retry contract lane.
 
 ## Files to touch
 
@@ -75,7 +75,14 @@ Ship a behavior-preserving initial extraction slice for M10 by moving archival r
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_archival_retry_integration` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m10_core_test_pre_seconds=0.49`
+    - command: `/usr/bin/time -f 'm10_core_test_pre_seconds=%e' -o /tmp/m10_core_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
+  - post extraction lane timing: `m10_core_test_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_core_test_post_seconds=%e' -o /tmp/m10_core_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
