@@ -150,6 +150,11 @@ if ! printf '%s\n' "$pass_output" | grep -q '^threshold_exceeded_total=0$'; then
   printf '%s\n' "$pass_output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$pass_output" | grep -q '^policy_elapsed_seconds='; then
+  echo "expected policy_elapsed_seconds marker for pass report" >&2
+  printf '%s\n' "$pass_output" >&2
+  exit 1
+fi
 
 if python3 "$CHECKER" \
   --audit-json "$HIGH_REPORT" \
@@ -212,6 +217,8 @@ if payload.get("unwaived_total") != 0:
     raise SystemExit("expected unwaived_total=0")
 if payload.get("review_required") is not True:
     raise SystemExit("expected review_required=true in report JSON")
+if not isinstance(payload.get("policy_elapsed_seconds"), (float, int)):
+    raise SystemExit("expected numeric policy_elapsed_seconds marker in report JSON")
 PY
 
 if python3 "$CHECKER" \

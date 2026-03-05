@@ -2169,6 +2169,16 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo_audit_waiver_schema_version=kamn.ci.cargo-audit-waiver.v1`
   - `cargo_audit_policy_reason_taxonomy_version=kamn.ci.cargo-audit-policy-reason-taxonomy.v1`
   - `cargo_audit_policy_reason_codes_csv=cargo_audit_report_missing,cargo_audit_report_invalid,cargo_audit_report_schema_invalid,cargo_audit_threshold_invalid,cargo_audit_waiver_file_missing,cargo_audit_waiver_invalid,cargo_audit_waiver_schema_invalid,cargo_audit_waiver_tracking_issue_invalid,cargo_audit_waiver_expired,cargo_audit_advisory_id_missing,cargo_audit_advisory_severity_unknown,cargo_audit_advisory_threshold_exceeded_unwaived,cargo_audit_advisory_threshold_exceeded_waived`
+- Runner-impact measurement markers:
+  - `cargo_audit_runner_impact_method=github-actions-step-duration+policy-output`
+  - `cargo_audit_fast_gate_observed_seconds=156`
+  - `cargo_audit_workspace_premerge_observed_seconds=156`
+  - `cargo_audit_runner_impact_baseline_captured_at=2026-03-05`
+  - `cargo_audit_runner_impact_source_fast_gate_run=22707945091`
+  - `cargo_audit_runner_impact_source_job=65838851460`
+  - `cargo_audit_policy_elapsed_seconds=<float>`
+- Runner-impact docs-contract guard:
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_cargo_audit_runner_impact_measurement_markers -- --exact`
 - Fail-closed and waiver policy:
   - unwaived advisories above `moderate` (`high`, `critical`) fail the gate.
   - waiver entries must include `advisory_id`, `reason`, `tracking_issue` (`#<issue-id>`), and non-expired `expires_on`.

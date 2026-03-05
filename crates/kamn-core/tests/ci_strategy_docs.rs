@@ -1479,6 +1479,22 @@ fn doc_contains_dependency_ci_smoke_checker_threshold_parity_markers() {
 }
 
 #[test]
+fn doc_contains_cargo_audit_runner_impact_measurement_markers() {
+    assert!(DOC.contains(
+        "cargo_audit_runner_impact_method=github-actions-step-duration+policy-output"
+    ));
+    assert!(DOC.contains("cargo_audit_fast_gate_observed_seconds=156"));
+    assert!(DOC.contains("cargo_audit_workspace_premerge_observed_seconds=156"));
+    assert!(DOC.contains("cargo_audit_runner_impact_baseline_captured_at=2026-03-05"));
+    assert!(DOC.contains("cargo_audit_runner_impact_source_fast_gate_run=22707945091"));
+    assert!(DOC.contains("cargo_audit_runner_impact_source_job=65838851460"));
+    assert!(DOC.contains("cargo_audit_policy_elapsed_seconds=<float>"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_cargo_audit_runner_impact_measurement_markers -- --exact"
+    ));
+}
+
+#[test]
 fn doc_contains_anti_flake_rerun_policy_reason_taxonomy_markers() {
     assert!(DOC.contains(
         "anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1"
