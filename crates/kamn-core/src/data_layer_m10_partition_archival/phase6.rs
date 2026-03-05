@@ -853,35 +853,6 @@ fn validate_phase6_scheduler_policy(
     Ok(())
 }
 
-fn resolve_phase6_scheduler_elapsed(
-    signal: DataLayerM10Phase6SchedulerSignal,
-) -> Result<u64, DataLayerM10PartitionLifecycleError> {
-    if signal.now_epoch_seconds == 0 {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
-                field: "now_epoch_seconds",
-                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
-            },
-        );
-    }
-    match signal.last_tick_epoch_seconds {
-        Some(last_tick_epoch_seconds) => {
-            if last_tick_epoch_seconds > signal.now_epoch_seconds {
-                return Err(
-                    DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
-                        field: "last_tick_epoch_seconds",
-                        reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
-                    },
-                );
-            }
-            Ok(signal
-                .now_epoch_seconds
-                .saturating_sub(last_tick_epoch_seconds))
-        }
-        None => Ok(signal.now_epoch_seconds),
-    }
-}
-
 fn validate_phase6_scheduler_runtime_clock(
     now_epoch_seconds: u64,
     last_observed_now_epoch_seconds: Option<u64>,
