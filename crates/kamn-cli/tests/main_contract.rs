@@ -245,7 +245,9 @@ fn spec_c14_main_contract_declares_cli_models_module_wiring() {
         "lib.rs should declare cli_models module"
     );
     assert!(
-        lib_rs.contains("pub use cli_models::{CommandKind, CommandOutput, OutputFormat, ParsedCliArgs};"),
+        lib_rs.contains(
+            "pub use cli_models::{CommandKind, CommandOutput, OutputFormat, ParsedCliArgs};"
+        ),
         "lib.rs should re-export model types from cli_models module"
     );
 }
