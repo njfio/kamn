@@ -1,7 +1,5 @@
 use std::fmt;
 
-use crate::DataLayerM8ComplianceError;
-
 use super::*;
 
 /// Error taxonomy for M10 partition lifecycle contracts.
@@ -172,31 +170,6 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
 
 impl std::error::Error for DataLayerM10PartitionLifecycleError {}
 
-pub(super) fn map_m8_execution_error_to_m10(
-    error: DataLayerM8ComplianceError,
-) -> DataLayerM10PartitionLifecycleError {
-    let reason_code = match error {
-        DataLayerM8ComplianceError::OwnerScopeViolation { .. } => {
-            DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE
-        }
-        DataLayerM8ComplianceError::LegalHoldActive { .. } => {
-            DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE
-        }
-        DataLayerM8ComplianceError::OwnerNotFound { .. }
-        | DataLayerM8ComplianceError::MessageNotFound { .. }
-        | DataLayerM8ComplianceError::InvalidDid(_)
-        | DataLayerM8ComplianceError::EmptyField(_)
-        | DataLayerM8ComplianceError::EmptyWrappedKeys
-        | DataLayerM8ComplianceError::InvalidWrappedKey(_)
-        | DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { .. }
-        | DataLayerM8ComplianceError::DuplicateMessageId { .. }
-        | DataLayerM8ComplianceError::AlreadyShredded { .. } => {
-            DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE
-        }
-    };
-    phase6_execution_failed(reason_code, error.to_string())
-}
-
 pub(super) fn map_phase6_projection_error_to_m10(
     error: DataLayerM10PartitionLifecycleError,
 ) -> DataLayerM10PartitionLifecycleError {
@@ -212,18 +185,6 @@ pub(super) fn map_phase6_projection_error_to_m10(
         _ => DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_FAILED_REASON_CODE,
     };
     phase6_execution_failed(reason_code, error.to_string())
-}
-
-pub(super) fn map_phase6_owner_scope_error_to_m10(
-    error: DataLayerM10PartitionLifecycleError,
-) -> DataLayerM10PartitionLifecycleError {
-    match error {
-        DataLayerM10PartitionLifecycleError::OwnerScopeViolation { .. } => phase6_execution_failed(
-            DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE,
-            "phase6 owner scope authorization failed",
-        ),
-        other => other,
-    }
 }
 
 pub(super) fn phase6_execution_failed(
