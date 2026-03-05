@@ -1,5 +1,7 @@
 use std::{fs, path::PathBuf};
 
+const RUNBOOK_PATH: &str = "docs/ops/runbooks/service-secret-rotation.md";
+
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -16,7 +18,7 @@ fn read_repo_text(rel_path: &str) -> String {
 
 #[test]
 fn runbook_contains_versioned_rotation_markers_and_phases() {
-    let runbook = read_repo_text("docs/ops/runbooks/service-secret-rotation.md");
+    let runbook = read_repo_text(RUNBOOK_PATH);
     assert!(runbook.contains("runbook_schema_version=kamn.ops.service-secret-rotation-runbook.v1"));
     assert!(runbook.contains("## Key Generation"));
     assert!(runbook.contains("## Staged Rollout"));
@@ -26,7 +28,7 @@ fn runbook_contains_versioned_rotation_markers_and_phases() {
 
 #[test]
 fn runbook_contains_required_env_ownership_boundaries() {
-    let runbook = read_repo_text("docs/ops/runbooks/service-secret-rotation.md");
+    let runbook = read_repo_text(RUNBOOK_PATH);
     assert!(runbook.contains("KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX"));
     assert!(runbook.contains("KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX"));
     assert!(runbook.contains("KAMN_SIGNER_PRIVATE_KEY_HEX"));
@@ -45,7 +47,7 @@ fn runbook_links_are_present_in_ops_and_contributor_docs() {
 
 #[test]
 fn runbook_contains_validation_commands_aligned_with_runtime_contracts() {
-    let runbook = read_repo_text("docs/ops/runbooks/service-secret-rotation.md");
+    let runbook = read_repo_text(RUNBOOK_PATH);
     assert!(runbook.contains("cargo test -p kamn-node main_tests::runtime_tests::regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_with_deterministic_reason_code -- --exact --nocapture"));
     assert!(runbook.contains("bash scripts/runtime/validate_service_api_request_auth_live.sh"));
     assert!(runbook.contains("cargo test -p kamn-core --test service_secret_rotation_runbook_docs"));
