@@ -8,6 +8,10 @@ fn doc_contains_m0_m11_extraction_map_and_compatibility_markers() {
         "m11_extraction_target_crate=crates/kamn-data-layer",
         "m11_compatibility_shim_path=kamn-core::data_layer_m11_hardening_readiness",
         "m11_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m11_hardening_readiness.rs,crates/kamn-core/tests/data_layer_m11_closure_evidence.rs,crates/kamn-data-layer/tests/data_layer_m11_hardening_readiness_integration.rs",
+        "m10_retry_extraction_slice_version=kamn.arch.data-layer-m10-retry-extraction.v1",
+        "m10_retry_extraction_target_crate=crates/kamn-data-layer",
+        "m10_retry_compatibility_wrapper_path=kamn-core::data_layer_m10_partition_archival::retry",
+        "m10_full_extraction_blocker_csv=data_layer_m8_compliance_lifecycle,KamnDid",
     ];
     for marker in required_markers {
         assert!(DOC.contains(marker), "missing marker: {marker}");
