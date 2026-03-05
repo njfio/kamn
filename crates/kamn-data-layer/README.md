@@ -1,10 +1,11 @@
 # kamn-data-layer
 
 ## Purpose
-Extracted data-layer shared helpers from `kamn-core`.
+Extracted data-layer contracts from `kamn-core` with focused ownership.
 
 ## Key Surfaces
 - `data_layer_hashing`
+- `data_layer_m11_hardening_readiness`
 
 ## Usage
 - Build: `cargo build -p kamn-data-layer`
