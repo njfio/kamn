@@ -23,11 +23,11 @@ Extract lifecycle baseline scenario tests (`spec_c01` through `spec_c05`) from `
 - Assertions or reason-code checks change during extraction.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `lifecycle_basics_cases.rs` exists and contains C01-C05 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` retains C01-C05 entrypoints and delegates to `lifecycle_basics_cases` functions.
-- [ ] AC-3: split-contract test enforces C01-C05 delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `lifecycle_basics_cases.rs` exists and contains C01-C05 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` retains C01-C05 entrypoints and delegates to `lifecycle_basics_cases` functions.
+- [x] AC-3: split-contract test enforces C01-C05 delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 - `specs/6433-m10-lifecycle-basics-test-cases-extraction.md`
@@ -51,7 +51,8 @@ Extract lifecycle baseline scenario tests (`spec_c01` through `spec_c05`) from `
   - `cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`8 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 - None.
