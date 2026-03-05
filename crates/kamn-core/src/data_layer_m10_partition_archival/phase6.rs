@@ -24,6 +24,7 @@ use kamn_data_layer::{
     DataLayerM10Phase6CryptoShredInput, DataLayerM10Phase6PolicyBudget,
     DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyEvaluatorError,
     DataLayerM10Phase6PolicyReportCounts, DataLayerM10Phase6RetentionDueCandidate,
+    DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection,
     DataLayerM10Phase6SchedulerBudgetOverflowStage, DataLayerM10Phase6SchedulerCyclePolicyReport,
     DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
     DataLayerM10Phase6TriggerPolicyDecision,
@@ -945,12 +946,16 @@ fn project_phase6_scheduler_budget_overflow_error(
         map_phase6_budget_policy_report_from_core(budget_report),
         stage,
     )
-    .map(|projected_overflow| {
-        DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
-            reason_code: projected_overflow.reason_code,
-            detail: projected_overflow.detail,
-        }
-    })
+    .map(map_phase6_budget_overflow_projection_to_core)
+}
+
+fn map_phase6_budget_overflow_projection_to_core(
+    projected_overflow: DataLayerM10Phase6SchedulerBudgetOverflowPolicyProjection,
+) -> DataLayerM10PartitionLifecycleError {
+    DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
+        reason_code: projected_overflow.reason_code,
+        detail: projected_overflow.detail,
+    }
 }
 
 fn validate_phase6_execution_tick_budget(
