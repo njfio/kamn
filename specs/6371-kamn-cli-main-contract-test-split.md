@@ -22,15 +22,16 @@ Reduce test-file sprawl by splitting `crates/kamn-cli/tests/main_contract.rs` in
 - `main_contract.rs` remains oversized or still contains moved blocks.
 
 ## Acceptance criteria (testable booleans)
-- [ ] `main_contract.rs` keeps only its focused runtime checks and excludes moved marker blocks.
-- [ ] New test files own moved extraction-contract marker checks.
-- [ ] All moved assertions still execute and pass.
-- [ ] `kamn-cli` contract suites remain green.
+- [x] `main_contract.rs` keeps only its focused runtime checks and excludes moved marker blocks.
+- [x] New test files own moved extraction-contract marker checks.
+- [x] All moved assertions still execute and pass.
+- [x] `kamn-cli` contract suites remain green.
 
 ## Files to touch
 - `specs/6371-kamn-cli-main-contract-test-split.md`
 - `crates/kamn-cli/tests/main_contract.rs`
 - `crates/kamn-cli/tests/main_module_extraction_contract.rs` (new)
+- `crates/kamn-cli/tests/main_module_surface_contract.rs` (new)
 
 ## Error semantics
 - No runtime error behavior changes.
@@ -46,7 +47,13 @@ Reduce test-file sprawl by splitting `crates/kamn-cli/tests/main_contract.rs` in
   - `cargo test -p kamn-cli --test command_activation_contract`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-cli --test main_contract` (pass)
+- `cargo test -p kamn-cli --test main_module_extraction_contract` (pass)
+- `cargo test -p kamn-cli --test main_module_surface_contract` (pass)
+- `cargo test -p kamn-cli --test subcommand_surface_contract` (pass)
+- `cargo test -p kamn-cli --test command_activation_contract` (pass)
+- `timeout 30s cargo run -p kamn-cli -- --help` (pass)
+- `timeout 30s cargo run -p kamn-cli --` (expected parse-error hard-fail: `missing command`)
 
 ## Deviations
 - None.
