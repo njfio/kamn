@@ -378,6 +378,21 @@ fn map_phase6_runtime_evidence_cycle_report_to_policy(
         .execution_report
         .map(map_phase6_runtime_execution_report_to_policy)
         .transpose()?;
+    ensure_phase6_runtime_evidence_owner_matches(&execution_report, owner_did)?;
+    Ok(DataLayerM10Phase6PolicyCycleReport {
+        trigger_decision: map_phase6_runtime_trigger_decision_to_policy(report.trigger_decision),
+        execution_report,
+        budget_decision: report
+            .budget_report
+            .map(map_phase6_runtime_budget_decision_to_policy),
+        reason_code: map_phase6_runtime_cycle_reason_to_policy(report.reason_code)?,
+    })
+}
+
+fn ensure_phase6_runtime_evidence_owner_matches(
+    execution_report: &Option<DataLayerM10Phase6PolicyExecutionReport>,
+    owner_did: &str,
+) -> Result<(), DataLayerM10PartitionLifecycleError> {
     if execution_report
         .as_ref()
         .map(|execution_report| execution_report.owner_did.as_str())
@@ -390,14 +405,7 @@ fn map_phase6_runtime_evidence_cycle_report_to_policy(
             },
         );
     }
-    Ok(DataLayerM10Phase6PolicyCycleReport {
-        trigger_decision: map_phase6_runtime_trigger_decision_to_policy(report.trigger_decision),
-        execution_report,
-        budget_decision: report
-            .budget_report
-            .map(map_phase6_runtime_budget_decision_to_policy),
-        reason_code: map_phase6_runtime_cycle_reason_to_policy(report.reason_code)?,
-    })
+    Ok(())
 }
 
 fn map_phase6_runtime_execution_report_to_policy(
