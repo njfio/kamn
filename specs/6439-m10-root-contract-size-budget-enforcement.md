@@ -21,11 +21,11 @@ Bring `crates/kamn-core/tests/data_layer_m10_partition_archival.rs` to `<=200` L
 - Split-contract budget assertion drifts from repo policy and allows regression.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `data_layer_m10_partition_archival.rs` line count is `<= 200`.
-- [ ] AC-2: C01-C38 entrypoint names remain present and delegate to same case runners.
-- [ ] AC-3: split-contract suite checks and enforces the `<= 200` line budget.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `data_layer_m10_partition_archival.rs` line count is `<= 200`.
+- [x] AC-2: C01-C38 entrypoint names remain present and delegate to same case runners.
+- [x] AC-3: split-contract suite checks and enforces the `<= 200` line budget.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 - `specs/6439-m10-root-contract-size-budget-enforcement.md`
@@ -47,7 +47,9 @@ Bring `crates/kamn-core/tests/data_layer_m10_partition_archival.rs` to `<=200` L
   - `cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Phase 6 integration evidence
-- Pending.
+- `wc -l crates/kamn-core/tests/data_layer_m10_partition_archival.rs` -> `84`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`11 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 - None.
