@@ -64,6 +64,12 @@ pub(super) use kamn_data_layer::{
     DataLayerM10Phase6RetentionDueCandidate,
 };
 
+const PHASE6_NOW_EPOCH_SECONDS: u64 = 1_700_000_000;
+const PHASE6_SHREDDED_AT_EPOCH_SECONDS: u64 = 1_700_000_300;
+const PHASE6_NOW_MONTH_ID: u32 = 202602;
+const PHASE6_OBJECT_STORAGE_PREFIX: &str = "s3://kamn-archive/messages";
+const PHASE6_LAST_OBSERVED_NOW_EPOCH_SECONDS: u64 = 1_700_000_010;
+
 pub(super) fn partition_input(
     partition_month_id: u32,
     all_messages_shredded: bool,
@@ -117,11 +123,11 @@ pub(super) fn phase6_request(
     DataLayerM10Phase6ExecutionTickRequest {
         requester_owner_did: owner_did.to_owned(),
         owner_did: owner_did.to_owned(),
-        now_epoch_seconds: 1_700_000_000,
-        shredded_at_epoch_seconds: 1_700_000_300,
-        now_month_id: 202602,
+        now_epoch_seconds: PHASE6_NOW_EPOCH_SECONDS,
+        shredded_at_epoch_seconds: PHASE6_SHREDDED_AT_EPOCH_SECONDS,
+        now_month_id: PHASE6_NOW_MONTH_ID,
         active_retention_months: 2,
-        object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+        object_storage_prefix: PHASE6_OBJECT_STORAGE_PREFIX.to_owned(),
         partition_message_ids_by_month,
     }
 }
@@ -158,8 +164,8 @@ pub(super) fn phase6_runtime_state(
     last_reason_code: &'static str,
 ) -> DataLayerM10Phase6SchedulerRuntimeState {
     DataLayerM10Phase6SchedulerRuntimeState {
-        last_successful_tick_epoch_seconds: Some(1_700_000_000),
-        last_observed_now_epoch_seconds: Some(1_700_000_010),
+        last_successful_tick_epoch_seconds: Some(PHASE6_NOW_EPOCH_SECONDS),
+        last_observed_now_epoch_seconds: Some(PHASE6_LAST_OBSERVED_NOW_EPOCH_SECONDS),
         total_cycles,
         executed_cycles,
         deferred_cycles,
