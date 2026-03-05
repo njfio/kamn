@@ -33,11 +33,11 @@ Extract Phase-6 runtime-evidence test scenarios (`spec_c33`..`spec_c36`) from `c
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `runtime_evidence_cases.rs` exists and contains C33-C36 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` retains C33-C36 test entrypoint names while delegating to cases module functions.
-- [ ] AC-3: split-contract test enforces runtime-evidence delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `runtime_evidence_cases.rs` exists and contains C33-C36 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` retains C33-C36 test entrypoint names while delegating to cases module functions.
+- [x] AC-3: split-contract test enforces runtime-evidence delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 
@@ -66,7 +66,8 @@ Extract Phase-6 runtime-evidence test scenarios (`spec_c33`..`spec_c36`) from `c
 
 ## Phase 6 integration evidence
 
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`1 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 
