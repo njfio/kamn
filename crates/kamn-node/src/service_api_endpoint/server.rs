@@ -525,8 +525,8 @@ mod tests {
     }
 
     #[test]
-    fn regression_service_api_tls_mode_resolution_rejects_explicit_disabled_mode_for_production_paths()
-    {
+    fn regression_service_api_tls_mode_resolution_rejects_explicit_disabled_mode_for_production_paths(
+    ) {
         let error = resolve_service_api_tls_mode_from_env(
             Ok("disabled".to_owned()),
             Err(env::VarError::NotPresent),
