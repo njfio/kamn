@@ -246,21 +246,11 @@ pub fn data_layer_m10_validate_phase6_scheduler_runtime_clock_signal(
     last_observed_now_epoch_seconds: Option<u64>,
 ) -> Result<(), DataLayerM10Phase6PolicyEvaluatorError> {
     if now_epoch_seconds == 0 {
-        return Err(
-            DataLayerM10Phase6PolicyEvaluatorError::InvalidSchedulerSignalField {
-                field: "now_epoch_seconds",
-                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
-            },
-        );
+        return Err(invalid_now_epoch_seconds_signal_error());
     }
     if let Some(last_observed_now_epoch_seconds) = last_observed_now_epoch_seconds {
         if now_epoch_seconds < last_observed_now_epoch_seconds {
-            return Err(
-                DataLayerM10Phase6PolicyEvaluatorError::InvalidSchedulerSignalField {
-                    field: "now_epoch_seconds",
-                    reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
-                },
-            );
+            return Err(invalid_now_epoch_seconds_signal_error());
         }
     }
     Ok(())
@@ -372,5 +362,12 @@ fn resolve_elapsed(
                 .saturating_sub(last_tick_epoch_seconds))
         }
         None => Ok(signal.now_epoch_seconds),
+    }
+}
+
+fn invalid_now_epoch_seconds_signal_error() -> DataLayerM10Phase6PolicyEvaluatorError {
+    DataLayerM10Phase6PolicyEvaluatorError::InvalidSchedulerSignalField {
+        field: "now_epoch_seconds",
+        reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
     }
 }
