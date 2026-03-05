@@ -195,3 +195,44 @@ fn spec_c11_main_contract_removes_inline_tests_from_lib() {
         );
     }
 }
+
+#[test]
+fn spec_c12_main_contract_declares_cli_parse_mapping_module_wiring() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    assert!(
+        lib_rs.contains("mod cli_parse_mapping;"),
+        "lib.rs should declare cli_parse_mapping module"
+    );
+    assert!(
+        lib_rs.contains("parse_output_format(raw)"),
+        "lib.rs should delegate OutputFormat::parse through parse mapping module"
+    );
+    assert!(
+        lib_rs.contains("parse_command_kind(raw)"),
+        "lib.rs should delegate CommandKind::parse through parse mapping module"
+    );
+}
+
+#[test]
+fn spec_c13_main_contract_removes_inline_parse_matches_from_lib() {
+    let lib_rs = read_repo_file("src/lib.rs");
+    for marker in [
+        "\"json\" => Ok(Self::Json)",
+        "\"help\" | \"--help\" | \"-h\" => Ok(Self::Help)",
+        "\"health\" => Ok(Self::Health)",
+    ] {
+        assert!(
+            !lib_rs.contains(marker),
+            "lib.rs should not keep inline parse marker: {marker}"
+        );
+    }
+    let parse_mapping_rs = read_repo_file("src/cli_parse_mapping.rs");
+    assert!(
+        parse_mapping_rs.contains("pub(super) fn parse_output_format("),
+        "parse mapping module should expose output-format parse entrypoint"
+    );
+    assert!(
+        parse_mapping_rs.contains("pub(super) fn parse_command_kind("),
+        "parse mapping module should expose command-kind parse entrypoint"
+    );
+}

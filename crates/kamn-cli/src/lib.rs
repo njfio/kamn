@@ -8,9 +8,12 @@ pub mod commands;
 mod cli_args;
 #[path = "cli_dispatch.rs"]
 mod cli_dispatch;
+#[path = "cli_parse_mapping.rs"]
+mod cli_parse_mapping;
 
 use cli_args::{is_help_request_impl, parse_cli_args_impl, render_help_text_impl};
 use cli_dispatch::dispatch_impl;
+use cli_parse_mapping::{parse_command_kind, parse_output_format};
 
 /// Output format for CLI responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,11 +26,7 @@ pub enum OutputFormat {
 
 impl OutputFormat {
     fn parse(raw: &str) -> Result<Self, String> {
-        match raw {
-            "json" => Ok(Self::Json),
-            "text" => Ok(Self::Text),
-            _ => Err(format!("unsupported format: {raw}")),
-        }
+        parse_output_format(raw)
     }
 }
 
@@ -82,31 +81,7 @@ pub enum CommandKind {
 
 impl CommandKind {
     fn parse(raw: &str) -> Result<Self, String> {
-        match raw {
-            "help" | "--help" | "-h" => Ok(Self::Help),
-            "register" => Ok(Self::Register),
-            "send-message" => Ok(Self::SendMessage),
-            "create-channel" => Ok(Self::CreateChannel),
-            "list-messages" => Ok(Self::ListMessages),
-            "query-message" => Ok(Self::QueryMessage),
-            "query-task" => Ok(Self::QueryTask),
-            "query-agent-profile" => Ok(Self::QueryAgentProfile),
-            "register-content" => Ok(Self::RegisterContent),
-            "expire-content" => Ok(Self::ExpireContent),
-            "tombstone-content" => Ok(Self::TombstoneContent),
-            "query-content" => Ok(Self::QueryContent),
-            "submit-bridge-message" => Ok(Self::SubmitBridgeMessage),
-            "forward-bridge-message" => Ok(Self::ForwardBridgeMessage),
-            "query-bridge-message" => Ok(Self::QueryBridgeMessage),
-            "create-task" => Ok(Self::CreateTask),
-            "accept-task" => Ok(Self::AcceptTask),
-            "complete-task" => Ok(Self::CompleteTask),
-            "fund-escrow" => Ok(Self::FundEscrow),
-            "release-escrow" => Ok(Self::ReleaseEscrow),
-            "verify-proof" => Ok(Self::VerifyProof),
-            "health" => Ok(Self::Health),
-            _ => Err(format!("unsupported command: {raw}")),
-        }
+        parse_command_kind(raw)
     }
 }
 
