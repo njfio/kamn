@@ -10,6 +10,12 @@ use super::{
 };
 use kamn_cli::{dispatch, CommandKind};
 
+macro_rules! assert_contains {
+    ($output:expr, $expected:expr, $label:expr) => {
+        assert_output_contains($output.text.as_str(), $expected, $label);
+    };
+}
+
 pub(super) fn run_spec_c08_cli_content_commands_execute_and_validate_args() {
     with_contract_server(4, |endpoint| {
         let register_output = dispatch(&parsed(
@@ -18,15 +24,15 @@ pub(super) fn run_spec_c08_cli_content_commands_execute_and_validate_args() {
             &[r#"{"content":"abc","retention_class":"standard"}"#],
         ))
         .expect("register-content should succeed");
-        assert_output_contains(
-            register_output.text.as_str(),
+        assert_contains!(
+            register_output,
             "content_id=content-cli",
-            REGISTER_CONTENT_ID_OUTPUT_LABEL,
+            REGISTER_CONTENT_ID_OUTPUT_LABEL
         );
-        assert_output_contains(
-            register_output.text.as_str(),
+        assert_contains!(
+            register_output,
             "retention_class=standard",
-            REGISTER_CONTENT_RETENTION_OUTPUT_LABEL,
+            REGISTER_CONTENT_RETENTION_OUTPUT_LABEL
         );
 
         let expire_output = dispatch(&parsed(
@@ -35,10 +41,10 @@ pub(super) fn run_spec_c08_cli_content_commands_execute_and_validate_args() {
             &["content-cli"],
         ))
         .expect("expire-content should succeed");
-        assert_output_contains(
-            expire_output.text.as_str(),
+        assert_contains!(
+            expire_output,
             "lifecycle_state=expired",
-            EXPIRE_CONTENT_OUTPUT_LABEL,
+            EXPIRE_CONTENT_OUTPUT_LABEL
         );
 
         let tombstone_output = dispatch(&parsed(
@@ -47,10 +53,10 @@ pub(super) fn run_spec_c08_cli_content_commands_execute_and_validate_args() {
             &["content-cli"],
         ))
         .expect("tombstone-content should succeed");
-        assert_output_contains(
-            tombstone_output.text.as_str(),
+        assert_contains!(
+            tombstone_output,
             "redaction_status=redacted",
-            TOMBSTONE_CONTENT_OUTPUT_LABEL,
+            TOMBSTONE_CONTENT_OUTPUT_LABEL
         );
 
         let query_output = dispatch(&parsed(
@@ -59,10 +65,10 @@ pub(super) fn run_spec_c08_cli_content_commands_execute_and_validate_args() {
             &["content-cli"],
         ))
         .expect("query-content should succeed");
-        assert_output_contains(
-            query_output.text.as_str(),
+        assert_contains!(
+            query_output,
             "lifecycle_state=tombstoned",
-            QUERY_CONTENT_OUTPUT_LABEL,
+            QUERY_CONTENT_OUTPUT_LABEL
         );
 
         for (command, label) in [
@@ -84,15 +90,15 @@ pub(super) fn run_spec_c09_cli_bridge_commands_execute_and_validate_args() {
             &[r#"{"source_message_id":"msg-cli","target_network":"testnet"}"#],
         ))
         .expect("submit-bridge-message should succeed");
-        assert_output_contains(
-            submit_output.text.as_str(),
+        assert_contains!(
+            submit_output,
             "bridge_id=bridge-cli",
-            SUBMIT_BRIDGE_ID_OUTPUT_LABEL,
+            SUBMIT_BRIDGE_ID_OUTPUT_LABEL
         );
-        assert_output_contains(
-            submit_output.text.as_str(),
+        assert_contains!(
+            submit_output,
             "bridge_status=submitted",
-            SUBMIT_BRIDGE_STATUS_OUTPUT_LABEL,
+            SUBMIT_BRIDGE_STATUS_OUTPUT_LABEL
         );
 
         let forward_output = dispatch(&parsed(
@@ -101,15 +107,15 @@ pub(super) fn run_spec_c09_cli_bridge_commands_execute_and_validate_args() {
             &["bridge-cli"],
         ))
         .expect("forward-bridge-message should succeed");
-        assert_output_contains(
-            forward_output.text.as_str(),
+        assert_contains!(
+            forward_output,
             "bridge_status=forwarded",
-            FORWARD_BRIDGE_STATUS_OUTPUT_LABEL,
+            FORWARD_BRIDGE_STATUS_OUTPUT_LABEL
         );
-        assert_output_contains(
-            forward_output.text.as_str(),
+        assert_contains!(
+            forward_output,
             "target_message_id=msg-bridge-target-cli",
-            FORWARD_BRIDGE_TARGET_OUTPUT_LABEL,
+            FORWARD_BRIDGE_TARGET_OUTPUT_LABEL
         );
 
         let query_output = dispatch(&parsed(
@@ -118,10 +124,10 @@ pub(super) fn run_spec_c09_cli_bridge_commands_execute_and_validate_args() {
             &["bridge-cli"],
         ))
         .expect("query-bridge-message should succeed");
-        assert_output_contains(
-            query_output.text.as_str(),
+        assert_contains!(
+            query_output,
             "forward_tx_hash=sha256:bridge-forwarded-cli",
-            QUERY_BRIDGE_OUTPUT_LABEL,
+            QUERY_BRIDGE_OUTPUT_LABEL
         );
 
         for (command, label) in [
