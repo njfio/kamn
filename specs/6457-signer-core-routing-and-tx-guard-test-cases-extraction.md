@@ -22,11 +22,11 @@ Extract core-routing and transaction-guard integration scenarios from `crates/ka
 - Extracted tests lose fail-closed assertions or transaction-guard integration coverage.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `signer_core_cases.rs` exists and contains extracted core-routing/tx-guard scenario bodies.
-- [ ] AC-2: root `signer_backend.rs` retains selected entrypoint names and delegates to `signer_core_cases` functions.
-- [ ] AC-3: `signer_backend_split_contract.rs` enforces core-case delegation and ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test signer_backend_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test signer_backend` passes.
+- [x] AC-1: `signer_core_cases.rs` exists and contains extracted core-routing/tx-guard scenario bodies.
+- [x] AC-2: root `signer_backend.rs` retains selected entrypoint names and delegates to `signer_core_cases` functions.
+- [x] AC-3: `signer_backend_split_contract.rs` enforces core-case delegation and ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test signer_backend_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test signer_backend` passes.
 
 ## Files to touch
 - `specs/6457-signer-core-routing-and-tx-guard-test-cases-extraction.md`
@@ -52,7 +52,12 @@ Extract core-routing and transaction-guard integration scenarios from `crates/ka
   - `cargo test -p kamn-core --test signer_backend`
 
 ## Phase 6 integration evidence
-- Pending.
+- Split contract guard:
+  - `cargo test -p kamn-core --test signer_backend_split_contract`
+  - result: `5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`
+- Full signer backend integration target:
+  - `cargo test -p kamn-core --test signer_backend`
+  - result: `30 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out`
 
 ## Deviations
 - None.
