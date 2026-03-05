@@ -1,9 +1,10 @@
 use kamn_data_layer::{
     data_layer_m10_evaluate_phase6_execution_tick_budget_policy,
-    data_layer_m10_evaluate_phase6_scheduler_trigger_policy,
-    DataLayerM10Phase6PolicyBudget, DataLayerM10Phase6PolicyBudgetDecision,
-    DataLayerM10Phase6PolicyReportCounts, DataLayerM10Phase6SchedulerSignalPolicy,
-    DataLayerM10Phase6SchedulerTriggerPolicy, DataLayerM10Phase6TriggerPolicyDecision,
+    data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy,
+    data_layer_m10_evaluate_phase6_scheduler_trigger_policy, DataLayerM10Phase6PolicyBudget,
+    DataLayerM10Phase6PolicyBudgetDecision, DataLayerM10Phase6PolicyReportCounts,
+    DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
+    DataLayerM10Phase6TriggerPolicyDecision,
 };
 
 #[test]
@@ -24,6 +25,13 @@ fn contract_phase6_policy_budget_and_trigger_surfaces_are_exported() {
         .expect("policy evaluation should succeed");
     assert_eq!(
         budget_report.decision,
+        DataLayerM10Phase6PolicyBudgetDecision::Exceeded
+    );
+    let preflight_budget_report =
+        data_layer_m10_evaluate_phase6_scheduler_preflight_budget_policy(1, 3, budget)
+            .expect("scheduler preflight policy evaluation should succeed");
+    assert_eq!(
+        preflight_budget_report.decision,
         DataLayerM10Phase6PolicyBudgetDecision::Exceeded
     );
 
