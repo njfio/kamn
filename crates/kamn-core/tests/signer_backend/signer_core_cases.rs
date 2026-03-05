@@ -59,31 +59,32 @@ fn signer_core_custom_provider_client(
     })
 }
 
+fn assert_sign_and_verify_backend(
+    router: &SignerBackendRouter,
+    key_id: &str,
+    expected_backend: &str,
+) {
+    let request = signer_core_request(key_id, CORE_DEFAULT_PAYLOAD);
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("secure backend should sign");
+    assert_eq!(signed.backend, expected_backend);
+    router
+        .verify_with_backend(&signed.backend, &request, &signed.signature)
+        .expect("signature should verify");
+}
+
 pub(super) fn run_functional_secure_backend_signs_and_verifies_when_available() {
     with_default_signer_key_env(|| {
         let router = SignerBackendRouter::default();
-        let request = signer_core_request(CORE_SECURE_KEY_ID, CORE_DEFAULT_PAYLOAD);
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("secure backend should sign");
-        assert_eq!(signed.backend, "secure-mock");
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("signature should verify");
+        assert_sign_and_verify_backend(&router, CORE_SECURE_KEY_ID, "secure-mock");
     });
 }
 
 pub(super) fn run_functional_aws_kms_provider_routes_to_production_adapter_backend() {
     with_default_signer_key_env(|| {
         let router = SignerBackendRouter::default();
-        let request = signer_core_request(CORE_AWS_KEY_ID, CORE_DEFAULT_PAYLOAD);
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("secure backend should sign");
-        assert_eq!(signed.backend, "secure-aws-kms-emulator");
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("signature should verify");
+        assert_sign_and_verify_backend(&router, CORE_AWS_KEY_ID, "secure-aws-kms-emulator");
     });
 }
 
@@ -105,14 +106,7 @@ pub(super) fn run_functional_router_uses_custom_provider_client_mapping_for_secu
 pub(super) fn run_functional_secure_unavailable_falls_back_to_local_backend() {
     with_default_signer_key_env(|| {
         let router = SignerBackendRouter::with_secure_availability(false);
-        let request = signer_core_request(CORE_SECURE_KEY_ID, CORE_DEFAULT_PAYLOAD);
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("fallback should sign");
-        assert_eq!(signed.backend, "local-software");
-        router
-            .verify_with_backend(&signed.backend, &request, &signed.signature)
-            .expect("fallback signature should verify");
+        assert_sign_and_verify_backend(&router, CORE_SECURE_KEY_ID, "local-software");
     });
 }
 
