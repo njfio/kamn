@@ -11,9 +11,8 @@ fn repo_root() -> PathBuf {
 
 fn read_repo_text(rel_path: &str) -> String {
     let path = repo_root().join(rel_path);
-    fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!("expected {} to be readable: {}", path.display(), error)
-    })
+    fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("expected {} to be readable: {}", path.display(), error))
 }
 
 #[test]
