@@ -23,11 +23,11 @@ Extract the large import + helper-builder block from `crates/kamn-core/tests/dat
 - Split contract does not enforce shared-module ownership markers.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `shared.rs` exists with helper functions and re-exported symbols used by case modules.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` imports from `shared::*` and no longer defines the moved helpers inline.
-- [ ] AC-3: split-contract test enforces shared-module wiring/ownership markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `shared.rs` exists with helper functions and re-exported symbols used by case modules.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` imports from `shared::*` and no longer defines the moved helpers inline.
+- [x] AC-3: split-contract test enforces shared-module wiring/ownership markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 - `specs/6437-m10-shared-helper-module-extraction.md`
@@ -50,7 +50,8 @@ Extract the large import + helper-builder block from `crates/kamn-core/tests/dat
   - `cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`10 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 - None.
