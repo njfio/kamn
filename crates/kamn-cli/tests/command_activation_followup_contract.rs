@@ -129,3 +129,31 @@ fn spec_c05_followup_root_contract_uses_shared_server_harness_pattern() {
         );
     }
 }
+
+#[test]
+fn spec_c06_followup_content_bridge_contract_delegates_to_cases_module() {
+    let content_bridge = read_repo_file("tests/command_activation_content_bridge_contract.rs");
+    let cases = read_repo_file("tests/command_activation_content_bridge_contract/cases.rs");
+
+    for marker in [
+        "#[path = \"command_activation_content_bridge_contract/cases.rs\"]",
+        "mod command_activation_content_bridge_cases;",
+        "command_activation_content_bridge_cases::run_spec_c08_cli_content_commands_execute_and_validate_args();",
+        "command_activation_content_bridge_cases::run_spec_c09_cli_bridge_commands_execute_and_validate_args();",
+    ] {
+        assert!(
+            content_bridge.contains(marker),
+            "content-bridge contract should contain delegation marker: {marker}"
+        );
+    }
+
+    for marker in [
+        "pub(super) fn run_spec_c08_cli_content_commands_execute_and_validate_args()",
+        "pub(super) fn run_spec_c09_cli_bridge_commands_execute_and_validate_args()",
+    ] {
+        assert!(
+            cases.contains(marker),
+            "content-bridge cases module should define marker: {marker}"
+        );
+    }
+}
