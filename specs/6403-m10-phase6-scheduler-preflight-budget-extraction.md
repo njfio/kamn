@@ -36,11 +36,11 @@ Extract deterministic M10 Phase-6 scheduler preflight budget evaluation from `ka
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exposes a scheduler preflight budget policy evaluator entrypoint.
-- [ ] AC-2: `kamn-core` scheduler-cycle preflight path delegates through extracted contract logic.
-- [ ] AC-3: existing M10 scheduler-cycle contract tests stay green, including preflight overflow assertions.
-- [ ] AC-4: docs + data-layer contract tests include preflight extraction markers/surface checks.
-- [ ] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
+- [x] AC-1: `kamn-data-layer` exposes a scheduler preflight budget policy evaluator entrypoint.
+- [x] AC-2: `kamn-core` scheduler-cycle preflight path delegates through extracted contract logic.
+- [x] AC-3: existing M10 scheduler-cycle contract tests stay green, including preflight overflow assertions.
+- [x] AC-4: docs + data-layer contract tests include preflight extraction markers/surface checks.
+- [x] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
 
 ## Files to touch
 
@@ -76,7 +76,14 @@ Extract deterministic M10 Phase-6 scheduler preflight budget evaluation from `ka
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_phase6_policy_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m10_phase6_preflight_pre_seconds=16.67`
+    - command: `/usr/bin/time -f 'm10_phase6_preflight_pre_seconds=%e' -o /tmp/m10_phase6_preflight_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6403-pre/Cargo.toml`
+  - post extraction lane timing: `m10_phase6_preflight_post_seconds=0.11`
+    - command: `/usr/bin/time -f 'm10_phase6_preflight_post_seconds=%e' -o /tmp/m10_phase6_preflight_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
