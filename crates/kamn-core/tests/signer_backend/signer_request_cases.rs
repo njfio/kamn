@@ -19,6 +19,17 @@ fn signer_profile_request() -> SigningRequest {
     .expect("request should be valid")
 }
 
+fn signer_empty_id_transaction() -> BaselineTransaction {
+    BaselineTransaction {
+        id: String::new(),
+        sender: REQUEST_PROFILE_SENDER.to_owned(),
+        nonce: REQUEST_PROFILE_NONCE,
+        payload: REQUEST_PROFILE_PAYLOAD.to_owned(),
+        state_hash: GENESIS_STATE_HASH.to_owned(),
+        signature: REQUEST_PLACEHOLDER_SIGNATURE.to_owned(),
+    }
+}
+
 fn assert_signature_includes_profile_prefix(message: &str) {
     with_default_signer_key_env(|| {
         let router = SignerBackendRouter::default();
@@ -31,14 +42,7 @@ fn assert_signature_includes_profile_prefix(message: &str) {
 }
 
 pub(super) fn run_for_transaction_rejects_empty_transaction_id() {
-    let tx = BaselineTransaction {
-        id: String::new(),
-        sender: REQUEST_PROFILE_SENDER.to_owned(),
-        nonce: REQUEST_PROFILE_NONCE,
-        payload: REQUEST_PROFILE_PAYLOAD.to_owned(),
-        state_hash: GENESIS_STATE_HASH.to_owned(),
-        signature: REQUEST_PLACEHOLDER_SIGNATURE.to_owned(),
-    };
+    let tx = signer_empty_id_transaction();
     assert_eq!(
         SigningRequest::for_transaction(REQUEST_TRANSACTION_KEY_ID, &tx),
         Err(SignerBackendError::EmptyField("transaction_id"))
