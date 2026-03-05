@@ -94,6 +94,23 @@ const ORCHESTRATION_ORDERING_CASES_MARKERS: [&str; 2] = [
     "pub(super) fn run_spec_c17_phase6_orchestration_tick_orders_outputs_deterministically(",
 ];
 
+const RETRY_POLICY_ROOT_MARKERS: [&str; 7] = [
+    "#[path = \"data_layer_m10_partition_archival/retry_policy_cases.rs\"]",
+    "mod retry_policy_cases;",
+    "retry_policy_cases::run_spec_c12_transient_archival_failure_projects_deterministic_retry_window();",
+    "retry_policy_cases::run_spec_c13_transient_archival_retry_backoff_caps_at_policy_maximum();",
+    "retry_policy_cases::run_spec_c14_archival_retry_budget_exhaustion_and_permanent_failure_fail_closed();",
+    "retry_policy_cases::run_spec_c15_archival_retry_policy_and_attempt_validation_fail_closed();",
+    "fn spec_c12_transient_archival_failure_projects_deterministic_retry_window()",
+];
+
+const RETRY_POLICY_CASES_MARKERS: [&str; 4] = [
+    "pub(super) fn run_spec_c12_transient_archival_failure_projects_deterministic_retry_window(",
+    "pub(super) fn run_spec_c13_transient_archival_retry_backoff_caps_at_policy_maximum(",
+    "pub(super) fn run_spec_c14_archival_retry_budget_exhaustion_and_permanent_failure_fail_closed(",
+    "pub(super) fn run_spec_c15_archival_retry_policy_and_attempt_validation_fail_closed(",
+];
+
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
@@ -220,6 +237,26 @@ fn spec_c06_orchestration_ordering_tests_delegate_to_cases_module() {
         assert!(
             cases.contains(marker),
             "orchestration-ordering cases module should define marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c07_retry_policy_tests_delegate_to_cases_module() {
+    let root = read_repo_file("tests/data_layer_m10_partition_archival.rs");
+    let cases = read_repo_file("tests/data_layer_m10_partition_archival/retry_policy_cases.rs");
+
+    for marker in RETRY_POLICY_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "root archival contract should contain retry-policy delegation marker: {marker}"
+        );
+    }
+
+    for marker in RETRY_POLICY_CASES_MARKERS {
+        assert!(
+            cases.contains(marker),
+            "retry-policy cases module should define marker: {marker}"
         );
     }
 }
