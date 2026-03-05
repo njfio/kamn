@@ -23,11 +23,11 @@ Extract compliance projection and legal-hold scenario tests (`spec_c06` through 
 - Extraction alters reason-code assertions or expected failure matches.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `compliance_projection_cases.rs` exists and contains C06-C11 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` retains C06-C11 entrypoints and delegates to `compliance_projection_cases` functions.
-- [ ] AC-3: split-contract test enforces C06-C11 delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `compliance_projection_cases.rs` exists and contains C06-C11 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` retains C06-C11 entrypoints and delegates to `compliance_projection_cases` functions.
+- [x] AC-3: split-contract test enforces C06-C11 delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 - `specs/6435-m10-compliance-projection-test-cases-extraction.md`
@@ -51,7 +51,8 @@ Extract compliance projection and legal-hold scenario tests (`spec_c06` through 
   - `cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`9 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 - None.
