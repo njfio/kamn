@@ -1,14 +1,22 @@
 use super::*;
 
+const NOW_MONTH_ID: u32 = 202602;
+const ARCHIVE_PREFIX: &str = "s3://kamn-archive/messages";
+const PARTITION_OLD_PRIMARY: u32 = 202401;
+const PARTITION_OLD_SECONDARY: u32 = 202402;
+const PARTITION_RECENT: u32 = 202601;
+const PARTITION_DUPLICATE: u32 = 202512;
+const PARTITION_INVALID: u32 = 202613;
+
 pub(super) fn run_spec_c01_partition_naming_and_future_planning_are_deterministic() {
     let registry = DataLayerM10PartitionLifecycleRegistry::new();
     assert_eq!(
-        data_layer_m10_format_partition_name(202602).expect("month should format"),
+        data_layer_m10_format_partition_name(NOW_MONTH_ID).expect("month should format"),
         "messages_2026_02"
     );
 
     let planned = registry
-        .plan_future_partition_names(202602, 3)
+        .plan_future_partition_names(NOW_MONTH_ID, 3)
         .expect("future planning should succeed");
     assert_eq!(
         planned,
@@ -20,20 +28,20 @@ pub(super) fn run_spec_c02_archival_due_selection_respects_retention_window_and_
 ) {
     let mut registry = DataLayerM10PartitionLifecycleRegistry::new();
     registry
-        .register_partition(partition_input(202401, true))
+        .register_partition(partition_input(PARTITION_OLD_PRIMARY, true))
         .expect("old shred-complete partition should register");
     registry
-        .register_partition(partition_input(202402, false))
+        .register_partition(partition_input(PARTITION_OLD_SECONDARY, false))
         .expect("old non-shredded partition should register");
     registry
-        .register_partition(partition_input(202601, true))
+        .register_partition(partition_input(PARTITION_RECENT, true))
         .expect("recent partition should register");
 
     let archived = registry
         .archive_due_partitions(DataLayerM10ArchiveDueRequest {
-            now_month_id: 202602,
+            now_month_id: NOW_MONTH_ID,
             active_retention_months: 2,
-            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+            object_storage_prefix: ARCHIVE_PREFIX.to_owned(),
         })
         .expect("archive due should succeed");
 
@@ -48,14 +56,14 @@ pub(super) fn run_spec_c02_archival_due_selection_respects_retention_window_and_
 pub(super) fn run_spec_c03_archival_index_records_and_reattach_transition_are_deterministic() {
     let mut registry = DataLayerM10PartitionLifecycleRegistry::new();
     registry
-        .register_partition(partition_input(202401, true))
+        .register_partition(partition_input(PARTITION_OLD_PRIMARY, true))
         .expect("old shred-complete partition should register");
 
     let archived = registry
         .archive_due_partitions(DataLayerM10ArchiveDueRequest {
-            now_month_id: 202602,
+            now_month_id: NOW_MONTH_ID,
             active_retention_months: 1,
-            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+            object_storage_prefix: ARCHIVE_PREFIX.to_owned(),
         })
         .expect("archive due should succeed");
     assert_eq!(archived.len(), 1);
@@ -82,14 +90,14 @@ pub(super) fn run_spec_c03_archival_index_records_and_reattach_transition_are_de
 
 pub(super) fn run_spec_c04_invalid_month_identifiers_and_illegal_transitions_fail_closed() {
     let mut registry = DataLayerM10PartitionLifecycleRegistry::new();
-    let invalid = registry.register_partition(partition_input(202613, true));
+    let invalid = registry.register_partition(partition_input(PARTITION_INVALID, true));
     assert!(matches!(
         invalid,
-        Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(202613))
+        Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(PARTITION_INVALID))
     ));
 
     registry
-        .register_partition(partition_input(202602, true))
+        .register_partition(partition_input(NOW_MONTH_ID, true))
         .expect("valid partition should register");
     let illegal = registry.reattach_partition("messages_2026_02");
     assert!(matches!(
@@ -106,16 +114,16 @@ pub(super) fn run_spec_c04_invalid_month_identifiers_and_illegal_transitions_fai
 pub(super) fn run_spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced() {
     let mut registry = DataLayerM10PartitionLifecycleRegistry::new();
     registry
-        .register_partition(partition_input(202512, true))
+        .register_partition(partition_input(PARTITION_DUPLICATE, true))
         .expect("partition should register");
-    let duplicate = registry.register_partition(partition_input(202512, true));
+    let duplicate = registry.register_partition(partition_input(PARTITION_DUPLICATE, true));
     assert!(matches!(
         duplicate,
-        Err(DataLayerM10PartitionLifecycleError::DuplicatePartitionMonthId(202512))
+        Err(DataLayerM10PartitionLifecycleError::DuplicatePartitionMonthId(PARTITION_DUPLICATE))
     ));
 
     let planned = registry
-        .plan_future_partition_names(202512, 1)
+        .plan_future_partition_names(PARTITION_DUPLICATE, 1)
         .expect("future planning should succeed");
     assert_eq!(planned.len(), 1);
     assert!(planned[0].starts_with(DATA_LAYER_M10_PARTITION_PREFIX));
