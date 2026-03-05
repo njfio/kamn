@@ -35,11 +35,11 @@ Extract deterministic Phase-6 scheduler cycle report projection (deferred/applie
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: `kamn-data-layer` exposes scheduler cycle report projector contracts.
-- [ ] AC-2: `kamn-core` scheduler cycle path delegates report assembly through extracted contracts.
-- [ ] AC-3: core M10 contract lane remains green, including deferred/applied scheduler-cycle assertions.
-- [ ] AC-4: docs + data-layer policy contract tests include scheduler-cycle report extraction markers/surface checks.
-- [ ] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
+- [x] AC-1: `kamn-data-layer` exposes scheduler cycle report projector contracts.
+- [x] AC-2: `kamn-core` scheduler cycle path delegates report assembly through extracted contracts.
+- [x] AC-3: core M10 contract lane remains green, including deferred/applied scheduler-cycle assertions.
+- [x] AC-4: docs + data-layer policy contract tests include scheduler-cycle report extraction markers/surface checks.
+- [x] AC-5: Phase 6 integration evidence recorded for docs lane, data-layer policy lane, and core M10 lane.
 
 ## Files to touch
 
@@ -75,7 +75,14 @@ Extract deterministic Phase-6 scheduler cycle report projection (deferred/applie
 
 ## Phase 6 integration evidence
 
-- Pending.
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs` (pass)
+- 2026-03-05: `cargo test -p kamn-data-layer --test data_layer_m10_phase6_policy_contract` (pass)
+- 2026-03-05: `cargo test -p kamn-core --test data_layer_m10_partition_archival` (pass)
+- 2026-03-05 telemetry:
+  - pre extraction lane timing: `m10_phase6_scheduler_cycle_report_pre_seconds=16.89`
+    - command: `/usr/bin/time -f 'm10_phase6_scheduler_cycle_report_pre_seconds=%e' -o /tmp/m10_phase6_scheduler_cycle_report_pre.time cargo test -p kamn-core --test data_layer_m10_partition_archival --manifest-path /tmp/kamn-6409-pre/Cargo.toml`
+  - post extraction lane timing: `m10_phase6_scheduler_cycle_report_post_seconds=0.12`
+    - command: `/usr/bin/time -f 'm10_phase6_scheduler_cycle_report_post_seconds=%e' -o /tmp/m10_phase6_scheduler_cycle_report_post.time cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Deviations
 
