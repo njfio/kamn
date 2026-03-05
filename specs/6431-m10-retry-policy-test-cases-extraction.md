@@ -23,11 +23,11 @@ Extract archival retry policy scenario tests (`spec_c12` through `spec_c15`) fro
 - Refactor accidentally changes assertion expectations or reason-code checks.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `retry_policy_cases.rs` exists and contains C12-C15 scenario bodies.
-- [ ] AC-2: root `data_layer_m10_partition_archival.rs` retains C12-C15 entrypoints and delegates to `retry_policy_cases` functions.
-- [ ] AC-3: split-contract test enforces C12-C15 delegation markers.
-- [ ] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
-- [ ] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
+- [x] AC-1: `retry_policy_cases.rs` exists and contains C12-C15 scenario bodies.
+- [x] AC-2: root `data_layer_m10_partition_archival.rs` retains C12-C15 entrypoints and delegates to `retry_policy_cases` functions.
+- [x] AC-3: split-contract test enforces C12-C15 delegation markers.
+- [x] AC-4: `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` passes.
+- [x] AC-5: `cargo test -p kamn-core --test data_layer_m10_partition_archival` passes.
 
 ## Files to touch
 - `specs/6431-m10-retry-policy-test-cases-extraction.md`
@@ -51,7 +51,8 @@ Extract archival retry policy scenario tests (`spec_c12` through `spec_c15`) fro
   - `cargo test -p kamn-core --test data_layer_m10_partition_archival`
 
 ## Phase 6 integration evidence
-- Pending.
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival_split_contract` -> PASS (`7 passed, 0 failed`)
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival` -> PASS (`38 passed, 0 failed`)
 
 ## Deviations
 - None.
