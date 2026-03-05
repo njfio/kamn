@@ -36,15 +36,16 @@ Enforce fail-closed Service API TLS policy on production runtime paths so startu
 
 ## Acceptance criteria (testable booleans)
 
-- [ ] AC-1: Service API startup fails closed when TLS mode resolves to disabled on production-targeted runtime modes with non-loopback bind addresses.
-- [ ] AC-2: Service API startup diagnostics include deterministic TLS policy violation markers/remediation for blocked production paths.
-- [ ] AC-3: Existing local workflows remain explicitly opt-in via loopback-bound Service API startup and are documented.
-- [ ] AC-4: Service API TLS contract tests cover production enforcement behavior (fail-closed + allowed local loopback path).
+- [x] AC-1: Service API startup fails closed when TLS mode resolves to disabled on production-targeted runtime modes with non-loopback bind addresses.
+- [x] AC-2: Service API startup diagnostics include deterministic TLS policy violation markers/remediation for blocked production paths.
+- [x] AC-3: Existing local workflows remain explicitly opt-in via loopback-bound Service API startup and are documented.
+- [x] AC-4: Service API TLS contract tests cover production enforcement behavior (fail-closed + allowed local loopback path).
 
 ## Files to touch
 
 - `specs/6380-fail-fast-tls-production-paths.md`
 - `crates/kamn-node/src/service_api_endpoint/server.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`
 - `docs/ops/deployment.md`
 
 ## Error semantics
@@ -70,7 +71,17 @@ Enforce fail-closed Service API TLS policy on production runtime paths so startu
 
 ## Phase 6 integration evidence
 
-- Pending.
+- Wiring:
+  - `serve_service_api_endpoint_async` now resolves TLS mode with runtime mode + bind address context and enforces production-path fail-closed policy before serving.
+  - Added runtime-path policy helpers for production mode classification and loopback bind-address classification.
+  - Added integration coverage in `main_tests/service_api_endpoint_tests.rs` asserting disabled TLS fails closed for non-loopback `api` runtime path.
+  - Updated deployment documentation with production fail-closed behavior and loopback local opt-in guidance.
+- Executed:
+  - `cargo test -p kamn-node service_api_tls_mode_resolution -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_http_response_bodies_match_serde_contracts -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_tls_mode_serves_required_https_routes -- --nocapture`
+  - `cargo test -p kamn-node regression_service_api_endpoint_rejects_disabled_tls_for_non_loopback_api_runtime_path -- --nocapture`
+  - `bash scripts/deploy/test_deployment_assets.sh`
 
 ## Deviations
 
