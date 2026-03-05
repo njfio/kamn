@@ -53,6 +53,10 @@ use kamn_core::{
     DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_INTERVAL_ELAPSED_REASON_CODE,
     DATA_LAYER_M10_REATTACH_REASON_CODE,
 };
+use kamn_data_layer::{
+    DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
+    DataLayerM10ComplianceProjectionPortError,
+};
 use std::collections::BTreeMap;
 
 fn partition_input(
@@ -1807,4 +1811,65 @@ fn spec_c36_phase6_runtime_evidence_bundle_fails_closed_when_deferred_payload_co
             }
         )
     ));
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FakeProjectionPort;
+
+impl DataLayerM10ComplianceProjectionPort for FakeProjectionPort {
+    fn authorize_owner_scope(
+        &self,
+        requester_owner_did: &str,
+        owner_did: &str,
+    ) -> Result<String, DataLayerM10ComplianceProjectionPortError> {
+        if requester_owner_did == owner_did {
+            Ok(owner_did.to_owned())
+        } else {
+            Err(DataLayerM10ComplianceProjectionPortError::OwnerScopeViolation)
+        }
+    }
+
+    fn message_for_owner(
+        &self,
+        owner_did: &str,
+        message_id: &str,
+    ) -> Result<DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPortError>
+    {
+        if owner_did != "kamn:did:owner:alpha" || message_id != "m10-port-msg-1" {
+            return Err(DataLayerM10ComplianceProjectionPortError::LookupFailed(
+                "message missing".to_owned(),
+            ));
+        }
+
+        Ok(DataLayerM10ComplianceProjectionMessageState {
+            message_id: message_id.to_owned(),
+            legal_hold_active: false,
+            shredded_at_epoch_seconds: Some(1_708_560_200),
+        })
+    }
+}
+
+#[test]
+fn spec_c37_partition_shred_projection_with_port_is_supported_without_direct_m8_registry_argument() {
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let projection = m10_registry.project_partition_shred_completeness_with_port(
+        &FakeProjectionPort,
+        DataLayerM10ComplianceShredProjectionRequest {
+            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            partition_month_id: 202401,
+            partition_message_ids: vec!["m10-port-msg-1".to_owned()],
+        },
+    );
+    let projection = projection.expect("projection should pass via seam port");
+    assert_eq!(
+        projection.projection_reason_code,
+        DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE
+    );
+    assert_eq!(projection.shredded_partition_messages, 1);
+    assert!(projection.all_messages_shredded);
 }

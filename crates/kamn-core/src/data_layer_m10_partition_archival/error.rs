@@ -172,35 +172,6 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
 
 impl std::error::Error for DataLayerM10PartitionLifecycleError {}
 
-pub(super) fn map_m8_projection_error_to_m10(
-    error: DataLayerM8ComplianceError,
-) -> DataLayerM10PartitionLifecycleError {
-    let reason_code = match error {
-        DataLayerM8ComplianceError::OwnerScopeViolation { .. } => {
-            DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE
-        }
-        DataLayerM8ComplianceError::OwnerNotFound { .. }
-        | DataLayerM8ComplianceError::MessageNotFound { .. } => {
-            DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE
-        }
-        DataLayerM8ComplianceError::InvalidDid(_)
-        | DataLayerM8ComplianceError::EmptyField(_)
-        | DataLayerM8ComplianceError::EmptyWrappedKeys
-        | DataLayerM8ComplianceError::InvalidWrappedKey(_)
-        | DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { .. }
-        | DataLayerM8ComplianceError::DuplicateMessageId { .. }
-        | DataLayerM8ComplianceError::LegalHoldActive { .. }
-        | DataLayerM8ComplianceError::AlreadyShredded { .. } => {
-            DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE
-        }
-    };
-
-    DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
-        reason_code,
-        detail: error.to_string(),
-    }
-}
-
 pub(super) fn map_m8_execution_error_to_m10(
     error: DataLayerM8ComplianceError,
 ) -> DataLayerM10PartitionLifecycleError {

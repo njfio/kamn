@@ -15,6 +15,9 @@ m10_retry_extraction_target_crate=crates/kamn-data-layer
 m10_retry_compatibility_wrapper_path=kamn-core::data_layer_m10_partition_archival::retry
 m10_retry_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m10_partition_archival.rs,crates/kamn-data-layer/tests/data_layer_m10_archival_retry_integration.rs
 m10_full_extraction_blocker_csv=data_layer_m8_compliance_lifecycle,KamnDid
+m10_projection_port_seam_version=kamn.arch.data-layer-m10-projection-port.v1
+m10_projection_port_trait_path=kamn-data-layer::DataLayerM10ComplianceProjectionPort
+m10_projection_port_entrypoint=DataLayerM10PartitionLifecycleRegistry::project_partition_shred_completeness_with_port
 
 | Milestone | Current ownership | Planned standalone ownership | Compatibility strategy |
 |---|---|---|---|
@@ -28,7 +31,7 @@ m10_full_extraction_blocker_csv=data_layer_m8_compliance_lifecycle,KamnDid
 | M7 | `kamn-core::data_layer_m7_timeseries_telemetry` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and rollup parity contracts |
 | M8 | `kamn-core::data_layer_m8_compliance_lifecycle` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and retention/legal-hold contracts |
 | M9 | `kamn-core::data_layer_m9_*` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and realtime dispatch contracts |
-| M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` | `crates/kamn-data-layer` | retry projection extracted; full extraction blocked on `M8` + `KamnDid` dependency seam, keep `kamn-core` compatibility wrappers and phase-6 scheduler contracts |
+| M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_compliance_projection_port` | `crates/kamn-data-layer` | retry projection and projection-port seam extracted; full extraction still blocked on remaining `M8` + `KamnDid` migration for phase6 path, keep `kamn-core` compatibility wrappers and scheduler contracts |
 | M11 | `kamn-data-layer::data_layer_m11_hardening_readiness` + `kamn-core::data_layer_m11_closure_evidence` | `crates/kamn-data-layer` | hardening already extracted; `kamn-core` keeps shim and closure API compatibility |
 
 ## Objective
