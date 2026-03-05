@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fmt;
 use x25519_dalek::{PublicKey, StaticSecret};
+use zeroize::Zeroize;
 
 /// Canonical direct-message key-agreement algorithm identifier.
 pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "X25519";
@@ -38,13 +39,23 @@ pub struct DirectMessageCiphertext {
 }
 
 /// Direct-message crypto engine with nonce reuse protection.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct DirectMessageCryptoEngine {
     sender_key_ref: String,
     recipient_key_ref: String,
     aead_key: [u8; 32],
     legacy_aead_key: [u8; 32],
     used_nonces: BTreeSet<u64>,
+}
+
+impl fmt::Debug for DirectMessageCryptoEngine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DirectMessageCryptoEngine")
+            .field("sender_key_ref", &self.sender_key_ref)
+            .field("recipient_key_ref", &self.recipient_key_ref)
+            .field("used_nonce_count", &self.used_nonces.len())
+            .finish()
+    }
 }
 
 impl DirectMessageCryptoEngine {
@@ -176,6 +187,14 @@ impl DirectMessageCryptoEngine {
         }?;
         String::from_utf8(plaintext)
             .map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
+    }
+}
+
+impl Drop for DirectMessageCryptoEngine {
+    fn drop(&mut self) {
+        self.aead_key.zeroize();
+        self.legacy_aead_key.zeroize();
+        self.used_nonces.clear();
     }
 }
 

@@ -11,7 +11,7 @@ pub use kamn_crypto::direct_message_crypto::{
 
 /// Compatibility wrapper that forwards direct-message crypto operations to
 /// `kamn-crypto`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DirectMessageCryptoEngine(kamn_crypto::direct_message_crypto::DirectMessageCryptoEngine);
 
 impl DirectMessageCryptoEngine {
