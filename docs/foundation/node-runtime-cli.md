@@ -299,7 +299,7 @@ This document captures node-runtime productionization slices for machine-readabl
 ## Runtime Mode Command Examples
 - Planning mode:
   - `kamn-node --role processor --runtime-mode planning`
-  - `kamn-node --role processor --runtime-mode planning --expected-state-hash state-1 --proposal tx-1|did:kamn:agent:aaa|1|state-1`
+  - `kamn-node --role processor --runtime-mode planning --expected-state-hash state-1 --proposal tx-1|kamn:did:agent:aaa|1|state-1`
 - Recovery-check mode:
   - `kamn-node --role processor --runtime-mode recovery-check`
   - `kamn-node --role processor --runtime-mode recovery-check --expected-state-version 42 --expected-state-hash state-42 --rejoin-attempt node-a|42|state-42|resume-1`
