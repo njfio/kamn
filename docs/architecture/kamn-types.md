@@ -25,4 +25,5 @@ Defines the architecture contract for `kamn-types` in the KAMN workspace and doc
 
 ## Related
 - `crates/kamn-types/README.md`
+- `docs/architecture/did-format-standardization.md`
 - `docs/architecture/README.md`
