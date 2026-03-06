@@ -33,14 +33,14 @@ aggregation and lookup behavior are specified by tests instead of inferred from 
 
 ## Acceptance criteria
 
-- [ ] A test proves empty reports return `None` for `overall_status()`
-- [ ] A test proves empty reports return an empty map from `mode_status_map()`
-- [ ] A test proves all-`SKIP` entries aggregate to `Some(SKIP)` for both `mode_status()` and `overall_status()`
-- [ ] A test proves summary projection preserves all-`SKIP` counts and overall `Some(SKIP)`
-- [ ] A test proves `status_for()` trims surrounding whitespace in lookup identifiers
-- [ ] A test proves `status_for()` returns `None` for empty lookup identifiers
-- [ ] A test proves `mode_status_map()` omits absent modes and returns deterministic per-mode aggregates for mixed modes
-- [ ] `cargo test -p kamn-live-probe-matrix -- --nocapture` passes
+- [x] A test proves empty reports return `None` for `overall_status()`
+- [x] A test proves empty reports return an empty map from `mode_status_map()`
+- [x] A test proves all-`SKIP` entries aggregate to `Some(SKIP)` for both `mode_status()` and `overall_status()`
+- [x] A test proves summary projection preserves all-`SKIP` counts and overall `Some(SKIP)`
+- [x] A test proves `status_for()` trims surrounding whitespace in lookup identifiers
+- [x] A test proves `status_for()` returns `None` for empty lookup identifiers
+- [x] A test proves `mode_status_map()` omits absent modes and returns deterministic per-mode aggregates for mixed modes
+- [x] `cargo test -p kamn-live-probe-matrix -- --nocapture` passes
 
 ## Files to touch
 
@@ -68,6 +68,13 @@ aggregation and lookup behavior are specified by tests instead of inferred from 
   - `cargo test -p kamn-live-probe-matrix --test live_probe_matrix_edge_cases -- --nocapture`
   - `cargo test -p kamn-live-probe-matrix -- --nocapture`
   - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` if a new test file changes inventory
+
+## Phase 6 integration evidence
+
+- The real crate path is exercised via `cargo test -p kamn-live-probe-matrix -- --nocapture`
+- New integration coverage landed in `crates/kamn-live-probe-matrix/tests/live_probe_matrix_edge_cases.rs`
+- Contract coverage landed in `crates/kamn-live-probe-matrix/tests/live_probe_matrix_edge_cases_contract.rs`
+- The test inventory baseline was refreshed to account for the two new test targets
 
 ## Deviations
 
