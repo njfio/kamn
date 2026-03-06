@@ -23,7 +23,7 @@ fn assert_contains_all(doc: &str, required_markers: &[&str]) {
 fn is_tranche_row(line: &str) -> bool {
     matches!(
         line.split('|').nth(1).map(str::trim),
-        Some("T1" | "T2" | "T3" | "T4" | "T5")
+        Some("T1" | "T2" | "T3" | "T4" | "T5" | "T6")
     )
 }
 
@@ -36,8 +36,8 @@ fn module_map_declares_decomposition_tranche_markers() {
             "kamn_core_decomposition_map_version=kamn.arch.kamn-core-decomposition-map.v1",
             "kamn_core_decomposition_reason_taxonomy_version=kamn.arch.kamn-core-decomposition-reason-taxonomy.v1",
             "kamn_core_decomposition_reason_codes_csv=module_group_boundary_missing,tranche_ordering_missing,target_destination_missing,hotspot_prioritization_missing,architecture_index_link_missing",
-            "kamn_core_decomposition_tranche_count=5",
-            "kamn_core_decomposition_target_crates_csv=kamn-runtime-guards,kamn-snapshot-journal,kamn-kolme,kamn-bridges,kamn-crypto",
+            "kamn_core_decomposition_tranche_count=6",
+            "kamn_core_decomposition_target_crates_csv=kamn-runtime-guards,kamn-snapshot-journal,kamn-types,kamn-kolme,kamn-bridges,kamn-crypto",
         ],
     );
 }
