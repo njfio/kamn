@@ -23,9 +23,7 @@ pub(super) fn authorize_service_api_request(
     )
 }
 
-fn require_valid_sender_did_header<'a>(
-    request: &'a ParsedRequest,
-) -> Result<&'a str, RequestAuthFailure> {
+fn require_valid_sender_did_header(request: &ParsedRequest) -> Result<&str, RequestAuthFailure> {
     let sender_did =
         header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
             RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
