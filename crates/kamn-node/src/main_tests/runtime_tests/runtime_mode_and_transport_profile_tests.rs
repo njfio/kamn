@@ -21,6 +21,28 @@ fn parses_runtime_mode_planning_with_proposals() {
 }
 
 #[test]
+fn rejects_runtime_mode_planning_with_legacy_proposal_sender_did() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "planning".to_owned(),
+        "--expected-state-hash".to_owned(),
+        "state-1".to_owned(),
+        "--proposal".to_owned(),
+        "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+    ];
+
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::InvalidProposalArgument(
+            "tx-1|did:kamn:agent:aaa|1|state-1".to_owned()
+        ))
+    );
+}
+
+#[test]
 fn parses_runtime_mode_recovery_check_with_rejoin_attempt() {
     let args = vec![
         "kamn-node".to_owned(),

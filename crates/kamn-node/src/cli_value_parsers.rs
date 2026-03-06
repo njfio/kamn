@@ -1,4 +1,5 @@
 use super::{ConfigError, PeerLifecycleEvent, ProposalCandidate, RejoinAttempt};
+use kamn_core::AgentDid;
 
 fn split_four_segments(value: &str) -> Option<[&str; 4]> {
     let segments = value.split('|').collect::<Vec<&str>>();
@@ -21,6 +22,8 @@ pub(super) fn parse_state_version_arg(value: &str) -> Result<u64, ConfigError> {
 pub(super) fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate, ConfigError> {
     let parts = split_four_segments(value)
         .ok_or_else(|| ConfigError::InvalidProposalArgument(value.to_owned()))?;
+    AgentDid::parse(parts[1])
+        .map_err(|_| ConfigError::InvalidProposalArgument(value.to_owned()))?;
     let nonce = parts[2]
         .parse::<u64>()
         .map_err(|_| ConfigError::InvalidProposalArgument(value.to_owned()))?;
