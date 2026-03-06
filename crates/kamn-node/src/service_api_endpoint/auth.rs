@@ -23,7 +23,7 @@ pub(super) fn authorize_service_api_request(
     )
 }
 
-fn validate_sender_did_header<'a>(
+fn require_valid_sender_did_header<'a>(
     request: &'a ParsedRequest,
 ) -> Result<&'a str, RequestAuthFailure> {
     let sender_did =
@@ -51,7 +51,7 @@ fn authorize_service_api_request_with_legacy_policy(
     if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
         return Ok(());
     }
-    let sender_did = validate_sender_did_header(request)?;
+    let sender_did = require_valid_sender_did_header(request)?;
     let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
         RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
             REASON_CODE_AUTH_NONCE_HEADER_MISSING,
@@ -722,7 +722,7 @@ mod tests {
                 "did:kamn:agent:legacy-alpha".to_owned(),
             )]),
         };
-        let error = validate_sender_did_header(&request)
+        let error = require_valid_sender_did_header(&request)
             .expect_err("legacy did shape should fail closed at auth ingress");
         let RequestAuthFailure::Unauthorized(error) = error else {
             panic!("expected unauthorized auth failure");
