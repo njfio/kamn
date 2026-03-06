@@ -27,13 +27,13 @@ existing coverage.
   the budget source of truth.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `.ci/docs-contract-test-file-budget.env` sets
+- [x] AC-1: `.ci/docs-contract-test-file-budget.env` sets
       `DOCS_CONTRACT_TEST_FILE_MAX=69`.
-- [ ] AC-2: The exact Fast Gate docs-contract count check fails before the
+- [x] AC-2: The exact Fast Gate docs-contract count check fails before the
       budget update with `69 > 65`.
-- [ ] AC-3: The same count check passes after the budget update with the current
+- [x] AC-3: The same count check passes after the budget update with the current
       repository inventory.
-- [ ] AC-4: The spec records the budget rationale and validation evidence.
+- [x] AC-4: The spec records the budget rationale and validation evidence.
 
 ## Files to touch
 - `specs/6477-raise-docs-contract-test-file-budget.md`
@@ -56,7 +56,14 @@ existing coverage.
   - Re-run the exact Fast Gate count check and confirm it passes.
 
 ## Phase 6 integration evidence
-- Pending.
+- No new production entrypoint wiring was required because this issue updates a
+  CI budget source-of-truth only.
+- The integrated path is the existing Fast Gate shell check in
+  `.github/workflows/ci-fast-gate.yml`.
+- Red evidence:
+  `docs-contract test-file budget exceeded: 69 > 65`
+- Green evidence:
+  `docs-contract test-file budget check passed: 69 <= 69`
 
 ## Deviations
 - None.
