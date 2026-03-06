@@ -766,9 +766,9 @@ fn performance_authenticated_peer_frame_validation_stays_within_ci_budget() {
 #[test]
 fn functional_planner_orders_candidates_deterministically() {
     let candidates = vec![
-        ProposalCandidate::new("tx-3", "did:kamn:agent:bbb", 2, "state-1").expect("valid"),
-        ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-1").expect("valid"),
-        ProposalCandidate::new("tx-2", "did:kamn:agent:bbb", 1, "state-1").expect("valid"),
+        ProposalCandidate::new("tx-3", "kamn:did:agent:bbb", 2, "state-1").expect("valid"),
+        ProposalCandidate::new("tx-1", "kamn:did:agent:aaa", 1, "state-1").expect("valid"),
+        ProposalCandidate::new("tx-2", "kamn:did:agent:bbb", 1, "state-1").expect("valid"),
     ];
 
     let planner = DeterministicProposalPlanner::new("state-1");
@@ -785,21 +785,21 @@ fn integration_queue_drains_into_planner_without_order_loss() {
     assert!(
         queue
             .enqueue(
-                ProposalCandidate::new("tx-3", "did:kamn:agent:bbb", 2, "state-1").expect("valid"),
+                ProposalCandidate::new("tx-3", "kamn:did:agent:bbb", 2, "state-1").expect("valid"),
             )
             .is_ok()
     );
     assert!(
         queue
             .enqueue(
-                ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-1").expect("valid"),
+                ProposalCandidate::new("tx-1", "kamn:did:agent:aaa", 1, "state-1").expect("valid"),
             )
             .is_ok()
     );
     assert!(
         queue
             .enqueue(
-                ProposalCandidate::new("tx-2", "did:kamn:agent:bbb", 1, "state-1").expect("valid"),
+                ProposalCandidate::new("tx-2", "kamn:did:agent:bbb", 1, "state-1").expect("valid"),
             )
             .is_ok()
     );
@@ -819,7 +819,7 @@ fn integration_queue_drains_into_planner_without_order_loss() {
 
 #[test]
 fn unit_rejects_empty_candidate_id() {
-    let candidate = ProposalCandidate::new("", "did:kamn:agent:aaa", 1, "state-1");
+    let candidate = ProposalCandidate::new("", "kamn:did:agent:aaa", 1, "state-1");
     assert_eq!(candidate, Err(ProposalPlannerError::InvalidCandidateId));
 }
 
@@ -827,8 +827,8 @@ fn unit_rejects_empty_candidate_id() {
 fn regression_duplicate_candidate_id_is_rejected() {
     // Regression: #323
     let candidates = vec![
-        ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-1").expect("valid"),
-        ProposalCandidate::new("tx-1", "did:kamn:agent:bbb", 2, "state-1").expect("valid"),
+        ProposalCandidate::new("tx-1", "kamn:did:agent:aaa", 1, "state-1").expect("valid"),
+        ProposalCandidate::new("tx-1", "kamn:did:agent:bbb", 2, "state-1").expect("valid"),
     ];
     let planner = DeterministicProposalPlanner::new("state-1");
     let error = planner
@@ -844,7 +844,7 @@ fn regression_duplicate_candidate_id_is_rejected() {
 fn regression_stale_state_hash_is_rejected() {
     // Regression: #323
     let candidates =
-        vec![ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-2").expect("valid")];
+        vec![ProposalCandidate::new("tx-1", "kamn:did:agent:aaa", 1, "state-2").expect("valid")];
     let planner = DeterministicProposalPlanner::new("state-1");
     let error = planner
         .plan(candidates)

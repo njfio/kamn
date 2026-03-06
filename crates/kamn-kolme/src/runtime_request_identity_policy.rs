@@ -172,27 +172,37 @@ mod tests {
             deterministic_runtime_commit_idempotency_key(
                 " operation-123 ",
                 " state:abc ",
-                " did:kamn:agent:alpha ",
+                " kamn:did:agent:alpha ",
                 7,
                 " payload-hash "
             ),
-            "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:7061796c6f61642d68617368"
+            "kolme-runtime-commit:operation-123:state:abc:kamn:did:agent:alpha:7:7061796c6f61642d68617368"
         );
     }
 
     #[test]
     fn regression_issue_6202_commit_id_uses_payload_hash_value_component() {
-        let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
-        let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
+        let left = deterministic_runtime_commit_id("op-x", "kamn:did:agent:alpha", 3, "abc");
+        let right = deterministic_runtime_commit_id("op-x", "kamn:did:agent:alpha", 3, "xyz");
         assert_ne!(left, right);
     }
 
     #[test]
     fn regression_issue_6215_idempotency_key_uses_payload_hash_value_component() {
-        let left =
-            deterministic_runtime_commit_idempotency_key("op-x", "state:x", "did:agent", 3, "abc");
-        let right =
-            deterministic_runtime_commit_idempotency_key("op-x", "state:x", "did:agent", 3, "xyz");
+        let left = deterministic_runtime_commit_idempotency_key(
+            "op-x",
+            "state:x",
+            "kamn:did:agent:alpha",
+            3,
+            "abc",
+        );
+        let right = deterministic_runtime_commit_idempotency_key(
+            "op-x",
+            "state:x",
+            "kamn:did:agent:alpha",
+            3,
+            "xyz",
+        );
         assert_ne!(left, right);
     }
 
@@ -268,14 +278,14 @@ mod tests {
         let payload = render_runtime_commit_wire_payload(
             "op-11",
             "state:gamma",
-            "did:kamn:agent:gamma",
+            "kamn:did:agent:gamma",
             4,
             "payload:gamma",
             "idempotency:gamma",
         );
         assert_eq!(
             payload,
-            "operation_id=op-11\nstate_root=state:gamma\nactor_did=did:kamn:agent:gamma\nnonce=4\npayload_hash=payload:gamma\nidempotency_key=idempotency:gamma\n"
+            "operation_id=op-11\nstate_root=state:gamma\nactor_did=kamn:did:agent:gamma\nnonce=4\npayload_hash=payload:gamma\nidempotency_key=idempotency:gamma\n"
         );
     }
 
