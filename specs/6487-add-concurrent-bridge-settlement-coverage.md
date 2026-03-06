@@ -30,10 +30,10 @@ parallel.
 
 ## Acceptance criteria
 
-- [ ] A test proves concurrent evaluation of mixed final, pending, failed, and invalid proofs yields the expected decision for each proof
-- [ ] A test proves concurrent evaluation of the same final proof across multiple threads yields identical `Settle` decisions
-- [ ] A test proves concurrent evaluation of mixed pending and invalid proofs preserves pending decisions and typed invalid-proof rejection reasons
-- [ ] `cargo test -p kamn-bridges -- --nocapture` passes
+- [x] A test proves concurrent evaluation of mixed final, pending, failed, and invalid proofs yields the expected decision for each proof
+- [x] A test proves concurrent evaluation of the same final proof across multiple threads yields identical `Settle` decisions
+- [x] A test proves concurrent evaluation of mixed pending and invalid proofs preserves pending decisions and typed invalid-proof rejection reasons
+- [x] `cargo test -p kamn-bridges -- --nocapture` passes
 
 ## Files to touch
 
@@ -60,6 +60,15 @@ parallel.
   - `cargo test -p kamn-bridges --test concurrent_bridge_settlement_integration -- --nocapture`
   - `cargo test -p kamn-bridges -- --nocapture`
   - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` if test inventory changes
+
+## Phase 6 integration evidence
+
+- The real crate path is exercised via `cargo test -p kamn-bridges -- --nocapture`
+- New integration coverage landed in
+  `crates/kamn-bridges/tests/concurrent_bridge_settlement_integration.rs`
+- Contract coverage landed in
+  `crates/kamn-bridges/tests/concurrent_bridge_settlement_contract.rs`
+- The test inventory baseline was refreshed to account for the two new test targets
 
 ## Deviations
 
