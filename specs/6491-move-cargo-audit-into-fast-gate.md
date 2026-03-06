@@ -30,12 +30,12 @@ regressions surface before the slower `Workspace Pre-Merge Gate (PR)` lane compl
 
 ## Acceptance criteria
 
-- [ ] `Fast Gate (PR)` installs `cargo-audit` under the existing Rust-scope selector
-- [ ] `Fast Gate (PR)` runs `cargo audit --json > cargo-audit-report.json`
-- [ ] `Fast Gate (PR)` enforces the existing checker against `.ci/cargo-audit-waivers.json`
-- [ ] `Fast Gate (PR)` uploads `cargo-audit-report.json` and `ci-cargo-audit-policy.json` artifacts
-- [ ] CI docs/contracts record that cargo-audit feedback exists in `Fast Gate (PR)`
-- [ ] `cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract -- --nocapture` passes
+- [x] `Fast Gate (PR)` installs `cargo-audit` under the existing Rust-scope selector
+- [x] `Fast Gate (PR)` runs `cargo audit --json > cargo-audit-report.json`
+- [x] `Fast Gate (PR)` enforces the existing checker against `.ci/cargo-audit-waivers.json`
+- [x] `Fast Gate (PR)` uploads `cargo-audit-report.json` and `ci-cargo-audit-policy.json` artifacts
+- [x] CI docs/contracts record that cargo-audit feedback exists in `Fast Gate (PR)`
+- [x] `cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract -- --nocapture` passes
 
 ## Files to touch
 
@@ -58,10 +58,12 @@ regressions surface before the slower `Workspace Pre-Merge Gate (PR)` lane compl
 - Run:
   - `cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract -- --nocapture`
 
-## Phase 6 integration plan
+## Phase 6 integration evidence
 
-- Verify the integrated path through the real `ci-fast-gate` workflow file and strategy/ADR docs
-- Open a PR and rely on actual `Fast Gate (PR)` CI execution as final integration evidence
+- Verified the integrated path through the real `.github/workflows/ci-fast-gate.yml` entrypoint
+- Verified docs contracts via:
+  - `cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract -- --nocapture`
+- Final integrated evidence will be the actual `Fast Gate (PR)` execution attached to the PR
 
 ## Deviations
 
