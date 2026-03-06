@@ -29,11 +29,11 @@ format before any public-contract or parser behavior changes are attempted.
 
 ## Acceptance criteria
 
-- [ ] A document inventories both canonical `kamn:did:...` and divergent `did:kamn:...` shapes with concrete repo examples
-- [ ] The document states the target canonical format for future implementation work
-- [ ] The document records non-goals for the planning slice and follow-up implementation direction
-- [ ] A docs contract test pins the required DID divergence markers
-- [ ] `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture` passes
+- [x] A document inventories both canonical `kamn:did:...` and divergent `did:kamn:...` shapes with concrete repo examples
+- [x] The document states the target canonical format for future implementation work
+- [x] The document records non-goals for the planning slice and follow-up implementation direction
+- [x] A docs contract test pins the required DID divergence markers
+- [x] `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture` passes
 
 ## Files to touch
 
@@ -54,6 +54,13 @@ format before any public-contract or parser behavior changes are attempted.
 - Add/update architecture documentation with concrete examples of the two DID shapes
 - Run:
   - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
+
+## Phase 6 integration evidence
+
+- Existing `kamn-types` docs contract coverage now imports
+  `docs/architecture/did-format-standardization.md`
+- Full crate verification passed via `cargo test -p kamn-types -- --nocapture`
+- No runtime/parser wiring changed in this planning-only issue
 
 ## Deviations
 
