@@ -27,15 +27,15 @@ after Actions recovery.
 - The outage-recovery pattern disappears without test coverage.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: `AGENTS.md` instructs contributors to check GitHub Status when PR
+- [x] AC-1: `AGENTS.md` instructs contributors to check GitHub Status when PR
       checks are missing or workflow dispatch returns platform-level failures.
-- [ ] AC-2: `.github/CONTRIBUTING.md` documents the same GitHub Actions outage
+- [x] AC-2: `.github/CONTRIBUTING.md` documents the same GitHub Actions outage
       recovery pattern.
-- [ ] AC-3: The documented recovery pattern includes a safe retrigger step after
+- [x] AC-3: The documented recovery pattern includes a safe retrigger step after
       GitHub Actions recovery.
-- [ ] AC-4: A docs contract test enforces the required outage-recovery markers
+- [x] AC-4: A docs contract test enforces the required outage-recovery markers
       in both policy files.
-- [ ] AC-5: `cargo test -p kamn-core --test contributor_policy_ci_outage_docs`
+- [x] AC-5: `cargo test -p kamn-core --test contributor_policy_ci_outage_docs`
       passes.
 
 ## Files to touch
@@ -63,7 +63,14 @@ after Actions recovery.
   - Run the dedicated docs contract target.
 
 ## Phase 6 integration evidence
-- Pending.
+- No production entrypoint wiring was required because this issue changes
+  contributor policy only.
+- The guidance is integrated into the real repository contract surface through
+  `AGENTS.md` and `.github/CONTRIBUTING.md`.
+- The policy is enforced by the normal `kamn-core` integration test surface via
+  `cargo test -p kamn-core --test contributor_policy_ci_outage_docs -- --nocapture`.
+- Repository-wide test inventory governance remains integrated and green via
+  `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`.
 
 ## Deviations
 - Refreshed `fixtures/ci/test_file_size_policy_baseline.env` because adding the
