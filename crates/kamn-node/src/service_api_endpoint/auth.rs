@@ -23,15 +23,7 @@ pub(super) fn authorize_service_api_request(
     )
 }
 
-fn authorize_service_api_request_with_legacy_policy(
-    state: &ServiceApiRuntimeState,
-    request: &ParsedRequest,
-    replay_guard: &mut ServiceApiReplayGuard,
-    allow_legacy_sender_binding: bool,
-) -> Result<(), RequestAuthFailure> {
-    if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
-        return Ok(());
-    }
+fn require_valid_sender_did_header(request: &ParsedRequest) -> Result<&str, RequestAuthFailure> {
     let sender_did =
         header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
             RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
@@ -45,6 +37,19 @@ fn authorize_service_api_request_with_legacy_policy(
             format!("invalid sender did: {error}"),
         ))
     })?;
+    Ok(sender_did)
+}
+
+fn authorize_service_api_request_with_legacy_policy(
+    state: &ServiceApiRuntimeState,
+    request: &ParsedRequest,
+    replay_guard: &mut ServiceApiReplayGuard,
+    allow_legacy_sender_binding: bool,
+) -> Result<(), RequestAuthFailure> {
+    if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
+        return Ok(());
+    }
+    let sender_did = require_valid_sender_did_header(request)?;
     let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
         RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
             REASON_CODE_AUTH_NONCE_HEADER_MISSING,
@@ -701,5 +706,26 @@ mod tests {
             resolved,
             "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11"
         );
+    }
+
+    #[test]
+    fn regression_sender_did_header_rejects_legacy_did_shape() {
+        // Regression: #6502
+        let request = ParsedRequest {
+            method: "POST".to_owned(),
+            path: ROUTE_MESSAGES_SEND.to_owned(),
+            body: "{}".to_owned(),
+            headers: BTreeMap::from([(
+                REQUEST_AUTH_SENDER_DID_HEADER.to_owned(),
+                "did:kamn:agent:legacy-alpha".to_owned(),
+            )]),
+        };
+        let error = require_valid_sender_did_header(&request)
+            .expect_err("legacy did shape should fail closed at auth ingress");
+        let RequestAuthFailure::Unauthorized(error) = error else {
+            panic!("expected unauthorized auth failure");
+        };
+        assert_eq!(error.reason_code, REASON_CODE_AUTH_SENDER_DID_INVALID);
+        assert!(error.message.contains("invalid sender did"));
     }
 }
