@@ -16,12 +16,14 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(DID_FORMAT_DOC.contains("did_format_divergent_shape=did:kamn:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_target_standard=kamn:did:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_divergent_consumer_count=0"));
-    assert!(DID_FORMAT_DOC.contains("did_format_followup_scope=parser-compatibility-decision-only"));
+    assert!(DID_FORMAT_DOC.contains("did_format_followup_scope=approved-enforcement-issue-only"));
     assert!(DID_FORMAT_DOC.contains("did_format_divergent_reference_scope=inventory-only"));
     assert!(DID_FORMAT_DOC.contains("did_format_legacy_input_policy=direct-fail-closed"));
     assert!(DID_FORMAT_DOC.contains("did_format_policy_boundary=parser-and-api-ingress"));
     assert!(DID_FORMAT_DOC.contains("did_format_runtime_output_policy=canonical-only"));
-    assert!(DID_FORMAT_DOC.contains("did_format_policy_implementation_gate=approved-followup-required"));
+    assert!(
+        DID_FORMAT_DOC.contains("did_format_policy_implementation_gate=approved-followup-required")
+    );
     assert!(DID_FORMAT_DOC.contains("did_format_public_contract_gate=approval-required"));
     assert!(!DID_FORMAT_DOC.contains("did_format_divergent_consumer=docs/"));
 }

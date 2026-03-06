@@ -9,8 +9,12 @@ format before any parser or public-contract changes are attempted.
 - `did_format_divergent_shape=did:kamn:{role}:{id}`
 - `did_format_target_standard=kamn:did:{role}:{id}`
 - `did_format_divergent_consumer_count=0`
-- `did_format_followup_scope=parser-compatibility-decision-only`
+- `did_format_followup_scope=approved-enforcement-issue-only`
 - `did_format_divergent_reference_scope=inventory-only`
+- `did_format_legacy_input_policy=direct-fail-closed`
+- `did_format_policy_boundary=parser-and-api-ingress`
+- `did_format_runtime_output_policy=canonical-only`
+- `did_format_policy_implementation_gate=approved-followup-required`
 - `did_format_public_contract_gate=approval-required`
 
 ## Current State
@@ -51,6 +55,24 @@ Reasoning:
 - this is the format exposed by `kamn-types` as the shared identity boundary
 - this keeps crate, SDK, and architecture docs aligned with the existing canonical parser surface
 
+## Legacy Input Policy
+
+- `did_format_legacy_input_policy=direct-fail-closed`
+- `did_format_policy_boundary=parser-and-api-ingress`
+- `did_format_runtime_output_policy=canonical-only`
+- `did_format_policy_implementation_gate=approved-followup-required`
+
+Policy decision:
+
+- legacy `did:kamn:...` inputs are not approved as a long-term compatibility shape
+- the intended enforcement target is direct fail-closed rejection at shared parser boundaries and
+  API ingress points that accept DID strings
+- runtime, API, CLI, SDK, and documentation outputs must remain canonical-only:
+  `kamn:did:{role}:{id}`
+- any implementation issue that enforces this policy must first audit affected parser helpers,
+  ingress surfaces, rollout notes, and migration guidance under a separate approved public-contract
+  change
+
 ## Non-Goals For Issue 6489
 
 - no parser or runtime behavior changes
@@ -59,10 +81,10 @@ Reasoning:
 
 ## Follow-Up Direction
 
-- decide whether any legacy `did:kamn:...` inputs need a temporary compatibility window or direct
-  fail-closed rejection under a separate approved issue
-- if parser or API-contract enforcement changes are approved, update migration guidance and public
-  contract documentation in the same issue
+- audit the exact parser helpers, API ingress surfaces, and runtime boundaries that still need an
+  explicit enforcement plan
+- implement direct fail-closed rejection only under a separate approved public-contract issue that
+  updates migration guidance and rollout communication in the same change
 
 ## Decision Gate
 
