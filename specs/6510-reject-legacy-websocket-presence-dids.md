@@ -46,3 +46,25 @@ Reject legacy `did:kamn:...` presence owner, target-owner, and target-agent head
 - Assert canonical presence DID header values still succeed.
 - Assert websocket reason taxonomy tests observe the new invalid-header codes.
 - Run targeted `kamn-node` websocket contract tests covering the new rejection path and an existing canonical presence success path.
+
+## Integration notes
+- Real ingress wiring remains in `crates/kamn-node/src/service_api_endpoint/websocket.rs` through the websocket upgrade path and `project_presence_mode_payload`.
+- Presence owner and target-owner headers now validate as `KamnDid` before M9 projection is invoked.
+- Presence target-agent header now validates as `AgentDid` before M9 projection is invoked.
+- The websocket reason taxonomy inventory now includes the new invalid-header reason codes exposed at the websocket boundary.
+
+## Verification evidence
+- Red:
+  - `cargo test -p kamn-node websocket_reason_taxonomy_includes_presence_did_invalid_headers -- --nocapture`
+  - `cargo test -p kamn-node websocket_presence_mode_rejects_legacy -- --nocapture`
+  - Observed failures before implementation:
+    - websocket taxonomy missing the invalid-header codes
+    - legacy presence DID headers were rejected only after falling into M9 projection with downstream `m9_*` reason codes
+- Green/Integration:
+  - `cargo clippy -p kamn-node --tests -- -D warnings`
+  - `cargo test -p kamn-node websocket_reason_taxonomy_includes_presence_did_invalid_headers -- --nocapture`
+  - `cargo test -p kamn-node websocket_presence_mode_rejects_legacy -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event -- --nocapture`
+
+## Deviations
+- None
