@@ -181,3 +181,9 @@ a
 - Re-read the issue and spec and research
 - Propose clarifying questions or spec amendments
 - Do NOT guess. Do NOT write speculative code.
+
+## GitHub Actions Outage Recovery
+- If PR checks disappear or workflow dispatch fails with `HTTP 500`, check GitHub Status first: `https://www.githubstatus.com/`.
+- During an active Actions incident, treat missing check suites as a platform failure first. Do not rewrite workflows or branch logic first.
+- After Actions recovery, retrigger CI with a fresh PR event, for example `git commit --allow-empty -m "chore(<issue>): retrigger ci after actions outage"` and `git push`.
+- Re-evaluate only after new checks attach to the current head SHA.
