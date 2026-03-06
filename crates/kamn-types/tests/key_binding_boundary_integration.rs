@@ -5,8 +5,7 @@ use kamn_types::{
     KamnDidError, SharedDidParseError,
 };
 
-const PUBLIC_KEY_HEX: &str =
-    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+const PUBLIC_KEY_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
 #[test]
 fn integration_top_level_and_module_key_binding_generation_match() {
