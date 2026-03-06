@@ -21,6 +21,7 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(DID_FORMAT_DOC.contains("did_format_legacy_input_policy=direct-fail-closed"));
     assert!(DID_FORMAT_DOC.contains("did_format_policy_boundary=parser-and-api-ingress"));
     assert!(DID_FORMAT_DOC.contains("did_format_runtime_output_policy=canonical-only"));
+    assert!(DID_FORMAT_DOC.contains("did_format_normalization_policy=no-silent-rewrite"));
     assert!(
         DID_FORMAT_DOC.contains("did_format_policy_implementation_gate=approved-followup-required")
     );

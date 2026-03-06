@@ -14,6 +14,7 @@ format before any parser or public-contract changes are attempted.
 - `did_format_legacy_input_policy=direct-fail-closed`
 - `did_format_policy_boundary=parser-and-api-ingress`
 - `did_format_runtime_output_policy=canonical-only`
+- `did_format_normalization_policy=no-silent-rewrite`
 - `did_format_policy_implementation_gate=approved-followup-required`
 - `did_format_public_contract_gate=approval-required`
 
@@ -60,6 +61,7 @@ Reasoning:
 - `did_format_legacy_input_policy=direct-fail-closed`
 - `did_format_policy_boundary=parser-and-api-ingress`
 - `did_format_runtime_output_policy=canonical-only`
+- `did_format_normalization_policy=no-silent-rewrite`
 - `did_format_policy_implementation_gate=approved-followup-required`
 
 Policy decision:
@@ -67,6 +69,8 @@ Policy decision:
 - legacy `did:kamn:...` inputs are not approved as a long-term compatibility shape
 - the intended enforcement target is direct fail-closed rejection at shared parser boundaries and
   API ingress points that accept DID strings
+- no shared parser or ingress path should silently rewrite `did:kamn:...` into canonical
+  `kamn:did:...` behind the caller's back
 - runtime, API, CLI, SDK, and documentation outputs must remain canonical-only:
   `kamn:did:{role}:{id}`
 - any implementation issue that enforces this policy must first audit affected parser helpers,
