@@ -6269,7 +6269,10 @@ fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids() {
         &[
             ("X-KAMN-Sender-DID", caller_did),
             ("X-KAMN-Request-Nonce", "51"),
-            ("X-KAMN-Request-Signature", legacy_recipient_signature.as_str()),
+            (
+                "X-KAMN-Request-Signature",
+                legacy_recipient_signature.as_str(),
+            ),
         ],
     );
     assert!(legacy_recipient_response.contains("HTTP/1.1 400 Bad Request"));
@@ -6317,8 +6320,12 @@ fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids() {
         "legacy relay sender rejection should explain the invalid sender boundary"
     );
 
-    let canonical_signature =
-        service_api_request_signature_for_fields(caller_did, 53, state_hash.as_str(), canonical_body);
+    let canonical_signature = service_api_request_signature_for_fields(
+        caller_did,
+        53,
+        state_hash.as_str(),
+        canonical_body,
+    );
     let canonical_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "POST",
@@ -6345,7 +6352,11 @@ fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids() {
     let messages = state_json["messages"]
         .as_object()
         .expect("messages snapshot should be an object");
-    assert_eq!(messages.len(), 1, "only canonical relay payloads should persist");
+    assert_eq!(
+        messages.len(),
+        1,
+        "only canonical relay payloads should persist"
+    );
     assert!(
         messages.contains_key("msg-relay-canonical"),
         "canonical relay payload should persist under its message id"
