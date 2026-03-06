@@ -951,11 +951,8 @@ pub(super) async fn handle_service_api_http_route(
                 };
             }
             Err(error) => {
-                return super::payload::json_error_response(
-                    StatusCode::BAD_REQUEST,
-                    "bad-request",
-                    error.reason_code,
-                    error.message.as_str(),
+                return super::payload::contract_response(
+                    super::payload::invalid_agent_did_path_endpoint_response(&error),
                 );
             }
             Ok(None) => {}

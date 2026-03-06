@@ -330,24 +330,17 @@ pub(super) fn render_service_api_endpoint_response(
         }
         match canonical_agent_path_id(path) {
             Ok(Some(agent_did)) => {
-            let payload = ServiceApiAgentGetBody {
-                did: agent_did.to_owned(),
-                reputation_score: 500,
-            };
-            return ServiceApiEndpointResponse {
-                status_code: 200,
-                content_type: "application/json",
-                body: serialize_service_api_json(&payload),
-            };
+                let payload = ServiceApiAgentGetBody {
+                    did: agent_did.to_owned(),
+                    reputation_score: 500,
+                };
+                return ServiceApiEndpointResponse {
+                    status_code: 200,
+                    content_type: "application/json",
+                    body: serialize_service_api_json(&payload),
+                };
             }
-            Err(error) => {
-                return json_error_endpoint_response(
-                    StatusCode::BAD_REQUEST,
-                    "bad-request",
-                    error.reason_code,
-                    error.message.as_str(),
-                );
-            }
+            Err(error) => return invalid_agent_did_path_endpoint_response(&error),
             Ok(None) => {}
         }
     }
@@ -511,6 +504,17 @@ pub(super) fn canonical_agent_path_id(path: &str) -> Result<Option<&str>, Servic
         )
     })?;
     Ok(Some(agent_did))
+}
+
+pub(super) fn invalid_agent_did_path_endpoint_response(
+    error: &ServiceApiReasonedError,
+) -> ServiceApiEndpointResponse {
+    json_error_endpoint_response(
+        StatusCode::BAD_REQUEST,
+        "bad-request",
+        error.reason_code,
+        error.message.as_str(),
+    )
 }
 
 pub(super) fn contract_response(response: ServiceApiEndpointResponse) -> Response {
