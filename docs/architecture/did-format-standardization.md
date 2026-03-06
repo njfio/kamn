@@ -10,6 +10,7 @@ format before any parser or public-contract changes are attempted.
 - `did_format_target_standard=kamn:did:{role}:{id}`
 - `did_format_divergent_consumer_count=0`
 - `did_format_followup_scope=parser-compatibility-decision-only`
+- `did_format_divergent_reference_scope=inventory-only`
 - `did_format_public_contract_gate=approval-required`
 
 ## Current State
