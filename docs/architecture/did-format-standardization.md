@@ -34,12 +34,12 @@ The repository still contains a divergent shape:
 
 Concrete divergent consumers currently include:
 
-- `did_format_divergent_consumer=crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs`
-- `did_format_divergent_consumer=crates/kamn-node/src/main_tests/cli_contract_tests.rs`
-- `did_format_divergent_consumer=docs/foundation/node-runtime-cli.md`
+- `did_format_divergent_consumer=docs/foundation/reputation-signal-routing.md`
+- `did_format_divergent_consumer=docs/foundation/audit-export-interfaces.md`
+- `did_format_divergent_consumer=docs/foundation/reputation-state-model.md`
 
-These usages show the divergence is not limited to docs; it still appears in node CLI/test
-surfaces even after the Kolme/runtime-request helper fixtures were standardized.
+These usages show the divergence is now concentrated in documentation/examples after the runtime
+and node test fixtures were standardized.
 
 ## Target Standard
 Future implementation work should standardize on:
@@ -62,7 +62,7 @@ Reasoning:
 
 - decide whether divergent `did:kamn:...` inputs need a temporary compatibility window or direct
   cleanup
-- update remaining node CLI/proposal/test call sites to emit canonical `kamn:did:{role}:{id}`
+- update remaining documentation/example call sites to emit canonical `kamn:did:{role}:{id}`
   values
 - only then consider parser or API-contract enforcement changes under a separate approved issue
 

@@ -106,7 +106,7 @@ fn rejects_planning_without_expected_state_hash() {
         "--runtime-mode".to_owned(),
         "planning".to_owned(),
         "--proposal".to_owned(),
-        "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+        "tx-1|kamn:did:agent:aaa|1|state-1".to_owned(),
     ];
     assert_eq!(
         parse_args(args),
@@ -1039,12 +1039,12 @@ fn rejects_malformed_proposal_argument() {
         "--expected-state-hash".to_owned(),
         "state-1".to_owned(),
         "--proposal".to_owned(),
-        "tx-1|did:kamn:agent:aaa|state-1".to_owned(),
+        "tx-1|kamn:did:agent:aaa|state-1".to_owned(),
     ];
     assert_eq!(
         parse_args(args),
         Err(ConfigError::InvalidProposalArgument(
-            "tx-1|did:kamn:agent:aaa|state-1".to_owned()
+            "tx-1|kamn:did:agent:aaa|state-1".to_owned()
         ))
     );
 }
@@ -1165,9 +1165,9 @@ fn regression_runtime_planning_rejects_duplicate_candidate_ids() {
         "--expected-state-hash".to_owned(),
         "state-1".to_owned(),
         "--proposal".to_owned(),
-        "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+        "tx-1|kamn:did:agent:aaa|1|state-1".to_owned(),
         "--proposal".to_owned(),
-        "tx-1|did:kamn:agent:bbb|2|state-1".to_owned(),
+        "tx-1|kamn:did:agent:bbb|2|state-1".to_owned(),
     ];
     let parsed = parse_args(args).expect("planning args should parse");
     assert_eq!(
@@ -1190,7 +1190,7 @@ fn regression_runtime_planning_rejects_stale_state_hash() {
         "--expected-state-hash".to_owned(),
         "state-1".to_owned(),
         "--proposal".to_owned(),
-        "tx-1|did:kamn:agent:aaa|1|state-2".to_owned(),
+        "tx-1|kamn:did:agent:aaa|1|state-2".to_owned(),
     ];
     let parsed = parse_args(args).expect("planning args should parse");
     assert_eq!(
