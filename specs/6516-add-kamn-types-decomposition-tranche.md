@@ -26,12 +26,12 @@ targets.
 - Architecture index linkage regresses.
 
 ## Acceptance criteria
-- [ ] The roadmap table includes an explicit `kamn-types` extraction tranche.
-- [ ] `kamn_core_decomposition_tranche_count` and `kamn_core_decomposition_target_crates_csv`
+- [x] The roadmap table includes an explicit `kamn-types` extraction tranche.
+- [x] `kamn_core_decomposition_tranche_count` and `kamn_core_decomposition_target_crates_csv`
       include the new `kamn-types` tranche.
-- [ ] The hotspot table no longer relies on an implicit `kamn-types` follow-up outside the tracked
+- [x] The hotspot table no longer relies on an implicit `kamn-types` follow-up outside the tracked
       tranche roadmap.
-- [ ] Existing docs contracts and architecture index linkage pass.
+- [x] Existing docs contracts and architecture index linkage pass.
 
 ## Files to touch
 - `docs/architecture/kamn-core-module-map.md`
@@ -56,4 +56,10 @@ targets.
 - None.
 
 ## Execution Evidence
-- Pending.
+- Red:
+  - `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
+- Green:
+  - `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
+- Refactor / Integration:
+  - `cargo fmt --all --check`
+  - `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
