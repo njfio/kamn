@@ -25,12 +25,12 @@ Standardize the remaining `kamn-node` planning-mode proposal fixtures and comman
 - Focused tests pass only because assertions were weakened rather than because fixtures were standardized.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs` uses canonical `kamn:did:agent:*` proposal fixtures.
-- [ ] `crates/kamn-node/src/main_tests/cli_contract_tests.rs` uses canonical `kamn:did:agent:*` proposal fixtures.
-- [ ] `crates/kamn-node/src/main_tests/report_tests.rs` uses canonical `kamn:did:agent:*` proposal fixtures where planning proposals are asserted.
-- [ ] `docs/foundation/node-runtime-cli.md` uses canonical `kamn:did:agent:*` planning-mode examples.
-- [ ] `docs/architecture/did-format-standardization.md` no longer lists the cleaned node fixtures as current divergent consumers.
-- [ ] Focused test/doc contract commands pass locally.
+- [x] `crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs` uses canonical `kamn:did:agent:*` proposal fixtures.
+- [x] `crates/kamn-node/src/main_tests/cli_contract_tests.rs` uses canonical `kamn:did:agent:*` proposal fixtures.
+- [x] `crates/kamn-node/src/main_tests/report_tests.rs` uses canonical `kamn:did:agent:*` proposal fixtures where planning proposals are asserted.
+- [x] `docs/foundation/node-runtime-cli.md` uses canonical `kamn:did:agent:*` planning-mode examples.
+- [x] `docs/architecture/did-format-standardization.md` no longer lists the cleaned node fixtures as current divergent consumers.
+- [x] Focused test/doc contract commands pass locally.
 
 ## Files to touch
 - `crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs`
@@ -39,6 +39,7 @@ Standardize the remaining `kamn-node` planning-mode proposal fixtures and comman
 - `docs/foundation/node-runtime-cli.md`
 - `docs/architecture/did-format-standardization.md`
 - `crates/kamn-types/tests/identity_boundary_contract.rs`
+- `crates/kamn-node/tests/node_runtime_cli_docs.rs`
 - `specs/6496-standardize-node-planning-proposal-dids.md`
 
 ## Error semantics
@@ -50,9 +51,24 @@ Standardize the remaining `kamn-node` planning-mode proposal fixtures and comman
 - Red:
   - update focused node/doc fixtures to canonical `kamn:did:...` values and verify whether existing parsing logic already accepts them
 - Green:
-  - `cargo test -p kamn-node runtime_mode_and_transport_profile_tests -- --nocapture`
+  - `cargo test -p kamn-node parses_runtime_mode_planning_with_proposals -- --nocapture`
   - `cargo test -p kamn-node cli_contract_tests -- --nocapture`
   - `cargo test -p kamn-node report_tests -- --nocapture`
+  - `cargo test -p kamn-node --test node_runtime_cli_docs doc_contains_runtime_mode_command_examples -- --exact --nocapture`
   - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
 - Refactor:
   - rerun the focused commands after inventory/doc cleanup
+
+## Deviations
+- Red-phase investigation showed the node planning parser and runtime reporting logic already
+  accepted canonical `kamn:did:...` proposal values, so no implementation change was required.
+- To keep the doc cleanup from drifting back, this issue also tightened
+  `crates/kamn-node/tests/node_runtime_cli_docs.rs` to assert the exact canonical planning-mode
+  example string.
+
+## Execution Evidence
+- `cargo test -p kamn-node parses_runtime_mode_planning_with_proposals -- --nocapture`
+- `cargo test -p kamn-node cli_contract_tests -- --nocapture`
+- `cargo test -p kamn-node report_tests -- --nocapture`
+- `cargo test -p kamn-node --test node_runtime_cli_docs doc_contains_runtime_mode_command_examples -- --exact --nocapture`
+- `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
