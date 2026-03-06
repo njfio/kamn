@@ -955,6 +955,26 @@ fn regression_service_request_auth_rejects_crlf_signature_payload() {
 }
 
 #[test]
+fn regression_service_api_client_rejects_legacy_agent_profile_did() {
+    // Regression: #6514
+    ensure_test_service_auth_private_key();
+    let client = ServiceApiClient::connect("http://127.0.0.1:1").expect("client should construct");
+    let sender = AgentDid::parse("kamn:did:agent:sdk-legacy-agent-profile").expect("did");
+    let auth = auth_with_scope(&sender, 1, "", "agents:read");
+
+    let error = client
+        .get_agent_profile("did:kamn:agent:alice", &auth)
+        .expect_err("legacy did must fail closed before request emission");
+    assert_eq!(
+        error,
+        SdkError::InvalidInput {
+            field: "did",
+            reason: "must start with kamn:did:agent:",
+        }
+    );
+}
+
+#[test]
 fn regression_service_api_client_rejects_crlf_agent_did_route_payload() {
     // Regression: #6228
     ensure_test_service_auth_private_key();
