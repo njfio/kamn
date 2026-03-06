@@ -30,17 +30,17 @@ Standardize the remaining documented example call sites that still use the diver
 - Search results still show non-intentional `did:kamn:` usage outside the DID inventory document.
 
 ## Acceptance criteria
-- [ ] `docs/foundation/reputation-signal-routing.md` uses canonical `kamn:did:...` examples.
-- [ ] `docs/foundation/audit-export-interfaces.md` uses canonical `kamn:did:...` examples.
-- [ ] `docs/foundation/reputation-state-model.md` uses canonical `kamn:did:...` examples.
-- [ ] `docs/foundation/release-gonogo-checklist.md` uses canonical `kamn:did:...` examples.
-- [ ] `docs/foundation/data-classification-tagging.md` uses canonical `kamn:did:...` examples.
-- [ ] existing doc contract tests pin the canonical examples in each affected document.
-- [ ] `docs/architecture/did-format-standardization.md` records that no active divergent doc
+- [x] `docs/foundation/reputation-signal-routing.md` uses canonical `kamn:did:...` examples.
+- [x] `docs/foundation/audit-export-interfaces.md` uses canonical `kamn:did:...` examples.
+- [x] `docs/foundation/reputation-state-model.md` uses canonical `kamn:did:...` examples.
+- [x] `docs/foundation/release-gonogo-checklist.md` uses canonical `kamn:did:...` examples.
+- [x] `docs/foundation/data-classification-tagging.md` uses canonical `kamn:did:...` examples.
+- [x] existing doc contract tests pin the canonical examples in each affected document.
+- [x] `docs/architecture/did-format-standardization.md` records that no active divergent doc
       consumers remain outside the intentional divergence-description section.
-- [ ] `crates/kamn-types/tests/identity_boundary_contract.rs` matches the zero-active-consumer
+- [x] `crates/kamn-types/tests/identity_boundary_contract.rs` matches the zero-active-consumer
       inventory state.
-- [ ] Focused doc contract commands pass locally.
+- [x] Focused doc contract commands pass locally.
 
 ## Files to touch
 - `docs/foundation/reputation-signal-routing.md`
@@ -75,4 +75,28 @@ Standardize the remaining documented example call sites that still use the diver
   - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
 - Refactor:
   - rerun the focused commands after inventory and doc cleanup
-  - run `rg -n "did:kamn:" docs crates` to verify only intentional inventory references remain
+  - run `rg -n "did:kamn:" docs` to verify only intentional inventory references remain
+
+## Deviations
+- The existing repository already had doc contract tests covering every affected document, so this
+  issue extended those contract surfaces instead of introducing new standalone doc test files.
+- The DID inventory document now carries machine-readable zero-consumer and inventory-only markers
+  so the remaining deprecated token references are explicitly scoped to documentation inventory
+  text, not active example call sites.
+
+## Execution Evidence
+- Red:
+  - `cargo test -p kamn-core --test docs_contract_wave4_harness reputation_signal_routing_docs::regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test reputation_state_model_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test audit_export_interfaces_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test release_gonogo_checklist_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test data_classification_tagging_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
+- Green / Refactor / Integration:
+  - `cargo test -p kamn-core --test docs_contract_wave4_harness reputation_signal_routing_docs::regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test reputation_state_model_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test audit_export_interfaces_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test release_gonogo_checklist_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-core --test data_classification_tagging_docs regression_requires_canonical_did_examples -- --exact --nocapture`
+  - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
+  - `rg -n "did:kamn:" docs | sed -n '1,200p'`
