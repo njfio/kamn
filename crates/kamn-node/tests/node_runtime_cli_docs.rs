@@ -310,6 +310,9 @@ fn doc_contains_runtime_recovery_check_rules() {
 #[test]
 fn doc_contains_runtime_mode_command_examples() {
     assert!(DOC.contains("`kamn-node --role processor --runtime-mode planning`"));
+    assert!(DOC.contains(
+        "`kamn-node --role processor --runtime-mode planning --expected-state-hash state-1 --proposal tx-1|kamn:did:agent:aaa|1|state-1`"
+    ));
     assert!(DOC.contains("`kamn-node --role processor --runtime-mode recovery-check`"));
     assert!(DOC.contains("`kamn-node --role processor --runtime-mode daemon`"));
 }

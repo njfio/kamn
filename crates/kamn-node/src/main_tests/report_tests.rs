@@ -220,9 +220,9 @@ fn integration_runtime_planning_renders_sorted_candidate_ids() {
         "--output".to_owned(),
         "json".to_owned(),
         "--proposal".to_owned(),
-        "tx-2|did:kamn:agent:bbb|2|state-1".to_owned(),
+        "tx-2|kamn:did:agent:bbb|2|state-1".to_owned(),
         "--proposal".to_owned(),
-        "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+        "tx-1|kamn:did:agent:aaa|1|state-1".to_owned(),
     ];
 
     let parsed = parse_args(args).expect("planning args should parse");
