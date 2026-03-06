@@ -15,11 +15,15 @@ test_harness_require_executable "$CHECKER" "expected live-https dependency postu
 
 test_harness_require_executable "$PY_CHECKER" "expected live-https dependency posture checker module to be executable"
 
+run_checker() {
+  bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" "$@"
+}
+
 REPORT_FILE="$(mktemp)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR" "$REPORT_FILE"' EXIT
 
-pass_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --output-json "$REPORT_FILE")"
+pass_output="$(run_checker --output-json "$REPORT_FILE")"
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1$'; then
   echo "expected deterministic reason taxonomy marker on pass output" >&2
   exit 1
@@ -57,7 +61,7 @@ cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$MANIFEST_FIXTURE"
 sed -i 's/rustls-pemfile = { workspace = true, optional = true }/rustls-pemfile = { workspace = true, optional = false }/' "$MANIFEST_FIXTURE"
 
 set +e
-manifest_failure_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
+manifest_failure_output="$(run_checker --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
 manifest_failure_code=$?
 set -e
 
@@ -104,7 +108,7 @@ path.write_text(content, encoding="utf-8")
 PY
 
 set +e
-root_drift_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+root_drift_output="$(run_checker --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
 root_drift_code=$?
 set -e
 
@@ -146,7 +150,7 @@ path.write_text(content, encoding="utf-8")
 PY
 
 set +e
-rustls_drift_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --cargo-manifest "$RUSTLS_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+rustls_drift_output="$(run_checker --cargo-manifest "$RUSTLS_DRIFT_MANIFEST_FIXTURE" 2>&1)"
 rustls_drift_code=$?
 set -e
 
@@ -173,7 +177,7 @@ cp "$ROOT_DIR/README.md" "$README_FIXTURE"
 sed -i '/adr-kamn-core-live-tls-transport.md/d' "$README_FIXTURE"
 
 set +e
-readme_failure_output="$(bash "$CHECKER" --readme "$README_FIXTURE" 2>&1)"
+readme_failure_output="$(run_checker --readme "$README_FIXTURE" 2>&1)"
 readme_failure_code=$?
 set -e
 
@@ -196,7 +200,7 @@ cp "$ROOT_DIR/README.md" "$README_DEP_DRIFT_FIXTURE"
 sed -i '/`webpki-roots`/d' "$README_DEP_DRIFT_FIXTURE"
 
 set +e
-readme_dep_drift_output="$(bash "$CHECKER" --readme "$README_DEP_DRIFT_FIXTURE" 2>&1)"
+readme_dep_drift_output="$(run_checker --readme "$README_DEP_DRIFT_FIXTURE" 2>&1)"
 readme_dep_drift_code=$?
 set -e
 
@@ -227,7 +231,7 @@ cp "$ROOT_DIR/docs/ci/strategy.md" "$CI_STRATEGY_DRIFT_FIXTURE"
 sed -i '/cargo check -p kamn-core --no-default-features/d' "$CI_STRATEGY_DRIFT_FIXTURE"
 
 set +e
-ci_strategy_drift_output="$(bash "$CHECKER" --ci-strategy "$CI_STRATEGY_DRIFT_FIXTURE" 2>&1)"
+ci_strategy_drift_output="$(run_checker --ci-strategy "$CI_STRATEGY_DRIFT_FIXTURE" 2>&1)"
 ci_strategy_drift_code=$?
 set -e
 
