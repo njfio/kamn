@@ -25,11 +25,11 @@ fails closed at the client boundary before emitting `/v1/agents/{did}` requests.
 - The SDK silently rewrites legacy DID inputs instead of failing closed.
 
 ## Acceptance criteria
-- [ ] `get_agent_profile()` rejects legacy `did:kamn:agent:*` values before request emission.
-- [ ] Canonical `kamn:did:agent:*` agent-profile requests still succeed through the existing route
+- [x] `get_agent_profile()` rejects legacy `did:kamn:agent:*` values before request emission.
+- [x] Canonical `kamn:did:agent:*` agent-profile requests still succeed through the existing route
       path.
-- [ ] Existing CRLF route-segment rejection remains unchanged.
-- [ ] SDK tests cover both the legacy rejection path and canonical acceptance path.
+- [x] Existing CRLF route-segment rejection remains unchanged.
+- [x] SDK tests cover both the legacy rejection path and canonical acceptance path.
 
 ## Files to touch
 - `crates/kamn-sdk/src/service_client_bridge_misc_routes.rs`
@@ -56,4 +56,12 @@ fails closed at the client boundary before emitting `/v1/agents/{did}` requests.
 - None.
 
 ## Execution Evidence
-- Pending.
+- Red:
+  - `cargo test -p kamn-sdk regression_service_api_client_rejects_legacy_agent_profile_did -- --nocapture`
+- Green:
+  - `cargo test -p kamn-sdk regression_service_api_client_rejects_legacy_agent_profile_did -- --nocapture`
+  - `cargo test -p kamn-sdk regression_service_api_client_rejects_crlf_agent_did_route_payload -- --nocapture`
+  - `cargo test -p kamn-sdk functional_service_api_client_executes_signed_http_route_contracts -- --nocapture`
+- Refactor / Integration:
+  - `cargo test -p kamn-sdk service_api_client -- --nocapture`
+  - `cargo clippy -p kamn-sdk --tests -- -D warnings`
