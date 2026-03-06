@@ -100,6 +100,8 @@ const SERVICE_API_AUTH_SCOPE_HEADER_MISSING_REASON_CODE: &str =
     "service_api_auth_scope_header_missing";
 const SERVICE_API_AUTH_SCOPE_INVALID_REASON_CODE: &str = "service_api_auth_scope_invalid";
 const SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE: &str = "service_api_agent_did_path_invalid";
+const SERVICE_API_MESSAGE_RECIPIENT_DID_INVALID_REASON_CODE: &str =
+    "service_api_message_recipient_did_invalid";
 const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
     "service_api_auth_scope_route_mismatch";
 const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
@@ -5648,6 +5650,165 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         "delivered",
         "recipient retrieval should deterministically advance relayed message to delivered"
     );
+
+    let _ = fs::remove_file(state_file);
+    let _ = fs::remove_file(relay_spool_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids() {
+    let _env = acquire_service_api_test_env();
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-legacy-recipient-state-{unique_suffix}.json"
+    ));
+    let relay_spool_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-legacy-recipient-spool-{unique_suffix}.ndjson"
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+    let _relay_spool_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+        Some(relay_spool_file_str.as_str()),
+    );
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34122".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let sender_did = "kamn:did:agent:legacy-recipient-sender";
+    let canonical_recipient_did = "kamn:did:agent:legacy-recipient-target";
+    let legacy_send_body =
+        r#"{"recipient_did":"did:kamn:agent:legacy-alpha","message":"reject-me"}"#;
+    let canonical_send_body =
+        format!(r#"{{"recipient_did":"{canonical_recipient_did}","message":"accept-me"}}"#);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let legacy_signature = service_api_request_signature_for_fields(
+        sender_did,
+        41,
+        state_hash.as_str(),
+        legacy_send_body,
+    );
+    let legacy_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        legacy_send_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "41"),
+            ("X-KAMN-Request-Signature", legacy_signature.as_str()),
+        ],
+    );
+    assert!(legacy_response.contains("HTTP/1.1 400 Bad Request"));
+    let legacy_payload = parse_error_envelope_from_http_response(legacy_response.as_str());
+    assert_eq!(
+        legacy_payload.reason_code,
+        SERVICE_API_MESSAGE_RECIPIENT_DID_INVALID_REASON_CODE
+    );
+    assert!(
+        legacy_payload.message.contains("invalid recipient did"),
+        "legacy recipient did rejection should explain the invalid recipient boundary"
+    );
+
+    let canonical_signature = service_api_request_signature_for_fields(
+        sender_did,
+        42,
+        state_hash.as_str(),
+        canonical_send_body.as_str(),
+    );
+    let canonical_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        canonical_send_body.as_str(),
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "42"),
+            ("X-KAMN-Request-Signature", canonical_signature.as_str()),
+        ],
+    );
+    assert!(canonical_response.contains("HTTP/1.1 202 Accepted"));
+    let canonical_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(canonical_response.as_str()))
+            .expect("canonical send payload should deserialize");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after legacy recipient rejection flow"
+    );
+
+    let state_payload =
+        fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+    let state_json: Value =
+        serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+    let messages = state_json["messages"]
+        .as_object()
+        .expect("messages snapshot should be an object");
+    assert_eq!(messages.len(), 1, "only canonical sends should persist");
+    let persisted_message = messages
+        .values()
+        .next()
+        .expect("canonical send should persist exactly one message");
+    assert_eq!(
+        persisted_message["message_id"],
+        canonical_payload.message_id
+    );
+    assert_eq!(persisted_message["recipient_did"], canonical_recipient_did);
+    assert_eq!(persisted_message["sender_did"], sender_did);
+
+    let relay_spool_payload = fs::read_to_string(relay_spool_file.as_path())
+        .expect("relay spool should remain readable after canonical send");
+    let relay_lines: Vec<&str> = relay_spool_payload
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    assert_eq!(
+        relay_lines.len(),
+        1,
+        "only canonical sends should enqueue relay spool entries"
+    );
+    let relay_entry_json: Value =
+        serde_json::from_str(relay_lines[0]).expect("relay spool entry should deserialize");
+    assert_eq!(relay_entry_json["message_id"], canonical_payload.message_id);
+    assert_eq!(relay_entry_json["recipient_did"], canonical_recipient_did);
 
     let _ = fs::remove_file(state_file);
     let _ = fs::remove_file(relay_spool_file);

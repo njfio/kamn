@@ -543,8 +543,19 @@ pub(super) async fn handle_service_api_http_route(
     if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_MESSAGES_SEND
     {
         let channel_id = extract_channel_id_from_payload(context.parsed_request.body.as_str());
-        let recipient_did =
-            extract_recipient_did_from_payload(context.parsed_request.body.as_str());
+        let recipient_did = match extract_canonical_recipient_did_from_payload(
+            context.parsed_request.body.as_str(),
+        ) {
+            Ok(recipient_did) => recipient_did,
+            Err(error) => {
+                return super::payload::json_error_response(
+                    StatusCode::BAD_REQUEST,
+                    "bad-request",
+                    error.reason_code,
+                    error.message.as_str(),
+                );
+            }
+        };
         let sender_did = super::auth::header_value(
             &context.parsed_request.headers,
             REQUEST_AUTH_SENDER_DID_HEADER,
@@ -978,8 +989,12 @@ fn extract_channel_id_from_payload(payload: &str) -> Option<String> {
     Some(channel_id.to_owned())
 }
 
-fn extract_recipient_did_from_payload(payload: &str) -> Option<String> {
-    let parsed = serde_json::from_str::<serde_json::Value>(payload).ok()?;
+fn extract_canonical_recipient_did_from_payload(
+    payload: &str,
+) -> Result<Option<String>, ServiceApiReasonedError> {
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) else {
+        return Ok(None);
+    };
     for key in ["recipient_did", "to", "to_did"] {
         let Some(raw_value) = parsed.get(key).and_then(serde_json::Value::as_str) else {
             continue;
@@ -988,9 +1003,15 @@ fn extract_recipient_did_from_payload(payload: &str) -> Option<String> {
         if recipient_did.is_empty() {
             continue;
         }
-        return Some(recipient_did.to_owned());
+        AgentDid::parse(recipient_did).map_err(|error| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_MESSAGE_RECIPIENT_DID_INVALID,
+                format!("invalid recipient did: {error}"),
+            )
+        })?;
+        return Ok(Some(recipient_did.to_owned()));
     }
-    None
+    Ok(None)
 }
 
 fn parse_relay_ingest_payload(
