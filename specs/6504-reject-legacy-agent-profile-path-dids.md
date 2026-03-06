@@ -44,3 +44,21 @@ Reject legacy `did:kamn:agent:...` path values at the service API agent-profile 
 - Assert rejected legacy path input does not create an agent record in persisted state.
 - Keep or add a canonical route regression proving `GET /v1/agents/kamn:did:agent:alpha` still returns `200 OK`.
 - Run targeted `kamn-node` service API tests covering the new rejection and canonical success path.
+
+## Integration notes
+- Real ingress wiring remains in `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` through `handle_service_api_http_route`.
+- Agent profile path parsing now validates canonical DID shape before calling `get_or_create_agent_profile`.
+- The shared renderer in `crates/kamn-node/src/service_api_endpoint/payload.rs` mirrors the same fail-closed boundary for direct service API response generation used by existing contract tests.
+
+## Verification evidence
+- Red:
+  - `cargo test -p kamn-node integration_service_api_endpoint_rejects_legacy_agent_profile_path_dids -- --nocapture`
+  - Observed failure before implementation: legacy path returned `status_code=200 outcome=handled`
+- Green/Integration:
+  - `cargo clippy -p kamn-node --tests -- -D warnings`
+  - `cargo test -p kamn-node integration_service_api_endpoint_rejects_legacy_agent_profile_path_dids -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_persists_agent_profile_query_state_across_restart -- --nocapture`
+  - `cargo test -p kamn-node unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --nocapture`
+
+## Deviations
+- None
