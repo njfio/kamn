@@ -13,36 +13,36 @@ fn unit_runtime_request_identity_policy_idempotency_key_contract() {
     let idempotency_key = deterministic_runtime_commit_idempotency_key(
         " operation-123 ",
         " state:abc ",
-        " did:kamn:agent:alpha ",
+        " kamn:did:agent:alpha ",
         7,
         " payload-hash ",
     );
     assert_eq!(
         idempotency_key,
-        "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:7061796c6f61642d68617368"
+        "kolme-runtime-commit:operation-123:state:abc:kamn:did:agent:alpha:7:7061796c6f61642d68617368"
     );
 }
 
 #[test]
 fn functional_runtime_request_identity_policy_commit_id_contract() {
-    let commit_id = deterministic_runtime_commit_id("op-9", "did:agent:beta", 11, "hash:xyz");
+    let commit_id = deterministic_runtime_commit_id("op-9", "kamn:did:agent:beta", 11, "hash:xyz");
     assert_eq!(
         commit_id,
-        "kolme-commit:op-9:did:agent:beta:11:686173683a78797a"
+        "kolme-commit:op-9:kamn:did:agent:beta:11:686173683a78797a"
     );
 }
 
 #[test]
 fn regression_issue_6202_runtime_request_identity_policy_payload_component_uses_value_not_length() {
-    let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
-    let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
+    let left = deterministic_runtime_commit_id("op-x", "kamn:did:agent:alpha", 3, "abc");
+    let right = deterministic_runtime_commit_id("op-x", "kamn:did:agent:alpha", 3, "xyz");
     assert_ne!(left, right);
 }
 
 #[test]
 fn functional_runtime_request_identity_policy_accepts_non_empty_commit_id_request() {
     assert!(is_valid_runtime_commit_id_request(
-        "kolme-commit:op-9:did:agent:beta:11:686173683a78797a"
+        "kolme-commit:op-9:kamn:did:agent:beta:11:686173683a78797a"
     ));
 }
 
@@ -112,14 +112,14 @@ fn functional_runtime_request_identity_policy_renders_runtime_commit_wire_payloa
     let payload = render_runtime_commit_wire_payload(
         "op-12",
         "state:delta",
-        "did:kamn:agent:delta",
+        "kamn:did:agent:delta",
         8,
         "payload:delta",
         "idempotency:delta",
     );
     assert_eq!(
         payload,
-        "operation_id=op-12\nstate_root=state:delta\nactor_did=did:kamn:agent:delta\nnonce=8\npayload_hash=payload:delta\nidempotency_key=idempotency:delta\n"
+        "operation_id=op-12\nstate_root=state:delta\nactor_did=kamn:did:agent:delta\nnonce=8\npayload_hash=payload:delta\nidempotency_key=idempotency:delta\n"
     );
 }
 
@@ -207,7 +207,7 @@ fn regression_issue_1906_runtime_request_identity_policy_wire_payload_field_orde
     let payload = render_runtime_commit_wire_payload(
         "op-12",
         "state:delta",
-        "did:kamn:agent:delta",
+        "kamn:did:agent:delta",
         8,
         "payload:delta",
         "idempotency:delta",

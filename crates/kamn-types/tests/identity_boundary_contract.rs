@@ -17,10 +17,11 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(DID_FORMAT_DOC.contains("did_format_target_standard=kamn:did:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_public_contract_gate=approval-required"));
     assert!(DID_FORMAT_DOC.contains(
-        "did_format_divergent_consumer=crates/kamn-kolme/src/runtime_request_identity_policy.rs"
+        "did_format_divergent_consumer=crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs"
     ));
-    assert!(DID_FORMAT_DOC
-        .contains("did_format_divergent_consumer=crates/kamn-core/src/runtime_tests.rs"));
+    assert!(DID_FORMAT_DOC.contains(
+        "did_format_divergent_consumer=crates/kamn-node/src/main_tests/cli_contract_tests.rs"
+    ));
 }
 
 #[test]
