@@ -1050,6 +1050,27 @@ fn rejects_malformed_proposal_argument() {
 }
 
 #[test]
+fn rejects_legacy_proposal_sender_did_argument() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "planning".to_owned(),
+        "--expected-state-hash".to_owned(),
+        "state-1".to_owned(),
+        "--proposal".to_owned(),
+        "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::InvalidProposalArgument(
+            "tx-1|did:kamn:agent:aaa|1|state-1".to_owned()
+        ))
+    );
+}
+
+#[test]
 fn rejects_malformed_rejoin_attempt_argument() {
     let args = vec![
         "kamn-node".to_owned(),
