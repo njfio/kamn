@@ -19,8 +19,9 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(DID_FORMAT_DOC.contains(
         "did_format_divergent_consumer=crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs"
     ));
-    assert!(DID_FORMAT_DOC
-        .contains("did_format_divergent_consumer=crates/kamn-node/src/main_tests/cli_contract_tests.rs"));
+    assert!(DID_FORMAT_DOC.contains(
+        "did_format_divergent_consumer=crates/kamn-node/src/main_tests/cli_contract_tests.rs"
+    ));
 }
 
 #[test]
