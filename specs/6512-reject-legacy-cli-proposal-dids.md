@@ -28,11 +28,11 @@ matches the documented fail-closed DID policy at parser boundaries.
   enforcing the intended boundary.
 
 ## Acceptance criteria
-- [ ] `parse_proposal_candidate()` rejects legacy `did:kamn:agent:*` sender DIDs.
-- [ ] `parse_proposal_candidate()` still accepts canonical `kamn:did:agent:*` sender DIDs.
-- [ ] Rejected legacy proposal sender DIDs surface through the existing
+- [x] `parse_proposal_candidate()` rejects legacy `did:kamn:agent:*` sender DIDs.
+- [x] `parse_proposal_candidate()` still accepts canonical `kamn:did:agent:*` sender DIDs.
+- [x] Rejected legacy proposal sender DIDs surface through the existing
       `ConfigError::InvalidProposalArgument` CLI path with no silent rewrite.
-- [ ] Focused CLI/runtime tests cover both the reject and accept paths.
+- [x] Focused CLI/runtime tests cover both the reject and accept paths.
 
 ## Files to touch
 - `crates/kamn-node/src/cli_value_parsers.rs`
@@ -61,4 +61,14 @@ matches the documented fail-closed DID policy at parser boundaries.
 - None.
 
 ## Execution Evidence
-- Pending.
+- Red:
+  - `cargo test -p kamn-node rejects_legacy_proposal_sender_did_argument -- --nocapture`
+  - `cargo test -p kamn-node rejects_runtime_mode_planning_with_legacy_proposal_sender_did -- --nocapture`
+- Green:
+  - `cargo test -p kamn-node rejects_legacy_proposal_sender_did_argument -- --nocapture`
+  - `cargo test -p kamn-node rejects_runtime_mode_planning_with_legacy_proposal_sender_did -- --nocapture`
+  - `cargo test -p kamn-node parses_runtime_mode_planning_with_proposals -- --nocapture`
+- Refactor / Integration:
+  - `cargo test -p kamn-node cli_contract_tests -- --nocapture`
+  - `cargo test -p kamn-node runtime_mode_and_transport_profile_tests -- --nocapture`
+  - `cargo clippy -p kamn-node --tests -- -D warnings`
