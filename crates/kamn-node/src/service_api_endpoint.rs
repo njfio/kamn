@@ -32,7 +32,7 @@ use kamn_core::{
     data_layer_m9_gateway_project_presence_event, service_auth_verify_with_public_key_hex,
     AgentDid, DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
     DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
-    DataLayerM9RealtimeDeliveryRegistry, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DataLayerM9RealtimeDeliveryRegistry, KamnDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
 };
 use kamn_runtime_guards::anti_spam::{
@@ -170,10 +170,16 @@ const REASON_CODE_WS_VERSION_HEADER_INVALID: &str = "service_api_ws_version_head
 const REASON_CODE_WS_EVENTS_MODE_INVALID: &str = "service_api_ws_events_mode_invalid";
 const REASON_CODE_WS_PRESENCE_OWNER_DID_HEADER_MISSING: &str =
     "service_api_ws_presence_owner_did_header_missing";
+const REASON_CODE_WS_PRESENCE_OWNER_DID_HEADER_INVALID: &str =
+    "service_api_ws_presence_owner_did_header_invalid";
 const REASON_CODE_WS_PRESENCE_TARGET_AGENT_DID_HEADER_MISSING: &str =
     "service_api_ws_presence_target_agent_did_header_missing";
+const REASON_CODE_WS_PRESENCE_TARGET_AGENT_DID_HEADER_INVALID: &str =
+    "service_api_ws_presence_target_agent_did_header_invalid";
 const REASON_CODE_WS_PRESENCE_REQUESTER_AGENT_DID_HEADER_MISSING: &str =
     "service_api_ws_presence_requester_agent_did_header_missing";
+const REASON_CODE_WS_PRESENCE_TARGET_OWNER_DID_HEADER_INVALID: &str =
+    "service_api_ws_presence_target_owner_did_header_invalid";
 const REASON_CODE_WS_PRESENCE_CONNECTED_SINCE_INVALID: &str =
     "service_api_ws_presence_connected_since_invalid";
 const REASON_CODE_WS_PRESENCE_LAST_HEARTBEAT_INVALID: &str =
@@ -184,7 +190,7 @@ const REASON_CODE_WS_PRESENCE_PROJECTION_INVALID: &str =
     "service_api_ws_presence_projection_invalid";
 pub(crate) const SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-websocket-reason-taxonomy.v1";
-pub(crate) const SERVICE_API_WEBSOCKET_REASON_CODES_CSV: &str = "service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_ws_events_mode_invalid,service_api_ws_presence_owner_did_header_missing,service_api_ws_presence_target_agent_did_header_missing,service_api_ws_presence_requester_agent_did_header_missing,service_api_ws_presence_connected_since_invalid,service_api_ws_presence_last_heartbeat_invalid,service_api_ws_presence_capabilities_invalid,service_api_ws_presence_projection_invalid";
+pub(crate) const SERVICE_API_WEBSOCKET_REASON_CODES_CSV: &str = "service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_ws_events_mode_invalid,service_api_ws_presence_owner_did_header_missing,service_api_ws_presence_owner_did_header_invalid,service_api_ws_presence_target_agent_did_header_missing,service_api_ws_presence_target_agent_did_header_invalid,service_api_ws_presence_requester_agent_did_header_missing,service_api_ws_presence_target_owner_did_header_invalid,service_api_ws_presence_connected_since_invalid,service_api_ws_presence_last_heartbeat_invalid,service_api_ws_presence_capabilities_invalid,service_api_ws_presence_projection_invalid";
 const REQUEST_WS_EVENTS_MODE_HEADER: &str = "x-kamn-events-mode";
 const REQUEST_WS_PRESENCE_OWNER_DID_HEADER: &str = "x-kamn-presence-owner-did";
 const REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER: &str = "x-kamn-presence-target-owner-did";
