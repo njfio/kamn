@@ -36,13 +36,13 @@ types so the crate’s public identity surface is verified beyond basic canonica
 
 ## Acceptance criteria
 
-- [ ] A test proves top-level and `kamn_types::did` key-binding generation produce equivalent DIDs
-- [ ] A test proves generated agent DIDs expose a key-binding fingerprint and validate against the original public key hex
-- [ ] A test proves invalid public-key hex returns `AgentDidKeyBindingError::InvalidPublicKeyHex`
-- [ ] A test proves `parse_agent_did_canonical(...)` preserves `MissingMethodSpecificId`
-- [ ] A test proves `parse_kamn_did_canonical(...)` preserves `InvalidShape`
-- [ ] A test proves `DidDocument`, `DidService`, `DidVerificationMethod`, and `AgentDidMetadata` are constructible from `kamn-types` imports
-- [ ] `cargo test -p kamn-types -- --nocapture` passes
+- [x] A test proves top-level and `kamn_types::did` key-binding generation produce equivalent DIDs
+- [x] A test proves generated agent DIDs expose a key-binding fingerprint and validate against the original public key hex
+- [x] A test proves invalid public-key hex returns `AgentDidKeyBindingError::InvalidPublicKeyHex`
+- [x] A test proves `parse_agent_did_canonical(...)` preserves `MissingMethodSpecificId`
+- [x] A test proves `parse_kamn_did_canonical(...)` preserves `InvalidShape`
+- [x] A test proves `DidDocument`, `DidService`, `DidVerificationMethod`, and `AgentDidMetadata` are constructible from `kamn-types` imports
+- [x] `cargo test -p kamn-types -- --nocapture` passes
 
 ## Files to touch
 
@@ -69,6 +69,13 @@ types so the crate’s public identity surface is verified beyond basic canonica
   - `cargo test -p kamn-types --test key_binding_boundary_integration -- --nocapture`
   - `cargo test -p kamn-types -- --nocapture`
   - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` if test inventory changes
+
+## Phase 6 integration evidence
+
+- The real crate path is exercised via `cargo test -p kamn-types -- --nocapture`
+- New integration coverage landed in `crates/kamn-types/tests/key_binding_boundary_integration.rs`
+- Contract coverage landed in `crates/kamn-types/tests/key_binding_boundary_contract.rs`
+- The test inventory baseline was refreshed to account for the two new test targets
 
 ## Deviations
 
