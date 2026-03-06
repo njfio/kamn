@@ -43,3 +43,20 @@ Reject legacy `did:kamn:agent:...` recipient DID values at the service API `/v1/
 - Assert rejected legacy recipient DID input does not create persisted message records or relay spool entries.
 - Keep or add a canonical send regression proving `POST /v1/messages/send` with canonical recipient DID still succeeds.
 - Run targeted `kamn-node` service API tests covering the new rejection and canonical success path.
+
+## Integration notes
+- Real ingress wiring remains in `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` through `handle_service_api_http_route`.
+- Message-send recipient extraction now validates canonical DID shape before `create_message` or relay spool append can run.
+- Rejected legacy recipient DID values fail before any message persistence or recipient relay side effects occur.
+
+## Verification evidence
+- Red:
+  - `cargo test -p kamn-node integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids -- --nocapture`
+  - Observed failure before implementation: legacy recipient send returned `status_code=202 outcome=handled`
+- Green/Integration:
+  - `cargo clippy -p kamn-node --tests -- -D warnings`
+  - `cargo test -p kamn-node integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract -- --nocapture`
+
+## Deviations
+- None
