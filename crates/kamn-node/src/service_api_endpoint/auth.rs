@@ -702,4 +702,25 @@ mod tests {
             "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11"
         );
     }
+
+    #[test]
+    fn regression_sender_did_header_rejects_legacy_did_shape() {
+        // Regression: #6502
+        let request = ParsedRequest {
+            method: "POST".to_owned(),
+            path: ROUTE_MESSAGES_SEND.to_owned(),
+            body: "{}".to_owned(),
+            headers: BTreeMap::from([(
+                REQUEST_AUTH_SENDER_DID_HEADER.to_owned(),
+                "did:kamn:agent:legacy-alpha".to_owned(),
+            )]),
+        };
+        let error = validate_sender_did_header(&request)
+            .expect_err("legacy did shape should fail closed at auth ingress");
+        let RequestAuthFailure::Unauthorized(error) = error else {
+            panic!("expected unauthorized auth failure");
+        };
+        assert_eq!(error.reason_code, REASON_CODE_AUTH_SENDER_DID_INVALID);
+        assert!(error.message.contains("invalid sender did"));
+    }
 }

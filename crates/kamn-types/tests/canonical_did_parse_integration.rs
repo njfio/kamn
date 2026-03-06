@@ -44,3 +44,20 @@ fn integration_canonical_parse_preserves_underlying_error_types() {
         )))
     );
 }
+
+#[test]
+fn regression_legacy_did_shape_rejects_with_typed_prefix_errors() {
+    // Regression: #6502
+    assert_eq!(
+        parse_agent_did_canonical("did:kamn:agent:legacy-alpha"),
+        Err(SharedDidParseError::Agent(AgentDidError::InvalidPrefix(
+            "did:kamn:agent:legacy-alpha".to_owned()
+        )))
+    );
+    assert_eq!(
+        parse_kamn_did_canonical("did:kamn:operator:legacy-node"),
+        Err(SharedDidParseError::Kamn(KamnDidError::InvalidPrefix(
+            "did:kamn:operator:legacy-node".to_owned()
+        )))
+    );
+}
