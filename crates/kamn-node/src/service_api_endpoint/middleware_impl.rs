@@ -1046,12 +1046,7 @@ fn parse_relay_ingest_payload(
                 "relay payload missing non-empty recipient_did",
             )
         })?;
-    AgentDid::parse(recipient_did).map_err(|error| {
-        ServiceApiReasonedError::new(
-            REASON_CODE_RELAY_DID_INVALID,
-            format!("invalid relay recipient did: {error}"),
-        )
-    })?;
+    validate_relay_agent_did("recipient", recipient_did)?;
     let body = parsed
         .get("body")
         .and_then(serde_json::Value::as_str)
@@ -1067,12 +1062,7 @@ fn parse_relay_ingest_payload(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(|sender_did| {
-            AgentDid::parse(sender_did).map_err(|error| {
-                ServiceApiReasonedError::new(
-                    REASON_CODE_RELAY_DID_INVALID,
-                    format!("invalid relay sender did: {error}"),
-                )
-            })?;
+            validate_relay_agent_did("sender", sender_did)?;
             Ok(sender_did.to_owned())
         })
         .transpose()?;
@@ -1083,6 +1073,16 @@ fn parse_relay_ingest_payload(
         recipient_did: recipient_did.to_owned(),
         body: body.to_owned(),
     })
+}
+
+fn validate_relay_agent_did(role: &str, did: &str) -> Result<(), ServiceApiReasonedError> {
+    AgentDid::parse(did).map_err(|error| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_RELAY_DID_INVALID,
+            format!("invalid relay {role} did: {error}"),
+        )
+    })?;
+    Ok(())
 }
 
 pub(super) async fn handle_service_api_websocket_route(
