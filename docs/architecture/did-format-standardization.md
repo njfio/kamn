@@ -34,12 +34,12 @@ The repository still contains a divergent shape:
 
 Concrete divergent consumers currently include:
 
-- `did_format_divergent_consumer=crates/kamn-kolme/src/runtime_request_identity_policy.rs`
-- `did_format_divergent_consumer=crates/kamn-kolme/tests/runtime_request_identity_policy_contracts.rs`
-- `did_format_divergent_consumer=crates/kamn-core/src/runtime_tests.rs`
+- `did_format_divergent_consumer=crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs`
+- `did_format_divergent_consumer=crates/kamn-node/src/main_tests/cli_contract_tests.rs`
+- `did_format_divergent_consumer=docs/foundation/node-runtime-cli.md`
 
-These usages show the divergence is not limited to docs; it also appears in runtime-facing policy
-and test surfaces.
+These usages show the divergence is not limited to docs; it still appears in node CLI/test
+surfaces even after the Kolme/runtime-request helper fixtures were standardized.
 
 ## Target Standard
 Future implementation work should standardize on:
@@ -62,8 +62,8 @@ Reasoning:
 
 - decide whether divergent `did:kamn:...` inputs need a temporary compatibility window or direct
   cleanup
-- update runtime request identity and proposal/test call sites to emit canonical
-  `kamn:did:{role}:{id}` values
+- update remaining node CLI/proposal/test call sites to emit canonical `kamn:did:{role}:{id}`
+  values
 - only then consider parser or API-contract enforcement changes under a separate approved issue
 
 ## Decision Gate

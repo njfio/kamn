@@ -28,12 +28,14 @@ Standardize the runtime request identity helper and directly related runtime tes
 - [ ] `render_runtime_commit_wire_payload` test coverage uses canonical `kamn:did:agent:*` examples.
 - [ ] `crates/kamn-kolme/tests/runtime_request_identity_policy_contracts.rs` asserts canonical DID strings for request identity outputs.
 - [ ] `crates/kamn-core/src/runtime_tests.rs` proposal-planner fixtures use canonical `kamn:did:agent:*` sender values.
+- [ ] `docs/architecture/did-format-standardization.md` no longer lists the cleaned Kolme/runtime fixtures as current divergent consumers.
 - [ ] Focused test commands pass locally.
 
 ## Files to touch
 - `crates/kamn-kolme/src/runtime_request_identity_policy.rs`
 - `crates/kamn-kolme/tests/runtime_request_identity_policy_contracts.rs`
 - `crates/kamn-core/src/runtime_tests.rs`
+- `docs/architecture/did-format-standardization.md`
 - `specs/6494-standardize-runtime-request-identity-dids.md`
 
 ## Error semantics
