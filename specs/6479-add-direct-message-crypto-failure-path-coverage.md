@@ -30,17 +30,17 @@ source-contract tests.
   removed without test protection.
 
 ## Acceptance criteria (testable booleans)
-- [ ] AC-1: A dedicated `kamn-crypto` failure-path test target exists for
+- [x] AC-1: A dedicated `kamn-crypto` failure-path test target exists for
       direct-message crypto.
-- [ ] AC-2: The target covers malformed ciphertext hex mapping to
+- [x] AC-2: The target covers malformed ciphertext hex mapping to
       `InvalidCiphertextEncoding`.
-- [ ] AC-3: The target covers malformed auth-tag hex mapping to
+- [x] AC-3: The target covers malformed auth-tag hex mapping to
       `IntegrityCheckFailed`.
-- [ ] AC-4: The target covers invalid UTF-8 decrypt output mapping to
+- [x] AC-4: The target covers invalid UTF-8 decrypt output mapping to
       `InvalidCiphertextEncoding`.
-- [ ] AC-5: The target enforces source-contract markers for defensive
+- [x] AC-5: The target enforces source-contract markers for defensive
       `EncryptionFailed` and `KeyDerivationFailed` mappings.
-- [ ] AC-6: `cargo test -p kamn-crypto --test direct_message_crypto_failure_paths -- --nocapture`
+- [x] AC-6: `cargo test -p kamn-crypto --test direct_message_crypto_failure_paths -- --nocapture`
       passes.
 
 ## Files to touch
@@ -69,7 +69,16 @@ source-contract tests.
   - Run the dedicated failure-path test target.
 
 ## Phase 6 integration evidence
-- Pending.
+- No production entrypoint wiring was required because this issue adds test
+  coverage only.
+- The dedicated target is integrated into the normal crate test surface:
+  `cargo test -p kamn-crypto -- --nocapture` passes with the new failure-path
+  and contract targets present.
+- Targeted evidence:
+  - `cargo test -p kamn-crypto --test direct_message_crypto_failure_paths_contract -- --nocapture`
+  - `cargo test -p kamn-crypto --test direct_message_crypto_failure_paths -- --nocapture`
+- Repository test inventory governance remains integrated and green via:
+  - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
 
 ## Deviations
 - Refreshed `fixtures/ci/test_file_size_policy_baseline.env` because adding the
