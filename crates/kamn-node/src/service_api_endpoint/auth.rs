@@ -23,15 +23,9 @@ pub(super) fn authorize_service_api_request(
     )
 }
 
-fn authorize_service_api_request_with_legacy_policy(
-    state: &ServiceApiRuntimeState,
-    request: &ParsedRequest,
-    replay_guard: &mut ServiceApiReplayGuard,
-    allow_legacy_sender_binding: bool,
-) -> Result<(), RequestAuthFailure> {
-    if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
-        return Ok(());
-    }
+fn validate_sender_did_header<'a>(
+    request: &'a ParsedRequest,
+) -> Result<&'a str, RequestAuthFailure> {
     let sender_did =
         header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
             RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
@@ -45,6 +39,19 @@ fn authorize_service_api_request_with_legacy_policy(
             format!("invalid sender did: {error}"),
         ))
     })?;
+    Ok(sender_did)
+}
+
+fn authorize_service_api_request_with_legacy_policy(
+    state: &ServiceApiRuntimeState,
+    request: &ParsedRequest,
+    replay_guard: &mut ServiceApiReplayGuard,
+    allow_legacy_sender_binding: bool,
+) -> Result<(), RequestAuthFailure> {
+    if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
+        return Ok(());
+    }
+    let sender_did = validate_sender_did_header(request)?;
     let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
         RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
             REASON_CODE_AUTH_NONCE_HEADER_MISSING,
