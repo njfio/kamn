@@ -9,6 +9,7 @@ format before any parser or public-contract changes are attempted.
 - `did_format_divergent_shape=did:kamn:{role}:{id}`
 - `did_format_target_standard=kamn:did:{role}:{id}`
 - `did_format_followup_scope=standardize-runtime-and-doc-consumers`
+- `did_format_public_contract_gate=approval-required`
 
 ## Current State
 
@@ -64,3 +65,8 @@ Reasoning:
 - update runtime request identity and proposal/test call sites to emit canonical
   `kamn:did:{role}:{id}` values
 - only then consider parser or API-contract enforcement changes under a separate approved issue
+
+## Decision Gate
+
+Any implementation issue that changes accepted DID wire formats, parser behavior, or externally
+visible runtime values must be treated as a public-contract change and approved before code lands.

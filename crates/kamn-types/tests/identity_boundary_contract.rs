@@ -2,7 +2,8 @@ use kamn_types::{parse_agent_did_canonical, parse_kamn_did_canonical};
 
 const README: &str = include_str!("../README.md");
 const ARCH_DOC: &str = include_str!("../../../docs/architecture/kamn-types.md");
-const DID_FORMAT_DOC: &str = include_str!("../../../docs/architecture/did-format-standardization.md");
+const DID_FORMAT_DOC: &str =
+    include_str!("../../../docs/architecture/did-format-standardization.md");
 
 #[test]
 fn docs_contain_identity_boundary_and_migration_markers() {
@@ -14,8 +15,12 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(DID_FORMAT_DOC.contains("did_format_current_canonical=kamn:did:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_divergent_shape=did:kamn:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_target_standard=kamn:did:{role}:{id}"));
-    assert!(DID_FORMAT_DOC.contains("did_format_divergent_consumer=crates/kamn-kolme/src/runtime_request_identity_policy.rs"));
-    assert!(DID_FORMAT_DOC.contains("did_format_divergent_consumer=crates/kamn-core/src/runtime_tests.rs"));
+    assert!(DID_FORMAT_DOC.contains("did_format_public_contract_gate=approval-required"));
+    assert!(DID_FORMAT_DOC.contains(
+        "did_format_divergent_consumer=crates/kamn-kolme/src/runtime_request_identity_policy.rs"
+    ));
+    assert!(DID_FORMAT_DOC
+        .contains("did_format_divergent_consumer=crates/kamn-core/src/runtime_tests.rs"));
 }
 
 #[test]
