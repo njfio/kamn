@@ -91,7 +91,10 @@ fn integration_status_for_trims_lookup_and_rejects_empty_lookup() {
         report.status_for(LiveProbeMatrixMode::CliScripted, "  S-09  "),
         Some(LiveProbeMatrixStatus::Pass)
     );
-    assert_eq!(report.status_for(LiveProbeMatrixMode::CliScripted, "   "), None);
+    assert_eq!(
+        report.status_for(LiveProbeMatrixMode::CliScripted, "   "),
+        None
+    );
 }
 
 #[test]
@@ -121,9 +124,7 @@ fn integration_mode_status_map_is_deterministic_for_mixed_modes() {
     ]);
 
     assert_eq!(report.mode_status_map(), expected);
-    assert!(
-        !report
-            .mode_status_map()
-            .contains_key(&LiveProbeMatrixMode::CliScripted)
-    );
+    assert!(!report
+        .mode_status_map()
+        .contains_key(&LiveProbeMatrixMode::CliScripted));
 }
