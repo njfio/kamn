@@ -328,16 +328,20 @@ pub(super) fn render_service_api_endpoint_response(
                 body: serialize_service_api_json(&payload),
             };
         }
-        if let Some(agent_did) = agent_path_id(path) {
-            let payload = ServiceApiAgentGetBody {
-                did: agent_did.to_owned(),
-                reputation_score: 500,
-            };
-            return ServiceApiEndpointResponse {
-                status_code: 200,
-                content_type: "application/json",
-                body: serialize_service_api_json(&payload),
-            };
+        match canonical_agent_path_id(path) {
+            Ok(Some(agent_did)) => {
+                let payload = ServiceApiAgentGetBody {
+                    did: agent_did.to_owned(),
+                    reputation_score: 500,
+                };
+                return ServiceApiEndpointResponse {
+                    status_code: 200,
+                    content_type: "application/json",
+                    body: serialize_service_api_json(&payload),
+                };
+            }
+            Err(error) => return invalid_agent_did_path_endpoint_response(&error),
+            Ok(None) => {}
         }
     }
 
@@ -487,6 +491,30 @@ pub(super) fn agent_path_id(path: &str) -> Option<&str> {
         }
         Some(did)
     })
+}
+
+pub(super) fn canonical_agent_path_id(path: &str) -> Result<Option<&str>, ServiceApiReasonedError> {
+    let Some(agent_did) = agent_path_id(path) else {
+        return Ok(None);
+    };
+    AgentDid::parse(agent_did).map_err(|error| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_AGENT_DID_PATH_INVALID,
+            format!("invalid agent did path: {error}"),
+        )
+    })?;
+    Ok(Some(agent_did))
+}
+
+pub(super) fn invalid_agent_did_path_endpoint_response(
+    error: &ServiceApiReasonedError,
+) -> ServiceApiEndpointResponse {
+    json_error_endpoint_response(
+        StatusCode::BAD_REQUEST,
+        "bad-request",
+        error.reason_code,
+        error.message.as_str(),
+    )
 }
 
 pub(super) fn contract_response(response: ServiceApiEndpointResponse) -> Response {

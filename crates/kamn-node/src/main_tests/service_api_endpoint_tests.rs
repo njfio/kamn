@@ -99,6 +99,7 @@ const SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE: &str =
 const SERVICE_API_AUTH_SCOPE_HEADER_MISSING_REASON_CODE: &str =
     "service_api_auth_scope_header_missing";
 const SERVICE_API_AUTH_SCOPE_INVALID_REASON_CODE: &str = "service_api_auth_scope_invalid";
+const SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE: &str = "service_api_agent_did_path_invalid";
 const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
     "service_api_auth_scope_route_mismatch";
 const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
@@ -4276,6 +4277,100 @@ fn integration_service_api_endpoint_persists_agent_profile_query_state_across_re
         restart_server_result.is_ok(),
         "service api endpoint should stop cleanly after restart agent query"
     );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_rejects_legacy_agent_profile_path_dids() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-agent-profile-legacy-path-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34121".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let caller_did = "kamn:did:agent:test-client-agent-profile-legacy-path";
+    let legacy_target_did = "did:kamn:agent:legacy-alpha";
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let query_path = format!("/v1/agents/{legacy_target_did}");
+    let query_signature =
+        service_api_request_signature_for_fields(caller_did, 121, state_hash.as_str(), "");
+    let query_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        query_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "121"),
+            ("X-KAMN-Request-Signature", query_signature.as_str()),
+        ],
+    );
+    assert!(query_response.contains("HTTP/1.1 400 Bad Request"));
+    let error_payload = parse_error_envelope_from_http_response(query_response.as_str());
+    assert_eq!(
+        error_payload.reason_code,
+        SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE
+    );
+    assert!(
+        error_payload.message.contains("invalid agent did path"),
+        "legacy path rejection should explain the invalid did boundary"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after legacy path rejection"
+    );
+
+    if state_file.exists() {
+        let state_payload = fs::read_to_string(state_file.as_path())
+            .expect("state file should remain readable when present");
+        let state_json: Value =
+            serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+        assert!(
+            state_json["agents"].get(legacy_target_did).is_none(),
+            "legacy agent did should not be persisted"
+        );
+    }
 
     let _ = fs::remove_file(state_file);
 }
