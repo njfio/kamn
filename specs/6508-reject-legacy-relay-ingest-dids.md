@@ -44,3 +44,20 @@ Reject legacy `did:kamn:agent:...` sender or recipient DID values at the service
 - Assert canonical relay payload DID values still succeed through the same endpoint.
 - Assert rejected legacy relay payloads do not create persisted relayed messages.
 - Run targeted `kamn-node` service API tests covering the new rejection and canonical success path.
+
+## Integration notes
+- Real ingress wiring remains in `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` through `handle_service_api_http_route`.
+- Relay payload parsing now validates canonical DID shape for required `recipient_did` and optional `sender_did` before `upsert_relayed_message` can run.
+- Rejected legacy relay DID values fail before any relayed message persistence occurs.
+
+## Verification evidence
+- Red:
+  - `cargo test -p kamn-node integration_service_api_endpoint_rejects_legacy_relay_ingest_dids -- --nocapture`
+  - Observed failure before implementation: legacy relay ingest returned `status_code=202 outcome=handled`
+- Green/Integration:
+  - `cargo clippy -p kamn-node --tests -- -D warnings`
+  - `cargo test -p kamn-node integration_service_api_endpoint_rejects_legacy_relay_ingest_dids -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_cross_node_relay_delivery_contract -- --nocapture`
+
+## Deviations
+- None
