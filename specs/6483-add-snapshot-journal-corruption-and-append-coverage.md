@@ -32,13 +32,13 @@ tests.
 
 ## Acceptance criteria
 
-- [ ] A test proves appending multiple snapshot records preserves record order
-- [ ] A test proves appending multiple snapshot records produces newline-delimited journal lines
-- [ ] A test proves uppercase hex payloads decode successfully
-- [ ] A test proves a valid JSON record with corrupted `payload_hex` parses but decode fails with `None`
-- [ ] A test proves records missing `schema_version` fail checked parse with `InvalidJson`
-- [ ] A test proves records missing `payload_hex` fail checked parse with `InvalidJson`
-- [ ] `cargo test -p kamn-snapshot-journal -- --nocapture` passes
+- [x] A test proves appending multiple snapshot records preserves record order
+- [x] A test proves appending multiple snapshot records produces newline-delimited journal lines
+- [x] A test proves uppercase hex payloads decode successfully
+- [x] A test proves a valid JSON record with corrupted `payload_hex` parses but decode fails with `None`
+- [x] A test proves records missing `schema_version` fail checked parse with `InvalidJson`
+- [x] A test proves records missing `payload_hex` fail checked parse with `InvalidJson`
+- [x] `cargo test -p kamn-snapshot-journal -- --nocapture` passes
 
 ## Files to touch
 
@@ -64,6 +64,15 @@ tests.
   - `cargo test -p kamn-snapshot-journal --test snapshot_journal_edge_cases -- --nocapture`
   - `cargo test -p kamn-snapshot-journal -- --nocapture`
   - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` if test inventory changes
+
+## Phase 6 integration evidence
+
+- The real crate path is exercised via `cargo test -p kamn-snapshot-journal -- --nocapture`
+- New integration coverage landed in
+  `crates/kamn-snapshot-journal/tests/snapshot_journal_edge_cases.rs`
+- Contract coverage landed in
+  `crates/kamn-snapshot-journal/tests/snapshot_journal_edge_cases_contract.rs`
+- The test inventory baseline was refreshed to account for the two new test targets
 
 ## Deviations
 
