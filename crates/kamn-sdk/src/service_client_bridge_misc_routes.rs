@@ -4,6 +4,7 @@ use super::super::{
     ServiceRequestAuth,
 };
 use super::ServiceApiClient;
+use crate::AgentDid;
 
 impl ServiceApiClient {
     /// Submits one bridge message via `POST /v1/bridge/submit`.
@@ -64,6 +65,7 @@ impl ServiceApiClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceAgentProfile, SdkError> {
         let did = normalize_route_segment("did", did)?;
+        AgentDid::parse(did.as_str()).map_err(SdkError::from)?;
         let route = format!("/v1/agents/{did}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
