@@ -23,14 +23,14 @@ behavior changes are attempted.
 - The documented policy can drift without any failing contract test.
 
 ## Acceptance criteria
-- [ ] `docs/architecture/did-format-standardization.md` defines the legacy-input policy with
+- [x] `docs/architecture/did-format-standardization.md` defines the legacy-input policy with
       machine-readable markers.
-- [ ] The doc states whether the policy is a temporary compatibility window or direct fail-closed
+- [x] The doc states whether the policy is a temporary compatibility window or direct fail-closed
       rejection.
-- [ ] The doc identifies the intended enforcement boundary.
-- [ ] The doc states the implementation preconditions/gate for any future enforcement issue.
-- [ ] `crates/kamn-types/tests/identity_boundary_contract.rs` pins the new policy markers.
-- [ ] Focused policy doc contract tests pass locally.
+- [x] The doc identifies the intended enforcement boundary.
+- [x] The doc states the implementation preconditions/gate for any future enforcement issue.
+- [x] `crates/kamn-types/tests/identity_boundary_contract.rs` pins the new policy markers.
+- [x] Focused policy doc contract tests pass locally.
 
 ## Files to touch
 - `docs/architecture/did-format-standardization.md`
@@ -49,3 +49,15 @@ behavior changes are attempted.
   - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
 - Refactor:
   - rerun the focused contract test after wording/marker cleanup
+
+## Deviations
+- The planning decision uses the existing DID architecture document and identity boundary contract
+  rather than introducing a new ADR or a new dedicated test file.
+- The documented policy explicitly forbids silent normalization of `did:kamn:...` into
+  `kamn:did:...` so "direct fail-closed" cannot later be interpreted as auto-rewrite.
+
+## Execution Evidence
+- Red:
+  - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
+- Green / Refactor / Integration:
+  - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
