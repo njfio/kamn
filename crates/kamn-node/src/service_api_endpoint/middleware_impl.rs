@@ -543,7 +543,7 @@ pub(super) async fn handle_service_api_http_route(
     if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_MESSAGES_SEND
     {
         let channel_id = extract_channel_id_from_payload(context.parsed_request.body.as_str());
-        let recipient_did = match extract_recipient_did_from_payload(
+        let recipient_did = match extract_canonical_recipient_did_from_payload(
             context.parsed_request.body.as_str(),
         ) {
             Ok(recipient_did) => recipient_did,
@@ -989,7 +989,7 @@ fn extract_channel_id_from_payload(payload: &str) -> Option<String> {
     Some(channel_id.to_owned())
 }
 
-fn extract_recipient_did_from_payload(
+fn extract_canonical_recipient_did_from_payload(
     payload: &str,
 ) -> Result<Option<String>, ServiceApiReasonedError> {
     let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) else {
