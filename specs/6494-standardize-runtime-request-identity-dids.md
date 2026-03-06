@@ -24,12 +24,12 @@ Standardize the runtime request identity helper and directly related runtime tes
 - Focused tests pass only by weakening assertions rather than standardizing the canonical values.
 
 ## Acceptance criteria
-- [ ] `deterministic_runtime_commit_idempotency_key` test coverage uses canonical `kamn:did:agent:*` examples.
-- [ ] `render_runtime_commit_wire_payload` test coverage uses canonical `kamn:did:agent:*` examples.
-- [ ] `crates/kamn-kolme/tests/runtime_request_identity_policy_contracts.rs` asserts canonical DID strings for request identity outputs.
-- [ ] `crates/kamn-core/src/runtime_tests.rs` proposal-planner fixtures use canonical `kamn:did:agent:*` sender values.
-- [ ] `docs/architecture/did-format-standardization.md` no longer lists the cleaned Kolme/runtime fixtures as current divergent consumers.
-- [ ] Focused test commands pass locally.
+- [x] `deterministic_runtime_commit_idempotency_key` test coverage uses canonical `kamn:did:agent:*` examples.
+- [x] `render_runtime_commit_wire_payload` test coverage uses canonical `kamn:did:agent:*` examples.
+- [x] `crates/kamn-kolme/tests/runtime_request_identity_policy_contracts.rs` asserts canonical DID strings for request identity outputs.
+- [x] `crates/kamn-core/src/runtime_tests.rs` proposal-planner fixtures use canonical `kamn:did:agent:*` sender values.
+- [x] `docs/architecture/did-format-standardization.md` no longer lists the cleaned Kolme/runtime fixtures as current divergent consumers.
+- [x] Focused test commands pass locally.
 
 ## Files to touch
 - `crates/kamn-kolme/src/runtime_request_identity_policy.rs`
@@ -45,9 +45,20 @@ Standardize the runtime request identity helper and directly related runtime tes
 
 ## Test plan
 - Red:
-  - update focused tests to assert canonical DID strings and verify they fail before implementation
+  - update focused tests to assert canonical DID strings and verify whether the helper already supports canonical inputs
 - Green:
   - `cargo test -p kamn-kolme runtime_request_identity_policy -- --nocapture`
   - `cargo test -p kamn-core runtime_tests -- --nocapture`
+  - `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
 - Refactor:
   - rerun the focused commands after any duplication cleanup
+
+## Phase 6 evidence
+- `cargo test -p kamn-kolme runtime_request_identity_policy -- --nocapture`
+- `cargo test -p kamn-core runtime_tests -- --nocapture`
+- `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
+
+## Deviations
+- Red-phase investigation showed no helper implementation change was required. The canonical path
+  already existed because the request-identity helpers render the DID string provided by the caller;
+  the drift was in fixture/example values and the divergence inventory.
