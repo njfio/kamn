@@ -38,6 +38,11 @@ def parse_args() -> argparse.Namespace:
         help="Path to CI strategy document.",
     )
     parser.add_argument(
+        "--workspace-manifest",
+        default="",
+        help="Optional path to the workspace Cargo manifest used for inherited dependencies.",
+    )
+    parser.add_argument(
         "--output-json",
         default="",
         help="Optional output file path for report JSON.",
@@ -47,6 +52,10 @@ def parse_args() -> argparse.Namespace:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def load_toml(path: Path) -> dict[str, object]:
+    return tomllib.loads(read_text(path))
 
 
 def normalize_feature_entries(value: object) -> list[str]:
@@ -59,6 +68,45 @@ def normalize_feature_entries(value: object) -> list[str]:
     return normalized
 
 
+def find_workspace_manifest(manifest_path: Path, override: str) -> Path | None:
+    if override:
+        path = Path(override)
+        return path if path.exists() else None
+
+    resolved_manifest_path = manifest_path.resolve()
+    for parent in resolved_manifest_path.parents:
+        candidate = parent / "Cargo.toml"
+        if candidate == resolved_manifest_path:
+            continue
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def resolve_dependency(
+    dep_name: str, dep_config: object, workspace_dependencies: dict[str, object]
+) -> object:
+    if not (isinstance(dep_config, dict) and dep_config.get("workspace") is True):
+        return dep_config
+
+    workspace_dep = workspace_dependencies.get(dep_name)
+    if workspace_dep is None:
+        return dep_config
+
+    if isinstance(workspace_dep, str):
+        resolved: dict[str, object] = {"version": workspace_dep}
+    elif isinstance(workspace_dep, dict):
+        resolved = dict(workspace_dep)
+    else:
+        return dep_config
+
+    for key, value in dep_config.items():
+        if key == "workspace":
+            continue
+        resolved[key] = value
+    return resolved
+
+
 def main() -> int:
     args = parse_args()
 
@@ -66,6 +114,7 @@ def main() -> int:
     readme_path = Path(args.readme)
     adr_path = Path(args.adr)
     ci_strategy_path = Path(args.ci_strategy)
+    workspace_manifest_path = find_workspace_manifest(manifest_path, args.workspace_manifest)
 
     checks: dict[str, str] = {}
     violations: list[str] = []
@@ -87,7 +136,7 @@ def main() -> int:
     manifest_data: dict[str, object] = {}
     if manifest_path.exists():
         try:
-            manifest_data = tomllib.loads(read_text(manifest_path))
+            manifest_data = load_toml(manifest_path)
         except tomllib.TOMLDecodeError as exc:
             checks["manifest_parses"] = "fail"
             violations.append(f"failed to parse Cargo manifest: {exc}")
@@ -97,10 +146,24 @@ def main() -> int:
     else:
         checks["manifest_parses"] = "fail"
 
+    workspace_manifest_data: dict[str, object] = {}
+    if workspace_manifest_path and workspace_manifest_path.exists():
+        try:
+            workspace_manifest_data = load_toml(workspace_manifest_path)
+        except tomllib.TOMLDecodeError:
+            workspace_manifest_data = {}
+
     features = manifest_data.get("features") if isinstance(manifest_data, dict) else None
     dependencies = (
         manifest_data.get("dependencies") if isinstance(manifest_data, dict) else None
     )
+    workspace_dependencies = {}
+    if isinstance(workspace_manifest_data, dict):
+        workspace = workspace_manifest_data.get("workspace")
+        if isinstance(workspace, dict):
+            resolved_workspace_dependencies = workspace.get("dependencies")
+            if isinstance(resolved_workspace_dependencies, dict):
+                workspace_dependencies = resolved_workspace_dependencies
 
     live_https_entries = normalize_feature_entries(
         features.get("live-https") if isinstance(features, dict) else None
@@ -119,6 +182,7 @@ def main() -> int:
             reason_code_set.add(f"{key_prefix}_feature_mapping_missing")
 
         dep_config = dependencies.get(dep) if isinstance(dependencies, dict) else None
+        dep_config = resolve_dependency(dep, dep_config, workspace_dependencies)
         if dep_config is None:
             checks[f"{key_prefix}_dependency_declared"] = "fail"
             violations.append(f"dependency `{dep}` must be declared under [dependencies]")
@@ -135,6 +199,7 @@ def main() -> int:
 
     if isinstance(dependencies, dict):
         rustls_dep = dependencies.get("rustls")
+        rustls_dep = resolve_dependency("rustls", rustls_dep, workspace_dependencies)
         if isinstance(rustls_dep, dict) and rustls_dep.get("default-features") is False:
             checks["rustls_default_features_disabled"] = "pass"
         else:

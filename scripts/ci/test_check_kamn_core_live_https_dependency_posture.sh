@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.sh"
 PY_CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.py"
+WORKSPACE_MANIFEST="$ROOT_DIR/Cargo.toml"
 TLS_HARDENING_DOC="$ROOT_DIR/docs/security/tls-hardening.md"
 CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
@@ -18,7 +19,7 @@ REPORT_FILE="$(mktemp)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR" "$REPORT_FILE"' EXIT
 
-pass_output="$(bash "$CHECKER" --output-json "$REPORT_FILE")"
+pass_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --output-json "$REPORT_FILE")"
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1$'; then
   echo "expected deterministic reason taxonomy marker on pass output" >&2
   exit 1
@@ -56,7 +57,7 @@ cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$MANIFEST_FIXTURE"
 sed -i 's/rustls-pemfile = { workspace = true, optional = true }/rustls-pemfile = { workspace = true, optional = false }/' "$MANIFEST_FIXTURE"
 
 set +e
-manifest_failure_output="$(bash "$CHECKER" --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
+manifest_failure_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
 manifest_failure_code=$?
 set -e
 
@@ -103,7 +104,7 @@ path.write_text(content, encoding="utf-8")
 PY
 
 set +e
-root_drift_output="$(bash "$CHECKER" --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+root_drift_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
 root_drift_code=$?
 set -e
 
@@ -145,7 +146,7 @@ path.write_text(content, encoding="utf-8")
 PY
 
 set +e
-rustls_drift_output="$(bash "$CHECKER" --cargo-manifest "$RUSTLS_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+rustls_drift_output="$(bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" --cargo-manifest "$RUSTLS_DRIFT_MANIFEST_FIXTURE" 2>&1)"
 rustls_drift_code=$?
 set -e
 
