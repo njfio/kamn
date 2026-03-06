@@ -363,7 +363,7 @@ fn serialize_state_transition_payload(snapshot: &ServiceApiSnapshot) -> String {
 fn project_presence_mode_payload(
     headers: &BTreeMap<String, String>,
 ) -> Result<String, ServiceApiReasonedError> {
-    let requester_agent_did = required_presence_header(
+    let requester_agent_did = required_non_empty_presence_header(
         headers,
         REQUEST_AUTH_SENDER_DID_HEADER,
         REASON_CODE_WS_PRESENCE_REQUESTER_AGENT_DID_HEADER_MISSING,
@@ -452,7 +452,7 @@ fn project_presence_mode_payload(
     Ok(super::serialize_service_api_json(&payload))
 }
 
-fn required_presence_header<'a>(
+fn required_non_empty_presence_header<'a>(
     headers: &'a BTreeMap<String, String>,
     header_name: &str,
     reason_code: &'static str,
@@ -475,7 +475,8 @@ fn required_presence_agent_did_header<'a>(
     invalid_reason_code: &'static str,
     invalid_message: &str,
 ) -> Result<&'a str, ServiceApiReasonedError> {
-    let header_value = required_presence_header(headers, header_name, missing_reason_code)?;
+    let header_value =
+        required_non_empty_presence_header(headers, header_name, missing_reason_code)?;
     AgentDid::parse(header_value).map_err(|error| {
         ServiceApiReasonedError::new(invalid_reason_code, format!("{invalid_message}: {error}"))
     })?;
@@ -489,7 +490,8 @@ fn required_presence_kamn_did_header<'a>(
     invalid_reason_code: &'static str,
     invalid_message: &str,
 ) -> Result<&'a str, ServiceApiReasonedError> {
-    let header_value = required_presence_header(headers, header_name, missing_reason_code)?;
+    let header_value =
+        required_non_empty_presence_header(headers, header_name, missing_reason_code)?;
     KamnDid::parse(header_value).map_err(|error| {
         ServiceApiReasonedError::new(invalid_reason_code, format!("{invalid_message}: {error}"))
     })?;
