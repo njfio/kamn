@@ -152,7 +152,10 @@ fn integration_concurrent_pending_and_invalid_proofs_preserve_decision_boundarie
         ),
     ]);
 
-    assert_eq!(decisions[0], CrossChainSettlementDecision::DeferPendingFinality);
+    assert_eq!(
+        decisions[0],
+        CrossChainSettlementDecision::DeferPendingFinality
+    );
     assert_eq!(
         decisions[1],
         CrossChainSettlementDecision::Reject(CrossChainSettlementRejectionReason::InvalidProof(
@@ -162,7 +165,10 @@ fn integration_concurrent_pending_and_invalid_proofs_preserve_decision_boundarie
             }
         ))
     );
-    assert_eq!(decisions[2], CrossChainSettlementDecision::DeferPendingFinality);
+    assert_eq!(
+        decisions[2],
+        CrossChainSettlementDecision::DeferPendingFinality
+    );
     assert_eq!(
         decisions[3],
         CrossChainSettlementDecision::Reject(CrossChainSettlementRejectionReason::InvalidProof(
