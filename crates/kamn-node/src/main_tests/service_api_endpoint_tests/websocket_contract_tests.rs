@@ -1,6 +1,12 @@
 use super::*;
 
 const WEBSOCKET_EVENTS_PATH: &str = "/v1/events/ws";
+const WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE: &str =
+    "service_api_ws_presence_owner_did_header_invalid";
+const WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE: &str =
+    "service_api_ws_presence_target_owner_did_header_invalid";
+const WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE: &str =
+    "service_api_ws_presence_target_agent_did_header_invalid";
 
 fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str)]) -> Vec<u8> {
     send_websocket_upgrade_request_with_version(addr, path, "13", headers)
@@ -63,6 +69,18 @@ fn send_websocket_upgrade_request_with_version_close_observation(
         }
     }
     (response, peer_closed)
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_reason_taxonomy_includes_presence_did_invalid_headers()
+{
+    assert!(
+        SERVICE_API_WEBSOCKET_REASON_CODES_CSV.contains(WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE)
+    );
+    assert!(SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .contains(WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE));
+    assert!(SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .contains(WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE));
 }
 
 fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
@@ -682,6 +700,227 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_missing_owner
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after missing-owner websocket rejection"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_owner_did_header() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34062".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-legacy-owner";
+    let nonce = 44_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        WEBSOCKET_EVENTS_PATH,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "44"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence"),
+            ("X-KAMN-Presence-Owner-DID", "did:kamn:owner:legacy-alpha"),
+            ("X-KAMN-Presence-Target-Agent-DID", sender_did),
+        ],
+    );
+    let response_text = String::from_utf8(response).expect("legacy owner response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(
+        payload.reason_code,
+        WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE
+    );
+    assert!(payload
+        .message
+        .contains("invalid presence owner did header"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after legacy owner websocket rejection"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target_owner_did_header()
+{
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34063".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-legacy-target-owner";
+    let nonce = 45_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        WEBSOCKET_EVENTS_PATH,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "45"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence"),
+            ("X-KAMN-Presence-Owner-DID", "kamn:did:owner:alpha"),
+            (
+                "X-KAMN-Presence-Target-Owner-DID",
+                "did:kamn:owner:legacy-beta",
+            ),
+            ("X-KAMN-Presence-Target-Agent-DID", sender_did),
+        ],
+    );
+    let response_text =
+        String::from_utf8(response).expect("legacy target owner response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(
+        payload.reason_code,
+        WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE
+    );
+    assert!(payload
+        .message
+        .contains("invalid presence target owner did header"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after legacy target owner websocket rejection"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target_agent_did_header()
+{
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34064".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-legacy-target-agent";
+    let nonce = 46_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        WEBSOCKET_EVENTS_PATH,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "46"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence"),
+            ("X-KAMN-Presence-Owner-DID", "kamn:did:owner:alpha"),
+            (
+                "X-KAMN-Presence-Target-Agent-DID",
+                "did:kamn:agent:legacy-gamma",
+            ),
+        ],
+    );
+    let response_text =
+        String::from_utf8(response).expect("legacy target agent response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(
+        payload.reason_code,
+        WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE
+    );
+    assert!(payload
+        .message
+        .contains("invalid presence target agent did header"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after legacy target agent websocket rejection"
     );
 }
 

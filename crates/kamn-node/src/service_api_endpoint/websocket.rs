@@ -363,28 +363,33 @@ fn serialize_state_transition_payload(snapshot: &ServiceApiSnapshot) -> String {
 fn project_presence_mode_payload(
     headers: &BTreeMap<String, String>,
 ) -> Result<String, ServiceApiReasonedError> {
-    let requester_agent_did = required_presence_header(
+    let requester_agent_did = required_non_empty_presence_header(
         headers,
         REQUEST_AUTH_SENDER_DID_HEADER,
         REASON_CODE_WS_PRESENCE_REQUESTER_AGENT_DID_HEADER_MISSING,
     )?
     .to_owned();
-    let owner_did = required_presence_header(
+    let owner_did = required_presence_kamn_did_header(
         headers,
         REQUEST_WS_PRESENCE_OWNER_DID_HEADER,
         REASON_CODE_WS_PRESENCE_OWNER_DID_HEADER_MISSING,
+        REASON_CODE_WS_PRESENCE_OWNER_DID_HEADER_INVALID,
+        "invalid presence owner did header",
     )?
     .to_owned();
-    let target_owner_did =
-        super::auth::header_value(headers, REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .unwrap_or(owner_did.as_str())
-            .to_owned();
-    let target_agent_did = required_presence_header(
+    let target_owner_did = optional_presence_kamn_did_header(
+        headers,
+        REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER,
+        owner_did.as_str(),
+        REASON_CODE_WS_PRESENCE_TARGET_OWNER_DID_HEADER_INVALID,
+        "invalid presence target owner did header",
+    )?;
+    let target_agent_did = required_presence_agent_did_header(
         headers,
         REQUEST_WS_PRESENCE_TARGET_AGENT_DID_HEADER,
         REASON_CODE_WS_PRESENCE_TARGET_AGENT_DID_HEADER_MISSING,
+        REASON_CODE_WS_PRESENCE_TARGET_AGENT_DID_HEADER_INVALID,
+        "invalid presence target agent did header",
     )?
     .to_owned();
     let gateway_node = super::auth::header_value(headers, REQUEST_WS_PRESENCE_GATEWAY_NODE_HEADER)
@@ -447,7 +452,7 @@ fn project_presence_mode_payload(
     Ok(super::serialize_service_api_json(&payload))
 }
 
-fn required_presence_header<'a>(
+fn required_non_empty_presence_header<'a>(
     headers: &'a BTreeMap<String, String>,
     header_name: &str,
     reason_code: &'static str,
@@ -461,6 +466,55 @@ fn required_presence_header<'a>(
                 format!("missing required header: {header_name}"),
             )
         })
+}
+
+fn required_presence_agent_did_header<'a>(
+    headers: &'a BTreeMap<String, String>,
+    header_name: &str,
+    missing_reason_code: &'static str,
+    invalid_reason_code: &'static str,
+    invalid_message: &str,
+) -> Result<&'a str, ServiceApiReasonedError> {
+    let header_value =
+        required_non_empty_presence_header(headers, header_name, missing_reason_code)?;
+    AgentDid::parse(header_value).map_err(|error| {
+        ServiceApiReasonedError::new(invalid_reason_code, format!("{invalid_message}: {error}"))
+    })?;
+    Ok(header_value)
+}
+
+fn required_presence_kamn_did_header<'a>(
+    headers: &'a BTreeMap<String, String>,
+    header_name: &str,
+    missing_reason_code: &'static str,
+    invalid_reason_code: &'static str,
+    invalid_message: &str,
+) -> Result<&'a str, ServiceApiReasonedError> {
+    let header_value =
+        required_non_empty_presence_header(headers, header_name, missing_reason_code)?;
+    KamnDid::parse(header_value).map_err(|error| {
+        ServiceApiReasonedError::new(invalid_reason_code, format!("{invalid_message}: {error}"))
+    })?;
+    Ok(header_value)
+}
+
+fn optional_presence_kamn_did_header(
+    headers: &BTreeMap<String, String>,
+    header_name: &str,
+    default_value: &str,
+    invalid_reason_code: &'static str,
+    invalid_message: &str,
+) -> Result<String, ServiceApiReasonedError> {
+    let Some(header_value) = super::auth::header_value(headers, header_name)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(default_value.to_owned());
+    };
+    KamnDid::parse(header_value).map_err(|error| {
+        ServiceApiReasonedError::new(invalid_reason_code, format!("{invalid_message}: {error}"))
+    })?;
+    Ok(header_value.to_owned())
 }
 
 fn parse_presence_timestamp_header(
