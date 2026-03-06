@@ -9,6 +9,13 @@ fn fast_gate_section() -> &'static str {
         .expect("fast gate section should exist")
 }
 
+fn workspace_premerge_section() -> &'static str {
+    CI_FAST_GATE_WORKFLOW
+        .split("workspace-premerge-gate:")
+        .nth(1)
+        .expect("workspace premerge section should exist")
+}
+
 #[test]
 fn spec_c01_ci_fast_gate_declares_workspace_premerge_job() {
     assert!(
@@ -108,5 +115,18 @@ fn spec_c07_ci_docs_record_fast_gate_cargo_audit_contract() {
     assert!(
         CARGO_AUDIT_ADR.contains("cargo_audit_fast_gate_artifact=ci-cargo-audit"),
         "cargo_audit_adr_fast_gate_artifact_marker_missing",
+    );
+}
+
+#[test]
+fn spec_c08_workspace_premerge_no_longer_duplicates_cargo_audit() {
+    let workspace_premerge = workspace_premerge_section();
+    assert!(
+        !workspace_premerge.contains("Install cargo-audit"),
+        "workspace_premerge_cargo_audit_install_step_should_be_absent",
+    );
+    assert!(
+        !workspace_premerge.contains("cargo audit --json > cargo-audit-report.json"),
+        "workspace_premerge_cargo_audit_command_should_be_absent",
     );
 }
