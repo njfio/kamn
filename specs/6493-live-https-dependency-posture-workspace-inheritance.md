@@ -27,10 +27,10 @@ Teach the kamn-core live HTTPS dependency posture checker to evaluate workspace-
 - Documentation marker checks regress while updating the checker/test harness.
 
 ## Acceptance criteria
-- [ ] Running `bash scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh` passes on the current workspace-inherited `crates/kamn-core/Cargo.toml`.
-- [ ] A regression fixture that overrides local `rustls` posture to `default-features = true` fails with `reason_codes_csv=rustls_default_features_not_disabled`.
-- [ ] The checker resolves workspace-inherited `rustls`, `rustls-pemfile`, and `webpki-roots` declarations without weakening existing fail-closed checks.
-- [ ] `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` passes locally after the fix.
+- [x] Running `bash scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh` passes on the current workspace-inherited `crates/kamn-core/Cargo.toml`.
+- [x] A regression fixture that overrides local `rustls` posture to `default-features = true` fails with `reason_codes_csv=rustls_default_features_not_disabled`.
+- [x] The checker resolves workspace-inherited `rustls`, `rustls-pemfile`, and `webpki-roots` declarations without weakening existing fail-closed checks.
+- [x] `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` passes locally after the fix.
 
 ## Files to touch
 - `scripts/ci/check_kamn_core_live_https_dependency_posture.py`
@@ -50,3 +50,10 @@ Teach the kamn-core live HTTPS dependency posture checker to evaluate workspace-
   - rerun `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
 - Refactor:
   - rerun the focused checker regression after simplifying any duplicated manifest-resolution logic
+
+## Phase 6 evidence
+- `bash scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh`
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
+
+## Deviations
+- None
