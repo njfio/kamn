@@ -125,8 +125,7 @@ const REASON_CODE_REQUEST_HEADER_UTF8_INVALID: &str = "service_api_request_heade
 const REASON_CODE_REQUEST_BODY_UTF8_INVALID: &str = "service_api_request_body_utf8_invalid";
 const REASON_CODE_RELAY_PAYLOAD_INVALID: &str = "service_api_relay_payload_invalid";
 const REASON_CODE_AGENT_DID_PATH_INVALID: &str = "service_api_agent_did_path_invalid";
-const REASON_CODE_MESSAGE_RECIPIENT_DID_INVALID: &str =
-    "service_api_message_recipient_did_invalid";
+const REASON_CODE_MESSAGE_RECIPIENT_DID_INVALID: &str = "service_api_message_recipient_did_invalid";
 const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
 const REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING: &str =
     "service_api_auth_sender_did_header_missing";

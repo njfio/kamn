@@ -5702,9 +5702,8 @@ fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()
     let canonical_recipient_did = "kamn:did:agent:legacy-recipient-target";
     let legacy_send_body =
         r#"{"recipient_did":"did:kamn:agent:legacy-alpha","message":"reject-me"}"#;
-    let canonical_send_body = format!(
-        r#"{{"recipient_did":"{canonical_recipient_did}","message":"accept-me"}}"#
-    );
+    let canonical_send_body =
+        format!(r#"{{"recipient_did":"{canonical_recipient_did}","message":"accept-me"}}"#);
 
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
@@ -5720,8 +5719,12 @@ fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let legacy_signature =
-        service_api_request_signature_for_fields(sender_did, 41, state_hash.as_str(), legacy_send_body);
+    let legacy_signature = service_api_request_signature_for_fields(
+        sender_did,
+        41,
+        state_hash.as_str(),
+        legacy_send_body,
+    );
     let legacy_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "POST",
@@ -5784,7 +5787,10 @@ fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()
         .values()
         .next()
         .expect("canonical send should persist exactly one message");
-    assert_eq!(persisted_message["message_id"], canonical_payload.message_id);
+    assert_eq!(
+        persisted_message["message_id"],
+        canonical_payload.message_id
+    );
     assert_eq!(persisted_message["recipient_did"], canonical_recipient_did);
     assert_eq!(persisted_message["sender_did"], sender_did);
 
@@ -5794,7 +5800,11 @@ fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()
         .lines()
         .filter(|line| !line.trim().is_empty())
         .collect();
-    assert_eq!(relay_lines.len(), 1, "only canonical sends should enqueue relay spool entries");
+    assert_eq!(
+        relay_lines.len(),
+        1,
+        "only canonical sends should enqueue relay spool entries"
+    );
     let relay_entry_json: Value =
         serde_json::from_str(relay_lines[0]).expect("relay spool entry should deserialize");
     assert_eq!(relay_entry_json["message_id"], canonical_payload.message_id);
