@@ -102,6 +102,7 @@ const SERVICE_API_AUTH_SCOPE_INVALID_REASON_CODE: &str = "service_api_auth_scope
 const SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE: &str = "service_api_agent_did_path_invalid";
 const SERVICE_API_MESSAGE_RECIPIENT_DID_INVALID_REASON_CODE: &str =
     "service_api_message_recipient_did_invalid";
+const SERVICE_API_RELAY_DID_INVALID_REASON_CODE: &str = "service_api_relay_did_invalid";
 const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
     "service_api_auth_scope_route_mismatch";
 const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
@@ -319,6 +320,7 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
     }
     let scope = match (method, path) {
         ("POST", "/v1/messages/send") => "messages:write",
+        ("POST", "/v1/messages/relay") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", "/v1/escrow/fund") => "escrow:write",
@@ -6182,6 +6184,193 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
     let _ = fs::remove_file(sender_relay_spool_file);
     let _ = fs::remove_file(recipient_state_file);
     let _ = fs::remove_file(recipient_relay_spool_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids() {
+    let _env = acquire_service_api_test_env();
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-legacy-relay-state-{unique_suffix}.json"
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34123".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let caller_did = "kamn:did:agent:relay-ingest-caller";
+    let legacy_recipient_body = r#"{
+      "message_id":"msg-relay-legacy-recipient",
+      "sender_did":"kamn:did:agent:relay-sender",
+      "recipient_did":"did:kamn:agent:legacy-recipient",
+      "body":"{\"message\":\"relay-recipient\"}"
+    }"#;
+    let legacy_sender_body = r#"{
+      "message_id":"msg-relay-legacy-sender",
+      "sender_did":"did:kamn:agent:legacy-sender",
+      "recipient_did":"kamn:did:agent:relay-recipient",
+      "body":"{\"message\":\"relay-sender\"}"
+    }"#;
+    let canonical_body = r#"{
+      "message_id":"msg-relay-canonical",
+      "sender_did":"kamn:did:agent:relay-sender",
+      "recipient_did":"kamn:did:agent:relay-recipient",
+      "body":"{\"message\":\"relay-canonical\"}"
+    }"#;
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let legacy_recipient_signature = service_api_request_signature_for_fields(
+        caller_did,
+        51,
+        state_hash.as_str(),
+        legacy_recipient_body,
+    );
+    let legacy_recipient_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/relay",
+        legacy_recipient_body,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "51"),
+            (
+                "X-KAMN-Request-Signature",
+                legacy_recipient_signature.as_str(),
+            ),
+        ],
+    );
+    assert!(legacy_recipient_response.contains("HTTP/1.1 400 Bad Request"));
+    let legacy_recipient_payload =
+        parse_error_envelope_from_http_response(legacy_recipient_response.as_str());
+    assert_eq!(
+        legacy_recipient_payload.reason_code,
+        SERVICE_API_RELAY_DID_INVALID_REASON_CODE
+    );
+    assert!(
+        legacy_recipient_payload
+            .message
+            .contains("invalid relay recipient did"),
+        "legacy relay recipient rejection should explain the invalid recipient boundary"
+    );
+
+    let legacy_sender_signature = service_api_request_signature_for_fields(
+        caller_did,
+        52,
+        state_hash.as_str(),
+        legacy_sender_body,
+    );
+    let legacy_sender_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/relay",
+        legacy_sender_body,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "52"),
+            ("X-KAMN-Request-Signature", legacy_sender_signature.as_str()),
+        ],
+    );
+    assert!(legacy_sender_response.contains("HTTP/1.1 400 Bad Request"));
+    let legacy_sender_payload =
+        parse_error_envelope_from_http_response(legacy_sender_response.as_str());
+    assert_eq!(
+        legacy_sender_payload.reason_code,
+        SERVICE_API_RELAY_DID_INVALID_REASON_CODE
+    );
+    assert!(
+        legacy_sender_payload
+            .message
+            .contains("invalid relay sender did"),
+        "legacy relay sender rejection should explain the invalid sender boundary"
+    );
+
+    let canonical_signature = service_api_request_signature_for_fields(
+        caller_did,
+        53,
+        state_hash.as_str(),
+        canonical_body,
+    );
+    let canonical_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/relay",
+        canonical_body,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "53"),
+            ("X-KAMN-Request-Signature", canonical_signature.as_str()),
+        ],
+    );
+    assert!(canonical_response.contains("HTTP/1.1 202 Accepted"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after relay did rejection flow"
+    );
+
+    let state_payload =
+        fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+    let state_json: Value =
+        serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+    let messages = state_json["messages"]
+        .as_object()
+        .expect("messages snapshot should be an object");
+    assert_eq!(
+        messages.len(),
+        1,
+        "only canonical relay payloads should persist"
+    );
+    assert!(
+        messages.contains_key("msg-relay-canonical"),
+        "canonical relay payload should persist under its message id"
+    );
+    assert!(
+        !messages.contains_key("msg-relay-legacy-recipient"),
+        "legacy relay recipient payload must not persist"
+    );
+    assert!(
+        !messages.contains_key("msg-relay-legacy-sender"),
+        "legacy relay sender payload must not persist"
+    );
+
+    let _ = fs::remove_file(state_file);
 }
 
 #[test]
