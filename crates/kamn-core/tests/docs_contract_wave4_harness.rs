@@ -1455,4 +1455,12 @@ mod reputation_signal_routing_docs {
             "tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`)."
         ));
     }
+
+    #[test]
+    fn regression_requires_canonical_did_examples() {
+        // Regression: #6498
+        assert!(!DOC.contains("did:kamn:"));
+        assert!(DOC.contains("--subject-did kamn:did:agent-001"));
+        assert!(DOC.contains("--reviewer-did kamn:did:reviewer-001"));
+    }
 }

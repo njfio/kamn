@@ -116,3 +116,13 @@ fn regression_requires_reputation_recovery_guard_marker() {
         "false-positive irreversible-penalty paths, replayed recovery nonces, and tampered recovery reason codes force `NO-GO` (`Regression: #936`)."
     ));
 }
+
+#[test]
+fn regression_requires_canonical_did_examples() {
+    // Regression: #6498
+    assert!(!DOC.contains("did:kamn:"));
+    assert!(DOC.contains("--collector-did kamn:did:auditor-001"));
+    assert!(DOC.contains("--subject-did kamn:did:subject-001"));
+    assert!(DOC.contains("--subject-did kamn:did:agent-001"));
+    assert!(DOC.contains("--reviewer-did kamn:did:reviewer-001"));
+}

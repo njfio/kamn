@@ -52,7 +52,7 @@ Routing-affecting dispute outcomes are published through deterministic evidence 
 - Shared Python implementation:
   - `scripts/reputation/reputation_dispute_contract.py`
 - Evidence bundle generator:
-  - `bash scripts/reputation/generate_reputation_dispute_evidence_bundle.sh --output-file /tmp/reputation-dispute.json --dispute-id dispute-001 --subject-did did:kamn:agent-001 --reviewer-did did:kamn:reviewer-001 --dispute-reason-code QUALITY --evidence-uri s3://kamn-audit/reputation/dispute-001.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --evidence-hash-verified PASS --original-trust-score 640 --proposed-trust-score 560 --max-adjustment-points 120 --policy-window-open true --approval-recorded true --ci-fast-gate PASS`
+  - `bash scripts/reputation/generate_reputation_dispute_evidence_bundle.sh --output-file /tmp/reputation-dispute.json --dispute-id dispute-001 --subject-did kamn:did:agent-001 --reviewer-did kamn:did:reviewer-001 --dispute-reason-code QUALITY --evidence-uri s3://kamn-audit/reputation/dispute-001.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --evidence-hash-verified PASS --original-trust-score 640 --proposed-trust-score 560 --max-adjustment-points 120 --policy-window-open true --approval-recorded true --ci-fast-gate PASS`
 - Policy checker:
   - `bash scripts/reputation/check_reputation_dispute_policy.sh --bundle-file /tmp/reputation-dispute.json`
 - PR fast contract lane:
@@ -73,7 +73,7 @@ Inbound reputation signals require deterministic quarantine-policy evidence befo
 - Shared Python implementation:
   - `scripts/reputation/reputation_signal_quarantine_contract.py`
 - Evidence bundle generator:
-  - `bash scripts/reputation/generate_reputation_signal_quarantine_evidence_bundle.sh --output-file /tmp/reputation-signal-quarantine.json --lane contract --signal-id signal-001 --subject-did did:kamn:agent-001 --signal-kind ENDORSEMENT --source-channel TELEGRAM --event-age-seconds 45 --payload-sha256 sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --payload-signature-verified PASS --nonce-unique true --rate-within-threshold true --source-attested true --ci-fast-gate PASS`
+  - `bash scripts/reputation/generate_reputation_signal_quarantine_evidence_bundle.sh --output-file /tmp/reputation-signal-quarantine.json --lane contract --signal-id signal-001 --subject-did kamn:did:agent-001 --signal-kind ENDORSEMENT --source-channel TELEGRAM --event-age-seconds 45 --payload-sha256 sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --payload-signature-verified PASS --nonce-unique true --rate-within-threshold true --source-attested true --ci-fast-gate PASS`
 - Policy checker:
   - `bash scripts/reputation/check_reputation_signal_quarantine_policy.sh --bundle-file /tmp/reputation-signal-quarantine.json`
 - PR fast contract lane:

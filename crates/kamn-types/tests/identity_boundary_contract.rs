@@ -15,13 +15,11 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(DID_FORMAT_DOC.contains("did_format_current_canonical=kamn:did:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_divergent_shape=did:kamn:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_target_standard=kamn:did:{role}:{id}"));
+    assert!(DID_FORMAT_DOC.contains("did_format_divergent_consumer_count=0"));
+    assert!(DID_FORMAT_DOC.contains("did_format_followup_scope=parser-compatibility-decision-only"));
+    assert!(DID_FORMAT_DOC.contains("did_format_divergent_reference_scope=inventory-only"));
     assert!(DID_FORMAT_DOC.contains("did_format_public_contract_gate=approval-required"));
-    assert!(DID_FORMAT_DOC
-        .contains("did_format_divergent_consumer=docs/foundation/reputation-signal-routing.md"));
-    assert!(DID_FORMAT_DOC
-        .contains("did_format_divergent_consumer=docs/foundation/audit-export-interfaces.md"));
-    assert!(DID_FORMAT_DOC
-        .contains("did_format_divergent_consumer=docs/foundation/reputation-state-model.md"));
+    assert!(!DID_FORMAT_DOC.contains("did_format_divergent_consumer=docs/"));
 }
 
 #[test]

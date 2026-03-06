@@ -1530,3 +1530,13 @@ fn regression_requires_signer_incident_recovery_stale_artifact_guard_marker() {
         "stale deep-lane artifacts, unscheduled deep-lane execution, and incident recovery policy drift force `NO-GO` (`Regression: #989`)."
     ));
 }
+
+#[test]
+fn regression_requires_canonical_did_examples() {
+    // Regression: #6498
+    assert!(!CHECKLIST.contains("did:kamn:"));
+    assert!(CHECKLIST.contains("--collector-did kamn:did:auditor-001"));
+    assert!(CHECKLIST.contains("--subject-did kamn:did:subject-001"));
+    assert!(CHECKLIST.contains("--subject-did kamn:did:agent-001"));
+    assert!(CHECKLIST.contains("--reviewer-did kamn:did:reviewer-001"));
+}

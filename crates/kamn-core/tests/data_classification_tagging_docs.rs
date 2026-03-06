@@ -75,3 +75,10 @@ fn regression_requires_dsar_contract_lane_wrapper_marker() {
     assert!(DOC.contains("dsar_legal_hold_contract_lane_contract.py"));
     assert!(DOC.contains("Regression: #1234"));
 }
+
+#[test]
+fn regression_requires_canonical_did_examples() {
+    // Regression: #6498
+    assert!(!DOC.contains("did:kamn:"));
+    assert!(DOC.contains("--subject-did kamn:did:subject-001"));
+}
