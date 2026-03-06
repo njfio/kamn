@@ -99,8 +99,7 @@ const SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE: &str =
 const SERVICE_API_AUTH_SCOPE_HEADER_MISSING_REASON_CODE: &str =
     "service_api_auth_scope_header_missing";
 const SERVICE_API_AUTH_SCOPE_INVALID_REASON_CODE: &str = "service_api_auth_scope_invalid";
-const SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE: &str =
-    "service_api_agent_did_path_invalid";
+const SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE: &str = "service_api_agent_did_path_invalid";
 const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
     "service_api_auth_scope_route_mismatch";
 const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
