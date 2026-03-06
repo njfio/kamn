@@ -22,11 +22,11 @@ Add explicit coverage for `evaluate_runtime_guard_policy_stack()` propagating
 - Existing allow/reject paths regress while adding the new test coverage.
 
 ## Acceptance criteria
-- [ ] A dedicated runtime-guards test asserts `AntiSpamError::InvalidInput(..)` propagates from
+- [x] A dedicated runtime-guards test asserts `AntiSpamError::InvalidInput(..)` propagates from
       `evaluate_runtime_guard_policy_stack()`.
-- [ ] A contract test fails if that dedicated test surface is removed.
-- [ ] Existing allow and reject policy-stack behavior remains unchanged.
-- [ ] Focused runtime-guards tests pass locally.
+- [x] A contract test fails if that dedicated test surface is removed.
+- [x] Existing allow and reject policy-stack behavior remains unchanged.
+- [x] Focused runtime-guards tests pass locally.
 
 ## Files to touch
 - `crates/kamn-runtime-guards/tests/runtime_guard_policy_stack.rs`
@@ -51,8 +51,16 @@ Add explicit coverage for `evaluate_runtime_guard_policy_stack()` propagating
   - rerun the focused runtime-guards tests after cleanup
 
 ## Deviations
-- Pending red-phase investigation may show the production behavior already exists and only the
-  coverage artifact is missing. If so, no production code change is expected.
+- Red-phase investigation confirmed the production behavior already existed through the `?`
+  propagation in `evaluate_runtime_guard_policy_stack()`. This issue therefore landed as
+  coverage-only with no production code change.
 
 ## Execution Evidence
-- Pending.
+- Red:
+  - `cargo test -p kamn-runtime-guards --test runtime_guard_policy_stack_contract -- --nocapture`
+- Green:
+  - `cargo test -p kamn-runtime-guards --test runtime_guard_policy_stack_contract -- --nocapture`
+  - `cargo test -p kamn-runtime-guards --test runtime_guard_policy_stack -- --nocapture`
+- Refactor / Integration:
+  - `cargo test -p kamn-runtime-guards -- --nocapture`
+  - `cargo clippy -p kamn-runtime-guards --tests -- -D warnings`
