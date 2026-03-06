@@ -25,6 +25,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - CI/workflow changes without Rust source changes: run shell syntax checks and a smoke Rust lane when a Cargo project exists.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
+- `fast_gate_cargo_audit_feedback=enabled`
+- When `run_rust=true`, `Fast Gate (PR)` runs `cargo-audit`, enforces the existing waiver policy, and uploads the `ci-cargo-audit` artifact for earlier security feedback.
 
 ## Heavy Integration CI Scope Contracts
 - Heavy local integration run-mode lanes must remain excluded from fast-gate command surfaces.

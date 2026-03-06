@@ -1,5 +1,20 @@
 const CI_FAST_GATE_WORKFLOW: &str = include_str!("../../../.github/workflows/ci-fast-gate.yml");
 const CI_STRATEGY_DOC: &str = include_str!("../../../docs/ci/strategy.md");
+const CARGO_AUDIT_ADR: &str = include_str!("../../../docs/architecture/adr-cargo-audit-ci-gate.md");
+
+fn fast_gate_section() -> &'static str {
+    CI_FAST_GATE_WORKFLOW
+        .split("workspace-premerge-gate:")
+        .next()
+        .expect("fast gate section should exist")
+}
+
+fn workspace_premerge_section() -> &'static str {
+    CI_FAST_GATE_WORKFLOW
+        .split("workspace-premerge-gate:")
+        .nth(1)
+        .expect("workspace premerge section should exist")
+}
 
 #[test]
 fn spec_c01_ci_fast_gate_declares_workspace_premerge_job() {
@@ -51,5 +66,67 @@ fn spec_c05_ci_strategy_docs_record_workspace_premerge_gate_contract() {
     assert!(
         CI_STRATEGY_DOC.contains("bash scripts/ci/run_with_retry.sh --label workspace-premerge-tests --max-attempts 2 -- cargo test --workspace --locked --all-features --no-fail-fast"),
         "ci_strategy_workspace_premerge_command_marker_missing",
+    );
+}
+
+#[test]
+fn spec_c06_ci_fast_gate_runs_cargo_audit_in_fast_gate() {
+    let fast_gate = fast_gate_section();
+    assert!(
+        fast_gate.contains("Fast Gate (PR)"),
+        "ci_fast_gate_job_marker_missing",
+    );
+    assert!(
+        fast_gate.contains("Install cargo-audit"),
+        "ci_fast_gate_cargo_audit_install_step_missing",
+    );
+    assert!(
+        fast_gate.contains("cargo audit --json > cargo-audit-report.json"),
+        "ci_fast_gate_cargo_audit_command_missing",
+    );
+    assert!(
+        fast_gate.contains("python3 scripts/ci/check_cargo_audit_policy.py"),
+        "ci_fast_gate_cargo_audit_policy_command_missing",
+    );
+    assert!(
+        fast_gate.contains("name: ci-cargo-audit-${{ github.run_id }}-${{ github.run_attempt }}"),
+        "ci_fast_gate_cargo_audit_artifact_name_missing",
+    );
+    assert!(
+        fast_gate.contains("cargo-audit-report.json"),
+        "ci_fast_gate_cargo_audit_report_artifact_missing",
+    );
+    assert!(
+        fast_gate.contains("ci-cargo-audit-policy.json"),
+        "ci_fast_gate_cargo_audit_policy_artifact_missing",
+    );
+}
+
+#[test]
+fn spec_c07_ci_docs_record_fast_gate_cargo_audit_contract() {
+    assert!(
+        CI_STRATEGY_DOC.contains("fast_gate_cargo_audit_feedback=enabled"),
+        "ci_strategy_fast_gate_cargo_audit_marker_missing",
+    );
+    assert!(
+        CARGO_AUDIT_ADR.contains("cargo_audit_fast_gate_scope=run_rust"),
+        "cargo_audit_adr_fast_gate_scope_marker_missing",
+    );
+    assert!(
+        CARGO_AUDIT_ADR.contains("cargo_audit_fast_gate_artifact=ci-cargo-audit"),
+        "cargo_audit_adr_fast_gate_artifact_marker_missing",
+    );
+}
+
+#[test]
+fn spec_c08_workspace_premerge_no_longer_duplicates_cargo_audit() {
+    let workspace_premerge = workspace_premerge_section();
+    assert!(
+        !workspace_premerge.contains("Install cargo-audit"),
+        "workspace_premerge_cargo_audit_install_step_should_be_absent",
+    );
+    assert!(
+        !workspace_premerge.contains("cargo audit --json > cargo-audit-report.json"),
+        "workspace_premerge_cargo_audit_command_should_be_absent",
     );
 }

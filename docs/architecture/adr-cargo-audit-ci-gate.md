@@ -8,13 +8,18 @@ Issue: `#5941`
 
 ## Decision
 
-Add a fail-closed cargo-audit policy gate to required CI and deep validation workflows:
+Add a fail-closed cargo-audit policy gate to required CI with earlier Fast Gate feedback:
 
 - Generate live advisory report:
   - `cargo audit --json > cargo-audit-report.json`
 - Enforce deterministic policy:
   - `python3 scripts/ci/check_cargo_audit_policy.py --audit-json cargo-audit-report.json --waiver-file .ci/cargo-audit-waivers.json --threshold-max-severity moderate --output-json ci-cargo-audit-policy.json`
 - Archive report and policy outputs as workflow artifacts.
+
+Fast-gate routing markers:
+
+- `cargo_audit_fast_gate_scope=run_rust`
+- `cargo_audit_fast_gate_artifact=ci-cargo-audit`
 
 Waiver policy is explicit and tracked:
 
@@ -26,13 +31,13 @@ Waiver policy is explicit and tracked:
 
 Positive:
 
-- Required CI now blocks unwaived high/critical dependency advisories.
+- `Fast Gate (PR)` now blocks unwaived high/critical dependency advisories earlier in the PR cycle.
 - Waiver exceptions become auditable and time-bounded.
 - Security evidence is archived per run.
 
 Trade-offs:
 
-- CI runtime increases due to cargo-audit installation/execution.
+- Fast gate runtime increases due to cargo-audit installation/execution.
 - Waiver governance adds process overhead for temporary exceptions.
 
 Operational follow-up:

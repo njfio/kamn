@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.sh"
 PY_CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.py"
+WORKSPACE_MANIFEST="$ROOT_DIR/Cargo.toml"
 TLS_HARDENING_DOC="$ROOT_DIR/docs/security/tls-hardening.md"
 CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
@@ -14,11 +15,15 @@ test_harness_require_executable "$CHECKER" "expected live-https dependency postu
 
 test_harness_require_executable "$PY_CHECKER" "expected live-https dependency posture checker module to be executable"
 
+run_checker() {
+  bash "$CHECKER" --workspace-manifest "$WORKSPACE_MANIFEST" "$@"
+}
+
 REPORT_FILE="$(mktemp)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR" "$REPORT_FILE"' EXIT
 
-pass_output="$(bash "$CHECKER" --output-json "$REPORT_FILE")"
+pass_output="$(run_checker --output-json "$REPORT_FILE")"
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1$'; then
   echo "expected deterministic reason taxonomy marker on pass output" >&2
   exit 1
@@ -53,10 +58,10 @@ PY
 
 MANIFEST_FIXTURE="$TMP_DIR/Cargo.toml"
 cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$MANIFEST_FIXTURE"
-sed -i 's/rustls-pemfile = { version = "2.2.0", optional = true }/rustls-pemfile = { version = "2.2.0", optional = false }/' "$MANIFEST_FIXTURE"
+sed -i 's/rustls-pemfile = { workspace = true, optional = true }/rustls-pemfile = { workspace = true, optional = false }/' "$MANIFEST_FIXTURE"
 
 set +e
-manifest_failure_output="$(bash "$CHECKER" --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
+manifest_failure_output="$(run_checker --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
 manifest_failure_code=$?
 set -e
 
@@ -98,12 +103,12 @@ content = content.replace(
     'live-https = ["dep:rustls", "dep:rustls-pemfile", "dep:webpki-roots"]',
     'live-https = ["dep:rustls", "dep:rustls-pemfile"]',
 )
-content = content.replace('webpki-roots = { version = "1.0.3", optional = true }\n', "")
+content = content.replace('webpki-roots = { workspace = true, optional = true }\n', "")
 path.write_text(content, encoding="utf-8")
 PY
 
 set +e
-root_drift_output="$(bash "$CHECKER" --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+root_drift_output="$(run_checker --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
 root_drift_code=$?
 set -e
 
@@ -129,12 +134,50 @@ if ! printf '%s\n' "$root_drift_output" | grep -q '^reason_codes_value=webpki_ro
   exit 1
 fi
 
+RUSTLS_DRIFT_MANIFEST_FIXTURE="$TMP_DIR/Cargo-rustls-default-features-drift.toml"
+cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$RUSTLS_DRIFT_MANIFEST_FIXTURE"
+python3 - "$RUSTLS_DRIFT_MANIFEST_FIXTURE" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+content = path.read_text(encoding="utf-8")
+content = content.replace(
+    'rustls = { workspace = true, features = ["ring", "std", "tls12"], optional = true }',
+    'rustls = { workspace = true, default-features = true, features = ["ring", "std", "tls12"], optional = true }',
+)
+path.write_text(content, encoding="utf-8")
+PY
+
+set +e
+rustls_drift_output="$(run_checker --cargo-manifest "$RUSTLS_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+rustls_drift_code=$?
+set -e
+
+if [ "$rustls_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when rustls default-features posture drifts locally" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$rustls_drift_output" | grep -q 'dependency `rustls` should disable default features for deterministic profile control'; then
+  echo "expected rustls default-features drift marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$rustls_drift_output" | grep -q '^reason_codes_csv=rustls_default_features_not_disabled$'; then
+  echo "expected deterministic rustls default-features reason code from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$rustls_drift_output" | grep -q '^reason_codes_value=rustls_default_features_not_disabled$'; then
+  echo "expected deterministic rustls default-features reason value marker from checker" >&2
+  exit 1
+fi
+
 README_FIXTURE="$TMP_DIR/README.md"
 cp "$ROOT_DIR/README.md" "$README_FIXTURE"
 sed -i '/adr-kamn-core-live-tls-transport.md/d' "$README_FIXTURE"
 
 set +e
-readme_failure_output="$(bash "$CHECKER" --readme "$README_FIXTURE" 2>&1)"
+readme_failure_output="$(run_checker --readme "$README_FIXTURE" 2>&1)"
 readme_failure_code=$?
 set -e
 
@@ -157,7 +200,7 @@ cp "$ROOT_DIR/README.md" "$README_DEP_DRIFT_FIXTURE"
 sed -i '/`webpki-roots`/d' "$README_DEP_DRIFT_FIXTURE"
 
 set +e
-readme_dep_drift_output="$(bash "$CHECKER" --readme "$README_DEP_DRIFT_FIXTURE" 2>&1)"
+readme_dep_drift_output="$(run_checker --readme "$README_DEP_DRIFT_FIXTURE" 2>&1)"
 readme_dep_drift_code=$?
 set -e
 
@@ -188,7 +231,7 @@ cp "$ROOT_DIR/docs/ci/strategy.md" "$CI_STRATEGY_DRIFT_FIXTURE"
 sed -i '/cargo check -p kamn-core --no-default-features/d' "$CI_STRATEGY_DRIFT_FIXTURE"
 
 set +e
-ci_strategy_drift_output="$(bash "$CHECKER" --ci-strategy "$CI_STRATEGY_DRIFT_FIXTURE" 2>&1)"
+ci_strategy_drift_output="$(run_checker --ci-strategy "$CI_STRATEGY_DRIFT_FIXTURE" 2>&1)"
 ci_strategy_drift_code=$?
 set -e
 
