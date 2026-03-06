@@ -311,6 +311,33 @@ jobs:
           shared-key: kamn-rust-ci-v1
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Install cargo-audit
+        if: steps.scope.outputs.run_rust == 'true'
+        run: cargo install cargo-audit --locked --version 0.22.0
+
+      - name: Run cargo-audit dependency scan
+        if: steps.scope.outputs.run_rust == 'true'
+        run: cargo audit --json > cargo-audit-report.json
+
+      - name: Enforce cargo-audit policy gate
+        if: steps.scope.outputs.run_rust == 'true'
+        run: |
+          python3 scripts/ci/check_cargo_audit_policy.py \
+            --audit-json cargo-audit-report.json \
+            --waiver-file .ci/cargo-audit-waivers.json \
+            --threshold-max-severity moderate \
+            --output-json ci-cargo-audit-policy.json
+
+      - name: Upload cargo-audit security report
+        if: always() && (hashFiles('cargo-audit-report.json') != '' || hashFiles('ci-cargo-audit-policy.json') != '')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-cargo-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            cargo-audit-report.json
+            ci-cargo-audit-policy.json
+          if-no-files-found: error
+
       - name: Run kamn-core rustdoc artifact contract lane
         if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
         run: |
@@ -692,30 +719,6 @@ jobs:
         with:
           shared-key: kamn-rust-ci-v1
           save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked --version 0.22.0
-
-      - name: Run cargo-audit dependency scan
-        run: cargo audit --json > cargo-audit-report.json
-
-      - name: Enforce cargo-audit policy gate
-        run: |
-          python3 scripts/ci/check_cargo_audit_policy.py \
-            --audit-json cargo-audit-report.json \
-            --waiver-file .ci/cargo-audit-waivers.json \
-            --threshold-max-severity moderate \
-            --output-json ci-cargo-audit-policy.json
-
-      - name: Upload cargo-audit security report
-        if: always() && (hashFiles('cargo-audit-report.json') != '' || hashFiles('ci-cargo-audit-policy.json') != '')
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-cargo-audit-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            cargo-audit-report.json
-            ci-cargo-audit-policy.json
-          if-no-files-found: error
 
       - name: Full workspace pre-merge tests (bounded retry)
         run: |
