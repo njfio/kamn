@@ -43,6 +43,7 @@ after Actions recovery.
 - `AGENTS.md`
 - `.github/CONTRIBUTING.md`
 - `crates/kamn-core/tests/contributor_policy_ci_outage_docs.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 
 ## Error semantics
 - Documentation changes only; no runtime error behavior changes.
@@ -65,4 +66,6 @@ after Actions recovery.
 - Pending.
 
 ## Deviations
-- None.
+- Refreshed `fixtures/ci/test_file_size_policy_baseline.env` because adding the
+  dedicated docs contract target increased the repository test-file inventory by
+  one without changing any oversized-file counts.
