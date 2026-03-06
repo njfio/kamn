@@ -81,6 +81,18 @@ fn spec_c06_ci_fast_gate_runs_cargo_audit_in_fast_gate() {
         fast_gate.contains("python3 scripts/ci/check_cargo_audit_policy.py"),
         "ci_fast_gate_cargo_audit_policy_command_missing",
     );
+    assert!(
+        fast_gate.contains("name: ci-cargo-audit-${{ github.run_id }}-${{ github.run_attempt }}"),
+        "ci_fast_gate_cargo_audit_artifact_name_missing",
+    );
+    assert!(
+        fast_gate.contains("cargo-audit-report.json"),
+        "ci_fast_gate_cargo_audit_report_artifact_missing",
+    );
+    assert!(
+        fast_gate.contains("ci-cargo-audit-policy.json"),
+        "ci_fast_gate_cargo_audit_policy_artifact_missing",
+    );
 }
 
 #[test]
