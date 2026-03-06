@@ -9,8 +9,7 @@ use sha2::{Digest, Sha256, Sha512};
 use std::sync::{Mutex, OnceLock};
 use x25519_dalek::{PublicKey, StaticSecret};
 
-const TEST_KEY_SEED_HEX: &str =
-    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+const TEST_KEY_SEED_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const DIRECT_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-salt:v2";
 const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-info:v2";
@@ -115,7 +114,9 @@ fn ciphertext_with_raw_plaintext(
         msg: plaintext,
         aad: aad.as_bytes(),
     };
-    let mut sealed = cipher.encrypt(&xnonce, payload).expect("encryption should succeed");
+    let mut sealed = cipher
+        .encrypt(&xnonce, payload)
+        .expect("encryption should succeed");
     let auth_tag = sealed.split_off(sealed.len() - 16);
     DirectMessageCiphertext {
         key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
@@ -133,7 +134,9 @@ fn integration_decrypt_rejects_invalid_ciphertext_hex() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine =
             DirectMessageCryptoEngine::new(SENDER_KEY_REF, RECIPIENT_KEY_REF).expect("engine");
-        let mut sealed = engine.encrypt("payload", 101).expect("encrypt should succeed");
+        let mut sealed = engine
+            .encrypt("payload", 101)
+            .expect("encrypt should succeed");
         sealed.ciphertext = "zz".to_owned();
         assert_eq!(
             engine.decrypt(&sealed),
@@ -147,7 +150,9 @@ fn integration_decrypt_rejects_invalid_auth_tag_hex_as_integrity_failure() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine =
             DirectMessageCryptoEngine::new(SENDER_KEY_REF, RECIPIENT_KEY_REF).expect("engine");
-        let mut sealed = engine.encrypt("payload", 102).expect("encrypt should succeed");
+        let mut sealed = engine
+            .encrypt("payload", 102)
+            .expect("encrypt should succeed");
         sealed.auth_tag = "zz".to_owned();
         assert_eq!(
             engine.decrypt(&sealed),

@@ -47,6 +47,7 @@ source-contract tests.
 - `specs/6479-add-direct-message-crypto-failure-path-coverage.md`
 - `crates/kamn-crypto/tests/direct_message_crypto_failure_paths_contract.rs`
 - `crates/kamn-crypto/tests/direct_message_crypto_failure_paths.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 
 ## Error semantics
 - Preserve current `DirectMessageCryptoError` behavior exactly.
@@ -71,4 +72,6 @@ source-contract tests.
 - Pending.
 
 ## Deviations
-- None.
+- Refreshed `fixtures/ci/test_file_size_policy_baseline.env` because adding the
+  dedicated contract and failure-path targets increased the repository test-file
+  inventory from 432 to 434 without changing oversized-file counts.
