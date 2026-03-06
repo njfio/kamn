@@ -1046,6 +1046,12 @@ fn parse_relay_ingest_payload(
                 "relay payload missing non-empty recipient_did",
             )
         })?;
+    AgentDid::parse(recipient_did).map_err(|error| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_RELAY_DID_INVALID,
+            format!("invalid relay recipient did: {error}"),
+        )
+    })?;
     let body = parsed
         .get("body")
         .and_then(serde_json::Value::as_str)
@@ -1060,7 +1066,16 @@ fn parse_relay_ingest_payload(
         .and_then(serde_json::Value::as_str)
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .map(str::to_owned);
+        .map(|sender_did| {
+            AgentDid::parse(sender_did).map_err(|error| {
+                ServiceApiReasonedError::new(
+                    REASON_CODE_RELAY_DID_INVALID,
+                    format!("invalid relay sender did: {error}"),
+                )
+            })?;
+            Ok(sender_did.to_owned())
+        })
+        .transpose()?;
 
     Ok(ServiceApiRelayIngestPayload {
         message_id: message_id.to_owned(),
