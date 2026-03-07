@@ -169,6 +169,9 @@ fn candidate_doc_counts_match_filesystem_inventory() {
     let filesystem = collect_filesystem_stats();
     let filesystem_total_short: usize = filesystem.values().map(|value| value.short).sum();
     let doc_table = parse_doc_table_stats(&doc);
+    let ci_row = doc_table
+        .get("ci")
+        .unwrap_or_else(|| panic!("missing scripts/ci row in reduction candidates doc"));
 
     assert_eq!(
         parse_usize_marker(&doc, "script_surface_short_wrapper_category_count"),
@@ -177,6 +180,14 @@ fn candidate_doc_counts_match_filesystem_inventory() {
     assert_eq!(
         parse_usize_marker(&doc, "script_surface_short_wrapper_total_candidates"),
         filesystem_total_short
+    );
+    assert_eq!(
+        *ci_row,
+        CategoryStats {
+            total: 198,
+            short: 19,
+        },
+        "tracked scripts/ci candidate row drifted"
     );
     assert_eq!(doc_table, filesystem, "candidate table drifted");
 
