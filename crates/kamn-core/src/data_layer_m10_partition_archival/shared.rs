@@ -76,7 +76,10 @@ pub(super) fn deterministic_checksum_marker(
     partition_name: &str,
     partition_month_id: u32,
 ) -> String {
-    kamn_data_layer::data_layer_m10_deterministic_checksum_marker(partition_name, partition_month_id)
+    kamn_data_layer::data_layer_m10_deterministic_checksum_marker(
+        partition_name,
+        partition_month_id,
+    )
 }
 
 #[cfg(test)]
