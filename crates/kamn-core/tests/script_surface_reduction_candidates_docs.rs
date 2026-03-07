@@ -6,6 +6,10 @@ const README_DOC: &str = include_str!("../../../docs/developer/readme-contract-r
 const DOC_PATH: &str = "docs/developer/script-surface-reduction-candidates.md";
 const SH_THRESHOLD_MAX_LOC: usize = 25;
 const PY_THRESHOLD_MAX_LOC: usize = 40;
+const TRACKED_CI_STATS: CategoryStats = CategoryStats {
+    total: 198,
+    short: 19,
+};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct CategoryStats {
@@ -183,10 +187,7 @@ fn candidate_doc_counts_match_filesystem_inventory() {
     );
     assert_eq!(
         *ci_row,
-        CategoryStats {
-            total: 198,
-            short: 19,
-        },
+        TRACKED_CI_STATS,
         "tracked scripts/ci candidate row drifted"
     );
     assert_eq!(doc_table, filesystem, "candidate table drifted");
