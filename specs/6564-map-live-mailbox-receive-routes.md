@@ -59,6 +59,7 @@ real mailbox-backed implementation that composes the existing service routes:
 - `crates/kamn-sdk/src/service_client_message_task_routes.rs`
 - `crates/kamn-sdk/tests/live_transport_agent.rs`
 - `crates/kamn-sdk/tests/live_transport_receive.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 - `specs/6564-map-live-mailbox-receive-routes.md`
 
 ## Error semantics
@@ -82,10 +83,13 @@ real mailbox-backed implementation that composes the existing service routes:
   already covered the mailbox/message route contract shape needed for this issue.
 - No service API route or OpenAPI change was required. The live SDK composes the existing
   mailbox-list and message-query routes and keeps the richer message-delivery model crate-private.
+- `fixtures/ci/test_file_size_policy_baseline.env` had to be refreshed from `459` to `460`
+  because this issue added a new top-level test target.
 
 ## Verification
 
 - `cargo test -p kamn-sdk --test live_transport_receive -- --nocapture`
 - `cargo test -p kamn-sdk --test live_transport_agent spec_c05_live_transport_remaining_unsupported_methods_fail_closed -- --nocapture`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
 - `cargo clippy -p kamn-sdk --tests -- -D warnings`
 - `cargo test -p kamn-sdk -- --nocapture`
