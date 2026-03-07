@@ -18,6 +18,14 @@ pub struct ServiceMessageStatus {
     pub status: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceMessageDelivery {
+    pub(crate) message_id: String,
+    pub(crate) sender_did: String,
+    pub(crate) recipient_did: String,
+    pub(crate) body: String,
+}
+
 /// Parsed response for `POST /v1/channels/create`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceChannelReceipt {

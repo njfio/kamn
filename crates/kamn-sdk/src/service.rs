@@ -37,6 +37,7 @@ pub use self::service_models::{
     ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
     ServiceMessageStatus, ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
 };
+pub(crate) use self::service_models::ServiceMessageDelivery;
 pub use self::service_request_auth::ServiceRequestAuth;
 use self::service_response::{
     expect_status, json_string_array_field, json_string_field, json_u64_field,

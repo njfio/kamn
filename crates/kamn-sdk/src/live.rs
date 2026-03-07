@@ -6,7 +6,7 @@ mod task_escrow;
 
 pub use self::config::LiveTransportConfig;
 use self::state::LiveTransportState;
-use crate::{SdkError, ServiceApiClient};
+use crate::{KamnTransport, SdkError, ServiceApiClient, TransportMode};
 use std::sync::{Arc, Mutex};
 
 /// Live transport client backed by the Service API.
@@ -34,5 +34,11 @@ impl LiveTransportKamnClient {
     }
     fn unsupported<T>(feature: &'static str) -> Result<T, SdkError> {
         Err(SdkError::NotImplemented(feature))
+    }
+}
+
+impl KamnTransport for LiveTransportKamnClient {
+    fn transport_mode(&self) -> TransportMode {
+        TransportMode::Live
     }
 }

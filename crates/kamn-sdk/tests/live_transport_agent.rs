@@ -600,7 +600,7 @@ fn regression_live_transport_whitespace_requester_did_falls_back_to_default() {
 }
 
 #[test]
-fn spec_c05_live_transport_unsupported_methods_fail_closed() {
+fn spec_c05_live_transport_remaining_unsupported_methods_fail_closed() {
     with_env_lock(|| {
         ensure_live_test_env();
         let mut client = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
@@ -613,9 +613,15 @@ fn spec_c05_live_transport_unsupported_methods_fail_closed() {
             ))
         );
         assert_eq!(
-            client.receive(&did("receiver")),
+            client.submit_artifact(
+                &kamn_sdk::TaskId(7),
+                kamn_sdk::Artifact {
+                    name: "artifact".to_owned(),
+                    bytes: b"artifact".to_vec(),
+                }
+            ),
             Err(SdkError::NotImplemented(
-                "live transport receive route is not available via service api"
+                "live transport artifact routes are not yet mapped in sdk kamn-agent surface"
             ))
         );
         assert_eq!(
