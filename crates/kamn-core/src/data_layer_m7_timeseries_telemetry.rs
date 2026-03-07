@@ -8,6 +8,10 @@ use crate::{
     ObservabilityError, ObservabilityMonitor, ObservabilityReport, ObservabilitySample,
     ObservabilitySloProfile, ObservabilitySnapshot,
 };
+use kamn_data_layer::{
+    project_data_layer_m7_observability_sample as project_m7_observability_sample,
+    DataLayerM7ObservabilityProjection, DataLayerM7ObservabilityProjectionInput,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -690,24 +694,7 @@ impl std::error::Error for DataLayerM7TimeseriesError {}
 pub fn data_layer_m7_project_observability_sample(
     point: &DataLayerM7TelemetryPointRecord,
 ) -> ObservabilitySample {
-    let latency_p50_ms = u64::from(point.ingress_latency_ms_p95);
-    let latency_p99_ms = u64::from(
-        point
-            .ingress_latency_ms_p95
-            .max(point.egress_latency_ms_p95),
-    );
-    let throughput_tps = derive_observability_throughput_tps(point);
-    let error_rate_pct = derive_observability_error_rate_pct(point);
-    let availability_pct = derive_observability_availability_pct(point.active_sessions);
-
-    ObservabilitySample {
-        latency_p50_ms,
-        latency_p99_ms,
-        throughput_tps,
-        error_rate_pct,
-        availability_pct,
-        timestamp_epoch_s: point.timestamp_epoch_seconds,
-    }
+    observability_sample_from_projection(project_m7_observability_projection(point))
 }
 
 fn map_observability_error_to_timeseries(_error: ObservabilityError) -> DataLayerM7TimeseriesError {
@@ -716,28 +703,37 @@ fn map_observability_error_to_timeseries(_error: ObservabilityError) -> DataLaye
     }
 }
 
-fn derive_observability_throughput_tps(point: &DataLayerM7TelemetryPointRecord) -> u64 {
-    let activity = point
-        .message_count
-        .saturating_add(point.query_count)
-        .saturating_add(point.embedding_count);
-    let session_boost = u64::from(point.active_sessions).saturating_mul(1_000);
-    activity.saturating_add(session_boost).max(1)
+fn project_m7_observability_projection(
+    point: &DataLayerM7TelemetryPointRecord,
+) -> DataLayerM7ObservabilityProjection {
+    project_m7_observability_sample(&m7_observability_projection_input(point))
 }
 
-fn derive_observability_error_rate_pct(point: &DataLayerM7TelemetryPointRecord) -> f64 {
-    if point.embedding_count == 0 {
-        return 0.0;
+fn m7_observability_projection_input(
+    point: &DataLayerM7TelemetryPointRecord,
+) -> DataLayerM7ObservabilityProjectionInput {
+    DataLayerM7ObservabilityProjectionInput {
+        timestamp_epoch_seconds: point.timestamp_epoch_seconds,
+        ingress_latency_ms_p95: point.ingress_latency_ms_p95,
+        egress_latency_ms_p95: point.egress_latency_ms_p95,
+        message_count: point.message_count,
+        query_count: point.query_count,
+        embedding_count: point.embedding_count,
+        embedding_anomaly_count: point.embedding_anomaly_count,
+        active_sessions: point.active_sessions,
     }
-    let ratio = (point.embedding_anomaly_count as f64 / point.embedding_count as f64) * 100.0;
-    ratio.clamp(0.0, 100.0)
 }
 
-fn derive_observability_availability_pct(active_sessions: u32) -> f64 {
-    if active_sessions == 0 {
-        0.0
-    } else {
-        100.0
+fn observability_sample_from_projection(
+    projection: DataLayerM7ObservabilityProjection,
+) -> ObservabilitySample {
+    ObservabilitySample {
+        latency_p50_ms: projection.latency_p50_ms,
+        latency_p99_ms: projection.latency_p99_ms,
+        throughput_tps: projection.throughput_tps,
+        error_rate_pct: projection.error_rate_pct,
+        availability_pct: projection.availability_pct,
+        timestamp_epoch_s: projection.timestamp_epoch_s,
     }
 }
 
@@ -777,8 +773,7 @@ fn daily_bucket(timestamp_epoch_seconds: u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        daily_bucket, derive_observability_availability_pct, derive_observability_error_rate_pct,
-        derive_observability_throughput_tps, hourly_bucket, validate_kamn_did,
+        daily_bucket, hourly_bucket, project_m7_observability_projection, validate_kamn_did,
         DataLayerM7TelemetryPointRecord, DataLayerM7TimeseriesError,
         DATA_LAYER_M7_DAILY_BUCKET_SECONDS, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
     };
@@ -811,11 +806,11 @@ mod tests {
     #[test]
     fn unit_observability_throughput_uses_minimum_floor_and_session_boost() {
         assert_eq!(
-            derive_observability_throughput_tps(&telemetry_point(0, 0, 0, 0, 0)),
+            project_m7_observability_projection(&telemetry_point(0, 0, 0, 0, 0)).throughput_tps,
             1
         );
         assert_eq!(
-            derive_observability_throughput_tps(&telemetry_point(2, 3, 5, 0, 4)),
+            project_m7_observability_projection(&telemetry_point(2, 3, 5, 0, 4)).throughput_tps,
             4_010
         );
     }
@@ -823,15 +818,21 @@ mod tests {
     #[test]
     fn unit_observability_error_rate_and_availability_are_bounded() {
         assert_eq!(
-            derive_observability_error_rate_pct(&telemetry_point(0, 0, 0, 9, 0)),
+            project_m7_observability_projection(&telemetry_point(0, 0, 0, 9, 0)).error_rate_pct,
             0.0
         );
         assert_eq!(
-            derive_observability_error_rate_pct(&telemetry_point(0, 0, 10, 25, 0)),
+            project_m7_observability_projection(&telemetry_point(0, 0, 10, 25, 0)).error_rate_pct,
             100.0
         );
-        assert_eq!(derive_observability_availability_pct(0), 0.0);
-        assert_eq!(derive_observability_availability_pct(1), 100.0);
+        assert_eq!(
+            project_m7_observability_projection(&telemetry_point(0, 0, 0, 0, 0)).availability_pct,
+            0.0
+        );
+        assert_eq!(
+            project_m7_observability_projection(&telemetry_point(0, 0, 0, 0, 1)).availability_pct,
+            100.0
+        );
     }
 
     #[test]

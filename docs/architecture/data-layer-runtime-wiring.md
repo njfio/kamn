@@ -11,6 +11,10 @@ m1_batch_scheduler_extraction_slice_version=kamn.arch.data-layer-m1-batch-schedu
 m1_batch_scheduler_target_crate=crates/kamn-data-layer
 m1_batch_scheduler_compatibility_wrapper_path=kamn-core::data_layer_m1_batch_scheduler
 m1_batch_scheduler_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m1_batch_scheduler.rs,crates/kamn-core/tests/data_layer_m1_anchoring_orchestrator.rs,crates/kamn-data-layer/tests/data_layer_m1_batch_scheduler_integration.rs
+m7_observability_projection_extraction_slice_version=kamn.arch.data-layer-m7-observability-projection-extraction.v1
+m7_observability_projection_target_crate=crates/kamn-data-layer
+m7_observability_projection_compatibility_wrapper_path=kamn-core::data_layer_m7_project_observability_sample
+m7_observability_projection_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m7_timeseries_telemetry.rs,crates/kamn-core/tests/data_layer_m7_observability_projection_integration.rs,crates/kamn-data-layer/tests/data_layer_m7_observability_projection_integration.rs
 prd_critical_scenario_conformance_extraction_slice_version=kamn.arch.data-layer-prd-critical-scenario-conformance-extraction.v1
 prd_critical_scenario_conformance_target_crate=crates/kamn-data-layer
 prd_critical_scenario_conformance_compatibility_wrapper_path=kamn-core::data_layer_prd_critical_scenario_conformance
@@ -85,7 +89,7 @@ m10_phase6_runtime_evidence_wrapper_path=kamn-core::data_layer_m10_partition_arc
 | M4 | `kamn-core::data_layer_m4_escrow_integration` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and escrow transition contracts |
 | M5 | `kamn-core::data_layer_m5_vector_integration` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and recall-drift contracts |
 | M6 | `kamn-core::data_layer_m6_graph_integration` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and graph portability contracts |
-| M7 | `kamn-core::data_layer_m7_timeseries_telemetry` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and rollup parity contracts |
+| M7 | `kamn-core::data_layer_m7_timeseries_telemetry` + `kamn-data-layer::data_layer_m7_observability_projection` | `crates/kamn-data-layer` | observability projection extracted; keep `kamn-core` compatibility shim and rollup parity contracts while wider M7 ingest and aggregate ownership stays in core |
 | M8 | `kamn-core::data_layer_m8_compliance_lifecycle` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and retention/legal-hold contracts |
 | M9 | `kamn-core::data_layer_m9_*` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and realtime dispatch contracts |
 | M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_partition_month_policy` + `kamn-data-layer::data_layer_m10_partition_registry_state_machine` + `kamn-data-layer::data_layer_m10_compliance_projection_port` + `kamn-data-layer::data_layer_m10_compliance_projection_bookkeeping` + `kamn-data-layer::data_layer_m10_phase6_compliance_port` + `kamn-data-layer::data_layer_m10_phase6_policy_evaluator` | `crates/kamn-data-layer` | retry, partition month policy, deterministic checksum marker, registry state machine, compliance-projection bookkeeping, projection seam, and phase6 policy evaluators extracted; keep `kamn-core` compatibility wrappers while remaining M10 implementation ownership is migrated incrementally |

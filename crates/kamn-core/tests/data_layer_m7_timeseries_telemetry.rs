@@ -8,7 +8,6 @@ use kamn_core::{
     DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE,
     DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
 };
-
 fn telemetry_point(
     owner_did: &str,
     agent_did: &str,
