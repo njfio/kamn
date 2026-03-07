@@ -4,6 +4,7 @@ use crate::AgentDid;
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 use sha2::{Digest, Sha256, Sha512};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fmt;
@@ -77,6 +78,7 @@ pub struct GroupChannelCryptoEngine {
     sender_key_history: BTreeMap<String, BTreeMap<u64, SenderKeyDistributionRecord>>,
     active_generation_by_sender: BTreeMap<String, u64>,
     used_nonces: BTreeSet<(String, u64, u64)>,
+    cached_master_seed: RefCell<Option<[u8; 32]>>,
 }
 
 impl fmt::Debug for GroupChannelCryptoEngine {
@@ -84,7 +86,10 @@ impl fmt::Debug for GroupChannelCryptoEngine {
         f.debug_struct("GroupChannelCryptoEngine")
             .field("channel_id", &self.channel_id)
             .field("sender_count", &self.sender_key_history.len())
-            .field("active_sender_count", &self.active_generation_by_sender.len())
+            .field(
+                "active_sender_count",
+                &self.active_generation_by_sender.len(),
+            )
             .field("used_nonce_count", &self.used_nonces.len())
             .finish()
     }
@@ -102,6 +107,7 @@ impl GroupChannelCryptoEngine {
             sender_key_history: BTreeMap::new(),
             active_generation_by_sender: BTreeMap::new(),
             used_nonces: BTreeSet::new(),
+            cached_master_seed: RefCell::new(None),
         })
     }
 
@@ -219,7 +225,7 @@ impl GroupChannelCryptoEngine {
             return Err(GroupChannelCryptoError::NonceReuse(nonce));
         }
 
-        let master_seed = load_key_agreement_master_seed()?;
+        let master_seed = self.cached_master_seed()?;
         let shared_secret = derive_group_shared_secret(
             self.channel_id.as_str(),
             record.sender_key_ref.as_str(),
@@ -309,7 +315,7 @@ impl GroupChannelCryptoEngine {
             });
         }
 
-        let master_seed = load_key_agreement_master_seed()?;
+        let master_seed = self.cached_master_seed()?;
         let shared_secret = derive_group_shared_secret(
             self.channel_id.as_str(),
             record.sender_key_ref.as_str(),
@@ -365,7 +371,11 @@ impl GroupChannelCryptoEngine {
         // Compatibility policy: encrypt with the fully derived v2 nonce layout and HKDF-v2 key,
         // but continue accepting legacy raw-prefix nonce layout and legacy SHA-256-v1 keys.
         let nonce_candidates = [
-            group_nonce_bytes(sealed.sender_did.as_str(), sealed.key_generation, sealed.nonce),
+            group_nonce_bytes(
+                sealed.sender_did.as_str(),
+                sealed.key_generation,
+                sealed.nonce,
+            ),
             legacy_raw_prefix_group_nonce_bytes(
                 sealed.sender_did.as_str(),
                 sealed.key_generation,
@@ -390,6 +400,16 @@ impl GroupChannelCryptoEngine {
 
         String::from_utf8(plaintext).map_err(|_| GroupChannelCryptoError::InvalidCiphertextEncoding)
     }
+
+    fn cached_master_seed(&self) -> Result<[u8; 32], GroupChannelCryptoError> {
+        if let Some(seed) = self.cached_master_seed.borrow().as_ref().copied() {
+            return Ok(seed);
+        }
+
+        let seed = load_key_agreement_master_seed()?;
+        self.cached_master_seed.borrow_mut().replace(seed);
+        Ok(seed)
+    }
 }
 
 impl Drop for GroupChannelCryptoEngine {
@@ -398,6 +418,9 @@ impl Drop for GroupChannelCryptoEngine {
         zeroize_sender_key_history(&mut self.sender_key_history);
         zeroize_u64_keyed_sender_history(&mut self.active_generation_by_sender);
         self.used_nonces.clear();
+        if let Some(seed) = self.cached_master_seed.get_mut().as_mut() {
+            seed.zeroize();
+        }
     }
 }
 
@@ -548,9 +571,11 @@ fn validate_sender_key_ref(value: &str) -> Result<(), GroupChannelCryptoError> {
 }
 
 fn load_key_agreement_master_seed() -> Result<[u8; 32], GroupChannelCryptoError> {
-    let seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
+    let mut seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
         .map_err(|_| GroupChannelCryptoError::MissingKeyAgreementMasterSeed)?;
-    parse_fixed_hex_32(seed_hex.trim())
+    let seed = parse_fixed_hex_32(seed_hex.trim());
+    seed_hex.zeroize();
+    seed
 }
 
 fn parse_fixed_hex_32(value: &str) -> Result<[u8; 32], GroupChannelCryptoError> {
@@ -1124,7 +1149,8 @@ mod tests {
     #[test]
     fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
     ) {
-        let derive_line = SOURCE
+        let production_source = SOURCE.split("\n#[cfg(test)]").next().unwrap_or(SOURCE);
+        let derive_line = production_source
             .split("pub struct GroupChannelCryptoEngine")
             .next()
             .and_then(|prefix| prefix.lines().last())
@@ -1135,24 +1161,28 @@ mod tests {
             "group-channel engine must not derive Clone"
         );
         assert!(
-            SOURCE.contains("impl fmt::Debug for GroupChannelCryptoEngine"),
+            production_source.contains("impl fmt::Debug for GroupChannelCryptoEngine"),
             "group-channel engine must define a redacted Debug impl"
         );
         assert!(
-            SOURCE.contains("used_nonce_count"),
+            production_source.contains("used_nonce_count"),
             "group-channel engine debug output must expose only a nonce-count summary"
         );
         assert!(
-            SOURCE.contains("impl Drop for GroupChannelCryptoEngine"),
+            production_source.contains("impl Drop for GroupChannelCryptoEngine"),
             "group-channel engine must define Drop"
         );
         assert!(
-            SOURCE.contains("self.channel_id.zeroize();"),
+            production_source.contains("self.channel_id.zeroize();"),
             "group-channel engine Drop must zeroize channel_id"
         );
         assert!(
-            SOURCE.contains("zeroize_sender_key_history(&mut self.sender_key_history);"),
+            production_source.contains("zeroize_sender_key_history(&mut self.sender_key_history);"),
             "group-channel engine Drop must clear sender-key history"
+        );
+        assert!(
+            production_source.contains("seed_hex.zeroize();"),
+            "group-channel master seed loader must zeroize env-loaded hex buffer"
         );
     }
 
@@ -1201,11 +1231,8 @@ mod tests {
             )
             .expect("aead key should derive");
             let cipher = XChaCha20Poly1305::new((&aead_key).into());
-            let legacy_nonce_bytes = legacy_raw_prefix_group_nonce_bytes(
-                sender_did,
-                distribution.key_generation,
-                nonce,
-            );
+            let legacy_nonce_bytes =
+                legacy_raw_prefix_group_nonce_bytes(sender_did, distribution.key_generation, nonce);
             let xnonce = XNonce::from(legacy_nonce_bytes);
             let mut combined = super::hex_decode(&sealed.ciphertext).expect("ciphertext hex");
             combined.extend_from_slice(&super::hex_decode(&sealed.auth_tag).expect("auth tag hex"));
