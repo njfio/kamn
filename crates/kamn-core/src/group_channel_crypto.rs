@@ -4,6 +4,7 @@ use crate::AgentDid;
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 use sha2::{Digest, Sha256, Sha512};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fmt;
@@ -77,6 +78,7 @@ pub struct GroupChannelCryptoEngine {
     sender_key_history: BTreeMap<String, BTreeMap<u64, SenderKeyDistributionRecord>>,
     active_generation_by_sender: BTreeMap<String, u64>,
     used_nonces: BTreeSet<(String, u64, u64)>,
+    cached_master_seed: RefCell<Option<[u8; 32]>>,
 }
 
 impl fmt::Debug for GroupChannelCryptoEngine {
@@ -102,6 +104,7 @@ impl GroupChannelCryptoEngine {
             sender_key_history: BTreeMap::new(),
             active_generation_by_sender: BTreeMap::new(),
             used_nonces: BTreeSet::new(),
+            cached_master_seed: RefCell::new(None),
         })
     }
 
@@ -219,7 +222,7 @@ impl GroupChannelCryptoEngine {
             return Err(GroupChannelCryptoError::NonceReuse(nonce));
         }
 
-        let master_seed = load_key_agreement_master_seed()?;
+        let master_seed = self.cached_master_seed()?;
         let shared_secret = derive_group_shared_secret(
             self.channel_id.as_str(),
             record.sender_key_ref.as_str(),
@@ -309,7 +312,7 @@ impl GroupChannelCryptoEngine {
             });
         }
 
-        let master_seed = load_key_agreement_master_seed()?;
+        let master_seed = self.cached_master_seed()?;
         let shared_secret = derive_group_shared_secret(
             self.channel_id.as_str(),
             record.sender_key_ref.as_str(),
@@ -390,6 +393,16 @@ impl GroupChannelCryptoEngine {
 
         String::from_utf8(plaintext).map_err(|_| GroupChannelCryptoError::InvalidCiphertextEncoding)
     }
+
+    fn cached_master_seed(&self) -> Result<[u8; 32], GroupChannelCryptoError> {
+        if let Some(seed) = self.cached_master_seed.borrow().as_ref().copied() {
+            return Ok(seed);
+        }
+
+        let seed = load_key_agreement_master_seed()?;
+        self.cached_master_seed.borrow_mut().replace(seed);
+        Ok(seed)
+    }
 }
 
 impl Drop for GroupChannelCryptoEngine {
@@ -398,6 +411,9 @@ impl Drop for GroupChannelCryptoEngine {
         zeroize_sender_key_history(&mut self.sender_key_history);
         zeroize_u64_keyed_sender_history(&mut self.active_generation_by_sender);
         self.used_nonces.clear();
+        if let Some(seed) = self.cached_master_seed.get_mut().as_mut() {
+            seed.zeroize();
+        }
     }
 }
 
@@ -548,9 +564,11 @@ fn validate_sender_key_ref(value: &str) -> Result<(), GroupChannelCryptoError> {
 }
 
 fn load_key_agreement_master_seed() -> Result<[u8; 32], GroupChannelCryptoError> {
-    let seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
+    let mut seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
         .map_err(|_| GroupChannelCryptoError::MissingKeyAgreementMasterSeed)?;
-    parse_fixed_hex_32(seed_hex.trim())
+    let seed = parse_fixed_hex_32(seed_hex.trim());
+    seed_hex.zeroize();
+    seed
 }
 
 fn parse_fixed_hex_32(value: &str) -> Result<[u8; 32], GroupChannelCryptoError> {

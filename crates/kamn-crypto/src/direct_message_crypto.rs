@@ -250,9 +250,11 @@ fn validate_key_ref_match(
 }
 
 fn load_key_agreement_master_seed() -> Result<[u8; 32], DirectMessageCryptoError> {
-    let seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
+    let mut seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
         .map_err(|_| DirectMessageCryptoError::MissingKeyAgreementMasterSeed)?;
-    parse_fixed_hex_32(seed_hex.trim())
+    let seed = parse_fixed_hex_32(seed_hex.trim());
+    seed_hex.zeroize();
+    seed
 }
 
 fn parse_fixed_hex_32(value: &str) -> Result<[u8; 32], DirectMessageCryptoError> {
