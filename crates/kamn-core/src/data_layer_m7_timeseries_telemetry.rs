@@ -706,7 +706,13 @@ fn map_observability_error_to_timeseries(_error: ObservabilityError) -> DataLaye
 fn project_m7_observability_projection(
     point: &DataLayerM7TelemetryPointRecord,
 ) -> DataLayerM7ObservabilityProjection {
-    project_m7_observability_sample(&DataLayerM7ObservabilityProjectionInput {
+    project_m7_observability_sample(&m7_observability_projection_input(point))
+}
+
+fn m7_observability_projection_input(
+    point: &DataLayerM7TelemetryPointRecord,
+) -> DataLayerM7ObservabilityProjectionInput {
+    DataLayerM7ObservabilityProjectionInput {
         timestamp_epoch_seconds: point.timestamp_epoch_seconds,
         ingress_latency_ms_p95: point.ingress_latency_ms_p95,
         egress_latency_ms_p95: point.egress_latency_ms_p95,
@@ -715,7 +721,7 @@ fn project_m7_observability_projection(
         embedding_count: point.embedding_count,
         embedding_anomaly_count: point.embedding_anomaly_count,
         active_sessions: point.active_sessions,
-    })
+    }
 }
 
 fn observability_sample_from_projection(
