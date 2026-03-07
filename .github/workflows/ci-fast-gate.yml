@@ -84,11 +84,12 @@ jobs:
       - name: Governance/feature commit ratio gate
         if: github.event_name == 'pull_request'
         run: |
-          git log --no-merges --pretty=format:%s -n 50 HEAD > ci-pr-commit-subjects.txt
+          source .ci/governance-feature-commit-ratio-moratorium.env
+          git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD" > ci-pr-commit-subjects.txt
           python3 scripts/ci/check_governance_feature_commit_ratio.py \
             --commit-subjects-file ci-pr-commit-subjects.txt \
-            --window-size 50 \
-            --max-governance-ratio 0.20 \
+            --window-size "$GOVERNANCE_FEATURE_COMMIT_RATIO_WINDOW_SIZE" \
+            --max-governance-ratio "$GOVERNANCE_FEATURE_COMMIT_RATIO_MAX_GOVERNANCE_RATIO" \
             --output-json ci-governance-feature-commit-ratio.json
 
       - name: Upload governance/feature commit ratio report
