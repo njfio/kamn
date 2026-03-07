@@ -1,7 +1,7 @@
 # Data Layer Runtime Wiring (R65 / #5936)
 
 schema_version=kamn.docs.architecture.data-layer-runtime-wiring.v1
-last_updated=2026-03-05
+last_updated=2026-03-07
 
 ## M0-M11 Extraction Map (Issue #6379)
 
