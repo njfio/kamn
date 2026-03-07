@@ -36,6 +36,8 @@ const SDK_DIRECT_FULL_SCENARIOS_MARKER: &str =
 const CLI_SMOKE_SCENARIOS: &str = "--scenarios S-01,S-02";
 const CENTRALIZED_SERVICE_AUTH_KEY_MARKER: &str =
     "  KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX: \"658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4\"";
+const CENTRALIZED_SERVICE_AUTH_PUBLIC_KEY_MARKER: &str =
+    "  KAMN_E2E_SERVICE_AUTH_PUBLIC_KEY_HEX: \"0264eb26609d15e709227b9ddc46c11a738b210bb237949aa86d7d490a35ae0f0a\"";
 const DUPLICATED_INLINE_SERVICE_AUTH_KEY_MARKER: &str =
     "SERVICE_AUTH_PRIVATE_KEY_HEX=\"658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4\"";
 const STRATEGY_REQUIRED_MARKERS: &[&str] = &[
@@ -351,6 +353,18 @@ fn functional_e2e_live_workflow_lane_accepts_repository_baseline() {
     assert_eq!(decision.reason_codes_csv, REASON_CODES_CSV);
     assert_eq!(decision.reason_codes_value, "none");
     assert_eq!(decision.contract_status, "verified");
+}
+
+#[test]
+fn functional_e2e_live_workflow_lane_keeps_centralized_public_key_marker() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+
+    assert!(
+        workflow.contains(CENTRALIZED_SERVICE_AUTH_PUBLIC_KEY_MARKER),
+        "workflow must keep the centralized E2E service-auth public key marker"
+    );
 }
 
 #[test]
