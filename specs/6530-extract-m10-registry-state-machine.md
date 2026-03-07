@@ -67,7 +67,11 @@ wrappers.
 ## Files to touch
 - `specs/6530-extract-m10-registry-state-machine.md`
 - `crates/kamn-data-layer/src/lib.rs`
-- `crates/kamn-data-layer/src/data_layer_m10_partition_registry_state_machine.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_partition_registry_state_machine/mod.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_partition_registry_state_machine/types.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_partition_registry_state_machine/error.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_partition_registry_state_machine/helpers.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_partition_registry_state_machine/machine.rs`
 - `crates/kamn-data-layer/tests/data_layer_m10_partition_registry_state_machine_integration.rs`
 - `crates/kamn-core/src/data_layer_m10_partition_archival.rs`
 - `crates/kamn-core/src/data_layer_m10_partition_archival/registry.rs`
@@ -104,3 +108,9 @@ wrappers.
   - run targeted `kamn-data-layer` and `kamn-core` tests
   - run `cargo fmt --all --check`
   - run strict clippy for touched crates
+
+## Deviations
+- The extracted data-layer module shipped as a small module directory
+  (`mod.rs` + `types.rs` + `error.rs` + `helpers.rs` + `machine.rs`) instead of a single
+  `data_layer_m10_partition_registry_state_machine.rs` file so the new surface stays within the
+  repo file-size standard.
