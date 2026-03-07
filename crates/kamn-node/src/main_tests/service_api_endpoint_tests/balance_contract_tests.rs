@@ -127,8 +127,8 @@ fn integration_service_api_endpoint_balance_route_backfills_legacy_state_and_per
         "service api endpoint should stop cleanly after first agent balance query phase"
     );
 
-    let phase_one_state_payload =
-        fs::read_to_string(state_file.as_path()).expect("balance state file should remain readable");
+    let phase_one_state_payload = fs::read_to_string(state_file.as_path())
+        .expect("balance state file should remain readable");
     let phase_one_state_json: Value =
         serde_json::from_str(phase_one_state_payload.as_str()).expect("state payload should parse");
     assert_eq!(
