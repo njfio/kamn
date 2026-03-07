@@ -61,7 +61,11 @@ the existing `kamn-core` public projection behavior through compatibility delega
 ## Files to touch
 - `specs/6532-extract-m10-compliance-projection-bookkeeping.md`
 - `crates/kamn-data-layer/src/lib.rs`
-- `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping/mod.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping/types.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping/error.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping/helpers.rs`
+- `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping/projector.rs`
 - `crates/kamn-data-layer/tests/data_layer_m10_compliance_projection_bookkeeping_integration.rs`
 - `crates/kamn-core/src/data_layer_m10_partition_archival.rs`
 - `crates/kamn-core/src/data_layer_m10_partition_archival/registry.rs`
@@ -95,3 +99,8 @@ the existing `kamn-core` public projection behavior through compatibility delega
   - run `cargo fmt --all --check`
   - run strict clippy for touched crates
   - run targeted `kamn-data-layer`, `kamn-core`, and `test_file_size_policy` coverage
+
+## Deviations
+- The extracted bookkeeping surface was split into a small module directory under
+  `crates/kamn-data-layer/src/data_layer_m10_compliance_projection_bookkeeping/` instead of a
+  single source file so the refactor phase could preserve the repo file-size constraint.

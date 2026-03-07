@@ -1,9 +1,9 @@
 use kamn_data_layer::{
-    data_layer_m10_project_partition_shred_completeness_with_port as data_layer_m10_project_partition_shred_completeness_with_port_policy,
     data_layer_m10_format_partition_name as data_layer_m10_format_partition_name_policy,
-    DataLayerM10ComplianceProjectionBookkeepingError,
-    DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
-    DataLayerM10ComplianceProjectionPortError, DataLayerM10PartitionRegistryStateMachineError,
+    data_layer_m10_project_partition_shred_completeness_with_port as data_layer_m10_project_partition_shred_completeness_with_port_policy,
+    DataLayerM10ComplianceProjectionBookkeepingError, DataLayerM10ComplianceProjectionMessageState,
+    DataLayerM10ComplianceProjectionPort, DataLayerM10ComplianceProjectionPortError,
+    DataLayerM10PartitionRegistryStateMachineError,
 };
 
 use super::shared::map_partition_month_policy_error_to_m10;
