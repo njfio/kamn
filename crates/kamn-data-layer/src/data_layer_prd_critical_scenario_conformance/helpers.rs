@@ -16,9 +16,7 @@ fn validate_required_scenario_id(
     if DATA_LAYER_PRD_REQUIRED_CRITICAL_SCENARIO_IDS.contains(&scenario_id) {
         return Ok(());
     }
-    Err(DataLayerPrdCriticalScenarioConformanceError::InvalidScenarioId(
-        scenario_id,
-    ))
+    Err(DataLayerPrdCriticalScenarioConformanceError::InvalidScenarioId(scenario_id))
 }
 
 fn validate_non_empty(

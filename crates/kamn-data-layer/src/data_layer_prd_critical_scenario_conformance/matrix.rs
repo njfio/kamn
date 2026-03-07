@@ -2,10 +2,9 @@ use std::collections::BTreeMap;
 
 use super::helpers::validate_result_input;
 use super::{
-    DataLayerPrdCriticalScenarioConformanceDecision,
-    DataLayerPrdCriticalScenarioConformanceError, DataLayerPrdCriticalScenarioConformanceReport,
-    DataLayerPrdCriticalScenarioMode, DataLayerPrdCriticalScenarioResultInput,
-    DataLayerPrdCriticalScenarioResultRecord,
+    DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,
+    DataLayerPrdCriticalScenarioConformanceReport, DataLayerPrdCriticalScenarioMode,
+    DataLayerPrdCriticalScenarioResultInput, DataLayerPrdCriticalScenarioResultRecord,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_CONFORMANT_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_FAILED_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_INVALID_MUTATION_REASON_CODE,
@@ -126,7 +125,12 @@ impl ConformanceTally {
         }
     }
 
-    fn resolve_decision(&self) -> (DataLayerPrdCriticalScenarioConformanceDecision, Vec<&'static str>) {
+    fn resolve_decision(
+        &self,
+    ) -> (
+        DataLayerPrdCriticalScenarioConformanceDecision,
+        Vec<&'static str>,
+    ) {
         if !self.shell_policy_violation_scenario_ids.is_empty() {
             return non_conformant(DATA_LAYER_PRD_CRITICAL_SCENARIO_SHELL_POLICY_REASON_CODE);
         }
@@ -146,21 +150,21 @@ impl ConformanceTally {
 fn ensure_result_immutable(
     existing: &DataLayerPrdCriticalScenarioResultRecord,
     input: &DataLayerPrdCriticalScenarioResultInput,
-) -> Result<
-    DataLayerPrdCriticalScenarioResultRecord,
-    DataLayerPrdCriticalScenarioConformanceError,
-> {
+) -> Result<DataLayerPrdCriticalScenarioResultRecord, DataLayerPrdCriticalScenarioConformanceError>
+{
     if existing.passed == input.passed && existing.orchestration_mode == input.orchestration_mode {
         return Ok(existing.clone());
     }
-    Err(DataLayerPrdCriticalScenarioConformanceError::InvalidResultMutation {
-        scenario_id: input.scenario_id,
-        existing_passed: existing.passed,
-        requested_passed: input.passed,
-        existing_mode: existing.orchestration_mode,
-        requested_mode: input.orchestration_mode,
-        reason_code: DATA_LAYER_PRD_CRITICAL_SCENARIO_INVALID_MUTATION_REASON_CODE,
-    })
+    Err(
+        DataLayerPrdCriticalScenarioConformanceError::InvalidResultMutation {
+            scenario_id: input.scenario_id,
+            existing_passed: existing.passed,
+            requested_passed: input.passed,
+            existing_mode: existing.orchestration_mode,
+            requested_mode: input.orchestration_mode,
+            reason_code: DATA_LAYER_PRD_CRITICAL_SCENARIO_INVALID_MUTATION_REASON_CODE,
+        },
+    )
 }
 
 fn build_result_record(
@@ -176,7 +180,10 @@ fn build_result_record(
 
 fn non_conformant(
     reason_code: &'static str,
-) -> (DataLayerPrdCriticalScenarioConformanceDecision, Vec<&'static str>) {
+) -> (
+    DataLayerPrdCriticalScenarioConformanceDecision,
+    Vec<&'static str>,
+) {
     (
         DataLayerPrdCriticalScenarioConformanceDecision::NonConformant,
         vec![reason_code],

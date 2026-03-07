@@ -115,7 +115,10 @@ fn integration_evaluates_non_conformance_for_failed_missing_and_shell_policy_inp
         shell_policy_report.reason_codes,
         vec![DATA_LAYER_PRD_CRITICAL_SCENARIO_SHELL_POLICY_REASON_CODE]
     );
-    assert_eq!(shell_policy_report.shell_policy_violation_scenario_ids, vec![68]);
+    assert_eq!(
+        shell_policy_report.shell_policy_violation_scenario_ids,
+        vec![68]
+    );
 }
 
 #[test]
