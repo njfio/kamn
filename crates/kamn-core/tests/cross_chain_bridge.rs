@@ -193,6 +193,24 @@ fn regression_rejects_replayed_solana_inbound_projection_event() {
 }
 
 #[test]
+fn contract_cross_chain_bridge_keeps_inbound_validation_branch_regressions() {
+    const TEST_SOURCE: &str = include_str!("cross_chain_bridge.rs");
+
+    assert!(
+        TEST_SOURCE.contains(
+            "Err(CrossChainBridgeError::UnauthorizedListener(\n            \"kamn:did:agent:listener-x\".to_owned()"
+        ),
+        "cross_chain_bridge.rs must keep the UnauthorizedListener regression"
+    );
+    assert!(
+        TEST_SOURCE.contains(
+            "Err(CrossChainBridgeError::RouteTargetMismatch {\n            chain: CrossChainNetwork::Ethereum,\n            external_channel_id: \"ethereum:sepolia:contract:escrow-v1\".to_owned()"
+        ),
+        "cross_chain_bridge.rs must keep the RouteTargetMismatch regression"
+    );
+}
+
+#[test]
 fn regression_unknown_ethereum_route_is_rejected() {
     let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
 
