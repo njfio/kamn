@@ -26,23 +26,16 @@ pub use registry::data_layer_m10_format_partition_name;
 pub use retry::data_layer_m10_project_archival_retry_decision;
 
 /// Partition prefix for monthly message partitions.
-pub use kamn_data_layer::DATA_LAYER_M10_PARTITION_PREFIX;
-/// Archive format marker for exported partition artifacts.
-pub const DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD: &str = "parquet-zstd";
-/// Stable reason marker for archived lifecycle transitions.
-pub const DATA_LAYER_M10_ARCHIVE_REASON_CODE: &str = "m10_partition_archived";
-/// Stable reason marker for archived -> reattached transitions.
-pub const DATA_LAYER_M10_REATTACH_REASON_CODE: &str = "m10_partition_reattached";
-/// Stable reason marker for invalid lifecycle transitions.
-pub const DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE: &str = "m10_partition_transition_invalid";
-/// Stable reason marker when partition recoverability is ready for historical replay.
-pub const DATA_LAYER_M10_RECOVERY_READY_REASON_CODE: &str = "m10_partition_recovery_ready";
-/// Stable reason marker when partition status is not eligible for historical recovery.
-pub const DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE: &str =
-    "m10_partition_recovery_status_ineligible";
-/// Stable reason marker when historical partition metadata is incomplete.
-pub const DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE: &str =
-    "m10_partition_recovery_metadata_incomplete";
+pub use kamn_data_layer::{
+    DataLayerM10ArchiveDueRequest, DataLayerM10ArchivalIndexEntry,
+    DataLayerM10PartitionRecord, DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
+    DataLayerM10RecoveryDecision, DataLayerM10RecoveryReadinessReport,
+    DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD, DATA_LAYER_M10_ARCHIVE_REASON_CODE,
+    DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
+    DATA_LAYER_M10_REATTACH_REASON_CODE, DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE,
+    DATA_LAYER_M10_RECOVERY_READY_REASON_CODE,
+    DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE,
+};
 /// Stable reason marker when M10 partition shred-completeness projection from M8 is applied.
 pub const DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE: &str =
     "m10_partition_compliance_projection_applied";
@@ -143,67 +136,6 @@ pub const DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_DEFERRED_REASON_CODE: &str =
 pub const DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE: &str =
     "m10_phase6_runtime_evidence_input_invalid";
 
-/// Partition lifecycle status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DataLayerM10PartitionStatus {
-    /// Active partition in primary query path.
-    Active,
-    /// Archived partition with export metadata in archival index.
-    Archived,
-    /// Archived partition reattached for historical query access.
-    Reattached,
-}
-
-/// Recoverability decision for one partition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DataLayerM10RecoveryDecision {
-    /// Partition has complete archival metadata and can be recovered.
-    Ready,
-    /// Partition cannot be recovered under current state/metadata.
-    Blocked,
-}
-
-/// Partition registration input.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataLayerM10PartitionRecordInput {
-    /// Partition month identifier as `YYYYMM`.
-    pub partition_month_id: u32,
-    /// True when all rows in partition are shred-complete and eligible for archival export.
-    pub all_messages_shredded: bool,
-}
-
-/// Partition lifecycle record.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataLayerM10PartitionRecord {
-    /// Partition month identifier as `YYYYMM`.
-    pub partition_month_id: u32,
-    /// Canonical partition name `messages_YYYY_MM`.
-    pub partition_name: String,
-    /// Shred-complete marker for archival eligibility checks.
-    pub all_messages_shredded: bool,
-    /// Current lifecycle status.
-    pub lifecycle_status: DataLayerM10PartitionStatus,
-    /// Archived object URI when partition is archived.
-    pub archived_object_uri: Option<String>,
-    /// Archive format marker when partition is archived.
-    pub archive_format_marker: Option<&'static str>,
-    /// Deterministic checksum marker when partition is archived.
-    pub checksum_marker: Option<String>,
-    /// Last lifecycle transition reason marker.
-    pub last_reason_code: Option<&'static str>,
-}
-
-/// Archive evaluation request envelope.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataLayerM10ArchiveDueRequest {
-    /// Current month identifier as `YYYYMM`.
-    pub now_month_id: u32,
-    /// Active retention window in months.
-    pub active_retention_months: u16,
-    /// Object-storage prefix used for archived artifacts.
-    pub object_storage_prefix: String,
-}
-
 /// Compliance projection request to derive partition shred completeness from M8.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM10ComplianceShredProjectionRequest {
@@ -215,23 +147,6 @@ pub struct DataLayerM10ComplianceShredProjectionRequest {
     pub partition_month_id: u32,
     /// Message identifiers that belong to the partition scope.
     pub partition_message_ids: Vec<String>,
-}
-
-/// Archival index projection row.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataLayerM10ArchivalIndexEntry {
-    /// Partition month identifier as `YYYYMM`.
-    pub partition_month_id: u32,
-    /// Canonical partition name `messages_YYYY_MM`.
-    pub partition_name: String,
-    /// Archived object URI.
-    pub archived_object_uri: String,
-    /// Archive format marker.
-    pub archive_format_marker: &'static str,
-    /// Deterministic checksum marker.
-    pub checksum_marker: String,
-    /// Lifecycle status after archive transition.
-    pub lifecycle_status: DataLayerM10PartitionStatus,
 }
 
 /// Projection report for M8-derived partition shred completeness.
@@ -478,29 +393,8 @@ pub struct DataLayerM10Phase6RuntimeEvidenceBundle {
     pub reason_code: &'static str,
 }
 
-/// Projects canonical Phase-6 runtime evidence from one scheduler-cycle report and runtime state.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DataLayerM10RecoveryReadinessReport {
-    /// Partition month identifier as `YYYYMM`.
-    pub partition_month_id: u32,
-    /// Canonical partition name `messages_YYYY_MM`.
-    pub partition_name: String,
-    /// Recoverability decision.
-    pub decision: DataLayerM10RecoveryDecision,
-    /// Stable reason marker for the decision.
-    pub reason_code: &'static str,
-    /// Current lifecycle status.
-    pub lifecycle_status: DataLayerM10PartitionStatus,
-    /// Archived object URI.
-    pub archived_object_uri: Option<String>,
-    /// Archive format marker.
-    pub archive_format_marker: Option<&'static str>,
-    /// Deterministic checksum marker.
-    pub checksum_marker: Option<String>,
-}
-
-/// Projects deterministic archival failure recovery decision under bounded retry policy.
+/// Core compatibility wrapper over the extracted deterministic registry state machine.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DataLayerM10PartitionLifecycleRegistry {
-    partitions: BTreeMap<u32, DataLayerM10PartitionRecord>,
+    state_machine: kamn_data_layer::DataLayerM10PartitionRegistryStateMachine,
 }
