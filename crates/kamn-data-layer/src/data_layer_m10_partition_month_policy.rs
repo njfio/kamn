@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use crate::data_layer_hashing::tagged_sha256;
+
 /// Partition prefix for monthly message partitions.
 pub const DATA_LAYER_M10_PARTITION_PREFIX: &str = "messages_";
 
@@ -79,4 +81,13 @@ pub fn data_layer_m10_format_partition_name(
     Ok(format!(
         "{DATA_LAYER_M10_PARTITION_PREFIX}{year:04}_{month:02}"
     ))
+}
+
+/// Projects a deterministic checksum marker for one partition archival record.
+pub fn data_layer_m10_deterministic_checksum_marker(
+    partition_name: &str,
+    partition_month_id: u32,
+) -> String {
+    let canonical_payload = format!("{partition_name}:{partition_month_id}");
+    tagged_sha256(canonical_payload.as_str(), "sha256")
 }

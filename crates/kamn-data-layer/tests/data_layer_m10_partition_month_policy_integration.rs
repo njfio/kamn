@@ -1,5 +1,6 @@
 use kamn_data_layer::{
-    data_layer_m10_add_months, data_layer_m10_format_partition_name, data_layer_m10_month_distance,
+    data_layer_m10_add_months, data_layer_m10_deterministic_checksum_marker,
+    data_layer_m10_format_partition_name, data_layer_m10_month_distance,
     data_layer_m10_split_month_id, data_layer_m10_validate_partition_month_id,
     DataLayerM10PartitionMonthPolicyError,
 };
@@ -25,4 +26,14 @@ fn integration_partition_month_policy_rejects_invalid_month_ranges() {
         data_layer_m10_split_month_id(202513),
         Err(DataLayerM10PartitionMonthPolicyError::InvalidPartitionMonthId(202513))
     );
+}
+
+#[test]
+fn integration_partition_month_policy_projects_stable_checksum_marker() {
+    let marker = data_layer_m10_deterministic_checksum_marker("messages_2025_02", 202502);
+    assert_eq!(
+        marker,
+        "sha256:436a53bb2b45f5bfe769623a94cefdd17c75bc18ceb4c6d985884933ab268a42"
+    );
+    assert_ne!(marker, "sha256:messages_2025_02:202502");
 }
