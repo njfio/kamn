@@ -1,4 +1,6 @@
-use kamn_runtime_guards::anti_spam::{AntiSpamConfig, AntiSpamEngine, AntiSpamRejection};
+use kamn_runtime_guards::anti_spam::{
+    AntiSpamConfig, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
+};
 use kamn_runtime_guards::fairness_policy::FairnessPolicyInput;
 use kamn_runtime_guards::policy_stack::{
     evaluate_runtime_guard_policy_stack, RuntimeGuardPolicyDecision, RuntimeGuardPolicyRejection,
@@ -135,4 +137,24 @@ fn integration_policy_stack_rejects_fairness_after_anti_spam_and_quota_allow() {
             reason: RuntimeGuardPolicyRejection::Fairness(_),
         }
     ));
+}
+
+#[test]
+fn integration_policy_stack_propagates_invalid_input_error_from_anti_spam_engine() {
+    let mut anti_spam = anti_spam_engine();
+
+    let error = evaluate_runtime_guard_policy_stack(
+        &mut anti_spam,
+        "did:example:alice",
+        "msg-invalid-input",
+        1_700_000_004,
+        &valid_quota(),
+        &valid_fairness(),
+    )
+    .expect_err("invalid anti-spam input must fail closed");
+
+    assert_eq!(
+        error,
+        AntiSpamError::InvalidInput("sender_did must use kamn:did:agent:* format".to_owned())
+    );
 }
