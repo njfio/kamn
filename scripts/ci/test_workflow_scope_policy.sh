@@ -120,6 +120,11 @@ if ! grep -Fq "source .ci/governance-feature-commit-ratio-moratorium.env" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=eded44be72ab5af7a709fd54809af745f918cb7a" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
+  echo "expected governance/feature commit ratio moratorium env to anchor at the activation merge commit" >&2
+  exit 1
+fi
+
 if ! grep -Fq 'git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD"' "$FAST_WORKFLOW"; then
   echo "expected governance/feature commit ratio gate to start from the moratorium activation base SHA" >&2
   exit 1
