@@ -461,10 +461,8 @@ pub fn signature_matches_supported_profile_for_fields(
         return false;
     }
 
-    crate::constant_time_eq::constant_time_eq_str(
-        signature,
-        baseline_signature_for_fields(sender, nonce, state_hash, payload).as_str(),
-    )
+    let expected_signature = baseline_signature_for_fields(sender, nonce, state_hash, payload);
+    crate::constant_time_eq::constant_time_eq_str(signature, expected_signature.as_str())
 }
 
 #[cfg(test)]
