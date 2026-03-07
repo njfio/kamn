@@ -26,13 +26,13 @@ Stop reparsing `KAMN_KEY_AGREEMENT_MASTER_SEED_HEX` on every group-message crypt
 - tests miss a regression back to per-operation env parsing.
 
 ## Acceptance criteria
-- [ ] `GroupChannelCryptoEngine` caches parsed master seed material after the first operation that needs it.
-- [ ] `GroupChannelCryptoEngine::new()` still succeeds without requiring `KAMN_KEY_AGREEMENT_MASTER_SEED_HEX`.
-- [ ] repeated group encrypt/decrypt operations do not need repeated env reparsing once the seed is cached.
-- [ ] direct-message seed loading zeroizes the env-loaded hex buffer after parsing.
-- [ ] group-message seed loading zeroizes the env-loaded hex buffer after parsing.
-- [ ] missing and invalid env seed values still fail closed with the existing typed errors.
-- [ ] regression tests fail if the lazy cache or zeroization markers disappear.
+- [x] `GroupChannelCryptoEngine` caches parsed master seed material after the first operation that needs it.
+- [x] `GroupChannelCryptoEngine::new()` still succeeds without requiring `KAMN_KEY_AGREEMENT_MASTER_SEED_HEX`.
+- [x] repeated group encrypt/decrypt operations do not need repeated env reparsing once the seed is cached.
+- [x] direct-message seed loading zeroizes the env-loaded hex buffer after parsing.
+- [x] group-message seed loading zeroizes the env-loaded hex buffer after parsing.
+- [x] missing and invalid env seed values still fail closed with the existing typed errors.
+- [x] regression tests fail if the lazy cache or zeroization markers disappear.
 
 ## Files to touch
 - `crates/kamn-core/src/group_channel_crypto.rs`
@@ -53,8 +53,19 @@ Stop reparsing `KAMN_KEY_AGREEMENT_MASTER_SEED_HEX` on every group-message crypt
 - Integration:
   - rerun targeted direct/group crypto tests and strict clippy
 
+## Deviations
+- None.
+
+## Verification evidence
+- `cargo test -p kamn-core group_channel_crypto -- --nocapture`
+- `cargo test -p kamn-crypto direct_message_crypto -- --nocapture`
+- `cargo test -p kamn-core --test group_sender_keys -- --nocapture`
+- `cargo test -p kamn-crypto --test direct_message_crypto_integration -- --nocapture`
+- `cargo clippy -p kamn-core --tests -- -D warnings`
+- `cargo clippy -p kamn-crypto --tests -- -D warnings`
+
 ## Shell-surface closure template
 - shell_loc_delta_actual: 0
-- rust_loc_delta_actual: 0
+- rust_loc_delta_actual: 174
 - shell_to_rust_ratio_delta_actual: 0.0
 - shell_surface_ratio_target_status: improved
