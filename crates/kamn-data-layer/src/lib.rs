@@ -3,6 +3,8 @@
 
 /// Shared SHA-256 helpers used by data-layer hash-chain contracts.
 pub mod data_layer_hashing;
+/// M1 batch scheduler trigger policy extracted from core.
+pub mod data_layer_m1_batch_scheduler;
 /// M10 archival retry projection contracts extracted from core data-layer module.
 pub mod data_layer_m10_archival_retry;
 /// M10 compliance-projection bookkeeping extracted from core.
@@ -25,6 +27,7 @@ pub mod data_layer_m11_hardening_readiness;
 pub use data_layer_m10_archival_retry::*;
 pub use data_layer_m10_compliance_projection_bookkeeping::*;
 pub use data_layer_m10_compliance_projection_port::*;
+pub use data_layer_m1_batch_scheduler::*;
 pub use data_layer_m10_partition_month_policy::*;
 pub use data_layer_m10_partition_registry_state_machine::*;
 pub use data_layer_m10_phase6_compliance_port::*;
