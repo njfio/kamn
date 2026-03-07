@@ -756,6 +756,25 @@ mod tests {
         }
     }
 
+    fn legacy_raw_prefix_group_nonce_bytes(
+        sender_did: &str,
+        generation: u64,
+        nonce: u64,
+    ) -> [u8; 24] {
+        let mut out = [0u8; 24];
+        out[..8].copy_from_slice(&nonce.to_le_bytes());
+
+        let mut hasher = sha2::Sha256::new();
+        use sha2::Digest;
+        hasher.update(b"kamn:group-message:nonce:v1:");
+        hasher.update(sender_did.as_bytes());
+        hasher.update(generation.to_le_bytes());
+        hasher.update(nonce.to_le_bytes());
+        let digest = hasher.finalize();
+        out[8..].copy_from_slice(&digest[..16]);
+        out
+    }
+
     #[test]
     fn constructor_rejects_empty_channel_id() {
         assert_eq!(
@@ -996,6 +1015,106 @@ mod tests {
             !SOURCE.contains("\nfn hmac_sha256("),
             "manual hmac helper must be removed"
         );
+    }
+
+    #[test]
+    fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
+    ) {
+        let derive_line = SOURCE
+            .lines()
+            .find(|line| line.contains("pub struct GroupChannelCryptoEngine"))
+            .and_then(|_| {
+                SOURCE
+                    .lines()
+                    .find(|line| line.contains("#[derive(") && line.contains("PartialEq"))
+            })
+            .unwrap_or_default();
+        let derive_window = derive_line.replace(' ', "");
+        assert!(
+            !derive_window.contains("Clone"),
+            "group-channel engine must not derive Clone"
+        );
+        assert!(
+            SOURCE.contains("impl fmt::Debug for GroupChannelCryptoEngine"),
+            "group-channel engine must define a redacted Debug impl"
+        );
+        assert!(
+            SOURCE.contains("used_nonce_count"),
+            "group-channel engine debug output must expose only a nonce-count summary"
+        );
+        assert!(
+            SOURCE.contains("impl Drop for GroupChannelCryptoEngine"),
+            "group-channel engine must define Drop"
+        );
+    }
+
+    #[test]
+    fn group_nonce_bytes_do_not_expose_raw_counter_prefix() {
+        let nonce = 0x0102_0304_0506_0708_u64;
+        let nonce_bytes = super::group_nonce_bytes("kamn:did:agent:alice", 7, nonce);
+
+        assert_ne!(
+            &nonce_bytes[..8],
+            &nonce.to_le_bytes(),
+            "derived group nonce bytes must not expose nonce.to_le_bytes() as the prefix"
+        );
+    }
+
+    #[test]
+    fn encrypt_output_does_not_authenticate_under_legacy_raw_prefix_nonce_layout() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let channel_id = "channel:group:nonce-layout";
+            let sender_did = "kamn:did:agent:alice";
+            let sender_key_ref = "kamn:did:agent:alice#sender-key-1";
+            let recipient_did = "kamn:did:agent:bob";
+            let nonce = 57;
+
+            let mut engine =
+                GroupChannelCryptoEngine::new(channel_id).expect("group engine should initialize");
+            let distribution = engine
+                .distribute_sender_key(sender_did, sender_key_ref, vec![recipient_did.to_owned()])
+                .expect("distribution should succeed");
+            let sealed = engine
+                .encrypt(sender_did, "group-nonce-layout", nonce)
+                .expect("encrypt should succeed");
+
+            let master_seed =
+                super::load_key_agreement_master_seed().expect("master seed should be available");
+            let shared_secret = super::derive_group_shared_secret(
+                channel_id,
+                sender_key_ref,
+                distribution.key_generation,
+                &master_seed,
+            );
+            let aead_key = super::derive_group_aead_key(
+                &shared_secret,
+                channel_id,
+                distribution.key_generation,
+            )
+            .expect("aead key should derive");
+            let cipher = XChaCha20Poly1305::new((&aead_key).into());
+            let legacy_nonce_bytes = legacy_raw_prefix_group_nonce_bytes(
+                sender_did,
+                distribution.key_generation,
+                nonce,
+            );
+            let xnonce = XNonce::from(legacy_nonce_bytes);
+            let mut combined = super::hex_decode(&sealed.ciphertext).expect("ciphertext hex");
+            combined.extend_from_slice(&super::hex_decode(&sealed.auth_tag).expect("auth tag hex"));
+
+            let decrypted = cipher.decrypt(
+                &xnonce,
+                Payload {
+                    msg: &combined,
+                    aad: &[],
+                },
+            );
+
+            assert!(
+                decrypted.is_err(),
+                "current group encryptions must not authenticate under the legacy raw-prefix nonce layout"
+            );
+        });
     }
 
     #[test]
