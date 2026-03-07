@@ -10,6 +10,7 @@ Extracted data-layer contracts from `kamn-core` with focused ownership.
 - `data_layer_m10_partition_registry_state_machine`
 - `data_layer_m11_hardening_readiness`
 - `data_layer_prd_critical_scenario_conformance`
+- `data_layer_shell_neutral_policy`
 
 ## Usage
 - Build: `cargo build -p kamn-data-layer`
