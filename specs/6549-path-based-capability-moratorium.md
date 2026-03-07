@@ -56,3 +56,7 @@ Harden the governance/capability moratorium so it classifies commits from change
 3. Run `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`.
 4. Run `bash scripts/ci/test_workflow_scope_policy.sh`.
 5. Run `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`.
+
+## Integration Notes
+- During rollout, pull requests are judged by the checker/config loaded from `origin/${base_ref}`.
+- If the base branch checker does not yet expose `--base-sha`, Fast Gate must fall back to the legacy `--commit-subjects-file` invocation without failing the PR.
