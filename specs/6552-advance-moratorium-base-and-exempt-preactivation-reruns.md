@@ -56,3 +56,19 @@ Advance the governance/feature commit-ratio moratorium start point past the roll
   - post-activation governance-only history still failing
 - Add workflow/doc contract regressions in `scripts/ci/test_workflow_scope_policy.sh` and `crates/kamn-core/tests/ci_strategy_docs.rs` for the new base SHA and strategy markers.
 - Re-run the shell regression tests and targeted docs contract after the implementation.
+
+## Integration notes
+- The real command surface is the governance-ratio Fast Gate step in `.github/workflows/ci-fast-gate.yml`, so integration evidence must use the checker against real repository history, not a synthetic fixture only.
+- Verified local real-history outcomes:
+  - `#6551` head `e8a6de26ef277849b374e921c3e3307accbbacdf` returns `status=ok` with `activation_scope_status=head_at_activation_base`.
+  - `#6550` head `73212e841bfa77668424ba3b8c3b7e66fedf2d83` returns `status=ok` with `activation_scope_status=head_precedes_activation_base`.
+
+## Evidence
+- `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
+- `bash scripts/ci/test_workflow_scope_policy.sh`
+- `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`
+- `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root /home/n/Code/kamn --base-sha e8a6de26ef277849b374e921c3e3307accbbacdf --head-sha e8a6de26ef277849b374e921c3e3307accbbacdf --window-size 50 --max-governance-ratio 0.2 --output-json /tmp/ratio-6551.json`
+- `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root /home/n/Code/kamn --base-sha e8a6de26ef277849b374e921c3e3307accbbacdf --head-sha 73212e841bfa77668424ba3b8c3b7e66fedf2d83 --window-size 50 --max-governance-ratio 0.2 --output-json /tmp/ratio-6550.json`
+
+## Deviations
+- No pre-merge PR can make its own governance-ratio Fast Gate green once that gate is loaded from the unfixed base branch and the PR itself is governance-only work. This issue fixes the merged/base-branch semantics and historical reruns, but its own PR still requires an explicit merge exception or a post-merge rerun for clean evidence.
