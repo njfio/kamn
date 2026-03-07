@@ -15,6 +15,7 @@ permissions:
 
 env:
   KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX: "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4"
+  KAMN_E2E_SERVICE_AUTH_PUBLIC_KEY_HEX: "0264eb26609d15e709227b9ddc46c11a738b210bb237949aa86d7d490a35ae0f0a"
 
 jobs:
   e2e-sdk-direct:
@@ -62,11 +63,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          SERVICE_AUTH_PRIVATE_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX"
-          export SERVICE_AUTH_PRIVATE_KEY_HEX
-          SERVICE_AUTH_PUBLIC_KEY_HEX="$(python3 -c 'from cryptography.hazmat.primitives.asymmetric import ec; from cryptography.hazmat.primitives import serialization; import os; private_key = ec.derive_private_key(int(os.environ["SERVICE_AUTH_PRIVATE_KEY_HEX"], 16), ec.SECP256K1()); print(private_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint).hex())')"
-          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$SERVICE_AUTH_PRIVATE_KEY_HEX"
-          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$SERVICE_AUTH_PUBLIC_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PUBLIC_KEY_HEX"
           export KAMN_SERVICE_API_TLS_MODE=disabled
 
           cleanup() {
@@ -259,11 +257,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          SERVICE_AUTH_PRIVATE_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX"
-          export SERVICE_AUTH_PRIVATE_KEY_HEX
-          SERVICE_AUTH_PUBLIC_KEY_HEX="$(python3 -c 'from cryptography.hazmat.primitives.asymmetric import ec; from cryptography.hazmat.primitives import serialization; import os; private_key = ec.derive_private_key(int(os.environ["SERVICE_AUTH_PRIVATE_KEY_HEX"], 16), ec.SECP256K1()); print(private_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint).hex())')"
-          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$SERVICE_AUTH_PRIVATE_KEY_HEX"
-          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$SERVICE_AUTH_PUBLIC_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PUBLIC_KEY_HEX"
           export KAMN_SERVICE_API_TLS_MODE=disabled
 
           cleanup() {
@@ -450,11 +445,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          SERVICE_AUTH_PRIVATE_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX"
-          export SERVICE_AUTH_PRIVATE_KEY_HEX
-          SERVICE_AUTH_PUBLIC_KEY_HEX="$(python3 -c 'from cryptography.hazmat.primitives.asymmetric import ec; from cryptography.hazmat.primitives import serialization; import os; private_key = ec.derive_private_key(int(os.environ["SERVICE_AUTH_PRIVATE_KEY_HEX"], 16), ec.SECP256K1()); print(private_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint).hex())')"
-          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$SERVICE_AUTH_PRIVATE_KEY_HEX"
-          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$SERVICE_AUTH_PUBLIC_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PRIVATE_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$KAMN_E2E_SERVICE_AUTH_PUBLIC_KEY_HEX"
           export KAMN_SERVICE_API_TLS_MODE=disabled
 
           cleanup() {
