@@ -7,10 +7,12 @@ Bring `GroupChannelCryptoEngine` up to the same security-hardening baseline as t
 - Inputs:
   - `crates/kamn-core/src/group_channel_crypto.rs`
   - `crates/kamn-core/Cargo.toml`
+  - `crates/kamn-core/tests/group_sender_keys.rs`
+  - `Cargo.lock`
 - Outputs:
   - hardened `GroupChannelCryptoEngine` source contract
   - compatibility-preserving group decrypt path for legacy raw-prefix nonce ciphertext
-  - targeted regression coverage for nonce derivation and source hardening markers
+  - targeted regression coverage for nonce derivation, source hardening markers, and redacted crate-level debug output
 
 ## Boundaries/Non-goals
 - Do not change the public `GroupMessageCiphertext` fields.
@@ -35,8 +37,10 @@ Bring `GroupChannelCryptoEngine` up to the same security-hardening baseline as t
 - [ ] targeted tests fail closed if the old raw-prefix nonce layout, `Clone`, or missing `Drop`/redacted `Debug` return.
 
 ## Files to touch
+- `Cargo.lock`
 - `crates/kamn-core/src/group_channel_crypto.rs`
 - `crates/kamn-core/Cargo.toml`
+- `crates/kamn-core/tests/group_sender_keys.rs`
 - `specs/6568-harden-group-channel-crypto-engine.md`
 
 ## Error semantics
@@ -52,10 +56,21 @@ Bring `GroupChannelCryptoEngine` up to the same security-hardening baseline as t
   - implement the minimum module changes to satisfy the new tests
 - Integration:
   - rerun targeted `kamn-core` tests for `group_channel_crypto`
+  - add crate-level regression coverage that a live sender-key distribution/encrypt path exposes only redacted `Debug` summaries
   - run strict `clippy` for `kamn-core` tests
+
+## Deviations
+- `Cargo.lock` changed because `kamn-core` now consumes the existing workspace `zeroize` dependency directly.
+- Phase 6 integration proof used the smaller external test surface `crates/kamn-core/tests/group_sender_keys.rs` rather than expanding the older 400+ line crypto integration target.
+
+## Verification evidence
+- `cargo test -p kamn-core --test group_sender_keys -- --nocapture`
+- `cargo test -p kamn-core group_channel_crypto -- --nocapture`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+- `cargo clippy -p kamn-core --tests -- -D warnings`
 
 ## Shell-surface closure template
 - shell_loc_delta_actual: 0
-- rust_loc_delta_actual: 0
+- rust_loc_delta_actual: 245
 - shell_to_rust_ratio_delta_actual: 0.0
-- shell_surface_ratio_target_status: neutral
+- shell_surface_ratio_target_status: improved

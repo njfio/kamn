@@ -160,3 +160,38 @@ fn group_sender_keys_reject_invalid_sender_did_with_structured_marker() {
         })
     );
 }
+
+#[test]
+fn group_sender_keys_debug_output_is_redacted_after_live_round_trip() {
+    ensure_key_agreement_master_seed();
+    let mut engine =
+        GroupChannelCryptoEngine::new("channel:group:zeta").expect("engine should initialize");
+
+    engine
+        .distribute_sender_key(
+            "kamn:did:agent:alice",
+            "kamn:did:agent:alice#sender-key-secret",
+            vec!["kamn:did:agent:bob".to_owned(), "kamn:did:agent:carol".to_owned()],
+        )
+        .expect("distribution should succeed");
+
+    engine
+        .encrypt("kamn:did:agent:alice", "redacted hello", 17)
+        .expect("encrypt should succeed");
+
+    let debug_output = format!("{engine:?}");
+
+    assert!(
+        debug_output.contains("GroupChannelCryptoEngine"),
+        "debug output should identify the engine type: {debug_output}"
+    );
+    assert!(debug_output.contains("used_nonce_count: 1"), "debug output should expose the redacted nonce summary: {debug_output}");
+    assert!(
+        !debug_output.contains("sender-key-secret"),
+        "debug output must not expose sender key refs: {debug_output}"
+    );
+    assert!(
+        !debug_output.contains("kamn:did:agent:bob"),
+        "debug output must not expose recipient allowlists: {debug_output}"
+    );
+}
