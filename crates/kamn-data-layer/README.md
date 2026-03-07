@@ -5,6 +5,7 @@ Extracted data-layer contracts from `kamn-core` with focused ownership.
 
 ## Key Surfaces
 - `data_layer_hashing`
+- `data_layer_m1_batch_scheduler`
 - `data_layer_m10_compliance_projection_bookkeeping`
 - `data_layer_m10_partition_registry_state_machine`
 - `data_layer_m11_hardening_readiness`
