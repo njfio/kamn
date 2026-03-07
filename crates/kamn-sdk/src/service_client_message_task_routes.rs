@@ -1,9 +1,10 @@
 use super::super::{
     expect_status, json_string_array_field, json_string_field, normalize_route_segment, SdkError,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceMessageReceipt, ServiceMessageStatus,
-    ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceMessageDelivery, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
 };
 use super::ServiceApiClient;
+use serde_json::Value;
 
 impl ServiceApiClient {
     /// Sends a signed message payload through the service API.
@@ -35,6 +36,18 @@ impl ServiceApiClient {
             message_id: json_string_field(response.body.as_str(), "message_id")?,
             status: json_string_field(response.body.as_str(), "status")?,
         })
+    }
+
+    pub(crate) fn get_message_delivery(
+        &self,
+        message_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceMessageDelivery, SdkError> {
+        let message_id = normalize_route_segment("message_id", message_id)?;
+        let route = format!("/v1/messages/{message_id}");
+        let response = self.request("GET", route.as_str(), "", Some(auth))?;
+        expect_status(response.status, 200)?;
+        parse_message_delivery(response.body.as_str())
     }
 
     /// Creates a channel payload through the service API.
@@ -128,4 +141,47 @@ impl ServiceApiClient {
             state: json_string_field(response.body.as_str(), "state")?,
         })
     }
+}
+
+fn parse_message_delivery(payload: &str) -> Result<ServiceMessageDelivery, SdkError> {
+    let root = serde_json::from_str::<Value>(payload)
+        .map_err(|_| SdkError::TransportFailure("service response payload was not valid json"))?;
+    Ok(ServiceMessageDelivery {
+        message_id: required_message_field(
+            &root,
+            "message_id",
+            "service message response missing required message_id",
+        )?,
+        sender_did: required_message_field(
+            &root,
+            "sender_did",
+            "service message response missing required sender_did",
+        )?,
+        recipient_did: required_message_field(
+            &root,
+            "recipient_did",
+            "service message response missing required recipient_did",
+        )?,
+        body: required_message_field(
+            &root,
+            "body",
+            "service message response missing required body",
+        )?,
+    })
+}
+
+fn required_message_field(
+    root: &Value,
+    key: &str,
+    missing_message: &'static str,
+) -> Result<String, SdkError> {
+    let Some(value) = root.get(key) else {
+        return Err(SdkError::TransportFailure(missing_message));
+    };
+    value
+        .as_str()
+        .map(str::to_owned)
+        .ok_or(SdkError::TransportFailure(
+            "service message response field was malformed",
+        ))
 }

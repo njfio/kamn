@@ -1,4 +1,4 @@
-use super::config::LiveTransportConfig;
+use super::config::{LiveTransportConfig, AGENTS_READ_SCOPE};
 use super::task_escrow::{deterministic_u64_tag, LiveEscrowAlias, LiveTaskAlias};
 use crate::{
     service_signature_for_fields, service_signer_public_key_for_fields, AgentDid, MessageId,
@@ -38,6 +38,13 @@ pub(crate) fn build_auth(
         Some(signer_public_key_hex.as_str()),
         scope,
     )
+}
+
+pub(crate) fn build_agents_read_auth(
+    state: &Arc<Mutex<LiveTransportState>>,
+    config: &LiveTransportConfig,
+) -> Result<ServiceRequestAuth, SdkError> {
+    build_auth(state, config, &config.requester_did, "", Some(AGENTS_READ_SCOPE))
 }
 
 pub(crate) fn remember_message_id(

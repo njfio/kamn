@@ -1,5 +1,9 @@
 use super::task_escrow::escape_json;
-use crate::{AgentMetadata, AgentReputation, DidDocument, Message, SdkError, ServiceAgentProfile};
+use crate::{
+    AgentDid, AgentMetadata, AgentReputation, DidDocument, Message, MessageId, MessageRecord,
+    SdkError, ServiceAgentProfile,
+};
+use crate::service::ServiceMessageDelivery;
 
 pub(crate) fn service_message_payload(message: &Message) -> String {
     let channel_segment = match &message.channel {
@@ -16,6 +20,29 @@ pub(crate) fn service_message_payload(message: &Message) -> String {
         escape_json(message.body.as_str()),
         channel_segment,
     )
+}
+
+pub(crate) fn recipient_mailbox_channel_id(recipient: &AgentDid) -> String {
+    format!("recipient:{}", recipient.as_str())
+}
+
+pub(crate) fn service_message_to_record(
+    delivery: ServiceMessageDelivery,
+    message_id: MessageId,
+) -> Result<MessageRecord, SdkError> {
+    let sender = AgentDid::parse(&delivery.sender_did)
+        .map_err(|_| SdkError::TransportFailure("service returned invalid sender did"))?;
+    let recipient = AgentDid::parse(&delivery.recipient_did)
+        .map_err(|_| SdkError::TransportFailure("service returned invalid recipient did"))?;
+    Ok(MessageRecord {
+        id: message_id,
+        message: Message {
+            from: sender,
+            to: recipient,
+            body: delivery.body,
+            channel: None,
+        },
+    })
 }
 
 pub(crate) fn agent_profile_to_document(
