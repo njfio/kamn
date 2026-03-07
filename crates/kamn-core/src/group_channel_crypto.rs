@@ -86,7 +86,10 @@ impl fmt::Debug for GroupChannelCryptoEngine {
         f.debug_struct("GroupChannelCryptoEngine")
             .field("channel_id", &self.channel_id)
             .field("sender_count", &self.sender_key_history.len())
-            .field("active_sender_count", &self.active_generation_by_sender.len())
+            .field(
+                "active_sender_count",
+                &self.active_generation_by_sender.len(),
+            )
             .field("used_nonce_count", &self.used_nonces.len())
             .finish()
     }
@@ -368,7 +371,11 @@ impl GroupChannelCryptoEngine {
         // Compatibility policy: encrypt with the fully derived v2 nonce layout and HKDF-v2 key,
         // but continue accepting legacy raw-prefix nonce layout and legacy SHA-256-v1 keys.
         let nonce_candidates = [
-            group_nonce_bytes(sealed.sender_did.as_str(), sealed.key_generation, sealed.nonce),
+            group_nonce_bytes(
+                sealed.sender_did.as_str(),
+                sealed.key_generation,
+                sealed.nonce,
+            ),
             legacy_raw_prefix_group_nonce_bytes(
                 sealed.sender_did.as_str(),
                 sealed.key_generation,
@@ -1288,11 +1295,8 @@ mod tests {
             )
             .expect("aead key should derive");
             let cipher = XChaCha20Poly1305::new((&aead_key).into());
-            let legacy_nonce_bytes = legacy_raw_prefix_group_nonce_bytes(
-                sender_did,
-                distribution.key_generation,
-                nonce,
-            );
+            let legacy_nonce_bytes =
+                legacy_raw_prefix_group_nonce_bytes(sender_did, distribution.key_generation, nonce);
             let xnonce = XNonce::from(legacy_nonce_bytes);
             let mut combined = super::hex_decode(&sealed.ciphertext).expect("ciphertext hex");
             combined.extend_from_slice(&super::hex_decode(&sealed.auth_tag).expect("auth tag hex"));
