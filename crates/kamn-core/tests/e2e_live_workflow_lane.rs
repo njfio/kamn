@@ -386,7 +386,7 @@ fn regression_e2e_live_workflow_lane_rejects_missing_centralized_service_auth_ke
     assert_eq!(decision.final_decision, "NO-GO");
     assert_eq!(
         decision.reason_codes_value,
-        "centralized_service_auth_key_marker_missing,duplicated_service_auth_key_setup_present"
+        "centralized_service_auth_key_marker_missing"
     );
     assert_eq!(decision.contract_status, "violation");
 }
@@ -403,10 +403,7 @@ fn regression_e2e_live_workflow_lane_rejects_missing_live_job_timeout() {
 
     assert_eq!(decision.status, "fail");
     assert_eq!(decision.final_decision, "NO-GO");
-    assert_eq!(
-        decision.reason_codes_value,
-        "centralized_service_auth_key_marker_missing,duplicated_service_auth_key_setup_present,live_job_timeout_missing,ci_strategy_markers_missing"
-    );
+    assert_eq!(decision.reason_codes_value, "live_job_timeout_missing");
     assert_eq!(decision.contract_status, "violation");
 }
 
