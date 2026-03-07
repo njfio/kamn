@@ -51,3 +51,14 @@ Add dedicated external `kamn-crypto` regression coverage for direct-message cryp
 3. Run the new contract target and failure-path target.
 4. Refresh the workspace test-file inventory baseline if the new targets change the tracked count.
 5. Re-run the targeted tests and the file-inventory test.
+
+## Integration evidence
+- The dedicated external target is now wired into the real workspace test surface under `crates/kamn-crypto/tests/`.
+- The workspace inventory gate was refreshed to account for the two new test targets.
+- Verified green commands:
+  - `cargo test -p kamn-crypto --test direct_message_crypto_input_nonce_failures_contract -- --nocapture`
+  - `cargo test -p kamn-crypto --test direct_message_crypto_input_nonce_failures -- --nocapture`
+  - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+
+## Deviations
+- None.
