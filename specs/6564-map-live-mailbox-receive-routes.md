@@ -50,6 +50,7 @@ real mailbox-backed implementation that composes the existing service routes:
 
 ## Files to touch
 
+- `crates/kamn-sdk/src/live.rs`
 - `crates/kamn-sdk/src/live/agent.rs`
 - `crates/kamn-sdk/src/live/routes.rs`
 - `crates/kamn-sdk/src/live/state.rs`
@@ -57,8 +58,7 @@ real mailbox-backed implementation that composes the existing service routes:
 - `crates/kamn-sdk/src/service_models.rs`
 - `crates/kamn-sdk/src/service_client_message_task_routes.rs`
 - `crates/kamn-sdk/tests/live_transport_agent.rs`
-- `crates/kamn-sdk/tests/support/live_transport_contract_server.rs`
-- `crates/kamn-sdk/tests/support/live_transport_http.rs`
+- `crates/kamn-sdk/tests/live_transport_receive.rs`
 - `specs/6564-map-live-mailbox-receive-routes.md`
 
 ## Error semantics
@@ -77,4 +77,15 @@ real mailbox-backed implementation that composes the existing service routes:
 
 ## Deviations
 
-- None.
+- `crates/kamn-sdk/tests/support/live_transport_contract_server.rs` and
+  `crates/kamn-sdk/tests/support/live_transport_http.rs` were not changed; the existing harness
+  already covered the mailbox/message route contract shape needed for this issue.
+- No service API route or OpenAPI change was required. The live SDK composes the existing
+  mailbox-list and message-query routes and keeps the richer message-delivery model crate-private.
+
+## Verification
+
+- `cargo test -p kamn-sdk --test live_transport_receive -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_agent spec_c05_live_transport_remaining_unsupported_methods_fail_closed -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
+- `cargo test -p kamn-sdk -- --nocapture`
