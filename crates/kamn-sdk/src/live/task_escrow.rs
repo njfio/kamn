@@ -87,13 +87,11 @@ pub(crate) fn remember_task_alias(
     service_task_id: &str,
     creator: &AgentDid,
 ) -> Result<TaskId, SdkError> {
-    remember_service_id("task", service_task_id)?;
+    validate_service_id("task", service_task_id)?;
     let alias = deterministic_u64_tag(service_task_id);
     match task_aliases.get(&alias) {
         Some(existing) if existing.service_id != service_task_id => {
-            return Err(SdkError::Conflict(
-                "service task id collision detected in sdk task alias map",
-            ));
+            return Err(alias_collision("task"));
         }
         Some(_) => {}
         None => {
@@ -117,10 +115,7 @@ pub(crate) fn prepare_task_accept(
 ) -> Result<(String, AgentDid), SdkError> {
     let entry = task_aliases
         .get_mut(&task_id.0)
-        .ok_or_else(|| SdkError::NotFound {
-            entity: "task",
-            id: task_id.0.to_string(),
-        })?;
+        .ok_or_else(|| missing_alias("task", task_id.0))?;
     entry.assignee = Some(assignee.clone());
     Ok((entry.service_id.clone(), assignee.clone()))
 }
@@ -131,10 +126,7 @@ pub(crate) fn prepare_task_complete(
 ) -> Result<(String, AgentDid), SdkError> {
     let entry = task_aliases
         .get(&task_id.0)
-        .ok_or_else(|| SdkError::NotFound {
-            entity: "task",
-            id: task_id.0.to_string(),
-        })?;
+        .ok_or_else(|| missing_alias("task", task_id.0))?;
     Ok((
         entry.service_id.clone(),
         entry
@@ -149,13 +141,11 @@ pub(crate) fn remember_escrow_alias(
     service_escrow_id: &str,
     payer: &AgentDid,
 ) -> Result<EscrowId, SdkError> {
-    remember_service_id("escrow", service_escrow_id)?;
+    validate_service_id("escrow", service_escrow_id)?;
     let alias = deterministic_u64_tag(service_escrow_id);
     match escrow_aliases.get(&alias) {
         Some(existing) if existing.service_id != service_escrow_id => {
-            return Err(SdkError::Conflict(
-                "service escrow id collision detected in sdk escrow alias map",
-            ));
+            return Err(alias_collision("escrow"));
         }
         Some(_) => {}
         None => {
@@ -177,14 +167,11 @@ pub(crate) fn prepare_escrow_release(
 ) -> Result<(String, AgentDid), SdkError> {
     let entry = escrow_aliases
         .get(&escrow_id.0)
-        .ok_or_else(|| SdkError::NotFound {
-            entity: "escrow",
-            id: escrow_id.0.to_string(),
-        })?;
+        .ok_or_else(|| missing_alias("escrow", escrow_id.0))?;
     Ok((entry.service_id.clone(), entry.payer.clone()))
 }
 
-fn remember_service_id(entity: &'static str, service_id: &str) -> Result<(), SdkError> {
+fn validate_service_id(entity: &'static str, service_id: &str) -> Result<(), SdkError> {
     if service_id.trim().is_empty() {
         return Err(SdkError::TransportFailure(match entity {
             "task" => "service returned empty task_id in task response",
@@ -193,4 +180,19 @@ fn remember_service_id(entity: &'static str, service_id: &str) -> Result<(), Sdk
         }));
     }
     Ok(())
+}
+
+fn missing_alias(entity: &'static str, id: u64) -> SdkError {
+    SdkError::NotFound {
+        entity,
+        id: id.to_string(),
+    }
+}
+
+fn alias_collision(entity: &'static str) -> SdkError {
+    SdkError::Conflict(match entity {
+        "task" => "service task id collision detected in sdk task alias map",
+        "escrow" => "service escrow id collision detected in sdk escrow alias map",
+        _ => "service id collision detected in sdk alias map",
+    })
 }
