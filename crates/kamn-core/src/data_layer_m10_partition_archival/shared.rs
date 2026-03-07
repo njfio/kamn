@@ -1,4 +1,5 @@
 use crate::{data_layer_hashing::tagged_sha256, KamnDid};
+use kamn_data_layer::DataLayerM10PartitionMonthPolicyError;
 
 use super::*;
 
@@ -25,6 +26,16 @@ pub(super) fn authorize_owner_scope(
     Ok(owner_did)
 }
 
+pub(super) fn map_partition_month_policy_error_to_m10(
+    error: DataLayerM10PartitionMonthPolicyError,
+) -> DataLayerM10PartitionLifecycleError {
+    match error {
+        DataLayerM10PartitionMonthPolicyError::InvalidPartitionMonthId(value) => {
+            DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(value)
+        }
+    }
+}
+
 pub(super) fn validate_non_empty(
     value: &str,
     field: &'static str,
@@ -38,44 +49,27 @@ pub(super) fn validate_non_empty(
 pub(super) fn validate_partition_month_id(
     partition_month_id: u32,
 ) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    let _ = split_month_id(partition_month_id)?;
-    Ok(())
-}
-
-pub(super) fn split_month_id(
-    partition_month_id: u32,
-) -> Result<(u32, u32), DataLayerM10PartitionLifecycleError> {
-    let year = partition_month_id / 100;
-    let month = partition_month_id % 100;
-    if year < 1970 || !(1..=12).contains(&month) {
-        return Err(
-            DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(partition_month_id),
-        );
-    }
-    Ok((year, month))
+    kamn_data_layer::data_layer_m10_validate_partition_month_id(partition_month_id)
+        .map_err(map_partition_month_policy_error_to_m10)
 }
 
 pub(super) fn add_months(
     partition_month_id: u32,
     months_to_add: u32,
 ) -> Result<u32, DataLayerM10PartitionLifecycleError> {
-    let (year, month) = split_month_id(partition_month_id)?;
-    let base = year * 12 + (month - 1);
-    let future = base + months_to_add;
-    let future_year = future / 12;
-    let future_month = (future % 12) + 1;
-    Ok(future_year * 100 + future_month)
+    kamn_data_layer::data_layer_m10_add_months(partition_month_id, months_to_add)
+        .map_err(map_partition_month_policy_error_to_m10)
 }
 
 pub(super) fn month_distance(
     older_partition_month_id: u32,
     newer_partition_month_id: u32,
 ) -> Result<u32, DataLayerM10PartitionLifecycleError> {
-    let (older_year, older_month) = split_month_id(older_partition_month_id)?;
-    let (newer_year, newer_month) = split_month_id(newer_partition_month_id)?;
-    let older = older_year * 12 + (older_month - 1);
-    let newer = newer_year * 12 + (newer_month - 1);
-    Ok(newer.saturating_sub(older))
+    kamn_data_layer::data_layer_m10_month_distance(
+        older_partition_month_id,
+        newer_partition_month_id,
+    )
+    .map_err(map_partition_month_policy_error_to_m10)
 }
 
 pub(super) fn deterministic_checksum_marker(
@@ -89,8 +83,7 @@ pub(super) fn deterministic_checksum_marker(
 #[cfg(test)]
 mod tests {
     use super::{
-        add_months, deterministic_checksum_marker, month_distance, split_month_id,
-        validate_partition_month_id,
+        add_months, deterministic_checksum_marker, month_distance, validate_partition_month_id,
     };
     use crate::DataLayerM10PartitionLifecycleError;
 
@@ -101,10 +94,10 @@ mod tests {
             Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(196912))
         );
         assert_eq!(
-            split_month_id(202513),
+            validate_partition_month_id(202513),
             Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(202513))
         );
-        assert_eq!(split_month_id(202512), Ok((2025, 12)));
+        assert_eq!(validate_partition_month_id(202512), Ok(()));
     }
 
     #[test]

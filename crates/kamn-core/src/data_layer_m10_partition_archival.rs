@@ -26,7 +26,7 @@ pub use registry::data_layer_m10_format_partition_name;
 pub use retry::data_layer_m10_project_archival_retry_decision;
 
 /// Partition prefix for monthly message partitions.
-pub const DATA_LAYER_M10_PARTITION_PREFIX: &str = "messages_";
+pub use kamn_data_layer::DATA_LAYER_M10_PARTITION_PREFIX;
 /// Archive format marker for exported partition artifacts.
 pub const DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD: &str = "parquet-zstd";
 /// Stable reason marker for archived lifecycle transitions.

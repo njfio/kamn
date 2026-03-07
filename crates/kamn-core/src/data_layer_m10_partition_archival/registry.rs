@@ -1,13 +1,14 @@
 use std::collections::BTreeSet;
 
 use kamn_data_layer::{
+    data_layer_m10_format_partition_name as data_layer_m10_format_partition_name_policy,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
     DataLayerM10ComplianceProjectionPortError,
 };
 
 use super::shared::{
-    add_months, deterministic_checksum_marker, month_distance, split_month_id, validate_non_empty,
-    validate_partition_month_id,
+    add_months, deterministic_checksum_marker, map_partition_month_policy_error_to_m10,
+    month_distance, validate_non_empty, validate_partition_month_id,
 };
 use super::*;
 use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
@@ -391,10 +392,8 @@ impl DataLayerM10PartitionLifecycleRegistry {
 pub fn data_layer_m10_format_partition_name(
     partition_month_id: u32,
 ) -> Result<String, DataLayerM10PartitionLifecycleError> {
-    let (year, month) = split_month_id(partition_month_id)?;
-    Ok(format!(
-        "{DATA_LAYER_M10_PARTITION_PREFIX}{year:04}_{month:02}"
-    ))
+    data_layer_m10_format_partition_name_policy(partition_month_id)
+        .map_err(map_partition_month_policy_error_to_m10)
 }
 
 fn project_partition_recovery_readiness(
