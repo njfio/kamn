@@ -25,6 +25,8 @@ pub mod data_layer_m11_closure_evidence;
 pub mod data_layer_m11_hardening_readiness;
 /// M1 batch scheduler trigger policy extracted from core.
 pub mod data_layer_m1_batch_scheduler;
+/// M7 observability projection contracts extracted from core telemetry policy.
+pub mod data_layer_m7_observability_projection;
 /// PRD critical-scenario conformance contracts extracted from core.
 pub mod data_layer_prd_critical_scenario_conformance;
 /// Shell-neutral orchestration and ratio-budget policy contracts extracted from core.
@@ -37,6 +39,7 @@ pub use data_layer_m10_partition_month_policy::*;
 pub use data_layer_m10_partition_registry_state_machine::*;
 pub use data_layer_m10_phase6_compliance_port::*;
 pub use data_layer_m10_phase6_policy_evaluator::*;
+pub use data_layer_m7_observability_projection::*;
 pub use data_layer_m11_closure_evidence::*;
 pub use data_layer_m11_hardening_readiness::*;
 pub use data_layer_m1_batch_scheduler::*;
