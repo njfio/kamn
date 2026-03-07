@@ -8,6 +8,20 @@ from typing import Dict, Sequence
 EMPTY_REASON = "governance_commit_subjects_empty"
 UNCLASSIFIED_REASON = "governance_commit_subject_unclassified"
 THRESHOLD_REASON = "governance_commit_ratio_threshold_exceeded"
+GOVERNANCE_PATH_PREFIXES = (
+    ".ci/",
+    ".github/",
+    "docs/ci/",
+    "scripts/ci/",
+    "specs/",
+)
+GOVERNANCE_PATHS = frozenset(
+    {
+        ".github/CONTRIBUTING.md",
+        "AGENTS.md",
+        "crates/kamn-core/tests/ci_strategy_docs.rs",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -21,8 +35,48 @@ class Classification:
         return self.governance_count + self.feature_count + len(self.unknown_subjects)
 
 
+@dataclass(frozen=True)
+class CommitRecord:
+    subject: str
+    paths: Sequence[str]
+
+
 def serialize_float(value: float) -> float:
     return round(value, 6)
+
+
+def normalize_path(path: str) -> str:
+    return path.strip().lstrip("./")
+
+
+def is_governance_path(path: str) -> bool:
+    normalized = normalize_path(path)
+    if not normalized:
+        return False
+    if normalized in GOVERNANCE_PATHS:
+        return True
+    return any(normalized.startswith(prefix) for prefix in GOVERNANCE_PATH_PREFIXES)
+
+
+def classify_commit_records(records: Sequence[CommitRecord]) -> Classification:
+    governance_count = 0
+    feature_count = 0
+    unknown_subjects = []
+
+    for record in records:
+        if not record.paths:
+            unknown_subjects.append(record.subject)
+            continue
+        if all(is_governance_path(path) for path in record.paths):
+            governance_count += 1
+            continue
+        feature_count += 1
+
+    return Classification(
+        governance_count=governance_count,
+        feature_count=feature_count,
+        unknown_subjects=tuple(unknown_subjects),
+    )
 
 
 def reason_codes_for_classification(

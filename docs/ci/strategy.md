@@ -295,6 +295,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Governance/Feature Commit-Ratio Fast Gate
 - Moratorium activation config:
   - `source .ci/governance-feature-commit-ratio-moratorium.env`
+- Policy source contract:
+  - load the checker/config from `origin/${base_ref}` so PRs are judged by the base-branch policy, not by their own modified copy.
 - Fast-gate governance-ratio contract command:
   - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/governance-feature-commit-ratio-report.json`
 - Deterministic coverage command:
@@ -306,6 +308,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Temporary capability moratorium semantics:
   - start counting after `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` so pre-moratorium governance debt does not cause retroactive failures.
   - the current activation file anchors at the last pre-implementation bootstrap commit for issue `#6548`, so the correction issue does not self-fail while restoring the moratorium.
+  - classify commits from changed-path surfaces: governance-only paths stay governance, while any mixed or capability path counts as capability work regardless of commit prefix.
   - evaluate the latest 50 non-merge commits in newest-first `git log` order.
   - require at least 40 of those 50 commits to classify as feature/capability work.
   - fail closed when governance-classified commits exceed 10 of the evaluated 50-commit window.
@@ -317,6 +320,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `governance_feature_commit_ratio_feature_ratio_min=0.80`
   - `governance_feature_commit_ratio_window_size=50`
   - `governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits`
+  - `governance_feature_commit_ratio_policy_source=base_branch`
+  - `governance_feature_commit_ratio_classification_mode=changed_path_surface`
   - `governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env`
   - `governance_feature_commit_ratio_activation_base_sha=f0252d24ff91859fe0b4051712ef98873aaae1f4`
   - `governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only`

@@ -115,8 +115,8 @@ if ! grep -Fq "Governance/feature commit ratio gate" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq "source .ci/governance-feature-commit-ratio-moratorium.env" "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to source the moratorium activation config" >&2
+if ! grep -Fq 'source "$tmp_dir/governance-feature-commit-ratio-moratorium.env"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to source moratorium activation config from the base branch payload" >&2
   exit 1
 fi
 
@@ -140,13 +140,28 @@ if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=f0252d24ff918
   exit 1
 fi
 
-if ! grep -Fq 'git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to start from the moratorium activation base SHA" >&2
+if ! grep -Fq -- '--repo-root "$PWD"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to pass repo-root for path-based classification" >&2
   exit 1
 fi
 
-if ! grep -Fq "python3 scripts/ci/check_governance_feature_commit_ratio.py" "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to run checker script" >&2
+if ! grep -Fq -- '--base-sha "$GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to pass the moratorium activation base SHA to the new checker interface" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- '--head-sha "${{ github.event.pull_request.head.sha }}"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to pass the PR head SHA to the new checker interface" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..${{ github.event.pull_request.head.sha }}"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to retain the legacy subject-file fallback path during rollout" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'python3 "$tmp_dir/check_governance_feature_commit_ratio.py"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to run the checker loaded from the base branch payload" >&2
   exit 1
 fi
 

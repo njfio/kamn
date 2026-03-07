@@ -6,12 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import subprocess
 from typing import Dict, Iterable, List, Sequence
 
 from governance_feature_commit_ratio_support import (
     Classification,
+    CommitRecord,
     build_error_report,
     build_report,
+    classify_commit_records,
     emit_stdout,
 )
 
@@ -37,8 +40,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--commit-subjects-file",
-        required=True,
         help="Path to newline-delimited commit subject list.",
+    )
+    parser.add_argument(
+        "--repo-root",
+        help="Repository root for git-range classification mode.",
+    )
+    parser.add_argument(
+        "--base-sha",
+        help="Inclusive moratorium cutoff SHA for git-range classification mode.",
+    )
+    parser.add_argument(
+        "--head-sha",
+        help="Head SHA to evaluate in git-range classification mode.",
     )
     parser.add_argument(
         "--window-size",
@@ -67,10 +81,10 @@ def read_commit_subjects(path: Path) -> List[str]:
     return [line.strip() for line in contents.splitlines() if line.strip()]
 
 
-def select_subject_window(subjects: Sequence[str], window_size: int) -> Sequence[str]:
-    if window_size <= 0 or window_size >= len(subjects):
-        return tuple(subjects)
-    return tuple(subjects[:window_size])
+def select_window(items: Sequence[object], window_size: int) -> Sequence[object]:
+    if window_size <= 0 or window_size >= len(items):
+        return tuple(items)
+    return tuple(items[:window_size])
 
 
 def commit_type_from_subject(subject: str) -> str | None:
@@ -108,6 +122,41 @@ def classify_subjects(subjects: Iterable[str]) -> Classification:
     )
 
 
+def run_git(repo_root: Path, args: Sequence[str]) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        capture_output=True,
+        check=False,
+        encoding="utf-8",
+    )
+    if completed.returncode != 0:
+        stderr = completed.stderr.strip()
+        raise CheckerError(stderr or f"git command failed: {' '.join(args)}")
+    return completed.stdout
+
+
+def read_commit_records(repo_root: Path, base_sha: str, head_sha: str) -> Sequence[CommitRecord]:
+    if not repo_root.exists():
+        raise CheckerError(f"repo root not found: {repo_root}")
+    commit_shas = [
+        line.strip()
+        for line in run_git(repo_root, ["rev-list", "--no-merges", f"{base_sha}..{head_sha}"]).splitlines()
+        if line.strip()
+    ]
+    records = []
+    for commit_sha in commit_shas:
+        subject = run_git(repo_root, ["show", "-s", "--format=%s", commit_sha]).strip()
+        paths = [
+            line.strip()
+            for line in run_git(
+                repo_root, ["diff-tree", "--no-commit-id", "--name-only", "-r", commit_sha]
+            ).splitlines()
+            if line.strip()
+        ]
+        records.append(CommitRecord(subject=subject, paths=tuple(paths)))
+    return tuple(records)
+
+
 def write_report(path: Path, report: Dict[str, object]) -> None:
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -117,18 +166,30 @@ def validate_args(args: argparse.Namespace) -> None:
         raise CheckerError("--max-governance-ratio must be within [0.0, 1.0]")
     if args.window_size < 0:
         raise CheckerError("--window-size must be >= 0")
+    if args.commit_subjects_file:
+        return
+    if not args.repo_root or not args.base_sha or not args.head_sha:
+        raise CheckerError(
+            "either --commit-subjects-file or the full --repo-root/--base-sha/--head-sha set is required"
+        )
 
 
 def main() -> int:
     args = parse_args()
     try:
         validate_args(args)
-        subjects = read_commit_subjects(Path(args.commit_subjects_file))
-        subject_window = select_subject_window(subjects, int(args.window_size))
-        classification = classify_subjects(subject_window)
+        input_total = 0
+        if args.commit_subjects_file:
+            subjects = read_commit_subjects(Path(args.commit_subjects_file))
+            classification = classify_subjects(select_window(subjects, int(args.window_size)))
+            input_total = len(subjects)
+        else:
+            records = read_commit_records(Path(args.repo_root), str(args.base_sha), str(args.head_sha))
+            classification = classify_commit_records(select_window(records, int(args.window_size)))
+            input_total = len(records)
         report = build_report(
             classification,
-            input_non_merge_commit_total=len(subjects),
+            input_non_merge_commit_total=input_total,
             window_size=int(args.window_size),
             max_governance_ratio=float(args.max_governance_ratio),
             schema_version=SCHEMA_VERSION,

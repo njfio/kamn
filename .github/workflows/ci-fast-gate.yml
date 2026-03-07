@@ -84,13 +84,29 @@ jobs:
       - name: Governance/feature commit ratio gate
         if: github.event_name == 'pull_request'
         run: |
-          source .ci/governance-feature-commit-ratio-moratorium.env
-          git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD" > ci-pr-commit-subjects.txt
-          python3 scripts/ci/check_governance_feature_commit_ratio.py \
-            --commit-subjects-file ci-pr-commit-subjects.txt \
-            --window-size "$GOVERNANCE_FEATURE_COMMIT_RATIO_WINDOW_SIZE" \
-            --max-governance-ratio "$GOVERNANCE_FEATURE_COMMIT_RATIO_MAX_GOVERNANCE_RATIO" \
-            --output-json ci-governance-feature-commit-ratio.json
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py" > "$tmp_dir/check_governance_feature_commit_ratio.py"
+          git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py" > "$tmp_dir/governance_feature_commit_ratio_support.py"
+          git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env" > "$tmp_dir/governance-feature-commit-ratio-moratorium.env"
+          chmod +x "$tmp_dir/check_governance_feature_commit_ratio.py"
+          source "$tmp_dir/governance-feature-commit-ratio-moratorium.env"
+          if grep -Fq -- "--base-sha" "$tmp_dir/check_governance_feature_commit_ratio.py"; then
+            python3 "$tmp_dir/check_governance_feature_commit_ratio.py" \
+              --repo-root "$PWD" \
+              --base-sha "$GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA" \
+              --head-sha "${{ github.event.pull_request.head.sha }}" \
+              --window-size "$GOVERNANCE_FEATURE_COMMIT_RATIO_WINDOW_SIZE" \
+              --max-governance-ratio "$GOVERNANCE_FEATURE_COMMIT_RATIO_MAX_GOVERNANCE_RATIO" \
+              --output-json ci-governance-feature-commit-ratio.json
+          else
+            git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..${{ github.event.pull_request.head.sha }}" > ci-pr-commit-subjects.txt
+            python3 "$tmp_dir/check_governance_feature_commit_ratio.py" \
+              --commit-subjects-file ci-pr-commit-subjects.txt \
+              --window-size "$GOVERNANCE_FEATURE_COMMIT_RATIO_WINDOW_SIZE" \
+              --max-governance-ratio "$GOVERNANCE_FEATURE_COMMIT_RATIO_MAX_GOVERNANCE_RATIO" \
+              --output-json ci-governance-feature-commit-ratio.json
+          fi
 
       - name: Upload governance/feature commit ratio report
         if: always() && hashFiles('ci-governance-feature-commit-ratio.json') != ''
