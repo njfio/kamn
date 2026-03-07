@@ -121,7 +121,7 @@ if ! grep -Fq "source .ci/governance-feature-commit-ratio-moratorium.env" "$FAST
 fi
 
 if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=f0252d24ff91859fe0b4051712ef98873aaae1f4" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
-  echo "expected governance/feature commit ratio moratorium env to anchor at the activation merge commit" >&2
+  echo "expected governance/feature commit ratio moratorium env to anchor at the bootstrap cutoff commit" >&2
   exit 1
 fi
 
