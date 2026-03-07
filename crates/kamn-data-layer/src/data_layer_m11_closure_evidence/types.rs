@@ -6,8 +6,7 @@ use crate::{
 /// Stable reason marker when closure evidence satisfies all release gates.
 pub const DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE: &str = "m11_closure_accepted";
 /// Stable reason marker when hardening readiness blocks closure.
-pub const DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE: &str =
-    "m11_closure_block_hardening";
+pub const DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE: &str = "m11_closure_block_hardening";
 /// Stable reason marker when critical scenario conformance blocks closure.
 pub const DATA_LAYER_M11_CLOSURE_BLOCK_CRITICAL_SCENARIO_REASON_CODE: &str =
     "m11_closure_block_critical_scenario";
