@@ -1,4 +1,4 @@
-use crate::{data_layer_hashing::tagged_sha256, KamnDid};
+use crate::KamnDid;
 use kamn_data_layer::DataLayerM10PartitionMonthPolicyError;
 
 use super::*;
@@ -76,8 +76,7 @@ pub(super) fn deterministic_checksum_marker(
     partition_name: &str,
     partition_month_id: u32,
 ) -> String {
-    let canonical_payload = format!("{partition_name}:{partition_month_id}");
-    tagged_sha256(canonical_payload.as_str(), "sha256")
+    kamn_data_layer::data_layer_m10_deterministic_checksum_marker(partition_name, partition_month_id)
 }
 
 #[cfg(test)]
