@@ -6,36 +6,22 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-import subprocess
 from typing import Dict, Iterable, List, Sequence
+
+from governance_feature_commit_ratio_git import CheckerError, classify_range
 
 from governance_feature_commit_ratio_support import (
     Classification,
-    CommitRecord,
-    HEAD_AT_ACTIVATION_BASE,
-    HEAD_PRECEDES_ACTIVATION_BASE,
-    POST_ACTIVATION_WINDOW,
     SUBJECT_WINDOW_ONLY,
     build_error_report,
     build_report,
-    classify_commit_records,
     emit_stdout,
 )
 
 SCHEMA_VERSION = "kamn.ci.governance-feature-commit-ratio-report.v1"
 REASON_TAXONOMY_VERSION = "kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1"
-REASON_CODES = [
-    "governance_commit_subjects_empty",
-    "governance_commit_subject_unclassified",
-    "governance_commit_ratio_threshold_exceeded",
-]
-
 GOVERNANCE_TYPES = frozenset({"spec", "docs", "chore"})
 FEATURE_TYPES = frozenset({"feat", "fix", "refactor", "test", "perf", "integrate"})
-
-
-class CheckerError(Exception):
-    """Raised for deterministic checker failures."""
 
 
 def parse_args() -> argparse.Namespace:
@@ -126,89 +112,6 @@ def classify_subjects(subjects: Iterable[str]) -> Classification:
     )
 
 
-def run_git(repo_root: Path, args: Sequence[str]) -> str:
-    completed = subprocess.run(
-        ["git", "-C", str(repo_root), *args],
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-    )
-    if completed.returncode != 0:
-        stderr = completed.stderr.strip()
-        raise CheckerError(stderr or f"git command failed: {' '.join(args)}")
-    return completed.stdout
-
-
-def read_commit_records(repo_root: Path, base_sha: str, head_sha: str) -> Sequence[CommitRecord]:
-    if not repo_root.exists():
-        raise CheckerError(f"repo root not found: {repo_root}")
-    commit_shas = [
-        line.strip()
-        for line in run_git(repo_root, ["rev-list", "--no-merges", f"{base_sha}..{head_sha}"]).splitlines()
-        if line.strip()
-    ]
-    records = []
-    for commit_sha in commit_shas:
-        subject = run_git(repo_root, ["show", "-s", "--format=%s", commit_sha]).strip()
-        paths = [
-            line.strip()
-            for line in run_git(
-                repo_root, ["diff-tree", "--no-commit-id", "--name-only", "-r", commit_sha]
-            ).splitlines()
-            if line.strip()
-        ]
-        records.append(CommitRecord(subject=subject, paths=tuple(paths)))
-    return tuple(records)
-
-
-def verify_commit(repo_root: Path, commit_sha: str) -> None:
-    run_git(repo_root, ["rev-parse", "--verify", f"{commit_sha}^{{commit}}"])
-
-
-def is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: str) -> bool:
-    completed = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(repo_root),
-            "merge-base",
-            "--is-ancestor",
-            ancestor_sha,
-            descendant_sha,
-        ],
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-    )
-    if completed.returncode == 0:
-        return True
-    if completed.returncode == 1:
-        return False
-    stderr = completed.stderr.strip()
-    raise CheckerError(stderr or "git merge-base --is-ancestor failed")
-
-
-def classify_range(
-    repo_root: Path,
-    base_sha: str,
-    head_sha: str,
-    window_size: int,
-) -> tuple[Classification, int, str, bool]:
-    verify_commit(repo_root, base_sha)
-    verify_commit(repo_root, head_sha)
-    if base_sha == head_sha:
-        return Classification(0, 0, ()), 0, HEAD_AT_ACTIVATION_BASE, True
-    if is_ancestor(repo_root, head_sha, base_sha):
-        return Classification(0, 0, ()), 0, HEAD_PRECEDES_ACTIVATION_BASE, True
-    records = read_commit_records(repo_root, base_sha, head_sha)
-    return (
-        classify_commit_records(select_window(records, window_size)),
-        len(records),
-        POST_ACTIVATION_WINDOW,
-        False,
-    )
-
-
 def write_report(path: Path, report: Dict[str, object]) -> None:
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -243,6 +146,7 @@ def main() -> int:
                 str(args.base_sha),
                 str(args.head_sha),
                 int(args.window_size),
+                select_window,
             )
         report = build_report(
             classification,
