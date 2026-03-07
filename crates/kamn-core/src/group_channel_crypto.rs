@@ -332,7 +332,10 @@ impl GroupChannelCryptoEngine {
             &sealed.ciphertext,
             &sealed.auth_tag,
         );
-        if expected_signature != sealed.signature {
+        if !crate::constant_time_eq::constant_time_eq_str(
+            expected_signature.as_str(),
+            sealed.signature.as_str(),
+        ) {
             return Err(GroupChannelCryptoError::SignatureMismatch);
         }
 
@@ -497,7 +500,10 @@ impl fmt::Display for GroupChannelCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InsecureCryptoDisabled => {
-                write!(f, "legacy deterministic group-message crypto has been removed")
+                write!(
+                    f,
+                    "legacy deterministic group-message crypto has been removed"
+                )
             }
             Self::MissingKeyAgreementMasterSeed => write!(
                 f,
@@ -538,7 +544,10 @@ impl fmt::Display for GroupChannelCryptoError {
             ),
             Self::AlgorithmMismatch => write!(f, "group message algorithm mismatch"),
             Self::ChannelMismatch { expected, actual } => {
-                write!(f, "group message channel mismatch, expected {expected}, got {actual}")
+                write!(
+                    f,
+                    "group message channel mismatch, expected {expected}, got {actual}"
+                )
             }
             Self::SignatureMismatch => write!(f, "group message signature verification failed"),
             Self::EncryptionFailed => write!(f, "group message encryption failed"),
@@ -774,8 +783,8 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, GroupChannelCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
         GROUP_MESSAGE_CIPHER_ALGORITHM, GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
+        GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
     };
     use chacha20poly1305::aead::{Aead, KeyInit, Payload};
     use chacha20poly1305::{XChaCha20Poly1305, XNonce};
@@ -1067,7 +1076,11 @@ mod tests {
             "group decrypt should use the scoped constant-time helper for signature comparison"
         );
         assert!(
-            !SOURCE.contains("if expected_signature != sealed.signature {"),
+            !SOURCE.contains(
+                ["if expected_signature !=", " sealed.signature {"]
+                    .concat()
+                    .as_str()
+            ),
             "group decrypt must not use direct signature inequality"
         );
     }
@@ -1159,8 +1172,8 @@ mod tests {
     }
 
     #[test]
-    fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
-    ) {
+    fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize()
+     {
         let production_source = SOURCE.split("\n#[cfg(test)]").next().unwrap_or(SOURCE);
         let derive_line = production_source
             .split("pub struct GroupChannelCryptoEngine")

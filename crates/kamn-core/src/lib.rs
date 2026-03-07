@@ -22,6 +22,7 @@ pub mod channel_models;
 pub mod channel_policies;
 /// Node role, sync mode, and runtime configuration validation contracts.
 pub mod config;
+mod constant_time_eq;
 /// Content retention, tombstone scheduling, and purge eligibility contracts.
 pub mod content_lifecycle;
 /// Replication policy, availability health, and repair action contracts.
@@ -34,8 +35,6 @@ pub mod content_storage;
 pub mod cross_chain_bridge;
 /// Cross-store replay consistency checker and deterministic divergence taxonomy contracts.
 pub mod cross_store_replay_consistency;
-#[cfg(test)]
-mod constant_time_eq;
 #[cfg(test)]
 pub(crate) mod crypto_test_env_lock;
 /// Data-domain classification policy and write-tag validation contracts.
@@ -190,11 +189,6 @@ pub use audit_exports::{
     AuditExportFilter, AuditExportFormat, AuditExportManifest, AuditExportRequest,
 };
 pub use block_pipeline::{
-    build_canonical_replay_evidence_bundle, build_transport_convergence_evidence_bundle,
-    decode_transport_candidate_payload, decode_transport_canonical_candidate_payload,
-    durable_commit_checker_reason_taxonomy_version, encode_transport_candidate_payload,
-    encode_transport_canonical_candidate_payload, encode_transport_commit_report_payload,
-    enforce_durable_commit_checker_lane_boundary, project_durable_commit_checker_reason,
     AcceptAllForkChoiceHook, BlockConsensusRoundInput, BlockPipelineCommitReport,
     BlockPipelineError, CanonicalCandidateDecision, CanonicalCandidateOutcome,
     CanonicalCommitRecord, CanonicalCommitStore, CanonicalReplayEvidenceBundle,
@@ -205,10 +199,15 @@ pub use block_pipeline::{
     GossipIngressError, GossipIngressRecord, InMemoryCanonicalCommitStore,
     InMemoryTransportMempoolFeed, MempoolBlockPipeline, SqliteCanonicalCommitStore,
     TransportCanonicalCandidateFeed, TransportConvergenceEvidenceBundle, TransportEventMempoolFeed,
-    TransportFedBlockPipeline, TransportMempoolFeed,
+    TransportFedBlockPipeline, TransportMempoolFeed, build_canonical_replay_evidence_bundle,
+    build_transport_convergence_evidence_bundle, decode_transport_candidate_payload,
+    decode_transport_canonical_candidate_payload, durable_commit_checker_reason_taxonomy_version,
+    encode_transport_candidate_payload, encode_transport_canonical_candidate_payload,
+    encode_transport_commit_report_payload, enforce_durable_commit_checker_lane_boundary,
+    project_durable_commit_checker_reason,
 };
 pub use bootstrap::{
-    bootstrap, bootstrap_from_state_version, bootstrap_with_transport_profile, BootstrapPlan,
+    BootstrapPlan, bootstrap, bootstrap_from_state_version, bootstrap_with_transport_profile,
 };
 pub use bridge_adapter::{
     AllowAllBridgePolicy, BridgeAdapter, BridgeAdapterEngine, BridgeAdapterError, BridgeDirection,
@@ -216,15 +215,15 @@ pub use bridge_adapter::{
     BridgePolicyHook, NormalizedInboundMessage, PassThroughBridgeAdapter,
 };
 pub use channel_models::{
-    ChannelMetadata, ChannelModelError, ChannelRecordSnapshot, ChannelRecoveryResult,
-    ChannelSnapshot, ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError,
-    ChannelStore, ChannelType, FileChannelSnapshotStore, InMemoryChannelSnapshotStore,
-    SqliteChannelSnapshotStore, CHANNEL_SNAPSHOT_SCHEMA_VERSION,
+    CHANNEL_SNAPSHOT_SCHEMA_VERSION, ChannelMetadata, ChannelModelError, ChannelRecordSnapshot,
+    ChannelRecoveryResult, ChannelSnapshot, ChannelSnapshotError, ChannelSnapshotStore,
+    ChannelSnapshotStoreError, ChannelStore, ChannelType, FileChannelSnapshotStore,
+    InMemoryChannelSnapshotStore, SqliteChannelSnapshotStore,
 };
 pub use channel_policies::{
-    ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError,
-    ChannelPolicySnapshot, ChannelPolicySnapshotChannel, ChannelPolicySnapshotError,
-    PermissionRule, RetentionMessage, RetentionPolicy, CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION,
+    CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION, ChannelAction, ChannelPermissionEngine,
+    ChannelPermissions, ChannelPolicyError, ChannelPolicySnapshot, ChannelPolicySnapshotChannel,
+    ChannelPolicySnapshotError, PermissionRule, RetentionMessage, RetentionPolicy,
 };
 pub use config::{
     ConfigError, NodeConfig, NodeRole, SyncMode, SyncOperationalProfile, SyncRecoveryStrategy,
@@ -245,8 +244,8 @@ pub use content_retrieval::{
     ContentRetrievalResult, ContentRetrievalScope,
 };
 pub use content_storage::{
-    cid_from_content_uri, content_uri_for_cid, ContentHead, ContentObject, ContentStorageAdapter,
-    ContentStorageError, FileContentAdapter, InMemoryContentAdapter,
+    ContentHead, ContentObject, ContentStorageAdapter, ContentStorageError, FileContentAdapter,
+    InMemoryContentAdapter, cid_from_content_uri, content_uri_for_cid,
 };
 pub use cross_chain_bridge::{
     CrossChainBridgeConfig, CrossChainBridgeEngine, CrossChainBridgeError,
@@ -254,61 +253,205 @@ pub use cross_chain_bridge::{
     CrossChainOutboundDispatch,
 };
 pub use cross_store_replay_consistency::{
-    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
-    evaluate_cross_store_replay_consistency, CrossStoreReplayConsistencyReport,
-    CrossStoreReplayConsistencyStatus, CrossStoreReplayDivergenceClass,
+    CrossStoreReplayConsistencyReport, CrossStoreReplayConsistencyStatus,
+    CrossStoreReplayDivergenceClass, cross_store_replay_reason_codes_csv,
+    cross_store_replay_reason_taxonomy_version, evaluate_cross_store_replay_consistency,
 };
 pub use data_classification::{
     ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
     DataClassificationLevel, WriteDomain, WriteRequestContext, WriteTag,
 };
 pub use data_layer_m0::{
-    evaluate_data_layer_m0_conformance_matrix, DataLayerM0AppendOnlyLedger,
-    DataLayerM0ConformanceInvariant, DataLayerM0ConformanceMatrixCase,
-    DataLayerM0ConformanceMatrixDecision, DataLayerM0ConformanceMatrixEvidence,
-    DataLayerM0ConformanceMatrixReport, DataLayerM0EnvelopeRecord, DataLayerM0Error,
-    DataLayerM0RecordInput, DataLayerM0WrappedKey, DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD,
-    DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
+    DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD, DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
     DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE, DATA_LAYER_M0_HASH_ALGORITHM,
-    DATA_LAYER_M0_HASH_CHAIN_GENESIS,
+    DATA_LAYER_M0_HASH_CHAIN_GENESIS, DataLayerM0AppendOnlyLedger, DataLayerM0ConformanceInvariant,
+    DataLayerM0ConformanceMatrixCase, DataLayerM0ConformanceMatrixDecision,
+    DataLayerM0ConformanceMatrixEvidence, DataLayerM0ConformanceMatrixReport,
+    DataLayerM0EnvelopeRecord, DataLayerM0Error, DataLayerM0RecordInput, DataLayerM0WrappedKey,
+    evaluate_data_layer_m0_conformance_matrix,
 };
 pub use data_layer_m1::{
-    evaluate_data_layer_m1_anchor_failure_matrix, evaluate_data_layer_m1_inclusion_proof,
-    verify_data_layer_m1_inclusion_proof, DataLayerM1AnchorFailureMatrixCase,
+    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
+    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE, DATA_LAYER_M1_HASH_ALGORITHM,
+    DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE,
+    DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE, DataLayerM1AnchorFailureMatrixCase,
     DataLayerM1AnchorFailureMatrixDecision, DataLayerM1AnchorFailureMatrixEvidence,
     DataLayerM1AnchorFailureMatrixReport, DataLayerM1AnchorOutcome, DataLayerM1AnchorOutcomeKind,
     DataLayerM1AnchorReceipt, DataLayerM1AnchorResult, DataLayerM1AnchorRetryClass,
     DataLayerM1Error, DataLayerM1KolmeAnchoringWorker, DataLayerM1MerkleBatch,
     DataLayerM1MerkleInclusionProof, DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep,
     DataLayerM1ProofSiblingSide, DataLayerM1ProofVerificationDecision,
-    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
-    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE, DATA_LAYER_M1_HASH_ALGORITHM,
-    DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE,
-    DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE,
+    evaluate_data_layer_m1_anchor_failure_matrix, evaluate_data_layer_m1_inclusion_proof,
+    verify_data_layer_m1_inclusion_proof,
+};
+pub use data_layer_m1_anchoring_orchestrator::{
+    DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_FINAL_BLOCK_HEIGHT_REQUIRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_TX_MISMATCH_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_TICK_DEFERRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE, DataLayerM1AnchoringConfirmationMetadata,
+    DataLayerM1AnchoringFinalityObservation, DataLayerM1AnchoringFinalityReconciliationProjection,
+    DataLayerM1AnchoringFollowUpAction, DataLayerM1AnchoringFollowUpPolicy,
+    DataLayerM1AnchoringMessageAssignment, DataLayerM1AnchoringOrchestrator,
+    DataLayerM1AnchoringOrchestratorError, DataLayerM1AnchoringPersistencePlan,
+    DataLayerM1AnchoringSubmissionMetadata, DataLayerM1AnchoringTickOutcome,
+    reconcile_data_layer_m1_finality_observation,
+};
+pub use data_layer_m1_batch_scheduler::{
+    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_COUNT_THRESHOLD,
+    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_DEFERRED,
+    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_WINDOW_THRESHOLD, DataLayerM1BatchSchedulerError,
+    DataLayerM1BatchSchedulerPolicy, DataLayerM1BatchTriggerDecision,
+    DataLayerM1PendingBatchMessage, evaluate_data_layer_m1_batch_trigger,
+};
+pub use data_layer_m2_gateway_access::{
+    DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS, DATA_LAYER_M2_HASH_ALGORITHM,
+    DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE,
+    DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE, DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE,
+    DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
+    DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
+    DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED, DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
+    DATA_LAYER_M2_REASON_ESCROW_AUDITOR_SCOPE_ALLOWED, DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED,
+    DATA_LAYER_M2_REQUESTER_DID_SETTING, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,
+    DataLayerM2AccessAuditLedger, DataLayerM2AccessAuditRecord, DataLayerM2ActorRole,
+    DataLayerM2AuthorizationDecision, DataLayerM2DidAuthRequest,
+    DataLayerM2DidAuthRequestValidated, DataLayerM2DidSessionService, DataLayerM2GatewayError,
+    DataLayerM2MessageScope, DataLayerM2MessageScopeValidated,
+    DataLayerM2NegativeAuthorizationAuditFixture, DataLayerM2NegativeAuthorizationCase,
+    DataLayerM2NegativeAuthorizationMatrixDecision, DataLayerM2NegativeAuthorizationMatrixReport,
+    DataLayerM2RlsPolicy, DataLayerM2SessionToken, data_layer_m2_default_rls_policies,
+};
+pub use data_layer_m3_blind_index_search::{
+    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
+    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
+    DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
+    DataLayerM3BlindIndexDeterminismDecision, DataLayerM3BlindIndexDeterminismInput,
+    DataLayerM3BlindIndexDeterminismReport, DataLayerM3BlindIndexQuery,
+    DataLayerM3BlindIndexRetrievalProjectionInput, DataLayerM3BlindIndexSearchMode,
+    DataLayerM3MessageMetadataRecord, DataLayerM3MetadataQuery,
+    DataLayerM3RetrievalProjectionRecord, DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    data_layer_m3_compute_blind_index, data_layer_m3_normalize_blind_index_value,
+};
+pub use data_layer_m4_escrow_integration::{
+    DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_AUDITOR_DISPUTE_REQUIRED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_CONFIGURED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE, DATA_LAYER_M4_ESCROW_EXPIRED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_PARTICIPANT_SCOPE_ALLOWED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_REFUNDED_REASON_CODE, DATA_LAYER_M4_ESCROW_RELEASED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE, DATA_LAYER_M4_EVIDENCE_HASH_CHAIN_GENESIS,
+    DATA_LAYER_M4_HASH_ALGORITHM,
+    DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE,
+    DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE,
+    DataLayerM4EscrowDraftInput, DataLayerM4EscrowInteropError, DataLayerM4EscrowRecord,
+    DataLayerM4EscrowState, DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
+    DataLayerM4EscrowTransitionEvidence, DataLayerM4EscrowVisibilityDecision,
+    DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceInput,
+    DataLayerM4SettlementEvidenceReconciliationDecision,
+    DataLayerM4SettlementEvidenceReconciliationReport, DataLayerM4SettlementEvidenceRecord,
+    DataLayerM4SettlementEvidenceRegistry, DataLayerM4SettlementEvidenceRegistryError,
+};
+pub use data_layer_m5_vector_integration::{
+    DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
+    DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE, DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS,
+    DATA_LAYER_M5_HASH_ALGORITHM, DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M5_OWNER_SIDE_ANOMALY_REQUIRES_LOCAL_PIPELINE_REASON_CODE,
+    DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE,
+    DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
+    DATA_LAYER_M5_PLAINTEXT_INDEX_MISSING_FOR_OWNER_SCOPE_REASON_CODE,
+    DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE, DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE,
+    DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
+    DATA_LAYER_M5_SERVER_SIDE_PLAINTEXT_REQUIRED_REASON_CODE,
+    DATA_LAYER_M5_VECTOR_DISTANCE_METRIC_COSINE, DataLayerM5AnomalyDecision,
+    DataLayerM5AnomalyEvaluationInput, DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecord,
+    DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry, DataLayerM5RecallDriftDecision,
+    DataLayerM5RecallDriftEvaluationInput, DataLayerM5RecallDriftReport,
+    DataLayerM5RetentionDueCandidate, DataLayerM5SemanticQuery, DataLayerM5SemanticQueryResult,
+    DataLayerM5VectorIntegrationError,
+};
+pub use data_layer_m6_graph_integration::{
+    DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE, DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE,
+    DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE, DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED, DataLayerM6GraphEdgeInput,
+    DataLayerM6GraphEdgeRecord, DataLayerM6GraphEdgeRelation, DataLayerM6GraphIntegrationError,
+    DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind, DataLayerM6GraphNodeRecord,
+    DataLayerM6GraphRegistry, DataLayerM6PortableEdgeProjection, DataLayerM6TrustPropagationQuery,
+    DataLayerM6TrustPropagationResult,
+};
+pub use data_layer_m7_timeseries_telemetry::{
+    DATA_LAYER_M7_AGGREGATE_REASON_CODE, DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE,
+    DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+    DATA_LAYER_M7_HOURLY_BUCKET_SECONDS, DATA_LAYER_M7_OBSERVABILITY_SAMPLE_INVALID_REASON_CODE,
+    DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE, DataLayerM7AgentDailyAggregate,
+    DataLayerM7AgentHourlyAggregate, DataLayerM7BillingQuery,
+    DataLayerM7BillingReconciliationDecision, DataLayerM7BillingReconciliationInput,
+    DataLayerM7BillingReconciliationReport, DataLayerM7NetworkHourlyAggregate,
+    DataLayerM7OwnerBillingDailyProjection, DataLayerM7OwnerObservabilityReport,
+    DataLayerM7TelemetryPointInput, DataLayerM7TelemetryPointRecord, DataLayerM7TelemetryRegistry,
+    DataLayerM7TelemetryScopeQuery, DataLayerM7TimeseriesError,
+    data_layer_m7_project_observability_sample,
+};
+pub use data_layer_m8_compliance_lifecycle::{
+    DATA_LAYER_M8_CEK_TOMBSTONE_MARKER, DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE,
+    DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS, DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS,
+    DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE, DATA_LAYER_M8_RETENTION_DUE_REASON_CODE,
+    DATA_LAYER_M8_STANDARD_RETENTION_SECONDS, DataLayerM8ComplianceError,
+    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
+    DataLayerM8MessageRecord, DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery,
+    DataLayerM8RetentionClass, DataLayerM8RetentionDueCandidate, DataLayerM8RetentionInteropError,
+    DataLayerM8WrappedCekInput, data_layer_m8_retention_window_aligned_with_content_lifecycle,
+    data_layer_m8_retention_window_seconds,
+};
+pub use data_layer_m9_gateway_bridge::{
+    DATA_LAYER_M9_GATEWAY_DISPATCH_EVENT_LABEL, DATA_LAYER_M9_GATEWAY_PRESENCE_EVENT_LABEL,
+    DATA_LAYER_M9_GATEWAY_PRESENCE_NOT_FOUND_REASON_CODE,
+    DATA_LAYER_M9_GATEWAY_PRESENCE_VISIBLE_REASON_CODE,
+    DATA_LAYER_M9_GATEWAY_UNSUPPORTED_TRANSPORT_REASON_CODE, DataLayerM9GatewayBridgeError,
+    DataLayerM9GatewayDispatchProjection, DataLayerM9GatewayDispatchProjectionRequest,
+    DataLayerM9GatewayPresenceProjection, DataLayerM9GatewayPresenceProjectionRequest,
+    DataLayerM9GatewayTransportProfile, data_layer_m9_gateway_project_dispatch_event,
+    data_layer_m9_gateway_project_presence_event,
+};
+pub use data_layer_m9_realtime_delivery::{
+    DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE, DATA_LAYER_M9_ACK_QUEUED_QUEUE_FULL_REASON_CODE,
+    DATA_LAYER_M9_ACK_QUEUED_REASON_CODE, DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE,
+    DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE,
+    DATA_LAYER_M9_ANTI_SPAM_RATE_LIMITED_REASON_CODE,
+    DATA_LAYER_M9_ANTI_SPAM_SUSPENDED_REASON_CODE,
+    DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS,
+    DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS,
+    DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE,
+    DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
+    DATA_LAYER_M9_INVALID_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_COUNTERPARTY_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_OWNER_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_REQUESTER_OWNER_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_SENDER_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M9_INVALID_TARGET_AGENT_DID_REASON_CODE,
+    DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
+    DataLayerM9ChannelDispatchAuthorizationRequest, DataLayerM9DispatchAckStatus,
+    DataLayerM9DispatchOutcome, DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest,
+    DataLayerM9PresenceQuery, DataLayerM9PresenceRecord, DataLayerM9PresenceRelationshipRequest,
+    DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
+    DataLayerM9RecipientQueueSnapshot, DataLayerM9RuntimeBackpressureProjection,
+    DataLayerM9RuntimeBackpressureProjectionRequest,
 };
 pub use data_layer_m10_partition_archival::{
-    data_layer_m10_evaluate_phase6_execution_tick_budget,
-    data_layer_m10_evaluate_phase6_scheduler_trigger,
-    data_layer_m10_execute_phase6_orchestration_tick,
-    data_layer_m10_execute_phase6_orchestration_tick_with_port,
-    data_layer_m10_execute_phase6_scheduler_cycle,
-    data_layer_m10_execute_phase6_scheduler_cycle_with_port, data_layer_m10_format_partition_name,
-    data_layer_m10_project_archival_retry_decision,
-    data_layer_m10_project_phase6_runtime_evidence_bundle, DataLayerM10ArchivalFailureClass,
-    DataLayerM10ArchivalIndexEntry, DataLayerM10ArchivalRecoveryAction,
-    DataLayerM10ArchivalRetryDecision, DataLayerM10ArchivalRetryPolicy,
-    DataLayerM10ArchiveDueRequest, DataLayerM10ComplianceShredProjectionReport,
-    DataLayerM10ComplianceShredProjectionRequest, DataLayerM10PartitionLifecycleError,
-    DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecord,
-    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
-    DataLayerM10Phase6ExecutionBudgetDecision, DataLayerM10Phase6ExecutionTickBudget,
-    DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10Phase6ExecutionTickReport,
-    DataLayerM10Phase6ExecutionTickRequest, DataLayerM10Phase6RuntimeEvidenceBundle,
-    DataLayerM10Phase6RuntimeEvidenceInput, DataLayerM10Phase6SchedulerCycleReport,
-    DataLayerM10Phase6SchedulerCycleRequest, DataLayerM10Phase6SchedulerPolicy,
-    DataLayerM10Phase6SchedulerRuntime, DataLayerM10Phase6SchedulerRuntimeState,
-    DataLayerM10Phase6SchedulerSignal, DataLayerM10Phase6SchedulerTriggerDecision,
-    DataLayerM10RecoveryDecision, DataLayerM10RecoveryReadinessReport,
     DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
     DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE,
     DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
@@ -348,209 +491,75 @@ pub use data_layer_m10_partition_archival::{
     DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_INTERVAL_ELAPSED_REASON_CODE,
     DATA_LAYER_M10_REATTACH_REASON_CODE, DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE,
     DATA_LAYER_M10_RECOVERY_READY_REASON_CODE,
-    DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE,
+    DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE, DataLayerM10ArchivalFailureClass,
+    DataLayerM10ArchivalIndexEntry, DataLayerM10ArchivalRecoveryAction,
+    DataLayerM10ArchivalRetryDecision, DataLayerM10ArchivalRetryPolicy,
+    DataLayerM10ArchiveDueRequest, DataLayerM10ComplianceShredProjectionReport,
+    DataLayerM10ComplianceShredProjectionRequest, DataLayerM10PartitionLifecycleError,
+    DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecord,
+    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
+    DataLayerM10Phase6ExecutionBudgetDecision, DataLayerM10Phase6ExecutionTickBudget,
+    DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10Phase6ExecutionTickReport,
+    DataLayerM10Phase6ExecutionTickRequest, DataLayerM10Phase6RuntimeEvidenceBundle,
+    DataLayerM10Phase6RuntimeEvidenceInput, DataLayerM10Phase6SchedulerCycleReport,
+    DataLayerM10Phase6SchedulerCycleRequest, DataLayerM10Phase6SchedulerPolicy,
+    DataLayerM10Phase6SchedulerRuntime, DataLayerM10Phase6SchedulerRuntimeState,
+    DataLayerM10Phase6SchedulerSignal, DataLayerM10Phase6SchedulerTriggerDecision,
+    DataLayerM10RecoveryDecision, DataLayerM10RecoveryReadinessReport,
+    data_layer_m10_evaluate_phase6_execution_tick_budget,
+    data_layer_m10_evaluate_phase6_scheduler_trigger,
+    data_layer_m10_execute_phase6_orchestration_tick,
+    data_layer_m10_execute_phase6_orchestration_tick_with_port,
+    data_layer_m10_execute_phase6_scheduler_cycle,
+    data_layer_m10_execute_phase6_scheduler_cycle_with_port, data_layer_m10_format_partition_name,
+    data_layer_m10_project_archival_retry_decision,
+    data_layer_m10_project_phase6_runtime_evidence_bundle,
 };
 pub use data_layer_m11_closure_evidence::{
-    data_layer_m11_evaluate_closure_evidence, DataLayerM11ClosureAcceptanceDecision,
-    DataLayerM11ClosureEvidenceError, DataLayerM11ClosureEvidenceInput,
-    DataLayerM11ClosureEvidenceReport, DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE,
+    DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE,
     DATA_LAYER_M11_CLOSURE_BLOCK_CRITICAL_SCENARIO_REASON_CODE,
     DATA_LAYER_M11_CLOSURE_BLOCK_EVIDENCE_GAP_REASON_CODE,
-    DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE,
+    DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE, DataLayerM11ClosureAcceptanceDecision,
+    DataLayerM11ClosureEvidenceError, DataLayerM11ClosureEvidenceInput,
+    DataLayerM11ClosureEvidenceReport, data_layer_m11_evaluate_closure_evidence,
 };
 pub use data_layer_m11_hardening_readiness::{
+    DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE,
+    DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
+    DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
     DataLayerM11HardeningMatrix, DataLayerM11HardeningMatrixError,
     DataLayerM11OperatorReadinessDecision, DataLayerM11OperatorReadinessReport,
     DataLayerM11ScenarioDefinition, DataLayerM11ScenarioDomain, DataLayerM11ScenarioOutcomeInput,
     DataLayerM11ScenarioOutcomeRecord, DataLayerM11ScenarioSeverity, DataLayerM11ScenarioStatus,
-    DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE,
-    DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
-    DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
-};
-pub use data_layer_m1_anchoring_orchestrator::{
-    reconcile_data_layer_m1_finality_observation, DataLayerM1AnchoringConfirmationMetadata,
-    DataLayerM1AnchoringFinalityObservation, DataLayerM1AnchoringFinalityReconciliationProjection,
-    DataLayerM1AnchoringFollowUpAction, DataLayerM1AnchoringFollowUpPolicy,
-    DataLayerM1AnchoringMessageAssignment, DataLayerM1AnchoringOrchestrator,
-    DataLayerM1AnchoringOrchestratorError, DataLayerM1AnchoringPersistencePlan,
-    DataLayerM1AnchoringSubmissionMetadata, DataLayerM1AnchoringTickOutcome,
-    DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_FINAL_BLOCK_HEIGHT_REQUIRED_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_TX_MISMATCH_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_TICK_DEFERRED_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE,
-    DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE,
-};
-pub use data_layer_m1_batch_scheduler::{
-    evaluate_data_layer_m1_batch_trigger, DataLayerM1BatchSchedulerError,
-    DataLayerM1BatchSchedulerPolicy, DataLayerM1BatchTriggerDecision,
-    DataLayerM1PendingBatchMessage, DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_COUNT_THRESHOLD,
-    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_DEFERRED,
-    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_WINDOW_THRESHOLD,
-};
-pub use data_layer_m2_gateway_access::{
-    data_layer_m2_default_rls_policies, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,
-    DataLayerM2AccessAuditLedger, DataLayerM2AccessAuditRecord, DataLayerM2ActorRole,
-    DataLayerM2AuthorizationDecision, DataLayerM2DidAuthRequest,
-    DataLayerM2DidAuthRequestValidated, DataLayerM2DidSessionService, DataLayerM2GatewayError,
-    DataLayerM2MessageScope, DataLayerM2MessageScopeValidated,
-    DataLayerM2NegativeAuthorizationAuditFixture, DataLayerM2NegativeAuthorizationCase,
-    DataLayerM2NegativeAuthorizationMatrixDecision, DataLayerM2NegativeAuthorizationMatrixReport,
-    DataLayerM2RlsPolicy, DataLayerM2SessionToken, DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS,
-    DATA_LAYER_M2_HASH_ALGORITHM, DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE,
-    DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE, DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE,
-    DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
-    DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
-    DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED, DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
-    DATA_LAYER_M2_REASON_ESCROW_AUDITOR_SCOPE_ALLOWED, DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED,
-    DATA_LAYER_M2_REQUESTER_DID_SETTING,
-};
-pub use data_layer_m3_blind_index_search::{
-    data_layer_m3_compute_blind_index, data_layer_m3_normalize_blind_index_value,
-    DataLayerM3BlindIndexDeterminismDecision, DataLayerM3BlindIndexDeterminismInput,
-    DataLayerM3BlindIndexDeterminismReport, DataLayerM3BlindIndexQuery,
-    DataLayerM3BlindIndexRetrievalProjectionInput, DataLayerM3BlindIndexSearchMode,
-    DataLayerM3MessageMetadataRecord, DataLayerM3MetadataQuery,
-    DataLayerM3RetrievalProjectionRecord, DataLayerM3SearchCatalog, DataLayerM3SearchError,
-    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
-    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
-    DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
-};
-pub use data_layer_m4_escrow_integration::{
-    DataLayerM4EscrowDraftInput, DataLayerM4EscrowInteropError, DataLayerM4EscrowRecord,
-    DataLayerM4EscrowState, DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
-    DataLayerM4EscrowTransitionEvidence, DataLayerM4EscrowVisibilityDecision,
-    DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceInput,
-    DataLayerM4SettlementEvidenceReconciliationDecision,
-    DataLayerM4SettlementEvidenceReconciliationReport, DataLayerM4SettlementEvidenceRecord,
-    DataLayerM4SettlementEvidenceRegistry, DataLayerM4SettlementEvidenceRegistryError,
-    DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_AUDITOR_DISPUTE_REQUIRED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_CONFIGURED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE, DATA_LAYER_M4_ESCROW_EXPIRED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_PARTICIPANT_SCOPE_ALLOWED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_REFUNDED_REASON_CODE, DATA_LAYER_M4_ESCROW_RELEASED_REASON_CODE,
-    DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE, DATA_LAYER_M4_EVIDENCE_HASH_CHAIN_GENESIS,
-    DATA_LAYER_M4_HASH_ALGORITHM,
-    DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE,
-    DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE,
-};
-pub use data_layer_m5_vector_integration::{
-    DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput, DataLayerM5EmbeddingPrivacyMode,
-    DataLayerM5EmbeddingRecord, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
-    DataLayerM5RecallDriftDecision, DataLayerM5RecallDriftEvaluationInput,
-    DataLayerM5RecallDriftReport, DataLayerM5RetentionDueCandidate, DataLayerM5SemanticQuery,
-    DataLayerM5SemanticQueryResult, DataLayerM5VectorIntegrationError,
-    DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
-    DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE, DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS,
-    DATA_LAYER_M5_HASH_ALGORITHM, DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M5_OWNER_SIDE_ANOMALY_REQUIRES_LOCAL_PIPELINE_REASON_CODE,
-    DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE,
-    DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
-    DATA_LAYER_M5_PLAINTEXT_INDEX_MISSING_FOR_OWNER_SCOPE_REASON_CODE,
-    DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE, DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE,
-    DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
-    DATA_LAYER_M5_SERVER_SIDE_PLAINTEXT_REQUIRED_REASON_CODE,
-    DATA_LAYER_M5_VECTOR_DISTANCE_METRIC_COSINE,
-};
-pub use data_layer_m6_graph_integration::{
-    DataLayerM6GraphEdgeInput, DataLayerM6GraphEdgeRecord, DataLayerM6GraphEdgeRelation,
-    DataLayerM6GraphIntegrationError, DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind,
-    DataLayerM6GraphNodeRecord, DataLayerM6GraphRegistry, DataLayerM6PortableEdgeProjection,
-    DataLayerM6TrustPropagationQuery, DataLayerM6TrustPropagationResult,
-    DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE, DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE,
-    DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE, DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
-    DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED,
-};
-pub use data_layer_m7_timeseries_telemetry::{
-    data_layer_m7_project_observability_sample, DataLayerM7AgentDailyAggregate,
-    DataLayerM7AgentHourlyAggregate, DataLayerM7BillingQuery,
-    DataLayerM7BillingReconciliationDecision, DataLayerM7BillingReconciliationInput,
-    DataLayerM7BillingReconciliationReport, DataLayerM7NetworkHourlyAggregate,
-    DataLayerM7OwnerBillingDailyProjection, DataLayerM7OwnerObservabilityReport,
-    DataLayerM7TelemetryPointInput, DataLayerM7TelemetryPointRecord, DataLayerM7TelemetryRegistry,
-    DataLayerM7TelemetryScopeQuery, DataLayerM7TimeseriesError,
-    DATA_LAYER_M7_AGGREGATE_REASON_CODE, DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE,
-    DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
-    DATA_LAYER_M7_HOURLY_BUCKET_SECONDS, DATA_LAYER_M7_OBSERVABILITY_SAMPLE_INVALID_REASON_CODE,
-    DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
-};
-pub use data_layer_m8_compliance_lifecycle::{
-    data_layer_m8_retention_window_aligned_with_content_lifecycle,
-    data_layer_m8_retention_window_seconds, DataLayerM8ComplianceError,
-    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
-    DataLayerM8MessageRecord, DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery,
-    DataLayerM8RetentionClass, DataLayerM8RetentionDueCandidate, DataLayerM8RetentionInteropError,
-    DataLayerM8WrappedCekInput, DATA_LAYER_M8_CEK_TOMBSTONE_MARKER,
-    DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE, DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS,
-    DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS, DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
-    DATA_LAYER_M8_RETENTION_DUE_REASON_CODE, DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
-};
-pub use data_layer_m9_gateway_bridge::{
-    data_layer_m9_gateway_project_dispatch_event, data_layer_m9_gateway_project_presence_event,
-    DataLayerM9GatewayBridgeError, DataLayerM9GatewayDispatchProjection,
-    DataLayerM9GatewayDispatchProjectionRequest, DataLayerM9GatewayPresenceProjection,
-    DataLayerM9GatewayPresenceProjectionRequest, DataLayerM9GatewayTransportProfile,
-    DATA_LAYER_M9_GATEWAY_DISPATCH_EVENT_LABEL, DATA_LAYER_M9_GATEWAY_PRESENCE_EVENT_LABEL,
-    DATA_LAYER_M9_GATEWAY_PRESENCE_NOT_FOUND_REASON_CODE,
-    DATA_LAYER_M9_GATEWAY_PRESENCE_VISIBLE_REASON_CODE,
-    DATA_LAYER_M9_GATEWAY_UNSUPPORTED_TRANSPORT_REASON_CODE,
-};
-pub use data_layer_m9_realtime_delivery::{
-    DataLayerM9ChannelDispatchAuthorizationRequest, DataLayerM9DispatchAckStatus,
-    DataLayerM9DispatchOutcome, DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest,
-    DataLayerM9PresenceQuery, DataLayerM9PresenceRecord, DataLayerM9PresenceRelationshipRequest,
-    DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
-    DataLayerM9RecipientQueueSnapshot, DataLayerM9RuntimeBackpressureProjection,
-    DataLayerM9RuntimeBackpressureProjectionRequest, DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE,
-    DATA_LAYER_M9_ACK_QUEUED_QUEUE_FULL_REASON_CODE, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE,
-    DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE,
-    DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE,
-    DATA_LAYER_M9_ANTI_SPAM_RATE_LIMITED_REASON_CODE,
-    DATA_LAYER_M9_ANTI_SPAM_SUSPENDED_REASON_CODE,
-    DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS,
-    DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS,
-    DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE,
-    DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
-    DATA_LAYER_M9_INVALID_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_COUNTERPARTY_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_OWNER_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_REQUESTER_OWNER_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_SENDER_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M9_INVALID_TARGET_AGENT_DID_REASON_CODE,
-    DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
-    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
-    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE,
-    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
-    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
 };
 pub use data_layer_phase2_crypto_blind_index_pipeline::{
-    data_layer_phase2_build_operational_artifact, DataLayerPhase2OperationalPipelineArtifact,
-    DataLayerPhase2OperationalPipelineError, DataLayerPhase2OperationalPipelineRequest,
-    DataLayerPhase2RecipientEncryptionBinding,
+    DataLayerPhase2OperationalPipelineArtifact, DataLayerPhase2OperationalPipelineError,
+    DataLayerPhase2OperationalPipelineRequest, DataLayerPhase2RecipientEncryptionBinding,
+    data_layer_phase2_build_operational_artifact,
 };
 pub use data_layer_postgres_execution_adapter::{
-    data_layer_pg_collect_migration_files, DataLayerPgBlindIndexSearchRow,
-    DataLayerPgExecutionAdapter, DataLayerPgExecutionAdapterConfig,
-    DataLayerPgExecutionAdapterError, DataLayerPgMigrationReport, DataLayerPgRlsApplyReport,
-    DataLayerPgRlsStatementOutcome, DataLayerPgStoredMessage,
     DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
     DATA_LAYER_PG_EXECUTION_MIGRATION_FAILED_REASON_CODE,
     DATA_LAYER_PG_EXECUTION_SESSION_FAILED_REASON_CODE,
-    DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+    DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE, DataLayerPgBlindIndexSearchRow,
+    DataLayerPgExecutionAdapter, DataLayerPgExecutionAdapterConfig,
+    DataLayerPgExecutionAdapterError, DataLayerPgMigrationReport, DataLayerPgRlsApplyReport,
+    DataLayerPgRlsStatementOutcome, DataLayerPgStoredMessage,
+    data_layer_pg_collect_migration_files,
 };
 pub use data_layer_postgres_repository_bridge::{
-    data_layer_pg_project_blind_index_search_operation,
+    DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE,
+    DATA_LAYER_PG_AGE_RELATION_UNSUPPORTED_REASON_CODE,
+    DATA_LAYER_PG_INVALID_OWNER_DID_REASON_CODE, DATA_LAYER_PG_INVALID_REQUESTER_DID_REASON_CODE,
+    DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
+    DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE,
+    DATA_LAYER_PG_TIMESCALE_EXTENSION_UNAVAILABLE_REASON_CODE,
+    DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE, DataLayerPgBlindIndexSearchRequest,
+    DataLayerPgM5PgvectorConfig, DataLayerPgM5SimilaritySearchRequest, DataLayerPgM6AgeConfig,
+    DataLayerPgM6AgeTrustQueryRequest, DataLayerPgM7TimescaleConfig,
+    DataLayerPgM7TimescaleOwnerRollupRequest, DataLayerPgOperationKind,
+    DataLayerPgRepositoryBridgeError, DataLayerPgRequesterSession, DataLayerPgRlsStatement,
+    DataLayerPgSqlOperation, data_layer_pg_project_blind_index_search_operation,
     data_layer_pg_project_default_rls_statements, data_layer_pg_project_insert_message_operation,
     data_layer_pg_project_m5_embedding_insert_operation,
     data_layer_pg_project_m5_similarity_search_operation,
@@ -558,48 +567,37 @@ pub use data_layer_postgres_repository_bridge::{
     data_layer_pg_project_m6_age_trust_query_operation,
     data_layer_pg_project_m7_timescale_ingest_operation,
     data_layer_pg_project_m7_timescale_owner_rollup_query_operation,
-    data_layer_pg_project_select_message_by_id_operation, DataLayerPgBlindIndexSearchRequest,
-    DataLayerPgM5PgvectorConfig, DataLayerPgM5SimilaritySearchRequest, DataLayerPgM6AgeConfig,
-    DataLayerPgM6AgeTrustQueryRequest, DataLayerPgM7TimescaleConfig,
-    DataLayerPgM7TimescaleOwnerRollupRequest, DataLayerPgOperationKind,
-    DataLayerPgRepositoryBridgeError, DataLayerPgRequesterSession, DataLayerPgRlsStatement,
-    DataLayerPgSqlOperation, DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE,
-    DATA_LAYER_PG_AGE_RELATION_UNSUPPORTED_REASON_CODE,
-    DATA_LAYER_PG_INVALID_OWNER_DID_REASON_CODE, DATA_LAYER_PG_INVALID_REQUESTER_DID_REASON_CODE,
-    DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
-    DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE,
-    DATA_LAYER_PG_TIMESCALE_EXTENSION_UNAVAILABLE_REASON_CODE,
-    DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
+    data_layer_pg_project_select_message_by_id_operation,
 };
 pub use data_layer_prd_critical_scenario_conformance::{
-    DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,
-    DataLayerPrdCriticalScenarioConformanceMatrix, DataLayerPrdCriticalScenarioConformanceReport,
-    DataLayerPrdCriticalScenarioMode, DataLayerPrdCriticalScenarioResultInput,
-    DataLayerPrdCriticalScenarioResultRecord,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_CONFORMANT_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_FAILED_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_INVALID_MUTATION_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_MISSING_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_SHELL_POLICY_REASON_CODE,
+    DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,
+    DataLayerPrdCriticalScenarioConformanceMatrix, DataLayerPrdCriticalScenarioConformanceReport,
+    DataLayerPrdCriticalScenarioMode, DataLayerPrdCriticalScenarioResultInput,
+    DataLayerPrdCriticalScenarioResultRecord,
 };
 pub use data_layer_shell_neutral_policy::{
-    data_layer_evaluate_shell_neutral_policy, DataLayerShellNeutralPolicyDecision,
-    DataLayerShellNeutralPolicyError, DataLayerShellNeutralPolicyInput,
-    DataLayerShellNeutralPolicyReasonCode, DataLayerShellNeutralPolicyReasonCodeParseError,
-    DataLayerShellNeutralPolicyReport,
+    DataLayerShellNeutralPolicyDecision, DataLayerShellNeutralPolicyError,
+    DataLayerShellNeutralPolicyInput, DataLayerShellNeutralPolicyReasonCode,
+    DataLayerShellNeutralPolicyReasonCodeParseError, DataLayerShellNeutralPolicyReport,
+    data_layer_evaluate_shell_neutral_policy,
 };
 pub use dependency_ci_smoke_policy::{
-    dependency_ci_smoke_reason_codes_csv, dependency_ci_smoke_reason_taxonomy_version,
-    evaluate_dependency_ci_smoke_policy, DependencyAdvisoryRecord, DependencyCiSmokeDecision,
-    DependencyCiSmokePolicyInput, DependencyCiSmokeViolationReason,
+    DependencyAdvisoryRecord, DependencyCiSmokeDecision, DependencyCiSmokePolicyInput,
+    DependencyCiSmokeViolationReason, dependency_ci_smoke_reason_codes_csv,
+    dependency_ci_smoke_reason_taxonomy_version, evaluate_dependency_ci_smoke_policy,
 };
 pub use did::{
+    AgentDid, AgentDidError, AgentDidKeyBindingError, AgentDidMetadata, DidDocument,
+    DidDocumentError, DidService, DidVerificationMethod, FederatedDidHandshakeDecision,
+    FederatedDidHandshakeError, FederatedDidHandshakeEvaluator, FederatedDidHandshakeInput,
+    FederatedDidTrustStore, InMemoryFederatedDidTrustStore, KamnDid, KamnDidError,
     canonical_did_document, canonical_service_endpoint,
-    validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidKeyBindingError,
-    AgentDidMetadata, DidDocument, DidDocumentError, DidService, DidVerificationMethod,
-    FederatedDidHandshakeDecision, FederatedDidHandshakeError, FederatedDidHandshakeEvaluator,
-    FederatedDidHandshakeInput, FederatedDidTrustStore, InMemoryFederatedDidTrustStore, KamnDid,
-    KamnDidError,
+    validate_did_verification_method_algorithms,
 };
 pub use did_registry::{
     DidChainSubmissionOutcome, DidChainSubmissionReceipt, DidChainSubmissionRequest,
@@ -611,18 +609,18 @@ pub use did_registry::{
     KolmeDidLifecycleChainAdapter,
 };
 pub use direct_message_crypto::{
-    DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
     DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+    DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
 };
 pub use discord_bridge::{
     DiscordBridgeConfig, DiscordBridgeEngine, DiscordBridgeError, DiscordInboundRequest,
     DiscordOutboundApproval, DiscordOutboundDispatch,
 };
 pub use durable_guard_store::{
-    ChannelPolicySnapshotStore, DeliveryGuardSnapshotStore, DurableGuardBundleSnapshotStore,
-    DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
-    InMemoryDurableGuardSnapshotStore, SqliteDurableGuardSnapshotStore,
-    DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
+    ChannelPolicySnapshotStore, DURABLE_GUARD_BUNDLE_SCHEMA_VERSION, DeliveryGuardSnapshotStore,
+    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError,
+    FileDurableGuardSnapshotStore, InMemoryDurableGuardSnapshotStore,
+    SqliteDurableGuardSnapshotStore,
 };
 pub use escrow::{
     EscrowLifecycle, EscrowLifecycleError, EscrowReceiptFinality, EscrowSettlementAction,
@@ -634,23 +632,23 @@ pub use governance_workflow::{
     GovernanceWorkflow, GovernanceWorkflowError,
 };
 pub use group_channel_crypto::{
+    GROUP_MESSAGE_CIPHER_ALGORITHM, GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
     GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
-    SenderKeyDistributionRecord, GROUP_MESSAGE_CIPHER_ALGORITHM,
-    GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
+    SenderKeyDistributionRecord,
 };
 pub use instruction_verify::{
-    InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
-    VerificationFailure, VerificationOutcome, DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS,
+    DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS, InstructionClaim, InstructionRecord,
+    InstructionVerifier, VerificationContext, VerificationFailure, VerificationOutcome,
 };
 pub use invariants::{
-    catalog as invariant_catalog, classify_smoke_error, classify_transaction_guard_error,
-    invariant_by_id, validate_catalog, InvariantCatalogError, InvariantDomain,
-    InvariantFailureCode, InvariantSpec, InvariantViolation,
+    InvariantCatalogError, InvariantDomain, InvariantFailureCode, InvariantSpec,
+    InvariantViolation, catalog as invariant_catalog, classify_smoke_error,
+    classify_transaction_guard_error, invariant_by_id, validate_catalog,
 };
 pub use kamn_bridges::cross_chain_receipt::{
-    normalize_cross_chain_receipt, CrossChainReceiptFinality, CrossChainReceiptNetwork,
-    CrossChainReceiptNormalizationError, CrossChainReceiptProof, CrossChainReceiptStatus,
-    NormalizedCrossChainReceipt, ETHEREUM_FINAL_CONFIRMATION_THRESHOLD,
+    CrossChainReceiptFinality, CrossChainReceiptNetwork, CrossChainReceiptNormalizationError,
+    CrossChainReceiptProof, CrossChainReceiptStatus, ETHEREUM_FINAL_CONFIRMATION_THRESHOLD,
+    NormalizedCrossChainReceipt, normalize_cross_chain_receipt,
 };
 pub use kamn_live_probe_matrix::{
     LiveProbeMatrixEntry, LiveProbeMatrixError, LiveProbeMatrixMode, LiveProbeMatrixReport,
@@ -661,25 +659,25 @@ pub use kamn_runtime_guards::anti_spam::{
     AntiSpamTelemetry,
 };
 pub use kamn_runtime_guards::fairness_policy::{
+    FairnessPolicyDecision, FairnessPolicyInput, FairnessPolicyViolationReason,
     evaluate_fairness_policy, fairness_policy_reason_codes_csv,
-    fairness_policy_reason_taxonomy_version, FairnessPolicyDecision, FairnessPolicyInput,
-    FairnessPolicyViolationReason,
+    fairness_policy_reason_taxonomy_version,
 };
 pub use kamn_runtime_guards::message_delivery_guards::{
-    DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
-    DeliveryValidationResult, FailedDeliveryNotice, MessageDeliveryGuards,
-    DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
+    DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION, DeliveryFailureCode, DeliveryGuardInput,
+    DeliveryGuardSnapshot, DeliveryGuardSnapshotError, DeliveryValidationResult,
+    FailedDeliveryNotice, MessageDeliveryGuards,
 };
 pub use kamn_runtime_guards::quota_policy::{
-    evaluate_quota_policy, quota_policy_reason_codes_csv, quota_policy_reason_taxonomy_version,
-    QuotaPolicyDecision, QuotaPolicyInput, QuotaPolicyViolationReason,
+    QuotaPolicyDecision, QuotaPolicyInput, QuotaPolicyViolationReason, evaluate_quota_policy,
+    quota_policy_reason_codes_csv, quota_policy_reason_taxonomy_version,
 };
 pub use kamn_runtime_guards::retention_engine::{
+    RetentionClass, RetentionDomain, RetentionEnginePolicy, RetentionEvaluation,
+    RetentionPolicyCheckerInput, RetentionPolicyDecision, RetentionPolicyEngine,
+    RetentionPolicyError, RetentionPolicyViolationReason, RetentionRecord, RetentionStatus,
     evaluate_retention_policy, retention_policy_reason_codes_csv,
-    retention_policy_reason_taxonomy_version, RetentionClass, RetentionDomain,
-    RetentionEnginePolicy, RetentionEvaluation, RetentionPolicyCheckerInput,
-    RetentionPolicyDecision, RetentionPolicyEngine, RetentionPolicyError,
-    RetentionPolicyViolationReason, RetentionRecord, RetentionStatus,
+    retention_policy_reason_taxonomy_version,
 };
 pub use kamn_runtime_guards::watchdog::{
     WatchdogAlert, WatchdogAlertKind, WatchdogConfig, WatchdogError, WatchdogNode,
@@ -708,17 +706,17 @@ pub use kolme_runtime_commit::{
     RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
 };
 pub use message_envelope::{
-    AttachmentRef, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata,
-    EnvelopeProof, MessageEnvelopeError, CANONICAL_ENCRYPTION_ALGORITHM,
-    CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
+    AttachmentRef, CANONICAL_ENCRYPTION_ALGORITHM, CANONICAL_MESSAGE_ENVELOPE_TYPE,
+    CANONICAL_PROOF_PURPOSE, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader,
+    EnvelopeMetadata, EnvelopeProof, MessageEnvelopeError,
 };
 pub use message_lifecycle::{
     FileMessageLifecycleSnapshotStore, InMemoryMessageLifecycleSnapshotStore,
-    MessageLifecycleError, MessageLifecycleRecoveryResult, MessageLifecycleSnapshot,
-    MessageLifecycleSnapshotError, MessageLifecycleSnapshotStore,
-    MessageLifecycleSnapshotStoreError, MessageLifecycleStore, MessageProofAdmissionError,
-    MessageRecordSnapshot, MessageStatus, SqliteMessageLifecycleSnapshotStore,
-    MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
+    MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION, MessageLifecycleError,
+    MessageLifecycleRecoveryResult, MessageLifecycleSnapshot, MessageLifecycleSnapshotError,
+    MessageLifecycleSnapshotStore, MessageLifecycleSnapshotStoreError, MessageLifecycleStore,
+    MessageProofAdmissionError, MessageRecordSnapshot, MessageStatus,
+    SqliteMessageLifecycleSnapshotStore,
 };
 pub use message_proof_anchoring::{
     InMemoryMessageProofChainAdapter, KolmeMessageProofChainAdapter,
@@ -754,73 +752,73 @@ pub use operator_dashboard_ui::{
     OperatorTaskTimelineEntry, ReputationRiskTier,
 };
 pub use p2p_transport::{
+    InMemoryPeerLifecycleTransport, KademliaBootstrapSeedSet, KademliaDiscoveryBootstrapPlan,
+    Libp2pBehaviorFailureClass, Libp2pLivePeerLifecycleTransport, Libp2pLiveRuntimeBackend,
+    Libp2pRuntimeAdapterOperation, Libp2pRuntimeEvent, Libp2pRuntimeEventKind,
+    LiveTransportFaultClass, LiveTransportReconnectDecision, LiveTransportReconnectPolicy,
+    P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, P2pSwarmHarnessReport,
+    P2pSwarmHarnessTask, P2pTransportError, PeerAdapterMultiProcessValidationHook,
+    PeerAdapterReasonClass, PeerAdapterReasonProjection, PeerDiscoveryRecord, PeerGossipFrame,
+    PeerLifecycleRegressionCase, PeerLifecycleRegressionError,
+    PeerLifecycleRegressionExpectedOutcome, PeerLifecycleRegressionOutcome, PeerLifecycleTransport,
+    PeerLifecycleTransportCoordinator, UdpPeerLifecycleTransport,
     build_libp2p_lifecycle_regression_corpus, build_p2p_swarm_deterministic_config,
     canonical_libp2p_identify_protocol_id, canonical_libp2p_topic_id,
     compose_kademlia_discovery_bootstrap, compose_libp2p_swarm_behavior_stack,
     deterministic_multi_process_peer_validation_hooks, peer_adapter_reason_taxonomy_version,
     project_live_transport_reconnect_reason, project_peer_adapter_error_reason,
     resolve_libp2p_live_runtime_backend, run_libp2p_lifecycle_regression_case,
-    run_libp2p_lifecycle_regression_corpus, InMemoryPeerLifecycleTransport,
-    KademliaBootstrapSeedSet, KademliaDiscoveryBootstrapPlan, Libp2pBehaviorFailureClass,
-    Libp2pLivePeerLifecycleTransport, Libp2pLiveRuntimeBackend, Libp2pRuntimeAdapterOperation,
-    Libp2pRuntimeEvent, Libp2pRuntimeEventKind, LiveTransportFaultClass,
-    LiveTransportReconnectDecision, LiveTransportReconnectPolicy, P2pSwarmBehaviorStack,
-    P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask,
-    P2pTransportError, PeerAdapterMultiProcessValidationHook, PeerAdapterReasonClass,
-    PeerAdapterReasonProjection, PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleRegressionCase,
-    PeerLifecycleRegressionError, PeerLifecycleRegressionExpectedOutcome,
-    PeerLifecycleRegressionOutcome, PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
-    UdpPeerLifecycleTransport,
+    run_libp2p_lifecycle_regression_corpus,
 };
 pub use performance_targets::{
-    evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
-    PerformanceMetric, PerformanceMetricResult, PerformanceRunError, PerformanceRunReport,
-    PerformanceSample, PrdPerformanceTargets,
+    PerformanceAggregate, PerformanceMetric, PerformanceMetricResult, PerformanceRunError,
+    PerformanceRunReport, PerformanceSample, PrdPerformanceTargets,
+    evaluate_performance_from_observability, evaluate_performance_run,
 };
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
     RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
 };
 pub use reputation_signals::{
-    rank_agents_for_routing, rank_listings_by_reputation, RankedAgentCandidate,
-    RankedListingCandidate, ReputationSignalError, ReputationSignalSummary, RoutingSignalWeights,
+    RankedAgentCandidate, RankedListingCandidate, ReputationSignalError, ReputationSignalSummary,
+    RoutingSignalWeights, rank_agents_for_routing, rank_listings_by_reputation,
 };
 pub use reputation_state::{
-    agent_state_key, AgentReputation, CapabilityVerification, DisputeRecord, Endorsement,
-    ReputationError, ReputationPersistedRecord, ReputationStore, ReputationTaskOutcome,
-    ScoreSnapshot, DEFAULT_TRUST_SCORE, MAX_TRUST_SCORE,
+    AgentReputation, CapabilityVerification, DEFAULT_TRUST_SCORE, DisputeRecord, Endorsement,
+    MAX_TRUST_SCORE, ReputationError, ReputationPersistedRecord, ReputationStore,
+    ReputationTaskOutcome, ScoreSnapshot, agent_state_key,
 };
 pub use runtime::{
+    AuthenticatedPeerFrame, AuthenticatedPeerFrameError, BoundedRuntimeQueue,
+    DeterministicBackpressureController, DeterministicNetworkFaultSimulator,
+    DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
+    Libp2pCompileMode, NetworkFaultSimulationError, NetworkFaultSimulationInput,
+    NetworkFaultSimulationReport, PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent,
+    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError,
+    RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeBackpressureAction,
+    RuntimeBackpressureDecision, RuntimeBackpressureError, RuntimeBackpressureInput,
+    RuntimeBackpressurePolicy, RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot,
+    RuntimeSnapshotStore, RuntimeTransportProfile, RuntimeWiring, SnapshotRecoveryResult,
+    SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError, SqliteRuntimeSnapshotStore,
     build_runtime_wiring, build_runtime_wiring_with_transport_profile, libp2p_feature_gate_name,
-    resolve_libp2p_compile_mode, simulate_daemon_network_fault, AuthenticatedPeerFrame,
-    AuthenticatedPeerFrameError, BoundedRuntimeQueue, DeterministicBackpressureController,
-    DeterministicNetworkFaultSimulator, DeterministicProposalPlanner, FileRuntimeSnapshotStore,
-    InMemoryRuntimeSnapshotStore, Libp2pCompileMode, NetworkFaultSimulationError,
-    NetworkFaultSimulationInput, NetworkFaultSimulationReport, PeerFrameAuthenticator,
-    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlan,
-    ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
-    RuntimeBackpressureAction, RuntimeBackpressureDecision, RuntimeBackpressureError,
-    RuntimeBackpressureInput, RuntimeBackpressurePolicy, RuntimeLifecycleError, RuntimeQueueError,
-    RuntimeSnapshot, RuntimeSnapshotStore, RuntimeTransportProfile, RuntimeWiring,
-    SnapshotRecoveryResult, SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
-    SqliteRuntimeSnapshotStore,
+    resolve_libp2p_compile_mode, simulate_daemon_network_fault,
 };
 pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
     ServiceMarketplaceError,
 };
 pub use signature_profile::{
-    baseline_signature_algorithm, baseline_signature_for_fields, baseline_signature_profile_id,
-    legacy_signature_for_fields, parse_signature_profile_metadata,
+    BASELINE_SIGNATURE_ALGORITHM, BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID,
+    SERVICE_AUTH_SIGNATURE_ALGORITHM, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    SERVICE_AUTH_SIGNATURE_PROFILE_ID, SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV,
+    ServiceAuthSignatureError, SignatureProfileCompatibilityFixture, SignatureProfileMetadata,
+    UNKNOWN_SIGNATURE_ALGORITHM_ID, baseline_signature_algorithm, baseline_signature_for_fields,
+    baseline_signature_profile_id, legacy_signature_for_fields, parse_signature_profile_metadata,
     service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
     service_auth_signing_payload_for_fields, service_auth_verify_with_public_key_hex,
     signature_matches_supported_profile_for_fields,
     signature_profile_compatibility_fixtures_for_fields, unknown_signature_algorithm_for_fields,
-    unknown_signature_profile_for_fields, ServiceAuthSignatureError,
-    SignatureProfileCompatibilityFixture, SignatureProfileMetadata, BASELINE_SIGNATURE_ALGORITHM,
-    BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID, SERVICE_AUTH_SIGNATURE_ALGORITHM,
-    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, SERVICE_AUTH_SIGNATURE_PROFILE_ID,
-    SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV, UNKNOWN_SIGNATURE_ALGORITHM_ID,
+    unknown_signature_profile_for_fields,
 };
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SecureSignerProvider, SignerBackend,
@@ -829,13 +827,13 @@ pub use signer_backend::{
 };
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 pub use snapshot_migration::{
-    migrate_file_snapshots_to_sqlite_parity, SnapshotMigrationError, SnapshotMigrationParityReport,
+    SnapshotMigrationError, SnapshotMigrationParityReport, migrate_file_snapshots_to_sqlite_parity,
 };
 pub use sqlite_store_backend::{
-    SqliteStoreBackend, SqliteStoreBackendError, SQLITE_STORE_SCHEMA_VERSION,
+    SQLITE_STORE_SCHEMA_VERSION, SqliteStoreBackend, SqliteStoreBackendError,
 };
 pub use state::{
-    canonical_state_key, AppStateSchema, StateKeyError, StateVersion, APP_STATE_VERSION,
+    APP_STATE_VERSION, AppStateSchema, StateKeyError, StateVersion, canonical_state_key,
 };
 pub use task_artifacts::{
     TaskArtifactError, TaskArtifactRecord, TaskArtifactRegistry, TaskArtifactSubmission,
@@ -845,26 +843,26 @@ pub use task_lifecycle::{
 };
 pub use task_operations::{
     FileTaskOperationSnapshotStore, InMemoryTaskOperationSnapshotStore,
-    SqliteTaskOperationSnapshotStore, SwarmTaskDraft, TaskOperationEngine, TaskOperationError,
-    TaskOperationNoticeKind, TaskOperationRecord, TaskOperationRecordSnapshot,
-    TaskOperationRecoveryResult, TaskOperationSnapshot, TaskOperationSnapshotStore,
-    TaskOperationSnapshotStoreError, TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
+    SqliteTaskOperationSnapshotStore, SwarmTaskDraft, TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
+    TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind, TaskOperationRecord,
+    TaskOperationRecordSnapshot, TaskOperationRecoveryResult, TaskOperationSnapshot,
+    TaskOperationSnapshotStore, TaskOperationSnapshotStoreError,
 };
 pub use task_payment::{PaymentConfirm, PaymentOffer, TaskPaymentError, TaskPaymentWorkflow};
 pub use telegram_bridge::{
     TelegramBridgeConfig, TelegramBridgeEngine, TelegramBridgeError, TelegramInboundRequest,
 };
 pub use token::{
-    default_token_config, AllocationBucket, GenesisAllocation, TokenConfig, TokenConfigError,
-    DEFAULT_DECIMALS, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOTAL_SUPPLY,
+    AllocationBucket, DEFAULT_DECIMALS, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOTAL_SUPPLY,
+    GenesisAllocation, TokenConfig, TokenConfigError, default_token_config,
 };
 pub use transaction::{
-    BaselineTransaction, TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
+    BaselineTransaction, GENESIS_STATE_HASH, TransactionGuardError, TransactionGuards,
 };
 pub use trust_score::{
-    calculate_trust_score, recalculate_and_persist_trust_score, AbusePenaltyKind,
-    TrustScoreBreakdown, TrustScoreError, TRUST_SCORE_ENGINE_VERSION, TRUST_SCORE_MAX,
-    TRUST_SCORE_MIN,
+    AbusePenaltyKind, TRUST_SCORE_ENGINE_VERSION, TRUST_SCORE_MAX, TRUST_SCORE_MIN,
+    TrustScoreBreakdown, TrustScoreError, calculate_trust_score,
+    recalculate_and_persist_trust_score,
 };
 pub use upgrade_orchestration::{
     UpgradeAuditEvent, UpgradeAuditEventKind, UpgradeOrchestrationError, UpgradeProposalRecord,
@@ -875,7 +873,6 @@ pub use validator_lifecycle::{
     ValidatorTransitionKind, ValidatorTransitionProof, ValidatorTransitionRecord,
 };
 pub use zk_message_proofs::{
-    build_message_witness, evaluate_zk_option, phase4_baseline_options, recommend_phase4_plan,
     ProcessorProofAdmissionDecision, ProcessorProofAdmissionEvaluator,
     ProcessorProofAdmissionInput, ProcessorProofArtifact, ProofWatchdogProjection,
     ProofWatchdogProjectionKind, ProofWatchdogProjector, ProofWatchdogSeverity,
@@ -883,7 +880,8 @@ pub use zk_message_proofs::{
     ValidatorProofConsensusEvaluator, ValidatorProofConsensusInput, ValidatorProofConsensusStatus,
     ValidatorProofVerdict, ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy,
     ZkMessageWitness, ZkOptionAssessment, ZkPhaseMilestone, ZkPhasePlan, ZkProofSystem, ZkRisk,
-    ZkRiskSeverity, ZkVerificationTopology,
+    ZkRiskSeverity, ZkVerificationTopology, build_message_witness, evaluate_zk_option,
+    phase4_baseline_options, recommend_phase4_plan,
 };
 
 #[cfg(test)]

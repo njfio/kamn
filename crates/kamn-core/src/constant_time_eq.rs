@@ -1,3 +1,19 @@
+pub(crate) fn constant_time_eq_bytes(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+
+    let mut diff = 0_u8;
+    for (left_byte, right_byte) in left.iter().zip(right.iter()) {
+        diff |= left_byte ^ right_byte;
+    }
+    diff == 0
+}
+
+pub(crate) fn constant_time_eq_str(left: &str, right: &str) -> bool {
+    constant_time_eq_bytes(left.as_bytes(), right.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{constant_time_eq_bytes, constant_time_eq_str};

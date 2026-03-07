@@ -226,7 +226,10 @@ impl InstructionVerifier {
         if record.signature.trim().is_empty() {
             return VerificationOutcome::Rejected(VerificationFailure::MissingRecordSignature);
         }
-        if record.signature != claim.signature {
+        if !crate::constant_time_eq::constant_time_eq_str(
+            record.signature.as_str(),
+            claim.signature.as_str(),
+        ) {
             return VerificationOutcome::Rejected(VerificationFailure::SignatureMismatch);
         }
         if record.inclusion_proof_ref.trim().is_empty()
@@ -290,8 +293,8 @@ impl InstructionVerifier {
 #[cfg(test)]
 mod tests {
     use super::{
-        InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
-        VerificationFailure, VerificationOutcome, DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS,
+        DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS, InstructionClaim, InstructionRecord,
+        InstructionVerifier, VerificationContext, VerificationFailure, VerificationOutcome,
     };
 
     const SOURCE: &str = include_str!("instruction_verify.rs");
@@ -478,7 +481,11 @@ mod tests {
             "instruction verification should use the scoped constant-time helper for signature comparison"
         );
         assert!(
-            !SOURCE.contains("if record.signature != claim.signature {"),
+            !SOURCE.contains(
+                ["if record.signature !=", " claim.signature {"]
+                    .concat()
+                    .as_str()
+            ),
             "instruction verification must not use direct signature inequality"
         );
     }
