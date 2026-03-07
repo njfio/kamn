@@ -822,8 +822,7 @@ mod tests {
             0.0
         );
         assert_eq!(
-            project_m7_observability_projection(&telemetry_point(0, 0, 10, 25, 0))
-                .error_rate_pct,
+            project_m7_observability_projection(&telemetry_point(0, 0, 10, 25, 0)).error_rate_pct,
             100.0
         );
         assert_eq!(

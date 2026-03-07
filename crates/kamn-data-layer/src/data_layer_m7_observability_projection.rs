@@ -73,8 +73,7 @@ fn derive_observability_error_rate_pct(input: &DataLayerM7ObservabilityProjectio
     if input.embedding_count == 0 {
         return 0.0;
     }
-    let ratio =
-        (input.embedding_anomaly_count as f64 / input.embedding_count as f64) * 100.0;
+    let ratio = (input.embedding_anomaly_count as f64 / input.embedding_count as f64) * 100.0;
     ratio.clamp(0.0, 100.0)
 }
 
