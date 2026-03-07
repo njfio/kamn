@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fmt;
 use x25519_dalek::{PublicKey, StaticSecret};
+use zeroize::Zeroize;
 
 /// Key-derivation algorithm identifier stamped on group ciphertext envelopes.
 pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "X25519";
@@ -16,6 +17,8 @@ pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const GROUP_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:group-message:aead-key:hkdf-salt:v2";
 const GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2: &[u8] = b"kamn:group-message:aead-key:hkdf-info:v2:";
+const GROUP_MESSAGE_NONCE_INFO_V2: &[u8] = b"kamn:group-message:nonce:v2:";
+const GROUP_MESSAGE_NONCE_INFO_V1: &[u8] = b"kamn:group-message:nonce:v1:";
 /// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
 pub const GROUP_MESSAGE_HKDF_BACKEND_MARKER: &str =
     kamn_crypto::hkdf_sha256::HKDF_SHA256_BACKEND_MARKER;
@@ -68,12 +71,23 @@ pub struct GroupMessageCiphertext {
 }
 
 /// In-memory engine for sender-key distribution, rotation, and message sealing.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct GroupChannelCryptoEngine {
     channel_id: String,
     sender_key_history: BTreeMap<String, BTreeMap<u64, SenderKeyDistributionRecord>>,
     active_generation_by_sender: BTreeMap<String, u64>,
     used_nonces: BTreeSet<(String, u64, u64)>,
+}
+
+impl fmt::Debug for GroupChannelCryptoEngine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GroupChannelCryptoEngine")
+            .field("channel_id", &self.channel_id)
+            .field("sender_count", &self.sender_key_history.len())
+            .field("active_sender_count", &self.active_generation_by_sender.len())
+            .field("used_nonce_count", &self.used_nonces.len())
+            .finish()
+    }
 }
 
 impl GroupChannelCryptoEngine {
@@ -324,13 +338,6 @@ impl GroupChannelCryptoEngine {
         combined.extend_from_slice(&auth_tag);
 
         let aad: [u8; 0] = [];
-        let nonce_bytes = group_nonce_bytes(
-            sealed.sender_did.as_str(),
-            sealed.key_generation,
-            sealed.nonce,
-        );
-        let xnonce = XNonce::from(nonce_bytes);
-
         let aead_key_v2 = derive_group_aead_key(
             &shared_secret,
             self.channel_id.as_str(),
@@ -342,7 +349,8 @@ impl GroupChannelCryptoEngine {
             sealed.key_generation,
         );
 
-        let decrypt_with_key = |key: &[u8; 32]| {
+        let decrypt_with = |key: &[u8; 32], nonce_bytes: [u8; 24]| {
+            let xnonce = XNonce::from(nonce_bytes);
             XChaCha20Poly1305::new(key.into())
                 .decrypt(
                     &xnonce,
@@ -354,15 +362,42 @@ impl GroupChannelCryptoEngine {
                 .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)
         };
 
-        // Compatibility policy: encrypt with HKDF-v2 key, but continue accepting
-        // legacy SHA-256-v1 derived ciphertext on decrypt.
-        let plaintext = match decrypt_with_key(&aead_key_v2) {
-            Ok(value) => Ok(value),
-            Err(GroupChannelCryptoError::IntegrityCheckFailed) => decrypt_with_key(&aead_key_v1),
-            Err(other) => Err(other),
-        }?;
+        // Compatibility policy: encrypt with the fully derived v2 nonce layout and HKDF-v2 key,
+        // but continue accepting legacy raw-prefix nonce layout and legacy SHA-256-v1 keys.
+        let nonce_candidates = [
+            group_nonce_bytes(sealed.sender_did.as_str(), sealed.key_generation, sealed.nonce),
+            legacy_raw_prefix_group_nonce_bytes(
+                sealed.sender_did.as_str(),
+                sealed.key_generation,
+                sealed.nonce,
+            ),
+        ];
+        let key_candidates = [&aead_key_v2, &aead_key_v1];
+
+        let mut plaintext = None;
+        for key in key_candidates {
+            for nonce_bytes in nonce_candidates {
+                if let Ok(value) = decrypt_with(key, nonce_bytes) {
+                    plaintext = Some(value);
+                    break;
+                }
+            }
+            if plaintext.is_some() {
+                break;
+            }
+        }
+        let plaintext = plaintext.ok_or(GroupChannelCryptoError::IntegrityCheckFailed)?;
 
         String::from_utf8(plaintext).map_err(|_| GroupChannelCryptoError::InvalidCiphertextEncoding)
+    }
+}
+
+impl Drop for GroupChannelCryptoEngine {
+    fn drop(&mut self) {
+        self.channel_id.zeroize();
+        zeroize_sender_key_history(&mut self.sender_key_history);
+        zeroize_u64_keyed_sender_history(&mut self.active_generation_by_sender);
+        self.used_nonces.clear();
     }
 }
 
@@ -618,17 +653,56 @@ fn derive_x25519_public_key(master_seed: &[u8; 32], key_ref: &str) -> PublicKey 
 }
 
 fn group_nonce_bytes(sender_did: &str, generation: u64, nonce: u64) -> [u8; 24] {
+    let mut hasher = Sha256::new();
+    hasher.update(GROUP_MESSAGE_NONCE_INFO_V2);
+    hasher.update(sender_did.as_bytes());
+    hasher.update(generation.to_le_bytes());
+    hasher.update(nonce.to_le_bytes());
+    let digest = hasher.finalize();
+    let mut out = [0u8; 24];
+    out.copy_from_slice(&digest[..24]);
+    out
+}
+
+fn legacy_raw_prefix_group_nonce_bytes(sender_did: &str, generation: u64, nonce: u64) -> [u8; 24] {
     let mut out = [0u8; 24];
     out[..8].copy_from_slice(&nonce.to_le_bytes());
 
     let mut hasher = Sha256::new();
-    hasher.update(b"kamn:group-message:nonce:v1:");
+    hasher.update(GROUP_MESSAGE_NONCE_INFO_V1);
     hasher.update(sender_did.as_bytes());
     hasher.update(generation.to_le_bytes());
     hasher.update(nonce.to_le_bytes());
     let digest = hasher.finalize();
     out[8..].copy_from_slice(&digest[..16]);
     out
+}
+
+fn zeroize_sender_key_history(
+    sender_key_history: &mut BTreeMap<String, BTreeMap<u64, SenderKeyDistributionRecord>>,
+) {
+    for (mut sender_did, generations) in std::mem::take(sender_key_history) {
+        sender_did.zeroize();
+        for (_, mut record) in generations {
+            zeroize_sender_key_distribution_record(&mut record);
+        }
+    }
+}
+
+fn zeroize_sender_key_distribution_record(record: &mut SenderKeyDistributionRecord) {
+    record.channel_id.zeroize();
+    record.sender_did.zeroize();
+    record.sender_key_ref.zeroize();
+    let allowlist = std::mem::take(&mut record.recipient_allowlist);
+    for mut recipient in allowlist {
+        recipient.zeroize();
+    }
+}
+
+fn zeroize_u64_keyed_sender_history(sender_history: &mut BTreeMap<String, u64>) {
+    for (mut sender_did, _) in std::mem::take(sender_history) {
+        sender_did.zeroize();
+    }
 }
 
 fn compute_signature(
@@ -761,18 +835,7 @@ mod tests {
         generation: u64,
         nonce: u64,
     ) -> [u8; 24] {
-        let mut out = [0u8; 24];
-        out[..8].copy_from_slice(&nonce.to_le_bytes());
-
-        let mut hasher = sha2::Sha256::new();
-        use sha2::Digest;
-        hasher.update(b"kamn:group-message:nonce:v1:");
-        hasher.update(sender_did.as_bytes());
-        hasher.update(generation.to_le_bytes());
-        hasher.update(nonce.to_le_bytes());
-        let digest = hasher.finalize();
-        out[8..].copy_from_slice(&digest[..16]);
-        out
+        super::legacy_raw_prefix_group_nonce_bytes(sender_did, generation, nonce)
     }
 
     #[test]
@@ -1021,13 +1084,9 @@ mod tests {
     fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
     ) {
         let derive_line = SOURCE
-            .lines()
-            .find(|line| line.contains("pub struct GroupChannelCryptoEngine"))
-            .and_then(|_| {
-                SOURCE
-                    .lines()
-                    .find(|line| line.contains("#[derive(") && line.contains("PartialEq"))
-            })
+            .split("pub struct GroupChannelCryptoEngine")
+            .next()
+            .and_then(|prefix| prefix.lines().last())
             .unwrap_or_default();
         let derive_window = derive_line.replace(' ', "");
         assert!(
@@ -1045,6 +1104,14 @@ mod tests {
         assert!(
             SOURCE.contains("impl Drop for GroupChannelCryptoEngine"),
             "group-channel engine must define Drop"
+        );
+        assert!(
+            SOURCE.contains("self.channel_id.zeroize();"),
+            "group-channel engine Drop must zeroize channel_id"
+        );
+        assert!(
+            SOURCE.contains("zeroize_sender_key_history(&mut self.sender_key_history);"),
+            "group-channel engine Drop must clear sender-key history"
         );
     }
 
