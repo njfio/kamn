@@ -3,12 +3,11 @@ use std::collections::BTreeSet;
 use kamn_data_layer::{
     data_layer_m10_format_partition_name as data_layer_m10_format_partition_name_policy,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
-    DataLayerM10ComplianceProjectionPortError,
+    DataLayerM10ComplianceProjectionPortError, DataLayerM10PartitionRegistryStateMachineError,
 };
 
 use super::shared::{
-    add_months, deterministic_checksum_marker, map_partition_month_policy_error_to_m10,
-    month_distance, validate_non_empty, validate_partition_month_id,
+    map_partition_month_policy_error_to_m10, validate_non_empty, validate_partition_month_id,
 };
 use super::*;
 use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
@@ -113,6 +112,36 @@ fn map_projection_port_error_to_m10(
     }
 }
 
+fn map_state_machine_error_to_m10(
+    error: DataLayerM10PartitionRegistryStateMachineError,
+) -> DataLayerM10PartitionLifecycleError {
+    match error {
+        DataLayerM10PartitionRegistryStateMachineError::EmptyField(field) => {
+            DataLayerM10PartitionLifecycleError::EmptyField(field)
+        }
+        DataLayerM10PartitionRegistryStateMachineError::InvalidPartitionMonthId(value) => {
+            DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(value)
+        }
+        DataLayerM10PartitionRegistryStateMachineError::DuplicatePartitionMonthId(value) => {
+            DataLayerM10PartitionLifecycleError::DuplicatePartitionMonthId(value)
+        }
+        DataLayerM10PartitionRegistryStateMachineError::PartitionNotFound(name) => {
+            DataLayerM10PartitionLifecycleError::PartitionNotFound(name)
+        }
+        DataLayerM10PartitionRegistryStateMachineError::InvalidLifecycleTransition {
+            partition_name,
+            from_status,
+            to_status,
+            reason_code,
+        } => DataLayerM10PartitionLifecycleError::InvalidLifecycleTransition {
+            partition_name,
+            from_status,
+            to_status,
+            reason_code,
+        },
+    }
+}
+
 fn collect_partition_message_ids(
     partition_message_ids: Vec<String>,
 ) -> Result<BTreeSet<String>, DataLayerM10PartitionLifecycleError> {
@@ -161,28 +190,9 @@ impl DataLayerM10PartitionLifecycleRegistry {
         &mut self,
         input: DataLayerM10PartitionRecordInput,
     ) -> Result<DataLayerM10PartitionRecord, DataLayerM10PartitionLifecycleError> {
-        validate_partition_month_id(input.partition_month_id)?;
-        if self.partitions.contains_key(&input.partition_month_id) {
-            return Err(
-                DataLayerM10PartitionLifecycleError::DuplicatePartitionMonthId(
-                    input.partition_month_id,
-                ),
-            );
-        }
-
-        let record = DataLayerM10PartitionRecord {
-            partition_month_id: input.partition_month_id,
-            partition_name: data_layer_m10_format_partition_name(input.partition_month_id)?,
-            all_messages_shredded: input.all_messages_shredded,
-            lifecycle_status: DataLayerM10PartitionStatus::Active,
-            archived_object_uri: None,
-            archive_format_marker: None,
-            checksum_marker: None,
-            last_reason_code: None,
-        };
-        self.partitions
-            .insert(input.partition_month_id, record.clone());
-        Ok(record)
+        self.state_machine
+            .register_partition(input)
+            .map_err(map_state_machine_error_to_m10)
     }
 
     /// Derives partition shred completeness from M8 lifecycle records and updates partition state.
@@ -227,15 +237,14 @@ impl DataLayerM10PartitionLifecycleRegistry {
             DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE
         };
 
-        let partition_name = data_layer_m10_format_partition_name(request.partition_month_id)?;
         let record = self
-            .partitions
-            .get_mut(&request.partition_month_id)
-            .ok_or_else(|| {
-                DataLayerM10PartitionLifecycleError::PartitionNotFound(partition_name.clone())
-            })?;
-        record.all_messages_shredded = all_messages_shredded;
-        record.last_reason_code = Some(DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE);
+            .state_machine
+            .apply_partition_shred_completeness(
+                request.partition_month_id,
+                all_messages_shredded,
+                DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
+            )
+            .map_err(map_state_machine_error_to_m10)?;
 
         Ok(DataLayerM10ComplianceShredProjectionReport {
             partition_month_id: record.partition_month_id,
@@ -254,13 +263,9 @@ impl DataLayerM10PartitionLifecycleRegistry {
         reference_month_id: u32,
         months_ahead: u8,
     ) -> Result<Vec<String>, DataLayerM10PartitionLifecycleError> {
-        validate_partition_month_id(reference_month_id)?;
-        let mut result = Vec::with_capacity(months_ahead as usize);
-        for offset in 1..=u32::from(months_ahead) {
-            let month_id = add_months(reference_month_id, offset)?;
-            result.push(data_layer_m10_format_partition_name(month_id)?);
-        }
-        Ok(result)
+        self.state_machine
+            .plan_future_partition_names(reference_month_id, months_ahead)
+            .map_err(map_state_machine_error_to_m10)
     }
 
     /// Archives all due partitions and returns archival-index projections.
@@ -268,61 +273,9 @@ impl DataLayerM10PartitionLifecycleRegistry {
         &mut self,
         request: DataLayerM10ArchiveDueRequest,
     ) -> Result<Vec<DataLayerM10ArchivalIndexEntry>, DataLayerM10PartitionLifecycleError> {
-        validate_partition_month_id(request.now_month_id)?;
-        validate_non_empty(
-            request.object_storage_prefix.as_str(),
-            "object_storage_prefix",
-        )?;
-
-        let mut entries = Vec::new();
-        for record in self.partitions.values_mut() {
-            if record.lifecycle_status != DataLayerM10PartitionStatus::Active {
-                continue;
-            }
-            if !record.all_messages_shredded {
-                continue;
-            }
-            if record.partition_month_id > request.now_month_id {
-                continue;
-            }
-
-            let age_months = month_distance(record.partition_month_id, request.now_month_id)?;
-            if age_months <= u32::from(request.active_retention_months) {
-                continue;
-            }
-
-            let archived_object_uri = format!(
-                "{}/{}.parquet.zst",
-                request.object_storage_prefix.trim_end_matches('/'),
-                record.partition_name
-            );
-            let checksum_marker = deterministic_checksum_marker(
-                record.partition_name.as_str(),
-                record.partition_month_id,
-            );
-
-            record.lifecycle_status = DataLayerM10PartitionStatus::Archived;
-            record.archived_object_uri = Some(archived_object_uri.clone());
-            record.archive_format_marker = Some(DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD);
-            record.checksum_marker = Some(checksum_marker.clone());
-            record.last_reason_code = Some(DATA_LAYER_M10_ARCHIVE_REASON_CODE);
-
-            entries.push(DataLayerM10ArchivalIndexEntry {
-                partition_month_id: record.partition_month_id,
-                partition_name: record.partition_name.clone(),
-                archived_object_uri,
-                archive_format_marker: DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
-                checksum_marker,
-                lifecycle_status: record.lifecycle_status,
-            });
-        }
-
-        entries.sort_by(|left, right| {
-            left.partition_month_id
-                .cmp(&right.partition_month_id)
-                .then(left.partition_name.cmp(&right.partition_name))
-        });
-        Ok(entries)
+        self.state_machine
+            .archive_due_partitions(request)
+            .map_err(map_state_machine_error_to_m10)
     }
 
     /// Re-attaches one archived partition for historical query access.
@@ -330,29 +283,9 @@ impl DataLayerM10PartitionLifecycleRegistry {
         &mut self,
         partition_name: &str,
     ) -> Result<DataLayerM10PartitionRecord, DataLayerM10PartitionLifecycleError> {
-        validate_non_empty(partition_name, "partition_name")?;
-        let record = self
-            .partitions
-            .values_mut()
-            .find(|entry| entry.partition_name == partition_name)
-            .ok_or_else(|| {
-                DataLayerM10PartitionLifecycleError::PartitionNotFound(partition_name.to_owned())
-            })?;
-
-        if record.lifecycle_status != DataLayerM10PartitionStatus::Archived {
-            return Err(
-                DataLayerM10PartitionLifecycleError::InvalidLifecycleTransition {
-                    partition_name: record.partition_name.clone(),
-                    from_status: record.lifecycle_status,
-                    to_status: DataLayerM10PartitionStatus::Reattached,
-                    reason_code: DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE,
-                },
-            );
-        }
-
-        record.lifecycle_status = DataLayerM10PartitionStatus::Reattached;
-        record.last_reason_code = Some(DATA_LAYER_M10_REATTACH_REASON_CODE);
-        Ok(record.clone())
+        self.state_machine
+            .reattach_partition(partition_name)
+            .map_err(map_state_machine_error_to_m10)
     }
 
     /// Evaluates recoverability readiness for one partition.
@@ -360,31 +293,14 @@ impl DataLayerM10PartitionLifecycleRegistry {
         &self,
         partition_name: &str,
     ) -> Result<DataLayerM10RecoveryReadinessReport, DataLayerM10PartitionLifecycleError> {
-        validate_non_empty(partition_name, "partition_name")?;
-        let record = self
-            .partitions
-            .values()
-            .find(|entry| entry.partition_name == partition_name)
-            .ok_or_else(|| {
-                DataLayerM10PartitionLifecycleError::PartitionNotFound(partition_name.to_owned())
-            })?;
-        Ok(project_partition_recovery_readiness(record))
+        self.state_machine
+            .evaluate_partition_recovery_readiness(partition_name)
+            .map_err(map_state_machine_error_to_m10)
     }
 
     /// Lists recoverability readiness for historical partitions in deterministic order.
     pub fn list_historical_recovery_readiness(&self) -> Vec<DataLayerM10RecoveryReadinessReport> {
-        let mut reports: Vec<DataLayerM10RecoveryReadinessReport> = self
-            .partitions
-            .values()
-            .filter(|record| record.lifecycle_status != DataLayerM10PartitionStatus::Active)
-            .map(project_partition_recovery_readiness)
-            .collect();
-        reports.sort_by(|left, right| {
-            left.partition_month_id
-                .cmp(&right.partition_month_id)
-                .then(left.partition_name.cmp(&right.partition_name))
-        });
-        reports
+        self.state_machine.list_historical_recovery_readiness()
     }
 }
 
@@ -394,51 +310,6 @@ pub fn data_layer_m10_format_partition_name(
 ) -> Result<String, DataLayerM10PartitionLifecycleError> {
     data_layer_m10_format_partition_name_policy(partition_month_id)
         .map_err(map_partition_month_policy_error_to_m10)
-}
-
-fn project_partition_recovery_readiness(
-    record: &DataLayerM10PartitionRecord,
-) -> DataLayerM10RecoveryReadinessReport {
-    let metadata_complete = record
-        .archived_object_uri
-        .as_deref()
-        .is_some_and(|value| !value.trim().is_empty())
-        && record.archive_format_marker == Some(DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD)
-        && record
-            .checksum_marker
-            .as_deref()
-            .is_some_and(|value| !value.trim().is_empty());
-
-    let (decision, reason_code) = match record.lifecycle_status {
-        DataLayerM10PartitionStatus::Active => (
-            DataLayerM10RecoveryDecision::Blocked,
-            DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE,
-        ),
-        DataLayerM10PartitionStatus::Archived | DataLayerM10PartitionStatus::Reattached => {
-            if metadata_complete {
-                (
-                    DataLayerM10RecoveryDecision::Ready,
-                    DATA_LAYER_M10_RECOVERY_READY_REASON_CODE,
-                )
-            } else {
-                (
-                    DataLayerM10RecoveryDecision::Blocked,
-                    DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE,
-                )
-            }
-        }
-    };
-
-    DataLayerM10RecoveryReadinessReport {
-        partition_month_id: record.partition_month_id,
-        partition_name: record.partition_name.clone(),
-        decision,
-        reason_code,
-        lifecycle_status: record.lifecycle_status,
-        archived_object_uri: record.archived_object_uri.clone(),
-        archive_format_marker: record.archive_format_marker,
-        checksum_marker: record.checksum_marker.clone(),
-    }
 }
 
 #[cfg(test)]

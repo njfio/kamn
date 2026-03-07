@@ -22,6 +22,10 @@ m10_partition_checksum_extraction_slice_version=kamn.arch.data-layer-m10-partiti
 m10_partition_checksum_target_crate=crates/kamn-data-layer
 m10_partition_checksum_compatibility_wrapper_path=kamn-core::data_layer_m10_partition_archival::shared::deterministic_checksum_marker
 m10_partition_checksum_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m10_partition_archival.rs,crates/kamn-data-layer/tests/data_layer_m10_partition_month_policy_integration.rs
+m10_partition_registry_state_machine_extraction_slice_version=kamn.arch.data-layer-m10-partition-registry-state-machine-extraction.v1
+m10_partition_registry_state_machine_target_crate=crates/kamn-data-layer
+m10_partition_registry_state_machine_compatibility_wrapper_path=kamn-core::DataLayerM10PartitionLifecycleRegistry
+m10_partition_registry_state_machine_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m10_partition_archival.rs,crates/kamn-core/tests/data_layer_m10_partition_recoverability.rs,crates/kamn-data-layer/tests/data_layer_m10_partition_registry_state_machine_integration.rs
 m10_full_extraction_blocker_csv=data_layer_m8_compliance_lifecycle,KamnDid
 m10_projection_port_seam_version=kamn.arch.data-layer-m10-projection-port.v1
 m10_projection_port_trait_path=kamn-data-layer::DataLayerM10ComplianceProjectionPort
@@ -64,7 +68,7 @@ m10_phase6_runtime_evidence_wrapper_path=kamn-core::data_layer_m10_partition_arc
 | M7 | `kamn-core::data_layer_m7_timeseries_telemetry` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and rollup parity contracts |
 | M8 | `kamn-core::data_layer_m8_compliance_lifecycle` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and retention/legal-hold contracts |
 | M9 | `kamn-core::data_layer_m9_*` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and realtime dispatch contracts |
-| M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_partition_month_policy` + `kamn-data-layer::data_layer_m10_compliance_projection_port` + `kamn-data-layer::data_layer_m10_phase6_compliance_port` + `kamn-data-layer::data_layer_m10_phase6_policy_evaluator` | `crates/kamn-data-layer` | retry, partition month policy, deterministic checksum marker, projection, phase6 seam, and phase6 policy evaluators extracted; keep `kamn-core` compatibility wrappers while remaining M10 implementation ownership is migrated incrementally |
+| M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_partition_month_policy` + `kamn-data-layer::data_layer_m10_partition_registry_state_machine` + `kamn-data-layer::data_layer_m10_compliance_projection_port` + `kamn-data-layer::data_layer_m10_phase6_compliance_port` + `kamn-data-layer::data_layer_m10_phase6_policy_evaluator` | `crates/kamn-data-layer` | retry, partition month policy, deterministic checksum marker, registry state machine, projection, phase6 seam, and phase6 policy evaluators extracted; keep `kamn-core` compatibility wrappers while remaining M10 implementation ownership is migrated incrementally |
 | M11 | `kamn-data-layer::data_layer_m11_hardening_readiness` + `kamn-core::data_layer_m11_closure_evidence` | `crates/kamn-data-layer` | hardening already extracted; `kamn-core` keeps shim and closure API compatibility |
 
 ## Objective
