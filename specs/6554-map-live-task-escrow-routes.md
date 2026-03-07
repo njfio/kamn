@@ -19,6 +19,7 @@ Map the Rust live transport client task and escrow methods onto the existing Ser
   - `crates/kamn-sdk/tests/support/live_transport_task_escrow.rs`
   - `crates/kamn-sdk/tests/support/live_transport_contract_server.rs`
   - `crates/kamn-sdk/tests/support/live_transport_http.rs`
+  - `fixtures/ci/test_file_size_policy_baseline.env`
 - Outputs:
   - live transport task methods call the real service API routes
   - live transport escrow methods call the real service API routes
@@ -56,6 +57,7 @@ Map the Rust live transport client task and escrow methods onto the existing Ser
 - `crates/kamn-sdk/tests/support/live_transport_task_escrow.rs`
 - `crates/kamn-sdk/tests/support/live_transport_contract_server.rs`
 - `crates/kamn-sdk/tests/support/live_transport_http.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 
 ## Error semantics
 - Missing local live alias mappings return `SdkError::NotFound { entity: "task"|"escrow", id: <numeric id> }`.
@@ -80,7 +82,9 @@ Map the Rust live transport client task and escrow methods onto the existing Ser
 - `LiveTransportKamnClient` now uses the real `ServiceApiClient` route surface for task create/accept/complete and escrow fund/release instead of returning `NotImplemented`.
 - `crates/kamn-sdk/tests/live_transport_task_escrow.rs` exercises the full route set against a loopback contract server that verifies path, JSON body, sender DID, auth scope, nonce, and request signature.
 - The alias map remains local-only state inside the live transport client and fails closed on unknown numeric aliases with typed `SdkError::NotFound`.
+- `fixtures/ci/test_file_size_policy_baseline.env` was refreshed from `454` to `455` because the new live transport task/escrow contract target adds one tracked workspace test file.
 
 ## Deviations
 - The implementation split the live transport work across `crates/kamn-sdk/src/live/` submodules instead of a single helper file so each touched file stayed within the repo file-size budget.
 - `cargo fmt --all --check` still fails on pre-existing formatting drift in `crates/kamn-core/tests/ci_strategy_docs.rs`; this issue formatted the touched SDK files directly and left the unrelated drift untouched.
+- `Workspace Pre-Merge Gate` also currently inherits two unrelated `main` failures in `script_surface_index_docs` and `script_surface_reduction_candidates_docs`; this branch only corrects the new `test_file_size_policy` inventory drift it introduced.
