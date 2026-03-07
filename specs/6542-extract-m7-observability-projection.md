@@ -8,9 +8,10 @@ ObservabilitySample` public contract through a compatibility wrapper.
 
 ## Inputs/Outputs
 - Inputs:
-  - `DataLayerM7TelemetryPointRecord`
-  - telemetry latency, activity, anomaly, and active-session fields already
-    stored on the record
+  - `kamn-data-layer` owned M7 observability projection input struct populated
+    from `kamn-core::DataLayerM7TelemetryPointRecord`
+  - telemetry latency, activity, anomaly, active-session, and timestamp fields
+    already stored on the core record
 - Outputs:
   - `kamn-data-layer` M7 projection struct with observability sample fields
   - deterministic projection function for latency, throughput, error-rate, and
@@ -22,8 +23,9 @@ ObservabilitySample` public contract through a compatibility wrapper.
 - In scope:
   - move the deterministic M7 observability projection math into
     `crates/kamn-data-layer`
-  - introduce a `kamn-data-layer` owned projection type so the extraction does
-    not depend on `kamn-core::ObservabilitySample`
+  - introduce `kamn-data-layer` owned projection input/output types so the
+    extraction does not depend on `kamn-core::DataLayerM7TelemetryPointRecord`
+    or `kamn-core::ObservabilitySample`
   - preserve the existing `kamn-core` projector API by converting the extracted
     projection into `ObservabilitySample`
   - add dedicated `kamn-data-layer` coverage for latency, throughput,
@@ -45,7 +47,7 @@ ObservabilitySample` public contract through a compatibility wrapper.
 
 ## Acceptance Criteria
 - [ ] `kamn-data-layer` exports a deterministic M7 observability projection
-      surface owned by that crate
+      surface owned by that crate, including the projection input/output types
 - [ ] `kamn-core::data_layer_m7_project_observability_sample(...)` preserves its
       existing public signature and behavior through compatibility conversion
 - [ ] dedicated `kamn-data-layer` tests cover latency mapping, throughput floor
@@ -86,8 +88,9 @@ ObservabilitySample` public contract through a compatibility wrapper.
     before the docs are updated
 - Green:
   - implement the extracted `kamn-data-layer` M7 projection module and export it
-  - replace the `kamn-core` projector body with compatibility conversion using
-    the extracted surface
+  - replace the `kamn-core` projector body with compatibility conversion from
+    `DataLayerM7TelemetryPointRecord` into the extracted input type and then
+    from the extracted output type into `ObservabilitySample`
 - Refactor:
   - keep the new data-layer module and wrapper small enough to stay inside the
     repo file-size limits
