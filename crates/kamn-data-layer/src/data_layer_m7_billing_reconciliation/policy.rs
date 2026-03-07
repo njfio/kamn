@@ -59,8 +59,7 @@ pub fn reconcile_data_layer_m7_owner_billing_daily(
     let projection = projections
         .iter()
         .find(|entry| entry.bucket_day_epoch_seconds == input.bucket_day_epoch_seconds);
-    let projected_messages_stored_total =
-        projection.map_or(0, |entry| entry.messages_stored_total);
+    let projected_messages_stored_total = projection.map_or(0, |entry| entry.messages_stored_total);
     let projected_bytes_stored_total = projection.map_or(0, |entry| entry.bytes_stored_total);
     let projected_queries_executed_total =
         projection.map_or(0, |entry| entry.queries_executed_total);
@@ -105,9 +104,11 @@ fn validate_bucket_day_epoch_seconds(
     if bucket_day_epoch_seconds == 0
         || !bucket_day_epoch_seconds.is_multiple_of(DATA_LAYER_M7_DAILY_BUCKET_SECONDS)
     {
-        return Err(DataLayerM7BillingReconciliationError::InvalidBucketDayEpochSeconds(
-            bucket_day_epoch_seconds,
-        ));
+        return Err(
+            DataLayerM7BillingReconciliationError::InvalidBucketDayEpochSeconds(
+                bucket_day_epoch_seconds,
+            ),
+        );
     }
     Ok(())
 }

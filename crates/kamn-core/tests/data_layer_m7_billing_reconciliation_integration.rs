@@ -4,7 +4,8 @@ use kamn_core::{
 };
 use kamn_data_layer::{
     project_data_layer_m7_owner_billing_daily, reconcile_data_layer_m7_owner_billing_daily,
-    DataLayerM7BillingProjectionSampleInput, DataLayerM7BillingReconciliationInput as ExtractedInput,
+    DataLayerM7BillingProjectionSampleInput,
+    DataLayerM7BillingReconciliationInput as ExtractedInput,
 };
 
 fn telemetry_point(
@@ -67,7 +68,9 @@ fn integration_core_billing_wrappers_match_extracted_policy_outputs() {
         extracted_projection[0].messages_stored_total
     );
 
-    let day = core_projection.first().expect("projection row should exist");
+    let day = core_projection
+        .first()
+        .expect("projection row should exist");
     let core_reconciliation = registry
         .reconcile_owner_billing_daily(DataLayerM7BillingReconciliationInput {
             requester_owner_did: "kamn:did:owner:alpha".to_owned(),
@@ -91,7 +94,10 @@ fn integration_core_billing_wrappers_match_extracted_policy_outputs() {
         },
     )
     .expect("extracted reconciliation should succeed");
-    assert_eq!(core_reconciliation.reason_code, extracted_reconciliation.reason_code);
+    assert_eq!(
+        core_reconciliation.reason_code,
+        extracted_reconciliation.reason_code
+    );
     assert_eq!(
         core_reconciliation.projected_messages_stored_total,
         extracted_reconciliation.projected_messages_stored_total
