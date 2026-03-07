@@ -63,6 +63,7 @@ ObservabilitySample` public contract through a compatibility wrapper.
 - `crates/kamn-data-layer/src/data_layer_m7_observability_projection.rs`
 - `crates/kamn-data-layer/tests/data_layer_m7_observability_projection_integration.rs`
 - `crates/kamn-core/src/data_layer_m7_timeseries_telemetry.rs`
+- `crates/kamn-core/tests/data_layer_m7_observability_projection_integration.rs`
 - `crates/kamn-core/tests/data_layer_m0_m11_extraction_docs.rs`
 - `docs/architecture/data-layer-runtime-wiring.md`
 - `docs/architecture/kamn-data-layer.md`
@@ -98,8 +99,12 @@ ObservabilitySample` public contract through a compatibility wrapper.
 - Integration:
   - run `cargo fmt --all --check`
   - run strict clippy for touched crates
-  - run targeted `kamn-data-layer`, `kamn-core`, extraction-docs, and
-    test-file-inventory lanes
+  - run targeted `kamn-data-layer`, `kamn-core`, extraction-docs, core/extracted
+    parity, and test-file-inventory lanes
 
 ## Deviations
-- None.
+- Added `crates/kamn-core/tests/data_layer_m7_observability_projection_integration.rs`
+  as a dedicated parity test file instead of extending
+  `crates/kamn-core/tests/data_layer_m7_timeseries_telemetry.rs`. This kept the
+  new integration assertion out of an already large test file and avoided
+  increasing the soft-warning file-size count.

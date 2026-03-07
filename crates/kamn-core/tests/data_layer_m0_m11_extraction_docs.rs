@@ -12,7 +12,7 @@ fn doc_contains_m0_m11_extraction_map_and_compatibility_markers() {
         "m7_observability_projection_extraction_slice_version=kamn.arch.data-layer-m7-observability-projection-extraction.v1",
         "m7_observability_projection_target_crate=crates/kamn-data-layer",
         "m7_observability_projection_compatibility_wrapper_path=kamn-core::data_layer_m7_project_observability_sample",
-        "m7_observability_projection_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m7_timeseries_telemetry.rs,crates/kamn-data-layer/tests/data_layer_m7_observability_projection_integration.rs",
+        "m7_observability_projection_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m7_timeseries_telemetry.rs,crates/kamn-core/tests/data_layer_m7_observability_projection_integration.rs,crates/kamn-data-layer/tests/data_layer_m7_observability_projection_integration.rs",
         "prd_critical_scenario_conformance_extraction_slice_version=kamn.arch.data-layer-prd-critical-scenario-conformance-extraction.v1",
         "prd_critical_scenario_conformance_target_crate=crates/kamn-data-layer",
         "prd_critical_scenario_conformance_compatibility_wrapper_path=kamn-core::data_layer_prd_critical_scenario_conformance",
