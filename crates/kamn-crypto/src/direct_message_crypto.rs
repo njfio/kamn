@@ -754,31 +754,36 @@ mod tests {
     #[test]
     fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
     ) {
+        let production_source = SOURCE.split("\n#[cfg(test)]").next().unwrap_or(SOURCE);
         let struct_marker = "pub struct DirectMessageCryptoEngine";
-        let struct_index = SOURCE
+        let struct_index = production_source
             .find(struct_marker)
             .expect("engine struct declaration should exist");
         let derive_window_start = struct_index.saturating_sub(160);
-        let derive_window = &SOURCE[derive_window_start..struct_index];
+        let derive_window = &production_source[derive_window_start..struct_index];
         assert!(
             !derive_window.contains("Clone"),
             "direct-message engine must not derive Clone"
         );
         assert!(
-            SOURCE.contains("impl fmt::Debug for DirectMessageCryptoEngine"),
+            production_source.contains("impl fmt::Debug for DirectMessageCryptoEngine"),
             "direct-message engine must define custom Debug"
         );
         assert!(
-            SOURCE.contains("impl Drop for DirectMessageCryptoEngine"),
+            production_source.contains("impl Drop for DirectMessageCryptoEngine"),
             "direct-message engine must define Drop"
         );
         assert!(
-            SOURCE.contains("self.aead_key.zeroize();"),
+            production_source.contains("self.aead_key.zeroize();"),
             "direct-message engine Drop must zeroize aead_key"
         );
         assert!(
-            SOURCE.contains("self.legacy_aead_key.zeroize();"),
+            production_source.contains("self.legacy_aead_key.zeroize();"),
             "direct-message engine Drop must zeroize legacy_aead_key"
+        );
+        assert!(
+            production_source.contains("seed_hex.zeroize();"),
+            "direct-message master seed loader must zeroize env-loaded hex buffer"
         );
     }
 

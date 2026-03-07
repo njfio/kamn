@@ -1089,6 +1089,70 @@ mod tests {
     }
 
     #[test]
+    fn cached_group_seed_allows_repeated_operations_after_env_removal() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let mut engine = GroupChannelCryptoEngine::new("channel:group:cached")
+                .expect("engine should initialize");
+            engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed");
+
+            let first = engine
+                .encrypt("kamn:did:agent:alice", "payload-a", 1)
+                .expect("first encrypt should succeed");
+
+            std::env::remove_var(super::KEY_AGREEMENT_MASTER_SEED_ENV);
+
+            let second = engine
+                .encrypt("kamn:did:agent:alice", "payload-b", 2)
+                .expect("cached seed should allow second encrypt");
+            assert_eq!(
+                engine
+                    .decrypt("kamn:did:agent:bob", &first)
+                    .expect("cached seed should allow decrypt after env removal"),
+                "payload-a"
+            );
+            assert_eq!(
+                engine
+                    .decrypt("kamn:did:agent:bob", &second)
+                    .expect("cached seed should allow decrypt of later ciphertext"),
+                "payload-b"
+            );
+        });
+    }
+
+    #[test]
+    fn constructor_stays_env_independent_until_first_group_operation() {
+        with_key_agreement_seed(None, || {
+            let mut engine = GroupChannelCryptoEngine::new("channel:group:late-seed")
+                .expect("constructor should not require env seed");
+            engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("distribution should succeed without env seed");
+
+            std::env::set_var(super::KEY_AGREEMENT_MASTER_SEED_ENV, TEST_KEY_SEED_HEX);
+
+            let sealed = engine
+                .encrypt("kamn:did:agent:alice", "late-seed", 3)
+                .expect("encrypt should succeed once env seed is set");
+            assert_eq!(
+                engine
+                    .decrypt("kamn:did:agent:bob", &sealed)
+                    .expect("decrypt should succeed once env seed is cached"),
+                "late-seed"
+            );
+        });
+    }
+
+    #[test]
     fn group_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
         let shared_secret = [0x3cu8; 32];
         let hkdf_key_a = super::derive_group_aead_key(&shared_secret, "channel:test", 9)
@@ -1124,7 +1188,8 @@ mod tests {
     #[test]
     fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
     ) {
-        let derive_line = SOURCE
+        let production_source = SOURCE.split("\n#[cfg(test)]").next().unwrap_or(SOURCE);
+        let derive_line = production_source
             .split("pub struct GroupChannelCryptoEngine")
             .next()
             .and_then(|prefix| prefix.lines().last())
@@ -1135,24 +1200,28 @@ mod tests {
             "group-channel engine must not derive Clone"
         );
         assert!(
-            SOURCE.contains("impl fmt::Debug for GroupChannelCryptoEngine"),
+            production_source.contains("impl fmt::Debug for GroupChannelCryptoEngine"),
             "group-channel engine must define a redacted Debug impl"
         );
         assert!(
-            SOURCE.contains("used_nonce_count"),
+            production_source.contains("used_nonce_count"),
             "group-channel engine debug output must expose only a nonce-count summary"
         );
         assert!(
-            SOURCE.contains("impl Drop for GroupChannelCryptoEngine"),
+            production_source.contains("impl Drop for GroupChannelCryptoEngine"),
             "group-channel engine must define Drop"
         );
         assert!(
-            SOURCE.contains("self.channel_id.zeroize();"),
+            production_source.contains("self.channel_id.zeroize();"),
             "group-channel engine Drop must zeroize channel_id"
         );
         assert!(
-            SOURCE.contains("zeroize_sender_key_history(&mut self.sender_key_history);"),
+            production_source.contains("zeroize_sender_key_history(&mut self.sender_key_history);"),
             "group-channel engine Drop must clear sender-key history"
+        );
+        assert!(
+            production_source.contains("seed_hex.zeroize();"),
+            "group-channel master seed loader must zeroize env-loaded hex buffer"
         );
     }
 
