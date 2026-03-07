@@ -14,6 +14,8 @@ pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const DIRECT_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-salt:v2";
 const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-info:v2";
+const DIRECT_MESSAGE_NONCE_INFO_V2: &[u8] = b"kamn:direct-message:nonce:v2:";
+const DIRECT_MESSAGE_NONCE_INFO_V1: &[u8] = b"kamn:direct-message:nonce:v1:";
 /// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
 pub const DIRECT_MESSAGE_HKDF_BACKEND_MARKER: &str = crate::hkdf_sha256::HKDF_SHA256_BACKEND_MARKER;
 /// Marker asserting HMAC backend semantics are provided by RustCrypto primitives.
@@ -86,18 +88,14 @@ impl DirectMessageCryptoEngine {
         plaintext: &str,
         nonce: u64,
     ) -> Result<DirectMessageCiphertext, DirectMessageCryptoError> {
-        if plaintext.is_empty() {
-            return Err(DirectMessageCryptoError::EmptyPayload);
-        }
-        if nonce == 0 {
-            return Err(DirectMessageCryptoError::InvalidNonce(nonce));
-        }
-        if !self.used_nonces.insert(nonce) {
-            return Err(DirectMessageCryptoError::NonceReuse(nonce));
-        }
+        validate_encrypt_request(&mut self.used_nonces, plaintext, nonce)?;
 
         let cipher = XChaCha20Poly1305::new((&self.aead_key).into());
-        let nonce_bytes = direct_message_nonce_bytes(nonce);
+        let nonce_bytes = direct_message_nonce_bytes(
+            self.sender_key_ref.as_str(),
+            self.recipient_key_ref.as_str(),
+            nonce,
+        );
         let xnonce = XNonce::from(nonce_bytes);
         let aad = canonical_direct_message_aad(
             self.sender_key_ref.as_str(),
@@ -130,61 +128,26 @@ impl DirectMessageCryptoEngine {
         &self,
         sealed: &DirectMessageCiphertext,
     ) -> Result<String, DirectMessageCryptoError> {
-        if sealed.key_agreement_algorithm != DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM
-            || sealed.cipher_algorithm != DIRECT_MESSAGE_CIPHER_ALGORITHM
-        {
-            return Err(DirectMessageCryptoError::AlgorithmMismatch);
-        }
-        validate_key_ref_match(
-            "sender",
+        validate_ciphertext_context(
             self.sender_key_ref.as_str(),
-            sealed.sender_key_ref.as_str(),
-        )?;
-        validate_key_ref_match(
-            "recipient",
             self.recipient_key_ref.as_str(),
-            sealed.recipient_key_ref.as_str(),
+            sealed,
         )?;
-        if sealed.nonce == 0 {
-            return Err(DirectMessageCryptoError::InvalidNonce(sealed.nonce));
-        }
-
-        let ciphertext = hex_decode(&sealed.ciphertext)?;
-        let auth_tag = hex_decode(&sealed.auth_tag)
-            .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)?;
-
-        let mut combined = ciphertext;
-        combined.extend_from_slice(&auth_tag);
-
-        let nonce_bytes = direct_message_nonce_bytes(sealed.nonce);
-        let xnonce = XNonce::from(nonce_bytes);
+        let combined = decode_combined_ciphertext(sealed)?;
         let aad = canonical_direct_message_aad(
             sealed.sender_key_ref.as_str(),
             sealed.recipient_key_ref.as_str(),
             sealed.nonce,
         );
-
-        let decrypt_with_key = |key: &[u8; 32]| {
-            XChaCha20Poly1305::new(key.into())
-                .decrypt(
-                    &xnonce,
-                    Payload {
-                        msg: &combined,
-                        aad: aad.as_bytes(),
-                    },
-                )
-                .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)
-        };
-
-        // Compatibility policy: encrypt with HKDF-v2 key, but continue accepting
-        // legacy SHA-256-v1 derived ciphertext on decrypt.
-        let plaintext = match decrypt_with_key(&self.aead_key) {
-            Ok(value) => Ok(value),
-            Err(DirectMessageCryptoError::IntegrityCheckFailed) => {
-                decrypt_with_key(&self.legacy_aead_key)
-            }
-            Err(other) => Err(other),
-        }?;
+        let plaintext = decrypt_with_compatibility_candidates(
+            &self.aead_key,
+            &self.legacy_aead_key,
+            sealed.sender_key_ref.as_str(),
+            sealed.recipient_key_ref.as_str(),
+            sealed.nonce,
+            &combined,
+            aad.as_str(),
+        )?;
         String::from_utf8(plaintext)
             .map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
     }
@@ -354,16 +317,127 @@ fn derive_direct_message_aead_key_legacy(shared_secret: &[u8; 32]) -> [u8; 32] {
     key
 }
 
-fn direct_message_nonce_bytes(nonce: u64) -> [u8; 24] {
+fn direct_message_nonce_bytes(
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    nonce: u64,
+) -> [u8; 24] {
+    let mut hasher = Sha256::new();
+    hasher.update(DIRECT_MESSAGE_NONCE_INFO_V2);
+    hasher.update(sender_key_ref.as_bytes());
+    hasher.update([0]);
+    hasher.update(recipient_key_ref.as_bytes());
+    hasher.update([0]);
+    hasher.update(nonce.to_le_bytes());
+    let digest = hasher.finalize();
+    let mut out = [0u8; 24];
+    out.copy_from_slice(&digest[..24]);
+    out
+}
+
+fn legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce: u64) -> [u8; 24] {
     let mut out = [0u8; 24];
     out[..8].copy_from_slice(&nonce.to_le_bytes());
 
     let mut hasher = Sha256::new();
-    hasher.update(b"kamn:direct-message:nonce:v1:");
+    hasher.update(DIRECT_MESSAGE_NONCE_INFO_V1);
     hasher.update(nonce.to_le_bytes());
     let digest = hasher.finalize();
     out[8..].copy_from_slice(&digest[..16]);
     out
+}
+
+fn decrypt_with_nonce_bytes(
+    key: &[u8; 32],
+    nonce_bytes: [u8; 24],
+    combined: &[u8],
+    aad: &str,
+) -> Result<Vec<u8>, DirectMessageCryptoError> {
+    let xnonce = XNonce::from(nonce_bytes);
+    XChaCha20Poly1305::new(key.into())
+        .decrypt(
+            &xnonce,
+            Payload {
+                msg: combined,
+                aad: aad.as_bytes(),
+            },
+        )
+        .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)
+}
+
+fn decrypt_with_compatibility_candidates(
+    aead_key: &[u8; 32],
+    legacy_aead_key: &[u8; 32],
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    nonce: u64,
+    combined: &[u8],
+    aad: &str,
+) -> Result<Vec<u8>, DirectMessageCryptoError> {
+    let nonce_candidates = [
+        direct_message_nonce_bytes(sender_key_ref, recipient_key_ref, nonce),
+        legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce),
+    ];
+
+    for key in [aead_key, legacy_aead_key] {
+        for nonce_bytes in nonce_candidates {
+            if let Ok(plaintext) = decrypt_with_nonce_bytes(key, nonce_bytes, combined, aad) {
+                return Ok(plaintext);
+            }
+        }
+    }
+
+    Err(DirectMessageCryptoError::IntegrityCheckFailed)
+}
+
+fn validate_encrypt_request(
+    used_nonces: &mut BTreeSet<u64>,
+    plaintext: &str,
+    nonce: u64,
+) -> Result<(), DirectMessageCryptoError> {
+    if plaintext.is_empty() {
+        return Err(DirectMessageCryptoError::EmptyPayload);
+    }
+    if nonce == 0 {
+        return Err(DirectMessageCryptoError::InvalidNonce(nonce));
+    }
+    if !used_nonces.insert(nonce) {
+        return Err(DirectMessageCryptoError::NonceReuse(nonce));
+    }
+    Ok(())
+}
+
+fn validate_ciphertext_context(
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    sealed: &DirectMessageCiphertext,
+) -> Result<(), DirectMessageCryptoError> {
+    if sealed.key_agreement_algorithm != DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM
+        || sealed.cipher_algorithm != DIRECT_MESSAGE_CIPHER_ALGORITHM
+    {
+        return Err(DirectMessageCryptoError::AlgorithmMismatch);
+    }
+    validate_key_ref_match("sender", sender_key_ref, sealed.sender_key_ref.as_str())?;
+    validate_key_ref_match(
+        "recipient",
+        recipient_key_ref,
+        sealed.recipient_key_ref.as_str(),
+    )?;
+    if sealed.nonce == 0 {
+        return Err(DirectMessageCryptoError::InvalidNonce(sealed.nonce));
+    }
+    Ok(())
+}
+
+fn decode_combined_ciphertext(
+    sealed: &DirectMessageCiphertext,
+) -> Result<Vec<u8>, DirectMessageCryptoError> {
+    let ciphertext = hex_decode(&sealed.ciphertext)?;
+    let auth_tag =
+        hex_decode(&sealed.auth_tag).map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)?;
+    let mut combined = ciphertext;
+    combined.extend_from_slice(&auth_tag);
+    Ok(combined)
 }
 
 fn canonical_direct_message_aad(
@@ -453,7 +527,7 @@ mod tests {
         let legacy_key = super::derive_direct_message_aead_key_legacy(&shared_secret);
 
         let cipher = XChaCha20Poly1305::new((&legacy_key).into());
-        let nonce_bytes = super::direct_message_nonce_bytes(nonce);
+        let nonce_bytes = super::legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce);
         let xnonce = XNonce::from(nonce_bytes);
         let aad = super::canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
         let payload = Payload {
@@ -463,6 +537,47 @@ mod tests {
         let mut sealed = cipher
             .encrypt(&xnonce, payload)
             .expect("legacy encryption should succeed");
+        let auth_tag = sealed.split_off(sealed.len() - 16);
+
+        DirectMessageCiphertext {
+            key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
+            cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
+            sender_key_ref: sender_key_ref.to_owned(),
+            recipient_key_ref: recipient_key_ref.to_owned(),
+            nonce,
+            ciphertext: super::hex_encode(&sealed),
+            auth_tag: super::hex_encode(&auth_tag),
+        }
+    }
+
+    fn legacy_raw_prefix_nonce_bytes_v1(nonce: u64) -> [u8; 24] {
+        super::legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce)
+    }
+
+    fn legacy_v2_raw_prefix_ciphertext(
+        sender_key_ref: &str,
+        recipient_key_ref: &str,
+        plaintext: &str,
+        nonce: u64,
+    ) -> DirectMessageCiphertext {
+        let master_seed =
+            super::load_key_agreement_master_seed().expect("master seed should be available");
+        let shared_secret =
+            super::derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
+        let aead_key =
+            super::derive_direct_message_aead_key(&shared_secret).expect("hkdf derive should work");
+
+        let cipher = XChaCha20Poly1305::new((&aead_key).into());
+        let nonce_bytes = legacy_raw_prefix_nonce_bytes_v1(nonce);
+        let xnonce = XNonce::from(nonce_bytes);
+        let aad = super::canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
+        let payload = Payload {
+            msg: plaintext.as_bytes(),
+            aad: aad.as_bytes(),
+        };
+        let mut sealed = cipher
+            .encrypt(&xnonce, payload)
+            .expect("legacy raw-prefix encryption should succeed");
         let auth_tag = sealed.split_off(sealed.len() - 16);
 
         DirectMessageCiphertext {
@@ -713,6 +828,28 @@ mod tests {
     }
 
     #[test]
+    fn decrypt_accepts_legacy_raw_prefix_nonce_layout_for_hkdf_v2_compatibility() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let sender_key_ref = "kamn:did:agent:alice#key-agreement-1";
+            let recipient_key_ref = "kamn:did:agent:bob#key-agreement-1";
+
+            let engine = DirectMessageCryptoEngine::new(sender_key_ref, recipient_key_ref)
+                .expect("engine init should succeed");
+            let sealed = legacy_v2_raw_prefix_ciphertext(
+                sender_key_ref,
+                recipient_key_ref,
+                "legacy-raw-prefix",
+                43,
+            );
+
+            let plaintext = engine
+                .decrypt(&sealed)
+                .expect("legacy raw-prefix decrypt must succeed");
+            assert_eq!(plaintext, "legacy-raw-prefix");
+        });
+    }
+
+    #[test]
     fn display_messages_remain_stable_for_reason_taxonomy() {
         assert_eq!(
             DirectMessageCryptoError::InvalidKeyRef("sender").to_string(),
@@ -847,11 +984,65 @@ mod tests {
 
     #[test]
     fn direct_message_nonce_bytes_are_deterministic_and_nonce_sensitive() {
-        let nonce_7_first = super::direct_message_nonce_bytes(7);
-        let nonce_7_second = super::direct_message_nonce_bytes(7);
-        let nonce_8 = super::direct_message_nonce_bytes(8);
+        let sender_key_ref = "kamn:did:agent:alice#key-agreement-1";
+        let recipient_key_ref = "kamn:did:agent:bob#key-agreement-1";
+        let nonce_7_first = super::direct_message_nonce_bytes(sender_key_ref, recipient_key_ref, 7);
+        let nonce_7_second =
+            super::direct_message_nonce_bytes(sender_key_ref, recipient_key_ref, 7);
+        let nonce_8 = super::direct_message_nonce_bytes(sender_key_ref, recipient_key_ref, 8);
 
         assert_eq!(nonce_7_first, nonce_7_second);
         assert_ne!(nonce_7_first, nonce_8);
+    }
+
+    #[test]
+    fn direct_message_nonce_bytes_do_not_expose_raw_counter_prefix() {
+        let nonce = 0x0102_0304_0506_0708_u64;
+        let nonce_bytes = super::direct_message_nonce_bytes(
+            "kamn:did:agent:alice#key-agreement-1",
+            "kamn:did:agent:bob#key-agreement-1",
+            nonce,
+        );
+
+        assert_ne!(
+            &nonce_bytes[..8],
+            &nonce.to_le_bytes(),
+            "derived nonce bytes must not expose nonce.to_le_bytes() as the prefix"
+        );
+    }
+
+    #[test]
+    fn encrypt_output_does_not_authenticate_under_legacy_raw_prefix_nonce_layout() {
+        with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+            let sender_key_ref = "kamn:did:agent:alice#key-agreement-1";
+            let recipient_key_ref = "kamn:did:agent:bob#key-agreement-1";
+            let nonce = 57;
+            let mut engine = DirectMessageCryptoEngine::new(sender_key_ref, recipient_key_ref)
+                .expect("engine init should succeed");
+            let sealed = engine
+                .encrypt("payload", nonce)
+                .expect("encrypt should succeed");
+
+            let ciphertext = super::hex_decode(sealed.ciphertext.as_str()).expect("ciphertext hex");
+            let auth_tag = super::hex_decode(sealed.auth_tag.as_str()).expect("auth tag hex");
+            let mut combined = ciphertext;
+            combined.extend_from_slice(&auth_tag);
+
+            let aad = super::canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
+            let legacy_nonce_bytes = legacy_raw_prefix_nonce_bytes_v1(nonce);
+            let xnonce = XNonce::from(legacy_nonce_bytes);
+            let legacy_result = XChaCha20Poly1305::new((&engine.aead_key).into()).decrypt(
+                &xnonce,
+                Payload {
+                    msg: &combined,
+                    aad: aad.as_bytes(),
+                },
+            );
+
+            assert!(
+                legacy_result.is_err(),
+                "new encryptions must not authenticate under the legacy raw-prefix nonce layout"
+            );
+        });
     }
 }
