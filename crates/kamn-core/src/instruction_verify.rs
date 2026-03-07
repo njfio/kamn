@@ -294,6 +294,8 @@ mod tests {
         VerificationFailure, VerificationOutcome, DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS,
     };
 
+    const SOURCE: &str = include_str!("instruction_verify.rs");
+
     #[test]
     fn rejects_payload_hash_mismatch() {
         let context = VerificationContext::new(1)
@@ -466,6 +468,18 @@ mod tests {
         assert_eq!(
             InstructionVerifier::verify(&claim, &context),
             VerificationOutcome::Rejected(VerificationFailure::MissingRecordSignature)
+        );
+    }
+
+    #[test]
+    fn regression_requires_constant_time_instruction_signature_compare() {
+        assert!(
+            SOURCE.contains("crate::constant_time_eq::constant_time_eq_str("),
+            "instruction verification should use the scoped constant-time helper for signature comparison"
+        );
+        assert!(
+            !SOURCE.contains("if record.signature != claim.signature {"),
+            "instruction verification must not use direct signature inequality"
         );
     }
 

@@ -35,6 +35,8 @@ pub mod cross_chain_bridge;
 /// Cross-store replay consistency checker and deterministic divergence taxonomy contracts.
 pub mod cross_store_replay_consistency;
 #[cfg(test)]
+mod constant_time_eq;
+#[cfg(test)]
 pub(crate) mod crypto_test_env_lock;
 /// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;

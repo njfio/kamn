@@ -1061,6 +1061,18 @@ mod tests {
     }
 
     #[test]
+    fn regression_requires_constant_time_group_signature_compare() {
+        assert!(
+            SOURCE.contains("crate::constant_time_eq::constant_time_eq_str("),
+            "group decrypt should use the scoped constant-time helper for signature comparison"
+        );
+        assert!(
+            !SOURCE.contains("if expected_signature != sealed.signature {"),
+            "group decrypt must not use direct signature inequality"
+        );
+    }
+
+    #[test]
     fn decrypt_rejects_zero_nonce_fail_closed() {
         with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
             let mut engine =

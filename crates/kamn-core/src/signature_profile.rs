@@ -477,6 +477,7 @@ mod tests {
         SERVICE_AUTH_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
     };
 
+    const SOURCE: &str = include_str!("signature_profile.rs");
     const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
@@ -604,6 +605,18 @@ mod tests {
                 fixture.fixture_id
             );
         }
+    }
+
+    #[test]
+    fn regression_requires_constant_time_signature_profile_compare() {
+        assert!(
+            SOURCE.contains("crate::constant_time_eq::constant_time_eq_str("),
+            "signature profile matcher should use the scoped constant-time helper"
+        );
+        assert!(
+            !SOURCE.contains("signature == baseline_signature_for_fields(sender, nonce, state_hash, payload)"),
+            "signature profile matcher must not use direct signature equality"
+        );
     }
 
     #[test]
