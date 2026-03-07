@@ -31,6 +31,7 @@ Add explicit coverage for `evaluate_runtime_guard_policy_stack()` propagating
 ## Files to touch
 - `crates/kamn-runtime-guards/tests/runtime_guard_policy_stack.rs`
 - `crates/kamn-runtime-guards/tests/runtime_guard_policy_stack_contract.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 - `specs/6518-policy-stack-error-propagation-coverage.md`
 
 ## Error semantics
@@ -54,6 +55,8 @@ Add explicit coverage for `evaluate_runtime_guard_policy_stack()` propagating
 - Red-phase investigation confirmed the production behavior already existed through the `?`
   propagation in `evaluate_runtime_guard_policy_stack()`. This issue therefore landed as
   coverage-only with no production code change.
+- Because the new contract target increased the workspace test-file inventory by one, the existing
+  `kamn-core` `test_file_size_policy` baseline required a matching refresh.
 
 ## Execution Evidence
 - Red:
@@ -64,3 +67,4 @@ Add explicit coverage for `evaluate_runtime_guard_policy_stack()` propagating
 - Refactor / Integration:
   - `cargo test -p kamn-runtime-guards -- --nocapture`
   - `cargo clippy -p kamn-runtime-guards --tests -- -D warnings`
+  - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
