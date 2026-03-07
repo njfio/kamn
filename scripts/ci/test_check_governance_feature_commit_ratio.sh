@@ -237,4 +237,43 @@ mixed_output="$(run_range_checker "$HISTORY_REPO" "$CAPABILITY_SHA" "$MIXED_SHA"
 assert_output_contains "$mixed_output" 'status=ok' "expected mixed-surface history to classify as capability work"
 assert_output_contains "$mixed_output" 'feature_commit_count=1' "expected mixed-surface history to count as capability work"
 
+ACTIVATION_REPO="$TMP_DIR/activation-repo"
+ACTIVATION_OUTPUT_JSON="$TMP_DIR/activation-report.json"
+init_history_repo "$ACTIVATION_REPO"
+PREACTIVATION_BASE_SHA="$(git -C "$ACTIVATION_REPO" rev-parse HEAD)"
+
+commit_repo_file "$ACTIVATION_REPO" "docs(ci): preactivation governance prep" "scripts/ci/preactivation.sh" "echo preactivation"
+PREACTIVATION_SHA="$(git -C "$ACTIVATION_REPO" rev-parse HEAD)"
+
+commit_repo_file "$ACTIVATION_REPO" "feat(ci): rollout activation policy" "scripts/ci/activation.sh" "echo activation"
+ACTIVATION_SHA="$(git -C "$ACTIVATION_REPO" rev-parse HEAD)"
+
+activation_base_output="$(run_range_checker "$ACTIVATION_REPO" "$ACTIVATION_SHA" "$ACTIVATION_SHA" 50 0.20 "$ACTIVATION_OUTPUT_JSON")"
+assert_output_contains "$activation_base_output" 'status=ok' "expected activation-base head to produce a non-violating result"
+assert_output_contains "$activation_base_output" 'activation_scope_status=head_at_activation_base' "expected activation-base head to emit explicit activation-scope status"
+
+preactivation_output="$(run_range_checker "$ACTIVATION_REPO" "$ACTIVATION_SHA" "$PREACTIVATION_SHA" 50 0.20 "$ACTIVATION_OUTPUT_JSON")"
+assert_output_contains "$preactivation_output" 'status=ok' "expected preactivation head to produce a non-violating historical result"
+assert_output_contains "$preactivation_output" 'activation_scope_status=head_precedes_activation_base' "expected preactivation head to emit explicit historical activation-scope status"
+
+commit_repo_file "$ACTIVATION_REPO" "docs(ci): post-activation governance drift" "scripts/ci/post_activation.sh" "echo post activation"
+POSTACTIVATION_GOVERNANCE_SHA="$(git -C "$ACTIVATION_REPO" rev-parse HEAD)"
+
+if run_range_checker "$ACTIVATION_REPO" "$ACTIVATION_SHA" "$POSTACTIVATION_GOVERNANCE_SHA" 50 0.20 "$ACTIVATION_OUTPUT_JSON" >"$TMP_DIR/postactivation-governance.out" 2>"$TMP_DIR/postactivation-governance.err"; then
+  echo "expected post-activation governance-only history to keep failing the ratio gate" >&2
+  cat "$TMP_DIR/postactivation-governance.out" >&2 || true
+  cat "$TMP_DIR/postactivation-governance.err" >&2 || true
+  exit 1
+fi
+if ! grep -q '^activation_scope_status=post_activation_window$' "$TMP_DIR/postactivation-governance.out"; then
+  echo "expected post-activation governance-only history to report post_activation_window scope" >&2
+  cat "$TMP_DIR/postactivation-governance.out" >&2 || true
+  exit 1
+fi
+if ! grep -q '^reason_codes_csv=governance_commit_ratio_threshold_exceeded$' "$TMP_DIR/postactivation-governance.out"; then
+  echo "expected post-activation governance-only history to preserve deterministic threshold reason code" >&2
+  cat "$TMP_DIR/postactivation-governance.out" >&2 || true
+  exit 1
+fi
+
 echo "governance/feature commit-ratio checker tests passed."

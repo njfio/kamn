@@ -135,8 +135,8 @@ if ! grep -Fq 'grep -Fq -- "--base-sha" "$tmp_dir/check_governance_feature_commi
   exit 1
 fi
 
-if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=f0252d24ff91859fe0b4051712ef98873aaae1f4" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
-  echo "expected governance/feature commit ratio moratorium env to anchor at the bootstrap cutoff commit" >&2
+if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=e8a6de26ef277849b374e921c3e3307accbbacdf" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
+  echo "expected governance/feature commit ratio moratorium env to anchor after the path-based rollout head" >&2
   exit 1
 fi
 
