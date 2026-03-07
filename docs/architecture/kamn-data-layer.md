@@ -5,6 +5,7 @@ Defines the architecture contract for `kamn-data-layer` in the KAMN workspace an
 
 ## Responsibilities
 - `data_layer_hashing`
+- `data_layer_m10_compliance_projection_bookkeeping`
 - `data_layer_m10_partition_month_policy`
 - `data_layer_m10_partition_registry_state_machine`
 
