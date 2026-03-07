@@ -25,6 +25,8 @@ pub mod data_layer_m11_hardening_readiness;
 pub mod data_layer_m1_batch_scheduler;
 /// PRD critical-scenario conformance contracts extracted from core.
 pub mod data_layer_prd_critical_scenario_conformance;
+/// Shell-neutral orchestration and ratio-budget policy contracts extracted from core.
+pub mod data_layer_shell_neutral_policy;
 
 pub use data_layer_m10_archival_retry::*;
 pub use data_layer_m10_compliance_projection_bookkeeping::*;
@@ -36,3 +38,4 @@ pub use data_layer_m10_phase6_policy_evaluator::*;
 pub use data_layer_m11_hardening_readiness::*;
 pub use data_layer_m1_batch_scheduler::*;
 pub use data_layer_prd_critical_scenario_conformance::*;
+pub use data_layer_shell_neutral_policy::*;
