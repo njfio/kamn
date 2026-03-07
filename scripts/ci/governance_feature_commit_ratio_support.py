@@ -8,6 +8,10 @@ from typing import Dict, Sequence
 EMPTY_REASON = "governance_commit_subjects_empty"
 UNCLASSIFIED_REASON = "governance_commit_subject_unclassified"
 THRESHOLD_REASON = "governance_commit_ratio_threshold_exceeded"
+SUBJECT_WINDOW_ONLY = "subject_window_only"
+POST_ACTIVATION_WINDOW = "post_activation_window"
+HEAD_AT_ACTIVATION_BASE = "head_at_activation_base"
+HEAD_PRECEDES_ACTIVATION_BASE = "head_precedes_activation_base"
 GOVERNANCE_PATH_PREFIXES = (
     ".ci/",
     ".github/",
@@ -82,12 +86,13 @@ def classify_commit_records(records: Sequence[CommitRecord]) -> Classification:
 def reason_codes_for_classification(
     classification: Classification,
     max_governance_ratio: float,
+    empty_is_ok: bool = False,
 ) -> Sequence[str]:
     governance_total = classification.governance_count
     feature_total = classification.feature_count
     known_total = governance_total + feature_total
     reason_codes = []
-    if classification.non_merge_commit_total == 0:
+    if classification.non_merge_commit_total == 0 and not empty_is_ok:
         reason_codes.append(EMPTY_REASON)
     if classification.unknown_subjects:
         reason_codes.append(UNCLASSIFIED_REASON)
@@ -105,6 +110,8 @@ def build_report(
     reason_taxonomy_version: str,
     governance_types_csv: str,
     feature_types_csv: str,
+    activation_scope_status: str,
+    empty_is_ok: bool = False,
 ) -> Dict[str, object]:
     governance_count = classification.governance_count
     feature_count = classification.feature_count
@@ -114,12 +121,17 @@ def build_report(
     if known_total > 0:
         governance_ratio = governance_count / known_total
         feature_ratio = feature_count / known_total
-    reason_codes = reason_codes_for_classification(classification, max_governance_ratio)
+    reason_codes = reason_codes_for_classification(
+        classification,
+        max_governance_ratio,
+        empty_is_ok=empty_is_ok,
+    )
     return {
         "schema_version": schema_version,
         "reason_taxonomy_version": reason_taxonomy_version,
         "reason_codes_csv": "none" if not reason_codes else ",".join(reason_codes),
         "status": "ok" if not reason_codes else "violation",
+        "activation_scope_status": activation_scope_status,
         "input_non_merge_commit_total": input_non_merge_commit_total,
         "non_merge_commit_total": classification.non_merge_commit_total,
         "governance_commit_count": governance_count,
@@ -147,6 +159,7 @@ def build_error_report(
         "reason_taxonomy_version": reason_taxonomy_version,
         "reason_codes_csv": EMPTY_REASON,
         "status": "violation",
+        "activation_scope_status": "error",
         "error": error,
         "input_non_merge_commit_total": 0,
         "non_merge_commit_total": 0,
@@ -164,6 +177,7 @@ def emit_stdout(report: Dict[str, object]) -> None:
     print(f"status={report['status']}")
     print(f"reason_taxonomy_version={report['reason_taxonomy_version']}")
     print(f"reason_codes_csv={report['reason_codes_csv']}")
+    print(f"activation_scope_status={report['activation_scope_status']}")
     print(f"input_non_merge_commit_total={report['input_non_merge_commit_total']}")
     print(f"non_merge_commit_total={report['non_merge_commit_total']}")
     print(f"governance_commit_count={report['governance_commit_count']}")

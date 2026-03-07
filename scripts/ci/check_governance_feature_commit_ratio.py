@@ -12,6 +12,10 @@ from typing import Dict, Iterable, List, Sequence
 from governance_feature_commit_ratio_support import (
     Classification,
     CommitRecord,
+    HEAD_AT_ACTIVATION_BASE,
+    HEAD_PRECEDES_ACTIVATION_BASE,
+    POST_ACTIVATION_WINDOW,
+    SUBJECT_WINDOW_ONLY,
     build_error_report,
     build_report,
     classify_commit_records,
@@ -157,6 +161,54 @@ def read_commit_records(repo_root: Path, base_sha: str, head_sha: str) -> Sequen
     return tuple(records)
 
 
+def verify_commit(repo_root: Path, commit_sha: str) -> None:
+    run_git(repo_root, ["rev-parse", "--verify", f"{commit_sha}^{{commit}}"])
+
+
+def is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: str) -> bool:
+    completed = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo_root),
+            "merge-base",
+            "--is-ancestor",
+            ancestor_sha,
+            descendant_sha,
+        ],
+        capture_output=True,
+        check=False,
+        encoding="utf-8",
+    )
+    if completed.returncode == 0:
+        return True
+    if completed.returncode == 1:
+        return False
+    stderr = completed.stderr.strip()
+    raise CheckerError(stderr or "git merge-base --is-ancestor failed")
+
+
+def classify_range(
+    repo_root: Path,
+    base_sha: str,
+    head_sha: str,
+    window_size: int,
+) -> tuple[Classification, int, str, bool]:
+    verify_commit(repo_root, base_sha)
+    verify_commit(repo_root, head_sha)
+    if base_sha == head_sha:
+        return Classification(0, 0, ()), 0, HEAD_AT_ACTIVATION_BASE, True
+    if is_ancestor(repo_root, head_sha, base_sha):
+        return Classification(0, 0, ()), 0, HEAD_PRECEDES_ACTIVATION_BASE, True
+    records = read_commit_records(repo_root, base_sha, head_sha)
+    return (
+        classify_commit_records(select_window(records, window_size)),
+        len(records),
+        POST_ACTIVATION_WINDOW,
+        False,
+    )
+
+
 def write_report(path: Path, report: Dict[str, object]) -> None:
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -179,14 +231,19 @@ def main() -> int:
     try:
         validate_args(args)
         input_total = 0
+        activation_scope_status = SUBJECT_WINDOW_ONLY
+        empty_is_ok = False
         if args.commit_subjects_file:
             subjects = read_commit_subjects(Path(args.commit_subjects_file))
             classification = classify_subjects(select_window(subjects, int(args.window_size)))
             input_total = len(subjects)
         else:
-            records = read_commit_records(Path(args.repo_root), str(args.base_sha), str(args.head_sha))
-            classification = classify_commit_records(select_window(records, int(args.window_size)))
-            input_total = len(records)
+            classification, input_total, activation_scope_status, empty_is_ok = classify_range(
+                Path(args.repo_root),
+                str(args.base_sha),
+                str(args.head_sha),
+                int(args.window_size),
+            )
         report = build_report(
             classification,
             input_non_merge_commit_total=input_total,
@@ -196,6 +253,8 @@ def main() -> int:
             reason_taxonomy_version=REASON_TAXONOMY_VERSION,
             governance_types_csv=",".join(sorted(GOVERNANCE_TYPES)),
             feature_types_csv=",".join(sorted(FEATURE_TYPES)),
+            activation_scope_status=activation_scope_status,
+            empty_is_ok=empty_is_ok,
         )
         write_report(Path(args.output_json), report)
         emit_stdout(report)

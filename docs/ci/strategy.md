@@ -307,7 +307,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `ci-governance-feature-commit-ratio.json`
 - Temporary capability moratorium semantics:
   - start counting after `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` so pre-moratorium governance debt does not cause retroactive failures.
-  - the current activation file anchors at the last pre-implementation bootstrap commit for issue `#6548`, so the correction issue does not self-fail while restoring the moratorium.
+  - the current activation file anchors at the path-based rollout head for issue `#6549`, so the moratorium starts after the enforcement machinery itself lands.
+  - `head == GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` returns `status=ok` with `activation_scope_status=head_at_activation_base`.
+  - `head` values that are ancestors of `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` return `status=ok` with `activation_scope_status=head_precedes_activation_base`.
+  - post-activation windows continue to emit `activation_scope_status=post_activation_window` and fail closed on governance-ratio breaches.
   - classify commits from changed-path surfaces: governance-only paths stay governance, while any mixed or capability path counts as capability work regardless of commit prefix.
   - evaluate the latest 50 non-merge commits in newest-first `git log` order.
   - require at least 40 of those 50 commits to classify as feature/capability work.
@@ -323,8 +326,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `governance_feature_commit_ratio_policy_source=base_branch`
   - `governance_feature_commit_ratio_classification_mode=changed_path_surface`
   - `governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env`
-  - `governance_feature_commit_ratio_activation_base_sha=f0252d24ff91859fe0b4051712ef98873aaae1f4`
+  - `governance_feature_commit_ratio_activation_base_sha=e8a6de26ef277849b374e921c3e3307accbbacdf`
   - `governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only`
+  - `governance_feature_commit_ratio_activation_base_status=head_at_activation_base`
+  - `governance_feature_commit_ratio_preactivation_rerun_status=head_precedes_activation_base`
   - `governance_feature_commit_ratio_non_merge_only=true`
 
 ## Review-Document Freeze Fast Gate
