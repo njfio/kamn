@@ -53,40 +53,9 @@ pub(super) fn validate_partition_month_id(
         .map_err(map_partition_month_policy_error_to_m10)
 }
 
-pub(super) fn add_months(
-    partition_month_id: u32,
-    months_to_add: u32,
-) -> Result<u32, DataLayerM10PartitionLifecycleError> {
-    kamn_data_layer::data_layer_m10_add_months(partition_month_id, months_to_add)
-        .map_err(map_partition_month_policy_error_to_m10)
-}
-
-pub(super) fn month_distance(
-    older_partition_month_id: u32,
-    newer_partition_month_id: u32,
-) -> Result<u32, DataLayerM10PartitionLifecycleError> {
-    kamn_data_layer::data_layer_m10_month_distance(
-        older_partition_month_id,
-        newer_partition_month_id,
-    )
-    .map_err(map_partition_month_policy_error_to_m10)
-}
-
-pub(super) fn deterministic_checksum_marker(
-    partition_name: &str,
-    partition_month_id: u32,
-) -> String {
-    kamn_data_layer::data_layer_m10_deterministic_checksum_marker(
-        partition_name,
-        partition_month_id,
-    )
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{
-        add_months, deterministic_checksum_marker, month_distance, validate_partition_month_id,
-    };
+    use super::validate_partition_month_id;
     use crate::DataLayerM10PartitionLifecycleError;
 
     #[test]
@@ -100,22 +69,5 @@ mod tests {
             Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(202513))
         );
         assert_eq!(validate_partition_month_id(202512), Ok(()));
-    }
-
-    #[test]
-    fn unit_month_arithmetic_handles_year_rollover_deterministically() {
-        assert_eq!(add_months(202512, 1), Ok(202601));
-        assert_eq!(add_months(202511, 3), Ok(202602));
-        assert_eq!(month_distance(202411, 202502), Ok(3));
-    }
-
-    #[test]
-    fn unit_deterministic_checksum_marker_has_stable_shape() {
-        let marker = deterministic_checksum_marker("messages_2025_02", 202502);
-        assert_eq!(
-            marker,
-            "sha256:436a53bb2b45f5bfe769623a94cefdd17c75bc18ceb4c6d985884933ab268a42"
-        );
-        assert_ne!(marker, "sha256:messages_2025_02:202502");
     }
 }
