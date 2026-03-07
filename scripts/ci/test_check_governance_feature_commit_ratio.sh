@@ -59,6 +59,20 @@ commit_repo_file() {
   git -C "$repo_dir" commit -q -m "$subject"
 }
 
+commit_repo_two_files() {
+  local repo_dir="$1"
+  local subject="$2"
+  local first_path="$3"
+  local first_body="$4"
+  local second_path="$5"
+  local second_body="$6"
+  mkdir -p "$repo_dir/$(dirname "$first_path")" "$repo_dir/$(dirname "$second_path")"
+  printf '%s\n' "$first_body" >"$repo_dir/$first_path"
+  printf '%s\n' "$second_body" >"$repo_dir/$second_path"
+  git -C "$repo_dir" add "$first_path" "$second_path"
+  git -C "$repo_dir" commit -q -m "$subject"
+}
+
 assert_output_contains() {
   local output="$1"
   local pattern="$2"
@@ -215,10 +229,9 @@ capability_output="$(run_range_checker "$HISTORY_REPO" "$GOVERNANCE_ONLY_SHA" "$
 assert_output_contains "$capability_output" 'status=ok' "expected capability-surface history to pass even when the commit prefix looks like governance work"
 assert_output_contains "$capability_output" 'feature_commit_count=1' "expected capability-surface history to classify as capability work"
 
-commit_repo_file "$HISTORY_REPO" "chore(ci): mixed governance and capability surfaces" "crates/kamn-core/src/mixed.rs" "pub fn mixed_marker() {}"
-printf 'echo more governance\n' >"$HISTORY_REPO/scripts/ci/mixed.sh"
-git -C "$HISTORY_REPO" add scripts/ci/mixed.sh
-git -C "$HISTORY_REPO" commit --amend -q --no-edit
+commit_repo_two_files "$HISTORY_REPO" "chore(ci): mixed governance and capability surfaces" \
+  "crates/kamn-core/src/mixed.rs" "pub fn mixed_marker() {}" \
+  "scripts/ci/mixed.sh" "echo more governance"
 MIXED_SHA="$(git -C "$HISTORY_REPO" rev-parse HEAD)"
 mixed_output="$(run_range_checker "$HISTORY_REPO" "$CAPABILITY_SHA" "$MIXED_SHA" 50 0.20 "$RANGE_OUTPUT_JSON")"
 assert_output_contains "$mixed_output" 'status=ok' "expected mixed-surface history to classify as capability work"
