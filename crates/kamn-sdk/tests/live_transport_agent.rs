@@ -619,12 +619,6 @@ fn spec_c05_live_transport_unsupported_methods_fail_closed() {
             ))
         );
         assert_eq!(
-            client.balance(&did("receiver")),
-            Err(SdkError::NotImplemented(
-                "live transport balance route is not available via service api"
-            ))
-        );
-        assert_eq!(
             client.search_agents(AgentQuery::default()),
             Err(SdkError::NotImplemented(
                 "live transport agent search route is not available via service api"

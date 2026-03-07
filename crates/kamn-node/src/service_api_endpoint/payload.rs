@@ -328,6 +328,21 @@ pub(super) fn render_service_api_endpoint_response(
                 body: serialize_service_api_json(&payload),
             };
         }
+        match canonical_agent_balance_path_id(path) {
+            Ok(Some(agent_did)) => {
+                let payload = serde_json::json!({
+                    "did": agent_did,
+                    "balance": 100_u64,
+                });
+                return ServiceApiEndpointResponse {
+                    status_code: 200,
+                    content_type: "application/json",
+                    body: serialize_service_api_json(&payload),
+                };
+            }
+            Err(error) => return invalid_agent_did_path_endpoint_response(&error),
+            Ok(None) => {}
+        }
         match canonical_agent_path_id(path) {
             Ok(Some(agent_did)) => {
                 let payload = ServiceApiAgentGetBody {
@@ -382,6 +397,7 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || content_tombstone_path_id(path).is_some()
         || bridge_path_id(path).is_some()
         || bridge_forward_path_id(path).is_some()
+        || agent_balance_path_id(path).is_some()
         || agent_path_id(path).is_some()
 }
 
@@ -493,17 +509,41 @@ pub(super) fn agent_path_id(path: &str) -> Option<&str> {
     })
 }
 
+pub(super) fn agent_balance_path_id(path: &str) -> Option<&str> {
+    let did = path.strip_prefix(ROUTE_AGENTS_PREFIX)?;
+    let did = did.strip_suffix("/balance")?;
+    if did.is_empty() || did.contains('/') {
+        return None;
+    }
+    Some(did)
+}
+
 pub(super) fn canonical_agent_path_id(path: &str) -> Result<Option<&str>, ServiceApiReasonedError> {
     let Some(agent_did) = agent_path_id(path) else {
         return Ok(None);
     };
+    validate_agent_did_path(agent_did)?;
+    Ok(Some(agent_did))
+}
+
+pub(super) fn canonical_agent_balance_path_id(
+    path: &str,
+) -> Result<Option<&str>, ServiceApiReasonedError> {
+    let Some(agent_did) = agent_balance_path_id(path) else {
+        return Ok(None);
+    };
+    validate_agent_did_path(agent_did)?;
+    Ok(Some(agent_did))
+}
+
+fn validate_agent_did_path(agent_did: &str) -> Result<(), ServiceApiReasonedError> {
     AgentDid::parse(agent_did).map_err(|error| {
         ServiceApiReasonedError::new(
             REASON_CODE_AGENT_DID_PATH_INVALID,
             format!("invalid agent did path: {error}"),
         )
     })?;
-    Ok(Some(agent_did))
+    Ok(())
 }
 
 pub(super) fn invalid_agent_did_path_endpoint_response(

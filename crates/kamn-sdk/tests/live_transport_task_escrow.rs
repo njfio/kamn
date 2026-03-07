@@ -47,7 +47,7 @@ fn regression_live_transport_unknown_task_and_escrow_aliases_fail_closed() {
     let mut client = live_client("127.0.0.1:65535");
     assert_unknown_task_aliases(&mut client);
     assert_unknown_escrow_alias(&mut client);
-    assert_balance_is_still_unsupported(&client);
+    assert_balance_route_fails_closed(&client);
 }
 
 fn spawn_contract_server(bind_addr: String) -> thread::JoinHandle<Result<(), String>> {
@@ -190,11 +190,11 @@ fn assert_unknown_escrow_alias(client: &mut LiveTransportKamnClient) {
     );
 }
 
-fn assert_balance_is_still_unsupported(client: &LiveTransportKamnClient) {
+fn assert_balance_route_fails_closed(client: &LiveTransportKamnClient) {
     assert_eq!(
         client.balance(&did("payer-live")),
-        Err(SdkError::NotImplemented(
-            "live transport balance route is not available via service api"
+        Err(SdkError::TransportFailure(
+            "failed to connect to service endpoint"
         ))
     );
 }
