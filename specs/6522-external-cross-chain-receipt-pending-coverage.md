@@ -29,14 +29,14 @@ Add explicit `kamn-core` external regression coverage proving that direct
 
 ## Acceptance criteria
 
-- [ ] `kamn-core` has a targeted external regression asserting direct
+- [x] `kamn-core` has a targeted external regression asserting direct
       `CrossChainReceiptStatus::Pending` input normalizes to
       `CrossChainReceiptFinality::Pending`
-- [ ] The red phase demonstrates the external regression was absent before the
+- [x] The red phase demonstrates the external regression was absent before the
       new test was added
-- [ ] `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`
+- [x] `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`
       passes locally
-- [ ] This spec records that the issue is coverage hardening only, with no
+- [x] This spec records that the issue is coverage hardening only, with no
       intended production behavior change
 
 ## Files to touch
@@ -57,3 +57,20 @@ Add explicit `kamn-core` external regression coverage proving that direct
 2. Add the targeted external regression test for direct `Pending` status
    normalization through `kamn-core`.
 3. Run `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`.
+
+## Deviations
+
+- Red-phase investigation confirmed the normalization behavior already existed
+  in `kamn-bridges`; this issue landed as external `kamn-core` coverage
+  hardening only, with no production logic change.
+
+## Execution Evidence
+
+- Red:
+  - `cargo test -p kamn-core --test cross_chain_receipt_finality contract_keeps_external_pending_receipt_normalization_regression -- --exact --nocapture`
+- Green:
+  - `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`
+- Refactor / Integration:
+  - `cargo fmt --all --check`
+  - `cargo clippy -p kamn-core --test cross_chain_receipt_finality -- -D warnings`
+  - `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`
