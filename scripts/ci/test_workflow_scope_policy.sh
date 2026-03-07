@@ -120,6 +120,21 @@ if ! grep -Fq "source .ci/governance-feature-commit-ratio-moratorium.env" "$FAST
   exit 1
 fi
 
+if ! grep -Fq 'git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to load the checker from the base branch" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to load moratorium config from the base branch" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'grep -Fq -- "--base-sha" "$tmp_dir/check_governance_feature_commit_ratio.py"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to detect the new git-range checker interface" >&2
+  exit 1
+fi
+
 if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=f0252d24ff91859fe0b4051712ef98873aaae1f4" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
   echo "expected governance/feature commit ratio moratorium env to anchor at the bootstrap cutoff commit" >&2
   exit 1

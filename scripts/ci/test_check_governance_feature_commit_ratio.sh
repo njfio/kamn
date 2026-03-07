@@ -22,6 +22,43 @@ run_checker() {
     --output-json "$output_json"
 }
 
+run_range_checker() {
+  local repo_root="$1"
+  local base_sha="$2"
+  local head_sha="$3"
+  local window_size="$4"
+  local max_governance_ratio="$5"
+  local output_json="$6"
+  python3 "$CHECKER" \
+    --repo-root "$repo_root" \
+    --base-sha "$base_sha" \
+    --head-sha "$head_sha" \
+    --window-size "$window_size" \
+    --max-governance-ratio "$max_governance_ratio" \
+    --output-json "$output_json"
+}
+
+init_history_repo() {
+  local repo_dir="$1"
+  git init -q "$repo_dir"
+  git -C "$repo_dir" config user.name "KAMN Test"
+  git -C "$repo_dir" config user.email "kamn-test@example.com"
+  printf 'root\n' >"$repo_dir/README.md"
+  git -C "$repo_dir" add README.md
+  git -C "$repo_dir" commit -q -m "chore(test): seed repo"
+}
+
+commit_repo_file() {
+  local repo_dir="$1"
+  local subject="$2"
+  local file_path="$3"
+  local file_body="$4"
+  mkdir -p "$repo_dir/$(dirname "$file_path")"
+  printf '%s\n' "$file_body" >"$repo_dir/$file_path"
+  git -C "$repo_dir" add "$file_path"
+  git -C "$repo_dir" commit -q -m "$subject"
+}
+
 assert_output_contains() {
   local output="$1"
   local pattern="$2"
@@ -151,5 +188,40 @@ if integrate_payload.get("feature_commit_count") != 2 or integrate_payload.get("
 if "integrate" not in integrate_payload.get("feature_commit_types_csv", "").split(","):
     raise SystemExit("expected feature_commit_types_csv to include integrate")
 PY
+
+HISTORY_REPO="$TMP_DIR/history-repo"
+RANGE_OUTPUT_JSON="$TMP_DIR/range-report.json"
+init_history_repo "$HISTORY_REPO"
+BASE_SHA="$(git -C "$HISTORY_REPO" rev-parse HEAD)"
+
+commit_repo_file "$HISTORY_REPO" "feat(ci): governance-only surface with feature-looking prefix" "scripts/ci/policy.sh" "echo governance"
+GOVERNANCE_ONLY_SHA="$(git -C "$HISTORY_REPO" rev-parse HEAD)"
+
+if run_range_checker "$HISTORY_REPO" "$BASE_SHA" "$GOVERNANCE_ONLY_SHA" 50 0.20 "$RANGE_OUTPUT_JSON" >"$TMP_DIR/range-governance.out" 2>"$TMP_DIR/range-governance.err"; then
+  echo "expected governance-only path history to fail even when the commit prefix looks like feature work" >&2
+  cat "$TMP_DIR/range-governance.out" >&2 || true
+  cat "$TMP_DIR/range-governance.err" >&2 || true
+  exit 1
+fi
+if ! grep -q '^governance_commit_count=1$' "$TMP_DIR/range-governance.out"; then
+  echo "expected governance-only history to classify as governance work" >&2
+  cat "$TMP_DIR/range-governance.out" >&2 || true
+  exit 1
+fi
+
+commit_repo_file "$HISTORY_REPO" "docs(runtime): capability surface with governance-looking prefix" "crates/kamn-core/src/capability.rs" "pub fn capability_marker() {}"
+CAPABILITY_SHA="$(git -C "$HISTORY_REPO" rev-parse HEAD)"
+capability_output="$(run_range_checker "$HISTORY_REPO" "$GOVERNANCE_ONLY_SHA" "$CAPABILITY_SHA" 50 0.20 "$RANGE_OUTPUT_JSON")"
+assert_output_contains "$capability_output" 'status=ok' "expected capability-surface history to pass even when the commit prefix looks like governance work"
+assert_output_contains "$capability_output" 'feature_commit_count=1' "expected capability-surface history to classify as capability work"
+
+commit_repo_file "$HISTORY_REPO" "chore(ci): mixed governance and capability surfaces" "crates/kamn-core/src/mixed.rs" "pub fn mixed_marker() {}"
+printf 'echo more governance\n' >"$HISTORY_REPO/scripts/ci/mixed.sh"
+git -C "$HISTORY_REPO" add scripts/ci/mixed.sh
+git -C "$HISTORY_REPO" commit --amend -q --no-edit
+MIXED_SHA="$(git -C "$HISTORY_REPO" rev-parse HEAD)"
+mixed_output="$(run_range_checker "$HISTORY_REPO" "$CAPABILITY_SHA" "$MIXED_SHA" 50 0.20 "$RANGE_OUTPUT_JSON")"
+assert_output_contains "$mixed_output" 'status=ok' "expected mixed-surface history to classify as capability work"
+assert_output_contains "$mixed_output" 'feature_commit_count=1' "expected mixed-surface history to count as capability work"
 
 echo "governance/feature commit-ratio checker tests passed."
