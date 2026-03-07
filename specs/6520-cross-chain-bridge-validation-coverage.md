@@ -24,12 +24,12 @@ branches in `CrossChainBridgeEngine::validate_inbound_request()`.
   the branch outcomes directly.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/tests/cross_chain_bridge.rs` contains a dedicated test for
+- [x] `crates/kamn-core/tests/cross_chain_bridge.rs` contains a dedicated test for
       `UnauthorizedListener`.
-- [ ] `crates/kamn-core/tests/cross_chain_bridge.rs` contains a dedicated test for
+- [x] `crates/kamn-core/tests/cross_chain_bridge.rs` contains a dedicated test for
       `RouteTargetMismatch`.
-- [ ] Existing nearby bridge tests remain green.
-- [ ] Targeted cross-chain bridge tests pass locally.
+- [x] Existing nearby bridge tests remain green.
+- [x] Targeted cross-chain bridge tests pass locally.
 
 ## Files to touch
 - `crates/kamn-core/tests/cross_chain_bridge.rs`
@@ -51,8 +51,15 @@ branches in `CrossChainBridgeEngine::validate_inbound_request()`.
   - rerun the same targeted bridge suite after cleanup
 
 ## Deviations
-- Pending red-phase investigation may show the production behavior already exists and only the
-  missing coverage needs to land.
+- Red-phase investigation showed both validation branches were already wired correctly in
+  production. This issue therefore landed as coverage-only with no production code change.
 
 ## Execution Evidence
-- Pending.
+- Red:
+  - `cargo test -p kamn-core --test cross_chain_bridge contract_cross_chain_bridge_keeps_inbound_validation_branch_regressions -- --exact --nocapture`
+- Green:
+  - `cargo test -p kamn-core --test cross_chain_bridge -- --nocapture`
+- Refactor / Integration:
+  - `cargo fmt --all --check`
+  - `cargo test -p kamn-core --test cross_chain_bridge -- --nocapture`
+  - `cargo clippy -p kamn-core --tests -- -D warnings`
