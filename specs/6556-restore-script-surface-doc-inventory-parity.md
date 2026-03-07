@@ -48,3 +48,12 @@ Restore parity between the checked-in script-surface developer docs and the curr
 3. Run `cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture` and confirm failure before docs updates.
 4. Update the two docs to the current filesystem inventory.
 5. Re-run both targeted tests and confirm they pass.
+
+## Integration evidence
+- The existing `kamn-core` docs contract tests remain the real integration path because they load the checked-in docs from disk and compare them against the live `scripts/` filesystem inventory.
+- Verified green commands:
+  - `cargo test -p kamn-core --test script_surface_index_docs -- --nocapture`
+  - `cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture`
+
+## Deviations
+- None.
