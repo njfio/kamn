@@ -40,13 +40,13 @@ wrapper.
 
 ## Acceptance criteria
 
-- [ ] Deterministic M10 month-id helpers live in `kamn-data-layer`
-- [ ] `kamn-core::data_layer_m10_format_partition_name` remains stable and
+- [x] Deterministic M10 month-id helpers live in `kamn-data-layer`
+- [x] `kamn-core::data_layer_m10_format_partition_name` remains stable and
       delegates through a compatibility wrapper
-- [ ] `kamn-data-layer` has targeted tests for the extracted month-id/partition
+- [x] `kamn-data-layer` has targeted tests for the extracted month-id/partition
       policy
-- [ ] Existing `kamn-core` M10 behavior remains green through targeted tests
-- [ ] This issue stays scoped away from the documented M8 and DID blockers
+- [x] Existing `kamn-core` M10 behavior remains green through targeted tests
+- [x] This issue stays scoped away from the documented M8 and DID blockers
 
 ## Files to touch
 
@@ -72,3 +72,24 @@ wrapper.
    arithmetic, and partition-name formatting.
 3. Update `kamn-core` delegation and rerun targeted M10 tests to confirm public
    behavior is unchanged.
+
+## Deviations
+
+- The issue stayed within the intended scope and did not touch the documented
+  M8 or DID blockers.
+- Adding the new `kamn-data-layer` test target required refreshing
+  `fixtures/ci/test_file_size_policy_baseline.env` from `443` to `444`.
+
+## Execution Evidence
+
+- Red:
+  - `cargo test -p kamn-data-layer --test data_layer_m10_partition_month_policy_integration -- --nocapture`
+- Green:
+  - `cargo test -p kamn-data-layer -- --nocapture`
+  - `cargo test -p kamn-core --test data_layer_m10_partition_archival -- --nocapture`
+- Refactor / Integration:
+  - `cargo fmt --all --check`
+  - `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs -- --nocapture`
+  - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+  - `cargo clippy -p kamn-data-layer --tests -- -D warnings`
+  - `cargo clippy -p kamn-core --tests -- -D warnings`
