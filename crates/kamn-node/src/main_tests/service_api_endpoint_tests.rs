@@ -35,6 +35,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[path = "service_api_endpoint_tests/websocket_contract_tests.rs"]
 mod websocket_contract_tests;
+#[path = "service_api_endpoint_tests/balance_contract_tests.rs"]
+mod balance_contract_tests;
 
 const TEST_SERVICE_API_TLS_CERT_PEM: &str = "-----BEGIN CERTIFICATE-----
 MIIDCTCCAfGgAwIBAgIUX9dYtx2K5dX0X33CQvg4re7nVwwwDQYJKoZIhvcNAQEL
