@@ -5,6 +5,10 @@ const TEST_KEY_SEED_HEX: &str = "00112233445566778899aabbccddeeff001122334455667
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
 const SENDER_KEY_REF: &str = "kamn:did:agent:alice#key-agreement-1";
 const RECIPIENT_KEY_REF: &str = "kamn:did:agent:bob#key-agreement-1";
+const EMPTY_PAYLOAD_NONCE: u64 = 41;
+const ZERO_NONCE: u64 = 0;
+const VALID_DECRYPT_NONCE: u64 = 42;
+const REUSED_NONCE: u64 = 43;
 
 fn key_agreement_seed_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -37,37 +41,47 @@ fn engine() -> DirectMessageCryptoEngine {
         .expect("engine init should succeed")
 }
 
-#[test]
-fn integration_encrypt_rejects_empty_plaintext_payload() {
+fn assert_encrypt_error(
+    plaintext: &str,
+    nonce: u64,
+    expected: DirectMessageCryptoError,
+) {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine = engine();
-        assert_eq!(
-            engine.encrypt("", 41),
-            Err(DirectMessageCryptoError::EmptyPayload)
-        );
+        assert_eq!(engine.encrypt(plaintext, nonce), Err(expected));
     });
+}
+
+fn encrypt_payload(
+    engine: &mut DirectMessageCryptoEngine,
+    nonce: u64,
+) -> kamn_crypto::direct_message_crypto::DirectMessageCiphertext {
+    engine.encrypt("payload", nonce).expect("encrypt")
+}
+
+#[test]
+fn integration_encrypt_rejects_empty_plaintext_payload() {
+    assert_encrypt_error("", EMPTY_PAYLOAD_NONCE, DirectMessageCryptoError::EmptyPayload);
 }
 
 #[test]
 fn integration_encrypt_rejects_zero_nonce() {
-    with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
-        let mut engine = engine();
-        assert_eq!(
-            engine.encrypt("payload", 0),
-            Err(DirectMessageCryptoError::InvalidNonce(0))
-        );
-    });
+    assert_encrypt_error(
+        "payload",
+        ZERO_NONCE,
+        DirectMessageCryptoError::InvalidNonce(ZERO_NONCE),
+    );
 }
 
 #[test]
 fn integration_decrypt_rejects_zero_nonce_ciphertext() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine = engine();
-        let mut sealed = engine.encrypt("payload", 42).expect("encrypt");
-        sealed.nonce = 0;
+        let mut sealed = encrypt_payload(&mut engine, VALID_DECRYPT_NONCE);
+        sealed.nonce = ZERO_NONCE;
         assert_eq!(
             engine.decrypt(&sealed),
-            Err(DirectMessageCryptoError::InvalidNonce(0))
+            Err(DirectMessageCryptoError::InvalidNonce(ZERO_NONCE))
         );
     });
 }
@@ -76,10 +90,10 @@ fn integration_decrypt_rejects_zero_nonce_ciphertext() {
 fn integration_encrypt_rejects_nonce_reuse() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine = engine();
-        engine.encrypt("payload", 43).expect("first encrypt");
+        engine.encrypt("payload", REUSED_NONCE).expect("first encrypt");
         assert_eq!(
-            engine.encrypt("payload", 43),
-            Err(DirectMessageCryptoError::NonceReuse(43))
+            engine.encrypt("payload", REUSED_NONCE),
+            Err(DirectMessageCryptoError::NonceReuse(REUSED_NONCE))
         );
     });
 }
