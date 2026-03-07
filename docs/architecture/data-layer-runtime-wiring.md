@@ -19,6 +19,10 @@ shell_neutral_policy_extraction_slice_version=kamn.arch.data-layer-shell-neutral
 shell_neutral_policy_target_crate=crates/kamn-data-layer
 shell_neutral_policy_compatibility_wrapper_path=kamn-core::data_layer_shell_neutral_policy
 shell_neutral_policy_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_shell_neutral_policy.rs,crates/kamn-data-layer/tests/data_layer_shell_neutral_policy_integration.rs
+m11_closure_evidence_extraction_slice_version=kamn.arch.data-layer-m11-closure-evidence-extraction.v1
+m11_closure_evidence_target_crate=crates/kamn-data-layer
+m11_closure_evidence_compatibility_wrapper_path=kamn-core::data_layer_m11_closure_evidence
+m11_closure_evidence_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m11_closure_evidence.rs,crates/kamn-data-layer/tests/data_layer_m11_closure_evidence_integration.rs
 m11_extraction_target_crate=crates/kamn-data-layer
 m11_compatibility_shim_path=kamn-core::data_layer_m11_hardening_readiness
 m11_contract_protection_tests_csv=crates/kamn-core/tests/data_layer_m11_hardening_readiness.rs,crates/kamn-core/tests/data_layer_m11_closure_evidence.rs,crates/kamn-data-layer/tests/data_layer_m11_hardening_readiness_integration.rs
@@ -85,7 +89,7 @@ m10_phase6_runtime_evidence_wrapper_path=kamn-core::data_layer_m10_partition_arc
 | M8 | `kamn-core::data_layer_m8_compliance_lifecycle` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and retention/legal-hold contracts |
 | M9 | `kamn-core::data_layer_m9_*` | `crates/kamn-data-layer` | keep `kamn-core` re-export shim and realtime dispatch contracts |
 | M10 | `kamn-core::data_layer_m10_partition_archival` + `kamn-data-layer::data_layer_m10_archival_retry` + `kamn-data-layer::data_layer_m10_partition_month_policy` + `kamn-data-layer::data_layer_m10_partition_registry_state_machine` + `kamn-data-layer::data_layer_m10_compliance_projection_port` + `kamn-data-layer::data_layer_m10_compliance_projection_bookkeeping` + `kamn-data-layer::data_layer_m10_phase6_compliance_port` + `kamn-data-layer::data_layer_m10_phase6_policy_evaluator` | `crates/kamn-data-layer` | retry, partition month policy, deterministic checksum marker, registry state machine, compliance-projection bookkeeping, projection seam, and phase6 policy evaluators extracted; keep `kamn-core` compatibility wrappers while remaining M10 implementation ownership is migrated incrementally |
-| M11 | `kamn-data-layer::data_layer_prd_critical_scenario_conformance` + `kamn-data-layer::data_layer_m11_hardening_readiness` + `kamn-core::data_layer_m11_closure_evidence` | `crates/kamn-data-layer` | PRD critical-scenario conformance and hardening are extracted; `kamn-core` keeps shims and closure API compatibility |
+| M11 | `kamn-data-layer::data_layer_prd_critical_scenario_conformance` + `kamn-data-layer::data_layer_m11_hardening_readiness` + `kamn-data-layer::data_layer_m11_closure_evidence` | `crates/kamn-data-layer` | PRD critical-scenario conformance, hardening readiness, and closure evidence are extracted; `kamn-core` keeps compatibility shims while downstream imports migrate |
 
 ## Objective
 
