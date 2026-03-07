@@ -1,16 +1,34 @@
 use kamn_core::{GroupChannelCryptoEngine, GroupChannelCryptoError};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 const KEY_AGREEMENT_MASTER_SEED_ENV: &str = "KAMN_KEY_AGREEMENT_MASTER_SEED_HEX";
+const TEST_KEY_SEED_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
 fn ensure_key_agreement_master_seed() {
     static ONCE: OnceLock<()> = OnceLock::new();
     ONCE.get_or_init(|| {
-        std::env::set_var(
-            KEY_AGREEMENT_MASTER_SEED_ENV,
-            "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
-        );
+        std::env::set_var(KEY_AGREEMENT_MASTER_SEED_ENV, TEST_KEY_SEED_HEX);
     });
+}
+
+fn with_key_agreement_seed<T>(value: Option<&str>, f: impl FnOnce() -> T) -> T {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let guard = LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("env lock");
+    let previous = std::env::var(KEY_AGREEMENT_MASTER_SEED_ENV).ok();
+    match value {
+        Some(seed) => std::env::set_var(KEY_AGREEMENT_MASTER_SEED_ENV, seed),
+        None => std::env::remove_var(KEY_AGREEMENT_MASTER_SEED_ENV),
+    }
+    let result = f();
+    match previous {
+        Some(seed) => std::env::set_var(KEY_AGREEMENT_MASTER_SEED_ENV, seed),
+        None => std::env::remove_var(KEY_AGREEMENT_MASTER_SEED_ENV),
+    }
+    drop(guard);
+    result
 }
 
 #[test]
@@ -171,7 +189,10 @@ fn group_sender_keys_debug_output_is_redacted_after_live_round_trip() {
         .distribute_sender_key(
             "kamn:did:agent:alice",
             "kamn:did:agent:alice#sender-key-secret",
-            vec!["kamn:did:agent:bob".to_owned(), "kamn:did:agent:carol".to_owned()],
+            vec![
+                "kamn:did:agent:bob".to_owned(),
+                "kamn:did:agent:carol".to_owned(),
+            ],
         )
         .expect("distribution should succeed");
 
@@ -185,7 +206,10 @@ fn group_sender_keys_debug_output_is_redacted_after_live_round_trip() {
         debug_output.contains("GroupChannelCryptoEngine"),
         "debug output should identify the engine type: {debug_output}"
     );
-    assert!(debug_output.contains("used_nonce_count: 1"), "debug output should expose the redacted nonce summary: {debug_output}");
+    assert!(
+        debug_output.contains("used_nonce_count: 1"),
+        "debug output should expose the redacted nonce summary: {debug_output}"
+    );
     assert!(
         !debug_output.contains("sender-key-secret"),
         "debug output must not expose sender key refs: {debug_output}"
@@ -194,4 +218,68 @@ fn group_sender_keys_debug_output_is_redacted_after_live_round_trip() {
         !debug_output.contains("kamn:did:agent:bob"),
         "debug output must not expose recipient allowlists: {debug_output}"
     );
+}
+
+#[test]
+fn cached_group_seed_allows_repeated_operations_after_env_removal() {
+    with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
+        let mut engine = GroupChannelCryptoEngine::new("channel:group:cached")
+            .expect("engine should initialize");
+        engine
+            .distribute_sender_key(
+                "kamn:did:agent:alice",
+                "kamn:did:agent:alice#sender-key-1",
+                vec!["kamn:did:agent:bob".to_owned()],
+            )
+            .expect("distribution should succeed");
+
+        let first = engine
+            .encrypt("kamn:did:agent:alice", "payload-a", 1)
+            .expect("first encrypt should succeed");
+
+        std::env::remove_var(KEY_AGREEMENT_MASTER_SEED_ENV);
+
+        let second = engine
+            .encrypt("kamn:did:agent:alice", "payload-b", 2)
+            .expect("cached seed should allow second encrypt");
+        assert_eq!(
+            engine
+                .decrypt("kamn:did:agent:bob", &first)
+                .expect("cached seed should allow decrypt after env removal"),
+            "payload-a"
+        );
+        assert_eq!(
+            engine
+                .decrypt("kamn:did:agent:bob", &second)
+                .expect("cached seed should allow decrypt of later ciphertext"),
+            "payload-b"
+        );
+    });
+}
+
+#[test]
+fn constructor_stays_env_independent_until_first_group_operation() {
+    with_key_agreement_seed(None, || {
+        let mut engine = GroupChannelCryptoEngine::new("channel:group:late-seed")
+            .expect("constructor should not require env seed");
+        engine
+            .distribute_sender_key(
+                "kamn:did:agent:alice",
+                "kamn:did:agent:alice#sender-key-1",
+                vec!["kamn:did:agent:bob".to_owned()],
+            )
+            .expect("distribution should succeed without env seed");
+
+        std::env::set_var(KEY_AGREEMENT_MASTER_SEED_ENV, TEST_KEY_SEED_HEX);
+
+        let sealed = engine
+            .encrypt("kamn:did:agent:alice", "late-seed", 3)
+            .expect("encrypt should succeed once env seed is set");
+        assert_eq!(
+            engine
+                .decrypt("kamn:did:agent:bob", &sealed)
+                .expect("decrypt should succeed once env seed is cached"),
+            "late-seed"
+        );
+    });
 }

@@ -36,6 +36,7 @@ Stop reparsing `KAMN_KEY_AGREEMENT_MASTER_SEED_HEX` on every group-message crypt
 
 ## Files to touch
 - `crates/kamn-core/src/group_channel_crypto.rs`
+- `crates/kamn-core/tests/group_sender_keys.rs`
 - `crates/kamn-crypto/src/direct_message_crypto.rs`
 - `specs/6570-cache-group-master-seed-lazily.md`
 
@@ -63,6 +64,7 @@ Stop reparsing `KAMN_KEY_AGREEMENT_MASTER_SEED_HEX` on every group-message crypt
 - `cargo test -p kamn-crypto --test direct_message_crypto_integration -- --nocapture`
 - `cargo clippy -p kamn-core --tests -- -D warnings`
 - `cargo clippy -p kamn-crypto --tests -- -D warnings`
+- `bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/ci-critical-path-core-6570b.json --node-json /tmp/ci-critical-path-node-6570b.json --output-json /tmp/ci-critical-path-policy-6570b.json`
 
 ## Shell-surface closure template
 - shell_loc_delta_actual: 0
