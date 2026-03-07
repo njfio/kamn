@@ -26,7 +26,7 @@ Move the governance/capability moratorium activation anchor to the merge commit 
 
 ## Acceptance Criteria
 - [ ] `.ci/governance-feature-commit-ratio-moratorium.env` sets `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=eded44be72ab5af7a709fd54809af745f918cb7a`.
-- [ ] The exact local reproduction against `main` returns `status=ok`, `governance_ratio=0.0`, and `feature_ratio=0.0` or another passing ratio for the post-activation range.
+- [ ] The exact local reproduction against `main` returns `status=ok` for the post-activation range.
 - [ ] The workflow/docs contract coverage asserts the corrected activation-base marker.
 
 ## Files To Touch
