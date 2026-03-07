@@ -96,3 +96,6 @@ surface from `kamn-core` into `kamn-data-layer` while preserving the existing
   - run strict clippy for touched crates
   - run targeted `kamn-data-layer`, `kamn-core`, extraction-docs, and
     test-file-inventory lanes
+
+## Deviations
+- None.
