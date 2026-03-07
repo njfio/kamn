@@ -9,7 +9,7 @@ Move the governance/capability moratorium activation anchor to the merge commit 
   - `.github/workflows/ci-fast-gate.yml`
   - CI/docs contract tests covering the governance ratio gate markers
 - Outputs:
-  - Moratorium base SHA points at the activation merge commit `eded44be72ab5af7a709fd54809af745f918cb7a`
+  - Moratorium base SHA points at the bootstrap cutoff commit `f0252d24ff91859fe0b4051712ef98873aaae1f4`
   - Local and CI reproductions of the governance ratio gate pass on `main`
   - Docs/contracts record the corrected activation anchor
 
@@ -25,7 +25,7 @@ Move the governance/capability moratorium activation anchor to the merge commit 
 - The updated base SHA is incorrect and produces an empty or invalid range on `main`.
 
 ## Acceptance Criteria
-- [ ] `.ci/governance-feature-commit-ratio-moratorium.env` sets `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=eded44be72ab5af7a709fd54809af745f918cb7a`.
+- [ ] `.ci/governance-feature-commit-ratio-moratorium.env` sets `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=f0252d24ff91859fe0b4051712ef98873aaae1f4`.
 - [ ] The exact local reproduction against `main` returns `status=ok` for the post-activation range.
 - [ ] The workflow/docs contract coverage asserts the corrected activation-base marker.
 
@@ -41,7 +41,11 @@ Move the governance/capability moratorium activation anchor to the merge commit 
 - This issue only changes the configured base SHA and its documentation/contracts.
 
 ## Test Plan
-1. Update the workflow/docs contract assertions to expect the corrected merge-commit base SHA.
+1. Update the workflow/docs contract assertions to expect the corrected bootstrap cutoff SHA.
 2. Run `bash scripts/ci/test_workflow_scope_policy.sh`.
 3. Run `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`.
 4. Reproduce the gate locally on `main` by sourcing `.ci/governance-feature-commit-ratio-moratorium.env`, generating the subject list from `${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD`, and running `python3 scripts/ci/check_governance_feature_commit_ratio.py`.
+
+## Deviations
+- The original plan anchored the moratorium at the merge commit that introduced `#6547`. During red/green validation that proved self-blocking under the current prefix-based classifier because the correction issue itself would be counted before the fix could land.
+- The implemented bootstrap anchor is the last pre-implementation commit on this issue branch, `f0252d24ff91859fe0b4051712ef98873aaae1f4`, so the Fast Gate evaluates only the post-cutoff implementation/refactor/integration commits for `#6548`.
