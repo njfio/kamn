@@ -189,6 +189,7 @@ chore(governance): add subtask template (#61)
 - Keep commits atomic by concern: tests/fixtures, implementation, docs/governance.
 - One logical change per commit.
 - Rebase/sync frequently to reduce merge drift.
+- Temporary capability moratorium: Fast Gate evaluates the latest 50 non-merge commits and requires at least 80% of that window to classify as feature/capability commit types (`feat`, `fix`, `refactor`, `test`, `perf`, `integrate`).
 
 ---
 
