@@ -42,6 +42,11 @@ impl DataLayerM10ComplianceProjectionPort for FakeProjectionPort {
         requester_owner_did: &str,
         owner_did: &str,
     ) -> Result<String, DataLayerM10ComplianceProjectionPortError> {
+        if requester_owner_did.trim().is_empty() || owner_did.trim().is_empty() {
+            return Err(DataLayerM10ComplianceProjectionPortError::InvalidInput(
+                "owner/message id cannot be empty".to_owned(),
+            ));
+        }
         if requester_owner_did == owner_did {
             Ok(owner_did.to_owned())
         } else {
@@ -171,10 +176,10 @@ fn integration_projection_bookkeeping_fails_closed_on_lookup_and_invalid_input()
             &mut state_machine,
             &port,
             DataLayerM10ComplianceShredProjectionRequest {
-                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
-                owner_did: "kamn:did:owner:alpha".to_owned(),
+                requester_owner_did: "".to_owned(),
+                owner_did: "".to_owned(),
                 partition_month_id: 202401,
-                partition_message_ids: vec!["".to_owned()],
+                partition_message_ids: vec!["msg-1".to_owned()],
             },
         ),
         Err(DataLayerM10ComplianceProjectionBookkeepingError::PortInvalidInput {

@@ -1,14 +1,12 @@
-use std::collections::BTreeSet;
-
 use kamn_data_layer::{
+    data_layer_m10_project_partition_shred_completeness_with_port as data_layer_m10_project_partition_shred_completeness_with_port_policy,
     data_layer_m10_format_partition_name as data_layer_m10_format_partition_name_policy,
+    DataLayerM10ComplianceProjectionBookkeepingError,
     DataLayerM10ComplianceProjectionMessageState, DataLayerM10ComplianceProjectionPort,
     DataLayerM10ComplianceProjectionPortError, DataLayerM10PartitionRegistryStateMachineError,
 };
 
-use super::shared::{
-    map_partition_month_policy_error_to_m10, validate_non_empty, validate_partition_month_id,
-};
+use super::shared::map_partition_month_policy_error_to_m10;
 use super::*;
 use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
 
@@ -88,22 +86,34 @@ fn map_m8_projection_error_to_port(
     }
 }
 
-fn map_projection_port_error_to_m10(
-    error: DataLayerM10ComplianceProjectionPortError,
+fn map_projection_bookkeeping_error_to_m10(
+    error: DataLayerM10ComplianceProjectionBookkeepingError,
 ) -> DataLayerM10PartitionLifecycleError {
     match error {
-        DataLayerM10ComplianceProjectionPortError::OwnerScopeViolation => {
-            DataLayerM10PartitionLifecycleError::OwnerScopeViolation {
-                reason_code: DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
-            }
+        DataLayerM10ComplianceProjectionBookkeepingError::EmptyField(field) => {
+            DataLayerM10PartitionLifecycleError::EmptyField(field)
         }
-        DataLayerM10ComplianceProjectionPortError::LookupFailed(detail) => {
-            DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
-                reason_code: DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE,
-                detail,
-            }
+        DataLayerM10ComplianceProjectionBookkeepingError::InvalidPartitionMonthId(value) => {
+            DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(value)
         }
-        DataLayerM10ComplianceProjectionPortError::InvalidInput(detail) => {
+        DataLayerM10ComplianceProjectionBookkeepingError::OwnerScopeViolation { reason_code } => {
+            DataLayerM10PartitionLifecycleError::OwnerScopeViolation { reason_code }
+        }
+        DataLayerM10ComplianceProjectionBookkeepingError::PortLookupFailed {
+            reason_code,
+            detail,
+        }
+        | DataLayerM10ComplianceProjectionBookkeepingError::PortInvalidInput {
+            reason_code,
+            detail,
+        } => DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
+            reason_code,
+            detail,
+        },
+        DataLayerM10ComplianceProjectionBookkeepingError::PartitionNotFound(name) => {
+            DataLayerM10PartitionLifecycleError::PartitionNotFound(name)
+        }
+        DataLayerM10ComplianceProjectionBookkeepingError::RegistryMutationFailed(detail) => {
             DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
                 reason_code: DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE,
                 detail,
@@ -142,43 +152,6 @@ fn map_state_machine_error_to_m10(
     }
 }
 
-fn collect_partition_message_ids(
-    partition_message_ids: Vec<String>,
-) -> Result<BTreeSet<String>, DataLayerM10PartitionLifecycleError> {
-    if partition_message_ids.is_empty() {
-        return Err(DataLayerM10PartitionLifecycleError::EmptyField(
-            "partition_message_ids",
-        ));
-    }
-    let mut message_ids = BTreeSet::new();
-    for message_id in partition_message_ids {
-        validate_non_empty(message_id.as_str(), "partition_message_ids")?;
-        message_ids.insert(message_id);
-    }
-    Ok(message_ids)
-}
-
-fn evaluate_partition_message_shred_completeness(
-    compliance_port: &impl DataLayerM10ComplianceProjectionPort,
-    owner_did: &str,
-    message_ids: &BTreeSet<String>,
-) -> Result<(usize, usize), DataLayerM10PartitionLifecycleError> {
-    let mut shredded_partition_messages = 0usize;
-    let mut legal_hold_active_messages = 0usize;
-    for message_id in message_ids {
-        let message = compliance_port
-            .message_for_owner(owner_did, message_id.as_str())
-            .map_err(map_projection_port_error_to_m10)?;
-        if message.legal_hold_active {
-            legal_hold_active_messages += 1;
-        }
-        if message.shredded_at_epoch_seconds.is_some() {
-            shredded_partition_messages += 1;
-        }
-    }
-    Ok((shredded_partition_messages, legal_hold_active_messages))
-}
-
 impl DataLayerM10PartitionLifecycleRegistry {
     /// Creates an empty partition lifecycle registry.
     pub fn new() -> Self {
@@ -213,48 +186,12 @@ impl DataLayerM10PartitionLifecycleRegistry {
         request: DataLayerM10ComplianceShredProjectionRequest,
     ) -> Result<DataLayerM10ComplianceShredProjectionReport, DataLayerM10PartitionLifecycleError>
     {
-        let owner_did = compliance_port
-            .authorize_owner_scope(
-                request.requester_owner_did.as_str(),
-                request.owner_did.as_str(),
-            )
-            .map_err(map_projection_port_error_to_m10)?;
-        validate_partition_month_id(request.partition_month_id)?;
-        let message_ids = collect_partition_message_ids(request.partition_message_ids)?;
-        let total_partition_messages = message_ids.len();
-        let (shredded_partition_messages, legal_hold_active_messages) =
-            evaluate_partition_message_shred_completeness(
-                compliance_port,
-                owner_did.as_str(),
-                &message_ids,
-            )?;
-        let all_messages_shredded = shredded_partition_messages == total_partition_messages;
-        let reason_code = if legal_hold_active_messages > 0 {
-            DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE
-        } else if all_messages_shredded {
-            DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE
-        } else {
-            DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE
-        };
-
-        let record = self
-            .state_machine
-            .apply_partition_shred_completeness(
-                request.partition_month_id,
-                all_messages_shredded,
-                DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
-            )
-            .map_err(map_state_machine_error_to_m10)?;
-
-        Ok(DataLayerM10ComplianceShredProjectionReport {
-            partition_month_id: record.partition_month_id,
-            partition_name: record.partition_name.clone(),
-            total_partition_messages,
-            shredded_partition_messages,
-            all_messages_shredded,
-            reason_code,
-            projection_reason_code: DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
-        })
+        data_layer_m10_project_partition_shred_completeness_with_port_policy(
+            &mut self.state_machine,
+            compliance_port,
+            request,
+        )
+        .map_err(map_projection_bookkeeping_error_to_m10)
     }
 
     /// Plans future partition names for `months_ahead` months after `reference_month_id`.

@@ -7,6 +7,8 @@ pub mod data_layer_hashing;
 pub mod data_layer_m10_archival_retry;
 /// M10 compliance projection seam contracts shared by extraction adapters.
 pub mod data_layer_m10_compliance_projection_port;
+/// M10 compliance-projection bookkeeping extracted from core.
+pub mod data_layer_m10_compliance_projection_bookkeeping;
 /// M10 partition month-id parsing and naming policy extracted from core.
 pub mod data_layer_m10_partition_month_policy;
 /// M10 deterministic partition registry lifecycle state machine extracted from core.
@@ -21,6 +23,7 @@ pub mod data_layer_m10_phase6_runtime_evidence;
 pub mod data_layer_m11_hardening_readiness;
 
 pub use data_layer_m10_archival_retry::*;
+pub use data_layer_m10_compliance_projection_bookkeeping::*;
 pub use data_layer_m10_compliance_projection_port::*;
 pub use data_layer_m10_partition_month_policy::*;
 pub use data_layer_m10_partition_registry_state_machine::*;

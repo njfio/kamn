@@ -45,29 +45,3 @@ pub(super) fn validate_non_empty(
     }
     Ok(())
 }
-
-pub(super) fn validate_partition_month_id(
-    partition_month_id: u32,
-) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    kamn_data_layer::data_layer_m10_validate_partition_month_id(partition_month_id)
-        .map_err(map_partition_month_policy_error_to_m10)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::validate_partition_month_id;
-    use crate::DataLayerM10PartitionLifecycleError;
-
-    #[test]
-    fn unit_split_month_id_and_validation_reject_invalid_ranges() {
-        assert_eq!(
-            validate_partition_month_id(196912),
-            Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(196912))
-        );
-        assert_eq!(
-            validate_partition_month_id(202513),
-            Err(DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(202513))
-        );
-        assert_eq!(validate_partition_month_id(202512), Ok(()));
-    }
-}
