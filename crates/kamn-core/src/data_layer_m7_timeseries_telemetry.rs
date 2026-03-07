@@ -10,6 +10,11 @@ use crate::{
 };
 use kamn_data_layer::{
     project_data_layer_m7_observability_sample as project_m7_observability_sample,
+    project_data_layer_m7_owner_billing_daily, reconcile_data_layer_m7_owner_billing_daily,
+    DataLayerM7BillingDailyProjection as ExtractedBillingProjection,
+    DataLayerM7BillingProjectionSampleInput, DataLayerM7BillingReconciliationError,
+    DataLayerM7BillingReconciliationInput as ExtractedBillingInput,
+    DataLayerM7BillingReconciliationReport as ExtractedBillingReport,
     DataLayerM7ObservabilityProjection, DataLayerM7ObservabilityProjectionInput,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -495,40 +500,10 @@ impl DataLayerM7TelemetryRegistry {
             DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
         )?;
         let owner_points = self.owner_points_or_error(query.owner_did.as_str())?;
-
-        let mut grouped: BTreeMap<u64, (u64, u64, u64, u64)> = BTreeMap::new();
-        for point in owner_points {
-            let entry = grouped
-                .entry(point.bucket_day_epoch_seconds)
-                .or_insert((0, 0, 0, 0));
-            entry.0 += point.message_count;
-            entry.1 += point.bytes_stored;
-            entry.2 += point.query_count;
-            entry.3 += point.embedding_count;
-        }
-
-        Ok(grouped
-            .into_iter()
-            .map(
-                |(
-                    bucket_day_epoch_seconds,
-                    (
-                        messages_stored_total,
-                        bytes_stored_total,
-                        queries_executed_total,
-                        embeddings_generated_total,
-                    ),
-                )| DataLayerM7OwnerBillingDailyProjection {
-                    owner_did: query.owner_did.clone(),
-                    bucket_day_epoch_seconds,
-                    messages_stored_total,
-                    bytes_stored_total,
-                    queries_executed_total,
-                    embeddings_generated_total,
-                    reason_code: DATA_LAYER_M7_AGGREGATE_REASON_CODE,
-                },
-            )
-            .collect())
+        Ok(project_m7_owner_billing_daily_rows(
+            query.owner_did.as_str(),
+            owner_points,
+        ))
     }
 
     /// Reconciles one owner daily billing statement against projected totals.
@@ -550,54 +525,23 @@ impl DataLayerM7TelemetryRegistry {
                 input.bucket_day_epoch_seconds,
             ));
         }
+        let owner_points = self.owner_points_or_error(input.owner_did.as_str())?;
+        let extracted_projections =
+            project_m7_owner_billing_daily_projection(input.owner_did.as_str(), owner_points);
+        let extracted_report = reconcile_data_layer_m7_owner_billing_daily(
+            &extracted_projections,
+            ExtractedBillingInput {
+                owner_did: input.owner_did.clone(),
+                bucket_day_epoch_seconds: input.bucket_day_epoch_seconds,
+                messages_stored_total: input.messages_stored_total,
+                bytes_stored_total: input.bytes_stored_total,
+                queries_executed_total: input.queries_executed_total,
+                embeddings_generated_total: input.embeddings_generated_total,
+            },
+        )
+        .map_err(map_m7_billing_error_to_timeseries)?;
 
-        let projections = self.project_owner_billing_daily(DataLayerM7BillingQuery {
-            requester_owner_did: input.requester_owner_did.clone(),
-            owner_did: input.owner_did.clone(),
-        })?;
-        let projection = projections
-            .iter()
-            .find(|entry| entry.bucket_day_epoch_seconds == input.bucket_day_epoch_seconds);
-
-        let projected_messages_stored_total =
-            projection.map_or(0, |entry| entry.messages_stored_total);
-        let projected_bytes_stored_total = projection.map_or(0, |entry| entry.bytes_stored_total);
-        let projected_queries_executed_total =
-            projection.map_or(0, |entry| entry.queries_executed_total);
-        let projected_embeddings_generated_total =
-            projection.map_or(0, |entry| entry.embeddings_generated_total);
-
-        let mismatch = projected_messages_stored_total != input.messages_stored_total
-            || projected_bytes_stored_total != input.bytes_stored_total
-            || projected_queries_executed_total != input.queries_executed_total
-            || projected_embeddings_generated_total != input.embeddings_generated_total;
-
-        let (decision, reason_code) = if mismatch {
-            (
-                DataLayerM7BillingReconciliationDecision::Mismatch,
-                DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE,
-            )
-        } else {
-            (
-                DataLayerM7BillingReconciliationDecision::Match,
-                DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE,
-            )
-        };
-
-        Ok(DataLayerM7BillingReconciliationReport {
-            owner_did: input.owner_did,
-            bucket_day_epoch_seconds: input.bucket_day_epoch_seconds,
-            decision,
-            reason_code,
-            projected_messages_stored_total,
-            projected_bytes_stored_total,
-            projected_queries_executed_total,
-            projected_embeddings_generated_total,
-            statement_messages_stored_total: input.messages_stored_total,
-            statement_bytes_stored_total: input.bytes_stored_total,
-            statement_queries_executed_total: input.queries_executed_total,
-            statement_embeddings_generated_total: input.embeddings_generated_total,
-        })
+        Ok(core_m7_billing_reconciliation_report(extracted_report))
     }
 
     /// Evaluates owner telemetry points through canonical observability contracts.
@@ -700,6 +644,85 @@ pub fn data_layer_m7_project_observability_sample(
 fn map_observability_error_to_timeseries(_error: ObservabilityError) -> DataLayerM7TimeseriesError {
     DataLayerM7TimeseriesError::ObservabilitySampleInvalid {
         reason_code: DATA_LAYER_M7_OBSERVABILITY_SAMPLE_INVALID_REASON_CODE,
+    }
+}
+
+fn map_m7_billing_error_to_timeseries(
+    error: DataLayerM7BillingReconciliationError,
+) -> DataLayerM7TimeseriesError {
+    match error {
+        DataLayerM7BillingReconciliationError::InvalidBucketDayEpochSeconds(value) => {
+            DataLayerM7TimeseriesError::InvalidBucketDayEpochSeconds(value)
+        }
+    }
+}
+
+fn project_m7_owner_billing_daily_rows(
+    owner_did: &str,
+    owner_points: &[DataLayerM7TelemetryPointRecord],
+) -> Vec<DataLayerM7OwnerBillingDailyProjection> {
+    project_m7_owner_billing_daily_projection(owner_did, owner_points)
+        .into_iter()
+        .map(core_m7_billing_daily_projection)
+        .collect()
+}
+
+fn project_m7_owner_billing_daily_projection(
+    owner_did: &str,
+    owner_points: &[DataLayerM7TelemetryPointRecord],
+) -> Vec<ExtractedBillingProjection> {
+    project_data_layer_m7_owner_billing_daily(
+        owner_did,
+        &owner_points
+            .iter()
+            .map(|point| DataLayerM7BillingProjectionSampleInput {
+                bucket_day_epoch_seconds: point.bucket_day_epoch_seconds,
+                message_count: point.message_count,
+                bytes_stored: point.bytes_stored,
+                query_count: point.query_count,
+                embedding_count: point.embedding_count,
+            })
+            .collect::<Vec<_>>(),
+    )
+}
+
+fn core_m7_billing_daily_projection(
+    projection: ExtractedBillingProjection,
+) -> DataLayerM7OwnerBillingDailyProjection {
+    DataLayerM7OwnerBillingDailyProjection {
+        owner_did: projection.owner_did,
+        bucket_day_epoch_seconds: projection.bucket_day_epoch_seconds,
+        messages_stored_total: projection.messages_stored_total,
+        bytes_stored_total: projection.bytes_stored_total,
+        queries_executed_total: projection.queries_executed_total,
+        embeddings_generated_total: projection.embeddings_generated_total,
+        reason_code: DATA_LAYER_M7_AGGREGATE_REASON_CODE,
+    }
+}
+
+fn core_m7_billing_reconciliation_report(
+    report: ExtractedBillingReport,
+) -> DataLayerM7BillingReconciliationReport {
+    DataLayerM7BillingReconciliationReport {
+        owner_did: report.owner_did,
+        bucket_day_epoch_seconds: report.bucket_day_epoch_seconds,
+        decision: match report.decision {
+            kamn_data_layer::DataLayerM7BillingReconciliationDecision::Match => {
+                DataLayerM7BillingReconciliationDecision::Match
+            }
+            kamn_data_layer::DataLayerM7BillingReconciliationDecision::Mismatch => {
+                DataLayerM7BillingReconciliationDecision::Mismatch
+            }
+        },
+        reason_code: report.reason_code,
+        projected_messages_stored_total: report.projected_messages_stored_total,
+        projected_bytes_stored_total: report.projected_bytes_stored_total,
+        projected_queries_executed_total: report.projected_queries_executed_total,
+        projected_embeddings_generated_total: report.projected_embeddings_generated_total,
+        statement_messages_stored_total: report.statement_messages_stored_total,
+        statement_bytes_stored_total: report.statement_bytes_stored_total,
+        statement_queries_executed_total: report.statement_queries_executed_total,
+        statement_embeddings_generated_total: report.statement_embeddings_generated_total,
     }
 }
 
