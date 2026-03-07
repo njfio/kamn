@@ -54,8 +54,14 @@ Centralize the deterministic service-auth key setup used by the live E2E workflo
 - Integration:
   - rerun `cargo test -p kamn-core --test e2e_live_workflow_lane -- --nocapture`
 
+## Deviations
+- Centralization went slightly further than the initial minimum slice: the workflow now centralizes both the deterministic private key and its deterministic public key at workflow scope, removing the repeated Python derivation snippet from all three jobs.
+
+## Verification evidence
+- `cargo test -p kamn-core --test e2e_live_workflow_lane -- --nocapture`
+
 ## Shell-surface closure template
-- shell_loc_delta_actual: 0
-- rust_loc_delta_actual: 0
-- shell_to_rust_ratio_delta_actual: 0.0
-- shell_surface_ratio_target_status: neutral
+- shell_loc_delta_actual: -3
+- rust_loc_delta_actual: 74
+- shell_to_rust_ratio_delta_actual: -0.04
+- shell_surface_ratio_target_status: improved
