@@ -173,8 +173,8 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 kamn_core_decomposition_map_version=kamn.arch.kamn-core-decomposition-map.v1
 kamn_core_decomposition_reason_taxonomy_version=kamn.arch.kamn-core-decomposition-reason-taxonomy.v1
 kamn_core_decomposition_reason_codes_csv=module_group_boundary_missing,tranche_ordering_missing,target_destination_missing,hotspot_prioritization_missing,architecture_index_link_missing
-kamn_core_decomposition_tranche_count=6
-kamn_core_decomposition_target_crates_csv=kamn-runtime-guards,kamn-snapshot-journal,kamn-types,kamn-kolme,kamn-bridges,kamn-crypto
+kamn_core_decomposition_tranche_count=7
+kamn_core_decomposition_target_crates_csv=kamn-runtime-guards,kamn-snapshot-journal,kamn-types,kamn-data-layer,kamn-kolme,kamn-bridges,kamn-crypto
 kamn_core_decomposition_status=active
 
 | Tranche | Module-group boundary | Extraction destination | Ordering rationale |
@@ -182,9 +182,10 @@ kamn_core_decomposition_status=active
 | T1 | Runtime guard and policy surfaces (`anti_spam`, `fairness_policy`, `quota_policy`, `message_delivery_guards`, `retention_engine`, `watchdog`) | `crates/kamn-runtime-guards` | Lowest external coupling; completes shim retirement first. |
 | T2 | Snapshot/journal persistence helpers consumed by lifecycle domains | `crates/kamn-snapshot-journal` | Shared storage helpers are already partially extracted and can be completed with low API churn. |
 | T3 | Identity/value boundary surfaces (`did`, selected DID/value types, compatibility helpers currently mirrored through `kamn-types`) | `crates/kamn-types` | Shared identity/value contracts should stabilize before later bridge and crypto tranches consume a true leaf crate instead of `kamn-core` pass-through exports. |
-| T4 | Kolme runtime-commit transport/finality/codec compatibility modules (`kolme_runtime_commit`) | `crates/kamn-kolme` | Existing compatibility facade allows incremental extraction without runtime behavior change. |
-| T5 | Bridge/receipt normalization surfaces (`bridge_adapter`, `cross_chain_bridge`, `cross_chain_receipt`, platform bridges) | `crates/kamn-bridges` | External adapter seams are explicit and can be lifted behind crate boundaries. |
-| T6 | Crypto-heavy messaging and proof surfaces (`direct_message_crypto`, `group_channel_crypto`, `signer_backend`, `zk_message_proofs`) | `crates/kamn-crypto` | Security-sensitive extraction lands last after domain seams are stabilized by earlier tranches. |
+| T4 | Remaining data-layer surfaces (`data_layer_m0`-`data_layer_m11`, `data_layer_phase2_crypto_blind_index_pipeline`, `data_layer_postgres_execution_adapter`, `data_layer_postgres_repository_bridge`, `data_layer_prd_critical_scenario_conformance`, `data_layer_shell_neutral_policy`) | `crates/kamn-data-layer` | `kamn-data-layer` already owns extracted M10/M11 helper seams, so expanding that same boundary next reduces a large cohesive monolith surface before later external-facing tranches depend on it. |
+| T5 | Kolme runtime-commit transport/finality/codec compatibility modules (`kolme_runtime_commit`) | `crates/kamn-kolme` | Existing compatibility facade allows incremental extraction without runtime behavior change. |
+| T6 | Bridge/receipt normalization surfaces (`bridge_adapter`, `cross_chain_bridge`, `cross_chain_receipt`, platform bridges) | `crates/kamn-bridges` | External adapter seams are explicit and can be lifted behind crate boundaries. |
+| T7 | Crypto-heavy messaging and proof surfaces (`direct_message_crypto`, `group_channel_crypto`, `signer_backend`, `zk_message_proofs`) | `crates/kamn-crypto` | Security-sensitive extraction lands last after domain seams are stabilized by earlier tranches. |
 
 ## Top Monolith Hotspots (By LOC)
 
