@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Sequence
 
+EMPTY_REASON = "governance_commit_subjects_empty"
+UNCLASSIFIED_REASON = "governance_commit_subject_unclassified"
+THRESHOLD_REASON = "governance_commit_ratio_threshold_exceeded"
+
 
 @dataclass(frozen=True)
 class Classification:
@@ -19,6 +23,23 @@ class Classification:
 
 def serialize_float(value: float) -> float:
     return round(value, 6)
+
+
+def reason_codes_for_classification(
+    classification: Classification,
+    max_governance_ratio: float,
+) -> Sequence[str]:
+    governance_total = classification.governance_count
+    feature_total = classification.feature_count
+    known_total = governance_total + feature_total
+    reason_codes = []
+    if classification.non_merge_commit_total == 0:
+        reason_codes.append(EMPTY_REASON)
+    if classification.unknown_subjects:
+        reason_codes.append(UNCLASSIFIED_REASON)
+    if known_total > 0 and governance_total / known_total > max_governance_ratio:
+        reason_codes.append(THRESHOLD_REASON)
+    return tuple(reason_codes)
 
 
 def build_report(
@@ -39,13 +60,7 @@ def build_report(
     if known_total > 0:
         governance_ratio = governance_count / known_total
         feature_ratio = feature_count / known_total
-    reason_codes = []
-    if classification.non_merge_commit_total == 0:
-        reason_codes.append("governance_commit_subjects_empty")
-    if classification.unknown_subjects:
-        reason_codes.append("governance_commit_subject_unclassified")
-    if known_total > 0 and governance_ratio > max_governance_ratio:
-        reason_codes.append("governance_commit_ratio_threshold_exceeded")
+    reason_codes = reason_codes_for_classification(classification, max_governance_ratio)
     return {
         "schema_version": schema_version,
         "reason_taxonomy_version": reason_taxonomy_version,
@@ -76,7 +91,7 @@ def build_error_report(
     return {
         "schema_version": schema_version,
         "reason_taxonomy_version": reason_taxonomy_version,
-        "reason_codes_csv": "governance_commit_subjects_empty",
+        "reason_codes_csv": EMPTY_REASON,
         "status": "violation",
         "error": error,
         "input_non_merge_commit_total": 0,

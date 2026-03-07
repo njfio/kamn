@@ -11,26 +11,39 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 test_harness_require_executable "$CHECKER" "expected governance/feature commit-ratio checker to be executable"
 
 run_checker() {
+  local subjects_file="$1"
+  local window_size="$2"
+  local max_governance_ratio="$3"
+  local output_json="$4"
   python3 "$CHECKER" \
-    --commit-subjects-file "$1" \
-    --window-size "$2" \
-    --max-governance-ratio "$3" \
-    --output-json "$4"
+    --commit-subjects-file "$subjects_file" \
+    --window-size "$window_size" \
+    --max-governance-ratio "$max_governance_ratio" \
+    --output-json "$output_json"
 }
 
 assert_output_contains() {
-  if ! printf '%s\n' "$1" | grep -q "^$2$"; then
-    echo "$3" >&2
-    printf '%s\n' "$1" >&2
+  local output="$1"
+  local pattern="$2"
+  local message="$3"
+  if ! printf '%s\n' "$output" | grep -q "^$pattern$"; then
+    echo "$message" >&2
+    printf '%s\n' "$output" >&2
     exit 1
   fi
 }
 
 assert_failure() {
-  if run_checker "$2" "$3" "$4" "$5" >"$TMP_DIR/$1.out" 2>"$TMP_DIR/$1.err"; then
-    echo "$6" >&2
-    cat "$TMP_DIR/$1.out" >&2 || true
-    cat "$TMP_DIR/$1.err" >&2 || true
+  local label="$1"
+  local subjects_file="$2"
+  local window_size="$3"
+  local max_governance_ratio="$4"
+  local output_json="$5"
+  local message="$6"
+  if run_checker "$subjects_file" "$window_size" "$max_governance_ratio" "$output_json" >"$TMP_DIR/$label.out" 2>"$TMP_DIR/$label.err"; then
+    echo "$message" >&2
+    cat "$TMP_DIR/$label.out" >&2 || true
+    cat "$TMP_DIR/$label.err" >&2 || true
     exit 1
   fi
 }
