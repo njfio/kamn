@@ -193,6 +193,61 @@ fn regression_rejects_replayed_solana_inbound_projection_event() {
 }
 
 #[test]
+fn contract_cross_chain_bridge_keeps_inbound_validation_branch_regressions() {
+    const TEST_SOURCE: &str = include_str!("cross_chain_bridge.rs");
+
+    assert!(
+        TEST_SOURCE.contains(
+            "Err(CrossChainBridgeError::UnauthorizedListener(\n            \"kamn:did:agent:listener-x\".to_owned()"
+        ),
+        "cross_chain_bridge.rs must keep the UnauthorizedListener regression"
+    );
+    assert!(
+        TEST_SOURCE.contains(
+            "Err(CrossChainBridgeError::RouteTargetMismatch {\n            chain: CrossChainNetwork::Ethereum,\n            external_channel_id: \"ethereum:sepolia:contract:escrow-v1\".to_owned()"
+        ),
+        "cross_chain_bridge.rs must keep the RouteTargetMismatch regression"
+    );
+}
+
+#[test]
+fn inbound_rejects_unauthorized_listener() {
+    let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
+
+    assert_eq!(
+        engine.process_inbound(&CrossChainInboundRequest {
+            listener_did: "kamn:did:agent:listener-x".to_owned(),
+            observed_at_unix: 1_707_383_260,
+            chain: CrossChainNetwork::Ethereum,
+            inbound: eth_inbound("kamn:did:agent:listener-target-eth"),
+        }),
+        Err(CrossChainBridgeError::UnauthorizedListener(
+            "kamn:did:agent:listener-x".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn inbound_rejects_route_target_mismatch() {
+    let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
+
+    assert_eq!(
+        engine.process_inbound(&CrossChainInboundRequest {
+            listener_did: "kamn:did:agent:listener-1".to_owned(),
+            observed_at_unix: 1_707_383_260,
+            chain: CrossChainNetwork::Ethereum,
+            inbound: eth_inbound("kamn:did:agent:listener-target-sol"),
+        }),
+        Err(CrossChainBridgeError::RouteTargetMismatch {
+            chain: CrossChainNetwork::Ethereum,
+            external_channel_id: "ethereum:sepolia:contract:escrow-v1".to_owned(),
+            expected_target_did: "kamn:did:agent:listener-target-eth".to_owned(),
+            provided_target_did: "kamn:did:agent:listener-target-sol".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn regression_unknown_ethereum_route_is_rejected() {
     let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
 
