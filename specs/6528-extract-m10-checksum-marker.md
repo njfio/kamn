@@ -34,11 +34,11 @@ through a compatibility wrapper.
 
 ## Acceptance criteria
 
-- [ ] Deterministic M10 checksum-marker generation lives in `kamn-data-layer`
-- [ ] `kamn-core` keeps behavior stable through a compatibility wrapper
-- [ ] Targeted tests prove the extracted checksum-marker surface and keep core
+- [x] Deterministic M10 checksum-marker generation lives in `kamn-data-layer`
+- [x] `kamn-core` keeps behavior stable through a compatibility wrapper
+- [x] Targeted tests prove the extracted checksum-marker surface and keep core
       M10 behavior green
-- [ ] Extraction wiring docs reflect the new M10 slice
+- [x] Extraction wiring docs reflect the new M10 slice
 
 ## Files to touch
 
@@ -64,3 +64,25 @@ through a compatibility wrapper.
    `kamn-data-layer` before it exists.
 2. Implement the helper in `kamn-data-layer` and delegate from `kamn-core`.
 3. Run targeted `kamn-data-layer`, `kamn-core` M10, and extraction-doc tests.
+
+## Deviations
+
+- No deviations. The issue stayed within the pure checksum-marker helper and did
+  not touch M8 or DID-boundary logic.
+
+## Execution Evidence
+
+- Red:
+  - `cargo test -p kamn-data-layer --test data_layer_m10_partition_month_policy_integration -- --nocapture`
+- Green:
+  - `cargo test -p kamn-data-layer --test data_layer_m10_partition_month_policy_integration -- --nocapture`
+  - `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c02_archival_due_selection_respects_retention_window_and_shred_completeness -- --exact --nocapture`
+  - `cargo test -p kamn-core --lib data_layer_m10_partition_archival::shared::tests::unit_deterministic_checksum_marker_has_stable_shape -- --exact --nocapture`
+- Refactor / Integration:
+  - `cargo fmt --all --check`
+  - `cargo test -p kamn-data-layer -- --nocapture`
+  - `cargo test -p kamn-core --test data_layer_m10_partition_archival -- --nocapture`
+  - `cargo test -p kamn-core --test data_layer_m0_m11_extraction_docs -- --nocapture`
+  - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+  - `cargo clippy -p kamn-data-layer --tests -- -D warnings`
+  - `cargo clippy -p kamn-core --tests -- -D warnings`
