@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 const README_DOC: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 const INDEX_PATH: &str = "docs/developer/script-surface-index.md";
+const TRACKED_TOTAL_PY_FILES: usize = 334;
+const TRACKED_CI_COUNTS: Counts = Counts { sh: 147, py: 51 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct Counts {
@@ -189,8 +191,16 @@ fn index_inventory_matches_filesystem_counts() {
 
     let recorded_rows = parse_index_category_rows(&index_doc);
     let (filesystem_totals, filesystem_rows) = collect_filesystem_inventory();
+    let recorded_ci = recorded_rows
+        .get("ci")
+        .unwrap_or_else(|| panic!("missing scripts/ci row in script-surface index"));
 
     assert_eq!(recorded_sh, filesystem_totals.sh, "sh total drifted");
+    assert_eq!(
+        recorded_py,
+        TRACKED_TOTAL_PY_FILES,
+        "tracked py total marker drifted"
+    );
     assert_eq!(recorded_py, filesystem_totals.py, "py total drifted");
     assert_eq!(
         recorded_total,
@@ -201,6 +211,11 @@ fn index_inventory_matches_filesystem_counts() {
         recorded_category_count,
         filesystem_rows.len(),
         "category count marker drifted"
+    );
+    assert_eq!(
+        *recorded_ci,
+        TRACKED_CI_COUNTS,
+        "tracked scripts/ci row drifted"
     );
     assert_eq!(recorded_rows, filesystem_rows, "category table drifted");
 }
