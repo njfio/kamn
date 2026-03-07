@@ -69,6 +69,7 @@ public API and behavior through compatibility re-exports.
 - `crates/kamn-core/tests/data_layer_m0_m11_extraction_docs.rs`
 - `docs/architecture/data-layer-runtime-wiring.md`
 - `docs/architecture/kamn-data-layer.md`
+- `docs/architecture/kamn-core-module-map.md`
 - `crates/kamn-data-layer/README.md`
 - `fixtures/ci/test_file_size_policy_baseline.env`
 
@@ -98,3 +99,9 @@ public API and behavior through compatibility re-exports.
   - run strict clippy for touched crates
   - run targeted `kamn-data-layer`, `kamn-core`, extraction-docs, and
     test-file-inventory lanes
+
+## Deviations
+- `docs/architecture/kamn-core-module-map.md` was updated in addition to the
+  original file list so the decomposition roadmap stopped listing
+  `data_layer_prd_critical_scenario_conformance` as a remaining T4 surface
+  after this extraction landed.
