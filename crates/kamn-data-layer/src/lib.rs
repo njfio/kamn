@@ -19,6 +19,8 @@ pub mod data_layer_m10_phase6_compliance_port;
 pub mod data_layer_m10_phase6_policy_evaluator;
 /// M10 phase-6 runtime evidence projector contracts extracted from core.
 pub mod data_layer_m10_phase6_runtime_evidence;
+/// M11 closure-evidence acceptance policy contracts extracted from core.
+pub mod data_layer_m11_closure_evidence;
 /// M11 hardening matrix contracts for scenario tracking and operator readiness decisions.
 pub mod data_layer_m11_hardening_readiness;
 /// M1 batch scheduler trigger policy extracted from core.
@@ -35,6 +37,7 @@ pub use data_layer_m10_partition_month_policy::*;
 pub use data_layer_m10_partition_registry_state_machine::*;
 pub use data_layer_m10_phase6_compliance_port::*;
 pub use data_layer_m10_phase6_policy_evaluator::*;
+pub use data_layer_m11_closure_evidence::*;
 pub use data_layer_m11_hardening_readiness::*;
 pub use data_layer_m1_batch_scheduler::*;
 pub use data_layer_prd_critical_scenario_conformance::*;
