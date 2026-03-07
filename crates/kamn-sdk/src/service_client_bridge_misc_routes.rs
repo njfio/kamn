@@ -1,7 +1,7 @@
 use super::super::{
     expect_status, json_string_field, json_u64_field, normalize_route_segment, SdkError,
-    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceHealthStatus,
-    ServiceRequestAuth,
+    ServiceAgentBalance, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
+    ServiceHealthStatus, ServiceRequestAuth,
 };
 use super::ServiceApiClient;
 use crate::AgentDid;
@@ -72,6 +72,23 @@ impl ServiceApiClient {
         Ok(ServiceAgentProfile {
             did: json_string_field(response.body.as_str(), "did")?,
             reputation_score: json_u64_field(response.body.as_str(), "reputation_score")?,
+        })
+    }
+
+    /// Queries an agent balance by DID.
+    pub fn get_agent_balance(
+        &self,
+        did: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceAgentBalance, SdkError> {
+        let did = normalize_route_segment("did", did)?;
+        AgentDid::parse(did.as_str()).map_err(SdkError::from)?;
+        let route = format!("/v1/agents/{did}/balance");
+        let response = self.request("GET", route.as_str(), "", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceAgentBalance {
+            did: json_string_field(response.body.as_str(), "did")?,
+            balance: json_u64_field(response.body.as_str(), "balance")?,
         })
     }
 

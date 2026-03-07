@@ -429,6 +429,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/GenericSuccessResponse"
 
+  /v1/agents/{did}/balance:
+    get:
+      summary: Query agent balance
+      operationId: getAgentBalance
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      parameters:
+        - $ref: "#/components/parameters/DidParam"
+      responses:
+        "200":
+          description: Agent balance payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericSuccessResponse"
+
   /v1/events/ws:
     get:
       summary: Upgrade to websocket event stream

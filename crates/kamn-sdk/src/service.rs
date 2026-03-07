@@ -32,10 +32,10 @@ use self::service_http_io::{
     write_and_flush_request,
 };
 pub use self::service_models::{
-    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages,
-    ServiceChannelReceipt, ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus,
-    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRouteEvent,
-    ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceAgentBalance, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
+    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
 };
 pub use self::service_request_auth::ServiceRequestAuth;
 use self::service_response::{

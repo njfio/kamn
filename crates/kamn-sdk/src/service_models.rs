@@ -120,6 +120,15 @@ pub struct ServiceAgentProfile {
     pub reputation_score: u64,
 }
 
+/// Parsed response for `GET /v1/agents/{did}/balance`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceAgentBalance {
+    /// Agent DID.
+    pub did: String,
+    /// Current token balance.
+    pub balance: u64,
+}
+
 /// Parsed response for `GET /healthz`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceHealthStatus {

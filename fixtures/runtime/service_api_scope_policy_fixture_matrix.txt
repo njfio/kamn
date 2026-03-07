@@ -32,3 +32,5 @@ row|POST|/v1/bridge/bridge-123/forward|bridge:write|allow
 row|POST|/v1/bridge/bridge-123/forward|bridge:read|deny
 row|GET|/v1/bridge/bridge-123|bridge:read|allow
 row|GET|/v1/bridge/bridge-123|bridge:write|deny
+row|GET|/v1/agents/kamn:did:agent:balance-reader/balance|agents:read|allow
+row|GET|/v1/agents/kamn:did:agent:balance-reader/balance|messages:read|deny

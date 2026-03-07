@@ -33,6 +33,8 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+#[path = "service_api_endpoint_tests/balance_contract_tests.rs"]
+mod balance_contract_tests;
 #[path = "service_api_endpoint_tests/websocket_contract_tests.rs"]
 mod websocket_contract_tests;
 
@@ -257,6 +259,13 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
         ServiceApiRouteAuthzMatrixRow {
             method: "GET",
             path: "/v1/agents/kamn:did:agent:matrix",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/agents/kamn:did:agent:matrix/balance",
             body: "",
             requires_auth: true,
             expected_status_without_auth: "HTTP/1.1 401 Unauthorized",

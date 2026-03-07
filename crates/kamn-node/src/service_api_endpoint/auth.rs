@@ -341,6 +341,9 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope>
             ServiceApiScope::ChannelsRead
         }
         ("GET", _) if super::payload::task_path_id(path).is_some() => ServiceApiScope::TasksRead,
+        ("GET", _) if super::payload::agent_balance_path_id(path).is_some() => {
+            ServiceApiScope::AgentsRead
+        }
         ("GET", _) if super::payload::agent_path_id(path).is_some() => ServiceApiScope::AgentsRead,
         _ => ServiceApiScope::ProtectedUnknown,
     };
@@ -444,6 +447,10 @@ mod tests {
         );
         assert_eq!(
             required_scope_for_route("GET", "/v1/agents/kamn:did:agent:alice"),
+            Some(ServiceApiScope::AgentsRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/agents/kamn:did:agent:alice/balance"),
             Some(ServiceApiScope::AgentsRead)
         );
     }

@@ -968,6 +968,34 @@ pub(super) async fn handle_service_api_http_route(
             }
             Ok(None) => {}
         }
+        match super::payload::canonical_agent_balance_path_id(context.parsed_request.path.as_str())
+        {
+            Ok(Some(agent_did)) => {
+                let agent_payload = {
+                    let mut message_store = state.message_store.lock().await;
+                    message_store.get_or_create_agent_balance(agent_did)
+                };
+                return match agent_payload {
+                    Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                        status_code: 200,
+                        content_type: "application/json",
+                        body: super::serialize_service_api_json(&payload),
+                    }),
+                    Err(error) => super::payload::json_error_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "internal",
+                        REASON_CODE_STATE_PERSISTENCE_FAILED,
+                        format!("service api agent balance persistence failed: {error}").as_str(),
+                    ),
+                };
+            }
+            Err(error) => {
+                return super::payload::contract_response(
+                    super::payload::invalid_agent_did_path_endpoint_response(&error),
+                );
+            }
+            Ok(None) => {}
+        }
     }
     let snapshot =
         super::runtime_observability::snapshot_with_runtime_observability(state.as_ref()).await;

@@ -35,6 +35,8 @@ use std::path::Path;
 
 const SERVICE_API_DATA_LAYER_RUNTIME_EVIDENCE_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-data-layer-runtime-evidence.v1";
+const INITIAL_SERVICE_API_AGENT_REPUTATION_SCORE: u64 = 500;
+const INITIAL_SERVICE_API_AGENT_BALANCE: u64 = 100;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct ServiceApiDataLayerRuntimeEvidenceRecord {
@@ -105,6 +107,14 @@ struct ServiceApiPersistedBridgeRecord {
 struct ServiceApiPersistedAgentRecord {
     did: String,
     reputation_score: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    balance: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(super) struct ServiceApiAgentBalanceBody {
+    did: String,
+    balance: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -767,33 +777,61 @@ impl ServiceApiMessageStore {
         &mut self,
         agent_did: &str,
     ) -> Result<ServiceApiAgentGetBody, String> {
+        let record = self.get_or_create_agent_record(agent_did)?;
+        Ok(ServiceApiAgentGetBody {
+            did: record.did,
+            reputation_score: record.reputation_score,
+        })
+    }
+
+    pub(super) fn get_or_create_agent_balance(
+        &mut self,
+        agent_did: &str,
+    ) -> Result<ServiceApiAgentBalanceBody, String> {
+        let record = self.get_or_create_agent_record(agent_did)?;
+        Ok(ServiceApiAgentBalanceBody {
+            did: record.did,
+            balance: record.balance.unwrap_or(INITIAL_SERVICE_API_AGENT_BALANCE),
+        })
+    }
+
+    fn get_or_create_agent_record(
+        &mut self,
+        agent_did: &str,
+    ) -> Result<ServiceApiPersistedAgentRecord, String> {
         self.refresh_from_disk()?;
         let normalized_did = agent_did.trim();
         if normalized_did.is_empty() {
             return Err("agent did must not be empty".to_owned());
         }
 
-        let payload = if let Some(record) = self.snapshot.agents.get(normalized_did) {
-            ServiceApiAgentGetBody {
-                did: record.did.clone(),
-                reputation_score: record.reputation_score,
+        let mut persisted = false;
+        let record = match self.snapshot.agents.get_mut(normalized_did) {
+            Some(record) => {
+                if record.balance.is_none() {
+                    record.balance = Some(INITIAL_SERVICE_API_AGENT_BALANCE);
+                    persisted = true;
+                }
+                record.clone()
             }
-        } else {
-            self.snapshot.agents.insert(
-                normalized_did.to_owned(),
-                ServiceApiPersistedAgentRecord {
+            None => {
+                let record = ServiceApiPersistedAgentRecord {
                     did: normalized_did.to_owned(),
-                    reputation_score: 500,
-                },
-            );
-            self.persist()?;
-            ServiceApiAgentGetBody {
-                did: normalized_did.to_owned(),
-                reputation_score: 500,
+                    reputation_score: INITIAL_SERVICE_API_AGENT_REPUTATION_SCORE,
+                    balance: Some(INITIAL_SERVICE_API_AGENT_BALANCE),
+                };
+                self.snapshot
+                    .agents
+                    .insert(normalized_did.to_owned(), record.clone());
+                persisted = true;
+                record
             }
         };
 
-        Ok(payload)
+        if persisted {
+            self.persist()?;
+        }
+        Ok(record)
     }
 }
 
