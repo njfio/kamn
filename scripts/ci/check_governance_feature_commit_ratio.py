@@ -5,9 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
+
+from governance_feature_commit_ratio_support import (
+    Classification,
+    build_error_report,
+    build_report,
+    emit_stdout,
+)
 
 SCHEMA_VERSION = "kamn.ci.governance-feature-commit-ratio-report.v1"
 REASON_TAXONOMY_VERSION = "kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1"
@@ -25,17 +31,6 @@ class CheckerError(Exception):
     """Raised for deterministic checker failures."""
 
 
-@dataclass(frozen=True)
-class Classification:
-    governance_count: int
-    feature_count: int
-    unknown_subjects: Sequence[str]
-
-    @property
-    def non_merge_commit_total(self) -> int:
-        return self.governance_count + self.feature_count + len(self.unknown_subjects)
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Enforce governance/feature commit ratio threshold on PR commit subjects."
@@ -44,6 +39,12 @@ def parse_args() -> argparse.Namespace:
         "--commit-subjects-file",
         required=True,
         help="Path to newline-delimited commit subject list.",
+    )
+    parser.add_argument(
+        "--window-size",
+        type=int,
+        default=0,
+        help="Maximum number of newest commit subjects to evaluate; 0 means all input subjects.",
     )
     parser.add_argument(
         "--max-governance-ratio",
@@ -64,6 +65,12 @@ def read_commit_subjects(path: Path) -> List[str]:
         raise CheckerError(f"commit subjects file not found: {path}")
     contents = path.read_text(encoding="utf-8")
     return [line.strip() for line in contents.splitlines() if line.strip()]
+
+
+def select_subject_window(subjects: Sequence[str], window_size: int) -> Sequence[str]:
+    if window_size <= 0 or window_size >= len(subjects):
+        return tuple(subjects)
+    return tuple(subjects[:window_size])
 
 
 def commit_type_from_subject(subject: str) -> str | None:
@@ -101,72 +108,15 @@ def classify_subjects(subjects: Iterable[str]) -> Classification:
     )
 
 
-def serialize_float(value: float) -> float:
-    return round(value, 6)
-
-
-def build_report(
-    classification: Classification,
-    max_governance_ratio: float,
-) -> Dict[str, object]:
-    governance_count = classification.governance_count
-    feature_count = classification.feature_count
-    known_total = governance_count + feature_count
-    governance_ratio = 0.0
-    feature_ratio = 0.0
-    if known_total > 0:
-        governance_ratio = governance_count / known_total
-        feature_ratio = feature_count / known_total
-
-    reason_codes: List[str] = []
-    if classification.non_merge_commit_total == 0:
-        reason_codes.append("governance_commit_subjects_empty")
-    if classification.unknown_subjects:
-        reason_codes.append("governance_commit_subject_unclassified")
-    if known_total > 0 and governance_ratio > max_governance_ratio:
-        reason_codes.append("governance_commit_ratio_threshold_exceeded")
-
-    status = "ok" if not reason_codes else "violation"
-    reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
-
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
-        "reason_codes_csv": reason_codes_csv,
-        "status": status,
-        "non_merge_commit_total": classification.non_merge_commit_total,
-        "governance_commit_count": governance_count,
-        "feature_commit_count": feature_count,
-        "unknown_commit_count": len(classification.unknown_subjects),
-        "max_governance_ratio": serialize_float(max_governance_ratio),
-        "governance_ratio": serialize_float(governance_ratio),
-        "feature_ratio": serialize_float(feature_ratio),
-        "governance_commit_types_csv": ",".join(sorted(GOVERNANCE_TYPES)),
-        "feature_commit_types_csv": ",".join(sorted(FEATURE_TYPES)),
-        "unknown_commit_subjects": list(classification.unknown_subjects),
-    }
-
-
 def write_report(path: Path, report: Dict[str, object]) -> None:
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def emit_stdout(report: Dict[str, object]) -> None:
-    print(f"status={report['status']}")
-    print(f"reason_taxonomy_version={report['reason_taxonomy_version']}")
-    print(f"reason_codes_csv={report['reason_codes_csv']}")
-    print(f"non_merge_commit_total={report['non_merge_commit_total']}")
-    print(f"governance_commit_count={report['governance_commit_count']}")
-    print(f"feature_commit_count={report['feature_commit_count']}")
-    print(f"unknown_commit_count={report['unknown_commit_count']}")
-    print(f"max_governance_ratio={report['max_governance_ratio']}")
-    print(f"governance_ratio={report['governance_ratio']}")
-    print(f"feature_ratio={report['feature_ratio']}")
 
 
 def validate_args(args: argparse.Namespace) -> None:
     if args.max_governance_ratio < 0.0 or args.max_governance_ratio > 1.0:
         raise CheckerError("--max-governance-ratio must be within [0.0, 1.0]")
+    if args.window_size < 0:
+        raise CheckerError("--window-size must be >= 0")
 
 
 def main() -> int:
@@ -174,19 +124,29 @@ def main() -> int:
     try:
         validate_args(args)
         subjects = read_commit_subjects(Path(args.commit_subjects_file))
-        classification = classify_subjects(subjects)
-        report = build_report(classification, float(args.max_governance_ratio))
+        subject_window = select_subject_window(subjects, int(args.window_size))
+        classification = classify_subjects(subject_window)
+        report = build_report(
+            classification,
+            input_non_merge_commit_total=len(subjects),
+            window_size=int(args.window_size),
+            max_governance_ratio=float(args.max_governance_ratio),
+            schema_version=SCHEMA_VERSION,
+            reason_taxonomy_version=REASON_TAXONOMY_VERSION,
+            governance_types_csv=",".join(sorted(GOVERNANCE_TYPES)),
+            feature_types_csv=",".join(sorted(FEATURE_TYPES)),
+        )
         write_report(Path(args.output_json), report)
         emit_stdout(report)
         return 0 if report["status"] == "ok" else 1
     except CheckerError as error:
-        report = {
-            "schema_version": SCHEMA_VERSION,
-            "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
-            "reason_codes_csv": "governance_commit_subjects_empty",
-            "status": "violation",
-            "error": str(error),
-        }
+        report = build_error_report(
+            str(error),
+            max_governance_ratio=float(getattr(args, "max_governance_ratio", 0.0)),
+            window_size=int(getattr(args, "window_size", 0)),
+            schema_version=SCHEMA_VERSION,
+            reason_taxonomy_version=REASON_TAXONOMY_VERSION,
+        )
         write_report(Path(args.output_json), report)
         emit_stdout(report)
         return 1

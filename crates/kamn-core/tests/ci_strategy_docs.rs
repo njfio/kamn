@@ -3046,10 +3046,13 @@ fn doc_enforces_performance_ci_smoke_docs_remediation_markers_cover_reason_codes
 fn doc_contains_governance_feature_commit_ratio_gate_markers() {
     assert!(DOC.contains("## Governance/Feature Commit-Ratio Fast Gate"));
     assert!(DOC.contains(
-        "python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json"
+        "python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/governance-feature-commit-ratio-report.json"
     ));
     assert!(DOC.contains("bash scripts/ci/test_check_governance_feature_commit_ratio.sh"));
-    assert!(DOC.contains("git log --no-merges --pretty=format:%s <base_sha>..<head_sha>"));
+    assert!(DOC.contains("source .ci/governance-feature-commit-ratio-moratorium.env"));
+    assert!(DOC.contains(
+        "git log --no-merges --pretty=format:%s \"${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD\""
+    ));
     assert!(DOC.contains("ci-governance-feature-commit-ratio.json"));
     assert!(DOC.contains(
         "governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1"
@@ -3060,7 +3063,18 @@ fn doc_contains_governance_feature_commit_ratio_gate_markers() {
     assert!(DOC.contains(
         "governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded"
     ));
-    assert!(DOC.contains("governance_feature_commit_ratio_threshold_max=0.50"));
+    assert!(DOC.contains("governance_feature_commit_ratio_threshold_max=0.20"));
+    assert!(DOC.contains("governance_feature_commit_ratio_feature_ratio_min=0.80"));
+    assert!(DOC.contains("governance_feature_commit_ratio_window_size=50"));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only"
+    ));
     assert!(DOC.contains("governance_feature_commit_ratio_non_merge_only=true"));
 }
 

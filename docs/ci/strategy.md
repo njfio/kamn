@@ -293,19 +293,31 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr`
 
 ## Governance/Feature Commit-Ratio Fast Gate
+- Moratorium activation config:
+  - `source .ci/governance-feature-commit-ratio-moratorium.env`
 - Fast-gate governance-ratio contract command:
-  - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --max-governance-ratio 0.50 --output-json /tmp/governance-feature-commit-ratio-report.json`
+  - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/governance-feature-commit-ratio-report.json`
 - Deterministic coverage command:
-  - `git log --no-merges --pretty=format:%s <base_sha>..<head_sha>`
+  - `git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD"`
 - Contract test command:
   - `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
 - Evidence artifact:
   - `ci-governance-feature-commit-ratio.json`
+- Temporary capability moratorium semantics:
+  - start counting after `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` so pre-moratorium governance debt does not cause retroactive failures.
+  - evaluate the latest 50 non-merge commits in newest-first `git log` order.
+  - require at least 40 of those 50 commits to classify as feature/capability work.
+  - fail closed when governance-classified commits exceed 10 of the evaluated 50-commit window.
 - Policy markers:
   - `governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1`
   - `governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1`
   - `governance_feature_commit_ratio_reason_codes_csv=governance_commit_subjects_empty,governance_commit_subject_unclassified,governance_commit_ratio_threshold_exceeded`
-  - `governance_feature_commit_ratio_threshold_max=0.50`
+  - `governance_feature_commit_ratio_threshold_max=0.20`
+  - `governance_feature_commit_ratio_feature_ratio_min=0.80`
+  - `governance_feature_commit_ratio_window_size=50`
+  - `governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits`
+  - `governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env`
+  - `governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only`
   - `governance_feature_commit_ratio_non_merge_only=true`
 
 ## Review-Document Freeze Fast Gate
