@@ -32,12 +32,12 @@ Add a dedicated `kamn-data-layer` extraction tranche to the
 
 ## Acceptance criteria
 
-- [ ] The decomposition roadmap includes a dedicated tranche for the remaining
+- [x] The decomposition roadmap includes a dedicated tranche for the remaining
       `data_layer_*` extraction boundary
-- [ ] The tranche names the module-group boundary, destination crate, and
+- [x] The tranche names the module-group boundary, destination crate, and
       ordering rationale
-- [ ] The tranche markers and table-shape docs test are updated and pass
-- [ ] The spec records that this is planning-only with no production extraction
+- [x] The tranche markers and table-shape docs test are updated and pass
+- [x] The spec records that this is planning-only with no production extraction
       change in this issue
 
 ## Files to touch
@@ -60,3 +60,18 @@ Add a dedicated `kamn-data-layer` extraction tranche to the
    tranche.
 3. Run
    `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`.
+
+## Deviations
+
+- No deviations. This issue remained planning-only and did not modify any
+  production extraction or runtime wiring.
+
+## Execution Evidence
+
+- Red:
+  - `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
+- Green:
+  - `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
+- Refactor / Integration:
+  - `cargo fmt --all --check`
+  - `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
