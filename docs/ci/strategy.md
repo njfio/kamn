@@ -317,6 +317,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `governance_feature_commit_ratio_window_size=50`
   - `governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits`
   - `governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env`
+  - `governance_feature_commit_ratio_activation_base_sha=f0252d24ff91859fe0b4051712ef98873aaae1f4`
   - `governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only`
   - `governance_feature_commit_ratio_non_merge_only=true`
 
