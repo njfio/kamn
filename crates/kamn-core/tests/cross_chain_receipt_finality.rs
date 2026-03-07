@@ -76,6 +76,14 @@ fn near_failed_receipt_normalizes_to_failed() {
 }
 
 #[test]
+fn direct_pending_status_normalizes_to_pending_through_core_surface() {
+    let normalized =
+        normalize_cross_chain_receipt(&near_proof("final", CrossChainReceiptStatus::Pending))
+            .expect("pending receipt should normalize");
+    assert_eq!(normalized.finality, CrossChainReceiptFinality::Pending);
+}
+
+#[test]
 fn regression_rejects_unknown_near_finality_label() {
     // Regression: #740
     assert_eq!(
