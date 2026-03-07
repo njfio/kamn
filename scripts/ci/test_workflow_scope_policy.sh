@@ -115,8 +115,8 @@ if ! grep -Fq "Governance/feature commit ratio gate" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq "git log --no-merges --pretty=format:%s" "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to source non-merge commit subjects" >&2
+if ! grep -Fq "git log --no-merges --pretty=format:%s -n 50 HEAD" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to source the latest 50 non-merge commit subjects from HEAD" >&2
   exit 1
 fi
 
@@ -125,8 +125,13 @@ if ! grep -Fq "python3 scripts/ci/check_governance_feature_commit_ratio.py" "$FA
   exit 1
 fi
 
-if ! grep -Fq -- "--max-governance-ratio 0.50" "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to enforce max ratio 0.50" >&2
+if ! grep -Fq -- "--window-size 50" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to enforce a rolling 50-commit window" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--max-governance-ratio 0.20" "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to enforce max governance ratio 0.20" >&2
   exit 1
 fi
 
