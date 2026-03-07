@@ -75,3 +75,39 @@ Expose a read-only service API balance route and wire the Rust live transport SD
 3. Add live transport RED tests replacing the current unsupported-balance assertion with a real
    loopback contract call.
 4. Run targeted `kamn-node`, `kamn-sdk`, and `test_file_size_policy` checks.
+
+## Deviations
+
+- `crates/kamn-node/src/service_api_endpoint/models.rs` was not needed; the route uses existing
+  root response types plus a local persisted-balance payload to avoid growing the root module
+  surface.
+- `crates/kamn-sdk/tests/service_api_client.rs` was left unchanged because the dedicated
+  `crates/kamn-sdk/tests/service_api_balance.rs` contract test covers the new route directly.
+- Additional integration files were required:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/balance_contract_tests.rs`
+  - `crates/kamn-sdk/tests/live_transport_task_escrow.rs`
+  - `docs/api/service-http-api.md`
+  - `docs/api/service-openapi.yaml`
+  - `fixtures/runtime/service_api_scope_policy_fixture_matrix.txt`
+  - `fixtures/ci/test_file_size_policy_baseline.env`
+
+## Verification
+
+- `cargo test -p kamn-node unit_service_api_endpoint_balance_route_returns_did_and_balance_contract -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_balance_route_backfills_legacy_state_and_persists_restart -- --nocapture`
+- `cargo test -p kamn-node unit_service_api_route_authz_matrix_matches_protected_and_public_paths -- --nocapture`
+- `cargo test -p kamn-node functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping -- --nocapture`
+- `cargo test -p kamn-node --test service_api_endpoint_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-sdk --test service_api_balance -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_balance -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_agent spec_c05_live_transport_unsupported_methods_fail_closed -- --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
+- `cargo clippy -p kamn-node --tests -- -D warnings`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+- `rustfmt --edition 2021 crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs crates/kamn-node/src/service_api_endpoint.rs crates/kamn-node/src/service_api_endpoint/auth.rs crates/kamn-node/src/service_api_endpoint/message_store.rs crates/kamn-node/src/service_api_endpoint/middleware_impl.rs crates/kamn-node/src/service_api_endpoint/payload.rs crates/kamn-sdk/src/lib.rs crates/kamn-sdk/src/live/agent.rs crates/kamn-sdk/src/service.rs crates/kamn-sdk/src/service_client_bridge_misc_routes.rs crates/kamn-sdk/src/service_models.rs crates/kamn-sdk/tests/live_transport_agent.rs crates/kamn-sdk/tests/live_transport_task_escrow.rs crates/kamn-sdk/tests/service_api_balance.rs`
+
+Repo-wide note:
+
+- `cargo fmt --all --check` still reports unrelated pre-existing formatting drift outside issue
+  `#6562`; this change set was formatted only on the touched Rust files.
