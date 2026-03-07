@@ -900,7 +900,7 @@ mod tests {
         with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
             let mut engine =
                 GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
-            engine
+            let distribution = engine
                 .distribute_sender_key(
                     "kamn:did:agent:alice",
                     "kamn:did:agent:alice#sender-key-1",
@@ -915,6 +915,20 @@ mod tests {
                 )
                 .expect("rotation should succeed");
 
+            assert_eq!(
+                engine
+                    .active_sender_key_generation("kamn:did:agent:alice")
+                    .expect("active generation should exist"),
+                2
+            );
+            assert_eq!(
+                engine
+                    .sender_key_record("kamn:did:agent:alice", distribution.key_generation)
+                    .expect("first generation record should exist")
+                    .sender_key_ref,
+                "kamn:did:agent:alice#sender-key-1"
+            );
+
             let sealed = engine
                 .encrypt("kamn:did:agent:alice", "group payload", 33)
                 .expect("encrypt should succeed");
@@ -924,6 +938,33 @@ mod tests {
                 .expect("authorized recipient should decrypt");
             assert_eq!(plaintext, "group payload");
             assert_eq!(sealed.key_generation, 2);
+
+            let debug_output = format!("{engine:?}");
+            assert!(
+                debug_output.contains("used_nonce_count: 1"),
+                "debug output should expose only redacted summary counts: {debug_output}"
+            );
+            assert!(
+                !debug_output.contains("sender-key-2"),
+                "debug output must not expose sender key refs: {debug_output}"
+            );
+
+            let legacy = legacy_v1_ciphertext(
+                "channel:group:1",
+                "kamn:did:agent:alice",
+                "kamn:did:agent:alice#sender-key-2",
+                2,
+                34,
+                "legacy payload",
+            );
+            assert_eq!(
+                engine
+                    .decrypt("kamn:did:agent:bob", &legacy)
+                    .expect("legacy ciphertext should remain decryptable"),
+                "legacy payload"
+            );
+
+            drop(engine);
         });
     }
 

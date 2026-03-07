@@ -62,15 +62,17 @@ Bring `GroupChannelCryptoEngine` up to the same security-hardening baseline as t
 ## Deviations
 - `Cargo.lock` changed because `kamn-core` now consumes the existing workspace `zeroize` dependency directly.
 - Phase 6 integration proof used the smaller external test surface `crates/kamn-core/tests/group_sender_keys.rs` rather than expanding the older 400+ line crypto integration target.
+- After the first PR run, the critical-path coverage gate fell just below the `group_channel_crypto.rs` threshold. The fix stayed inside the existing gate-executed unit tests by broadening `encrypt_decrypt_roundtrip_requires_authorized_recipient` to cover redacted `Debug`, sender-key lookup, legacy compatibility, and populated-engine drop behavior.
 
 ## Verification evidence
 - `cargo test -p kamn-core --test group_sender_keys -- --nocapture`
 - `cargo test -p kamn-core group_channel_crypto -- --nocapture`
 - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
 - `cargo clippy -p kamn-core --tests -- -D warnings`
+- `bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/ci-critical-path-core-coverage.json --node-json /tmp/ci-critical-path-node-coverage.json --output-json /tmp/ci-critical-path-coverage-policy.json`
 
 ## Shell-surface closure template
 - shell_loc_delta_actual: 0
-- rust_loc_delta_actual: 245
+- rust_loc_delta_actual: 281
 - shell_to_rust_ratio_delta_actual: 0.0
 - shell_surface_ratio_target_status: improved
