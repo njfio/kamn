@@ -76,6 +76,14 @@ fn near_failed_receipt_normalizes_to_failed() {
 }
 
 #[test]
+fn direct_pending_status_normalizes_to_pending_through_core_surface() {
+    let normalized =
+        normalize_cross_chain_receipt(&near_proof("final", CrossChainReceiptStatus::Pending))
+            .expect("pending receipt should normalize");
+    assert_eq!(normalized.finality, CrossChainReceiptFinality::Pending);
+}
+
+#[test]
 fn regression_rejects_unknown_near_finality_label() {
     // Regression: #740
     assert_eq!(
@@ -86,5 +94,22 @@ fn regression_rejects_unknown_near_finality_label() {
                 label: "unsafe".to_owned(),
             }
         )
+    );
+}
+
+#[test]
+fn contract_keeps_external_pending_receipt_normalization_regression() {
+    let source = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/cross_chain_receipt_finality.rs"
+    ))
+    .expect("receipt finality test source should be readable");
+
+    assert!(
+        source
+            .matches("direct_pending_status_normalizes_to_pending_through_core_surface")
+            .count()
+            >= 2,
+        "cross_chain_receipt_finality.rs should pin direct pending normalization on the public core surface",
     );
 }
