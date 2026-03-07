@@ -3070,6 +3070,12 @@ fn doc_contains_governance_feature_commit_ratio_gate_markers() {
         "governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits"
     ));
     assert!(DOC.contains(
+        "governance_feature_commit_ratio_policy_source=base_branch"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_classification_mode=changed_path_surface"
+    ));
+    assert!(DOC.contains(
         "governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env"
     ));
     assert!(DOC.contains(
