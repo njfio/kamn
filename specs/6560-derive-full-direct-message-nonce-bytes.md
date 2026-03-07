@@ -66,3 +66,31 @@ decrypt compatibility for ciphertext produced by the existing layout.
 2. Add RED tests that decrypt legacy-layout ciphertext through the updated engine.
 3. Keep explicit regression coverage for zero nonce and nonce reuse.
 4. Run targeted `kamn-crypto` tests covering the new behavior and existing failure paths.
+
+## Deviations
+
+- The external integration coverage was initially added inline to
+  `crates/kamn-crypto/tests/direct_message_crypto_integration.rs`, but that pushed the file to
+  247 lines and violated the repo file-size policy. The helper bulk was moved into
+  `crates/kamn-crypto/tests/support/direct_message_crypto_support.rs`, which keeps the public
+  integration target under budget and does not affect the tracked test-file inventory because
+  `/tests/support/` is excluded from `test_file_size_policy`.
+
+## Verification
+
+- RED:
+  - `cargo test -p kamn-crypto direct_message_nonce_bytes_do_not_expose_raw_counter_prefix -- --nocapture`
+  - `cargo test -p kamn-crypto encrypt_output_does_not_authenticate_under_legacy_raw_prefix_nonce_layout -- --nocapture`
+- GREEN / refactor / integration:
+  - `cargo test -p kamn-crypto -- --nocapture`
+  - `cargo test -p kamn-crypto --test direct_message_crypto_integration -- --nocapture`
+  - `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+  - `cargo clippy -p kamn-crypto --tests -- -D warnings`
+
+## Outcome
+
+- Encryption now derives all 24 XChaCha20 nonce bytes from the v2 hash material rather than
+  exposing the raw counter prefix.
+- Decrypt accepts both the new v2 nonce layout and the previous raw-prefix layout, across both
+  current HKDF and legacy SHA-256-v1 key compatibility paths.
+- Zero nonce and nonce reuse semantics remain unchanged.
