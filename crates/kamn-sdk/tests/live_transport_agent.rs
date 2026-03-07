@@ -1,7 +1,6 @@
 use kamn_sdk::{
-    service_signature_for_fields, AgentDid, AgentMetadata, AgentQuery, EscrowId, KamnAgent,
-    KamnTransport, LiveTransportConfig, LiveTransportKamnClient, Message, SdkError, TaskId,
-    TransportMode,
+    service_signature_for_fields, AgentDid, AgentMetadata, AgentQuery, KamnAgent, KamnTransport,
+    LiveTransportConfig, LiveTransportKamnClient, Message, SdkError, TransportMode,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
@@ -620,21 +619,9 @@ fn spec_c05_live_transport_unsupported_methods_fail_closed() {
             ))
         );
         assert_eq!(
-            client.accept_task(&TaskId(7), &did("assignee")),
+            client.balance(&did("receiver")),
             Err(SdkError::NotImplemented(
-                "live transport task routes are not yet mapped in sdk kamn-agent surface"
-            ))
-        );
-        assert_eq!(
-            client.complete_task(&TaskId(7)),
-            Err(SdkError::NotImplemented(
-                "live transport task routes are not yet mapped in sdk kamn-agent surface"
-            ))
-        );
-        assert_eq!(
-            client.release_escrow(&EscrowId(9)),
-            Err(SdkError::NotImplemented(
-                "live transport escrow routes are not yet mapped in sdk kamn-agent surface"
+                "live transport balance route is not available via service api"
             ))
         );
         assert_eq!(
