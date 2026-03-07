@@ -45,13 +45,17 @@ impl std::str::FromStr for DataLayerShellNeutralPolicyReasonCode {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             SHELL_NEUTRAL_POLICY_VERIFIED_REASON => Ok(Self::Verified),
-            SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON => Ok(Self::BlockOrchestrationViolation),
+            SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON => {
+                Ok(Self::BlockOrchestrationViolation)
+            }
             SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON => Ok(Self::BlockPositiveShellDelta),
             SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON => Ok(Self::BlockRatioFailThreshold),
             SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON => Ok(Self::WarnRatioThreshold),
-            _ => Err(DataLayerShellNeutralPolicyReasonCodeParseError::UnknownReasonCode(
-                value.to_owned(),
-            )),
+            _ => Err(
+                DataLayerShellNeutralPolicyReasonCodeParseError::UnknownReasonCode(
+                    value.to_owned(),
+                ),
+            ),
         }
     }
 }

@@ -40,7 +40,10 @@ fn integration_shell_neutral_policy_covers_verified_warning_and_blocked_paths() 
         fail_shell_to_rust_ratio_max: 1.00,
     })
     .expect("verified policy evaluation should succeed");
-    assert_eq!(verified.decision, DataLayerShellNeutralPolicyDecision::Verified);
+    assert_eq!(
+        verified.decision,
+        DataLayerShellNeutralPolicyDecision::Verified
+    );
     assert_eq!(
         verified.reason_codes,
         vec![DataLayerShellNeutralPolicyReasonCode::Verified]
@@ -55,7 +58,10 @@ fn integration_shell_neutral_policy_covers_verified_warning_and_blocked_paths() 
         fail_shell_to_rust_ratio_max: 1.00,
     })
     .expect("warning policy evaluation should succeed");
-    assert_eq!(warning.decision, DataLayerShellNeutralPolicyDecision::Warning);
+    assert_eq!(
+        warning.decision,
+        DataLayerShellNeutralPolicyDecision::Warning
+    );
     assert_eq!(
         warning.reason_codes,
         vec![DataLayerShellNeutralPolicyReasonCode::WarnRatioThreshold]
