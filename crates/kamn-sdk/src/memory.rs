@@ -94,6 +94,20 @@ impl InMemoryKamnClient {
         }
     }
 
+    fn message_not_found(message_id: &MessageId) -> SdkError {
+        SdkError::NotFound {
+            entity: "message",
+            id: message_id.0.to_string(),
+        }
+    }
+
+    fn remember_message(&mut self, message_id: &MessageId) {
+        self.messages.insert(
+            message_id.clone(),
+            MessageStatus::from_status(message_id, "created"),
+        );
+    }
+
     fn set_artifact_status(
         &mut self,
         artifact_id: &ArtifactId,
@@ -243,10 +257,7 @@ impl KamnAgent for InMemoryKamnClient {
             id: message_id.clone(),
             message,
         };
-        self.messages.insert(
-            message_id.clone(),
-            MessageStatus::from_status(&message_id, "created"),
-        );
+        self.remember_message(&message_id);
         if let Some(inbox) = self.inboxes.get_mut(&record.message.to) {
             inbox.push(record);
             return Ok(message_id);
@@ -273,10 +284,7 @@ impl KamnAgent for InMemoryKamnClient {
         self.messages
             .get(message_id)
             .cloned()
-            .ok_or_else(|| SdkError::NotFound {
-                entity: "message",
-                id: message_id.0.to_string(),
-            })
+            .ok_or_else(|| Self::message_not_found(message_id))
     }
 
     fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError> {

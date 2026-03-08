@@ -13,7 +13,7 @@ use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
     MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, ServiceContentStatus,
-    ServiceMessageStatus, TaskDefinition, TaskId, TaskStatus, TokenAmount,
+    ServiceMessageStatus, ServiceRequestAuth, TaskDefinition, TaskId, TaskStatus, TokenAmount,
     service::agent_search_payload,
 };
 
@@ -34,13 +34,7 @@ impl KamnAgent for LiveTransportKamnClient {
 
     fn get_message_status(&self, message_id: &MessageId) -> Result<MessageStatus, SdkError> {
         let service_message_id = resolve_service_message_id(self, message_id)?;
-        let auth = build_auth(
-            &self.state,
-            &self.config,
-            &self.config.requester_did,
-            "",
-            Some(MESSAGES_READ_SCOPE),
-        )?;
+        let auth = message_read_auth(self)?;
         let status = self
             .service_client
             .get_message(service_message_id.as_str(), &auth)?;
@@ -216,10 +210,7 @@ fn resolve_service_message_id(
         .message_ids
         .get(&message_id.0)
         .cloned()
-        .ok_or_else(|| SdkError::NotFound {
-            entity: "message",
-            id: message_id.0.to_string(),
-        })
+        .ok_or_else(|| message_not_found(message_id))
 }
 
 fn resolve_service_task_id(
@@ -233,7 +224,27 @@ fn resolve_service_task_id(
     prepare_task_status_lookup(&guard.task_aliases, task_id)
 }
 
-fn message_status_from_service(message_id: &MessageId, status: ServiceMessageStatus) -> MessageStatus {
+fn message_read_auth(client: &LiveTransportKamnClient) -> Result<ServiceRequestAuth, SdkError> {
+    build_auth(
+        &client.state,
+        &client.config,
+        &client.config.requester_did,
+        "",
+        Some(MESSAGES_READ_SCOPE),
+    )
+}
+
+fn message_not_found(message_id: &MessageId) -> SdkError {
+    SdkError::NotFound {
+        entity: "message",
+        id: message_id.0.to_string(),
+    }
+}
+
+fn message_status_from_service(
+    message_id: &MessageId,
+    status: ServiceMessageStatus,
+) -> MessageStatus {
     MessageStatus::from_status(message_id, status.status.as_str())
 }
 
