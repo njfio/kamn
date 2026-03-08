@@ -169,9 +169,32 @@ fn sender_did_matches_signer_public_key(
     if let Some(bound_public_key_hex) =
         sender_did.strip_prefix(SELF_CERTIFYING_AGENT_DID_KEY_PREFIX)
     {
-        return bound_public_key_hex.eq_ignore_ascii_case(signer_public_key_hex);
+        let normalized_bound_public_key =
+            ascii_lowercase_bytes(bound_public_key_hex.trim().as_bytes());
+        let normalized_signer_public_key =
+            ascii_lowercase_bytes(signer_public_key_hex.trim().as_bytes());
+        return constant_time_eq_bytes(
+            normalized_bound_public_key.as_slice(),
+            normalized_signer_public_key.as_slice(),
+        );
     }
     allow_legacy_sender_binding
+}
+
+fn ascii_lowercase_bytes(value: &[u8]) -> Vec<u8> {
+    value.iter().map(u8::to_ascii_lowercase).collect()
+}
+
+fn constant_time_eq_bytes(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+
+    let mut diff = 0_u8;
+    for (left_byte, right_byte) in left.iter().zip(right.iter()) {
+        diff |= left_byte ^ right_byte;
+    }
+    diff == 0
 }
 
 pub(super) fn enforce_request_scope_policy(
