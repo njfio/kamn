@@ -2,8 +2,8 @@
 mod support;
 
 use kamn_sdk::{
-    EscrowConfig, EscrowId, KamnAgent, LiveTransportKamnClient, SdkError, TaskDefinition, TaskId,
-    TokenAmount,
+    Artifact, ArtifactId, EscrowConfig, EscrowId, KamnAgent, LiveTransportKamnClient, SdkError,
+    TaskDefinition, TaskId, TokenAmount,
 };
 use std::thread;
 
@@ -58,6 +58,7 @@ fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
     vec![
         create_task_request(),
         accept_task_request(),
+        submit_artifact_request(),
         complete_task_request(),
         create_escrow_request(),
         release_escrow_request(),
@@ -96,6 +97,20 @@ fn complete_task_request() -> ExpectedRequest {
     }
 }
 
+fn submit_artifact_request() -> ExpectedRequest {
+    ExpectedRequest {
+        sender_did: "kamn:did:agent:assignee-live".to_owned(),
+        scope: "content:write",
+        response_status: 201,
+        response_body: r#"{"content_id":"content-local-artifact-abc","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}"#.to_owned(),
+        ..expected_request(
+            "POST",
+            "/v1/content/register",
+            r#"{"task_id":"task-local-abc","artifact_name":"artifact.bin","artifact_bytes_hex":"61727469666163742d6279746573"}"#,
+        )
+    }
+}
+
 fn create_escrow_request() -> ExpectedRequest {
     ExpectedRequest {
         sender_did: "kamn:did:agent:payer-live".to_owned(),
@@ -131,6 +146,13 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
     client
         .accept_task(&task_id, &did("assignee-live"))
         .expect("accept_task should succeed");
+    let artifact_id = client
+        .submit_artifact(&task_id, live_artifact())
+        .expect("submit_artifact should succeed");
+    assert_eq!(
+        artifact_id,
+        ArtifactId(deterministic_u64_tag("content-local-artifact-abc"))
+    );
     client
         .complete_task(&task_id)
         .expect("complete_task should succeed");
@@ -163,6 +185,13 @@ fn live_escrow() -> EscrowConfig {
     }
 }
 
+fn live_artifact() -> Artifact {
+    Artifact {
+        name: "artifact.bin".to_owned(),
+        bytes: b"artifact-bytes".to_vec(),
+    }
+}
+
 fn assert_unknown_task_aliases(client: &mut LiveTransportKamnClient) {
     assert_eq!(
         client.accept_task(&TaskId(77), &did("assignee-live")),
@@ -177,6 +206,40 @@ fn assert_unknown_task_aliases(client: &mut LiveTransportKamnClient) {
             entity: "task",
             id: "77".to_owned(),
         })
+    );
+    assert_eq!(
+        client.submit_artifact(&TaskId(77), live_artifact()),
+        Err(SdkError::NotFound {
+            entity: "task",
+            id: "77".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_live_transport_submit_artifact_requires_accepted_task() {
+    ensure_live_test_env();
+    let bind_addr = reserve_loopback_addr();
+    let expected_requests = vec![create_task_request()];
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_contract_server(server_addr, expected_requests));
+    wait_for_server_ready();
+
+    let mut client = live_client(bind_addr.as_str());
+    let task_id = client
+        .create_task(live_task())
+        .expect("create_task should succeed");
+    assert_eq!(
+        client.submit_artifact(&task_id, live_artifact()),
+        Err(SdkError::Conflict(
+            "task must be accepted before artifact submission"
+        ))
+    );
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "unaccepted task artifact submission should not emit an extra network request"
     );
 }
 
