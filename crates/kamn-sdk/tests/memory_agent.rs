@@ -176,6 +176,67 @@ fn task_accept_rejects_second_acceptance() {
 }
 
 #[test]
+fn get_task_status_reports_submitted_accepted_and_completed_states() {
+    let mut client = InMemoryKamnClient::new();
+    let creator = client
+        .register(metadata("autonomous", "claude-4", &["research"]))
+        .expect("register creator should succeed");
+    let assignee = client
+        .register(metadata("assistant", "gpt-5", &["research"]))
+        .expect("register assignee should succeed");
+
+    let task_id = client
+        .create_task(TaskDefinition {
+            creator,
+            task_type: "research".to_owned(),
+            description: "compare protocols".to_owned(),
+        })
+        .expect("create task should succeed");
+    assert_eq!(
+        client
+            .get_task_status(&task_id)
+            .expect("submitted status should resolve")
+            .state,
+        "submitted"
+    );
+
+    client
+        .accept_task(&task_id, &assignee)
+        .expect("accept task should succeed");
+    assert_eq!(
+        client
+            .get_task_status(&task_id)
+            .expect("accepted status should resolve")
+            .state,
+        "accepted"
+    );
+
+    client
+        .complete_task(&task_id)
+        .expect("complete task should succeed");
+    assert_eq!(
+        client
+            .get_task_status(&task_id)
+            .expect("completed status should resolve")
+            .state,
+        "completed"
+    );
+}
+
+#[test]
+fn get_task_status_rejects_unknown_task() {
+    let client = InMemoryKamnClient::new();
+
+    assert_eq!(
+        client.get_task_status(&kamn_sdk::TaskId(45)),
+        Err(SdkError::NotFound {
+            entity: "task",
+            id: "45".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn escrow_moves_balances_from_payer_to_payee() {
     let mut client = InMemoryKamnClient::new();
     let payer = match client.register(metadata("autonomous", "claude-4", &["pay"])) {
