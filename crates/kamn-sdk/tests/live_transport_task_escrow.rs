@@ -57,7 +57,9 @@ fn spawn_contract_server(bind_addr: String) -> thread::JoinHandle<Result<(), Str
 fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
     vec![
         create_task_request(),
+        get_task_status_request("submitted"),
         accept_task_request(),
+        get_task_status_request("accepted"),
         submit_artifact_request(),
         get_artifact_status_request("retained", "none"),
         expire_artifact_request(),
@@ -65,6 +67,7 @@ fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
         tombstone_artifact_request(),
         get_artifact_status_request("tombstoned", "redacted"),
         complete_task_request(),
+        get_task_status_request("completed"),
         create_escrow_request(),
         release_escrow_request(),
     ]
@@ -99,6 +102,18 @@ fn complete_task_request() -> ExpectedRequest {
         scope: "tasks:write",
         response_body: r#"{"task_id":"task-local-abc","state":"completed"}"#.to_owned(),
         ..expected_request("POST", "/v1/tasks/task-local-abc/complete", "{}")
+    }
+}
+
+fn get_task_status_request(state: &str) -> ExpectedRequest {
+    ExpectedRequest {
+        method: "GET",
+        path: "/v1/tasks/task-local-abc".to_owned(),
+        body: String::new(),
+        sender_did: "kamn:did:agent:live-requester".to_owned(),
+        scope: "tasks:read",
+        response_body: format!(r#"{{"task_id":"task-local-abc","state":"{state}"}}"#),
+        ..Default::default()
     }
 }
 
@@ -186,9 +201,11 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
         .create_task(live_task())
         .expect("create_task should succeed");
     assert_eq!(task_id, TaskId(deterministic_u64_tag("task-local-abc")));
+    assert_task_status_state(client, &task_id, "submitted");
     client
         .accept_task(&task_id, &did("assignee-live"))
         .expect("accept_task should succeed");
+    assert_task_status_state(client, &task_id, "accepted");
     let artifact_id = client
         .submit_artifact(&task_id, live_artifact())
         .expect("submit_artifact should succeed");
@@ -240,6 +257,21 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
     client
         .complete_task(&task_id)
         .expect("complete_task should succeed");
+    assert_task_status_state(client, &task_id, "completed");
+}
+
+fn assert_task_status_state(
+    client: &LiveTransportKamnClient,
+    task_id: &TaskId,
+    expected_state: &str,
+) {
+    assert_eq!(
+        client
+            .get_task_status(task_id)
+            .expect("task status should succeed")
+            .state,
+        expected_state
+    );
 }
 
 fn live_task() -> TaskDefinition {
@@ -279,6 +311,13 @@ fn live_artifact() -> Artifact {
 fn assert_unknown_task_aliases(client: &mut LiveTransportKamnClient) {
     assert_eq!(
         client.accept_task(&TaskId(77), &did("assignee-live")),
+        Err(SdkError::NotFound {
+            entity: "task",
+            id: "77".to_owned(),
+        })
+    );
+    assert_eq!(
+        client.get_task_status(&TaskId(77)),
         Err(SdkError::NotFound {
             entity: "task",
             id: "77".to_owned(),
@@ -391,6 +430,44 @@ fn regression_live_transport_artifact_status_rejects_malformed_service_payload()
     assert!(
         server_result.is_ok(),
         "malformed content status should still satisfy request budget"
+    );
+}
+
+#[test]
+fn regression_live_transport_task_status_rejects_malformed_service_payload() {
+    ensure_live_test_env();
+    let bind_addr = reserve_loopback_addr();
+    let expected_requests = vec![
+        create_task_request(),
+        ExpectedRequest {
+            method: "GET",
+            path: "/v1/tasks/task-local-abc".to_owned(),
+            body: String::new(),
+            sender_did: "kamn:did:agent:live-requester".to_owned(),
+            scope: "tasks:read",
+            response_body: r#"{"task_id":"task-local-abc"}"#.to_owned(),
+            ..Default::default()
+        },
+    ];
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_contract_server(server_addr, expected_requests));
+    wait_for_server_ready();
+
+    let mut client = live_client(bind_addr.as_str());
+    let task_id = client
+        .create_task(live_task())
+        .expect("create_task should succeed");
+    assert_eq!(
+        client.get_task_status(&task_id),
+        Err(SdkError::TransportFailure(
+            "service response missing required field"
+        ))
+    );
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "malformed task status should still satisfy request budget"
     );
 }
 

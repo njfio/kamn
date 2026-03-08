@@ -62,6 +62,16 @@ pub(crate) fn prepare_task_complete(
     ))
 }
 
+pub(crate) fn prepare_task_status_lookup(
+    task_aliases: &HashMap<u64, LiveTaskAlias>,
+    task_id: &TaskId,
+) -> Result<String, SdkError> {
+    task_aliases
+        .get(&task_id.0)
+        .map(|entry| entry.service_id.clone())
+        .ok_or_else(|| missing_alias("task", task_id.0))
+}
+
 pub(crate) fn prepare_task_artifact_submission(
     task_aliases: &HashMap<u64, LiveTaskAlias>,
     task_id: &TaskId,

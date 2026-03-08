@@ -3,7 +3,7 @@ use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport,
     Message, MessageId, MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId,
-    TokenAmount, TransportMode,
+    TaskStatus, TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 
@@ -108,6 +108,17 @@ impl InMemoryKamnClient {
             redaction_status.to_owned(),
         );
         Ok(artifact.status.clone())
+    }
+
+    fn task_status(task_id: &TaskId, task: &TaskState) -> TaskStatus {
+        let state = if task.completed {
+            "completed"
+        } else if task.accepted_by.is_some() {
+            "accepted"
+        } else {
+            "submitted"
+        };
+        TaskStatus::from_state(task_id, state)
     }
 
     fn validate_metadata(metadata: &AgentMetadata) -> Result<(), SdkError> {
@@ -300,6 +311,14 @@ impl KamnAgent for InMemoryKamnClient {
         }
         task.accepted_by = Some(assignee.clone());
         Ok(())
+    }
+
+    fn get_task_status(&self, task_id: &TaskId) -> Result<TaskStatus, SdkError> {
+        let task = self.tasks.get(task_id).ok_or_else(|| SdkError::NotFound {
+            entity: "task",
+            id: task_id.0.to_string(),
+        })?;
+        Ok(Self::task_status(task_id, task))
     }
 
     fn submit_artifact(
