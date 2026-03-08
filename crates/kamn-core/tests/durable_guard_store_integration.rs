@@ -4,9 +4,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use kamn_core::{
     ChannelPermissionEngine, ChannelPermissions, DeliveryFailureCode, DeliveryGuardInput,
-    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError,
-    FileDurableGuardSnapshotStore, InMemoryDurableGuardSnapshotStore, MessageDeliveryGuards,
-    PermissionRule, RetentionPolicy, DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
+    DeliveryValidationResult, DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle,
+    DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
+    InMemoryDurableGuardSnapshotStore, MessageDeliveryGuards, PermissionRule, RetentionPolicy,
+    DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
 };
 
 fn valid_permissions() -> ChannelPermissions {
@@ -36,7 +37,7 @@ fn seeded_bundle() -> DurableGuardSnapshotBundle {
     let mut delivery = MessageDeliveryGuards::new();
     assert_eq!(
         delivery.validate(valid_input("urn:uuid:msg-1", 1)),
-        kamn_core::DeliveryValidationResult::Accepted
+        DeliveryValidationResult::Accepted
     );
 
     let mut channel = ChannelPermissionEngine::new();
@@ -63,6 +64,10 @@ fn temp_snapshot_path() -> PathBuf {
     std::env::temp_dir().join(format!("kamn-durable-guard-{nanos}.snapshot"))
 }
 
+fn remove_if_present(path: &PathBuf) {
+    let _ = fs::remove_file(path);
+}
+
 #[test]
 fn integration_durable_guard_bundle_capture_and_restore_reproduces_guard_state() {
     let bundle = seeded_bundle();
@@ -79,10 +84,10 @@ fn integration_durable_guard_bundle_capture_and_restore_reproduces_guard_state()
     assert_eq!(channel.export_snapshot(), original_channel);
 
     match delivery.validate(valid_input("urn:uuid:msg-1", 2)) {
-        kamn_core::DeliveryValidationResult::Rejected(notice) => {
+        DeliveryValidationResult::Rejected(notice) => {
             assert_eq!(notice.code, DeliveryFailureCode::Replay);
         }
-        kamn_core::DeliveryValidationResult::Accepted => panic!("expected replay rejection"),
+        DeliveryValidationResult::Accepted => panic!("expected replay rejection"),
     }
 }
 
@@ -109,7 +114,7 @@ fn integration_durable_guard_file_store_round_trips_bundle_from_disk() {
         .expect("save should succeed");
 
     assert_eq!(store.load_bundle().expect("load should succeed"), Some(bundle));
-    let _ = fs::remove_file(path);
+    remove_if_present(&path);
 }
 
 #[test]
@@ -132,5 +137,5 @@ fn integration_durable_guard_store_invalid_schema_and_payload_fail_closed() {
         store.load_bundle(),
         Err(DurableGuardSnapshotStoreError::InvalidPayload(_))
     ));
-    let _ = fs::remove_file(path);
+    remove_if_present(&path);
 }
