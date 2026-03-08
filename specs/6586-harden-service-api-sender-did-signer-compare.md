@@ -16,11 +16,11 @@ Replace the self-certifying sender-DID signer public-key compare in `crates/kamn
 - Reintroducing direct `eq_ignore_ascii_case()` in this compare must fail a source-contract regression test.
 
 # Acceptance criteria
-- [ ] `sender_did_matches_signer_public_key()` does not rely on `eq_ignore_ascii_case()` for self-certifying DID signer-key matching.
-- [ ] Matching self-certifying sender DIDs still accept uppercase/lowercase hex variants representing the same key.
-- [ ] Mismatched self-certifying sender DIDs still return `false`.
-- [ ] Legacy sender-binding behavior remains unchanged.
-- [ ] A dedicated source-contract regression test pins the auth-boundary compare away from `eq_ignore_ascii_case()`.
+- [x] `sender_did_matches_signer_public_key()` does not rely on `eq_ignore_ascii_case()` for self-certifying DID signer-key matching.
+- [x] Matching self-certifying sender DIDs still accept case-variant signer public-key header hex representing the same key.
+- [x] Mismatched self-certifying sender DIDs still return `false`.
+- [x] Legacy sender-binding behavior remains unchanged.
+- [x] A dedicated source-contract regression test pins the auth-boundary compare away from `eq_ignore_ascii_case()`.
 
 # Files to touch
 - `crates/kamn-node/src/service_api_endpoint/auth.rs`
@@ -34,6 +34,17 @@ Replace the self-certifying sender-DID signer public-key compare in `crates/kamn
 
 # Test plan
 - Add a source-contract test that inspects `sender_did_matches_signer_public_key()` and fails if `eq_ignore_ascii_case()` appears there.
-- Add runtime tests covering case-variant acceptance for the same self-certifying key.
+- Add runtime tests covering case-variant signer public-key header acceptance for the same self-certifying key.
 - Add runtime tests covering mismatched self-certifying key rejection.
 - Re-run existing legacy sender-binding tests to confirm unchanged behavior.
+
+# Verification actuals
+- Red: `cargo test -p kamn-node --test service_api_sender_did_constant_time -- --nocapture`
+- Green: `cargo test -p kamn-node --test service_api_sender_did_constant_time -- --nocapture`
+- Green: `cargo test -p kamn-node --bin kamn-node service_api_endpoint::auth::tests::regression_sender_did_binding_accepts_case_variant_signer_public_key_header -- --exact --nocapture`
+- Green: `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_did_binding -- --exact --nocapture`
+- Green: `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+- Green: `cargo clippy -p kamn-node --tests -- -D warnings`
+
+# Deviations
+- The live ingress path rejects uppercase self-certifying sender DIDs before the compare runs because `AgentDid::parse()` only accepts lowercase method-specific ids. The integration regression therefore targets the real public boundary: lowercase self-certifying DID plus case-variant signer public-key header.

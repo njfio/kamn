@@ -3009,6 +3009,78 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
 }
 
 #[test]
+fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_did_binding() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34075".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let signer_public_key_hex =
+        service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX)
+            .expect("service-auth public key should derive");
+    let sender_did = format!("kamn:did:agent:pkh-{signer_public_key_hex}");
+    let message_body = "{\"message\":\"hello\"}";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = service_api_request_signature_for_fields(
+        sender_did.as_str(),
+        1,
+        state_hash.as_str(),
+        message_body,
+    );
+    let response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did.as_str()),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            (
+                "x-kamn-signer-public-key",
+                signer_public_key_hex.to_uppercase().as_str(),
+            ),
+        ],
+    );
+
+    assert!(response.contains("HTTP/1.1 202 Accepted"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after case-variant sender DID auth flow"
+    );
+}
+
+#[test]
 fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths() {
     assert_eq!(
         SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
