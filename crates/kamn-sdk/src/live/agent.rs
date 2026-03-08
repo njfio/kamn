@@ -8,6 +8,7 @@ use super::{
     state::{build_agents_read_auth, build_agents_read_auth_with_body, build_auth, remember_message_id},
 };
 use crate::{
+    channel_create::channel_id as validate_channel_id,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
     MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, service::agent_search_payload,
@@ -59,12 +60,7 @@ impl KamnAgent for LiveTransportKamnClient {
             Some(CHANNELS_WRITE_SCOPE),
         )?;
         let receipt = self.service_client.create_channel(payload.as_str(), &auth)?;
-        if receipt.channel_id.trim().is_empty() {
-            return Err(SdkError::TransportFailure(
-                "service returned empty channel_id in create_channel response",
-            ));
-        }
-        Ok(ChannelId(receipt.channel_id))
+        validate_channel_id(receipt.channel_id)
     }
 
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError> {

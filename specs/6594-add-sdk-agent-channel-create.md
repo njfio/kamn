@@ -20,12 +20,12 @@ Add high-level channel creation to the SDK `KamnAgent` API so both in-memory and
 - In-memory duplicate channel creation must remain safe and deterministic without corrupting state.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes a channel creation method returning `ChannelId`.
-- [ ] `InMemoryKamnClient` implements the method with deterministic local semantics.
-- [ ] `LiveTransportKamnClient` implements the method through the existing `POST /v1/channels/create` route.
-- [ ] Live transport signs the exact request body sent to the service route.
-- [ ] SDK tests cover in-memory and live channel creation through the high-level API.
-- [ ] Existing lower-level `ServiceApiClient::create_channel()` behavior remains green.
+- [x] `KamnAgent` exposes a channel creation method returning `ChannelId`.
+- [x] `InMemoryKamnClient` implements the method with deterministic local semantics.
+- [x] `LiveTransportKamnClient` implements the method through the existing `POST /v1/channels/create` route.
+- [x] Live transport signs the exact request body sent to the service route.
+- [x] SDK tests cover in-memory and live channel creation through the high-level API.
+- [x] Existing lower-level `ServiceApiClient::create_channel()` behavior remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -49,3 +49,13 @@ Add high-level channel creation to the SDK `KamnAgent` API so both in-memory and
 - Add red tests for high-level live channel creation using the real service route contract server.
 - Re-run existing `ServiceApiClient` channel route contract coverage.
 - Run strict `clippy` for `kamn-sdk` and targeted SDK tests.
+
+# Deviations
+- None.
+
+# Execution evidence
+- `cargo test -p kamn-sdk --test memory_agent create_channel -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_agent -- --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
