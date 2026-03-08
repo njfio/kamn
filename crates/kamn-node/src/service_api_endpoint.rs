@@ -12,28 +12,29 @@ mod tests;
 mod websocket;
 
 use crate::{
-    logging::{log_info, log_warn},
     NodeBootstrapReport,
+    logging::{log_info, log_warn},
 };
 use axum::{
-    body::{to_bytes, Body, Bytes},
+    Extension, Router,
+    body::{Body, Bytes, to_bytes},
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
         Request, State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     http::{HeaderMap, HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{any, get},
-    Extension, Router,
 };
 use kamn_core::{
-    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
-    data_layer_m9_gateway_project_presence_event, service_auth_verify_with_public_key_hex,
-    AgentDid, DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
-    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
-    DataLayerM9RealtimeDeliveryRegistry, KamnDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
-    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+    AgentDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE, DataLayerM9GatewayBridgeError,
+    DataLayerM9GatewayPresenceProjectionRequest, DataLayerM9PresenceConnectRequest,
+    DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
+    DataLayerM9RealtimeDeliveryRegistry, KamnDid, cross_store_replay_reason_codes_csv,
+    cross_store_replay_reason_taxonomy_version, data_layer_m9_gateway_project_presence_event,
+    service_auth_verify_with_public_key_hex,
 };
 use kamn_runtime_guards::anti_spam::{
     AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
@@ -43,8 +44,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs, net::SocketAddr};
@@ -78,6 +79,7 @@ const ROUTE_TASKS_CREATE: &str = "/v1/tasks/create";
 const ROUTE_ESCROW_FUND: &str = "/v1/escrow/fund";
 const ROUTE_CONTENT_REGISTER: &str = "/v1/content/register";
 const ROUTE_BRIDGE_SUBMIT: &str = "/v1/bridge/submit";
+const ROUTE_AGENTS_REGISTER: &str = "/v1/agents/register";
 const ROUTE_MESSAGES_PREFIX: &str = "/v1/messages/";
 const ROUTE_CHANNELS_PREFIX: &str = "/v1/channels/";
 const ROUTE_CHANNELS_MESSAGES_SUFFIX: &str = "/messages";
@@ -154,9 +156,12 @@ const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/service_api_scope_policy_fixture_matrix.txt");
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-route-authz-matrix.v1";
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 22;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 23;
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT: usize = 2;
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 20;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 21;
+const REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID: &str =
+    "service_api_agent_registration_payload_invalid";
+const REASON_CODE_AGENT_REGISTRATION_CONFLICT: &str = "service_api_agent_registration_conflict";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
 const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";
@@ -338,6 +343,16 @@ pub(crate) struct ServiceApiBridgeStatusBody {
 pub(crate) struct ServiceApiAgentGetBody {
     pub(crate) did: String,
     pub(crate) reputation_score: u64,
+    pub(crate) agent_type: String,
+    pub(crate) model_family: String,
+    pub(crate) capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiAgentRegisterRequestBody {
+    pub(crate) agent_type: String,
+    pub(crate) model_family: String,
+    pub(crate) capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,6 +1,6 @@
 use kamn_sdk::{
-    service_signature_for_fields, AgentDid, AgentMetadata, AgentQuery, KamnAgent, KamnTransport,
-    LiveTransportConfig, LiveTransportKamnClient, Message, SdkError, TransportMode,
+    AgentDid, AgentMetadata, AgentQuery, KamnAgent, KamnTransport, LiveTransportConfig,
+    LiveTransportKamnClient, Message, SdkError, TransportMode, service_signature_for_fields,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
@@ -164,6 +164,7 @@ fn parse_http_request(
 fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Result<(), String> {
     let status_text = match status {
         200 => "200 OK",
+        201 => "201 Created",
         202 => "202 Accepted",
         401 => "401 Unauthorized",
         _ => "500 Internal Server Error",
@@ -180,6 +181,7 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
 
 fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
     Some(match (method, path) {
+        ("POST", "/v1/agents/register") => "agents:write",
         ("POST", "/v1/messages/send") => "messages:write",
         ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
         _ => return None,
@@ -307,6 +309,7 @@ fn run_live_transport_contract_server(
     let deadline = Instant::now() + Duration::from_secs(2);
     let mut served = 0_u64;
     let mut replay_guard = BTreeSet::new();
+    let mut registered_metadata: Option<(String, String, Vec<String>)> = None;
     while served < max_requests {
         if Instant::now() > deadline {
             return Err("server timed out before serving request budget".to_owned());
@@ -340,9 +343,65 @@ fn run_live_transport_contract_server(
                     }
                     let payload = r#"{"message_id":"msg-live-contract-001","status":"created","runtime_mode":"api"}"#;
                     write_http_response(&mut stream, 202, payload)?;
+                } else if method == "POST" && path == "/v1/agents/register" {
+                    let parsed: serde_json::Value =
+                        serde_json::from_str(body.as_str()).map_err(|error| {
+                            format!("registration payload should be valid json: {error}")
+                        })?;
+                    let agent_type = parsed
+                        .get("agent_type")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or_else(|| "registration payload missing agent_type".to_owned())?
+                        .to_owned();
+                    let model_family = parsed
+                        .get("model_family")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or_else(|| "registration payload missing model_family".to_owned())?
+                        .to_owned();
+                    let capabilities = parsed
+                        .get("capabilities")
+                        .and_then(serde_json::Value::as_array)
+                        .ok_or_else(|| "registration payload missing capabilities".to_owned())?
+                        .iter()
+                        .map(|value| {
+                            value
+                                .as_str()
+                                .map(str::to_owned)
+                                .ok_or_else(|| "registration capability must be string".to_owned())
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    registered_metadata = Some((
+                        agent_type.clone(),
+                        model_family.clone(),
+                        capabilities.clone(),
+                    ));
+                    let payload = format!(
+                        "{{\"did\":\"{}\",\"reputation_score\":777,\"agent_type\":\"{}\",\"model_family\":\"{}\",\"capabilities\":{}}}",
+                        expected_agent_sender_did,
+                        agent_type,
+                        model_family,
+                        serde_json::to_string(&capabilities)
+                            .map_err(|error| format!("capability serialization failed: {error}"))?
+                    );
+                    write_http_response(&mut stream, 201, payload.as_str())?;
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
                     let did = path.trim_start_matches("/v1/agents/");
-                    let payload = format!("{{\"did\":\"{}\",\"reputation_score\":777}}", did);
+                    let (agent_type, model_family, capabilities) =
+                        registered_metadata.clone().unwrap_or_else(|| {
+                            (
+                                "service-agent".to_owned(),
+                                "service-api".to_owned(),
+                                vec!["profile:read".to_owned()],
+                            )
+                        });
+                    let payload = format!(
+                        "{{\"did\":\"{}\",\"reputation_score\":777,\"agent_type\":\"{}\",\"model_family\":\"{}\",\"capabilities\":{}}}",
+                        did,
+                        agent_type,
+                        model_family,
+                        serde_json::to_string(&capabilities)
+                            .map_err(|error| format!("capability serialization failed: {error}"))?
+                    );
                     write_http_response(&mut stream, 200, payload.as_str())?;
                 } else {
                     let payload = r#"{"error":"not-found","reason_code":"service_api_route_not_found","message":"route not found"}"#;
@@ -603,15 +662,9 @@ fn regression_live_transport_whitespace_requester_did_falls_back_to_default() {
 fn spec_c05_live_transport_remaining_unsupported_methods_fail_closed() {
     with_env_lock(|| {
         ensure_live_test_env();
-        let mut client = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
+        let client = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
             .expect("endpoint format should be accepted");
 
-        assert_eq!(
-            client.register(metadata("assistant", "gpt-5", &["text"])),
-            Err(SdkError::NotImplemented(
-                "live transport register route is not available via service api"
-            ))
-        );
         assert_eq!(
             client.search_agents(AgentQuery::default()),
             Err(SdkError::NotImplemented(

@@ -1,10 +1,10 @@
 use super::super::{
-    expect_status, json_string_field, json_u64_field, normalize_route_segment, SdkError,
-    ServiceAgentBalance, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
-    ServiceHealthStatus, ServiceRequestAuth,
+    SdkError, ServiceAgentBalance, ServiceAgentProfile, ServiceBridgeStatus,
+    ServiceBridgeSubmission, ServiceHealthStatus, ServiceRequestAuth, expect_status,
+    json_string_array_field, json_string_field, json_u64_field, normalize_route_segment,
 };
 use super::ServiceApiClient;
-use crate::AgentDid;
+use crate::{AgentDid, AgentMetadata};
 
 impl ServiceApiClient {
     /// Submits one bridge message via `POST /v1/bridge/submit`.
@@ -69,10 +69,24 @@ impl ServiceApiClient {
         let route = format!("/v1/agents/{did}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceAgentProfile {
-            did: json_string_field(response.body.as_str(), "did")?,
-            reputation_score: json_u64_field(response.body.as_str(), "reputation_score")?,
+        parse_agent_profile_response(response.body.as_str())
+    }
+
+    /// Registers the authenticated sender DID as an agent profile.
+    pub fn register_agent(
+        &self,
+        metadata: &AgentMetadata,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceAgentProfile, SdkError> {
+        let payload = serde_json::json!({
+            "agent_type": metadata.agent_type,
+            "model_family": metadata.model_family,
+            "capabilities": metadata.capabilities,
         })
+        .to_string();
+        let response = self.request("POST", "/v1/agents/register", payload.as_str(), Some(auth))?;
+        expect_status(response.status, 201)?;
+        parse_agent_profile_response(response.body.as_str())
     }
 
     /// Queries an agent balance by DID.
@@ -117,4 +131,14 @@ impl ServiceApiClient {
         expect_status(response.status, 200)?;
         Ok(response.body)
     }
+}
+
+fn parse_agent_profile_response(body: &str) -> Result<ServiceAgentProfile, SdkError> {
+    Ok(ServiceAgentProfile {
+        did: json_string_field(body, "did")?,
+        reputation_score: json_u64_field(body, "reputation_score")?,
+        agent_type: json_string_field(body, "agent_type")?,
+        model_family: json_string_field(body, "model_family")?,
+        capabilities: json_string_array_field(body, "capabilities")?,
+    })
 }

@@ -289,12 +289,14 @@ pub(super) fn map_anti_spam_rejection_to_reasoned_error(
     rejection: AntiSpamRejection,
 ) -> ServiceApiReasonedError {
     match rejection {
-        AntiSpamRejection::InsufficientDeposit { required, provided } => ServiceApiReasonedError::new(
-            REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
-            format!(
-                "sender deposit below anti-spam minimum: required={required}, provided={provided}"
-            ),
-        ),
+        AntiSpamRejection::InsufficientDeposit { required, provided } => {
+            ServiceApiReasonedError::new(
+                REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
+                format!(
+                    "sender deposit below anti-spam minimum: required={required}, provided={provided}"
+                ),
+            )
+        }
         AntiSpamRejection::RateLimitExceeded {
             limit,
             observed,
@@ -332,6 +334,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope>
         ("POST", ROUTE_MESSAGES_SEND) => ServiceApiScope::MessagesWrite,
         ("POST", ROUTE_MESSAGES_RELAY) => ServiceApiScope::MessagesWrite,
         ("POST", ROUTE_CHANNELS_CREATE) => ServiceApiScope::ChannelsWrite,
+        ("POST", ROUTE_AGENTS_REGISTER) => ServiceApiScope::AgentsWrite,
         ("POST", ROUTE_TASKS_CREATE) => ServiceApiScope::TasksWrite,
         ("POST", _) if super::payload::task_accept_path_id(path).is_some() => {
             ServiceApiScope::TasksWrite
@@ -744,9 +747,11 @@ mod tests {
             error.reason_code,
             REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
         );
-        assert!(error
-            .message
-            .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER));
+        assert!(
+            error
+                .message
+                .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER)
+        );
     }
 
     #[test]

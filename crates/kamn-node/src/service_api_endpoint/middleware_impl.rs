@@ -439,6 +439,63 @@ pub(super) async fn handle_service_api_http_route(
         };
     }
     if context.parsed_request.method == "POST"
+        && context.parsed_request.path == ROUTE_AGENTS_REGISTER
+    {
+        let sender_did = match super::auth::header_value(
+            &context.parsed_request.headers,
+            REQUEST_AUTH_SENDER_DID_HEADER,
+        ) {
+            Some(sender_did) => sender_did,
+            None => {
+                return super::payload::json_error_response(
+                    StatusCode::UNAUTHORIZED,
+                    "unauthorized",
+                    REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING,
+                    format!("missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}").as_str(),
+                );
+            }
+        };
+        let registration =
+            match parse_agent_registration_payload(context.parsed_request.body.as_str()) {
+                Ok(payload) => payload,
+                Err(error) => {
+                    return super::payload::json_error_response(
+                        StatusCode::BAD_REQUEST,
+                        "bad-request",
+                        error.reason_code,
+                        error.message.as_str(),
+                    );
+                }
+            };
+        let registration_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.register_agent_profile(sender_did, &registration)
+        };
+        return match registration_result {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 201,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(message_store::ServiceApiAgentRegistrationStoreError::Conflict(error)) => {
+                super::payload::json_error_response(
+                    StatusCode::CONFLICT,
+                    "conflict",
+                    REASON_CODE_AGENT_REGISTRATION_CONFLICT,
+                    format!("service api agent registration rejected: {error}").as_str(),
+                )
+            }
+            Err(message_store::ServiceApiAgentRegistrationStoreError::Persistence(error)) => {
+                super::payload::json_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    REASON_CODE_STATE_PERSISTENCE_FAILED,
+                    format!("service api agent registration persistence failed: {error}").as_str(),
+                )
+            }
+        };
+    }
+    if context.parsed_request.method == "POST"
         && context.parsed_request.path == ROUTE_CONTENT_REGISTER
     {
         let register_result = {
@@ -1101,6 +1158,47 @@ fn parse_relay_ingest_payload(
         recipient_did: recipient_did.to_owned(),
         body: body.to_owned(),
     })
+}
+
+fn parse_agent_registration_payload(
+    payload: &str,
+) -> Result<ServiceApiAgentRegisterRequestBody, ServiceApiReasonedError> {
+    let parsed =
+        serde_json::from_str::<ServiceApiAgentRegisterRequestBody>(payload).map_err(|error| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                format!("agent registration payload must be valid json: {error}"),
+            )
+        })?;
+    if parsed.agent_type.trim().is_empty() {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+            "agent registration payload missing non-empty agent_type",
+        ));
+    }
+    if parsed.model_family.trim().is_empty() {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+            "agent registration payload missing non-empty model_family",
+        ));
+    }
+    if parsed.capabilities.is_empty() {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+            "agent registration payload missing non-empty capabilities",
+        ));
+    }
+    if parsed
+        .capabilities
+        .iter()
+        .any(|value| value.trim().is_empty())
+    {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+            "agent registration payload capabilities must not contain empty entries",
+        ));
+    }
+    Ok(parsed)
 }
 
 fn validate_relay_agent_did(role: &str, did: &str) -> Result<(), ServiceApiReasonedError> {

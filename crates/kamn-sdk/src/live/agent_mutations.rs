@@ -1,19 +1,38 @@
 use super::{
-    config::{CONTENT_WRITE_SCOPE, ESCROW_WRITE_SCOPE, MESSAGES_WRITE_SCOPE, TASKS_WRITE_SCOPE},
+    LiveTransportKamnClient,
+    config::{
+        AGENTS_WRITE_SCOPE, CONTENT_WRITE_SCOPE, ESCROW_WRITE_SCOPE, MESSAGES_WRITE_SCOPE,
+        TASKS_WRITE_SCOPE,
+    },
     state::{build_auth, remember_message_id},
     task_escrow::{
         artifact_payload, escrow_payload, prepare_escrow_release, prepare_task_accept,
         prepare_task_artifact_submission, prepare_task_complete, remember_artifact_alias,
         remember_escrow_alias, remember_task_alias, task_payload,
     },
-    LiveTransportKamnClient,
 };
 use crate::{
-    AgentDid, Artifact, ArtifactId, EscrowConfig, EscrowId, Message, MessageId, SdkError,
-    TaskDefinition, TaskId,
+    AgentDid, AgentMetadata, Artifact, ArtifactId, EscrowConfig, EscrowId, Message, MessageId,
+    SdkError, TaskDefinition, TaskId,
 };
 
 impl LiveTransportKamnClient {
+    pub(super) fn register_via_service(
+        &self,
+        metadata: AgentMetadata,
+    ) -> Result<AgentDid, SdkError> {
+        let payload = super::routes::agent_registration_payload(&metadata)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            payload.as_str(),
+            Some(AGENTS_WRITE_SCOPE),
+        )?;
+        let profile = self.service_client.register_agent(&metadata, &auth)?;
+        Ok(AgentDid::parse(profile.did.as_str())?)
+    }
+
     pub(super) fn send_via_service(&self, message: Message) -> Result<MessageId, SdkError> {
         let payload = super::routes::service_message_payload(&message);
         let auth = build_auth(
@@ -27,10 +46,7 @@ impl LiveTransportKamnClient {
         remember_message_id(&self.state, receipt.message_id.as_str())
     }
 
-    pub(super) fn create_task_via_service(
-        &self,
-        task: TaskDefinition,
-    ) -> Result<TaskId, SdkError> {
+    pub(super) fn create_task_via_service(&self, task: TaskDefinition) -> Result<TaskId, SdkError> {
         let payload = task_payload(&task)?;
         let auth = build_auth(
             &self.state,
@@ -95,7 +111,9 @@ impl LiveTransportKamnClient {
             payload.as_str(),
             Some(CONTENT_WRITE_SCOPE),
         )?;
-        let registration = self.service_client.register_content(payload.as_str(), &auth)?;
+        let registration = self
+            .service_client
+            .register_content(payload.as_str(), &auth)?;
         let mut guard = self
             .state
             .lock()
@@ -147,10 +165,7 @@ impl LiveTransportKamnClient {
         )
     }
 
-    pub(super) fn release_escrow_via_service(
-        &self,
-        escrow_id: &EscrowId,
-    ) -> Result<(), SdkError> {
+    pub(super) fn release_escrow_via_service(&self, escrow_id: &EscrowId) -> Result<(), SdkError> {
         let (service_escrow_id, sender) = {
             let guard = self
                 .state

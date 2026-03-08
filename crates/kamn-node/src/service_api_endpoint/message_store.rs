@@ -1,31 +1,31 @@
 use super::state_io::{load_service_api_state_payload, persist_service_api_state_payload};
 use super::*;
 use kamn_core::{
-    data_layer_m11_evaluate_closure_evidence, data_layer_m3_compute_blind_index,
-    verify_data_layer_m1_inclusion_proof, AgentDid, CanonicalMessageEnvelope,
-    ContentRetentionClass, DataLayerM0AppendOnlyLedger, DataLayerM0RecordInput,
-    DataLayerM0WrappedKey, DataLayerM10ArchiveDueRequest, DataLayerM10PartitionLifecycleRegistry,
+    AgentDid, CANONICAL_ENCRYPTION_ALGORITHM, CANONICAL_MESSAGE_ENVELOPE_TYPE,
+    CANONICAL_PROOF_PURPOSE, CanonicalMessageEnvelope, ContentRetentionClass,
+    DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD, DIRECT_MESSAGE_CIPHER_ALGORITHM,
+    DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM, DataLayerM0AppendOnlyLedger, DataLayerM0RecordInput,
+    DataLayerM0WrappedKey, DataLayerM1MerkleBatch, DataLayerM1MerkleLeaf, DataLayerM2AbacEngine,
+    DataLayerM2AccessAuditInput, DataLayerM2AccessAuditLedger, DataLayerM2ActorRole,
+    DataLayerM2AuthorizationDecision, DataLayerM2DidAuthRequest, DataLayerM2DidSessionService,
+    DataLayerM2MessageScope, DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexSearchMode,
+    DataLayerM3MessageMetadataRecord, DataLayerM3SearchCatalog, DataLayerM4EscrowDraftInput,
+    DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
+    DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
+    DataLayerM6GraphEdgeInput, DataLayerM6GraphEdgeRelation, DataLayerM6GraphNodeInput,
+    DataLayerM6GraphNodeKind, DataLayerM6GraphRegistry, DataLayerM7BillingQuery,
+    DataLayerM7TelemetryPointInput, DataLayerM7TelemetryRegistry, DataLayerM8ComplianceRegistry,
+    DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery, DataLayerM8RetentionClass,
+    DataLayerM8WrappedCekInput, DataLayerM9DispatchAckStatus, DataLayerM9DispatchRequest,
+    DataLayerM9PresenceConnectRequest, DataLayerM9RealtimeDeliveryRegistry,
+    DataLayerM10ArchiveDueRequest, DataLayerM10PartitionLifecycleRegistry,
     DataLayerM10PartitionRecordInput, DataLayerM11ClosureAcceptanceDecision,
     DataLayerM11ClosureEvidenceInput, DataLayerM11OperatorReadinessDecision,
-    DataLayerM11OperatorReadinessReport, DataLayerM1MerkleBatch, DataLayerM1MerkleLeaf,
-    DataLayerM2AbacEngine, DataLayerM2AccessAuditInput, DataLayerM2AccessAuditLedger,
-    DataLayerM2ActorRole, DataLayerM2AuthorizationDecision, DataLayerM2DidAuthRequest,
-    DataLayerM2DidSessionService, DataLayerM2MessageScope, DataLayerM3BlindIndexQuery,
-    DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord, DataLayerM3SearchCatalog,
-    DataLayerM4EscrowDraftInput, DataLayerM4EscrowTransitionAction,
-    DataLayerM4EscrowTransitionEngine, DataLayerM5EmbeddingPrivacyMode,
-    DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry, DataLayerM6GraphEdgeInput,
-    DataLayerM6GraphEdgeRelation, DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind,
-    DataLayerM6GraphRegistry, DataLayerM7BillingQuery, DataLayerM7TelemetryPointInput,
-    DataLayerM7TelemetryRegistry, DataLayerM8ComplianceRegistry, DataLayerM8MessageRecordInput,
-    DataLayerM8OwnerScopeQuery, DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
-    DataLayerM9DispatchAckStatus, DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest,
-    DataLayerM9RealtimeDeliveryRegistry, DataLayerPrdCriticalScenarioConformanceDecision,
+    DataLayerM11OperatorReadinessReport, DataLayerPrdCriticalScenarioConformanceDecision,
     DataLayerPrdCriticalScenarioConformanceReport, DirectMessageCiphertext, EnvelopeEncryption,
     EnvelopeHeader, EnvelopeMetadata, EnvelopeProof, ObservabilityHealth, ObservabilitySloProfile,
-    CANONICAL_ENCRYPTION_ALGORITHM, CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
-    DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD, DIRECT_MESSAGE_CIPHER_ALGORITHM,
-    DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+    data_layer_m3_compute_blind_index, data_layer_m11_evaluate_closure_evidence,
+    verify_data_layer_m1_inclusion_proof,
 };
 use std::collections::BTreeMap;
 #[cfg(test)]
@@ -109,12 +109,26 @@ struct ServiceApiPersistedAgentRecord {
     reputation_score: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     balance: Option<u64>,
+    #[serde(default)]
+    registered: bool,
+    #[serde(default)]
+    agent_type: String,
+    #[serde(default)]
+    model_family: String,
+    #[serde(default)]
+    capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(super) struct ServiceApiAgentBalanceBody {
     did: String,
     balance: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum ServiceApiAgentRegistrationStoreError {
+    Conflict(String),
+    Persistence(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -779,8 +793,66 @@ impl ServiceApiMessageStore {
     ) -> Result<ServiceApiAgentGetBody, String> {
         let record = self.get_or_create_agent_record(agent_did)?;
         Ok(ServiceApiAgentGetBody {
-            did: record.did,
+            did: record.did.clone(),
             reputation_score: record.reputation_score,
+            agent_type: record_agent_type(&record),
+            model_family: record_model_family(&record),
+            capabilities: record_capabilities(&record),
+        })
+    }
+
+    pub(super) fn register_agent_profile(
+        &mut self,
+        agent_did: &str,
+        registration: &ServiceApiAgentRegisterRequestBody,
+    ) -> Result<ServiceApiAgentGetBody, ServiceApiAgentRegistrationStoreError> {
+        self.refresh_from_disk()
+            .map_err(ServiceApiAgentRegistrationStoreError::Persistence)?;
+        let normalized_did = agent_did.trim();
+        if normalized_did.is_empty() {
+            return Err(ServiceApiAgentRegistrationStoreError::Persistence(
+                "agent did must not be empty".to_owned(),
+            ));
+        }
+
+        let expected_capabilities: Vec<String> = registration
+            .capabilities
+            .iter()
+            .map(|value| value.trim().to_owned())
+            .collect();
+
+        let existing = self
+            .snapshot
+            .agents
+            .get(normalized_did)
+            .cloned()
+            .unwrap_or_else(|| default_agent_record(normalized_did));
+        if existing.registered
+            && (record_agent_type(&existing) != registration.agent_type.trim()
+                || record_model_family(&existing) != registration.model_family.trim()
+                || record_capabilities(&existing) != expected_capabilities)
+        {
+            return Err(ServiceApiAgentRegistrationStoreError::Conflict(
+                "agent registration metadata mismatch for existing did".to_owned(),
+            ));
+        }
+
+        let mut record = existing;
+        record.registered = true;
+        record.agent_type = registration.agent_type.trim().to_owned();
+        record.model_family = registration.model_family.trim().to_owned();
+        record.capabilities = expected_capabilities;
+        self.snapshot
+            .agents
+            .insert(normalized_did.to_owned(), record.clone());
+        self.persist()
+            .map_err(ServiceApiAgentRegistrationStoreError::Persistence)?;
+        Ok(ServiceApiAgentGetBody {
+            did: record.did.clone(),
+            reputation_score: record.reputation_score,
+            agent_type: record_agent_type(&record),
+            model_family: record_model_family(&record),
+            capabilities: record_capabilities(&record),
         })
     }
 
@@ -815,11 +887,7 @@ impl ServiceApiMessageStore {
                 record.clone()
             }
             None => {
-                let record = ServiceApiPersistedAgentRecord {
-                    did: normalized_did.to_owned(),
-                    reputation_score: INITIAL_SERVICE_API_AGENT_REPUTATION_SCORE,
-                    balance: Some(INITIAL_SERVICE_API_AGENT_BALANCE),
-                };
+                let record = default_agent_record(normalized_did);
                 self.snapshot
                     .agents
                     .insert(normalized_did.to_owned(), record.clone());
@@ -833,6 +901,51 @@ impl ServiceApiMessageStore {
         }
         Ok(record)
     }
+}
+
+fn default_agent_record(agent_did: &str) -> ServiceApiPersistedAgentRecord {
+    ServiceApiPersistedAgentRecord {
+        did: agent_did.to_owned(),
+        reputation_score: INITIAL_SERVICE_API_AGENT_REPUTATION_SCORE,
+        balance: Some(INITIAL_SERVICE_API_AGENT_BALANCE),
+        registered: false,
+        agent_type: default_agent_type(),
+        model_family: default_model_family(),
+        capabilities: default_capabilities(),
+    }
+}
+
+fn record_agent_type(record: &ServiceApiPersistedAgentRecord) -> String {
+    if record.agent_type.trim().is_empty() {
+        return default_agent_type();
+    }
+    record.agent_type.clone()
+}
+
+fn record_model_family(record: &ServiceApiPersistedAgentRecord) -> String {
+    if record.model_family.trim().is_empty() {
+        return default_model_family();
+    }
+    record.model_family.clone()
+}
+
+fn record_capabilities(record: &ServiceApiPersistedAgentRecord) -> Vec<String> {
+    if record.capabilities.is_empty() {
+        return default_capabilities();
+    }
+    record.capabilities.clone()
+}
+
+fn default_agent_type() -> String {
+    "service-agent".to_owned()
+}
+
+fn default_model_family() -> String {
+    "service-api".to_owned()
+}
+
+fn default_capabilities() -> Vec<String> {
+    vec!["profile:read".to_owned()]
 }
 
 fn bridge_source_message_id_from_payload(
