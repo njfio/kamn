@@ -886,6 +886,18 @@ mod tests {
         DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
         DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
     };
+    const SOURCE: &str = include_str!("data_layer_m2_gateway_access.rs");
+
+    fn authenticate_source() -> &'static str {
+        let function_start = SOURCE
+            .find("pub fn authenticate(")
+            .expect("authenticate function must exist");
+        let function_end = SOURCE[function_start..]
+            .find("\n    }\n}")
+            .map(|offset| function_start + offset)
+            .expect("authenticate function boundary must exist");
+        &SOURCE[function_start..function_end]
+    }
 
     #[test]
     fn unit_data_layer_m2_session_authenticate_succeeds_for_valid_request() {
@@ -906,6 +918,38 @@ mod tests {
         assert_eq!(token.requester_did, requester_did);
         assert_eq!(token.expires_at_epoch_seconds, 1_120);
         assert!(token.token_id.starts_with("session:sha256:"));
+    }
+
+    #[test]
+    fn regression_data_layer_m2_session_authenticate_rejects_mismatched_credential() {
+        let service =
+            DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
+        assert_eq!(
+            service.authenticate(DataLayerM2DidAuthRequest {
+                requester_did: "kamn:did:agent:alice".to_owned(),
+                challenge: "nonce-1".to_owned(),
+                credential: "sig:kamn:did:agent:alice:wrong".to_owned(),
+                issued_at_epoch_seconds: 1_000,
+                ttl_seconds: 120,
+            }),
+            Err(super::DataLayerM2GatewayError::InvalidCredential(
+                "credential signature mismatch".to_owned(),
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_requires_constant_time_m2_authenticate_credential_compare() {
+        let function_source = authenticate_source();
+        let direct_pattern = ["if request.credential ", "!=", " expected_credential {"].concat();
+        assert!(
+            function_source.contains("crate::constant_time_eq::constant_time_eq_bytes("),
+            "m2 auth credential verification must use constant-time compare"
+        );
+        assert!(
+            !function_source.contains(direct_pattern.as_str()),
+            "m2 auth credential verification must not use direct equality"
+        );
     }
 
     #[test]
