@@ -20,11 +20,11 @@ Add high-level task status to the SDK `KamnAgent` API so callers can read task l
 - In-memory task status must remain deterministic across submitted, accepted, and completed transitions.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes a task status method returning a stable SDK `TaskStatus` type.
-- [ ] `InMemoryKamnClient` reports submitted, accepted, and completed task states for known tasks and rejects unknown tasks.
-- [ ] `LiveTransportKamnClient` resolves `TaskId` through the existing alias map and uses `GET /v1/tasks/{id}`.
-- [ ] SDK tests cover in-memory and live high-level task status, including unknown-alias and malformed-response failures.
-- [ ] Existing lower-level `ServiceApiClient::get_task()` behavior remains green.
+- [x] `KamnAgent` exposes a task status method returning a stable SDK `TaskStatus` type.
+- [x] `InMemoryKamnClient` reports submitted, accepted, and completed task states for known tasks and rejects unknown tasks.
+- [x] `LiveTransportKamnClient` resolves `TaskId` through the existing alias map and uses `GET /v1/tasks/{id}`.
+- [x] SDK tests cover in-memory and live high-level task status, including unknown-alias and malformed-response failures.
+- [x] Existing lower-level `ServiceApiClient::get_task()` behavior remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -48,3 +48,14 @@ Add high-level task status to the SDK `KamnAgent` API so callers can read task l
 - Add a live fail-closed test for malformed task-status response payloads.
 - Re-run existing signed low-level `ServiceApiClient` route contract coverage.
 - Run strict `clippy` for `kamn-sdk` and targeted SDK tests.
+
+# Deviations
+- None.
+
+# Verification
+- `cargo test -p kamn-sdk --test memory_agent get_task_status -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow task_status -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow spec_c06_live_transport_task_and_escrow_routes_execute_network_contract -- --exact --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
