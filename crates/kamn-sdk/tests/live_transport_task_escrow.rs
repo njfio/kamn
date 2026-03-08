@@ -60,6 +60,7 @@ fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
         accept_task_request(),
         submit_artifact_request(),
         get_artifact_status_request(),
+        expire_artifact_request(),
         complete_task_request(),
         create_escrow_request(),
         release_escrow_request(),
@@ -146,6 +147,18 @@ fn release_escrow_request() -> ExpectedRequest {
     }
 }
 
+fn expire_artifact_request() -> ExpectedRequest {
+    ExpectedRequest {
+        method: "POST",
+        path: "/v1/content/content-local-artifact-abc/expire".to_owned(),
+        body: "{}".to_owned(),
+        sender_did: "kamn:did:agent:live-requester".to_owned(),
+        scope: "content:write",
+        response_body: r#"{"content_id":"content-local-artifact-abc","lifecycle_state":"expired","redaction_status":"none"}"#.to_owned(),
+        ..Default::default()
+    }
+}
+
 fn live_client(endpoint: &str) -> LiveTransportKamnClient {
     let endpoint = format!("http://{endpoint}");
     LiveTransportKamnClient::connect(endpoint.as_str()).expect("live client should connect")
@@ -174,6 +187,17 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
         ArtifactStatus {
             artifact_id,
             lifecycle_state: "retained".to_owned(),
+            redaction_status: "none".to_owned(),
+        }
+    );
+    let expired_status = client
+        .expire_artifact(&artifact_id)
+        .expect("expire_artifact should succeed");
+    assert_eq!(
+        expired_status,
+        ArtifactStatus {
+            artifact_id,
+            lifecycle_state: "expired".to_owned(),
             redaction_status: "none".to_owned(),
         }
     );
@@ -240,6 +264,13 @@ fn assert_unknown_task_aliases(client: &mut LiveTransportKamnClient) {
     );
     assert_eq!(
         client.get_artifact_status(&ArtifactId(77)),
+        Err(SdkError::NotFound {
+            entity: "artifact",
+            id: "77".to_owned(),
+        })
+    );
+    assert_eq!(
+        client.expire_artifact(&ArtifactId(77)),
         Err(SdkError::NotFound {
             entity: "artifact",
             id: "77".to_owned(),
@@ -317,6 +348,52 @@ fn regression_live_transport_artifact_status_rejects_malformed_service_payload()
     assert!(
         server_result.is_ok(),
         "malformed content status should still satisfy request budget"
+    );
+}
+
+#[test]
+fn regression_live_transport_artifact_expire_rejects_malformed_service_payload() {
+    ensure_live_test_env();
+    let bind_addr = reserve_loopback_addr();
+    let expected_requests = vec![
+        create_task_request(),
+        accept_task_request(),
+        submit_artifact_request(),
+        ExpectedRequest {
+            method: "POST",
+            path: "/v1/content/content-local-artifact-abc/expire".to_owned(),
+            body: "{}".to_owned(),
+            sender_did: "kamn:did:agent:live-requester".to_owned(),
+            scope: "content:write",
+            response_body: r#"{"content_id":"content-local-artifact-abc","redaction_status":"none"}"#.to_owned(),
+            ..Default::default()
+        },
+    ];
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_contract_server(server_addr, expected_requests));
+    wait_for_server_ready();
+
+    let mut client = live_client(bind_addr.as_str());
+    let task_id = client
+        .create_task(live_task())
+        .expect("create_task should succeed");
+    client
+        .accept_task(&task_id, &did("assignee-live"))
+        .expect("accept_task should succeed");
+    let artifact_id = client
+        .submit_artifact(&task_id, live_artifact())
+        .expect("submit_artifact should succeed");
+    assert_eq!(
+        client.expire_artifact(&artifact_id),
+        Err(SdkError::TransportFailure(
+            "service response missing required field"
+        ))
+    );
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "malformed expire response should still satisfy request budget"
     );
 }
 

@@ -324,6 +324,68 @@ fn get_artifact_status_rejects_unknown_artifact() {
 }
 
 #[test]
+fn expire_artifact_returns_expired_status_for_known_artifact() {
+    let mut client = InMemoryKamnClient::new();
+    let creator = client
+        .register(metadata("autonomous", "claude-4", &["research"]))
+        .expect("register creator should succeed");
+    let assignee = client
+        .register(metadata("assistant", "gpt-5", &["research"]))
+        .expect("register assignee should succeed");
+    let task_id = client
+        .create_task(TaskDefinition {
+            creator,
+            task_type: "analysis".to_owned(),
+            description: "analyze benchmark results".to_owned(),
+        })
+        .expect("create task should succeed");
+    client
+        .accept_task(&task_id, &assignee)
+        .expect("accept task should succeed");
+    let artifact_id = client
+        .submit_artifact(
+            &task_id,
+            Artifact {
+                name: "report.md".to_owned(),
+                bytes: b"summary".to_vec(),
+            },
+        )
+        .expect("submit artifact should succeed");
+
+    let status = client
+        .expire_artifact(&artifact_id)
+        .expect("artifact expire should succeed");
+
+    assert_eq!(
+        status,
+        ArtifactStatus {
+            artifact_id: artifact_id.clone(),
+            lifecycle_state: "expired".to_owned(),
+            redaction_status: "none".to_owned(),
+        }
+    );
+    assert_eq!(
+        client
+            .get_artifact_status(&artifact_id)
+            .expect("status should reflect expiration"),
+        status
+    );
+}
+
+#[test]
+fn expire_artifact_rejects_unknown_artifact() {
+    let mut client = InMemoryKamnClient::new();
+
+    assert_eq!(
+        client.expire_artifact(&kamn_sdk::ArtifactId(43)),
+        Err(SdkError::NotFound {
+            entity: "artifact",
+            id: "43".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn search_agents_filters_by_capability_and_reputation_exists() {
     let mut client = InMemoryKamnClient::new();
     let did_a = match client.register(metadata("autonomous", "claude-4", &["text", "code"])) {
