@@ -2,8 +2,8 @@
 mod support;
 
 use kamn_sdk::{
-    Artifact, ArtifactId, EscrowConfig, EscrowId, KamnAgent, LiveTransportKamnClient, SdkError,
-    TaskDefinition, TaskId, TokenAmount,
+    Artifact, ArtifactId, ArtifactStatus, EscrowConfig, EscrowId, KamnAgent,
+    LiveTransportKamnClient, SdkError, TaskDefinition, TaskId, TokenAmount,
 };
 use std::thread;
 
@@ -59,6 +59,7 @@ fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
         create_task_request(),
         accept_task_request(),
         submit_artifact_request(),
+        get_artifact_status_request(),
         complete_task_request(),
         create_escrow_request(),
         release_escrow_request(),
@@ -124,6 +125,18 @@ fn create_escrow_request() -> ExpectedRequest {
     }
 }
 
+fn get_artifact_status_request() -> ExpectedRequest {
+    ExpectedRequest {
+        method: "GET",
+        path: "/v1/content/content-local-artifact-abc".to_owned(),
+        body: String::new(),
+        sender_did: "kamn:did:agent:live-requester".to_owned(),
+        scope: "content:read",
+        response_body: r#"{"content_id":"content-local-artifact-abc","lifecycle_state":"retained","redaction_status":"none"}"#.to_owned(),
+        ..Default::default()
+    }
+}
+
 fn release_escrow_request() -> ExpectedRequest {
     ExpectedRequest {
         sender_did: "kamn:did:agent:payer-live".to_owned(),
@@ -152,6 +165,17 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
     assert_eq!(
         artifact_id,
         ArtifactId(deterministic_u64_tag("content-local-artifact-abc"))
+    );
+    let artifact_status = client
+        .get_artifact_status(&artifact_id)
+        .expect("get_artifact_status should succeed");
+    assert_eq!(
+        artifact_status,
+        ArtifactStatus {
+            artifact_id,
+            lifecycle_state: "retained".to_owned(),
+            redaction_status: "none".to_owned(),
+        }
     );
     client
         .complete_task(&task_id)
@@ -214,6 +238,13 @@ fn assert_unknown_task_aliases(client: &mut LiveTransportKamnClient) {
             id: "77".to_owned(),
         })
     );
+    assert_eq!(
+        client.get_artifact_status(&ArtifactId(77)),
+        Err(SdkError::NotFound {
+            entity: "artifact",
+            id: "77".to_owned(),
+        })
+    );
 }
 
 #[test]
@@ -240,6 +271,38 @@ fn regression_live_transport_submit_artifact_requires_accepted_task() {
     assert!(
         server_result.is_ok(),
         "unaccepted task artifact submission should not emit an extra network request"
+    );
+}
+
+#[test]
+fn regression_live_transport_artifact_status_rejects_malformed_service_payload() {
+    ensure_live_test_env();
+    let bind_addr = reserve_loopback_addr();
+    let expected_requests = vec![ExpectedRequest {
+        method: "GET",
+        path: "/v1/content/content-local-artifact-bad".to_owned(),
+        body: String::new(),
+        sender_did: "kamn:did:agent:live-requester".to_owned(),
+        scope: "content:read",
+        response_body: r#"{"content_id":"content-local-artifact-bad","redaction_status":"none"}"#.to_owned(),
+        ..Default::default()
+    }];
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_contract_server(server_addr, expected_requests));
+    wait_for_server_ready();
+
+    let mut client = live_client(bind_addr.as_str());
+    assert_eq!(
+        client.get_artifact_status(&ArtifactId(deterministic_u64_tag("content-local-artifact-bad"))),
+        Err(SdkError::TransportFailure(
+            "service response payload missing required lifecycle_state"
+        ))
+    );
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "malformed content status should still satisfy request budget"
     );
 }
 

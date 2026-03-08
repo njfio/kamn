@@ -1,6 +1,6 @@
 use kamn_sdk::{
-    AgentDid, AgentMetadata, AgentQuery, Artifact, EscrowConfig, InMemoryKamnClient, KamnAgent,
-    Message, SdkError, TaskDefinition, TokenAmount,
+    AgentDid, AgentMetadata, AgentQuery, Artifact, ArtifactStatus, EscrowConfig,
+    InMemoryKamnClient, KamnAgent, Message, SdkError, TaskDefinition, TokenAmount,
 };
 
 fn metadata(agent_type: &str, model: &str, capabilities: &[&str]) -> AgentMetadata {
@@ -264,6 +264,62 @@ fn submit_artifact_and_complete_task_flow() {
     assert_eq!(
         second_complete,
         Err(SdkError::Conflict("task already completed"))
+    );
+}
+
+#[test]
+fn get_artifact_status_returns_retained_status_for_known_artifact() {
+    let mut client = InMemoryKamnClient::new();
+    let creator = client
+        .register(metadata("autonomous", "claude-4", &["research"]))
+        .expect("register creator should succeed");
+    let assignee = client
+        .register(metadata("assistant", "gpt-5", &["research"]))
+        .expect("register assignee should succeed");
+    let task_id = client
+        .create_task(TaskDefinition {
+            creator,
+            task_type: "analysis".to_owned(),
+            description: "analyze benchmark results".to_owned(),
+        })
+        .expect("create task should succeed");
+    client
+        .accept_task(&task_id, &assignee)
+        .expect("accept task should succeed");
+    let artifact_id = client
+        .submit_artifact(
+            &task_id,
+            Artifact {
+                name: "report.md".to_owned(),
+                bytes: b"summary".to_vec(),
+            },
+        )
+        .expect("submit artifact should succeed");
+
+    let status = client
+        .get_artifact_status(&artifact_id)
+        .expect("artifact status should succeed");
+
+    assert_eq!(
+        status,
+        ArtifactStatus {
+            artifact_id,
+            lifecycle_state: "retained".to_owned(),
+            redaction_status: "none".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn get_artifact_status_rejects_unknown_artifact() {
+    let client = InMemoryKamnClient::new();
+
+    assert_eq!(
+        client.get_artifact_status(&kamn_sdk::ArtifactId(42)),
+        Err(SdkError::NotFound {
+            entity: "artifact",
+            id: "42".to_owned(),
+        })
     );
 }
 
