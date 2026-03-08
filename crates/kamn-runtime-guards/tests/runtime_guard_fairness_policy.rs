@@ -13,6 +13,13 @@ fn valid_input(scope: &str) -> FairnessPolicyInput {
     }
 }
 
+fn assert_reject_reason(input: FairnessPolicyInput, reason: FairnessPolicyViolationReason) {
+    assert_eq!(
+        evaluate_fairness_policy(&input),
+        FairnessPolicyDecision::Reject { reason }
+    );
+}
+
 #[test]
 fn integration_runtime_guard_fairness_policy_allows_all_supported_scope_classes() {
     for scope in ["control_plane", "tenant_interactive", "bulk_replication"] {
@@ -25,43 +32,34 @@ fn integration_runtime_guard_fairness_policy_allows_all_supported_scope_classes(
 
 #[test]
 fn integration_runtime_guard_fairness_policy_rejects_invalid_inputs_with_deterministic_reasons() {
-    let cases = [
-        (
-            FairnessPolicyInput {
-                scope: "unknown".to_owned(),
-                ..valid_input("control_plane")
-            },
-            FairnessPolicyViolationReason::ScopeUnknown,
-        ),
-        (
-            FairnessPolicyInput {
-                window_seconds: 0,
-                ..valid_input("control_plane")
-            },
-            FairnessPolicyViolationReason::WindowNonPositive,
-        ),
-        (
-            FairnessPolicyInput {
-                max_weighted_share_gap: 0,
-                ..valid_input("control_plane")
-            },
-            FairnessPolicyViolationReason::MaxGapNonPositive,
-        ),
-        (
-            FairnessPolicyInput {
-                active_weighted_share: 6,
-                ..valid_input("control_plane")
-            },
-            FairnessPolicyViolationReason::WeightedShareExceedsGap,
-        ),
-    ];
-
-    for (input, reason) in cases {
-        assert_eq!(
-            evaluate_fairness_policy(&input),
-            FairnessPolicyDecision::Reject { reason }
-        );
-    }
+    assert_reject_reason(
+        FairnessPolicyInput {
+            scope: "unknown".to_owned(),
+            ..valid_input("control_plane")
+        },
+        FairnessPolicyViolationReason::ScopeUnknown,
+    );
+    assert_reject_reason(
+        FairnessPolicyInput {
+            window_seconds: 0,
+            ..valid_input("control_plane")
+        },
+        FairnessPolicyViolationReason::WindowNonPositive,
+    );
+    assert_reject_reason(
+        FairnessPolicyInput {
+            max_weighted_share_gap: 0,
+            ..valid_input("control_plane")
+        },
+        FairnessPolicyViolationReason::MaxGapNonPositive,
+    );
+    assert_reject_reason(
+        FairnessPolicyInput {
+            active_weighted_share: 6,
+            ..valid_input("control_plane")
+        },
+        FairnessPolicyViolationReason::WeightedShareExceedsGap,
+    );
 }
 
 #[test]
