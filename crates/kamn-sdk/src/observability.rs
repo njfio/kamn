@@ -1,4 +1,5 @@
 use crate::ServiceHealthStatus;
+use crate::SdkError;
 
 /// Stable SDK view of the service health route.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,4 +26,13 @@ impl From<ServiceHealthStatus> for ServiceHealthSnapshot {
             observability_health: health.observability_health,
         }
     }
+}
+
+/// Public service observability capabilities exposed by SDK transports.
+pub trait KamnServiceObservability {
+    /// Returns a stable SDK snapshot of the service health route.
+    fn service_health(&self) -> Result<ServiceHealthSnapshot, SdkError>;
+
+    /// Returns the raw `/metrics` exposition text.
+    fn service_metrics(&self) -> Result<String, SdkError>;
 }

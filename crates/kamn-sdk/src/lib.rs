@@ -25,7 +25,7 @@ pub use agent::{KamnAgent, KamnTransport, TransportMode};
 /// Re-exported bridge lifecycle types.
 pub use bridge::{BridgeId, BridgeStatus};
 /// Re-exported service observability types.
-pub use observability::ServiceHealthSnapshot;
+pub use observability::{KamnServiceObservability, ServiceHealthSnapshot};
 /// Re-exported SDK error type.
 pub use error::SdkError;
 /// Re-exported live transport client and configuration.

@@ -1,7 +1,7 @@
 #[path = "support/live_transport_observability.rs"]
 mod support;
 
-use kamn_sdk::{LiveTransportKamnClient, SdkError};
+use kamn_sdk::{KamnServiceObservability, LiveTransportKamnClient, SdkError, ServiceHealthSnapshot};
 use std::io::Write;
 use std::thread;
 
@@ -15,14 +15,14 @@ fn spec_c10_live_transport_service_observability_routes_execute_network_contract
     wait_for_server_ready();
 
     let client = live_client(bind_addr.as_str());
-    let health = client.service_health().expect("service_health should succeed");
+    let health = read_service_health(&client).expect("service_health should succeed");
     assert_eq!(health.status, "ok");
     assert_eq!(health.runtime_mode, "api");
     assert_eq!(health.role, "node");
     assert_eq!(health.observability_source, "service");
     assert_eq!(health.observability_health, "green");
 
-    let metrics = client.service_metrics().expect("service_metrics should succeed");
+    let metrics = read_service_metrics(&client).expect("service_metrics should succeed");
     assert!(
         metrics.contains("kamn_service_api_health{runtime_mode=\"api\"} 1"),
         "metrics should include service health gauge"
@@ -44,7 +44,7 @@ fn regression_live_transport_service_health_rejects_malformed_payload() {
 
     let client = live_client(bind_addr.as_str());
     assert_eq!(
-        client.service_health(),
+        read_service_health(&client),
         Err(SdkError::TransportFailure(
             "service response missing required field"
         ))
@@ -57,9 +57,28 @@ fn regression_live_transport_service_health_rejects_malformed_payload() {
     );
 }
 
+#[test]
+fn regression_in_memory_client_does_not_implement_service_observability_trait() {
+    let memory_source = include_str!("../src/memory.rs");
+    assert!(
+        !memory_source.contains("impl KamnServiceObservability for InMemoryKamnClient"),
+        "in-memory client should stay outside the service observability trait surface"
+    );
+}
+
 fn live_client(endpoint: &str) -> LiveTransportKamnClient {
     let endpoint = format!("http://{endpoint}");
     LiveTransportKamnClient::connect(endpoint.as_str()).expect("live client should connect")
+}
+
+fn read_service_health<T: KamnServiceObservability>(
+    client: &T,
+) -> Result<ServiceHealthSnapshot, SdkError> {
+    client.service_health()
+}
+
+fn read_service_metrics<T: KamnServiceObservability>(client: &T) -> Result<String, SdkError> {
+    client.service_metrics()
 }
 
 fn run_observability_server(bind_addr: String, malformed_health: bool) -> Result<(), String> {
