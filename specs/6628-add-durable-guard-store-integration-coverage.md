@@ -53,3 +53,8 @@ Add dedicated crate-level integration coverage for the public `durable_guard_sto
 2. Add a dedicated integration surface covering bundle capture/restore, in-memory persistence, file persistence, and fail-closed invalid schema/payload cases through the public API.
 3. Run targeted durable-guard contract and integration tests.
 4. Run `test_file_size_policy` and refresh its baseline only if the new test targets change inventory counts.
+
+## Phase 6 notes
+- No production durable-guard-store behavior changes were required.
+- Integration for this issue is the dedicated crate-level durable-store surface plus the contract pin that prevents silent removal of that surface.
+- Adding the two new test targets increased the workspace `test_file_total` baseline from `479` to `481`.
