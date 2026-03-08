@@ -15,12 +15,7 @@ pub(super) fn authorize_service_api_request(
     request: &ParsedRequest,
     replay_guard: &mut ServiceApiReplayGuard,
 ) -> Result<(), RequestAuthFailure> {
-    authorize_service_api_request_with_legacy_policy(
-        state,
-        request,
-        replay_guard,
-        cfg!(any(test, debug_assertions)),
-    )
+    authorize_service_api_request_with_legacy_policy(state, request, replay_guard, false)
 }
 
 fn require_valid_sender_did_header(request: &ParsedRequest) -> Result<&str, RequestAuthFailure> {
