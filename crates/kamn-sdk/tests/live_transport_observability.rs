@@ -73,8 +73,9 @@ fn run_observability_server(bind_addr: String, malformed_health: bool) -> Result
         .set_nonblocking(true)
         .map_err(|error| format!("nonblocking setup failed: {error}"))?;
     let deadline = Instant::now() + Duration::from_secs(2);
+    let expected_requests = if malformed_health { 1 } else { 2 };
     let mut served = 0_u64;
-    while served < 2 {
+    while served < expected_requests {
         if Instant::now() > deadline {
             return Err("server timed out before serving request budget".to_owned());
         }

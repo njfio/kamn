@@ -2,13 +2,14 @@ mod agent;
 mod agent_mutations;
 mod bridge;
 mod config;
+mod observability;
 mod routes;
 mod state;
 mod task_escrow;
 
 pub use self::config::LiveTransportConfig;
 use self::state::LiveTransportState;
-use crate::{KamnTransport, SdkError, ServiceApiClient, TransportMode};
+use crate::{KamnTransport, SdkError, ServiceApiClient, ServiceHealthSnapshot, TransportMode};
 use std::sync::{Arc, Mutex};
 
 /// Live transport client backed by the Service API.
@@ -33,6 +34,16 @@ impl LiveTransportKamnClient {
     /// Returns the configured endpoint for this client.
     pub fn endpoint(&self) -> &str {
         &self.config.endpoint
+    }
+
+    /// Reads the service health route through the live SDK transport.
+    pub fn service_health(&self) -> Result<ServiceHealthSnapshot, SdkError> {
+        self::observability::service_health(self)
+    }
+
+    /// Reads raw service metrics exposition text through the live SDK transport.
+    pub fn service_metrics(&self) -> Result<String, SdkError> {
+        self::observability::service_metrics(self)
     }
 }
 
