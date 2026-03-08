@@ -356,10 +356,14 @@ fn verify_kolme_live_managed_signer_backend_signature_provenance(
                 .to_owned(),
         ));
     }
-    if !backend_signature
-        .signer_public_key_hex
-        .eq_ignore_ascii_case(expected_signer_public_key_hex)
-    {
+    let expected_signer_public_key_bytes =
+        ascii_lowercase_bytes(expected_signer_public_key_hex.as_bytes());
+    let backend_signer_public_key_bytes =
+        ascii_lowercase_bytes(backend_signature.signer_public_key_hex.as_bytes());
+    if !constant_time_eq_bytes(
+        backend_signer_public_key_bytes.as_slice(),
+        expected_signer_public_key_bytes.as_slice(),
+    ) {
         return Err(ConfigError::RuntimeKolmeLive(format!(
             "managed-external signer backend response signer_public_key_hex does not match expected runtime signer key material (expected={}, found={}) (managed_signer_backend_response_provenance_mismatch)",
             expected_signer_public_key_hex,
@@ -419,6 +423,21 @@ fn verify_kolme_live_managed_signer_backend_signature_provenance(
         ));
     }
     Ok(())
+}
+
+fn ascii_lowercase_bytes(value: &[u8]) -> Vec<u8> {
+    value.iter().map(u8::to_ascii_lowercase).collect()
+}
+
+fn constant_time_eq_bytes(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    let mut diff = 0_u8;
+    for (lhs, rhs) in left.iter().zip(right.iter()) {
+        diff |= lhs ^ rhs;
+    }
+    diff == 0
 }
 
 fn execute_kolme_live_managed_signer_backend_command(
