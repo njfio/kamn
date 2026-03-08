@@ -18,11 +18,11 @@ Map `LiveTransportKamnClient::submit_artifact()` onto the existing service conte
 - Empty or colliding service `content_id` values must fail closed.
 
 # Acceptance criteria
-- [ ] `submit_artifact()` sends `POST /v1/content/register` with `content:write` scope.
-- [ ] The request payload contains the accepted service task id plus artifact name and bytes in deterministic JSON.
-- [ ] Successful content registration returns a stable numeric `ArtifactId` alias derived from `content_id`.
-- [ ] Unknown task aliases and unaccepted tasks fail closed before network emission.
-- [ ] The live transport unsupported-method regression no longer lists `submit_artifact()`.
+- [x] `submit_artifact()` sends `POST /v1/content/register` with `content:write` scope.
+- [x] The request payload contains the accepted service task id plus artifact name and bytes in deterministic JSON.
+- [x] Successful content registration returns a stable numeric `ArtifactId` alias derived from `content_id`.
+- [x] Unknown task aliases and unaccepted tasks fail closed before network emission.
+- [x] The live transport unsupported-method regression no longer lists `submit_artifact()`.
 
 # Files to touch
 - `crates/kamn-sdk/src/live/agent.rs`
@@ -46,3 +46,13 @@ Map `LiveTransportKamnClient::submit_artifact()` onto the existing service conte
 - Add failure-path coverage for unknown task alias and unaccepted task submission.
 - Update the unsupported-method regression to assert only the still-unmapped live methods remain unsupported.
 - Run the full `kamn-sdk` test suite and strict clippy.
+
+# Verification actuals
+- Red: `cargo test -p kamn-sdk --test live_transport_task_escrow -- --nocapture`
+- Green: `cargo test -p kamn-sdk --test live_transport_task_escrow -- --nocapture`
+- Green: `cargo test -p kamn-sdk --test live_transport_agent spec_c05_live_transport_remaining_unsupported_methods_fail_closed -- --exact --nocapture`
+- Green: `cargo test -p kamn-sdk -- --nocapture`
+- Green: `cargo clippy -p kamn-sdk --tests -- -D warnings`
+
+# Deviations
+- One intermediate full-suite run hit an existing `service_api_client` connection-race flake in `spec_c01_service_api_client_lists_channel_messages_through_route_contract`; the test passed immediately in isolated rerun and the subsequent full-suite rerun completed cleanly without code changes.
