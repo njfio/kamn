@@ -3149,6 +3149,75 @@ fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_
 }
 
 #[test]
+fn regression_service_api_endpoint_rejects_legacy_sender_binding_without_signer_public_key_header()
+{
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34076".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:legacy-auth-binding";
+    let message_body = r#"{"recipient_did":"kamn:did:agent:legacy-auth-target","message":"hello"}"#;
+    let signature =
+        service_api_request_signature_for_fields(sender_did, 1, state_hash.as_str(), message_body);
+    let response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+        ],
+    );
+
+    assert!(response.contains("HTTP/1.1 401 Unauthorized"));
+    let error_payload = parse_error_envelope_from_http_response(response.as_str());
+    assert_eq!(
+        error_payload.reason_code,
+        "service_api_auth_signature_verification_failed"
+    );
+    assert!(
+        error_payload.message.contains("x-kamn-signer-public-key"),
+        "missing signer header rejection should explain the explicit signer binding contract"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after rejecting legacy auth fallback"
+    );
+}
+
+#[test]
 fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths() {
     assert_eq!(
         SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
