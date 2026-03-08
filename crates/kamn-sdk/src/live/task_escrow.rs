@@ -1,4 +1,4 @@
-use crate::{AgentDid, EscrowConfig, EscrowId, SdkError, TaskDefinition, TaskId};
+use crate::{AgentDid, Artifact, ArtifactId, EscrowConfig, EscrowId, SdkError, TaskDefinition, TaskId};
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
@@ -82,6 +82,17 @@ pub(crate) fn escrow_payload(escrow: &EscrowConfig) -> Result<String, SdkError> 
     ))
 }
 
+pub(crate) fn artifact_payload(service_task_id: &str, artifact: &Artifact) -> Result<String, SdkError> {
+    validate_service_id("task", service_task_id)?;
+    validate_artifact(artifact)?;
+    Ok(format!(
+        "{{\"task_id\":\"{}\",\"artifact_name\":\"{}\",\"artifact_bytes_hex\":\"{}\"}}",
+        escape_json(service_task_id),
+        escape_json(artifact.name.as_str()),
+        hex_encode(artifact.bytes.as_slice()),
+    ))
+}
+
 pub(crate) fn remember_task_alias(
     task_aliases: &mut HashMap<u64, LiveTaskAlias>,
     service_task_id: &str,
@@ -136,6 +147,22 @@ pub(crate) fn prepare_task_complete(
     ))
 }
 
+pub(crate) fn prepare_task_artifact_submission(
+    task_aliases: &HashMap<u64, LiveTaskAlias>,
+    task_id: &TaskId,
+) -> Result<(String, AgentDid), SdkError> {
+    let entry = task_aliases
+        .get(&task_id.0)
+        .ok_or_else(|| missing_alias("task", task_id.0))?;
+    let assignee = entry
+        .assignee
+        .clone()
+        .ok_or(SdkError::Conflict(
+            "task must be accepted before artifact submission",
+        ))?;
+    Ok((entry.service_id.clone(), assignee))
+}
+
 pub(crate) fn remember_escrow_alias(
     escrow_aliases: &mut HashMap<u64, LiveEscrowAlias>,
     service_escrow_id: &str,
@@ -161,6 +188,24 @@ pub(crate) fn remember_escrow_alias(
     Ok(EscrowId(alias))
 }
 
+pub(crate) fn remember_artifact_alias(
+    artifact_ids: &mut HashMap<u64, String>,
+    service_content_id: &str,
+) -> Result<ArtifactId, SdkError> {
+    validate_service_id("content", service_content_id)?;
+    let alias = deterministic_u64_tag(service_content_id);
+    match artifact_ids.get(&alias) {
+        Some(existing) if existing != service_content_id => {
+            return Err(alias_collision("artifact"));
+        }
+        Some(_) => {}
+        None => {
+            artifact_ids.insert(alias, service_content_id.to_owned());
+        }
+    }
+    Ok(ArtifactId(alias))
+}
+
 pub(crate) fn prepare_escrow_release(
     escrow_aliases: &HashMap<u64, LiveEscrowAlias>,
     escrow_id: &EscrowId,
@@ -176,6 +221,7 @@ fn validate_service_id(entity: &'static str, service_id: &str) -> Result<(), Sdk
         return Err(SdkError::TransportFailure(match entity {
             "task" => "service returned empty task_id in task response",
             "escrow" => "service returned empty escrow_id in escrow response",
+            "content" => "service returned empty content_id in content response",
             _ => "service returned empty id in response",
         }));
     }
@@ -193,6 +239,31 @@ fn alias_collision(entity: &'static str) -> SdkError {
     SdkError::Conflict(match entity {
         "task" => "service task id collision detected in sdk task alias map",
         "escrow" => "service escrow id collision detected in sdk escrow alias map",
+        "artifact" => "service content id collision detected in sdk artifact alias map",
         _ => "service id collision detected in sdk alias map",
     })
+}
+
+fn validate_artifact(artifact: &Artifact) -> Result<(), SdkError> {
+    if artifact.name.trim().is_empty() {
+        return Err(SdkError::InvalidInput {
+            field: "artifact.name",
+            reason: "must not be empty",
+        });
+    }
+    if artifact.bytes.is_empty() {
+        return Err(SdkError::InvalidInput {
+            field: "artifact.bytes",
+            reason: "must not be empty",
+        });
+    }
+    Ok(())
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(encoded, "{byte:02x}");
+    }
+    encoded
 }

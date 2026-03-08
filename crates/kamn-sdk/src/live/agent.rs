@@ -1,12 +1,13 @@
 use super::{
-    config::{ESCROW_WRITE_SCOPE, MESSAGES_WRITE_SCOPE, TASKS_WRITE_SCOPE},
+    config::{CONTENT_WRITE_SCOPE, ESCROW_WRITE_SCOPE, MESSAGES_WRITE_SCOPE, TASKS_WRITE_SCOPE},
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, recipient_mailbox_channel_id,
         service_message_payload, service_message_to_record,
     },
     state::{build_agents_read_auth, build_auth, remember_message_id},
     task_escrow::{
-        escrow_payload, prepare_escrow_release, prepare_task_accept, prepare_task_complete,
+        artifact_payload, escrow_payload, prepare_escrow_release, prepare_task_accept,
+        prepare_task_artifact_submission, prepare_task_complete, remember_artifact_alias,
         remember_escrow_alias, remember_task_alias, task_payload,
     },
     LiveTransportKamnClient,
@@ -106,12 +107,30 @@ impl KamnAgent for LiveTransportKamnClient {
 
     fn submit_artifact(
         &mut self,
-        _task_id: &TaskId,
-        _artifact: Artifact,
+        task_id: &TaskId,
+        artifact: Artifact,
     ) -> Result<ArtifactId, SdkError> {
-        Self::unsupported(
-            "live transport artifact routes are not yet mapped in sdk kamn-agent surface",
-        )
+        let (service_task_id, sender) = {
+            let guard = self
+                .state
+                .lock()
+                .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
+            prepare_task_artifact_submission(&guard.task_aliases, task_id)?
+        };
+        let payload = artifact_payload(service_task_id.as_str(), &artifact)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &sender,
+            payload.as_str(),
+            Some(CONTENT_WRITE_SCOPE),
+        )?;
+        let registration = self.service_client.register_content(payload.as_str(), &auth)?;
+        let mut guard = self
+            .state
+            .lock()
+            .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
+        remember_artifact_alias(&mut guard.artifact_ids, registration.content_id.as_str())
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
