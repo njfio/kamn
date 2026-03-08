@@ -1,8 +1,9 @@
 use crate::{
     channel_create::channel_name,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport, Message, MessageId,
-    MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, TransportMode,
+    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport,
+    Message, MessageId, MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId,
+    TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 
@@ -297,6 +298,16 @@ impl KamnAgent for InMemoryKamnClient {
         task.artifacts.push(artifact_id.clone());
         self.artifacts.insert(artifact_id.clone(), artifact);
         Ok(artifact_id)
+    }
+
+    fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
+        if !self.artifacts.contains_key(artifact_id) {
+            return Err(SdkError::NotFound {
+                entity: "artifact",
+                id: artifact_id.0.to_string(),
+            });
+        }
+        Ok(ArtifactStatus::retained(artifact_id))
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {

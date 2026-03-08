@@ -1,17 +1,19 @@
 use super::{
     LiveTransportKamnClient,
-    config::CHANNELS_WRITE_SCOPE,
+    config::{CHANNELS_WRITE_SCOPE, CONTENT_READ_SCOPE},
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
         channel_create_payload, recipient_mailbox_channel_id, service_message_to_record,
     },
+    task_escrow::prepare_artifact_status_lookup,
     state::{build_agents_read_auth, build_agents_read_auth_with_body, build_auth, remember_message_id},
 };
 use crate::{
     channel_create::channel_id as validate_channel_id,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
-    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, service::agent_search_payload,
+    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
+    MessageId, MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    service::agent_search_payload,
 };
 
 impl KamnAgent for LiveTransportKamnClient {
@@ -77,6 +79,31 @@ impl KamnAgent for LiveTransportKamnClient {
         artifact: Artifact,
     ) -> Result<ArtifactId, SdkError> {
         self.submit_artifact_via_service(task_id, artifact)
+    }
+
+    fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
+        let service_content_id = {
+            let guard = self
+                .state
+                .lock()
+                .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
+            prepare_artifact_status_lookup(&guard.artifact_ids, artifact_id)?
+        };
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            "",
+            Some(CONTENT_READ_SCOPE),
+        )?;
+        let status = self
+            .service_client
+            .get_content(service_content_id.as_str(), &auth)?;
+        Ok(ArtifactStatus::from_lifecycle(
+            artifact_id,
+            status.lifecycle_state,
+            status.redaction_status,
+        ))
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {

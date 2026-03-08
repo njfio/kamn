@@ -121,6 +121,16 @@ pub(crate) fn remember_artifact_alias(
     Ok(ArtifactId(alias))
 }
 
+pub(crate) fn prepare_artifact_status_lookup(
+    artifact_ids: &HashMap<u64, String>,
+    artifact_id: &ArtifactId,
+) -> Result<String, SdkError> {
+    artifact_ids
+        .get(&artifact_id.0)
+        .cloned()
+        .ok_or_else(|| missing_alias("artifact", artifact_id.0))
+}
+
 pub(crate) fn prepare_escrow_release(
     escrow_aliases: &HashMap<u64, LiveEscrowAlias>,
     escrow_id: &EscrowId,
