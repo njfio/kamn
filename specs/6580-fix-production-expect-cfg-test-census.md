@@ -16,13 +16,14 @@ Fix `production_expect_surface_policy` so its production-source census excludes 
 ## Failure modes
 - Inline `#[cfg(test)] mod tests { ... }` content is counted as production surface.
 - Nested braces inside a skipped `#[cfg(test)]` item cause the skip to terminate before the enclosing item closes.
+- Character literals containing `"` inside skipped test code incorrectly open a string state and leak test content back into the census.
 - Real production-reachable `.expect(` calls outside skipped test-only scopes stop being counted.
 
 ## Acceptance criteria
-- [ ] A regression test with a minimal inline `#[cfg(test)] mod tests` fixture fails on the current logic and passes after the fix.
-- [ ] `functional_production_expect_surface_non_regression_gate` passes on current `main` without changing the production-expect baseline fixture.
-- [ ] Real production `.expect(` occurrences outside test-only scopes are still counted by the census logic.
-- [ ] The fix is limited to the census logic/tests in `production_expect_surface_policy`.
+- [x] A regression test with a minimal inline `#[cfg(test)] mod tests` fixture fails on the current logic and passes after the fix.
+- [x] `functional_production_expect_surface_non_regression_gate` passes on current `main` without changing the production-expect baseline fixture.
+- [x] Real production `.expect(` occurrences outside test-only scopes are still counted by the census logic.
+- [x] The fix is limited to the census logic/tests in `production_expect_surface_policy`.
 
 ## Files to touch
 - `crates/kamn-core/tests/production_expect_surface_policy.rs`
@@ -34,8 +35,19 @@ Fix `production_expect_surface_policy` so its production-source census excludes 
 
 ## Test plan
 - Add a minimal regression test that demonstrates nested braces inside `#[cfg(test)] mod tests` must remain excluded.
+- Add a regression test that demonstrates `if ch == '"'` inside skipped test code does not open a string state.
 - Run `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`.
-- Re-run the same test after refactor/lint verification.
+- Run `cargo clippy -p kamn-core --tests -- -D warnings`.
+
+## Integration verification
+- The integrated path is the same CI policy test target that failed in `Workspace Pre-Merge Gate (PR)`: `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`.
+- Verified on current branch without changing `fixtures/ci/production_expect_surface_baseline.env`.
+
+## Verification actuals
+- Red: `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`
+  - `regression_nested_cfg_test_module_expect_calls_are_excluded_from_census` failed with `left: 2 right: 1`
+- Green: `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`
+- Green: `cargo clippy -p kamn-core --tests -- -D warnings`
 
 ## Deviations
 - None.
