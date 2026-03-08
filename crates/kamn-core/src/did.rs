@@ -858,6 +858,17 @@ mod tests {
     };
     const SOURCE: &str = include_str!("did.rs");
 
+    fn ensure_public_key_hex_binding_source() -> &'static str {
+        let function_start = SOURCE
+            .find("pub fn ensure_public_key_hex_binding(")
+            .expect("function must exist");
+        let function_end = SOURCE[function_start..]
+            .find("\n    /// Builds an agent DID with deterministic key-binding fingerprint suffix.")
+            .map(|offset| function_start + offset)
+            .expect("function boundary must exist");
+        &SOURCE[function_start..function_end]
+    }
+
     fn metadata() -> AgentDidMetadata {
         AgentDidMetadata {
             agent_type: "autonomous".to_owned(),
@@ -1014,14 +1025,7 @@ mod tests {
 
     #[test]
     fn regression_requires_constant_time_agent_did_key_binding_compare() {
-        let function_start = SOURCE
-            .find("pub fn ensure_public_key_hex_binding(")
-            .expect("function must exist");
-        let function_end = SOURCE[function_start..]
-            .find("\n    /// Builds an agent DID with deterministic key-binding fingerprint suffix.")
-            .map(|offset| function_start + offset)
-            .expect("function boundary must exist");
-        let function_source = &SOURCE[function_start..function_end];
+        let function_source = ensure_public_key_hex_binding_source();
         let direct_pattern = ["if actual", "!=", " expected {"].concat();
         assert!(
             function_source.contains("crate::constant_time_eq::constant_time_eq_bytes("),
