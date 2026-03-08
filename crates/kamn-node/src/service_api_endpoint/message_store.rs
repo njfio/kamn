@@ -792,13 +792,7 @@ impl ServiceApiMessageStore {
         agent_did: &str,
     ) -> Result<ServiceApiAgentGetBody, String> {
         let record = self.get_or_create_agent_record(agent_did)?;
-        Ok(ServiceApiAgentGetBody {
-            did: record.did.clone(),
-            reputation_score: record.reputation_score,
-            agent_type: record_agent_type(&record),
-            model_family: record_model_family(&record),
-            capabilities: record_capabilities(&record),
-        })
+        Ok(agent_profile_body(&record))
     }
 
     pub(super) fn register_agent_profile(
@@ -847,13 +841,7 @@ impl ServiceApiMessageStore {
             .insert(normalized_did.to_owned(), record.clone());
         self.persist()
             .map_err(ServiceApiAgentRegistrationStoreError::Persistence)?;
-        Ok(ServiceApiAgentGetBody {
-            did: record.did.clone(),
-            reputation_score: record.reputation_score,
-            agent_type: record_agent_type(&record),
-            model_family: record_model_family(&record),
-            capabilities: record_capabilities(&record),
-        })
+        Ok(agent_profile_body(&record))
     }
 
     pub(super) fn get_or_create_agent_balance(
@@ -912,6 +900,16 @@ fn default_agent_record(agent_did: &str) -> ServiceApiPersistedAgentRecord {
         agent_type: default_agent_type(),
         model_family: default_model_family(),
         capabilities: default_capabilities(),
+    }
+}
+
+fn agent_profile_body(record: &ServiceApiPersistedAgentRecord) -> ServiceApiAgentGetBody {
+    ServiceApiAgentGetBody {
+        did: record.did.clone(),
+        reputation_score: record.reputation_score,
+        agent_type: record_agent_type(record),
+        model_family: record_model_family(record),
+        capabilities: record_capabilities(record),
     }
 }
 
