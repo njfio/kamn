@@ -345,6 +345,7 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
         ("POST", "/v1/messages/send") => "messages:write",
         ("POST", "/v1/messages/relay") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
+        ("POST", "/v1/agents/search") => "agents:read",
         ("POST", "/v1/agents/register") => "agents:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", "/v1/escrow/fund") => "escrow:write",
