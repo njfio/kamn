@@ -185,6 +185,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
         ("POST", "/v1/agents/search") => "agents:read",
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/messages/send") => "messages:write",
+        ("GET", _) if path.starts_with("/v1/messages/") => "messages:read",
         ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
         _ => return None,
     })
@@ -345,6 +346,13 @@ fn run_live_transport_contract_server(
                     }
                     let payload = r#"{"message_id":"msg-live-contract-001","status":"created","runtime_mode":"api"}"#;
                     write_http_response(&mut stream, 202, payload)?;
+                } else if method == "GET" && path.starts_with("/v1/messages/") {
+                    let message_id = path.trim_start_matches("/v1/messages/");
+                    let payload = format!(
+                        "{{\"message_id\":\"{}\",\"status\":\"created\"}}",
+                        message_id
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "POST" && path == "/v1/agents/register" {
                     let parsed: serde_json::Value =
                         serde_json::from_str(body.as_str()).map_err(|error| {
@@ -534,7 +542,7 @@ fn spec_c02_live_transport_send_executes_network_contract() {
         let bind_addr = reserve_loopback_addr();
         let server_addr = bind_addr.clone();
         let server = thread::spawn(move || {
-            run_live_transport_contract_server(server_addr, 1, "kamn:did:agent:live-tester", None)
+            run_live_transport_contract_server(server_addr, 2, "kamn:did:agent:live-tester", None)
         });
         wait_for_server_ready(bind_addr.as_str());
 
@@ -551,6 +559,13 @@ fn spec_c02_live_transport_send_executes_network_contract() {
         assert_eq!(
             message_id.0,
             deterministic_message_id("msg-live-contract-001")
+        );
+        assert_eq!(
+            client
+                .get_message_status(&message_id)
+                .expect("message status should succeed")
+                .status,
+            "created"
         );
 
         let server_result = server.join().expect("server thread should join");
@@ -653,6 +668,114 @@ fn regression_live_transport_duplicate_service_message_id_reuses_alias() {
         assert!(
             server_result.is_ok(),
             "test service contract server should satisfy request budget"
+        );
+    });
+}
+
+#[test]
+fn regression_live_transport_message_status_rejects_malformed_service_payload() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            let listener = TcpListener::bind(server_addr.as_str())
+                .map_err(|error| format!("bind failed: {error}"))?;
+            listener
+                .set_nonblocking(true)
+                .map_err(|error| format!("nonblocking setup failed: {error}"))?;
+            let deadline = Instant::now() + Duration::from_secs(2);
+            let mut served = 0_u64;
+            let mut replay_guard = BTreeSet::new();
+            while served < 2 {
+                if Instant::now() > deadline {
+                    return Err("server timed out before serving request budget".to_owned());
+                }
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        let (method, path, body, headers) = parse_http_request(&mut stream)?;
+                        if let Err((status, error, reason_code, message)) = validate_auth(
+                            method.as_str(),
+                            path.as_str(),
+                            body.as_str(),
+                            &headers,
+                            &mut replay_guard,
+                            "kamn:did:agent:live-tester",
+                        ) {
+                            let payload = format!(
+                                "{{\"error\":\"{error}\",\"reason_code\":\"{reason_code}\",\"message\":\"{message}\"}}"
+                            );
+                            write_http_response(&mut stream, status, payload.as_str())?;
+                            served = served.saturating_add(1);
+                            continue;
+                        }
+
+                        if method == "POST" && path == "/v1/messages/send" {
+                            write_http_response(
+                                &mut stream,
+                                202,
+                                r#"{"message_id":"msg-live-contract-001","status":"created","runtime_mode":"api"}"#,
+                            )?;
+                        } else if method == "GET" && path == "/v1/messages/msg-live-contract-001" {
+                            write_http_response(
+                                &mut stream,
+                                200,
+                                r#"{"message_id":"msg-live-contract-001"}"#,
+                            )?;
+                        } else {
+                            return Err(format!("unexpected route {method} {path}"));
+                        }
+                        served = served.saturating_add(1);
+                    }
+                    Err(error) if matches!(error.kind(), ErrorKind::WouldBlock) => {
+                        thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => return Err(format!("accept failed: {error}")),
+                }
+            }
+            Ok(())
+        });
+        wait_for_server_ready(bind_addr.as_str());
+
+        let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let message_id = client
+            .send(Message {
+                from: did("sender-live-contract"),
+                to: did("recipient-live-contract"),
+                body: "live contract payload".to_owned(),
+                channel: None,
+            })
+            .expect("live send should succeed");
+        assert_eq!(
+            client.get_message_status(&message_id),
+            Err(SdkError::TransportFailure(
+                "service response missing required field"
+            ))
+        );
+
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "malformed message status should still satisfy request budget"
+        );
+    });
+}
+
+#[test]
+fn regression_live_transport_message_status_rejects_unknown_alias_before_network() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let endpoint = format!("http://{}", reserve_loopback_addr());
+        let client = LiveTransportKamnClient::connect(endpoint.as_str())
+            .expect("live transport client should construct");
+
+        assert_eq!(
+            client.get_message_status(&kamn_sdk::MessageId(404)),
+            Err(SdkError::NotFound {
+                entity: "message",
+                id: "404".to_owned(),
+            })
         );
     });
 }

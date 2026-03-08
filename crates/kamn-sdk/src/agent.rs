@@ -1,7 +1,8 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId,
-    MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TaskStatus, TokenAmount,
+    MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition, TaskId, TaskStatus,
+    TokenAmount,
 };
 
 /// Transport backends available for SDK clients.
@@ -51,6 +52,8 @@ pub trait KamnAgent {
 
     /// Sends a message and returns the resulting message identifier.
     fn send(&mut self, message: Message) -> Result<MessageId, SdkError>;
+    /// Returns lifecycle metadata for a previously sent message.
+    fn get_message_status(&self, message_id: &MessageId) -> Result<MessageStatus, SdkError>;
     /// Receives and drains pending messages for the given DID.
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError>;
     /// Receives pending messages as an iterator stream abstraction.

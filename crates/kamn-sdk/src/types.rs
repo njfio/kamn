@@ -53,6 +53,24 @@ pub struct MessageRecord {
     pub message: Message,
 }
 
+/// Lifecycle view for a previously sent message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MessageStatus {
+    /// SDK message identifier.
+    pub message_id: MessageId,
+    /// Lifecycle state reported by the transport.
+    pub status: String,
+}
+
+impl MessageStatus {
+    pub(crate) fn from_status(message_id: &MessageId, status: &str) -> Self {
+        Self {
+            message_id: message_id.clone(),
+            status: status.to_owned(),
+        }
+    }
+}
+
 /// Iterator wrapper for streamed message retrieval.
 #[derive(Debug)]
 pub struct MessageStream {

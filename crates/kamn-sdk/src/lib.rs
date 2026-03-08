@@ -45,5 +45,5 @@ pub use tcp::{
 pub use types::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId,
-    MessageRecord, MessageStream, TaskDefinition, TaskId, TaskStatus, TokenAmount,
+    MessageRecord, MessageStatus, MessageStream, TaskDefinition, TaskId, TaskStatus, TokenAmount,
 };
