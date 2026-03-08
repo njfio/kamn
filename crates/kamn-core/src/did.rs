@@ -120,7 +120,7 @@ impl AgentDid {
             .key_binding_fingerprint()
             .ok_or(AgentDidKeyBindingError::MissingKeyBinding)?;
         let actual = agent_did_key_binding_fingerprint_for_public_key_hex(public_key_hex)?;
-        if actual != expected {
+        if !crate::constant_time_eq::constant_time_eq_bytes(actual.as_bytes(), expected.as_bytes()) {
             return Err(AgentDidKeyBindingError::KeyBindingMismatch {
                 expected: expected.to_owned(),
                 actual,
