@@ -19,11 +19,11 @@ Add a public high-level SDK service observability trait so callers can read serv
 - In-memory clients must remain outside the service observability trait surface.
 
 # Acceptance criteria
-- [ ] Public SDK trait `KamnServiceObservability` exists and exposes health and metrics methods.
-- [ ] `LiveTransportKamnClient` implements the trait through existing live route-backed behavior.
-- [ ] Trait methods return stable SDK outputs and do not expose low-level `ServiceApiClient` response structs.
-- [ ] Live SDK tests exercise the trait methods through real `/healthz` and `/metrics` route calls.
-- [ ] `InMemoryKamnClient` does not implement the trait.
+- [x] Public SDK trait `KamnServiceObservability` exists and exposes health and metrics methods.
+- [x] `LiveTransportKamnClient` implements the trait through existing live route-backed behavior.
+- [x] Trait methods return stable SDK outputs and do not expose low-level `ServiceApiClient` response structs.
+- [x] Live SDK tests exercise the trait methods through real `/healthz` and `/metrics` route calls.
+- [x] `InMemoryKamnClient` does not implement the trait.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs` or dedicated trait module if extraction is cleaner
@@ -42,3 +42,11 @@ Add a public high-level SDK service observability trait so callers can read serv
 - Keep the malformed health fail-closed regression on the trait method path.
 - Re-run the existing live observability route contract test.
 - Re-run the full `kamn-sdk` test suite and strict `clippy`.
+
+# Deviations
+- None.
+
+# Verification
+- `cargo test -p kamn-sdk --test live_transport_observability -- --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
