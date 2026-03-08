@@ -2,8 +2,8 @@ use crate::{
     channel_create::channel_name,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport,
-    Message, MessageId, MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId,
-    TaskStatus, TokenAmount, TransportMode,
+    Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition,
+    TaskId, TaskStatus, TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 
@@ -41,6 +41,7 @@ pub struct InMemoryKamnClient {
     next_escrow_id: u64,
     registry: HashMap<AgentDid, DidDocument>,
     inboxes: HashMap<AgentDid, Vec<MessageRecord>>,
+    messages: HashMap<MessageId, MessageStatus>,
     tasks: HashMap<TaskId, TaskState>,
     artifacts: HashMap<ArtifactId, ArtifactState>,
     escrows: HashMap<EscrowId, EscrowState>,
@@ -60,6 +61,7 @@ impl InMemoryKamnClient {
             next_escrow_id: 1,
             registry: HashMap::new(),
             inboxes: HashMap::new(),
+            messages: HashMap::new(),
             tasks: HashMap::new(),
             artifacts: HashMap::new(),
             escrows: HashMap::new(),
@@ -241,6 +243,10 @@ impl KamnAgent for InMemoryKamnClient {
             id: message_id.clone(),
             message,
         };
+        self.messages.insert(
+            message_id.clone(),
+            MessageStatus::from_status(&message_id, "created"),
+        );
         if let Some(inbox) = self.inboxes.get_mut(&record.message.to) {
             inbox.push(record);
             return Ok(message_id);
@@ -261,6 +267,16 @@ impl KamnAgent for InMemoryKamnClient {
                 id: did.as_str().to_owned(),
             })?;
         Ok(std::mem::take(inbox))
+    }
+
+    fn get_message_status(&self, message_id: &MessageId) -> Result<MessageStatus, SdkError> {
+        self.messages
+            .get(message_id)
+            .cloned()
+            .ok_or_else(|| SdkError::NotFound {
+                entity: "message",
+                id: message_id.0.to_string(),
+            })
     }
 
     fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError> {

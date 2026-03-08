@@ -1,6 +1,6 @@
 use super::{
     LiveTransportKamnClient,
-    config::{CHANNELS_WRITE_SCOPE, CONTENT_READ_SCOPE, TASKS_READ_SCOPE},
+    config::{CHANNELS_WRITE_SCOPE, CONTENT_READ_SCOPE, MESSAGES_READ_SCOPE, TASKS_READ_SCOPE},
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
         channel_create_payload, recipient_mailbox_channel_id, service_message_to_record,
@@ -12,8 +12,8 @@ use crate::{
     channel_create::channel_id as validate_channel_id,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
-    MessageId, MessageRecord, MessageStream, SdkError, ServiceContentStatus, TaskDefinition,
-    TaskId, TaskStatus, TokenAmount,
+    MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, ServiceContentStatus,
+    ServiceMessageStatus, TaskDefinition, TaskId, TaskStatus, TokenAmount,
     service::agent_search_payload,
 };
 
@@ -30,6 +30,21 @@ impl KamnAgent for LiveTransportKamnClient {
 
     fn send(&mut self, message: Message) -> Result<MessageId, SdkError> {
         self.send_via_service(message)
+    }
+
+    fn get_message_status(&self, message_id: &MessageId) -> Result<MessageStatus, SdkError> {
+        let service_message_id = resolve_service_message_id(self, message_id)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            "",
+            Some(MESSAGES_READ_SCOPE),
+        )?;
+        let status = self
+            .service_client
+            .get_message(service_message_id.as_str(), &auth)?;
+        Ok(message_status_from_service(message_id, status))
     }
 
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError> {
@@ -189,6 +204,24 @@ fn resolve_service_content_id(
     prepare_artifact_status_lookup(&guard.artifact_ids, artifact_id)
 }
 
+fn resolve_service_message_id(
+    client: &LiveTransportKamnClient,
+    message_id: &MessageId,
+) -> Result<String, SdkError> {
+    let guard = client
+        .state
+        .lock()
+        .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
+    guard
+        .message_ids
+        .get(&message_id.0)
+        .cloned()
+        .ok_or_else(|| SdkError::NotFound {
+            entity: "message",
+            id: message_id.0.to_string(),
+        })
+}
+
 fn resolve_service_task_id(
     client: &LiveTransportKamnClient,
     task_id: &TaskId,
@@ -198,6 +231,10 @@ fn resolve_service_task_id(
         .lock()
         .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
     prepare_task_status_lookup(&guard.task_aliases, task_id)
+}
+
+fn message_status_from_service(message_id: &MessageId, status: ServiceMessageStatus) -> MessageStatus {
+    MessageStatus::from_status(message_id, status.status.as_str())
 }
 
 fn artifact_status_from_service(
