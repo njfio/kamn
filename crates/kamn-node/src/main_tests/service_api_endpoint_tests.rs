@@ -17,6 +17,7 @@ use crate::service_api_endpoint::{
     parse_service_api_payload, project_service_api_lifecycle_rejection,
     upsert_service_api_relayed_message_from_daemon,
 };
+use kamn_core::AgentDid;
 use kamn_core::{
     cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
     service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
@@ -393,20 +394,65 @@ fn signed_header_present(headers: &[(&str, &str)], name: &str) -> bool {
         .any(|(header_name, _)| header_name.eq_ignore_ascii_case(name))
 }
 
-fn enrich_signed_headers_with_scope<'a>(
+fn test_service_api_auth_public_key_hex() -> String {
+    service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX)
+        .expect("service-auth public key should derive")
+}
+
+fn test_service_api_sender_did(sender: &str) -> String {
+    let public_key_hex = test_service_api_auth_public_key_hex();
+    let Ok(parsed_sender_did) = AgentDid::parse(sender) else {
+        return sender.to_owned();
+    };
+    if parsed_sender_did.method_specific_id().starts_with("pkh-") {
+        return sender.to_owned();
+    }
+    if parsed_sender_did
+        .ensure_public_key_hex_binding(public_key_hex.as_str())
+        .is_ok()
+    {
+        return sender.to_owned();
+    }
+    AgentDid::with_public_key_hex_binding(
+        parsed_sender_did.method_specific_id(),
+        public_key_hex.as_str(),
+    )
+    .expect("test sender did should bind to fixture signer key")
+    .as_str()
+    .to_owned()
+}
+
+fn enrich_signed_headers_with_scope(
     method: &str,
     path: &str,
-    headers: &'a [(&'a str, &'a str)],
-) -> Vec<(&'a str, &'a str)> {
-    let mut enriched = headers.to_vec();
+    headers: &[(&str, &str)],
+) -> Vec<(String, String)> {
+    let mut enriched: Vec<(String, String)> = headers
+        .iter()
+        .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+        .collect();
     let signed_request = signed_header_present(headers, "X-KAMN-Sender-DID")
         && signed_header_present(headers, "X-KAMN-Request-Nonce")
         && signed_header_present(headers, "X-KAMN-Request-Signature");
     let has_scope_header = signed_header_present(headers, "X-KAMN-Authz-Scope");
+    let has_signer_public_key_header = signed_header_present(headers, "X-KAMN-Signer-Public-Key");
     if signed_request && !has_scope_header {
         if let Some(scope) = required_scope_for_test_route(method, path) {
-            enriched.push(("X-KAMN-Authz-Scope", scope));
+            enriched.push(("X-KAMN-Authz-Scope".to_owned(), scope.to_owned()));
         }
+    }
+    if signed_request {
+        for (name, value) in &mut enriched {
+            if name.eq_ignore_ascii_case("X-KAMN-Sender-DID") {
+                *value = test_service_api_sender_did(value.as_str());
+            }
+        }
+    }
+    if signed_request && !has_signer_public_key_header {
+        enriched.push((
+            "X-KAMN-Signer-Public-Key".to_owned(),
+            test_service_api_auth_public_key_hex(),
+        ));
     }
     enriched
 }
@@ -484,7 +530,11 @@ fn send_http_request_with_headers(
     headers: &[(&str, &str)],
 ) -> String {
     let enriched_headers = enrich_signed_headers_with_scope(method, path, headers);
-    send_http_request_with_headers_raw(addr, method, path, body, &enriched_headers)
+    let enriched_header_refs: Vec<(&str, &str)> = enriched_headers
+        .iter()
+        .map(|(name, value)| (name.as_str(), value.as_str()))
+        .collect();
+    send_http_request_with_headers_raw(addr, method, path, body, enriched_header_refs.as_slice())
 }
 
 fn send_http_request_with_headers_raw(
@@ -546,9 +596,9 @@ async fn send_http_request_with_headers_async(
         .map_err(|error| format!("async http connect should succeed: {error}"))?;
     let mut header_lines = String::new();
     for (name, value) in &enriched_headers {
-        header_lines.push_str(name);
+        header_lines.push_str(name.as_str());
         header_lines.push_str(": ");
-        header_lines.push_str(value);
+        header_lines.push_str(value.as_str());
         header_lines.push_str("\r\n");
     }
     let request = format!(
@@ -590,7 +640,18 @@ fn send_https_request_with_headers(
     _root_cert_pem: &str,
 ) -> String {
     let enriched_headers = enrich_signed_headers_with_scope(method, path, headers);
-    send_https_request_with_headers_raw(addr, method, path, body, &enriched_headers, _root_cert_pem)
+    let enriched_header_refs: Vec<(&str, &str)> = enriched_headers
+        .iter()
+        .map(|(name, value)| (name.as_str(), value.as_str()))
+        .collect();
+    send_https_request_with_headers_raw(
+        addr,
+        method,
+        path,
+        body,
+        enriched_header_refs.as_slice(),
+        _root_cert_pem,
+    )
 }
 
 fn send_https_request_with_headers_raw(
@@ -777,7 +838,7 @@ fn service_api_request_signature_for_fields(
     payload: &str,
 ) -> String {
     service_auth_sign_with_private_key_hex(
-        sender,
+        test_service_api_sender_did(sender).as_str(),
         nonce,
         state_hash,
         payload,
@@ -801,9 +862,7 @@ struct ServiceApiTestEnvGuards {
 
 fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
     let env_lock = lock_signer_env_guard();
-    let auth_public_key_hex =
-        service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX)
-            .expect("service-auth public key should derive");
+    let auth_public_key_hex = test_service_api_auth_public_key_hex();
     // Use an isolated state file per test run to prevent replay nonce watermark bleed
     // between retry attempts in CI.
     let state_file = unique_service_api_test_state_file_path();
@@ -3123,7 +3182,7 @@ fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_
         state_hash.as_str(),
         message_body,
     );
-    let response = send_http_request_with_headers(
+    let response = send_http_request_with_headers_raw(
         bind_addr.as_str(),
         "POST",
         "/v1/messages/send",
@@ -3136,6 +3195,7 @@ fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_
                 "x-kamn-signer-public-key",
                 signer_public_key_hex.to_uppercase().as_str(),
             ),
+            ("X-KAMN-Authz-Scope", "messages:write"),
         ],
     );
 
@@ -3185,9 +3245,15 @@ fn regression_service_api_endpoint_rejects_legacy_sender_binding_without_signer_
 
     let sender_did = "kamn:did:agent:legacy-auth-binding";
     let message_body = r#"{"recipient_did":"kamn:did:agent:legacy-auth-target","message":"hello"}"#;
-    let signature =
-        service_api_request_signature_for_fields(sender_did, 1, state_hash.as_str(), message_body);
-    let response = send_http_request_with_headers(
+    let signature = service_auth_sign_with_private_key_hex(
+        sender_did,
+        1,
+        state_hash.as_str(),
+        message_body,
+        TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX,
+    )
+    .expect("raw legacy sender signature should derive");
+    let response = send_http_request_with_headers_raw(
         bind_addr.as_str(),
         "POST",
         "/v1/messages/send",
@@ -3423,6 +3489,8 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
 
     let message_body = "{\"message\":\"scope-policy-check\"}";
     let sender_did = "kamn:did:agent:test-client-scope-policy";
+    let bound_sender_did = test_service_api_sender_did(sender_did);
+    let signer_public_key_hex = test_service_api_auth_public_key_hex();
     let state_hash = format!(
         "service-api:{}:{}",
         snapshot.chain_id.as_str(),
@@ -3459,9 +3527,10 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
         "/v1/messages/send",
         message_body,
         &[
-            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Sender-DID", bound_sender_did.as_str()),
             ("X-KAMN-Request-Nonce", "9101"),
             ("X-KAMN-Request-Signature", signature_missing_scope.as_str()),
+            ("X-KAMN-Signer-Public-Key", signer_public_key_hex.as_str()),
         ],
     );
     assert!(missing_scope_response.contains("HTTP/1.1 401 Unauthorized"));
@@ -3479,9 +3548,10 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
         "/v1/messages/send",
         message_body,
         &[
-            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Sender-DID", bound_sender_did.as_str()),
             ("X-KAMN-Request-Nonce", "9102"),
             ("X-KAMN-Request-Signature", signature_invalid_scope.as_str()),
+            ("X-KAMN-Signer-Public-Key", signer_public_key_hex.as_str()),
             ("X-KAMN-Authz-Scope", ""),
         ],
     );
@@ -3500,12 +3570,13 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
         "/v1/messages/send",
         message_body,
         &[
-            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Sender-DID", bound_sender_did.as_str()),
             ("X-KAMN-Request-Nonce", "9103"),
             (
                 "X-KAMN-Request-Signature",
                 signature_mismatch_scope.as_str(),
             ),
+            ("X-KAMN-Signer-Public-Key", signer_public_key_hex.as_str()),
             ("X-KAMN-Authz-Scope", "messages:read"),
         ],
     );
@@ -3524,9 +3595,10 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
         "/v1/messages/send",
         message_body,
         &[
-            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Sender-DID", bound_sender_did.as_str()),
             ("X-KAMN-Request-Nonce", "9104"),
             ("X-KAMN-Request-Signature", signature_allowed_scope.as_str()),
+            ("X-KAMN-Signer-Public-Key", signer_public_key_hex.as_str()),
             ("X-KAMN-Authz-Scope", "messages:write"),
         ],
     );
@@ -4531,6 +4603,7 @@ fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_co
         snapshot.chain_version.as_str()
     );
     let caller_did = "kamn:did:agent:register-agent-profile";
+    let registered_caller_did = test_service_api_sender_did(caller_did);
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
@@ -4568,7 +4641,7 @@ fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_co
     let registration_payload: ServiceApiAgentGetBody =
         parse_service_api_payload(extract_http_response_body(registration_response.as_str()))
             .expect("registration payload should deserialize");
-    assert_eq!(registration_payload.did, caller_did);
+    assert_eq!(registration_payload.did, registered_caller_did);
     assert_eq!(registration_payload.agent_type, "assistant");
     assert_eq!(registration_payload.model_family, "gpt-5");
     assert_eq!(
@@ -4628,7 +4701,7 @@ fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_co
     let query_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "GET",
-        format!("/v1/agents/{caller_did}").as_str(),
+        format!("/v1/agents/{registered_caller_did}").as_str(),
         "",
         &[
             ("X-KAMN-Sender-DID", reader_did),
@@ -4640,7 +4713,7 @@ fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_co
     let query_payload: ServiceApiAgentGetBody =
         parse_service_api_payload(extract_http_response_body(query_response.as_str()))
             .expect("agent query payload should deserialize");
-    assert_eq!(query_payload.did, caller_did);
+    assert_eq!(query_payload.did, registered_caller_did);
     assert_eq!(query_payload.agent_type, "assistant");
     assert_eq!(query_payload.model_family, "gpt-5");
     assert_eq!(
@@ -4755,7 +4828,10 @@ fn integration_service_api_endpoint_searches_registered_agent_metadata() {
         parse_service_api_payload(extract_http_response_body(search_response.as_str()))
             .expect("search payload should deserialize");
     assert_eq!(search_payload.len(), 1);
-    assert_eq!(search_payload[0].did, "kamn:did:agent:search-alpha");
+    assert_eq!(
+        search_payload[0].did,
+        test_service_api_sender_did("kamn:did:agent:search-alpha")
+    );
     assert_eq!(search_payload[0].agent_type, "assistant");
     assert_eq!(search_payload[0].model_family, "gpt-5");
     assert_eq!(
@@ -5949,7 +6025,8 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         snapshot.chain_version.as_str()
     );
     let sender_did = "kamn:did:agent:delivery-sender";
-    let recipient_did = "kamn:did:agent:delivery-recipient";
+    let effective_sender_did = test_service_api_sender_did(sender_did);
+    let recipient_did = test_service_api_sender_did("kamn:did:agent:delivery-recipient");
 
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
@@ -5965,15 +6042,18 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let send_body =
-        r#"{"recipient_did":"kamn:did:agent:delivery-recipient","message":"deliver-me"}"#;
-    let send_signature =
-        service_api_request_signature_for_fields(sender_did, 31, state_hash.as_str(), send_body);
+    let send_body = format!(r#"{{"recipient_did":"{recipient_did}","message":"deliver-me"}}"#);
+    let send_signature = service_api_request_signature_for_fields(
+        sender_did,
+        31,
+        state_hash.as_str(),
+        send_body.as_str(),
+    );
     let send_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "POST",
         "/v1/messages/send",
-        send_body,
+        send_body.as_str(),
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "31"),
@@ -5986,15 +6066,19 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
             .expect("send payload should deserialize");
 
     let mailbox_path = format!("/v1/channels/recipient:{recipient_did}/messages");
-    let mailbox_signature =
-        service_api_request_signature_for_fields(recipient_did, 32, state_hash.as_str(), "");
+    let mailbox_signature = service_api_request_signature_for_fields(
+        recipient_did.as_str(),
+        32,
+        state_hash.as_str(),
+        "",
+    );
     let mailbox_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "GET",
         mailbox_path.as_str(),
         "",
         &[
-            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Sender-DID", recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "32"),
             ("X-KAMN-Request-Signature", mailbox_signature.as_str()),
         ],
@@ -6032,7 +6116,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         .expect("relay receiver listener addr should resolve")
         .to_string();
     let relay_route_map = serde_json::json!({
-        recipient_did: relay_receiver_addr.clone(),
+        recipient_did.clone(): relay_receiver_addr.clone(),
     })
     .to_string();
     let _relay_route_guard = EnvVarGuard::set(
@@ -6168,7 +6252,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
 
     let message_path = format!("/v1/messages/{}", send_payload.message_id);
     let message_signature = service_api_request_signature_for_fields(
-        recipient_did,
+        recipient_did.as_str(),
         33,
         restart_state_hash.as_str(),
         "",
@@ -6179,7 +6263,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
         message_path.as_str(),
         "",
         &[
-            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Sender-DID", recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "33"),
             ("X-KAMN-Request-Signature", message_signature.as_str()),
         ],
@@ -6190,7 +6274,7 @@ fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contra
             .expect("message query payload should deserialize");
     assert_eq!(message_payload["message_id"], send_payload.message_id);
     assert_eq!(message_payload["status"], "delivered");
-    assert_eq!(message_payload["sender_did"], sender_did);
+    assert_eq!(message_payload["sender_did"], effective_sender_did);
     assert_eq!(message_payload["recipient_did"], recipient_did);
     assert_eq!(message_payload["body"], send_body);
 
@@ -6260,6 +6344,7 @@ fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()
         snapshot.chain_version.as_str()
     );
     let sender_did = "kamn:did:agent:legacy-recipient-sender";
+    let effective_sender_did = test_service_api_sender_did(sender_did);
     let canonical_recipient_did = "kamn:did:agent:legacy-recipient-target";
     let legacy_send_body =
         r#"{"recipient_did":"did:kamn:agent:legacy-alpha","message":"reject-me"}"#;
@@ -6353,7 +6438,7 @@ fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()
         canonical_payload.message_id
     );
     assert_eq!(persisted_message["recipient_did"], canonical_recipient_did);
-    assert_eq!(persisted_message["sender_did"], sender_did);
+    assert_eq!(persisted_message["sender_did"], effective_sender_did);
 
     let relay_spool_payload = fs::read_to_string(relay_spool_file.as_path())
         .expect("relay spool should remain readable after canonical send");
@@ -6490,20 +6575,20 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
     wait_for_endpoint_ready(recipient_bind_addr.as_str());
 
     let sender_did = "kamn:did:agent:cross-node-sender";
-    let recipient_did = "kamn:did:agent:cross-node-recipient";
-    let send_body =
-        r#"{"recipient_did":"kamn:did:agent:cross-node-recipient","message":"cross-node"}"#;
+    let effective_sender_did = test_service_api_sender_did(sender_did);
+    let recipient_did = test_service_api_sender_did("kamn:did:agent:cross-node-recipient");
+    let send_body = format!(r#"{{"recipient_did":"{recipient_did}","message":"cross-node"}}"#);
     let send_signature = service_api_request_signature_for_fields(
         sender_did,
         81,
         sender_state_hash.as_str(),
-        send_body,
+        send_body.as_str(),
     );
     let send_response = send_http_request_with_headers(
         sender_bind_addr.as_str(),
         "POST",
         "/v1/messages/send",
-        send_body,
+        send_body.as_str(),
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "81"),
@@ -6579,7 +6664,7 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
 
     let recipient_mailbox_path = format!("/v1/channels/recipient:{recipient_did}/messages");
     let recipient_mailbox_signature = service_api_request_signature_for_fields(
-        recipient_did,
+        recipient_did.as_str(),
         82,
         recipient_state_hash.as_str(),
         "",
@@ -6590,7 +6675,7 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
         recipient_mailbox_path.as_str(),
         "",
         &[
-            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Sender-DID", recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "82"),
             (
                 "X-KAMN-Request-Signature",
@@ -6615,7 +6700,7 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
 
     let recipient_message_path = format!("/v1/messages/{}", send_payload.message_id);
     let recipient_message_signature = service_api_request_signature_for_fields(
-        recipient_did,
+        recipient_did.as_str(),
         83,
         recipient_state_hash.as_str(),
         "",
@@ -6626,7 +6711,7 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
         recipient_message_path.as_str(),
         "",
         &[
-            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Sender-DID", recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "83"),
             (
                 "X-KAMN-Request-Signature",
@@ -6644,7 +6729,10 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
         send_payload.message_id
     );
     assert_eq!(recipient_message_payload["status"], "delivered");
-    assert_eq!(recipient_message_payload["sender_did"], sender_did);
+    assert_eq!(
+        recipient_message_payload["sender_did"],
+        effective_sender_did
+    );
     assert_eq!(recipient_message_payload["recipient_did"], recipient_did);
     assert_eq!(recipient_message_payload["body"], send_body);
 
@@ -6691,7 +6779,7 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
     wait_for_endpoint_ready(restart_bind_addr.as_str());
 
     let restart_signature = service_api_request_signature_for_fields(
-        recipient_did,
+        recipient_did.as_str(),
         84,
         restart_state_hash.as_str(),
         "",
@@ -6702,7 +6790,7 @@ fn integration_service_api_endpoint_cross_node_relay_delivery_contract() {
         recipient_message_path.as_str(),
         "",
         &[
-            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Sender-DID", recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "84"),
             ("X-KAMN-Request-Signature", restart_signature.as_str()),
         ],
@@ -7072,28 +7160,31 @@ fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivere
         "kamn-node-service-api-relayed-to-delivered-state-{unique_suffix}.json"
     ));
     let state_file_str = state_file.to_string_lossy().to_string();
-    std::fs::write(
-        state_file.as_path(),
-        r#"{
+    let recipient_did = test_service_api_sender_did("kamn:did:agent:recipient-relayed");
+    let non_recipient_did =
+        test_service_api_sender_did("kamn:did:agent:recipient-relayed-observer");
+    let fixture_state_payload = format!(
+        r#"{{
   "schema_version":"kamn.runtime.service-api-message-store.v2",
-  "messages":{
-    "msg-relayed-to-delivered-1":{
+  "messages":{{
+    "msg-relayed-to-delivered-1":{{
       "message_id":"msg-relayed-to-delivered-1",
       "status":"relayed",
       "channel_id":null,
       "sender_did":"kamn:did:agent:sender-relayed",
-      "recipient_did":"kamn:did:agent:recipient-relayed",
-      "body":"{\"recipient_did\":\"kamn:did:agent:recipient-relayed\",\"message\":\"relay-complete\"}"
-    }
-  },
-  "channel_messages":{
-    "recipient:kamn:did:agent:recipient-relayed":["msg-relayed-to-delivered-1"]
-  },
-  "tasks":{},
-  "escrows":{}
-}"#,
-    )
-    .expect("state fixture should write");
+      "recipient_did":"{recipient_did}",
+      "body":"{{\"recipient_did\":\"{recipient_did}\",\"message\":\"relay-complete\"}}"
+    }}
+  }},
+  "channel_messages":{{
+    "recipient:{recipient_did}":["msg-relayed-to-delivered-1"]
+  }},
+  "tasks":{{}},
+  "escrows":{{}}
+}}"#
+    );
+    std::fs::write(state_file.as_path(), fixture_state_payload.as_str())
+        .expect("state fixture should write");
     let _state_file_guard =
         EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
 
@@ -7114,9 +7205,6 @@ fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivere
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let non_recipient_did = "kamn:did:agent:recipient-relayed-observer";
-    let recipient_did = "kamn:did:agent:recipient-relayed";
-
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
@@ -7131,15 +7219,19 @@ fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivere
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let non_recipient_signature =
-        service_api_request_signature_for_fields(non_recipient_did, 50, state_hash.as_str(), "");
+    let non_recipient_signature = service_api_request_signature_for_fields(
+        non_recipient_did.as_str(),
+        50,
+        state_hash.as_str(),
+        "",
+    );
     let non_recipient_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "GET",
         "/v1/messages/msg-relayed-to-delivered-1",
         "",
         &[
-            ("X-KAMN-Sender-DID", non_recipient_did),
+            ("X-KAMN-Sender-DID", non_recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "50"),
             ("X-KAMN-Request-Signature", non_recipient_signature.as_str()),
         ],
@@ -7157,15 +7249,19 @@ fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivere
         "non-recipient retrieval must not mark relayed message as delivered"
     );
 
-    let message_signature =
-        service_api_request_signature_for_fields(recipient_did, 51, state_hash.as_str(), "");
+    let message_signature = service_api_request_signature_for_fields(
+        recipient_did.as_str(),
+        51,
+        state_hash.as_str(),
+        "",
+    );
     let message_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "GET",
         "/v1/messages/msg-relayed-to-delivered-1",
         "",
         &[
-            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Sender-DID", recipient_did.as_str()),
             ("X-KAMN-Request-Nonce", "51"),
             ("X-KAMN-Request-Signature", message_signature.as_str()),
         ],
@@ -7432,7 +7528,8 @@ fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()
         snapshot.chain_version.as_str()
     );
     let sender_did = "kamn:did:agent:relay-spool-sender";
-    let recipient_did = "kamn:did:agent:relay-spool-recipient";
+    let effective_sender_did = test_service_api_sender_did(sender_did);
+    let recipient_did = test_service_api_sender_did("kamn:did:agent:relay-spool-recipient");
 
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
@@ -7448,15 +7545,18 @@ fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let send_body =
-        r#"{"recipient_did":"kamn:did:agent:relay-spool-recipient","message":"relay-me"}"#;
-    let send_signature =
-        service_api_request_signature_for_fields(sender_did, 41, state_hash.as_str(), send_body);
+    let send_body = format!(r#"{{"recipient_did":"{recipient_did}","message":"relay-me"}}"#);
+    let send_signature = service_api_request_signature_for_fields(
+        sender_did,
+        41,
+        state_hash.as_str(),
+        send_body.as_str(),
+    );
     let send_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "POST",
         "/v1/messages/send",
-        send_body,
+        send_body.as_str(),
         &[
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", "41"),
@@ -7483,7 +7583,7 @@ fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()
     let relay_payload: Value =
         serde_json::from_str(relay_line).expect("relay spool line should be valid json");
     assert_eq!(relay_payload["message_id"], send_payload.message_id);
-    assert_eq!(relay_payload["sender_did"], sender_did);
+    assert_eq!(relay_payload["sender_did"], effective_sender_did);
     assert_eq!(relay_payload["recipient_did"], recipient_did);
     assert_eq!(relay_payload["body"], send_body);
 
