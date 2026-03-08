@@ -1,8 +1,8 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId,
-    Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError,
-    ServiceHealthSnapshot, TaskDefinition, TaskId, TaskStatus, TokenAmount,
+    Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition,
+    TaskId, TaskStatus, TokenAmount,
 };
 
 /// Transport backends available for SDK clients.
@@ -41,15 +41,6 @@ pub trait KamnTransport {
             found: found.as_str(),
         })
     }
-}
-
-/// Public service observability capabilities exposed by SDK transports.
-pub trait KamnServiceObservability {
-    /// Returns a stable SDK snapshot of the service health route.
-    fn service_health(&self) -> Result<ServiceHealthSnapshot, SdkError>;
-
-    /// Returns the raw `/metrics` exposition text.
-    fn service_metrics(&self) -> Result<String, SdkError>;
 }
 
 /// High-level KAMN agent workflow API.
