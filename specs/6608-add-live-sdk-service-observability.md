@@ -19,11 +19,11 @@ Add a live-only SDK service observability surface so callers can read service he
 - Live client connection errors must continue to fail closed.
 
 # Acceptance criteria
-- [ ] `LiveTransportKamnClient` exposes service observability methods for health and metrics.
-- [ ] Health is returned through a stable SDK type rather than requiring direct use of low-level service models.
-- [ ] Metrics returns the raw `/metrics` exposition text through the live SDK.
-- [ ] Live SDK tests exercise real `/healthz` and `/metrics` route calls.
-- [ ] Existing low-level `ServiceApiClient::health()` and `metrics()` coverage remains green.
+- [x] `LiveTransportKamnClient` exposes service observability methods for health and metrics.
+- [x] Health is returned through a stable SDK type rather than requiring direct use of low-level service models.
+- [x] Metrics returns the raw `/metrics` exposition text through the live SDK.
+- [x] Live SDK tests exercise real `/healthz` and `/metrics` route calls.
+- [x] Existing low-level `ServiceApiClient::health()` and `metrics()` coverage remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/live.rs`
@@ -43,3 +43,12 @@ Add a live-only SDK service observability surface so callers can read service he
 - Add a red fail-closed test for malformed health payload.
 - Re-run existing signed low-level `ServiceApiClient` health/metrics coverage.
 - Run strict `clippy` for `kamn-sdk` and the full `kamn-sdk` test suite.
+
+# Deviations
+- None.
+
+# Verification
+- `cargo test -p kamn-sdk --test live_transport_observability -- --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
