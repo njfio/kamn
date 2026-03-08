@@ -91,6 +91,24 @@ pub struct TaskDefinition {
     pub description: String,
 }
 
+/// Lifecycle view for a previously created task.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskStatus {
+    /// SDK task identifier.
+    pub task_id: TaskId,
+    /// Lifecycle state reported by the transport.
+    pub state: String,
+}
+
+impl TaskStatus {
+    pub(crate) fn from_state(task_id: &TaskId, state: &str) -> Self {
+        Self {
+            task_id: task_id.clone(),
+            state: state.to_owned(),
+        }
+    }
+}
+
 /// Artifact identifier.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ArtifactId(pub u64);

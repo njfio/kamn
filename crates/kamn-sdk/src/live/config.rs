@@ -14,6 +14,7 @@ pub(crate) const CONTENT_READ_SCOPE: &str = "content:read";
 pub(crate) const CONTENT_WRITE_SCOPE: &str = "content:write";
 pub(crate) const ESCROW_WRITE_SCOPE: &str = "escrow:write";
 pub(crate) const MESSAGES_WRITE_SCOPE: &str = "messages:write";
+pub(crate) const TASKS_READ_SCOPE: &str = "tasks:read";
 pub(crate) const TASKS_WRITE_SCOPE: &str = "tasks:write";
 
 /// Configuration for the live transport client.

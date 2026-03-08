@@ -1,7 +1,7 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId,
-    MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TaskStatus, TokenAmount,
 };
 
 /// Transport backends available for SDK clients.
@@ -62,6 +62,8 @@ pub trait KamnAgent {
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError>;
     /// Accepts a task on behalf of an assignee DID.
     fn accept_task(&mut self, task_id: &TaskId, assignee: &AgentDid) -> Result<(), SdkError>;
+    /// Returns lifecycle metadata for a previously created task.
+    fn get_task_status(&self, task_id: &TaskId) -> Result<TaskStatus, SdkError>;
     /// Submits a task artifact and returns its artifact identifier.
     fn submit_artifact(
         &mut self,
