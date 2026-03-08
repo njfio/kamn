@@ -7,6 +7,7 @@ const BASELINE_SCHEMA_VERSION: &str = "kamn.ci.production-expect-surface-baselin
 const THRESHOLD_SCHEMA_VERSION: &str = "kamn.ci.production-expect-surface-thresholds.v1";
 const REASON_TAXONOMY_VERSION: &str = "kamn.ci.production-expect-surface-reason-taxonomy.v1";
 const REASON_CODES_CSV: &str = "baseline_file_missing,baseline_file_invalid,baseline_schema_invalid,baseline_value_invalid,threshold_file_missing,threshold_file_invalid,threshold_schema_invalid,threshold_value_invalid,census_command_failed,census_value_invalid,expect_delta_exceeded,expect_threshold_exceeded_unwaived";
+const EXPECT_CALL_TOKEN: &[u8] = b".expect(";
 
 #[derive(Debug, Clone)]
 struct Baseline {
@@ -307,7 +308,11 @@ struct CodeScanState {
     escaped: bool,
 }
 
-fn consume_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Option<usize> {
+fn consume_active_non_code(
+    bytes: &[u8],
+    index: usize,
+    state: &mut CodeScanState,
+) -> Option<usize> {
     if let Some(hash_count) = state.raw_string_hash_count {
         if closes_raw_string(bytes, index, hash_count) {
             state.raw_string_hash_count = None;
@@ -328,17 +333,20 @@ fn consume_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Op
         return Some(index + 1);
     }
 
-    if state.in_string {
-        if state.escaped {
-            state.escaped = false;
-        } else if bytes[index] == b'\\' {
-            state.escaped = true;
-        } else if bytes[index] == b'"' {
-            state.in_string = false;
-        }
-        return Some(index + 1);
+    if !state.in_string {
+        return None;
     }
+    if state.escaped {
+        state.escaped = false;
+    } else if bytes[index] == b'\\' {
+        state.escaped = true;
+    } else if bytes[index] == b'"' {
+        state.in_string = false;
+    }
+    Some(index + 1)
+}
 
+fn start_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Option<usize> {
     if starts_with(bytes, index, b"//") {
         let mut cursor = index + 2;
         while cursor < bytes.len() && bytes[cursor] != b'\n' {
@@ -367,8 +375,11 @@ fn consume_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Op
         state.escaped = false;
         return Some(index + 1);
     }
-
     None
+}
+
+fn consume_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Option<usize> {
+    consume_active_non_code(bytes, index, state).or_else(|| start_non_code(bytes, index, state))
 }
 
 fn skip_whitespace(bytes: &[u8], mut index: usize, state: &mut CodeScanState) -> usize {
@@ -451,9 +462,9 @@ fn count_expect_occurrences_excluding_cfg_test(raw: &str) -> i64 {
             index = skip_cfg_test_item(bytes, index);
             continue;
         }
-        if starts_with(bytes, index, b".expect(") {
+        if starts_with(bytes, index, EXPECT_CALL_TOKEN) {
             count += 1;
-            index += ".expect(".len();
+            index += EXPECT_CALL_TOKEN.len();
             continue;
         }
         index += 1;
