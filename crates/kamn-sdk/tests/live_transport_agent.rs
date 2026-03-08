@@ -183,6 +183,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
     Some(match (method, path) {
         ("POST", "/v1/agents/register") => "agents:write",
         ("POST", "/v1/agents/search") => "agents:read",
+        ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/messages/send") => "messages:write",
         ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
         _ => return None,
@@ -437,6 +438,18 @@ fn run_live_transport_contract_server(
                     let payload = serde_json::to_string(&filtered)
                         .map_err(|error| format!("search result serialization failed: {error}"))?;
                     write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/channels/create" {
+                    let parsed: serde_json::Value = serde_json::from_str(body.as_str())
+                        .map_err(|error| format!("channel payload should be valid json: {error}"))?;
+                    let name = parsed
+                        .get("name")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or_else(|| "channel payload missing name".to_owned())?;
+                    let payload = format!(
+                        "{{\"channel_id\":\"channel-live-{}\",\"status\":\"created\"}}",
+                        name
+                    );
+                    write_http_response(&mut stream, 201, payload.as_str())?;
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
                     let did = path.trim_start_matches("/v1/agents/");
                     let (agent_type, model_family, capabilities) =
@@ -789,6 +802,33 @@ fn spec_c07_live_transport_search_agents_uses_service_route() {
         assert!(
             server_result.is_ok(),
             "live transport search server should satisfy request budget"
+        );
+    });
+}
+
+#[test]
+fn spec_c08_live_transport_create_channel_uses_service_route() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(server_addr, 1, "kamn:did:agent:live-tester", None)
+        });
+        wait_for_server_ready(bind_addr.as_str());
+
+        let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let channel_id = client
+            .create_channel("ops-lane")
+            .expect("live create_channel should succeed");
+
+        assert_eq!(channel_id.0, "channel-live-ops-lane");
+
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "test service contract server should satisfy request budget"
         );
     });
 }
