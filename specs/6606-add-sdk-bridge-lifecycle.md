@@ -22,11 +22,11 @@ Add a high-level bridge lifecycle API to the SDK so callers can submit, forward,
 - In-memory bridge lifecycle state must remain deterministic across submit, forward, and later query operations.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes high-level bridge submit, forward, and status methods with stable SDK bridge types.
-- [ ] `InMemoryKamnClient` supports deterministic bridge lifecycle transitions and rejects unknown message/bridge ids.
-- [ ] `LiveTransportKamnClient` maps stable SDK bridge ids onto the existing `submit`, `forward`, and `query` bridge routes.
-- [ ] SDK tests cover in-memory and live bridge lifecycle behavior, including unknown-id and malformed-response failures.
-- [ ] Existing lower-level `ServiceApiClient` bridge route coverage remains green.
+- [x] `KamnAgent` exposes high-level bridge submit, forward, and status methods with stable SDK bridge types.
+- [x] `InMemoryKamnClient` supports deterministic bridge lifecycle transitions and rejects unknown message/bridge ids.
+- [x] `LiveTransportKamnClient` maps stable SDK bridge ids onto the existing `submit`, `forward`, and `query` bridge routes.
+- [x] SDK tests cover in-memory and live bridge lifecycle behavior, including unknown-id and malformed-response failures.
+- [x] Existing lower-level `ServiceApiClient` bridge route coverage remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -52,3 +52,14 @@ Add a high-level bridge lifecycle API to the SDK so callers can submit, forward,
 - Add fail-closed tests for unknown bridge ids and malformed live bridge responses.
 - Re-run existing signed low-level `ServiceApiClient` bridge route contract coverage.
 - Run strict `clippy` for `kamn-sdk` and the full `kamn-sdk` test suite.
+
+# Integration evidence
+- `cargo test -p kamn-sdk --test memory_bridge -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_bridge -- --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client spec_c03_service_api_client_executes_bridge_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+
+# Deviations
+- Added two dedicated SDK bridge test targets, which required refreshing `fixtures/ci/test_file_size_policy_baseline.env` from `test_file_total=463` / `soft_warn_count=34` to `test_file_total=465` / `soft_warn_count=36`.
