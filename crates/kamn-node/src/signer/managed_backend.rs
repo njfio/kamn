@@ -356,17 +356,17 @@ fn verify_kolme_live_managed_signer_backend_signature_provenance(
                 .to_owned(),
         ));
     }
-    let expected_signer_public_key_hex =
+    let expected_signer_public_key_bytes =
         ascii_lowercase_bytes(expected_signer_public_key_hex.as_bytes());
-    let backend_signer_public_key_hex =
+    let backend_signer_public_key_bytes =
         ascii_lowercase_bytes(backend_signature.signer_public_key_hex.as_bytes());
     if !constant_time_eq_bytes(
-        backend_signer_public_key_hex.as_slice(),
-        expected_signer_public_key_hex.as_slice(),
+        backend_signer_public_key_bytes.as_slice(),
+        expected_signer_public_key_bytes.as_slice(),
     ) {
         return Err(ConfigError::RuntimeKolmeLive(format!(
             "managed-external signer backend response signer_public_key_hex does not match expected runtime signer key material (expected={}, found={}) (managed_signer_backend_response_provenance_mismatch)",
-            String::from_utf8_lossy(expected_signer_public_key_hex.as_slice()),
+            expected_signer_public_key_hex,
             backend_signature.signer_public_key_hex,
         )));
     }
