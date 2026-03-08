@@ -24,15 +24,17 @@ Replace `eq_ignore_ascii_case()` in `verify_kolme_live_managed_signer_backend_si
 - Regression to `eq_ignore_ascii_case()` in the provenance compare
 
 ## Acceptance criteria
-- [ ] `verify_kolme_live_managed_signer_backend_signature_provenance()` no longer uses `eq_ignore_ascii_case()` for signer public-key provenance matching
-- [ ] Case-variant-equivalent valid hex still verifies successfully
-- [ ] Mismatched signer public key still returns the existing `managed_signer_backend_response_provenance_mismatch` error
-- [ ] Malformed signer key material still fails closed with deterministic runtime/config errors
-- [ ] A regression test fails if implementation reverts to `eq_ignore_ascii_case()`
+- [x] `verify_kolme_live_managed_signer_backend_signature_provenance()` no longer uses `eq_ignore_ascii_case()` for signer public-key provenance matching
+- [x] Case-variant-equivalent valid hex still verifies successfully
+- [x] Mismatched signer public key still returns the existing `managed_signer_backend_response_provenance_mismatch` error
+- [x] Malformed signer key material still fails closed with deterministic runtime/config errors
+- [x] A regression test fails if implementation reverts to `eq_ignore_ascii_case()`
 
 ## Files to touch
 - `crates/kamn-node/src/signer/managed_backend.rs`
 - `crates/kamn-node/tests/managed_signer_provenance_constant_time.rs`
+- `crates/kamn-node/src/main_tests/signer_tests.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 - `specs/6584-harden-managed-signer-provenance-compare.md`
 
 ## Error semantics
@@ -49,9 +51,18 @@ Replace `eq_ignore_ascii_case()` in `verify_kolme_live_managed_signer_backend_si
 ## Integration verification
 - Real integrated path remains `sign_kolme_live_managed_external_message(...)` via managed signer command execution and provenance verification
 - Verified through public runtime-facing signing path, not a mock-only bypass
+- Verified workspace inventory parity after adding the dedicated external contract test target
 
 ## Verification actuals
-- Pending
+- Red: `cargo test -p kamn-node --test managed_signer_provenance_constant_time -- --nocapture`
+  - failed because `verify_kolme_live_managed_signer_backend_signature_provenance()` still used `eq_ignore_ascii_case()`
+- Green: `cargo test -p kamn-node --test managed_signer_provenance_constant_time -- --nocapture`
+- Green: `cargo test -p kamn-node --bin kamn-node main_tests::signer_tests::regression_kolme_live_managed_external_backend_response_accepts_case_variant_signer_public_key -- --exact --nocapture`
+- Green: `cargo test -p kamn-node --bin kamn-node main_tests::signer_tests::regression_kolme_live_managed_external_backend_response_rejects_malformed_signer_public_key -- --exact --nocapture`
+- Green: `cargo test -p kamn-node --bin kamn-node main_tests::signer_tests::regression_kolme_live_managed_external_backend_response_rejects_signer_public_key_mismatch -- --exact --nocapture`
+- Green: `cargo test -p kamn-node --bin kamn-node main_tests::signer_tests::integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer_selection -- --exact --nocapture`
+- Green: `cargo clippy -p kamn-node --tests -- -D warnings`
+- Green: `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
 
 ## Deviations
-- None
+- Adding the dedicated external node contract test increased workspace test inventory by one file, so `fixtures/ci/test_file_size_policy_baseline.env` was refreshed from `461` to `462`.
