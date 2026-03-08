@@ -85,6 +85,13 @@ impl InMemoryKamnClient {
         Ok(did)
     }
 
+    fn artifact_not_found(artifact_id: &ArtifactId) -> SdkError {
+        SdkError::NotFound {
+            entity: "artifact",
+            id: artifact_id.0.to_string(),
+        }
+    }
+
     fn validate_metadata(metadata: &AgentMetadata) -> Result<(), SdkError> {
         if metadata.agent_type.trim().is_empty() {
             return Err(SdkError::InvalidInput {
@@ -316,20 +323,14 @@ impl KamnAgent for InMemoryKamnClient {
         self.artifacts
             .get(artifact_id)
             .map(|entry| entry.status.clone())
-            .ok_or_else(|| SdkError::NotFound {
-                entity: "artifact",
-                id: artifact_id.0.to_string(),
-            })
+            .ok_or_else(|| Self::artifact_not_found(artifact_id))
     }
 
     fn expire_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
         let artifact = self
             .artifacts
             .get_mut(artifact_id)
-            .ok_or_else(|| SdkError::NotFound {
-                entity: "artifact",
-                id: artifact_id.0.to_string(),
-            })?;
+            .ok_or_else(|| Self::artifact_not_found(artifact_id))?;
         artifact.status = ArtifactStatus::from_lifecycle(
             artifact_id,
             "expired".to_owned(),
