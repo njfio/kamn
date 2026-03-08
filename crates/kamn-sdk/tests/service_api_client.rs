@@ -1237,6 +1237,31 @@ fn spec_c01_service_api_client_lists_channel_messages_through_route_contract() {
 }
 
 #[test]
+fn regression_service_api_client_registration_surface_contract_exists() {
+    let route_source = std::fs::read_to_string("src/service_client_bridge_misc_routes.rs")
+        .expect("route source should be readable");
+    assert!(
+        route_source.contains("pub fn register_agent("),
+        "service client should expose a typed register_agent route"
+    );
+
+    let model_source =
+        std::fs::read_to_string("src/service_models.rs").expect("service models should be readable");
+    assert!(
+        model_source.contains("pub agent_type: String"),
+        "service agent profile should expose agent_type"
+    );
+    assert!(
+        model_source.contains("pub model_family: String"),
+        "service agent profile should expose model_family"
+    );
+    assert!(
+        model_source.contains("pub capabilities: Vec<String>"),
+        "service agent profile should expose capabilities"
+    );
+}
+
+#[test]
 fn spec_c02_service_api_client_executes_task_transition_and_escrow_route_contracts() {
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();

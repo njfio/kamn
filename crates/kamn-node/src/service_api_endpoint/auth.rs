@@ -522,8 +522,20 @@ mod tests {
             ServiceApiScope::BridgeRead
         );
         assert_eq!(
+            parse_scope(" agents:write ").expect("scope").as_str(),
+            "agents:write"
+        );
+        assert_eq!(
             parse_scope("protected:unknown").expect("scope"),
             ServiceApiScope::ProtectedUnknown
+        );
+    }
+
+    #[test]
+    fn regression_required_scope_for_route_maps_agent_registration_to_agents_write() {
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/agents/register").map(ServiceApiScope::as_str),
+            Some("agents:write")
         );
     }
 

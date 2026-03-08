@@ -1338,6 +1338,11 @@ fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
         parse_service_api_payload(agent.body.as_str()).expect("agent payload should deserialize");
     assert_eq!(agent_payload.did, "kamn:did:agent:alpha");
     assert_eq!(agent_payload.reputation_score, 500);
+    let agent_json: Value =
+        serde_json::from_str(agent.body.as_str()).expect("agent payload should parse as json");
+    assert_eq!(agent_json["agent_type"], "service-agent");
+    assert_eq!(agent_json["model_family"], "service-api");
+    assert_eq!(agent_json["capabilities"], serde_json::json!(["profile:read"]));
 }
 
 #[test]
