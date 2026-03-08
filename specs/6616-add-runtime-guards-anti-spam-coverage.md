@@ -56,3 +56,7 @@ Outputs:
 5. Run targeted and full crate tests:
    - `cargo test -p kamn-runtime-guards --test runtime_guard_anti_spam -- --nocapture`
    - `cargo test -p kamn-runtime-guards -- --nocapture`
+
+## Phase 6 Notes
+- No production anti-spam behavior changes were required; the public `kamn-runtime-guards` API already satisfied the new integration cases.
+- Integration for this issue is the new dedicated crate-level anti-spam test target plus the workspace inventory baseline refresh required by `test_file_size_policy`.
