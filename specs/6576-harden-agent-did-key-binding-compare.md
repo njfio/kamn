@@ -25,11 +25,11 @@ Replace direct equality in `AgentDid::ensure_public_key_hex_binding()` with the 
 - Regression to direct equality instead of constant-time helper
 
 ## Acceptance criteria
-- [ ] `AgentDid::ensure_public_key_hex_binding()` uses `crate::constant_time_eq::constant_time_eq_bytes(...)` for fingerprint comparison
-- [ ] Matching bound DID and public key still return `Ok(())`
-- [ ] Mismatched public key still returns `AgentDidKeyBindingError::KeyBindingMismatch` with unchanged `expected` and `actual` values
-- [ ] Malformed public key hex still returns `AgentDidKeyBindingError::InvalidPublicKeyHex`
-- [ ] A regression test fails if the implementation reverts to direct equality
+- [x] `AgentDid::ensure_public_key_hex_binding()` uses `crate::constant_time_eq::constant_time_eq_bytes(...)` for fingerprint comparison
+- [x] Matching bound DID and public key still return `Ok(())`
+- [x] Mismatched public key still returns `AgentDidKeyBindingError::KeyBindingMismatch` with unchanged `expected` and `actual` values
+- [x] Malformed public key hex still returns `AgentDidKeyBindingError::InvalidPublicKeyHex`
+- [x] A regression test fails if the implementation reverts to direct equality
 
 ## Files to touch
 - `crates/kamn-core/src/did.rs`
@@ -46,3 +46,14 @@ Replace direct equality in `AgentDid::ensure_public_key_hex_binding()` with the 
 - Assert mismatched public key returns `KeyBindingMismatch` and preserves `expected`/`actual`
 - Assert malformed public key hex returns `InvalidPublicKeyHex`
 - Run targeted `kamn-core` DID tests and strict clippy for the touched crate
+
+## Integration verification
+- Existing public boundary preserved: `AgentDid::parse(...)` -> `AgentDid::ensure_public_key_hex_binding(...)`
+- Added parsed-bound-DID round-trip coverage to prove the hardened comparison is exercised through the public type boundary
+
+## Verification actuals
+- `cargo test -p kamn-core did::tests -- --nocapture`
+- `cargo clippy -p kamn-core --tests -- -D warnings`
+
+## Deviations
+- None

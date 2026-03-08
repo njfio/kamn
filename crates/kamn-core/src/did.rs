@@ -1014,6 +1014,17 @@ mod tests {
     }
 
     #[test]
+    fn regression_agent_did_key_binding_verification_accepts_parsed_bound_did() {
+        let rendered = AgentDid::with_public_key_hex_binding("agent-5", TEST_PUBLIC_KEY_HEX)
+            .expect("bound did should render")
+            .to_string();
+        let parsed = AgentDid::parse(rendered.as_str()).expect("rendered bound did should parse");
+        parsed
+            .ensure_public_key_hex_binding(TEST_PUBLIC_KEY_HEX)
+            .expect("parsed bound did should preserve key-binding verification");
+    }
+
+    #[test]
     fn regression_agent_did_key_binding_verification_rejects_malformed_public_key_hex() {
         let did = AgentDid::with_public_key_hex_binding("agent-4", TEST_PUBLIC_KEY_HEX)
             .expect("bound did should render");
