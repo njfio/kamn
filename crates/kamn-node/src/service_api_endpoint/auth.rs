@@ -169,9 +169,34 @@ fn sender_did_matches_signer_public_key(
     if let Some(bound_public_key_hex) =
         sender_did.strip_prefix(SELF_CERTIFYING_AGENT_DID_KEY_PREFIX)
     {
-        return bound_public_key_hex.eq_ignore_ascii_case(signer_public_key_hex);
+        return normalized_public_key_hexes_match(
+            bound_public_key_hex.trim(),
+            signer_public_key_hex.trim(),
+        );
     }
     allow_legacy_sender_binding
+}
+
+fn normalized_public_key_hexes_match(left: &str, right: &str) -> bool {
+    let normalized_left = ascii_lowercase_bytes(left.as_bytes());
+    let normalized_right = ascii_lowercase_bytes(right.as_bytes());
+    constant_time_eq_bytes(normalized_left.as_slice(), normalized_right.as_slice())
+}
+
+fn ascii_lowercase_bytes(value: &[u8]) -> Vec<u8> {
+    value.iter().map(u8::to_ascii_lowercase).collect()
+}
+
+fn constant_time_eq_bytes(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+
+    let mut diff = 0_u8;
+    for (left_byte, right_byte) in left.iter().zip(right.iter()) {
+        diff |= left_byte ^ right_byte;
+    }
+    diff == 0
 }
 
 pub(super) fn enforce_request_scope_policy(
@@ -617,6 +642,18 @@ mod tests {
         assert!(sender_did_matches_signer_public_key(
             sender_did.as_str(),
             signer_public_key_hex,
+            false,
+        ));
+    }
+
+    #[test]
+    fn regression_sender_did_binding_accepts_case_variant_signer_public_key_header() {
+        let signer_public_key_hex =
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11";
+        let sender_did = format!("kamn:did:agent:pkh-{signer_public_key_hex}");
+        assert!(sender_did_matches_signer_public_key(
+            sender_did.as_str(),
+            signer_public_key_hex.to_uppercase().as_str(),
             false,
         ));
     }
