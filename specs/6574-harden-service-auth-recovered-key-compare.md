@@ -26,11 +26,11 @@ Replace the final expected-vs-recovered secp256k1 public key equality check in `
 - regression tests fail to pin the recovered-key comparison path.
 
 ## Acceptance criteria
-- [ ] `service_auth_verify_with_public_key_hex()` uses the internal constant-time helper for expected-vs-recovered compressed public key comparison.
-- [ ] valid signatures still verify with the matching public key.
-- [ ] tampered payloads and wrong public keys still fail with the existing verification error.
-- [ ] malformed signature/public-key inputs keep their current error mapping.
-- [ ] regression tests fail if the recovered-key comparison reverts to direct equality.
+- [x] `service_auth_verify_with_public_key_hex()` uses the internal constant-time helper for expected-vs-recovered compressed public key comparison.
+- [x] valid signatures still verify with the matching public key.
+- [x] tampered payloads and wrong public keys still fail with the existing verification error.
+- [x] malformed signature/public-key inputs keep their current error mapping.
+- [x] regression tests fail if the recovered-key comparison reverts to direct equality.
 
 ## Files to touch
 - `crates/kamn-core/src/signature_profile.rs`
@@ -51,3 +51,17 @@ Replace the final expected-vs-recovered secp256k1 public key equality check in `
   - keep the comparison local and readable; no new helper duplication
 - Integration:
   - run targeted `kamn-core` library tests covering `signature_profile`
+
+## Integration notes
+- No new entrypoint was introduced. The integration boundary for this issue is the existing `service_auth_verify_with_public_key_hex()` verification path inside `signature_profile`.
+
+## Verification
+- Red:
+  - `cargo test -p kamn-core --lib signature_profile -- --nocapture` (failed on recovered-key direct equality regression)
+- Green / Refactor / Integration:
+  - `cargo test -p kamn-core --lib signature_profile -- --nocapture`
+  - `cargo clippy -p kamn-core --tests -- -D warnings`
+  - `rustfmt --edition 2024 --config skip_children=true --check crates/kamn-core/src/signature_profile.rs`
+
+## Deviations
+- None.
