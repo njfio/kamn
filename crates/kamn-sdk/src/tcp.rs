@@ -20,6 +20,17 @@ const TCP_FRAME_DELIMITER: &str = "\n\n";
 const FROM_DID_KEY_BINDING_REASON: &str =
     "must include key-binding fingerprint matching signer_public_key";
 
+fn constant_time_eq_bytes(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    let mut diff = 0_u8;
+    for (lhs, rhs) in left.iter().zip(right.iter()) {
+        diff |= lhs ^ rhs;
+    }
+    diff == 0
+}
+
 /// Cryptographically signed envelope transported over TCP.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TcpSignedEnvelope {
@@ -544,13 +555,16 @@ impl TcpHandshakeFrame {
                 reason: "does not match envelope nonce",
             });
         }
-        if self.signer_public_key != envelope.signer_public_key {
+        if !constant_time_eq_bytes(
+            self.signer_public_key.as_bytes(),
+            envelope.signer_public_key.as_bytes(),
+        ) {
             return Err(SdkError::InvalidInput {
                 field: "handshake.signer_public_key",
                 reason: "does not match envelope signer public key",
             });
         }
-        if self.signature != envelope.signature {
+        if !constant_time_eq_bytes(self.signature.as_bytes(), envelope.signature.as_bytes()) {
             return Err(SdkError::InvalidInput {
                 field: "handshake.signature",
                 reason: "does not match envelope signature",
