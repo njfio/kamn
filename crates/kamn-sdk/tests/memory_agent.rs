@@ -146,6 +146,50 @@ fn receive_stream_does_not_replay_consumed_messages() {
 }
 
 #[test]
+fn get_message_status_reports_known_sent_message_after_receive() {
+    let mut client = InMemoryKamnClient::new();
+    let sender = client
+        .register(metadata("autonomous", "claude-4", &["text"]))
+        .expect("register sender should succeed");
+    let recipient = client
+        .register(metadata("assistant", "gpt-5", &["text"]))
+        .expect("register recipient should succeed");
+
+    let message_id = client
+        .send(Message {
+            from: sender,
+            to: recipient.clone(),
+            body: "hello".to_owned(),
+            channel: None,
+        })
+        .expect("send should succeed");
+    let _ = client
+        .receive(&recipient)
+        .expect("receive should still drain inbox successfully");
+
+    assert_eq!(
+        client
+            .get_message_status(&message_id)
+            .expect("message status should remain available")
+            .status,
+        "created"
+    );
+}
+
+#[test]
+fn get_message_status_rejects_unknown_message() {
+    let client = InMemoryKamnClient::new();
+
+    assert_eq!(
+        client.get_message_status(&kamn_sdk::MessageId(46)),
+        Err(SdkError::NotFound {
+            entity: "message",
+            id: "46".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn task_accept_rejects_second_acceptance() {
     let mut client = InMemoryKamnClient::new();
     let creator = match client.register(metadata("autonomous", "claude-4", &["research"])) {
