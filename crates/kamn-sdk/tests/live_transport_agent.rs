@@ -386,10 +386,8 @@ fn run_live_transport_contract_server(
                     );
                     write_http_response(&mut stream, 201, payload.as_str())?;
                 } else if method == "POST" && path == "/v1/agents/search" {
-                    let parsed: serde_json::Value =
-                        serde_json::from_str(body.as_str()).map_err(|error| {
-                            format!("search payload should be valid json: {error}")
-                        })?;
+                    let parsed: serde_json::Value = serde_json::from_str(body.as_str())
+                        .map_err(|error| format!("search payload should be valid json: {error}"))?;
                     let capability = parsed
                         .get("capability")
                         .and_then(serde_json::Value::as_str)
@@ -417,10 +415,10 @@ fn run_live_transport_contract_server(
                     let filtered: Vec<serde_json::Value> = candidate_rows
                         .into_iter()
                         .filter(|row| match model_family.as_deref() {
-                            Some(expected) => row
-                                .get("model_family")
-                                .and_then(serde_json::Value::as_str)
-                                == Some(expected),
+                            Some(expected) => {
+                                row.get("model_family").and_then(serde_json::Value::as_str)
+                                    == Some(expected)
+                            }
                             None => true,
                         })
                         .filter(|row| match capability.as_deref() {

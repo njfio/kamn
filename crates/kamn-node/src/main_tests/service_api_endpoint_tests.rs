@@ -159,6 +159,13 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
         },
         ServiceApiRouteAuthzMatrixRow {
             method: "POST",
+            path: "/v1/agents/search",
+            body: "{\"capability\":\"code\"}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
             path: "/v1/tasks/task-matrix/accept",
             body: "{}",
             requires_auth: true,
@@ -4433,7 +4440,7 @@ fn integration_service_api_endpoint_persists_agent_profile_query_state_across_re
 
 #[test]
 fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_conflicts_on_mismatch()
-{
+ {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),

@@ -33,9 +33,6 @@ impl LiveTransportKamnClient {
     pub fn endpoint(&self) -> &str {
         &self.config.endpoint
     }
-    fn unsupported<T>(feature: &'static str) -> Result<T, SdkError> {
-        Err(SdkError::NotImplemented(feature))
-    }
 }
 
 impl KamnTransport for LiveTransportKamnClient {

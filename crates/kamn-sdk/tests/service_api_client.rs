@@ -553,6 +553,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
         ("POST", "/v1/messages/send") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/agents/register") => "agents:write",
+        ("POST", "/v1/agents/search") => "agents:read",
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
@@ -785,6 +786,9 @@ fn run_service_contract_server_with_websocket_payload(
                 } else if method == "POST" && path == "/v1/agents/register" {
                     let payload = r#"{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}"#;
                     write_http_response(&mut stream, 201, payload)?;
+                } else if method == "POST" && path == "/v1/agents/search" {
+                    let payload = r#"[{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}]"#;
+                    write_http_response(&mut stream, 200, payload)?;
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
                     let did = path.trim_start_matches("/v1/agents/");
                     let payload = format!(
@@ -1025,7 +1029,7 @@ fn regression_service_request_auth_rejects_crlf_scope_payload() {
 fn functional_service_api_client_executes_signed_http_route_contracts() {
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 9));
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 10));
     wait_for_server_ready(bind_addr.as_str());
 
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
@@ -1111,6 +1115,25 @@ fn functional_service_api_client_executes_signed_http_route_contracts() {
     assert_eq!(registration.model_family, "gpt-5");
     assert_eq!(
         registration.capabilities,
+        vec!["text".to_owned(), "code".to_owned()]
+    );
+
+    let search_payload = r#"{"capability":"code","model_family":"gpt-5"}"#;
+    let search_results = client
+        .search_agents(
+            &kamn_sdk::AgentQuery {
+                capability: Some("code".to_owned()),
+                model_family: Some("gpt-5".to_owned()),
+            },
+            &auth_with_scope(&sender, 8, search_payload, "agents:read"),
+        )
+        .expect("agent search should succeed");
+    assert_eq!(search_results.len(), 1);
+    assert_eq!(search_results[0].did, "kamn:did:agent:sdk-register");
+    assert_eq!(search_results[0].agent_type, "assistant");
+    assert_eq!(search_results[0].model_family, "gpt-5");
+    assert_eq!(
+        search_results[0].capabilities,
         vec!["text".to_owned(), "code".to_owned()]
     );
 

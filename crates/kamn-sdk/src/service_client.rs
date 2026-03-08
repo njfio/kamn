@@ -1,16 +1,17 @@
 use super::parse_unmasked_text_frame_payload;
 use super::{
+    SERVICE_WS_ROUTE, SdkError, ServiceEndpoint, ServiceEscrowStatus, ServiceRequestAuth,
+    ServiceRouteEvent, read_response_bytes, read_response_text, render_auth_headers,
+    validate_http_header_value, validate_request_method, validate_request_path,
+    write_and_flush_request,
+};
+use super::{
     json_string_field, json_u64_field, map_non_success_response, parse_http_response,
     status_from_header,
 };
-use super::{
-    read_response_bytes, read_response_text, render_auth_headers, validate_http_header_value,
-    validate_request_method, validate_request_path, write_and_flush_request, SdkError,
-    ServiceEndpoint, ServiceEscrowStatus, ServiceRequestAuth, ServiceRouteEvent, SERVICE_WS_ROUTE,
-};
 
 #[path = "service_client_bridge_misc_routes.rs"]
-mod service_client_bridge_misc_routes;
+pub(crate) mod service_client_bridge_misc_routes;
 #[path = "service_client_content_routes.rs"]
 mod service_client_content_routes;
 #[path = "service_client_message_task_routes.rs"]

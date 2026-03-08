@@ -334,6 +334,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope>
         ("POST", ROUTE_MESSAGES_SEND) => ServiceApiScope::MessagesWrite,
         ("POST", ROUTE_MESSAGES_RELAY) => ServiceApiScope::MessagesWrite,
         ("POST", ROUTE_CHANNELS_CREATE) => ServiceApiScope::ChannelsWrite,
+        ("POST", ROUTE_AGENTS_SEARCH) => ServiceApiScope::AgentsRead,
         ("POST", ROUTE_AGENTS_REGISTER) => ServiceApiScope::AgentsWrite,
         ("POST", ROUTE_TASKS_CREATE) => ServiceApiScope::TasksWrite,
         ("POST", _) if super::payload::task_accept_path_id(path).is_some() => {

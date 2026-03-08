@@ -438,6 +438,37 @@ pub(super) async fn handle_service_api_http_route(
             ),
         };
     }
+    if context.parsed_request.method == "POST" && context.parsed_request.path == ROUTE_AGENTS_SEARCH
+    {
+        let search = match parse_agent_search_payload(context.parsed_request.body.as_str()) {
+            Ok(payload) => payload,
+            Err(error) => {
+                return super::payload::json_error_response(
+                    StatusCode::BAD_REQUEST,
+                    "bad-request",
+                    error.reason_code,
+                    error.message.as_str(),
+                );
+            }
+        };
+        let search_result = {
+            let mut message_store = state.message_store.lock().await;
+            message_store.search_agent_profiles(&search)
+        };
+        return match search_result {
+            Ok(payload) => super::payload::contract_response(ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: super::serialize_service_api_json(&payload),
+            }),
+            Err(error) => super::payload::json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                REASON_CODE_STATE_PERSISTENCE_FAILED,
+                format!("service api agent search persistence failed: {error}").as_str(),
+            ),
+        };
+    }
     if context.parsed_request.method == "POST"
         && context.parsed_request.path == ROUTE_AGENTS_REGISTER
     {
@@ -1199,6 +1230,38 @@ fn parse_agent_registration_payload(
         ));
     }
     Ok(parsed)
+}
+
+fn parse_agent_search_payload(
+    payload: &str,
+) -> Result<ServiceApiAgentSearchRequestBody, ServiceApiReasonedError> {
+    let parsed =
+        serde_json::from_str::<ServiceApiAgentSearchRequestBody>(payload).map_err(|error| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                format!("agent search payload must be valid json: {error}"),
+            )
+        })?;
+    if let Some(model_family) = parsed.model_family.as_deref() {
+        if model_family.trim().is_empty() {
+            return Err(ServiceApiReasonedError::new(
+                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                "agent search payload model_family must not be empty when provided",
+            ));
+        }
+    }
+    if let Some(capability) = parsed.capability.as_deref() {
+        if capability.trim().is_empty() {
+            return Err(ServiceApiReasonedError::new(
+                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                "agent search payload capability must not be empty when provided",
+            ));
+        }
+    }
+    Ok(ServiceApiAgentSearchRequestBody {
+        capability: parsed.capability.map(|value| value.trim().to_owned()),
+        model_family: parsed.model_family.map(|value| value.trim().to_owned()),
+    })
 }
 
 fn validate_relay_agent_did(role: &str, did: &str) -> Result<(), ServiceApiReasonedError> {

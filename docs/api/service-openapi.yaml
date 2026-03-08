@@ -457,6 +457,39 @@ paths:
         "409":
           $ref: "#/components/responses/ConflictError"
 
+  /v1/agents/search:
+    post:
+      summary: Search registered agent profiles
+      operationId: searchAgents
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                capability:
+                  type: string
+                model_family:
+                  type: string
+      responses:
+        "200":
+          description: Matching registered agent profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentProfileResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
   /v1/agents/{did}/balance:
     get:
       summary: Query agent balance

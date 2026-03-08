@@ -1,15 +1,15 @@
 use super::{
     LiveTransportKamnClient,
     routes::{
-        agent_profile_to_document, agent_profile_to_reputation, recipient_mailbox_channel_id,
-        service_message_to_record,
+        agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
+        recipient_mailbox_channel_id, service_message_to_record,
     },
-    state::{build_agents_read_auth, remember_message_id},
+    state::{build_agents_read_auth, build_auth, remember_message_id},
 };
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
-    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, service::agent_search_payload,
 };
 
 impl KamnAgent for LiveTransportKamnClient {
@@ -82,8 +82,17 @@ impl KamnAgent for LiveTransportKamnClient {
         Ok(TokenAmount(balance.balance))
     }
 
-    fn search_agents(&self, _query: AgentQuery) -> Result<Vec<AgentSummary>, SdkError> {
-        Self::unsupported("live transport agent search route is not available via service api")
+    fn search_agents(&self, query: AgentQuery) -> Result<Vec<AgentSummary>, SdkError> {
+        let payload = agent_search_payload(&query)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            payload.as_str(),
+            Some(super::config::AGENTS_READ_SCOPE),
+        )?;
+        let profiles = self.service_client.search_agents(&query, &auth)?;
+        profiles.into_iter().map(agent_profile_to_summary).collect()
     }
     fn get_reputation(&self, agent: &AgentDid) -> Result<AgentReputation, SdkError> {
         let auth = build_agents_read_auth(&self.state, &self.config)?;

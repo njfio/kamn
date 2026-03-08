@@ -1,8 +1,8 @@
 use super::task_escrow::escape_json;
 use crate::service::ServiceMessageDelivery;
 use crate::{
-    AgentDid, AgentMetadata, AgentReputation, DidDocument, Message, MessageId, MessageRecord,
-    SdkError, ServiceAgentProfile,
+    AgentDid, AgentMetadata, AgentReputation, AgentSummary, DidDocument, Message, MessageId,
+    MessageRecord, SdkError, ServiceAgentProfile,
 };
 
 pub(crate) fn service_message_payload(message: &Message) -> String {
@@ -89,6 +89,21 @@ pub(crate) fn agent_profile_to_reputation(
     Ok(AgentReputation {
         did: profile_did,
         score,
+    })
+}
+
+pub(crate) fn agent_profile_to_summary(
+    profile: ServiceAgentProfile,
+) -> Result<AgentSummary, SdkError> {
+    let did = parse_service_agent_did(
+        &profile.did,
+        "service returned invalid did in agent profile response",
+    )?;
+    Ok(AgentSummary {
+        did,
+        agent_type: profile.agent_type,
+        model_family: profile.model_family,
+        capabilities: profile.capabilities,
     })
 }
 
