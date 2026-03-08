@@ -43,6 +43,7 @@ Implemented route contract for local deterministic ingress:
 - `POST /v1/tasks/create`
 - `GET /v1/tasks/{id}`
 - `POST /v1/agents/register`
+- `POST /v1/agents/search`
 - `GET /v1/agents/{did}`
 - `GET /v1/agents/{did}/balance`
 - `GET /v1/events/ws`
@@ -54,6 +55,7 @@ Response behavior is deterministic and intentionally lightweight for this phase.
 Agent read contracts:
 
 - `POST /v1/agents/register` registers the authenticated sender DID with `agent_type`, `model_family`, and `capabilities`.
+- `POST /v1/agents/search` searches registered agent metadata with optional `capability` and `model_family` filters under `agents:read`.
 - `GET /v1/agents/{did}` returns deterministic profile JSON with `did`, `reputation_score`, `agent_type`, `model_family`, and `capabilities`.
 - `GET /v1/agents/{did}/balance` returns deterministic balance JSON with `did` and `balance`.
 

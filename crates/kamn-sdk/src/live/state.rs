@@ -1,8 +1,8 @@
-use super::config::{LiveTransportConfig, AGENTS_READ_SCOPE};
-use super::task_escrow::{deterministic_u64_tag, LiveEscrowAlias, LiveTaskAlias};
+use super::config::{AGENTS_READ_SCOPE, LiveTransportConfig};
+use super::task_escrow::{LiveEscrowAlias, LiveTaskAlias, deterministic_u64_tag};
 use crate::{
-    service_signature_for_fields, service_signer_public_key_for_fields, AgentDid, MessageId,
-    SdkError, ServiceRequestAuth,
+    AgentDid, MessageId, SdkError, ServiceRequestAuth, service_signature_for_fields,
+    service_signer_public_key_for_fields,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -45,7 +45,21 @@ pub(crate) fn build_agents_read_auth(
     state: &Arc<Mutex<LiveTransportState>>,
     config: &LiveTransportConfig,
 ) -> Result<ServiceRequestAuth, SdkError> {
-    build_auth(state, config, &config.requester_did, "", Some(AGENTS_READ_SCOPE))
+    build_agents_read_auth_with_body(state, config, "")
+}
+
+pub(crate) fn build_agents_read_auth_with_body(
+    state: &Arc<Mutex<LiveTransportState>>,
+    config: &LiveTransportConfig,
+    body: &str,
+) -> Result<ServiceRequestAuth, SdkError> {
+    build_auth(
+        state,
+        config,
+        &config.requester_did,
+        body,
+        Some(AGENTS_READ_SCOPE),
+    )
 }
 
 pub(crate) fn remember_message_id(

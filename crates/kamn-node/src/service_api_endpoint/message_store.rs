@@ -844,6 +844,34 @@ impl ServiceApiMessageStore {
         Ok(agent_profile_body(&record))
     }
 
+    pub(super) fn search_agent_profiles(
+        &mut self,
+        search: &ServiceApiAgentSearchRequestBody,
+    ) -> Result<Vec<ServiceApiAgentGetBody>, String> {
+        self.refresh_from_disk()?;
+        let capability = search.capability.as_deref();
+        let model_family = search.model_family.as_deref();
+        let mut results: Vec<ServiceApiAgentGetBody> = self
+            .snapshot
+            .agents
+            .values()
+            .filter(|record| record.registered)
+            .filter(|record| match model_family {
+                Some(expected) => record_model_family(record) == expected,
+                None => true,
+            })
+            .filter(|record| match capability {
+                Some(expected) => record_capabilities(record)
+                    .iter()
+                    .any(|value| value == expected),
+                None => true,
+            })
+            .map(agent_profile_body)
+            .collect();
+        results.sort_by(|left, right| left.did.cmp(&right.did));
+        Ok(results)
+    }
+
     pub(super) fn get_or_create_agent_balance(
         &mut self,
         agent_did: &str,

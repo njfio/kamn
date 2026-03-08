@@ -55,13 +55,14 @@ use tokio::sync::{Mutex, Notify, Semaphore};
 
 use message_store::ServiceApiMessageStore;
 pub(crate) use models::{
-    ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiBridgeStatusBody,
-    ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody,
-    ServiceApiContentLifecycleBody, ServiceApiContentRegisterBody, ServiceApiEndpointConfig,
-    ServiceApiEndpointResponse, ServiceApiErrorBody, ServiceApiEscrowStatusBody,
-    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
-    ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody,
-    ServiceApiTaskGetBody, ServiceApiTaskTransitionBody, ServiceApiWebsocketStateTransitionBody,
+    ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiAgentSearchRequestBody,
+    ServiceApiBridgeStatusBody, ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody,
+    ServiceApiChannelMessagesBody, ServiceApiContentLifecycleBody, ServiceApiContentRegisterBody,
+    ServiceApiEndpointConfig, ServiceApiEndpointResponse, ServiceApiErrorBody,
+    ServiceApiEscrowStatusBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
+    ServiceApiMessageGetBody, ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry,
+    ServiceApiTaskCreateBody, ServiceApiTaskGetBody, ServiceApiTaskTransitionBody,
+    ServiceApiWebsocketStateTransitionBody,
 };
 use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use snapshot::ServiceApiSnapshot;
@@ -89,6 +90,7 @@ const ROUTE_TASKS_CREATE: &str = "/v1/tasks/create";
 const ROUTE_ESCROW_FUND: &str = "/v1/escrow/fund";
 const ROUTE_CONTENT_REGISTER: &str = "/v1/content/register";
 const ROUTE_BRIDGE_SUBMIT: &str = "/v1/bridge/submit";
+const ROUTE_AGENTS_SEARCH: &str = "/v1/agents/search";
 const ROUTE_AGENTS_REGISTER: &str = "/v1/agents/register";
 const ROUTE_MESSAGES_PREFIX: &str = "/v1/messages/";
 const ROUTE_CHANNELS_PREFIX: &str = "/v1/channels/";
@@ -166,11 +168,12 @@ const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/service_api_scope_policy_fixture_matrix.txt");
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-route-authz-matrix.v1";
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 23;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 24;
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT: usize = 2;
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 21;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 22;
 const REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID: &str =
     "service_api_agent_registration_payload_invalid";
+const REASON_CODE_AGENT_SEARCH_PAYLOAD_INVALID: &str = "service_api_agent_search_payload_invalid";
 const REASON_CODE_AGENT_REGISTRATION_CONFLICT: &str = "service_api_agent_registration_conflict";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";

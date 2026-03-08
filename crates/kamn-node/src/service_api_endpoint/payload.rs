@@ -186,6 +186,13 @@ pub(super) fn render_service_api_endpoint_response(
             body: serialize_service_api_json(&payload),
         };
     }
+    if method == "POST" && path == ROUTE_AGENTS_SEARCH {
+        return ServiceApiEndpointResponse {
+            status_code: 200,
+            content_type: "application/json",
+            body: serialize_service_api_json(&Vec::<ServiceApiAgentGetBody>::new()),
+        };
+    }
     if method == "POST" && path == ROUTE_BRIDGE_SUBMIT {
         let bridge_tag = deterministic_body_tag(body.as_bytes());
         let bridge_id = format!("bridge-local-{bridge_tag:016x}");
@@ -404,6 +411,7 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || path == ROUTE_ESCROW_FUND
         || path == ROUTE_CONTENT_REGISTER
         || path == ROUTE_BRIDGE_SUBMIT
+        || path == ROUTE_AGENTS_SEARCH
         || path == ROUTE_AGENTS_REGISTER
         || path == ROUTE_EVENTS_WS
         || path == ROUTE_HEALTHZ
@@ -524,7 +532,7 @@ pub(super) fn bridge_forward_path_id(path: &str) -> Option<&str> {
 
 pub(super) fn agent_path_id(path: &str) -> Option<&str> {
     path.strip_prefix(ROUTE_AGENTS_PREFIX).and_then(|did| {
-        if did.is_empty() || did == "register" || did.contains('/') {
+        if did.is_empty() || did == "register" || did == "search" || did.contains('/') {
             return None;
         }
         Some(did)
@@ -534,7 +542,7 @@ pub(super) fn agent_path_id(path: &str) -> Option<&str> {
 pub(super) fn agent_balance_path_id(path: &str) -> Option<&str> {
     let did = path.strip_prefix(ROUTE_AGENTS_PREFIX)?;
     let did = did.strip_suffix("/balance")?;
-    if did.is_empty() || did == "register" || did.contains('/') {
+    if did.is_empty() || did == "register" || did == "search" || did.contains('/') {
         return None;
     }
     Some(did)

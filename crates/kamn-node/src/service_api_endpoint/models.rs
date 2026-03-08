@@ -151,6 +151,12 @@ pub(crate) struct ServiceApiAgentRegisterRequestBody {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiAgentSearchRequestBody {
+    pub(crate) capability: Option<String>,
+    pub(crate) model_family: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiWebsocketStateTransitionBody {
     pub(crate) event: String,
     pub(crate) runtime_mode: String,
