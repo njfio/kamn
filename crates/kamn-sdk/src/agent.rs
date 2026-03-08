@@ -70,6 +70,8 @@ pub trait KamnAgent {
     ) -> Result<ArtifactId, SdkError>;
     /// Returns lifecycle metadata for a previously submitted artifact.
     fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError>;
+    /// Expires a previously submitted artifact and returns updated lifecycle metadata.
+    fn expire_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError>;
     /// Marks a task as completed.
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError>;
 

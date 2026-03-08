@@ -12,7 +12,8 @@ use crate::{
     channel_create::channel_id as validate_channel_id,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
-    MessageId, MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    MessageId, MessageRecord, MessageStream, SdkError, ServiceContentStatus, TaskDefinition,
+    TaskId, TokenAmount,
     service::agent_search_payload,
 };
 
@@ -82,13 +83,7 @@ impl KamnAgent for LiveTransportKamnClient {
     }
 
     fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
-        let service_content_id = {
-            let guard = self
-                .state
-                .lock()
-                .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
-            prepare_artifact_status_lookup(&guard.artifact_ids, artifact_id)?
-        };
+        let service_content_id = resolve_service_content_id(self, artifact_id)?;
         let auth = build_auth(
             &self.state,
             &self.config,
@@ -99,11 +94,22 @@ impl KamnAgent for LiveTransportKamnClient {
         let status = self
             .service_client
             .get_content(service_content_id.as_str(), &auth)?;
-        Ok(ArtifactStatus::from_lifecycle(
-            artifact_id,
-            status.lifecycle_state,
-            status.redaction_status,
-        ))
+        Ok(artifact_status_from_service(artifact_id, status))
+    }
+
+    fn expire_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
+        let service_content_id = resolve_service_content_id(self, artifact_id)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            "{}",
+            Some(super::config::CONTENT_WRITE_SCOPE),
+        )?;
+        let status = self
+            .service_client
+            .expire_content(service_content_id.as_str(), &auth)?;
+        Ok(artifact_status_from_service(artifact_id, status))
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
@@ -137,4 +143,26 @@ impl KamnAgent for LiveTransportKamnClient {
             .get_agent_profile(agent.as_str(), &auth)?;
         agent_profile_to_reputation(profile)
     }
+}
+
+fn resolve_service_content_id(
+    client: &LiveTransportKamnClient,
+    artifact_id: &ArtifactId,
+) -> Result<String, SdkError> {
+    let guard = client
+        .state
+        .lock()
+        .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
+    prepare_artifact_status_lookup(&guard.artifact_ids, artifact_id)
+}
+
+fn artifact_status_from_service(
+    artifact_id: &ArtifactId,
+    status: ServiceContentStatus,
+) -> ArtifactStatus {
+    ArtifactStatus::from_lifecycle(
+        artifact_id,
+        status.lifecycle_state,
+        status.redaction_status,
+    )
 }
