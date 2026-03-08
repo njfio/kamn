@@ -40,9 +40,9 @@ fn send_websocket_upgrade_request_with_version_close_observation(
     let enriched_headers = enrich_signed_headers_with_scope("GET", path, headers);
     let mut header_lines = String::new();
     for (name, value) in &enriched_headers {
-        header_lines.push_str(name);
+        header_lines.push_str(name.as_str());
         header_lines.push_str(": ");
-        header_lines.push_str(value);
+        header_lines.push_str(value.as_str());
         header_lines.push_str("\r\n");
     }
     let request = format!(
@@ -77,10 +77,14 @@ fn regression_service_api_endpoint_websocket_reason_taxonomy_includes_presence_d
     assert!(
         SERVICE_API_WEBSOCKET_REASON_CODES_CSV.contains(WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE)
     );
-    assert!(SERVICE_API_WEBSOCKET_REASON_CODES_CSV
-        .contains(WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE));
-    assert!(SERVICE_API_WEBSOCKET_REASON_CODES_CSV
-        .contains(WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE));
+    assert!(
+        SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+            .contains(WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE)
+    );
+    assert!(
+        SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+            .contains(WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE)
+    );
 }
 
 fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
@@ -439,8 +443,7 @@ fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_
     unique_sequences.sort_unstable();
     unique_sequences.dedup();
     assert!(
-        unique_sequences.len() >= 2
-            && unique_sequences[1] > unique_sequences[0],
+        unique_sequences.len() >= 2 && unique_sequences[1] > unique_sequences[0],
         "message-created websocket event sequence should advance across events: {unique_sequences:?}"
     );
 
@@ -485,26 +488,30 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_proje
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let sender_did = "kamn:did:agent:ws-presence-client-1";
+    let sender_did = test_service_api_sender_did("kamn:did:agent:ws-presence-client-1");
     let nonce = 31_u64;
     let state_hash = format!(
         "service-api:{}:{}",
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature =
-        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature = service_api_request_signature_for_fields(
+        sender_did.as_str(),
+        nonce,
+        state_hash.as_str(),
+        "",
+    );
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
         WEBSOCKET_EVENTS_PATH,
         &[
-            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Sender-DID", sender_did.as_str()),
             ("X-KAMN-Request-Nonce", "31"),
             ("X-KAMN-Request-Signature", signature.as_str()),
             ("X-KAMN-Events-Mode", "presence"),
             ("X-KAMN-Presence-Owner-DID", "kamn:did:owner:alpha"),
             ("X-KAMN-Presence-Target-Owner-DID", "kamn:did:owner:alpha"),
-            ("X-KAMN-Presence-Target-Agent-DID", sender_did),
+            ("X-KAMN-Presence-Target-Agent-DID", sender_did.as_str()),
             ("X-KAMN-Presence-Gateway-Node", "gateway-alpha"),
             ("X-KAMN-Presence-Connected-Since", "1709000000"),
             ("X-KAMN-Presence-Last-Heartbeat", "1709000005"),
@@ -535,7 +542,7 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_proje
         payload_json
             .get("requester_agent_did")
             .and_then(Value::as_str),
-        Some(sender_did)
+        Some(sender_did.as_str())
     );
     assert_eq!(
         payload_json.get("target_owner_did").and_then(Value::as_str),
@@ -543,7 +550,7 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_proje
     );
     assert_eq!(
         payload_json.get("target_agent_did").and_then(Value::as_str),
-        Some(sender_did)
+        Some(sender_did.as_str())
     );
     assert_eq!(
         payload_json.get("visible").and_then(Value::as_bool),
@@ -762,9 +769,11 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_owner_
         payload.reason_code,
         WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE
     );
-    assert!(payload
-        .message
-        .contains("invalid presence owner did header"));
+    assert!(
+        payload
+            .message
+            .contains("invalid presence owner did header")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -838,9 +847,11 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target
         payload.reason_code,
         WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE
     );
-    assert!(payload
-        .message
-        .contains("invalid presence target owner did header"));
+    assert!(
+        payload
+            .message
+            .contains("invalid presence target owner did header")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -913,9 +924,11 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target
         payload.reason_code,
         WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE
     );
-    assert!(payload
-        .message
-        .contains("invalid presence target agent did header"));
+    assert!(
+        payload
+            .message
+            .contains("invalid presence target agent did header")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -1050,9 +1063,11 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
     let payload = parse_error_envelope_from_http_response(response.as_str());
     assert_eq!(payload.error, "bad-request");
     assert_eq!(payload.reason_code, "service_api_ws_upgrade_header_missing");
-    assert!(payload
-        .message
-        .contains("missing required websocket upgrade header"));
+    assert!(
+        payload
+            .message
+            .contains("missing required websocket upgrade header")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

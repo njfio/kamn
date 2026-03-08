@@ -1,8 +1,9 @@
 use super::*;
 use kamn_core::{
-    service_auth_sign_with_private_key_hex, Libp2pLivePeerLifecycleTransport, NodeRole,
-    P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, PeerDiscoveryRecord, PeerGossipFrame,
-    PeerLifecycleTransport, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    Libp2pLivePeerLifecycleTransport, NodeRole, P2pSwarmDeterministicConfig, P2pSwarmHarnessMode,
+    PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
+    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, service_auth_public_key_hex_from_private_key_hex,
+    service_auth_sign_with_private_key_hex,
 };
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -14,12 +15,10 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
-const DAEMON_PHASE6_RUNTIME_REASON_CODES_CSV: &str =
-    "m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded";
+const DAEMON_PHASE6_RUNTIME_REASON_CODES_CSV: &str = "m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded";
 const DAEMON_CONVERGENCE_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.convergence.reason-taxonomy.v1";
-const DAEMON_CONVERGENCE_REASON_CODES_CSV: &str =
-    "convergence_promotion_gate_go,convergence_schema_drift_detected,convergence_error_path_drift_detected,convergence_concurrency_drift_detected,convergence_performance_budget_exceeded,convergence_cost_budget_exceeded";
+const DAEMON_CONVERGENCE_REASON_CODES_CSV: &str = "convergence_promotion_gate_go,convergence_schema_drift_detected,convergence_error_path_drift_detected,convergence_concurrency_drift_detected,convergence_performance_budget_exceeded,convergence_cost_budget_exceeded";
 const DAEMON_CONVERGENCE_DECISION_GO: &str = "go";
 const DAEMON_CONVERGENCE_DECISION_NO_GO: &str = "no_go";
 const DAEMON_CONVERGENCE_REASON_GO: &str = "convergence_promotion_gate_go";
@@ -498,8 +497,8 @@ pub(crate) fn live_postgres_multi_host_execution_bundle_row_count_for_test() -> 
 }
 
 #[cfg(test)]
-pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test(
-) -> String {
+pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test()
+-> String {
     let rows = project_live_postgres_multi_host_execution_bundle_selector_rows();
     project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(rows.as_slice())
 }
@@ -982,8 +981,8 @@ fn build_daemon_service_api_relay_p2p_context(
     })
 }
 
-fn resolve_daemon_service_api_relay_p2p_context(
-) -> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
+fn resolve_daemon_service_api_relay_p2p_context()
+-> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
     #[cfg(test)]
     if let Some(override_json) = daemon_service_api_relay_p2p_config_override_json_for_tests() {
         return resolve_daemon_service_api_relay_p2p_context_from_json(override_json.as_str())
@@ -1302,8 +1301,8 @@ fn execute_daemon_service_api_relay_tick_loop(
     Ok(runtime_processing)
 }
 
-fn resolve_daemon_service_api_relay_recipient_route_map(
-) -> Result<BTreeMap<String, String>, ConfigError> {
+fn resolve_daemon_service_api_relay_recipient_route_map()
+-> Result<BTreeMap<String, String>, ConfigError> {
     let raw = match env::var(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV) {
         Ok(value) => value,
         Err(env::VarError::NotPresent) => return Ok(BTreeMap::new()),
@@ -1417,9 +1416,12 @@ fn forward_service_api_relay_entry(
         signing_private_key_hex,
     )
     .map_err(|error| format!("relay request signature generation failed: {error}"))?;
+    let signer_public_key_hex =
+        service_auth_public_key_hex_from_private_key_hex(signing_private_key_hex)
+            .map_err(|error| format!("relay signer public key derivation failed: {error}"))?;
 
     let request = format!(
-        "POST {SERVICE_API_RELAY_FORWARD_PATH} HTTP/1.1\r\nHost: {relay_addr}\r\nConnection: close\r\nContent-Type: application/json\r\nX-KAMN-Sender-DID: {sender_did}\r\nX-KAMN-Request-Nonce: {relay_nonce}\r\nX-KAMN-Request-Signature: {signature}\r\nX-KAMN-Authz-Scope: {SERVICE_API_RELAY_FORWARD_SCOPE}\r\nContent-Length: {}\r\n\r\n{}",
+        "POST {SERVICE_API_RELAY_FORWARD_PATH} HTTP/1.1\r\nHost: {relay_addr}\r\nConnection: close\r\nContent-Type: application/json\r\nX-KAMN-Sender-DID: {sender_did}\r\nX-KAMN-Signer-Public-Key: {signer_public_key_hex}\r\nX-KAMN-Request-Nonce: {relay_nonce}\r\nX-KAMN-Request-Signature: {signature}\r\nX-KAMN-Authz-Scope: {SERVICE_API_RELAY_FORWARD_SCOPE}\r\nContent-Length: {}\r\n\r\n{}",
         relay_payload_body.len(),
         relay_payload_body
     );
@@ -1494,12 +1496,12 @@ fn daemon_tick_remaining_sleep_duration(
 #[cfg(test)]
 mod tests {
     use super::{
+        SERVICE_API_RELAY_P2P_DEFAULT_TOPIC, SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
         daemon_tick_remaining_sleep_duration, drain_daemon_service_api_relay_p2p_inbox_for_test,
         execute_daemon_service_api_relay_tick_loop,
         forward_service_api_relay_entry_via_p2p_for_test,
         resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test,
         set_daemon_service_api_relay_p2p_config_override_for_test,
-        SERVICE_API_RELAY_P2P_DEFAULT_TOPIC, SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
     };
     use std::env;
     use std::fs;
