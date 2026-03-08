@@ -19,14 +19,14 @@ Add a service-backed agent registration route so `LiveTransportKamnClient::regis
 - Missing or unknown `agents:write` scope must fail closed at auth boundary.
 
 # Acceptance criteria
-- [ ] Service API adds `POST /v1/agents/register` requiring `agents:write` scope.
-- [ ] `ServiceApiScope` and route auth mapping support canonical `agents:write`.
-- [ ] Agent records persist `agent_type`, `model_family`, and `capabilities`.
-- [ ] `GET /v1/agents/{did}` returns persisted metadata fields in addition to `did` and `reputation_score`.
-- [ ] `ServiceApiClient` adds a typed registration route.
-- [ ] `LiveTransportKamnClient::register()` uses the real route and returns the sender DID.
-- [ ] `LiveTransportKamnClient::resolve()` returns stored metadata rather than synthetic defaults.
-- [ ] Duplicate identical registration is stable; duplicate mismatched registration fails closed.
+- [x] Service API adds `POST /v1/agents/register` requiring `agents:write` scope.
+- [x] `ServiceApiScope` and route auth mapping support canonical `agents:write`.
+- [x] Agent records persist `agent_type`, `model_family`, and `capabilities`.
+- [x] `GET /v1/agents/{did}` returns persisted metadata fields in addition to `did` and `reputation_score`.
+- [x] `ServiceApiClient` adds a typed registration route.
+- [x] `LiveTransportKamnClient::register()` uses the real route and returns the sender DID.
+- [x] `LiveTransportKamnClient::resolve()` returns stored metadata rather than synthetic defaults.
+- [x] Duplicate identical registration is stable; duplicate mismatched registration fails closed.
 
 # Files to touch
 - `crates/kamn-kolme/src/service_api_scope.rs`
@@ -61,3 +61,24 @@ Add a service-backed agent registration route so `LiveTransportKamnClient::regis
 - Add service client contract coverage for `POST /v1/agents/register`.
 - Add live transport contract coverage for `register()` and `resolve()` round-trip with persisted metadata.
 - Run targeted node and sdk suites plus strict clippy.
+
+# Phase 6 Evidence
+- `POST /v1/agents/register` is handled in the real node service API path and persists sender DID metadata through `ServiceApiMessageStore`.
+- `GET /v1/agents/{did}` now returns persisted metadata for registered agents and preserves the existing synthetic defaults for unregistered agents.
+- `LiveTransportKamnClient::register()` signs and emits the real registration route and `resolve()` consumes the stored metadata through the typed service client.
+
+# Verification
+- `rustfmt --edition 2024 --check crates/kamn-kolme/src/service_api_scope.rs crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs crates/kamn-node/src/service_api_endpoint.rs crates/kamn-node/src/service_api_endpoint/auth.rs crates/kamn-node/src/service_api_endpoint/message_store.rs crates/kamn-node/src/service_api_endpoint/middleware_impl.rs crates/kamn-node/src/service_api_endpoint/models.rs crates/kamn-node/src/service_api_endpoint/payload.rs crates/kamn-sdk/src/live/agent.rs crates/kamn-sdk/src/live/agent_mutations.rs crates/kamn-sdk/src/live/config.rs crates/kamn-sdk/src/live/routes.rs crates/kamn-sdk/src/service_client_bridge_misc_routes.rs crates/kamn-sdk/src/service_models.rs crates/kamn-sdk/tests/live_transport_agent.rs crates/kamn-sdk/tests/service_api_client.rs`
+- `cargo clippy -p kamn-node --tests -- -D warnings`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
+- `cargo test -p kamn-node --bin kamn-node service_api_endpoint::auth::tests::regression_required_scope_for_route_maps_agent_registration_to_agents_write -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::unit_service_api_route_authz_matrix_matches_protected_and_public_paths -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_registers_agent_metadata_idempotently_and_conflicts_on_mismatch -- --exact --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client regression_service_api_client_registration_surface_contract_exists -- --exact --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_agent -- --nocapture`
+
+# Deviations
+- `cargo fmt --all --check` was not used as the final formatting gate because `main` already contains unrelated formatting drift outside `#6590`. The touched Rust files were instead formatted and checked explicitly with `rustfmt --edition 2024 --check`.

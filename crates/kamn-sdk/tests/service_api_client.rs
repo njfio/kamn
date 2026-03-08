@@ -1,5 +1,5 @@
 use kamn_sdk::{
-    service_signature_for_fields, AgentDid, SdkError, ServiceApiClient, ServiceRequestAuth,
+    AgentDid, SdkError, ServiceApiClient, ServiceRequestAuth, service_signature_for_fields,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
@@ -552,6 +552,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
     Some(match (method, path) {
         ("POST", "/v1/messages/send") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
+        ("POST", "/v1/agents/register") => "agents:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
@@ -781,9 +782,15 @@ fn run_service_contract_server_with_websocket_payload(
                     let payload =
                         format!("{{\"task_id\":\"{}\",\"state\":\"submitted\"}}", task_id);
                     write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/agents/register" {
+                    let payload = r#"{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}"#;
+                    write_http_response(&mut stream, 201, payload)?;
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
                     let did = path.trim_start_matches("/v1/agents/");
-                    let payload = format!("{{\"did\":\"{}\",\"reputation_score\":500}}", did);
+                    let payload = format!(
+                        "{{\"did\":\"{}\",\"reputation_score\":500,\"agent_type\":\"service-agent\",\"model_family\":\"service-api\",\"capabilities\":[\"profile:read\"]}}",
+                        did
+                    );
                     write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "GET"
                     && path.starts_with("/v1/bridge/")
@@ -1018,7 +1025,7 @@ fn regression_service_request_auth_rejects_crlf_scope_payload() {
 fn functional_service_api_client_executes_signed_http_route_contracts() {
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 8));
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 9));
     wait_for_server_ready(bind_addr.as_str());
 
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
@@ -1078,6 +1085,34 @@ fn functional_service_api_client_executes_signed_http_route_contracts() {
         .expect("agent profile should resolve");
     assert_eq!(profile.did, sender.as_str());
     assert_eq!(profile.reputation_score, 500);
+    assert_eq!(profile.agent_type, "service-agent");
+    assert_eq!(profile.model_family, "service-api");
+    assert_eq!(profile.capabilities, vec!["profile:read".to_owned()]);
+
+    let registration_metadata = kamn_sdk::AgentMetadata {
+        agent_type: "assistant".to_owned(),
+        model_family: "gpt-5".to_owned(),
+        capabilities: vec!["text".to_owned(), "code".to_owned()],
+    };
+    let registration_payload = serde_json::json!({
+        "agent_type": registration_metadata.agent_type,
+        "model_family": registration_metadata.model_family,
+        "capabilities": registration_metadata.capabilities,
+    })
+    .to_string();
+    let registration = client
+        .register_agent(
+            &registration_metadata,
+            &auth_with_scope(&sender, 7, registration_payload.as_str(), "agents:write"),
+        )
+        .expect("agent registration should succeed");
+    assert_eq!(registration.did, "kamn:did:agent:sdk-register");
+    assert_eq!(registration.agent_type, "assistant");
+    assert_eq!(registration.model_family, "gpt-5");
+    assert_eq!(
+        registration.capabilities,
+        vec!["text".to_owned(), "code".to_owned()]
+    );
 
     let health = client.health().expect("health route should succeed");
     assert_eq!(health.status, "ok");
@@ -1245,8 +1280,8 @@ fn regression_service_api_client_registration_surface_contract_exists() {
         "service client should expose a typed register_agent route"
     );
 
-    let model_source =
-        std::fs::read_to_string("src/service_models.rs").expect("service models should be readable");
+    let model_source = std::fs::read_to_string("src/service_models.rs")
+        .expect("service models should be readable");
     assert!(
         model_source.contains("pub agent_type: String"),
         "service agent profile should expose agent_type"

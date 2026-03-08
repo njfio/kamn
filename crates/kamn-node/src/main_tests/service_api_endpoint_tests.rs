@@ -1,13 +1,8 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, project_service_api_lifecycle_rejection,
-    upsert_service_api_relayed_message_from_daemon, ServiceApiAgentGetBody,
-    ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
-    ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
-    ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
-    DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
-    SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
-    SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
+    DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+    DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND, SERVICE_API_AUTH_REASON_CODES_CSV,
+    SERVICE_API_AUTH_REASON_TAXONOMY_VERSION, SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION,
     SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT,
     SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT,
@@ -15,7 +10,11 @@ use crate::service_api_endpoint::{
     SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT,
     SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION, SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV,
     SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION, SERVICE_API_WEBSOCKET_REASON_CODES_CSV,
-    SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION,
+    SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION, ServiceApiAgentGetBody,
+    ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
+    ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
+    ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody, parse_service_api_payload,
+    project_service_api_lifecycle_rejection, upsert_service_api_relayed_message_from_daemon,
 };
 use kamn_core::{
     cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
@@ -257,6 +256,13 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
             expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
         },
         ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/agents/register",
+            body: "{\"agent_type\":\"assistant\",\"model_family\":\"gpt-5\",\"capabilities\":[\"text\"]}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
             method: "GET",
             path: "/v1/agents/kamn:did:agent:matrix",
             body: "",
@@ -331,6 +337,7 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
         ("POST", "/v1/messages/send") => "messages:write",
         ("POST", "/v1/messages/relay") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
+        ("POST", "/v1/agents/register") => "agents:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", "/v1/escrow/fund") => "escrow:write",
         ("POST", "/v1/content/register") => "content:write",
@@ -871,9 +878,11 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     let task_complete_response =
         render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-1/complete", "{}");
     assert_eq!(task_complete_response.status_code, 200);
-    assert!(task_complete_response
-        .body
-        .contains("\"state\":\"completed\""));
+    assert!(
+        task_complete_response
+            .body
+            .contains("\"state\":\"completed\"")
+    );
 
     let escrow_fund_response = render_service_api_endpoint_response(
         &snapshot,
@@ -882,9 +891,11 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{\"task_id\":\"task-1\",\"amount\":100}",
     );
     assert_eq!(escrow_fund_response.status_code, 200);
-    assert!(escrow_fund_response
-        .body
-        .contains("\"escrow_id\":\"escrow-local-"));
+    assert!(
+        escrow_fund_response
+            .body
+            .contains("\"escrow_id\":\"escrow-local-")
+    );
     assert!(escrow_fund_response.body.contains("\"state\":\"funded\""));
 
     let escrow_release_response = render_service_api_endpoint_response(
@@ -894,9 +905,11 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{}",
     );
     assert_eq!(escrow_release_response.status_code, 200);
-    assert!(escrow_release_response
-        .body
-        .contains("\"state\":\"released\""));
+    assert!(
+        escrow_release_response
+            .body
+            .contains("\"state\":\"released\"")
+    );
 
     let content_register_response = render_service_api_endpoint_response(
         &snapshot,
@@ -905,12 +918,16 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{\"content\":\"hello\"}",
     );
     assert_eq!(content_register_response.status_code, 201);
-    assert!(content_register_response
-        .body
-        .contains("\"content_id\":\"content-local-"));
-    assert!(content_register_response
-        .body
-        .contains("\"retention_class\":\"standard\""));
+    assert!(
+        content_register_response
+            .body
+            .contains("\"content_id\":\"content-local-")
+    );
+    assert!(
+        content_register_response
+            .body
+            .contains("\"retention_class\":\"standard\"")
+    );
 
     let content_expire_response = render_service_api_endpoint_response(
         &snapshot,
@@ -919,9 +936,11 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{}",
     );
     assert_eq!(content_expire_response.status_code, 200);
-    assert!(content_expire_response
-        .body
-        .contains("\"lifecycle_state\":\"expired\""));
+    assert!(
+        content_expire_response
+            .body
+            .contains("\"lifecycle_state\":\"expired\"")
+    );
 
     let content_tombstone_response = render_service_api_endpoint_response(
         &snapshot,
@@ -930,16 +949,20 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{}",
     );
     assert_eq!(content_tombstone_response.status_code, 200);
-    assert!(content_tombstone_response
-        .body
-        .contains("\"redaction_status\":\"redacted\""));
+    assert!(
+        content_tombstone_response
+            .body
+            .contains("\"redaction_status\":\"redacted\"")
+    );
 
     let content_query_response =
         render_service_api_endpoint_response(&snapshot, "GET", "/v1/content/content-1", "");
     assert_eq!(content_query_response.status_code, 200);
-    assert!(content_query_response
-        .body
-        .contains("\"lifecycle_state\":\"tombstoned\""));
+    assert!(
+        content_query_response
+            .body
+            .contains("\"lifecycle_state\":\"tombstoned\"")
+    );
 
     let bridge_submit_response = render_service_api_endpoint_response(
         &snapshot,
@@ -948,12 +971,16 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{\"source_message_id\":\"msg-1\",\"target_network\":\"testnet\"}",
     );
     assert_eq!(bridge_submit_response.status_code, 202);
-    assert!(bridge_submit_response
-        .body
-        .contains("\"bridge_id\":\"bridge-local-"));
-    assert!(bridge_submit_response
-        .body
-        .contains("\"bridge_status\":\"submitted\""));
+    assert!(
+        bridge_submit_response
+            .body
+            .contains("\"bridge_id\":\"bridge-local-")
+    );
+    assert!(
+        bridge_submit_response
+            .body
+            .contains("\"bridge_status\":\"submitted\"")
+    );
 
     let bridge_forward_response = render_service_api_endpoint_response(
         &snapshot,
@@ -962,19 +989,25 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         "{}",
     );
     assert_eq!(bridge_forward_response.status_code, 200);
-    assert!(bridge_forward_response
-        .body
-        .contains("\"bridge_status\":\"forwarded\""));
-    assert!(bridge_forward_response
-        .body
-        .contains("\"target_message_id\":\"msg-bridge-target-bridge-1\""));
+    assert!(
+        bridge_forward_response
+            .body
+            .contains("\"bridge_status\":\"forwarded\"")
+    );
+    assert!(
+        bridge_forward_response
+            .body
+            .contains("\"target_message_id\":\"msg-bridge-target-bridge-1\"")
+    );
 
     let bridge_query_response =
         render_service_api_endpoint_response(&snapshot, "GET", "/v1/bridge/bridge-1", "");
     assert_eq!(bridge_query_response.status_code, 200);
-    assert!(bridge_query_response
-        .body
-        .contains("\"forward_tx_hash\":\"sha256:bridge-forwarded-bridge-1\""));
+    assert!(
+        bridge_query_response
+            .body
+            .contains("\"forward_tx_hash\":\"sha256:bridge-forwarded-bridge-1\"")
+    );
 
     let agent_response = render_service_api_endpoint_response(
         &snapshot,
@@ -989,12 +1022,16 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
 
     let metrics_response = render_service_api_endpoint_response(&snapshot, "GET", "/metrics", "");
     assert_eq!(metrics_response.status_code, 200);
-    assert!(metrics_response
-        .body
-        .contains("kamn_service_api_observability_source{source=\"unknown\"} 1"));
-    assert!(metrics_response
-        .body
-        .contains("kamn_service_api_observability_health{health=\"unknown\"} 0"));
+    assert!(
+        metrics_response
+            .body
+            .contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
+    );
+    assert!(
+        metrics_response
+            .body
+            .contains("kamn_service_api_observability_health{health=\"unknown\"} 0")
+    );
     let expected_reason_code_count = cross_store_replay_reason_codes_csv()
         .split(',')
         .filter(|value| !value.is_empty())
@@ -1342,7 +1379,10 @@ fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
         serde_json::from_str(agent.body.as_str()).expect("agent payload should parse as json");
     assert_eq!(agent_json["agent_type"], "service-agent");
     assert_eq!(agent_json["model_family"], "service-api");
-    assert_eq!(agent_json["capabilities"], serde_json::json!(["profile:read"]));
+    assert_eq!(
+        agent_json["capabilities"],
+        serde_json::json!(["profile:read"])
+    );
 }
 
 #[test]
@@ -1370,9 +1410,11 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
         websocket_required_payload.reason_code,
         "service_api_websocket_upgrade_required"
     );
-    assert!(websocket_required_payload
-        .message
-        .contains("websocket upgrade required"));
+    assert!(
+        websocket_required_payload
+            .message
+            .contains("websocket upgrade required")
+    );
 
     let method_not_allowed =
         render_service_api_endpoint_response(&snapshot, "DELETE", "/v1/messages/send", "");
@@ -1383,9 +1425,11 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
         method_not_allowed_payload.reason_code,
         "service_api_method_not_allowed"
     );
-    assert!(method_not_allowed_payload
-        .message
-        .contains("method not allowed"));
+    assert!(
+        method_not_allowed_payload
+            .message
+            .contains("method not allowed")
+    );
 
     let not_found = render_service_api_endpoint_response(&snapshot, "GET", "/v1/nope", "");
     assert_eq!(not_found.status_code, 404);
@@ -1806,8 +1850,10 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_code_count {expected_lifecycle_rejection_reason_code_count}"
     )));
-    assert!(metrics_response
-        .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1"));
+    assert!(
+        metrics_response
+            .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -2396,8 +2442,10 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_code_count {expected_lifecycle_rejection_reason_code_count}"
     )));
-    assert!(metrics_response
-        .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1"));
+    assert!(
+        metrics_response
+            .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -2619,8 +2667,10 @@ fn integration_service_api_endpoint_supports_keep_alive_requests_on_single_conne
         .expect("second request should write over keep-alive connection");
     let second_response = read_single_http_response(&mut stream);
     assert!(second_response.contains("HTTP/1.1 200 OK"));
-    assert!(second_response
-        .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1"));
+    assert!(
+        second_response
+            .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -2744,12 +2794,16 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     assert_eq!(snapshot.observability_health, "healthy");
     let metrics_response = render_service_api_endpoint_response(&snapshot, "GET", "/metrics", "");
     assert_eq!(metrics_response.status_code, 200);
-    assert!(metrics_response
-        .body
-        .contains("kamn_service_api_observability_source{source=\"daemon\"} 1"));
-    assert!(metrics_response
-        .body
-        .contains("kamn_service_api_observability_health{health=\"healthy\"} 1"));
+    assert!(
+        metrics_response
+            .body
+            .contains("kamn_service_api_observability_source{source=\"daemon\"} 1")
+    );
+    assert!(
+        metrics_response
+            .body
+            .contains("kamn_service_api_observability_health{health=\"healthy\"} 1")
+    );
     let expected_reason_code_count = cross_store_replay_reason_codes_csv()
         .split(',')
         .filter(|value| !value.is_empty())
@@ -3091,7 +3145,9 @@ fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths() {
         SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
         "kamn.runtime.service-api-auth-reason-taxonomy.v1"
     );
-    assert!(SERVICE_API_AUTH_REASON_CODES_CSV.contains(SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE));
+    assert!(
+        SERVICE_API_AUTH_REASON_CODES_CSV.contains(SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE)
+    );
     for row in service_api_route_authz_matrix_rows() {
         assert_eq!(
             crate::service_api_endpoint::route_requires_auth(row.method, row.path),
@@ -3594,8 +3650,8 @@ fn regression_service_api_endpoint_rejects_legacy_signature_when_toggle_env_is_t
 }
 
 #[test]
-fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env(
-) {
+fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env()
+ {
     let _env = acquire_service_api_test_env();
 
     let parsed = parse_args(vec![
@@ -3927,12 +3983,16 @@ fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_eviden
         evidence["schema_version"],
         "kamn.runtime.service-api-data-layer-runtime-evidence.v1"
     );
-    assert!(evidence["m0_content_hash"]
-        .as_str()
-        .is_some_and(|value| value.starts_with("sha256:")));
-    assert!(evidence["m1_merkle_root"]
-        .as_str()
-        .is_some_and(|value| value.starts_with("sha256:")));
+    assert!(
+        evidence["m0_content_hash"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:"))
+    );
+    assert!(
+        evidence["m1_merkle_root"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:"))
+    );
     assert!(evidence["m2_authorization_reason_code"].as_str().is_some());
     assert!(evidence["m3_blind_index_token"].as_str().is_some());
     assert!(evidence["m4_transition_reason_code"].as_str().is_some());
@@ -4369,6 +4429,152 @@ fn integration_service_api_endpoint_persists_agent_profile_query_state_across_re
     );
 
     let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_conflicts_on_mismatch()
+ {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34121".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let caller_did = "kamn:did:agent:register-agent-profile";
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let registration_body =
+        r#"{"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}"#;
+    let registration_signature = service_api_request_signature_for_fields(
+        caller_did,
+        201,
+        state_hash.as_str(),
+        registration_body,
+    );
+    let registration_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/agents/register",
+        registration_body,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "201"),
+            ("X-KAMN-Request-Signature", registration_signature.as_str()),
+        ],
+    );
+    assert!(registration_response.contains("HTTP/1.1 201 Created"));
+    let registration_payload: ServiceApiAgentGetBody =
+        parse_service_api_payload(extract_http_response_body(registration_response.as_str()))
+            .expect("registration payload should deserialize");
+    assert_eq!(registration_payload.did, caller_did);
+    assert_eq!(registration_payload.agent_type, "assistant");
+    assert_eq!(registration_payload.model_family, "gpt-5");
+    assert_eq!(
+        registration_payload.capabilities,
+        vec!["text".to_owned(), "code".to_owned()]
+    );
+
+    let duplicate_signature = service_api_request_signature_for_fields(
+        caller_did,
+        202,
+        state_hash.as_str(),
+        registration_body,
+    );
+    let duplicate_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/agents/register",
+        registration_body,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "202"),
+            ("X-KAMN-Request-Signature", duplicate_signature.as_str()),
+        ],
+    );
+    assert!(duplicate_response.contains("HTTP/1.1 201 Created"));
+
+    let mismatched_body =
+        r#"{"agent_type":"assistant","model_family":"gpt-5o","capabilities":["text"]}"#;
+    let mismatch_signature = service_api_request_signature_for_fields(
+        caller_did,
+        203,
+        state_hash.as_str(),
+        mismatched_body,
+    );
+    let mismatch_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/agents/register",
+        mismatched_body,
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "203"),
+            ("X-KAMN-Request-Signature", mismatch_signature.as_str()),
+        ],
+    );
+    assert!(mismatch_response.contains("HTTP/1.1 409 Conflict"));
+    let mismatch_error =
+        parse_error_envelope(extract_http_response_body(mismatch_response.as_str()));
+    assert_eq!(
+        mismatch_error.reason_code,
+        "service_api_agent_registration_conflict"
+    );
+
+    let reader_did = "kamn:did:agent:register-agent-profile-reader";
+    let query_signature =
+        service_api_request_signature_for_fields(reader_did, 301, state_hash.as_str(), "");
+    let query_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        format!("/v1/agents/{caller_did}").as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", reader_did),
+            ("X-KAMN-Request-Nonce", "301"),
+            ("X-KAMN-Request-Signature", query_signature.as_str()),
+        ],
+    );
+    assert!(query_response.contains("HTTP/1.1 200 OK"));
+    let query_payload: ServiceApiAgentGetBody =
+        parse_service_api_payload(extract_http_response_body(query_response.as_str()))
+            .expect("agent query payload should deserialize");
+    assert_eq!(query_payload.did, caller_did);
+    assert_eq!(query_payload.agent_type, "assistant");
+    assert_eq!(query_payload.model_family, "gpt-5");
+    assert_eq!(
+        query_payload.capabilities,
+        vec!["text".to_owned(), "code".to_owned()]
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after agent registration contract"
+    );
 }
 
 #[test]
@@ -7099,9 +7305,11 @@ fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded() {
         second_payload.reason_code,
         "service_api_ingress_rate_limit_exceeded"
     );
-    assert!(second_payload
-        .message
-        .contains("ingress rate limit exceeded"));
+    assert!(
+        second_payload
+            .message
+            .contains("ingress rate limit exceeded")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -7402,9 +7610,11 @@ fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded()
         rejection_payload.reason_code,
         "service_api_ingress_concurrency_limit_exceeded"
     );
-    assert!(rejection_payload
-        .message
-        .contains("ingress concurrency limit exceeded"));
+    assert!(
+        rejection_payload
+            .message
+            .contains("ingress concurrency limit exceeded")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -7669,9 +7879,11 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
         replay_payload.reason_code,
         "service_api_auth_replay_nonce_detected"
     );
-    assert!(replay_payload
-        .message
-        .contains("request nonce replay detected"));
+    assert!(
+        replay_payload
+            .message
+            .contains("request nonce replay detected")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -8149,9 +8361,11 @@ fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_ac
                 payload.reason_code,
                 "service_api_ingress_concurrency_limit_exceeded"
             );
-            assert!(payload
-                .message
-                .contains("ingress concurrency limit exceeded"));
+            assert!(
+                payload
+                    .message
+                    .contains("ingress concurrency limit exceeded")
+            );
         }
     }
 

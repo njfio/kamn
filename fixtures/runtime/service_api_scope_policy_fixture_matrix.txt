@@ -26,6 +26,8 @@ row|POST|/v1/content/content-123/tombstone|content:write|allow
 row|POST|/v1/content/content-123/tombstone|messages:write|deny
 row|GET|/v1/content/content-123|content:read|allow
 row|GET|/v1/content/content-123|content:write|deny
+row|POST|/v1/agents/register|agents:write|allow
+row|POST|/v1/agents/register|agents:read|deny
 row|POST|/v1/bridge/submit|bridge:write|allow
 row|POST|/v1/bridge/submit|messages:write|deny
 row|POST|/v1/bridge/bridge-123/forward|bridge:write|allow
