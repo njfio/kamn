@@ -622,6 +622,18 @@ mod tests {
     }
 
     #[test]
+    fn regression_sender_did_binding_accepts_case_variant_self_certifying_public_key_suffix() {
+        let signer_public_key_hex =
+            "02f89df7f03f4db9ef84f54cf1f4df4df8fd5bca90b7c2f4c0333b3c0f4bc0fe11";
+        let sender_did = format!("kamn:did:agent:pkh-{}", signer_public_key_hex.to_uppercase());
+        assert!(sender_did_matches_signer_public_key(
+            sender_did.as_str(),
+            signer_public_key_hex,
+            false,
+        ));
+    }
+
+    #[test]
     fn regression_sender_did_binding_accepts_keyh_bound_pkh_did() {
         // Regression: #6303 e2e S-02 must accept did:key-binding sender identities.
         let signer_public_key_hex =
