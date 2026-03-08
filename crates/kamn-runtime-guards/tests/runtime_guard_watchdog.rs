@@ -7,22 +7,29 @@ fn default_watchdog() -> WatchdogNode {
     WatchdogNode::new(WatchdogConfig::default()).expect("valid watchdog config")
 }
 
-#[test]
-fn integration_runtime_guard_watchdog_mixed_sequence_emits_expected_alerts() {
-    let mut watchdog = default_watchdog();
-
+fn seed_block(watchdog: &mut WatchdogNode) {
     assert!(watchdog
         .observe(WatchdogObservation::block(
             "block-1", "state-1", "genesis", 3, 5,
         ))
         .expect("valid seed block")
         .is_empty());
+}
 
-    let block_alerts = watchdog
+fn anomalous_block_alerts(watchdog: &mut WatchdogNode) -> Vec<kamn_runtime_guards::watchdog::WatchdogAlert> {
+    watchdog
         .observe(WatchdogObservation::block(
             "block-2", "state-2", "wrong-parent", 1, 5,
         ))
-        .expect("valid anomalous block");
+        .expect("valid anomalous block")
+}
+
+#[test]
+fn integration_runtime_guard_watchdog_mixed_sequence_emits_expected_alerts() {
+    let mut watchdog = default_watchdog();
+    seed_block(&mut watchdog);
+
+    let block_alerts = anomalous_block_alerts(&mut watchdog);
     assert_eq!(block_alerts.len(), 2);
     assert!(block_alerts.iter().any(|alert| {
         alert.severity == WatchdogSeverity::Critical
@@ -84,17 +91,8 @@ fn integration_runtime_guard_watchdog_single_recipient_gossip_emits_no_alerts() 
 #[test]
 fn integration_runtime_guard_watchdog_snapshot_tracks_mixed_warning_and_critical_counts() {
     let mut watchdog = default_watchdog();
-
-    watchdog
-        .observe(WatchdogObservation::block(
-            "block-1", "state-1", "genesis", 3, 5,
-        ))
-        .expect("valid seed block");
-    watchdog
-        .observe(WatchdogObservation::block(
-            "block-2", "state-2", "wrong-parent", 1, 5,
-        ))
-        .expect("valid anomalous block");
+    seed_block(&mut watchdog);
+    anomalous_block_alerts(&mut watchdog);
     watchdog
         .observe(WatchdogObservation::gossip_delivery("msg-1", 10, 2, 10))
         .expect("valid gossip observation");
