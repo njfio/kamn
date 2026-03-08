@@ -856,6 +856,7 @@ mod tests {
         validate_did_verification_method_algorithms, AgentDid, AgentDidError,
         AgentDidKeyBindingError, AgentDidMetadata, DidDocumentError, KamnDid, KamnDidError,
     };
+    const SOURCE: &str = include_str!("did.rs");
 
     fn metadata() -> AgentDidMetadata {
         AgentDidMetadata {
@@ -983,9 +984,12 @@ mod tests {
         let error = did
             .ensure_public_key_hex_binding(TEST_PUBLIC_KEY_HEX_ALT)
             .expect_err("mismatched public key should fail binding verification");
+        let AgentDidKeyBindingError::KeyBindingMismatch { expected, actual } = error else {
+            panic!("expected key binding mismatch error");
+        };
         assert!(
-            matches!(error, AgentDidKeyBindingError::KeyBindingMismatch { .. }),
-            "expected key binding mismatch error"
+            expected.len() == 32 && actual.len() == 32,
+            "mismatch error should preserve expected/actual fingerprint payloads"
         );
     }
 
@@ -996,5 +1000,36 @@ mod tests {
             .expect("bound did should render");
         did.ensure_public_key_hex_binding(TEST_PUBLIC_KEY_HEX)
             .expect("matching public key should satisfy did binding");
+    }
+
+    #[test]
+    fn regression_agent_did_key_binding_verification_rejects_malformed_public_key_hex() {
+        let did = AgentDid::with_public_key_hex_binding("agent-4", TEST_PUBLIC_KEY_HEX)
+            .expect("bound did should render");
+        assert_eq!(
+            did.ensure_public_key_hex_binding("zz-not-hex"),
+            Err(AgentDidKeyBindingError::InvalidPublicKeyHex)
+        );
+    }
+
+    #[test]
+    fn regression_requires_constant_time_agent_did_key_binding_compare() {
+        let function_start = SOURCE
+            .find("pub fn ensure_public_key_hex_binding(")
+            .expect("function must exist");
+        let function_end = SOURCE[function_start..]
+            .find("\n    /// Builds an agent DID with deterministic key-binding fingerprint suffix.")
+            .map(|offset| function_start + offset)
+            .expect("function boundary must exist");
+        let function_source = &SOURCE[function_start..function_end];
+        let direct_pattern = ["if actual", "!=", " expected {"].concat();
+        assert!(
+            function_source.contains("crate::constant_time_eq::constant_time_eq_bytes("),
+            "agent did key-binding verification must use constant-time compare"
+        );
+        assert!(
+            !function_source.contains(direct_pattern.as_str()),
+            "agent did key-binding verification must not use direct equality"
+        );
     }
 }
