@@ -27,6 +27,7 @@ Fix `production_expect_surface_policy` so its production-source census excludes 
 
 ## Files to touch
 - `crates/kamn-core/tests/production_expect_surface_policy.rs`
+- `crates/kamn-core/tests/support/production_expect_surface_policy_support.rs`
 - `specs/6580-fix-production-expect-cfg-test-census.md`
 
 ## Error semantics
@@ -37,17 +38,19 @@ Fix `production_expect_surface_policy` so its production-source census excludes 
 - Add a minimal regression test that demonstrates nested braces inside `#[cfg(test)] mod tests` must remain excluded.
 - Add a regression test that demonstrates `if ch == '"'` inside skipped test code does not open a string state.
 - Run `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`.
+- Run `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`.
 - Run `cargo clippy -p kamn-core --tests -- -D warnings`.
 
 ## Integration verification
 - The integrated path is the same CI policy test target that failed in `Workspace Pre-Merge Gate (PR)`: `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`.
-- Verified on current branch without changing `fixtures/ci/production_expect_surface_baseline.env`.
+- The branch-specific follow-up verification also includes `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` so the refactor stays under the workspace oversized-test budget without changing `fixtures/ci/test_file_size_policy_baseline.env`.
 
 ## Verification actuals
 - Red: `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`
   - `regression_nested_cfg_test_module_expect_calls_are_excluded_from_census` failed with `left: 2 right: 1`
 - Green: `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`
+- Green: `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
 - Green: `cargo clippy -p kamn-core --tests -- -D warnings`
 
 ## Deviations
-- None.
+- The green implementation initially pushed `crates/kamn-core/tests/production_expect_surface_policy.rs` over the soft test-file budget. The final refactor extracted scanner helpers into `crates/kamn-core/tests/support/production_expect_surface_policy_support.rs` so the policy fix ships without a baseline bump.
