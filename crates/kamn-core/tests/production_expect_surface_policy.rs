@@ -435,6 +435,33 @@ fn helper_only() {
 }
 
 #[test]
+fn regression_nested_cfg_test_module_expect_calls_are_excluded_from_census() {
+    let fixture = r#"
+fn production_path() {
+    let _ = Some(1).expect("count me");
+}
+
+#[cfg(test)]
+mod tests {
+    const SOURCE: &str = include_str!("fixture.rs");
+
+    fn helper() -> &'static str {
+        SOURCE
+            .find("\n    }\n}")
+            .expect("helper should stay test-only");
+        "ok"
+    }
+
+    #[test]
+    fn unit_only() {
+        let _ = helper();
+    }
+}
+"#;
+    assert_eq!(count_expect_occurrences_excluding_cfg_test(fixture), 1);
+}
+
+#[test]
 fn regression_test_only_source_paths_are_excluded_from_census() {
     assert!(is_test_only_source_path(
         "crates/kamn-e2e-harness/src/drivers/sdk_direct.rs"
