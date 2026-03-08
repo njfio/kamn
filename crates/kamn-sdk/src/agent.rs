@@ -1,7 +1,7 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord, MessageStream,
-    SdkError, TaskDefinition, TaskId, TokenAmount,
+    ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord,
+    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
 };
 
 /// Transport backends available for SDK clients.
@@ -55,6 +55,8 @@ pub trait KamnAgent {
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError>;
     /// Receives pending messages as an iterator stream abstraction.
     fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError>;
+    /// Creates a channel and returns its channel identifier.
+    fn create_channel(&mut self, name: &str) -> Result<ChannelId, SdkError>;
 
     /// Creates a task definition and returns its task identifier.
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError>;

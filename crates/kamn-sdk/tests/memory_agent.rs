@@ -298,6 +298,38 @@ fn search_agents_filters_by_capability_and_reputation_exists() {
 }
 
 #[test]
+fn create_channel_returns_deterministic_channel_id() {
+    let mut client = InMemoryKamnClient::new();
+
+    let first = client
+        .create_channel("ops")
+        .expect("first channel create should succeed");
+    let second = client
+        .create_channel("ops")
+        .expect("second channel create should succeed");
+
+    assert_eq!(first.0, "channel-local-1");
+    assert_eq!(second.0, "channel-local-2");
+}
+
+#[test]
+fn create_channel_rejects_empty_or_whitespace_name() {
+    let mut client = InMemoryKamnClient::new();
+
+    let error = client
+        .create_channel("   ")
+        .expect_err("whitespace-only channel name must fail");
+
+    assert_eq!(
+        error,
+        SdkError::InvalidInput {
+            field: "channel_name",
+            reason: "must not be empty",
+        }
+    );
+}
+
+#[test]
 fn did_parse_rejects_wrong_prefix() {
     let invalid = AgentDid::parse("did:example:abc").map_err(SdkError::from);
     assert_eq!(

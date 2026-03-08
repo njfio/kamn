@@ -1,6 +1,8 @@
 #![warn(missing_docs)]
 //! Rust SDK surface for interacting with KAMN transports and domain types.
 
+mod channel_create;
+
 /// Agent-facing traits and transport mode primitives.
 pub mod agent;
 /// Shared SDK error types.
