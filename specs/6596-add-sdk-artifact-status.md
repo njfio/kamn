@@ -20,12 +20,12 @@ Add high-level artifact status retrieval to the SDK `KamnAgent` API so callers c
 - In-memory artifact status must remain deterministic for repeated reads.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes an artifact status retrieval method.
-- [ ] The SDK exposes a dedicated artifact status type.
-- [ ] `InMemoryKamnClient` returns retained/non-redacted status for known artifacts and `NotFound` for unknown ones.
-- [ ] `LiveTransportKamnClient` resolves `ArtifactId` through the existing alias map and uses `GET /v1/content/{id}`.
-- [ ] SDK tests cover both in-memory and live high-level artifact status retrieval, including fail-closed alias/status errors.
-- [ ] Existing lower-level `ServiceApiClient::get_content()` behavior remains green.
+- [x] `KamnAgent` exposes an artifact status retrieval method.
+- [x] The SDK exposes a dedicated artifact status type.
+- [x] `InMemoryKamnClient` returns retained/non-redacted status for known artifacts and `NotFound` for unknown ones.
+- [x] `LiveTransportKamnClient` resolves `ArtifactId` through the existing alias map and uses `GET /v1/content/{id}`.
+- [x] SDK tests cover both in-memory and live high-level artifact status retrieval, including fail-closed alias/status errors.
+- [x] Existing lower-level `ServiceApiClient::get_content()` behavior remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -51,3 +51,14 @@ Add high-level artifact status retrieval to the SDK `KamnAgent` API so callers c
 - Add a live fail-closed test for missing artifact alias or malformed service status payload.
 - Re-run existing `ServiceApiClient::get_content()` contract coverage.
 - Run strict `clippy` for `kamn-sdk` and targeted SDK tests.
+
+# Deviations
+- None.
+
+# Execution evidence
+- `cargo test -p kamn-sdk --test memory_agent get_artifact_status -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow artifact_status -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow spec_c06_live_transport_task_and_escrow_routes_execute_network_contract -- --exact --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`

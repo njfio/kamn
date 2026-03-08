@@ -5,6 +5,7 @@ use super::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
         channel_create_payload, recipient_mailbox_channel_id, service_message_to_record,
     },
+    task_escrow::prepare_artifact_status_lookup,
     state::{build_agents_read_auth, build_agents_read_auth_with_body, build_auth, remember_message_id},
 };
 use crate::{
@@ -86,14 +87,7 @@ impl KamnAgent for LiveTransportKamnClient {
                 .state
                 .lock()
                 .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
-            guard
-                .artifact_ids
-                .get(&artifact_id.0)
-                .cloned()
-                .ok_or_else(|| SdkError::NotFound {
-                    entity: "artifact",
-                    id: artifact_id.0.to_string(),
-                })?
+            prepare_artifact_status_lookup(&guard.artifact_ids, artifact_id)?
         };
         let auth = build_auth(
             &self.state,
