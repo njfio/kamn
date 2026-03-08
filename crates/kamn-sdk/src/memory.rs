@@ -1,4 +1,5 @@
 use crate::{
+    channel_create::channel_name,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport, Message, MessageId,
     MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, TransportMode,
@@ -119,16 +120,6 @@ impl InMemoryKamnClient {
         Ok(())
     }
 
-    fn validate_channel_name(name: &str) -> Result<(), SdkError> {
-        if name.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "channel_name",
-                reason: "must not be empty",
-            });
-        }
-        Ok(())
-    }
-
     fn validate_task(task: &TaskDefinition) -> Result<(), SdkError> {
         if task.task_type.trim().is_empty() {
             return Err(SdkError::InvalidInput {
@@ -235,7 +226,7 @@ impl KamnAgent for InMemoryKamnClient {
     }
 
     fn create_channel(&mut self, name: &str) -> Result<ChannelId, SdkError> {
-        Self::validate_channel_name(name)?;
+        channel_name(name)?;
         let channel_id = ChannelId(format!("channel-local-{}", self.next_channel_id));
         self.next_channel_id += 1;
         Ok(channel_id)

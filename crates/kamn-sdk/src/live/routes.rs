@@ -1,4 +1,5 @@
 use super::task_escrow::escape_json;
+use crate::channel_create::payload as channel_create_json_payload;
 use crate::service::ServiceMessageDelivery;
 use crate::{
     AgentDid, AgentMetadata, AgentReputation, AgentSummary, DidDocument, Message, MessageId,
@@ -33,13 +34,7 @@ pub(crate) fn agent_registration_payload(metadata: &AgentMetadata) -> Result<Str
 }
 
 pub(crate) fn channel_create_payload(name: &str) -> Result<String, SdkError> {
-    if name.trim().is_empty() {
-        return Err(SdkError::InvalidInput {
-            field: "channel_name",
-            reason: "must not be empty",
-        });
-    }
-    Ok(serde_json::json!({ "name": name }).to_string())
+    channel_create_json_payload(name)
 }
 
 pub(crate) fn recipient_mailbox_channel_id(recipient: &AgentDid) -> String {
