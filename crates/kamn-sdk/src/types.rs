@@ -115,6 +115,24 @@ pub struct ArtifactStatus {
     pub redaction_status: String,
 }
 
+impl ArtifactStatus {
+    pub(crate) fn retained(artifact_id: &ArtifactId) -> Self {
+        Self::from_lifecycle(artifact_id, "retained".to_owned(), "none".to_owned())
+    }
+
+    pub(crate) fn from_lifecycle(
+        artifact_id: &ArtifactId,
+        lifecycle_state: String,
+        redaction_status: String,
+    ) -> Self {
+        Self {
+            artifact_id: artifact_id.clone(),
+            lifecycle_state,
+            redaction_status,
+        }
+    }
+}
+
 /// Token amount wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TokenAmount(pub u64);

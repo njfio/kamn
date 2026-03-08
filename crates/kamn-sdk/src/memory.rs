@@ -307,11 +307,7 @@ impl KamnAgent for InMemoryKamnClient {
                 id: artifact_id.0.to_string(),
             });
         }
-        Ok(ArtifactStatus {
-            artifact_id: artifact_id.clone(),
-            lifecycle_state: "retained".to_owned(),
-            redaction_status: "none".to_owned(),
-        })
+        Ok(ArtifactStatus::retained(artifact_id))
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {

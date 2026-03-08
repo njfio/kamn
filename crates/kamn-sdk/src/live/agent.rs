@@ -105,11 +105,11 @@ impl KamnAgent for LiveTransportKamnClient {
         let status = self
             .service_client
             .get_content(service_content_id.as_str(), &auth)?;
-        Ok(ArtifactStatus {
-            artifact_id: artifact_id.clone(),
-            lifecycle_state: status.lifecycle_state,
-            redaction_status: status.redaction_status,
-        })
+        Ok(ArtifactStatus::from_lifecycle(
+            artifact_id,
+            status.lifecycle_state,
+            status.redaction_status,
+        ))
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
