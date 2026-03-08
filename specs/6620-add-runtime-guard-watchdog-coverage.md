@@ -58,3 +58,8 @@ Add dedicated crate-level integration coverage for the public `kamn_runtime_guar
 3. Run targeted watchdog contract and integration tests.
 4. Run the full `kamn-runtime-guards` crate tests.
 5. Run `test_file_size_policy` and refresh its baseline only if the new test targets change inventory counts.
+
+## Phase 6 notes
+- No production watchdog behavior changes were required.
+- Integration for this issue is the dedicated crate-level watchdog surface plus the contract pin that prevents silent removal of that surface.
+- Adding the two new test targets increased the workspace `test_file_total` baseline from `471` to `473`.
