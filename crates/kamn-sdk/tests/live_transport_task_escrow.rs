@@ -185,7 +185,7 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
     assert_eq!(
         artifact_status,
         ArtifactStatus {
-            artifact_id,
+            artifact_id: artifact_id.clone(),
             lifecycle_state: "retained".to_owned(),
             redaction_status: "none".to_owned(),
         }

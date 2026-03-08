@@ -24,6 +24,12 @@ struct EscrowState {
     released: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ArtifactState {
+    artifact: Artifact,
+    status: ArtifactStatus,
+}
+
 /// Deterministic in-memory implementation of the [`KamnAgent`] API.
 #[derive(Debug, Default)]
 pub struct InMemoryKamnClient {
@@ -36,7 +42,7 @@ pub struct InMemoryKamnClient {
     registry: HashMap<AgentDid, DidDocument>,
     inboxes: HashMap<AgentDid, Vec<MessageRecord>>,
     tasks: HashMap<TaskId, TaskState>,
-    artifacts: HashMap<ArtifactId, Artifact>,
+    artifacts: HashMap<ArtifactId, ArtifactState>,
     escrows: HashMap<EscrowId, EscrowState>,
     balances: HashMap<AgentDid, TokenAmount>,
     reputations: HashMap<AgentDid, AgentReputation>,
@@ -296,18 +302,40 @@ impl KamnAgent for InMemoryKamnClient {
         let artifact_id = ArtifactId(self.next_artifact_id);
         self.next_artifact_id += 1;
         task.artifacts.push(artifact_id.clone());
-        self.artifacts.insert(artifact_id.clone(), artifact);
+        self.artifacts.insert(
+            artifact_id.clone(),
+            ArtifactState {
+                artifact,
+                status: ArtifactStatus::retained(&artifact_id),
+            },
+        );
         Ok(artifact_id)
     }
 
     fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
-        if !self.artifacts.contains_key(artifact_id) {
-            return Err(SdkError::NotFound {
+        self.artifacts
+            .get(artifact_id)
+            .map(|entry| entry.status.clone())
+            .ok_or_else(|| SdkError::NotFound {
                 entity: "artifact",
                 id: artifact_id.0.to_string(),
-            });
-        }
-        Ok(ArtifactStatus::retained(artifact_id))
+            })
+    }
+
+    fn expire_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
+        let artifact = self
+            .artifacts
+            .get_mut(artifact_id)
+            .ok_or_else(|| SdkError::NotFound {
+                entity: "artifact",
+                id: artifact_id.0.to_string(),
+            })?;
+        artifact.status = ArtifactStatus::from_lifecycle(
+            artifact_id,
+            "expired".to_owned(),
+            "none".to_owned(),
+        );
+        Ok(artifact.status.clone())
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
