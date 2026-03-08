@@ -20,11 +20,11 @@ Add high-level message status to the SDK `KamnAgent` API so callers can read mes
 - In-memory message status must remain deterministic for known sent messages even after mailbox drains.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes a message status method returning a stable SDK `MessageStatus` type.
-- [ ] `InMemoryKamnClient` reports status for known sent messages and rejects unknown message ids.
-- [ ] `LiveTransportKamnClient` resolves `MessageId` through the existing alias map and uses `GET /v1/messages/{id}`.
-- [ ] SDK tests cover in-memory and live high-level message status, including unknown-alias and malformed-response failures.
-- [ ] Existing lower-level `ServiceApiClient::get_message()` behavior remains green.
+- [x] `KamnAgent` exposes a message status method returning a stable SDK `MessageStatus` type.
+- [x] `InMemoryKamnClient` reports status for known sent messages and rejects unknown message ids.
+- [x] `LiveTransportKamnClient` resolves `MessageId` through the existing alias map and uses `GET /v1/messages/{id}`.
+- [x] SDK tests cover in-memory and live high-level message status, including unknown-alias and malformed-response failures.
+- [x] Existing lower-level `ServiceApiClient::get_message()` behavior remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -48,3 +48,13 @@ Add high-level message status to the SDK `KamnAgent` API so callers can read mes
 - Add a live fail-closed test for malformed message-status response payloads.
 - Re-run existing signed low-level `ServiceApiClient` route contract coverage.
 - Run strict `clippy` for `kamn-sdk` and targeted SDK tests.
+
+# Integration evidence
+- `cargo test -p kamn-sdk --test memory_agent get_message_status -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_agent -- --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
+
+# Deviations
+- None.

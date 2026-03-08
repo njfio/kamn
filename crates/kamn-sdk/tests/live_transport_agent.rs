@@ -763,6 +763,24 @@ fn regression_live_transport_message_status_rejects_malformed_service_payload() 
 }
 
 #[test]
+fn regression_live_transport_message_status_rejects_unknown_alias_before_network() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let endpoint = format!("http://{}", reserve_loopback_addr());
+        let client = LiveTransportKamnClient::connect(endpoint.as_str())
+            .expect("live transport client should construct");
+
+        assert_eq!(
+            client.get_message_status(&kamn_sdk::MessageId(404)),
+            Err(SdkError::NotFound {
+                entity: "message",
+                id: "404".to_owned(),
+            })
+        );
+    });
+}
+
+#[test]
 fn spec_c04_live_transport_send_escapes_json_payload_contract() {
     with_env_lock(|| {
         ensure_live_test_env();
