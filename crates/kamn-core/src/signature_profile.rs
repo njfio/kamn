@@ -327,7 +327,12 @@ pub fn service_auth_verify_with_public_key_hex(
     }
     let expected_key = VerifyingKey::from_sec1_bytes(expected_key_bytes.as_slice())
         .map_err(|_| ServiceAuthSignatureError::InvalidPublicKeyHex)?;
-    if expected_key != recovered {
+    let expected_key_bytes = expected_key.to_encoded_point(true);
+    let recovered_key_bytes = recovered.to_encoded_point(true);
+    if !crate::constant_time_eq::constant_time_eq_bytes(
+        expected_key_bytes.as_bytes(),
+        recovered_key_bytes.as_bytes(),
+    ) {
         return Err(ServiceAuthSignatureError::VerificationFailure);
     }
     Ok(())
