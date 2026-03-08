@@ -12,6 +12,13 @@ fn valid_input(scope: &str) -> QuotaPolicyInput {
     }
 }
 
+fn assert_reject_reason(input: QuotaPolicyInput, reason: QuotaPolicyViolationReason) {
+    assert_eq!(
+        evaluate_quota_policy(&input),
+        QuotaPolicyDecision::Reject { reason }
+    );
+}
+
 #[test]
 fn integration_runtime_guard_quota_policy_allows_all_supported_scope_classes() {
     for scope in ["processor_ingress", "peer_sync", "channel_broadcast"] {
@@ -21,43 +28,34 @@ fn integration_runtime_guard_quota_policy_allows_all_supported_scope_classes() {
 
 #[test]
 fn integration_runtime_guard_quota_policy_rejects_invalid_inputs_with_deterministic_reasons() {
-    let cases = [
-        (
-            QuotaPolicyInput {
-                scope: "unknown".to_owned(),
-                ..valid_input("processor_ingress")
-            },
-            QuotaPolicyViolationReason::ScopeUnknown,
-        ),
-        (
-            QuotaPolicyInput {
-                window_seconds: 0,
-                ..valid_input("processor_ingress")
-            },
-            QuotaPolicyViolationReason::QuotaWindowNonPositive,
-        ),
-        (
-            QuotaPolicyInput {
-                limit: 0,
-                ..valid_input("processor_ingress")
-            },
-            QuotaPolicyViolationReason::QuotaLimitNonPositive,
-        ),
-        (
-            QuotaPolicyInput {
-                observed_count: 6,
-                ..valid_input("processor_ingress")
-            },
-            QuotaPolicyViolationReason::QuotaLimitExceeded,
-        ),
-    ];
-
-    for (input, reason) in cases {
-        assert_eq!(
-            evaluate_quota_policy(&input),
-            QuotaPolicyDecision::Reject { reason }
-        );
-    }
+    assert_reject_reason(
+        QuotaPolicyInput {
+            scope: "unknown".to_owned(),
+            ..valid_input("processor_ingress")
+        },
+        QuotaPolicyViolationReason::ScopeUnknown,
+    );
+    assert_reject_reason(
+        QuotaPolicyInput {
+            window_seconds: 0,
+            ..valid_input("processor_ingress")
+        },
+        QuotaPolicyViolationReason::QuotaWindowNonPositive,
+    );
+    assert_reject_reason(
+        QuotaPolicyInput {
+            limit: 0,
+            ..valid_input("processor_ingress")
+        },
+        QuotaPolicyViolationReason::QuotaLimitNonPositive,
+    );
+    assert_reject_reason(
+        QuotaPolicyInput {
+            observed_count: 6,
+            ..valid_input("processor_ingress")
+        },
+        QuotaPolicyViolationReason::QuotaLimitExceeded,
+    );
 }
 
 #[test]
