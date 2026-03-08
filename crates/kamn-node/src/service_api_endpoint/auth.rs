@@ -169,16 +169,18 @@ fn sender_did_matches_signer_public_key(
     if let Some(bound_public_key_hex) =
         sender_did.strip_prefix(SELF_CERTIFYING_AGENT_DID_KEY_PREFIX)
     {
-        let normalized_bound_public_key =
-            ascii_lowercase_bytes(bound_public_key_hex.trim().as_bytes());
-        let normalized_signer_public_key =
-            ascii_lowercase_bytes(signer_public_key_hex.trim().as_bytes());
-        return constant_time_eq_bytes(
-            normalized_bound_public_key.as_slice(),
-            normalized_signer_public_key.as_slice(),
+        return normalized_public_key_hexes_match(
+            bound_public_key_hex.trim(),
+            signer_public_key_hex.trim(),
         );
     }
     allow_legacy_sender_binding
+}
+
+fn normalized_public_key_hexes_match(left: &str, right: &str) -> bool {
+    let normalized_left = ascii_lowercase_bytes(left.as_bytes());
+    let normalized_right = ascii_lowercase_bytes(right.as_bytes());
+    constant_time_eq_bytes(normalized_left.as_slice(), normalized_right.as_slice())
 }
 
 fn ascii_lowercase_bytes(value: &[u8]) -> Vec<u8> {
