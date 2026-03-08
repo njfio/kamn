@@ -3,6 +3,7 @@
 
 mod bridge;
 mod channel_create;
+mod events;
 mod observability;
 
 /// Agent-facing traits and transport mode primitives.
@@ -24,6 +25,8 @@ pub mod types;
 pub use agent::{KamnAgent, KamnTransport, TransportMode};
 /// Re-exported bridge lifecycle types.
 pub use bridge::{BridgeId, BridgeStatus};
+/// Re-exported service events types.
+pub use events::{KamnServiceEvents, ServiceEventSnapshot};
 /// Re-exported service observability types.
 pub use observability::{KamnServiceObservability, ServiceHealthSnapshot};
 /// Re-exported SDK error type.
