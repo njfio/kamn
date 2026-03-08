@@ -1,5 +1,10 @@
 use super::{
     LiveTransportKamnClient,
+    bridge::{
+        bridge_read_auth, bridge_status_from_service, bridge_status_from_submission,
+        bridge_submit_payload, bridge_write_auth, resolve_service_bridge_id,
+        resolve_service_message_id,
+    },
     config::{CHANNELS_WRITE_SCOPE, CONTENT_READ_SCOPE, MESSAGES_READ_SCOPE, TASKS_READ_SCOPE},
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
@@ -11,10 +16,10 @@ use super::{
 use crate::{
     channel_create::channel_id as validate_channel_id,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
-    MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, ServiceContentStatus,
-    ServiceMessageStatus, ServiceRequestAuth, TaskDefinition, TaskId, TaskStatus, TokenAmount,
-    service::agent_search_payload,
+    ArtifactStatus, BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId,
+    KamnAgent, Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError,
+    ServiceContentStatus, ServiceMessageStatus, ServiceRequestAuth, TaskDefinition, TaskId,
+    TaskStatus, TokenAmount, service::agent_search_payload,
 };
 
 impl KamnAgent for LiveTransportKamnClient {
@@ -39,6 +44,38 @@ impl KamnAgent for LiveTransportKamnClient {
             .service_client
             .get_message(service_message_id.as_str(), &auth)?;
         Ok(message_status_from_service(message_id, status))
+    }
+
+    fn submit_bridge(
+        &mut self,
+        source_message_id: &MessageId,
+        target_network: &str,
+    ) -> Result<BridgeStatus, SdkError> {
+        let service_message_id = resolve_service_message_id(self, source_message_id)?;
+        let payload = bridge_submit_payload(service_message_id.as_str(), target_network)?;
+        let auth = bridge_write_auth(self, payload.as_str())?;
+        let submission = self
+            .service_client
+            .submit_bridge_message(payload.as_str(), &auth)?;
+        bridge_status_from_submission(self, submission)
+    }
+
+    fn forward_bridge(&mut self, bridge_id: &BridgeId) -> Result<BridgeStatus, SdkError> {
+        let service_bridge_id = resolve_service_bridge_id(self, bridge_id)?;
+        let auth = bridge_write_auth(self, "{}")?;
+        let status = self
+            .service_client
+            .forward_bridge_message(service_bridge_id.as_str(), &auth)?;
+        bridge_status_from_service(self, bridge_id, status)
+    }
+
+    fn get_bridge_status(&self, bridge_id: &BridgeId) -> Result<BridgeStatus, SdkError> {
+        let service_bridge_id = resolve_service_bridge_id(self, bridge_id)?;
+        let auth = bridge_read_auth(self)?;
+        let status = self
+            .service_client
+            .get_bridge_message(service_bridge_id.as_str(), &auth)?;
+        bridge_status_from_service(self, bridge_id, status)
     }
 
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError> {
@@ -198,21 +235,6 @@ fn resolve_service_content_id(
     prepare_artifact_status_lookup(&guard.artifact_ids, artifact_id)
 }
 
-fn resolve_service_message_id(
-    client: &LiveTransportKamnClient,
-    message_id: &MessageId,
-) -> Result<String, SdkError> {
-    let guard = client
-        .state
-        .lock()
-        .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
-    guard
-        .message_ids
-        .get(&message_id.0)
-        .cloned()
-        .ok_or_else(|| message_not_found(message_id))
-}
-
 fn resolve_service_task_id(
     client: &LiveTransportKamnClient,
     task_id: &TaskId,
@@ -232,13 +254,6 @@ fn message_read_auth(client: &LiveTransportKamnClient) -> Result<ServiceRequestA
         "",
         Some(MESSAGES_READ_SCOPE),
     )
-}
-
-fn message_not_found(message_id: &MessageId) -> SdkError {
-    SdkError::NotFound {
-        entity: "message",
-        id: message_id.0.to_string(),
-    }
 }
 
 fn message_status_from_service(

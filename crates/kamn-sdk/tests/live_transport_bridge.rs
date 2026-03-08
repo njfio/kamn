@@ -76,7 +76,7 @@ fn spec_c09_live_transport_bridge_routes_execute_network_contract() {
 #[test]
 fn regression_live_transport_bridge_status_rejects_unknown_alias_before_network() {
     ensure_live_test_env();
-    let client = live_client("127.0.0.1:65535");
+    let mut client = live_client("127.0.0.1:65535");
 
     assert_eq!(
         client.get_bridge_status(&BridgeId(404)),
