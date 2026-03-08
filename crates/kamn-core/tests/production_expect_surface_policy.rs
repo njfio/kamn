@@ -252,47 +252,214 @@ fn is_test_only_source_path(relative_path: &str) -> bool {
         || stem.contains("_tests")
 }
 
-fn brace_delta(line: &str) -> i64 {
-    let opens = line.chars().filter(|character| *character == '{').count() as i64;
-    let closes = line.chars().filter(|character| *character == '}').count() as i64;
-    opens - closes
+fn starts_with(bytes: &[u8], index: usize, needle: &[u8]) -> bool {
+    bytes
+        .get(index..index + needle.len())
+        .is_some_and(|candidate| candidate == needle)
+}
+
+fn raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
+    let prefix_len = match bytes.get(index..index + 2) {
+        Some(b"br") | Some(b"rb") => 2,
+        _ if bytes.get(index) == Some(&b'r') => 1,
+        _ => return None,
+    };
+    let mut cursor = index + prefix_len;
+    let mut hash_count = 0_usize;
+    while bytes.get(cursor) == Some(&b'#') {
+        hash_count += 1;
+        cursor += 1;
+    }
+    (bytes.get(cursor) == Some(&b'"')).then_some((prefix_len + hash_count + 1, hash_count))
+}
+
+fn char_literal_end(bytes: &[u8], index: usize) -> Option<usize> {
+    if bytes.get(index) != Some(&b'\'') {
+        return None;
+    }
+    let mut cursor = index + 1;
+    let mut escaped = false;
+    while cursor < bytes.len() && bytes[cursor] != b'\n' {
+        if escaped {
+            escaped = false;
+        } else if bytes[cursor] == b'\\' {
+            escaped = true;
+        } else if bytes[cursor] == b'\'' {
+            return Some(cursor + 1);
+        }
+        cursor += 1;
+    }
+    None
+}
+
+fn closes_raw_string(bytes: &[u8], index: usize, hash_count: usize) -> bool {
+    if bytes.get(index) != Some(&b'"') {
+        return false;
+    }
+    (0..hash_count).all(|offset| bytes.get(index + 1 + offset) == Some(&b'#'))
+}
+
+#[derive(Debug, Default, Clone)]
+struct CodeScanState {
+    block_comment_depth: usize,
+    raw_string_hash_count: Option<usize>,
+    in_string: bool,
+    escaped: bool,
+}
+
+fn consume_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Option<usize> {
+    if let Some(hash_count) = state.raw_string_hash_count {
+        if closes_raw_string(bytes, index, hash_count) {
+            state.raw_string_hash_count = None;
+            return Some(index + hash_count + 2);
+        }
+        return Some(index + 1);
+    }
+
+    if state.block_comment_depth > 0 {
+        if starts_with(bytes, index, b"/*") {
+            state.block_comment_depth += 1;
+            return Some(index + 2);
+        }
+        if starts_with(bytes, index, b"*/") {
+            state.block_comment_depth -= 1;
+            return Some(index + 2);
+        }
+        return Some(index + 1);
+    }
+
+    if state.in_string {
+        if state.escaped {
+            state.escaped = false;
+        } else if bytes[index] == b'\\' {
+            state.escaped = true;
+        } else if bytes[index] == b'"' {
+            state.in_string = false;
+        }
+        return Some(index + 1);
+    }
+
+    if starts_with(bytes, index, b"//") {
+        let mut cursor = index + 2;
+        while cursor < bytes.len() && bytes[cursor] != b'\n' {
+            cursor += 1;
+        }
+        return Some(cursor);
+    }
+    if starts_with(bytes, index, b"/*") {
+        state.block_comment_depth = 1;
+        return Some(index + 2);
+    }
+    if let Some((prefix_len, hash_count)) = raw_string_start(bytes, index) {
+        state.raw_string_hash_count = Some(hash_count);
+        return Some(index + prefix_len);
+    }
+    if let Some(end) = char_literal_end(bytes, index) {
+        return Some(end);
+    }
+    if starts_with(bytes, index, b"b\"") {
+        state.in_string = true;
+        state.escaped = false;
+        return Some(index + 2);
+    }
+    if bytes[index] == b'"' {
+        state.in_string = true;
+        state.escaped = false;
+        return Some(index + 1);
+    }
+
+    None
+}
+
+fn skip_whitespace(bytes: &[u8], mut index: usize, state: &mut CodeScanState) -> usize {
+    while index < bytes.len() {
+        if let Some(next) = consume_non_code(bytes, index, state) {
+            index = next;
+            continue;
+        }
+        if !bytes[index].is_ascii_whitespace() {
+            break;
+        }
+        index += 1;
+    }
+    index
+}
+
+fn skip_attribute(bytes: &[u8], mut index: usize, state: &mut CodeScanState) -> usize {
+    let mut depth = 0_i64;
+    while index < bytes.len() {
+        if let Some(next) = consume_non_code(bytes, index, state) {
+            index = next;
+            continue;
+        }
+        if bytes[index] == b'[' {
+            depth += 1;
+        } else if bytes[index] == b']' {
+            depth -= 1;
+            if depth == 0 {
+                return index + 1;
+            }
+        }
+        index += 1;
+    }
+    bytes.len()
+}
+
+fn skip_cfg_test_item(bytes: &[u8], mut index: usize) -> usize {
+    let mut state = CodeScanState::default();
+    index += "#[cfg(test)]".len();
+    index = skip_whitespace(bytes, index, &mut state);
+    while starts_with(bytes, index, b"#[") {
+        index = skip_attribute(bytes, index + 1, &mut state);
+        index = skip_whitespace(bytes, index, &mut state);
+    }
+
+    let mut body_depth = 0_i64;
+    while index < bytes.len() {
+        if let Some(next) = consume_non_code(bytes, index, &mut state) {
+            index = next;
+            continue;
+        }
+        if body_depth == 0 && bytes[index] == b';' {
+            return index + 1;
+        }
+        if bytes[index] == b'{' {
+            body_depth += 1;
+        } else if bytes[index] == b'}' {
+            body_depth -= 1;
+            if body_depth == 0 {
+                return index + 1;
+            }
+        }
+        index += 1;
+    }
+    bytes.len()
 }
 
 fn count_expect_occurrences_excluding_cfg_test(raw: &str) -> i64 {
-    let mut expect_count = 0_i64;
-    let mut pending_cfg_test = false;
-    let mut skip_depth = 0_i64;
+    let bytes = raw.as_bytes();
+    let mut count = 0_i64;
+    let mut index = 0_usize;
+    let mut state = CodeScanState::default();
 
-    for line in raw.lines() {
-        if skip_depth > 0 {
-            skip_depth += brace_delta(line);
-            if skip_depth <= 0 {
-                skip_depth = 0;
-            }
+    while index < bytes.len() {
+        if let Some(next) = consume_non_code(bytes, index, &mut state) {
+            index = next;
             continue;
         }
-
-        let trimmed = line.trim();
-        if trimmed.starts_with("#[cfg(test)]") {
-            pending_cfg_test = true;
+        if starts_with(bytes, index, b"#[cfg(test)]") {
+            index = skip_cfg_test_item(bytes, index);
             continue;
         }
-
-        if pending_cfg_test {
-            if trimmed.is_empty() || trimmed.starts_with("#[") {
-                continue;
-            }
-            if line.contains('{') {
-                skip_depth = brace_delta(line).max(0);
-            }
-            pending_cfg_test = false;
+        if starts_with(bytes, index, b".expect(") {
+            count += 1;
+            index += ".expect(".len();
             continue;
         }
-
-        expect_count += line.matches(".expect(").count() as i64;
+        index += 1;
     }
 
-    expect_count
+    count
 }
 
 fn current_surface() -> CurrentSurface {
@@ -455,6 +622,25 @@ mod tests {
     #[test]
     fn unit_only() {
         let _ = helper();
+    }
+}
+"#;
+    assert_eq!(count_expect_occurrences_excluding_cfg_test(fixture), 1);
+}
+
+#[test]
+fn regression_cfg_test_char_literal_quotes_do_not_open_strings_in_census() {
+    let fixture = r#"
+fn production_path() {
+    let _ = Some(1).expect("count me");
+}
+
+#[cfg(test)]
+mod tests {
+    fn helper(ch: char) {
+        if ch == '"' {
+            let _ = Some(2).expect("do not count me");
+        }
     }
 }
 "#;
