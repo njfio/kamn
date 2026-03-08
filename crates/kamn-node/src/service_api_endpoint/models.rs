@@ -11,63 +11,6 @@ pub(crate) struct ServiceApiEndpointConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ServiceApiSnapshot {
-    pub(crate) runtime_mode: String,
-    pub(crate) role: String,
-    pub(crate) chain_id: String,
-    pub(crate) chain_version: String,
-    pub(crate) cross_store_replay_reason_taxonomy_version: String,
-    pub(crate) cross_store_replay_reason_code_count: usize,
-    pub(crate) auth_reason_taxonomy_version: String,
-    pub(crate) auth_reason_code_count: usize,
-    pub(crate) scope_policy_reason_taxonomy_version: String,
-    pub(crate) scope_policy_reason_code_count: usize,
-    pub(crate) scope_policy_fixture_reason_taxonomy_version: String,
-    pub(crate) scope_policy_fixture_reason_code_count: usize,
-    pub(crate) scope_policy_fixture_row_count: usize,
-    pub(crate) scope_policy_fixture_allow_row_count: usize,
-    pub(crate) scope_policy_fixture_deny_row_count: usize,
-    pub(crate) scope_policy_fixture_unique_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_method_count: usize,
-    pub(crate) scope_policy_fixture_unique_expected_outcome_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_only_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_only_route_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_only_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_only_scope_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_method_count: usize,
-    pub(crate) scope_policy_fixture_unique_allow_only_method_count: usize,
-    pub(crate) scope_policy_fixture_unique_deny_only_method_count: usize,
-    pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
-    pub(crate) lifecycle_rejection_reason_code_count: usize,
-    pub(crate) route_authz_matrix_schema_version: String,
-    pub(crate) route_authz_matrix_total_route_count: usize,
-    pub(crate) route_authz_matrix_public_route_count: usize,
-    pub(crate) route_authz_matrix_protected_route_count: usize,
-    pub(crate) websocket_reason_taxonomy_version: String,
-    pub(crate) websocket_reason_code_count: usize,
-    pub(crate) relay_created_message_count: u64,
-    pub(crate) relay_relayed_message_count: u64,
-    pub(crate) relay_delivered_message_count: u64,
-    pub(crate) relay_drained_count: u64,
-    pub(crate) relay_projected_state_count: u64,
-    pub(crate) observability_source: String,
-    pub(crate) observability_latency_p50_ms: u64,
-    pub(crate) observability_latency_p99_ms: u64,
-    pub(crate) observability_throughput_tps: u64,
-    pub(crate) observability_error_rate_bps: u64,
-    pub(crate) observability_availability_bps: u64,
-    pub(crate) observability_health: String,
-    pub(crate) observability_alert_count: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointResponse {
     pub(crate) status_code: u16,
     pub(crate) content_type: &'static str,
@@ -195,6 +138,16 @@ pub(crate) struct ServiceApiBridgeStatusBody {
 pub(crate) struct ServiceApiAgentGetBody {
     pub(crate) did: String,
     pub(crate) reputation_score: u64,
+    pub(crate) agent_type: String,
+    pub(crate) model_family: String,
+    pub(crate) capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiAgentRegisterRequestBody {
+    pub(crate) agent_type: String,
+    pub(crate) model_family: String,
+    pub(crate) capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

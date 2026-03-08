@@ -54,7 +54,11 @@ pub(super) fn render_service_api_endpoint_response(
             escape_metrics_label(snapshot.scope_policy_reason_taxonomy_version.as_str()),
             snapshot.scope_policy_reason_code_count,
             escape_metrics_label(SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION),
-            escape_metrics_label(snapshot.scope_policy_fixture_reason_taxonomy_version.as_str()),
+            escape_metrics_label(
+                snapshot
+                    .scope_policy_fixture_reason_taxonomy_version
+                    .as_str()
+            ),
             snapshot.scope_policy_fixture_reason_code_count,
             snapshot.scope_policy_fixture_row_count,
             snapshot.scope_policy_fixture_allow_row_count,
@@ -161,6 +165,20 @@ pub(super) fn render_service_api_endpoint_response(
             retention_class: "standard".to_owned(),
             lifecycle_state: "retained".to_owned(),
             redaction_status: "none".to_owned(),
+        };
+        return ServiceApiEndpointResponse {
+            status_code: 201,
+            content_type: "application/json",
+            body: serialize_service_api_json(&payload),
+        };
+    }
+    if method == "POST" && path == ROUTE_AGENTS_REGISTER {
+        let payload = ServiceApiAgentGetBody {
+            did: "kamn:did:agent:register-placeholder".to_owned(),
+            reputation_score: 500,
+            agent_type: "service-agent".to_owned(),
+            model_family: "service-api".to_owned(),
+            capabilities: vec!["profile:read".to_owned()],
         };
         return ServiceApiEndpointResponse {
             status_code: 201,
@@ -348,6 +366,9 @@ pub(super) fn render_service_api_endpoint_response(
                 let payload = ServiceApiAgentGetBody {
                     did: agent_did.to_owned(),
                     reputation_score: 500,
+                    agent_type: "service-agent".to_owned(),
+                    model_family: "service-api".to_owned(),
+                    capabilities: vec!["profile:read".to_owned()],
                 };
                 return ServiceApiEndpointResponse {
                     status_code: 200,
@@ -383,6 +404,7 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || path == ROUTE_ESCROW_FUND
         || path == ROUTE_CONTENT_REGISTER
         || path == ROUTE_BRIDGE_SUBMIT
+        || path == ROUTE_AGENTS_REGISTER
         || path == ROUTE_EVENTS_WS
         || path == ROUTE_HEALTHZ
         || path == ROUTE_METRICS
@@ -502,7 +524,7 @@ pub(super) fn bridge_forward_path_id(path: &str) -> Option<&str> {
 
 pub(super) fn agent_path_id(path: &str) -> Option<&str> {
     path.strip_prefix(ROUTE_AGENTS_PREFIX).and_then(|did| {
-        if did.is_empty() || did.contains('/') {
+        if did.is_empty() || did == "register" || did.contains('/') {
             return None;
         }
         Some(did)
@@ -512,7 +534,7 @@ pub(super) fn agent_path_id(path: &str) -> Option<&str> {
 pub(super) fn agent_balance_path_id(path: &str) -> Option<&str> {
     let did = path.strip_prefix(ROUTE_AGENTS_PREFIX)?;
     let did = did.strip_suffix("/balance")?;
-    if did.is_empty() || did.contains('/') {
+    if did.is_empty() || did == "register" || did.contains('/') {
         return None;
     }
     Some(did)
@@ -665,9 +687,9 @@ pub(super) fn escape_metrics_label(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        bridge_forward_path_id, bridge_path_id, content_expire_path_id, content_path_id,
-        content_tombstone_path_id, route_exists_for_other_method, ROUTE_BRIDGE_SUBMIT,
-        ROUTE_CONTENT_REGISTER,
+        ROUTE_BRIDGE_SUBMIT, ROUTE_CONTENT_REGISTER, bridge_forward_path_id, bridge_path_id,
+        content_expire_path_id, content_path_id, content_tombstone_path_id,
+        route_exists_for_other_method,
     };
 
     #[test]

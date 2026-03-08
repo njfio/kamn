@@ -42,6 +42,7 @@ Implemented route contract for local deterministic ingress:
 - `GET /v1/channels/{id}/messages`
 - `POST /v1/tasks/create`
 - `GET /v1/tasks/{id}`
+- `POST /v1/agents/register`
 - `GET /v1/agents/{did}`
 - `GET /v1/agents/{did}/balance`
 - `GET /v1/events/ws`
@@ -52,7 +53,8 @@ Response behavior is deterministic and intentionally lightweight for this phase.
 
 Agent read contracts:
 
-- `GET /v1/agents/{did}` returns deterministic profile JSON with `did` and `reputation_score`.
+- `POST /v1/agents/register` registers the authenticated sender DID with `agent_type`, `model_family`, and `capabilities`.
+- `GET /v1/agents/{did}` returns deterministic profile JSON with `did`, `reputation_score`, `agent_type`, `model_family`, and `capabilities`.
 - `GET /v1/agents/{did}/balance` returns deterministic balance JSON with `did` and `balance`.
 
 OpenAPI reference:

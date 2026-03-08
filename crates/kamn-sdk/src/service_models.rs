@@ -126,6 +126,12 @@ pub struct ServiceAgentProfile {
     pub did: String,
     /// Current reputation score.
     pub reputation_score: u64,
+    /// Registered agent-type marker.
+    pub agent_type: String,
+    /// Registered model-family marker.
+    pub model_family: String,
+    /// Registered capability labels.
+    pub capabilities: Vec<String>,
 }
 
 /// Parsed response for `GET /v1/agents/{did}/balance`.

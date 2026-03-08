@@ -1,6 +1,7 @@
 mod auth;
 mod message_store;
 mod middleware_impl;
+mod models;
 mod payload;
 mod runtime_observability;
 mod scope_fixture;
@@ -12,28 +13,29 @@ mod tests;
 mod websocket;
 
 use crate::{
-    logging::{log_info, log_warn},
     NodeBootstrapReport,
+    logging::{log_info, log_warn},
 };
 use axum::{
-    body::{to_bytes, Body, Bytes},
+    Extension, Router,
+    body::{Body, Bytes, to_bytes},
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
         Request, State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     http::{HeaderMap, HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{any, get},
-    Extension, Router,
 };
 use kamn_core::{
-    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
-    data_layer_m9_gateway_project_presence_event, service_auth_verify_with_public_key_hex,
-    AgentDid, DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
-    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
-    DataLayerM9RealtimeDeliveryRegistry, KamnDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
-    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+    AgentDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE, DataLayerM9GatewayBridgeError,
+    DataLayerM9GatewayPresenceProjectionRequest, DataLayerM9PresenceConnectRequest,
+    DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
+    DataLayerM9RealtimeDeliveryRegistry, KamnDid, cross_store_replay_reason_codes_csv,
+    cross_store_replay_reason_taxonomy_version, data_layer_m9_gateway_project_presence_event,
+    service_auth_verify_with_public_key_hex,
 };
 use kamn_runtime_guards::anti_spam::{
     AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
@@ -43,8 +45,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs, net::SocketAddr};
@@ -52,6 +54,15 @@ use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
 use message_store::ServiceApiMessageStore;
+pub(crate) use models::{
+    ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiBridgeStatusBody,
+    ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody,
+    ServiceApiContentLifecycleBody, ServiceApiContentRegisterBody, ServiceApiEndpointConfig,
+    ServiceApiEndpointResponse, ServiceApiErrorBody, ServiceApiEscrowStatusBody,
+    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
+    ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody,
+    ServiceApiTaskGetBody, ServiceApiTaskTransitionBody, ServiceApiWebsocketStateTransitionBody,
+};
 use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use snapshot::ServiceApiSnapshot;
 pub(crate) use state_io::{
@@ -78,6 +89,7 @@ const ROUTE_TASKS_CREATE: &str = "/v1/tasks/create";
 const ROUTE_ESCROW_FUND: &str = "/v1/escrow/fund";
 const ROUTE_CONTENT_REGISTER: &str = "/v1/content/register";
 const ROUTE_BRIDGE_SUBMIT: &str = "/v1/bridge/submit";
+const ROUTE_AGENTS_REGISTER: &str = "/v1/agents/register";
 const ROUTE_MESSAGES_PREFIX: &str = "/v1/messages/";
 const ROUTE_CHANNELS_PREFIX: &str = "/v1/channels/";
 const ROUTE_CHANNELS_MESSAGES_SUFFIX: &str = "/messages";
@@ -154,9 +166,12 @@ const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/service_api_scope_policy_fixture_matrix.txt");
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-route-authz-matrix.v1";
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 22;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 23;
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT: usize = 2;
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 20;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 21;
+const REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID: &str =
+    "service_api_agent_registration_payload_invalid";
+const REASON_CODE_AGENT_REGISTRATION_CONFLICT: &str = "service_api_agent_registration_conflict";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
 const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";
@@ -208,145 +223,6 @@ const SERVICE_API_TLS_MODE_REQUIRE: &str = "require";
 const SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV: &str = "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX";
 const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
 pub(crate) const SERVICE_API_RELAY_SPOOL_FILE_ENV: &str = "KAMN_SERVICE_API_RELAY_SPOOL_FILE";
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ServiceApiEndpointConfig {
-    pub(crate) bind_addr: String,
-    pub(crate) max_requests: u64,
-    pub(crate) idle_timeout_ms: u64,
-    pub(crate) body_limit_bytes: u64,
-    pub(crate) concurrency_limit: u64,
-    pub(crate) rate_limit_per_second: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ServiceApiEndpointResponse {
-    pub(crate) status_code: u16,
-    pub(crate) content_type: &'static str,
-    pub(crate) body: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiErrorBody {
-    pub(crate) error: String,
-    pub(crate) reason_code: String,
-    pub(crate) message: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiHealthBody {
-    pub(crate) status: String,
-    pub(crate) runtime_mode: String,
-    pub(crate) role: String,
-    pub(crate) observability_source: String,
-    pub(crate) observability_health: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiMessageCreateBody {
-    pub(crate) message_id: String,
-    pub(crate) status: String,
-    pub(crate) runtime_mode: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiMessageRelayBody {
-    pub(crate) message_id: String,
-    pub(crate) status: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiMessageGetBody {
-    pub(crate) message_id: String,
-    pub(crate) status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) sender_did: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) recipient_did: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) body: Option<String>,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiRelaySpoolEntry {
-    pub(crate) message_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) sender_did: Option<String>,
-    pub(crate) recipient_did: String,
-    pub(crate) body: String,
-    pub(crate) queued_at_unix: u64,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiChannelCreateBody {
-    pub(crate) channel_id: String,
-    pub(crate) status: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiChannelMessagesBody {
-    pub(crate) channel_id: String,
-    pub(crate) messages: Vec<String>,
-}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiTaskCreateBody {
-    pub(crate) task_id: String,
-    pub(crate) state: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiTaskGetBody {
-    pub(crate) task_id: String,
-    pub(crate) state: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiTaskTransitionBody {
-    pub(crate) task_id: String,
-    pub(crate) state: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiEscrowStatusBody {
-    pub(crate) escrow_id: String,
-    pub(crate) state: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiContentRegisterBody {
-    pub(crate) content_id: String,
-    pub(crate) retention_class: String,
-    pub(crate) lifecycle_state: String,
-    pub(crate) redaction_status: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiContentLifecycleBody {
-    pub(crate) content_id: String,
-    pub(crate) lifecycle_state: String,
-    pub(crate) redaction_status: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiBridgeSubmitBody {
-    pub(crate) bridge_id: String,
-    pub(crate) source_message_id: String,
-    pub(crate) bridge_status: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiBridgeStatusBody {
-    pub(crate) bridge_id: String,
-    pub(crate) bridge_status: String,
-    pub(crate) target_message_id: String,
-    pub(crate) forward_tx_hash: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiAgentGetBody {
-    pub(crate) did: String,
-    pub(crate) reputation_score: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiWebsocketStateTransitionBody {
-    pub(crate) event: String,
-    pub(crate) runtime_mode: String,
-    pub(crate) role: String,
-    pub(crate) sequence: u64,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedRequest {

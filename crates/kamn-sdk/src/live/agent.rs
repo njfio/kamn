@@ -1,10 +1,10 @@
 use super::{
+    LiveTransportKamnClient,
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, recipient_mailbox_channel_id,
         service_message_to_record,
     },
     state::{build_agents_read_auth, remember_message_id},
-    LiveTransportKamnClient,
 };
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
@@ -13,8 +13,8 @@ use crate::{
 };
 
 impl KamnAgent for LiveTransportKamnClient {
-    fn register(&mut self, _metadata: AgentMetadata) -> Result<AgentDid, SdkError> {
-        Self::unsupported("live transport register route is not available via service api")
+    fn register(&mut self, metadata: AgentMetadata) -> Result<AgentDid, SdkError> {
+        self.register_via_service(metadata)
     }
 
     fn resolve(&self, did: &AgentDid) -> Result<DidDocument, SdkError> {
@@ -29,10 +29,9 @@ impl KamnAgent for LiveTransportKamnClient {
 
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError> {
         let mailbox_auth = build_agents_read_auth(&self.state, &self.config)?;
-        let mailbox = self.service_client.list_channel_messages(
-            recipient_mailbox_channel_id(did).as_str(),
-            &mailbox_auth,
-        )?;
+        let mailbox = self
+            .service_client
+            .list_channel_messages(recipient_mailbox_channel_id(did).as_str(), &mailbox_auth)?;
         let mut records = Vec::with_capacity(mailbox.messages.len());
         for service_message_id in mailbox.messages {
             let message_auth = build_agents_read_auth(&self.state, &self.config)?;

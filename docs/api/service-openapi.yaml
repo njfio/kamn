@@ -427,7 +427,35 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GenericSuccessResponse"
+                $ref: "#/components/schemas/AgentProfileResponse"
+
+  /v1/agents/register:
+    post:
+      summary: Register authenticated agent profile
+      operationId: registerAgent
+      security:
+        - SenderDidHeader: []
+          RequestNonceHeader: []
+          RequestSignatureHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRegistrationRequest"
+      responses:
+        "201":
+          description: Registered agent profile payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentProfileResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
 
   /v1/agents/{did}/balance:
     get:
@@ -533,6 +561,35 @@ components:
       description: |
         Success envelope shape varies by route and remains runtime-contract
         driven.
+    AgentRegistrationRequest:
+      type: object
+      required: [agent_type, model_family, capabilities]
+      properties:
+        agent_type:
+          type: string
+        model_family:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+    AgentProfileResponse:
+      type: object
+      required: [did, reputation_score, agent_type, model_family, capabilities]
+      properties:
+        did:
+          type: string
+        reputation_score:
+          type: integer
+          minimum: 0
+        agent_type:
+          type: string
+        model_family:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
     ErrorResponse:
       type: object
       properties:

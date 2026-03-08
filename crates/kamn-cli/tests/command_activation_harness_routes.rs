@@ -33,7 +33,7 @@ fn task_and_profile_routes(method: &str, path: &str) -> Option<(u16, &'static st
         }
         ("GET", "/v1/agents/kamn:did:agent:alice") => Some((
             200,
-            r#"{"did":"kamn:did:agent:alice","reputation_score":777}"#,
+            r#"{"did":"kamn:did:agent:alice","reputation_score":777,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
         )),
         ("POST", "/v1/tasks/create") => {
             Some((201, r#"{"task_id":"task-cli","state":"submitted"}"#))

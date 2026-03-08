@@ -29,6 +29,8 @@ pub enum ServiceApiScope {
     BridgeRead,
     /// Read scope for agent profile/query operations.
     AgentsRead,
+    /// Write scope for agent registration operations.
+    AgentsWrite,
     /// Read scope for event stream/websocket operations.
     EventsRead,
     /// Fallback scope for protected but unmapped routes.
@@ -51,6 +53,7 @@ impl ServiceApiScope {
             Self::BridgeWrite => "bridge:write",
             Self::BridgeRead => "bridge:read",
             Self::AgentsRead => "agents:read",
+            Self::AgentsWrite => "agents:write",
             Self::EventsRead => "events:read",
             Self::ProtectedUnknown => "protected:unknown",
         }
@@ -75,6 +78,7 @@ impl ServiceApiScope {
             "bridge:write" => Self::BridgeWrite,
             "bridge:read" => Self::BridgeRead,
             "agents:read" => Self::AgentsRead,
+            "agents:write" => Self::AgentsWrite,
             "events:read" => Self::EventsRead,
             "protected:unknown" => Self::ProtectedUnknown,
             _ => return Err(ServiceApiScopeError::Unknown),
@@ -151,6 +155,10 @@ mod tests {
         assert_eq!(
             ServiceApiScope::parse("agents:read").expect("scope"),
             ServiceApiScope::AgentsRead
+        );
+        assert_eq!(
+            ServiceApiScope::parse("agents:write").expect("scope"),
+            ServiceApiScope::AgentsWrite
         );
         assert_eq!(
             ServiceApiScope::parse("events:read").expect("scope"),
