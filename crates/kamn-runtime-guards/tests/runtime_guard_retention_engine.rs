@@ -15,6 +15,14 @@ fn base_policy() -> RetentionEnginePolicy {
     }
 }
 
+fn checker_input(domain: &str, window_seconds: u64, record_age_seconds: u64) -> RetentionPolicyCheckerInput {
+    RetentionPolicyCheckerInput {
+        domain: domain.to_owned(),
+        window_seconds,
+        record_age_seconds,
+    }
+}
+
 fn record(domain: RetentionDomain, record_id: &str, created_at_secs: u64) -> RetentionRecord {
     RetentionRecord {
         domain,
@@ -23,44 +31,29 @@ fn record(domain: RetentionDomain, record_id: &str, created_at_secs: u64) -> Ret
     }
 }
 
+fn assert_checker_reject(input: RetentionPolicyCheckerInput, reason: RetentionPolicyViolationReason) {
+    assert_eq!(
+        evaluate_retention_policy(&input),
+        RetentionPolicyDecision::Reject { reason }
+    );
+}
+
 #[test]
 fn integration_runtime_guard_retention_checker_rejects_invalid_inputs_and_allows_boundary() {
-    assert_eq!(
-        evaluate_retention_policy(&RetentionPolicyCheckerInput {
-            domain: "unknown".to_owned(),
-            window_seconds: 60,
-            record_age_seconds: 1,
-        }),
-        RetentionPolicyDecision::Reject {
-            reason: RetentionPolicyViolationReason::DomainUnknown,
-        }
+    assert_checker_reject(
+        checker_input("unknown", 60, 1),
+        RetentionPolicyViolationReason::DomainUnknown,
+    );
+    assert_checker_reject(
+        checker_input("messages", 0, 1),
+        RetentionPolicyViolationReason::WindowNonPositive,
+    );
+    assert_checker_reject(
+        checker_input("messages", 60, 61),
+        RetentionPolicyViolationReason::RecordExpired,
     );
     assert_eq!(
-        evaluate_retention_policy(&RetentionPolicyCheckerInput {
-            domain: "messages".to_owned(),
-            window_seconds: 0,
-            record_age_seconds: 1,
-        }),
-        RetentionPolicyDecision::Reject {
-            reason: RetentionPolicyViolationReason::WindowNonPositive,
-        }
-    );
-    assert_eq!(
-        evaluate_retention_policy(&RetentionPolicyCheckerInput {
-            domain: "messages".to_owned(),
-            window_seconds: 60,
-            record_age_seconds: 61,
-        }),
-        RetentionPolicyDecision::Reject {
-            reason: RetentionPolicyViolationReason::RecordExpired,
-        }
-    );
-    assert_eq!(
-        evaluate_retention_policy(&RetentionPolicyCheckerInput {
-            domain: "messages".to_owned(),
-            window_seconds: 60,
-            record_age_seconds: 60,
-        }),
+        evaluate_retention_policy(&checker_input("messages", 60, 60)),
         RetentionPolicyDecision::Allow
     );
     assert_eq!(
