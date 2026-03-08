@@ -24,15 +24,17 @@ Replace direct equality in `TcpSignedEnvelopeHandshake::verify_matches_envelope(
 - Regression to direct string equality for signer public key or signature
 
 ## Acceptance criteria
-- [ ] `TcpSignedEnvelopeHandshake::verify_matches_envelope()` uses constant-time comparison for `signer_public_key` and `signature`
-- [ ] Matching handshake/envelope pairs still verify successfully
-- [ ] Signer public key mismatch still returns `SdkError::InvalidInput { field: "handshake.signer_public_key", reason: "does not match envelope signer public key" }`
-- [ ] Signature mismatch still returns `SdkError::InvalidInput { field: "handshake.signature", reason: "does not match envelope signature" }`
-- [ ] A regression test fails if implementation reverts to direct equality for those two fields
+- [x] `TcpSignedEnvelopeHandshake::verify_matches_envelope()` uses constant-time comparison for `signer_public_key` and `signature`
+- [x] Matching handshake/envelope pairs still verify successfully
+- [x] Signer public key mismatch still returns `SdkError::InvalidInput { field: "handshake.signer_public_key", reason: "does not match envelope signer public key" }`
+- [x] Signature mismatch still returns `SdkError::InvalidInput { field: "handshake.signature", reason: "does not match envelope signature" }`
+- [x] A regression test fails if implementation reverts to direct equality for those two fields
 
 ## Files to touch
 - `crates/kamn-sdk/src/tcp.rs`
 - `crates/kamn-sdk/tests/tcp_handshake_constant_time.rs`
+- `crates/kamn-sdk/tests/support/tcp_handshake_constant_time_support.rs`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 - `specs/6582-harden-sdk-tcp-handshake-compares.md`
 
 ## Error semantics
@@ -50,9 +52,15 @@ Replace direct equality in `TcpSignedEnvelopeHandshake::verify_matches_envelope(
 ## Integration verification
 - The real integrated path remains `TcpTransportAdapter::listen_once()` via handshake verification inside `crates/kamn-sdk/src/tcp.rs`
 - Verified through the dedicated TCP handshake test target without mock-only production bypasses
+- Verified workspace inventory parity after adding the dedicated test target
 
 ## Verification actuals
-- Pending
+- Red: `cargo test -p kamn-sdk --test tcp_handshake_constant_time -- --nocapture`
+  - `regression_requires_constant_time_tcp_handshake_compares` failed because `verify_matches_envelope()` still used direct equality
+- Green: `cargo test -p kamn-sdk --test tcp_handshake_constant_time -- --nocapture`
+- Green: `cargo clippy -p kamn-sdk --tests -- -D warnings`
+- Green: `cargo test -p kamn-sdk -- --nocapture`
+- Green: `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
 
 ## Deviations
-- None
+- Adding the dedicated TCP handshake test target increased workspace test inventory by one file, so `fixtures/ci/test_file_size_policy_baseline.env` was refreshed from `460` to `461`.
