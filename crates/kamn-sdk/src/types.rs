@@ -104,6 +104,17 @@ pub struct Artifact {
     pub bytes: Vec<u8>,
 }
 
+/// Lifecycle view for a previously submitted artifact.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArtifactStatus {
+    /// SDK artifact identifier.
+    pub artifact_id: ArtifactId,
+    /// Lifecycle state reported by the transport.
+    pub lifecycle_state: String,
+    /// Redaction status reported by the transport.
+    pub redaction_status: String,
+}
+
 /// Token amount wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TokenAmount(pub u64);

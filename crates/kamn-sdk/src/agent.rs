@@ -1,7 +1,7 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord,
-    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId,
+    MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
 };
 
 /// Transport backends available for SDK clients.
@@ -68,6 +68,8 @@ pub trait KamnAgent {
         task_id: &TaskId,
         artifact: Artifact,
     ) -> Result<ArtifactId, SdkError>;
+    /// Returns lifecycle metadata for a previously submitted artifact.
+    fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError>;
     /// Marks a task as completed.
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError>;
 

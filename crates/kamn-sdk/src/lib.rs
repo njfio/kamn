@@ -44,6 +44,6 @@ pub use tcp::{
 /// Re-exported core domain data types.
 pub use types::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord,
-    MessageStream, TaskDefinition, TaskId, TokenAmount,
+    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId,
+    MessageRecord, MessageStream, TaskDefinition, TaskId, TokenAmount,
 };

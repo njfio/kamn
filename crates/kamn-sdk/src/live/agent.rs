@@ -1,6 +1,6 @@
 use super::{
     LiveTransportKamnClient,
-    config::CHANNELS_WRITE_SCOPE,
+    config::{CHANNELS_WRITE_SCOPE, CONTENT_READ_SCOPE},
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
         channel_create_payload, recipient_mailbox_channel_id, service_message_to_record,
@@ -10,8 +10,9 @@ use super::{
 use crate::{
     channel_create::channel_id as validate_channel_id,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
-    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, service::agent_search_payload,
+    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
+    MessageId, MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    service::agent_search_payload,
 };
 
 impl KamnAgent for LiveTransportKamnClient {
@@ -77,6 +78,38 @@ impl KamnAgent for LiveTransportKamnClient {
         artifact: Artifact,
     ) -> Result<ArtifactId, SdkError> {
         self.submit_artifact_via_service(task_id, artifact)
+    }
+
+    fn get_artifact_status(&self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
+        let service_content_id = {
+            let guard = self
+                .state
+                .lock()
+                .map_err(|_| SdkError::TransportFailure("live transport state lock poisoned"))?;
+            guard
+                .artifact_ids
+                .get(&artifact_id.0)
+                .cloned()
+                .ok_or_else(|| SdkError::NotFound {
+                    entity: "artifact",
+                    id: artifact_id.0.to_string(),
+                })?
+        };
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            "",
+            Some(CONTENT_READ_SCOPE),
+        )?;
+        let status = self
+            .service_client
+            .get_content(service_content_id.as_str(), &auth)?;
+        Ok(ArtifactStatus {
+            artifact_id: artifact_id.clone(),
+            lifecycle_state: status.lifecycle_state,
+            redaction_status: status.redaction_status,
+        })
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
