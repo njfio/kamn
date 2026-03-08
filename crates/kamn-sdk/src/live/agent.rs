@@ -1,14 +1,15 @@
 use super::{
     LiveTransportKamnClient,
+    config::CHANNELS_WRITE_SCOPE,
     routes::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
-        recipient_mailbox_channel_id, service_message_to_record,
+        channel_create_payload, recipient_mailbox_channel_id, service_message_to_record,
     },
-    state::{build_agents_read_auth, build_agents_read_auth_with_body, remember_message_id},
+    state::{build_agents_read_auth, build_agents_read_auth_with_body, build_auth, remember_message_id},
 };
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
+    ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
     MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, service::agent_search_payload,
 };
 
@@ -46,6 +47,24 @@ impl KamnAgent for LiveTransportKamnClient {
 
     fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError> {
         Ok(MessageStream::new(self.receive(did)?))
+    }
+
+    fn create_channel(&mut self, name: &str) -> Result<ChannelId, SdkError> {
+        let payload = channel_create_payload(name)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            payload.as_str(),
+            Some(CHANNELS_WRITE_SCOPE),
+        )?;
+        let receipt = self.service_client.create_channel(payload.as_str(), &auth)?;
+        if receipt.channel_id.trim().is_empty() {
+            return Err(SdkError::TransportFailure(
+                "service returned empty channel_id in create_channel response",
+            ));
+        }
+        Ok(ChannelId(receipt.channel_id))
     }
 
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError> {

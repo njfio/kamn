@@ -1,6 +1,6 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport, Message, MessageId,
+    ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport, Message, MessageId,
     MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
@@ -27,6 +27,7 @@ struct EscrowState {
 pub struct InMemoryKamnClient {
     next_agent_id: u64,
     next_message_id: u64,
+    next_channel_id: u64,
     next_task_id: u64,
     next_artifact_id: u64,
     next_escrow_id: u64,
@@ -45,6 +46,7 @@ impl InMemoryKamnClient {
         Self {
             next_agent_id: 1,
             next_message_id: 1,
+            next_channel_id: 1,
             next_task_id: 1,
             next_artifact_id: 1,
             next_escrow_id: 1,
@@ -112,6 +114,16 @@ impl InMemoryKamnClient {
             return Err(SdkError::InvalidInput {
                 field: "body",
                 reason: "message body must not be empty",
+            });
+        }
+        Ok(())
+    }
+
+    fn validate_channel_name(name: &str) -> Result<(), SdkError> {
+        if name.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "channel_name",
+                reason: "must not be empty",
             });
         }
         Ok(())
@@ -220,6 +232,13 @@ impl KamnAgent for InMemoryKamnClient {
     fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError> {
         let records = self.receive(did)?;
         Ok(MessageStream::new(records))
+    }
+
+    fn create_channel(&mut self, name: &str) -> Result<ChannelId, SdkError> {
+        Self::validate_channel_name(name)?;
+        let channel_id = ChannelId(format!("channel-local-{}", self.next_channel_id));
+        self.next_channel_id += 1;
+        Ok(channel_id)
     }
 
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError> {
