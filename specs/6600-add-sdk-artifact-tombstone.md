@@ -20,11 +20,11 @@ Add high-level artifact tombstone to the SDK `KamnAgent` API so callers can adva
 - Repeated in-memory tombstone calls must remain deterministic and return tombstoned status without corrupting state.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes an artifact tombstone method returning `ArtifactStatus`.
-- [ ] `InMemoryKamnClient` tombstones known artifacts, returns tombstoned status, and rejects unknown artifacts.
-- [ ] `LiveTransportKamnClient` resolves `ArtifactId` through the existing alias map and uses `POST /v1/content/{id}/tombstone`.
-- [ ] SDK tests cover in-memory and live high-level artifact tombstone, including unknown-alias and malformed-response failures.
-- [ ] Existing lower-level `ServiceApiClient::tombstone_content()` behavior remains green.
+- [x] `KamnAgent` exposes an artifact tombstone method returning `ArtifactStatus`.
+- [x] `InMemoryKamnClient` tombstones known artifacts, returns tombstoned status, and rejects unknown artifacts.
+- [x] `LiveTransportKamnClient` resolves `ArtifactId` through the existing alias map and uses `POST /v1/content/{id}/tombstone`.
+- [x] SDK tests cover in-memory and live high-level artifact tombstone, including unknown-alias and malformed-response failures.
+- [x] Existing lower-level `ServiceApiClient::tombstone_content()` behavior remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -47,3 +47,14 @@ Add high-level artifact tombstone to the SDK `KamnAgent` API so callers can adva
 - Add a live fail-closed test for malformed tombstone response payloads.
 - Re-run existing signed low-level `ServiceApiClient` route contract coverage.
 - Run strict `clippy` for `kamn-sdk` and targeted SDK tests.
+
+# Deviations
+- None.
+
+# Verification
+- `cargo test -p kamn-sdk --test memory_agent tombstone_artifact -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow tombstone -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow spec_c06_live_transport_task_and_escrow_routes_execute_network_contract -- --exact --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
