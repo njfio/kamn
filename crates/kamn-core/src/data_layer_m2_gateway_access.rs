@@ -146,7 +146,10 @@ impl DataLayerM2DidSessionService {
 
         let requester_did = request.requester_did.as_str().to_owned();
         let expected_credential = format!("sig:{requester_did}:{}", request.challenge);
-        if request.credential != expected_credential {
+        if !crate::constant_time_eq::constant_time_eq_bytes(
+            request.credential.as_bytes(),
+            expected_credential.as_bytes(),
+        ) {
             return Err(DataLayerM2GatewayError::InvalidCredential(
                 "credential signature mismatch".to_owned(),
             ));
@@ -886,26 +889,70 @@ mod tests {
         DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
         DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
     };
+    const SOURCE: &str = include_str!("data_layer_m2_gateway_access.rs");
+
+    fn authenticate_source() -> &'static str {
+        let function_start = SOURCE
+            .find("pub fn authenticate(")
+            .expect("authenticate function must exist");
+        let function_end = SOURCE[function_start..]
+            .find("\n    }\n}")
+            .map(|offset| function_start + offset)
+            .expect("authenticate function boundary must exist");
+        &SOURCE[function_start..function_end]
+    }
+
+    fn valid_auth_request() -> DataLayerM2DidAuthRequest {
+        let requester_did = "kamn:did:agent:alice";
+        let challenge = "nonce-1";
+        DataLayerM2DidAuthRequest {
+            requester_did: requester_did.to_owned(),
+            challenge: challenge.to_owned(),
+            credential: format!("sig:{requester_did}:{challenge}"),
+            issued_at_epoch_seconds: 1_000,
+            ttl_seconds: 120,
+        }
+    }
 
     #[test]
     fn unit_data_layer_m2_session_authenticate_succeeds_for_valid_request() {
         let service =
             DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
-        let requester_did = "kamn:did:agent:alice";
-        let challenge = "nonce-1";
         let token = service
-            .authenticate(DataLayerM2DidAuthRequest {
-                requester_did: requester_did.to_owned(),
-                challenge: challenge.to_owned(),
-                credential: format!("sig:{requester_did}:{challenge}"),
-                issued_at_epoch_seconds: 1_000,
-                ttl_seconds: 120,
-            })
+            .authenticate(valid_auth_request())
             .expect("valid auth request should issue session token");
 
-        assert_eq!(token.requester_did, requester_did);
+        assert_eq!(token.requester_did, "kamn:did:agent:alice");
         assert_eq!(token.expires_at_epoch_seconds, 1_120);
         assert!(token.token_id.starts_with("session:sha256:"));
+    }
+
+    #[test]
+    fn regression_data_layer_m2_session_authenticate_rejects_mismatched_credential() {
+        let service =
+            DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
+        let mut request = valid_auth_request();
+        request.credential = "sig:kamn:did:agent:alice:wrong".to_owned();
+        assert_eq!(
+            service.authenticate(request),
+            Err(super::DataLayerM2GatewayError::InvalidCredential(
+                "credential signature mismatch".to_owned(),
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_requires_constant_time_m2_authenticate_credential_compare() {
+        let function_source = authenticate_source();
+        let direct_pattern = ["if request.credential ", "!=", " expected_credential {"].concat();
+        assert!(
+            function_source.contains("crate::constant_time_eq::constant_time_eq_bytes("),
+            "m2 auth credential verification must use constant-time compare"
+        );
+        assert!(
+            !function_source.contains(direct_pattern.as_str()),
+            "m2 auth credential verification must not use direct equality"
+        );
     }
 
     #[test]
