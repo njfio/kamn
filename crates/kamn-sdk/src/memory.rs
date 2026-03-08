@@ -339,6 +339,22 @@ impl KamnAgent for InMemoryKamnClient {
         Ok(artifact.status.clone())
     }
 
+    fn tombstone_artifact(
+        &mut self,
+        artifact_id: &ArtifactId,
+    ) -> Result<ArtifactStatus, SdkError> {
+        let artifact = self
+            .artifacts
+            .get_mut(artifact_id)
+            .ok_or_else(|| Self::artifact_not_found(artifact_id))?;
+        artifact.status = ArtifactStatus::from_lifecycle(
+            artifact_id,
+            "tombstoned".to_owned(),
+            "redacted".to_owned(),
+        );
+        Ok(artifact.status.clone())
+    }
+
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
         let task = self
             .tasks

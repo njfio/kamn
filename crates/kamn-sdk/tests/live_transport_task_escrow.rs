@@ -59,11 +59,11 @@ fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
         create_task_request(),
         accept_task_request(),
         submit_artifact_request(),
-        get_artifact_status_request("retained"),
+        get_artifact_status_request("retained", "none"),
         expire_artifact_request(),
-        get_artifact_status_request("expired"),
+        get_artifact_status_request("expired", "none"),
         tombstone_artifact_request(),
-        get_artifact_status_request("tombstoned"),
+        get_artifact_status_request("tombstoned", "redacted"),
         complete_task_request(),
         create_escrow_request(),
         release_escrow_request(),
@@ -129,7 +129,7 @@ fn create_escrow_request() -> ExpectedRequest {
     }
 }
 
-fn get_artifact_status_request(lifecycle_state: &str) -> ExpectedRequest {
+fn get_artifact_status_request(lifecycle_state: &str, redaction_status: &str) -> ExpectedRequest {
     ExpectedRequest {
         method: "GET",
         path: "/v1/content/content-local-artifact-abc".to_owned(),
@@ -137,7 +137,7 @@ fn get_artifact_status_request(lifecycle_state: &str) -> ExpectedRequest {
         sender_did: "kamn:did:agent:live-requester".to_owned(),
         scope: "content:read",
         response_body: format!(
-            r#"{{"content_id":"content-local-artifact-abc","lifecycle_state":"{lifecycle_state}","redaction_status":"none"}}"#
+            r#"{{"content_id":"content-local-artifact-abc","lifecycle_state":"{lifecycle_state}","redaction_status":"{redaction_status}"}}"#
         ),
         ..Default::default()
     }

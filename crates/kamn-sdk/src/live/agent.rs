@@ -112,6 +112,24 @@ impl KamnAgent for LiveTransportKamnClient {
         Ok(artifact_status_from_service(artifact_id, status))
     }
 
+    fn tombstone_artifact(
+        &mut self,
+        artifact_id: &ArtifactId,
+    ) -> Result<ArtifactStatus, SdkError> {
+        let service_content_id = resolve_service_content_id(self, artifact_id)?;
+        let auth = build_auth(
+            &self.state,
+            &self.config,
+            &self.config.requester_did,
+            "{}",
+            Some(super::config::CONTENT_WRITE_SCOPE),
+        )?;
+        let status = self
+            .service_client
+            .tombstone_content(service_content_id.as_str(), &auth)?;
+        Ok(artifact_status_from_service(artifact_id, status))
+    }
+
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
         self.complete_task_via_service(task_id)
     }
