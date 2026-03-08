@@ -21,14 +21,14 @@ Add a service-backed agent search route so `LiveTransportKamnClient::search_agen
 - Persistence/query failures in the service store must fail closed as internal errors.
 
 # Acceptance criteria
-- [ ] Service API adds `POST /v1/agents/search` requiring `agents:read` scope.
-- [ ] Service message store exposes a deterministic search over persisted registered agent metadata.
-- [ ] Search results are sorted by DID and match the current in-memory filter behavior for optional `model_family` and `capability`.
-- [ ] Search excludes synthetic default profiles for unregistered DIDs.
-- [ ] `ServiceApiClient` exposes a typed agent-search route returning `Vec<ServiceAgentProfile>` or equivalent typed summaries.
-- [ ] `LiveTransportKamnClient::search_agents()` uses the real route and returns `Vec<AgentSummary>`.
-- [ ] Existing live unsupported-method coverage stops expecting `search_agents()` to be unsupported.
-- [ ] Node integration, SDK service-client, and live transport integration tests cover the real path.
+- [x] Service API adds `POST /v1/agents/search` requiring `agents:read` scope.
+- [x] Service message store exposes a deterministic search over persisted registered agent metadata.
+- [x] Search results are sorted by DID and match the current in-memory filter behavior for optional `model_family` and `capability`.
+- [x] Search excludes synthetic default profiles for unregistered DIDs.
+- [x] `ServiceApiClient` exposes a typed agent-search route returning `Vec<ServiceAgentProfile>` or equivalent typed summaries.
+- [x] `LiveTransportKamnClient::search_agents()` uses the real route and returns `Vec<AgentSummary>`.
+- [x] Existing live unsupported-method coverage stops expecting `search_agents()` to be unsupported.
+- [x] Node integration, SDK service-client, and live transport integration tests cover the real path.
 
 # Files to touch
 - `crates/kamn-node/src/service_api_endpoint.rs`
@@ -50,7 +50,7 @@ Add a service-backed agent search route so `LiveTransportKamnClient::search_agen
 
 # Error semantics
 - Use existing service API unauthorized responses for auth/scope failures.
-- Use `400 Bad Request` with deterministic reason code for invalid search payload fields.
+- Use `400 Bad Request` with deterministic reason code `service_api_agent_search_payload_invalid` for invalid search payload fields.
 - Use `500 Internal Server Error` with existing persistence reason semantics for store failures.
 - Preserve existing `SdkError::InvalidInput`, `SdkError::ServiceApiError`, and transport failure mappings.
 
@@ -60,3 +60,16 @@ Add a service-backed agent search route so `LiveTransportKamnClient::search_agen
 - Add service-client contract coverage for the typed search route.
 - Add live transport coverage for `search_agents()` using the real route and remove it from unsupported-method expectations.
 - Run targeted node and SDK suites plus strict clippy.
+
+# Deviations
+- None.
+
+# Verification
+- `cargo test -p kamn-node --bin kamn-node service_api_endpoint::auth::tests::regression_required_scope_for_route_maps_agent_search_to_agents_read -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_searches_registered_agent_metadata -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_rejects_invalid_agent_search_payload -- --exact --nocapture`
+- `cargo test -p kamn-node --test service_api_endpoint_module_extraction_contract -- --nocapture`
+- `cargo clippy -p kamn-node --tests -- -D warnings`
+- `cargo test -p kamn-sdk --test service_api_client -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_agent -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`
