@@ -902,23 +902,27 @@ mod tests {
         &SOURCE[function_start..function_end]
     }
 
+    fn valid_auth_request() -> DataLayerM2DidAuthRequest {
+        let requester_did = "kamn:did:agent:alice";
+        let challenge = "nonce-1";
+        DataLayerM2DidAuthRequest {
+            requester_did: requester_did.to_owned(),
+            challenge: challenge.to_owned(),
+            credential: format!("sig:{requester_did}:{challenge}"),
+            issued_at_epoch_seconds: 1_000,
+            ttl_seconds: 120,
+        }
+    }
+
     #[test]
     fn unit_data_layer_m2_session_authenticate_succeeds_for_valid_request() {
         let service =
             DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
-        let requester_did = "kamn:did:agent:alice";
-        let challenge = "nonce-1";
         let token = service
-            .authenticate(DataLayerM2DidAuthRequest {
-                requester_did: requester_did.to_owned(),
-                challenge: challenge.to_owned(),
-                credential: format!("sig:{requester_did}:{challenge}"),
-                issued_at_epoch_seconds: 1_000,
-                ttl_seconds: 120,
-            })
+            .authenticate(valid_auth_request())
             .expect("valid auth request should issue session token");
 
-        assert_eq!(token.requester_did, requester_did);
+        assert_eq!(token.requester_did, "kamn:did:agent:alice");
         assert_eq!(token.expires_at_epoch_seconds, 1_120);
         assert!(token.token_id.starts_with("session:sha256:"));
     }
@@ -927,14 +931,10 @@ mod tests {
     fn regression_data_layer_m2_session_authenticate_rejects_mismatched_credential() {
         let service =
             DataLayerM2DidSessionService::new(3_600).expect("session service should construct");
+        let mut request = valid_auth_request();
+        request.credential = "sig:kamn:did:agent:alice:wrong".to_owned();
         assert_eq!(
-            service.authenticate(DataLayerM2DidAuthRequest {
-                requester_did: "kamn:did:agent:alice".to_owned(),
-                challenge: "nonce-1".to_owned(),
-                credential: "sig:kamn:did:agent:alice:wrong".to_owned(),
-                issued_at_epoch_seconds: 1_000,
-                ttl_seconds: 120,
-            }),
+            service.authenticate(request),
             Err(super::DataLayerM2GatewayError::InvalidCredential(
                 "credential signature mismatch".to_owned(),
             ))
