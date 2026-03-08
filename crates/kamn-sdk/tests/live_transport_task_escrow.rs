@@ -201,23 +201,11 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
         .create_task(live_task())
         .expect("create_task should succeed");
     assert_eq!(task_id, TaskId(deterministic_u64_tag("task-local-abc")));
-    assert_eq!(
-        client
-            .get_task_status(&task_id)
-            .expect("submitted task status should succeed")
-            .state,
-        "submitted"
-    );
+    assert_task_status_state(client, &task_id, "submitted");
     client
         .accept_task(&task_id, &did("assignee-live"))
         .expect("accept_task should succeed");
-    assert_eq!(
-        client
-            .get_task_status(&task_id)
-            .expect("accepted task status should succeed")
-            .state,
-        "accepted"
-    );
+    assert_task_status_state(client, &task_id, "accepted");
     let artifact_id = client
         .submit_artifact(&task_id, live_artifact())
         .expect("submit_artifact should succeed");
@@ -269,12 +257,20 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
     client
         .complete_task(&task_id)
         .expect("complete_task should succeed");
+    assert_task_status_state(client, &task_id, "completed");
+}
+
+fn assert_task_status_state(
+    client: &LiveTransportKamnClient,
+    task_id: &TaskId,
+    expected_state: &str,
+) {
     assert_eq!(
         client
-            .get_task_status(&task_id)
-            .expect("completed task status should succeed")
+            .get_task_status(task_id)
+            .expect("task status should succeed")
             .state,
-        "completed"
+        expected_state
     );
 }
 
