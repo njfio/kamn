@@ -327,7 +327,12 @@ pub fn service_auth_verify_with_public_key_hex(
     }
     let expected_key = VerifyingKey::from_sec1_bytes(expected_key_bytes.as_slice())
         .map_err(|_| ServiceAuthSignatureError::InvalidPublicKeyHex)?;
-    if expected_key != recovered {
+    let expected_key_point = expected_key.to_encoded_point(true);
+    let recovered_key_point = recovered.to_encoded_point(true);
+    if !crate::constant_time_eq::constant_time_eq_bytes(
+        expected_key_point.as_bytes(),
+        recovered_key_point.as_bytes(),
+    ) {
         return Err(ServiceAuthSignatureError::VerificationFailure);
     }
     Ok(())
@@ -628,6 +633,18 @@ mod tests {
     }
 
     #[test]
+    fn regression_requires_constant_time_service_auth_recovered_key_compare() {
+        assert!(
+            SOURCE.contains("crate::constant_time_eq::constant_time_eq_bytes("),
+            "service-auth verification should use the internal constant-time helper for recovered-key comparison"
+        );
+        assert!(
+            !SOURCE.contains(["if expected_key !=", " recovered {"].concat().as_str()),
+            "service-auth verification must not use direct recovered-key equality"
+        );
+    }
+
+    #[test]
     fn service_auth_signing_payload_contains_canonical_field_bindings() {
         let payload = service_auth_signing_payload_for_fields("agent-a", 7, "state:1", "hello")
             .expect("payload should render");
@@ -697,6 +714,58 @@ mod tests {
             public_key_hex.as_str(),
         );
         assert!(legacy_result.is_err());
+    }
+
+    #[test]
+    fn service_auth_signature_verification_rejects_wrong_public_key_with_verification_failure() {
+        let signature = service_auth_sign_with_private_key_hex(
+            "agent-a",
+            7,
+            "service-api:chain:1",
+            "{\"message\":\"hello\"}",
+            TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should render");
+        let wrong_public_key_hex = service_auth_public_key_hex_from_private_key_hex(
+            "758c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4",
+        )
+        .expect("wrong public key should derive");
+
+        assert_eq!(
+            service_auth_verify_with_public_key_hex(
+                signature.as_str(),
+                "agent-a",
+                7,
+                "service-api:chain:1",
+                "{\"message\":\"hello\"}",
+                wrong_public_key_hex.as_str(),
+            ),
+            Err(super::ServiceAuthSignatureError::VerificationFailure)
+        );
+    }
+
+    #[test]
+    fn service_auth_signature_verification_rejects_malformed_public_key_hex() {
+        let signature = service_auth_sign_with_private_key_hex(
+            "agent-a",
+            7,
+            "service-api:chain:1",
+            "{\"message\":\"hello\"}",
+            TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+        )
+        .expect("signature should render");
+
+        assert_eq!(
+            service_auth_verify_with_public_key_hex(
+                signature.as_str(),
+                "agent-a",
+                7,
+                "service-api:chain:1",
+                "{\"message\":\"hello\"}",
+                "abcd",
+            ),
+            Err(super::ServiceAuthSignatureError::InvalidPublicKeyHex)
+        );
     }
 
     #[test]
