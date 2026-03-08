@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Debug, Default)]
 pub(crate) struct LiveTransportState {
     pub(crate) sender_nonces: HashMap<String, u64>,
+    pub(crate) artifact_ids: HashMap<u64, String>,
     pub(crate) message_ids: HashMap<u64, String>,
     pub(crate) escrow_aliases: HashMap<u64, LiveEscrowAlias>,
     pub(crate) task_aliases: HashMap<u64, LiveTaskAlias>,
