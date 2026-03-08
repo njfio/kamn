@@ -2,6 +2,7 @@ mod agent;
 mod agent_mutations;
 mod bridge;
 mod config;
+mod events;
 mod observability;
 mod routes;
 mod state;
@@ -10,8 +11,8 @@ mod task_escrow;
 pub use self::config::LiveTransportConfig;
 use self::state::LiveTransportState;
 use crate::{
-    KamnServiceObservability, KamnTransport, SdkError, ServiceApiClient, ServiceHealthSnapshot,
-    TransportMode,
+    KamnServiceEvents, KamnServiceObservability, KamnTransport, SdkError, ServiceApiClient,
+    ServiceEventSnapshot, ServiceHealthSnapshot, TransportMode,
 };
 use std::sync::{Arc, Mutex};
 
@@ -48,6 +49,11 @@ impl LiveTransportKamnClient {
     pub fn service_metrics(&self) -> Result<String, SdkError> {
         <Self as KamnServiceObservability>::service_metrics(self)
     }
+
+    /// Reads one event frame from the service websocket route through the live SDK transport.
+    pub fn read_service_event(&self) -> Result<ServiceEventSnapshot, SdkError> {
+        <Self as KamnServiceEvents>::read_service_event(self)
+    }
 }
 
 impl KamnTransport for LiveTransportKamnClient {
@@ -63,5 +69,11 @@ impl KamnServiceObservability for LiveTransportKamnClient {
 
     fn service_metrics(&self) -> Result<String, SdkError> {
         self::observability::service_metrics(self)
+    }
+}
+
+impl KamnServiceEvents for LiveTransportKamnClient {
+    fn read_service_event(&self) -> Result<ServiceEventSnapshot, SdkError> {
+        self::events::read_service_event(self)
     }
 }

@@ -5,49 +5,58 @@ use kamn_sdk::{KamnServiceEvents, LiveTransportKamnClient, SdkError, ServiceEven
 use std::io::Write;
 use std::thread;
 
-use support::{parse_http_request, reserve_loopback_addr, wait_for_server_ready};
+use support::{
+    ensure_live_test_env, parse_http_request, reserve_loopback_addr, wait_for_server_ready,
+    with_env_lock,
+};
 
 #[test]
 fn spec_c11_live_transport_service_events_route_executes_network_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_event_server(server_addr, false));
-    wait_for_server_ready();
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || run_event_server(server_addr, false));
+        wait_for_server_ready();
 
-    let client = live_client(bind_addr.as_str());
-    let event = read_service_event(&client).expect("service event should succeed");
-    assert_eq!(event.event, "state-transition");
-    assert_eq!(event.runtime_mode, "api");
-    assert_eq!(event.role, "processor");
-    assert_eq!(event.sequence, 1);
+        let client = live_client(bind_addr.as_str());
+        let event = read_service_event(&client).expect("service event should succeed");
+        assert_eq!(event.event, "state-transition");
+        assert_eq!(event.runtime_mode, "api");
+        assert_eq!(event.role, "processor");
+        assert_eq!(event.sequence, 1);
 
-    let server_result = server.join().expect("server thread should join");
-    assert!(
-        server_result.is_ok(),
-        "events contract server should satisfy request budget"
-    );
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "events contract server should satisfy request budget"
+        );
+    });
 }
 
 #[test]
 fn regression_live_transport_service_event_rejects_malformed_payload() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_event_server(server_addr, true));
-    wait_for_server_ready();
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || run_event_server(server_addr, true));
+        wait_for_server_ready();
 
-    let client = live_client(bind_addr.as_str());
-    assert_eq!(
-        read_service_event(&client),
-        Err(SdkError::TransportFailure(
-            "service response missing required field"
-        ))
-    );
+        let client = live_client(bind_addr.as_str());
+        assert_eq!(
+            read_service_event(&client),
+            Err(SdkError::TransportFailure(
+                "service response missing required field"
+            ))
+        );
 
-    let server_result = server.join().expect("server thread should join");
-    assert!(
-        server_result.is_ok(),
-        "malformed event payload should satisfy request budget"
-    );
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "malformed event payload should satisfy request budget"
+        );
+    });
 }
 
 #[test]
