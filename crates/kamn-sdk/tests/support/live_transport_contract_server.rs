@@ -146,6 +146,7 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
     let status_text = match status {
         200 => "200 OK",
         201 => "201 Created",
+        202 => "202 Accepted",
         _ => "500 Internal Server Error",
     };
     let payload = format!(

@@ -9,6 +9,8 @@ const DEFAULT_LIVE_REQUESTER_DID: &str = "kamn:did:agent:live-sdk";
 
 pub(crate) const AGENTS_READ_SCOPE: &str = "agents:read";
 pub(crate) const AGENTS_WRITE_SCOPE: &str = "agents:write";
+pub(crate) const BRIDGE_READ_SCOPE: &str = "bridge:read";
+pub(crate) const BRIDGE_WRITE_SCOPE: &str = "bridge:write";
 pub(crate) const CHANNELS_WRITE_SCOPE: &str = "channels:write";
 pub(crate) const CONTENT_READ_SCOPE: &str = "content:read";
 pub(crate) const CONTENT_WRITE_SCOPE: &str = "content:write";

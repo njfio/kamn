@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
 //! Rust SDK surface for interacting with KAMN transports and domain types.
 
+mod bridge;
 mod channel_create;
 
 /// Agent-facing traits and transport mode primitives.
@@ -20,6 +21,8 @@ pub mod types;
 
 /// Re-exported agent traits and transport mode enum.
 pub use agent::{KamnAgent, KamnTransport, TransportMode};
+/// Re-exported bridge lifecycle types.
+pub use bridge::{BridgeId, BridgeStatus};
 /// Re-exported SDK error type.
 pub use error::SdkError;
 /// Re-exported live transport client and configuration.

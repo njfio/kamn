@@ -1,9 +1,10 @@
 use crate::{
+    bridge::target_network,
     channel_create::channel_name,
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport,
-    Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition,
-    TaskId, TaskStatus, TokenAmount, TransportMode,
+    ArtifactStatus, BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId,
+    KamnAgent, KamnTransport, Message, MessageId, MessageRecord, MessageStatus, MessageStream,
+    SdkError, TaskDefinition, TaskId, TaskStatus, TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 
@@ -30,6 +31,11 @@ struct ArtifactState {
     status: ArtifactStatus,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BridgeState {
+    status: BridgeStatus,
+}
+
 /// Deterministic in-memory implementation of the [`KamnAgent`] API.
 #[derive(Debug, Default)]
 pub struct InMemoryKamnClient {
@@ -38,10 +44,12 @@ pub struct InMemoryKamnClient {
     next_channel_id: u64,
     next_task_id: u64,
     next_artifact_id: u64,
+    next_bridge_id: u64,
     next_escrow_id: u64,
     registry: HashMap<AgentDid, DidDocument>,
     inboxes: HashMap<AgentDid, Vec<MessageRecord>>,
     messages: HashMap<MessageId, MessageStatus>,
+    bridges: HashMap<BridgeId, BridgeState>,
     tasks: HashMap<TaskId, TaskState>,
     artifacts: HashMap<ArtifactId, ArtifactState>,
     escrows: HashMap<EscrowId, EscrowState>,
@@ -58,10 +66,12 @@ impl InMemoryKamnClient {
             next_channel_id: 1,
             next_task_id: 1,
             next_artifact_id: 1,
+            next_bridge_id: 1,
             next_escrow_id: 1,
             registry: HashMap::new(),
             inboxes: HashMap::new(),
             messages: HashMap::new(),
+            bridges: HashMap::new(),
             tasks: HashMap::new(),
             artifacts: HashMap::new(),
             escrows: HashMap::new(),
@@ -101,11 +111,24 @@ impl InMemoryKamnClient {
         }
     }
 
+    fn bridge_not_found(bridge_id: &BridgeId) -> SdkError {
+        SdkError::NotFound {
+            entity: "bridge",
+            id: bridge_id.0.to_string(),
+        }
+    }
+
     fn remember_message(&mut self, message_id: &MessageId) {
         self.messages.insert(
             message_id.clone(),
             MessageStatus::from_status(message_id, "created"),
         );
+    }
+
+    fn next_bridge_status(&mut self) -> BridgeStatus {
+        let bridge_id = BridgeId(self.next_bridge_id);
+        self.next_bridge_id += 1;
+        BridgeStatus::submitted(&bridge_id)
     }
 
     fn set_artifact_status(
@@ -285,6 +308,59 @@ impl KamnAgent for InMemoryKamnClient {
             .get(message_id)
             .cloned()
             .ok_or_else(|| Self::message_not_found(message_id))
+    }
+
+    fn submit_bridge(
+        &mut self,
+        source_message_id: &MessageId,
+        target_network_value: &str,
+    ) -> Result<BridgeStatus, SdkError> {
+        target_network(target_network_value)?;
+        if !self.messages.contains_key(source_message_id) {
+            return Err(Self::message_not_found(source_message_id));
+        }
+        let status = self.next_bridge_status();
+        self.bridges.insert(
+            status.bridge_id.clone(),
+            BridgeState {
+                status: status.clone(),
+            },
+        );
+        Ok(status)
+    }
+
+    fn forward_bridge(&mut self, bridge_id: &BridgeId) -> Result<BridgeStatus, SdkError> {
+        let existing = self
+            .bridges
+            .get(bridge_id)
+            .cloned()
+            .ok_or_else(|| Self::bridge_not_found(bridge_id))?;
+        if existing.status.bridge_status == "forwarded" {
+            return Ok(existing.status);
+        }
+
+        let target_message_id = MessageId(self.next_message_id);
+        self.next_message_id += 1;
+        self.remember_message(&target_message_id);
+        let status = BridgeStatus::forwarded(
+            bridge_id,
+            target_message_id,
+            format!("sha256:bridge-forwarded-local-{}", bridge_id.0),
+        );
+        self.bridges.insert(
+            bridge_id.clone(),
+            BridgeState {
+                status: status.clone(),
+            },
+        );
+        Ok(status)
+    }
+
+    fn get_bridge_status(&self, bridge_id: &BridgeId) -> Result<BridgeStatus, SdkError> {
+        self.bridges
+            .get(bridge_id)
+            .map(|bridge| bridge.status.clone())
+            .ok_or_else(|| Self::bridge_not_found(bridge_id))
     }
 
     fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError> {

@@ -1,8 +1,8 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ArtifactStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId,
-    MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition, TaskId, TaskStatus,
-    TokenAmount,
+    ArtifactStatus, BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId,
+    Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition,
+    TaskId, TaskStatus, TokenAmount,
 };
 
 /// Transport backends available for SDK clients.
@@ -54,6 +54,16 @@ pub trait KamnAgent {
     fn send(&mut self, message: Message) -> Result<MessageId, SdkError>;
     /// Returns lifecycle metadata for a previously sent message.
     fn get_message_status(&self, message_id: &MessageId) -> Result<MessageStatus, SdkError>;
+    /// Submits one message for bridge processing.
+    fn submit_bridge(
+        &mut self,
+        source_message_id: &MessageId,
+        target_network: &str,
+    ) -> Result<BridgeStatus, SdkError>;
+    /// Forwards a previously submitted bridge.
+    fn forward_bridge(&mut self, bridge_id: &BridgeId) -> Result<BridgeStatus, SdkError>;
+    /// Returns lifecycle metadata for a previously submitted bridge.
+    fn get_bridge_status(&self, bridge_id: &BridgeId) -> Result<BridgeStatus, SdkError>;
     /// Receives and drains pending messages for the given DID.
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError>;
     /// Receives pending messages as an iterator stream abstraction.
