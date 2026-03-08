@@ -1,3 +1,5 @@
+use crate::ServiceHealthStatus;
+
 /// Stable SDK view of the service health route.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceHealthSnapshot {
@@ -11,4 +13,16 @@ pub struct ServiceHealthSnapshot {
     pub observability_source: String,
     /// Observability health marker.
     pub observability_health: String,
+}
+
+impl From<ServiceHealthStatus> for ServiceHealthSnapshot {
+    fn from(health: ServiceHealthStatus) -> Self {
+        Self {
+            status: health.status,
+            runtime_mode: health.runtime_mode,
+            role: health.role,
+            observability_source: health.observability_source,
+            observability_health: health.observability_health,
+        }
+    }
 }
