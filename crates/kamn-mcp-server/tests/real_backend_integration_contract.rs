@@ -116,7 +116,7 @@ fn run_real_backend_service_server(bind_addr: String, max_requests: usize) -> Re
                     write_http_response(
                         &mut stream,
                         200,
-                        r#"{"did":"kamn:did:agent:alice","reputation_score":42}"#,
+                        r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
                     )?;
                 } else if method == "POST" && path == "/v1/content/register" {
                     write_http_response(

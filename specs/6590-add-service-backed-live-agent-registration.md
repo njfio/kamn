@@ -30,6 +30,8 @@ Add a service-backed agent registration route so `LiveTransportKamnClient::regis
 
 # Files to touch
 - `crates/kamn-kolme/src/service_api_scope.rs`
+- `crates/kamn-cli/tests/command_activation_harness_routes.rs`
+- `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-node/src/service_api_endpoint.rs`
 - `crates/kamn-node/src/service_api_endpoint/auth.rs`
 - `crates/kamn-node/src/service_api_endpoint/models.rs`
@@ -79,6 +81,10 @@ Add a service-backed agent registration route so `LiveTransportKamnClient::regis
 - `cargo test -p kamn-sdk --test service_api_client regression_service_api_client_registration_surface_contract_exists -- --exact --nocapture`
 - `cargo test -p kamn-sdk --test service_api_client functional_service_api_client_executes_signed_http_route_contracts -- --exact --nocapture`
 - `cargo test -p kamn-sdk --test live_transport_agent -- --nocapture`
+- `cargo test -p kamn-cli --test command_activation_core_contract -- --nocapture`
+- `cargo test -p kamn-mcp-server --test real_backend_integration_contract -- --nocapture`
+- `cargo test -p kamn-node --test service_api_endpoint_module_extraction_contract -- --nocapture`
 
 # Deviations
 - `cargo fmt --all --check` was not used as the final formatting gate because `main` already contains unrelated formatting drift outside `#6590`. The touched Rust files were instead formatted and checked explicitly with `rustfmt --edition 2024 --check`.
+- Post-PR CI exposed two older contract fixtures that still returned the pre-registration agent-profile shape and one node root line-budget regression. The fix updated the CLI/MCP fixtures to include the new required metadata fields and moved service API body models into the existing `models.rs` seam so the root file stayed within the enforced budget without weakening the contract.
