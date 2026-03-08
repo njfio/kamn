@@ -1294,6 +1294,10 @@ fn regression_service_api_client_registration_surface_contract_exists() {
         model_source.contains("pub capabilities: Vec<String>"),
         "service agent profile should expose capabilities"
     );
+    assert!(
+        route_source.contains("pub fn search_agents("),
+        "service client should expose a typed search_agents route"
+    );
 }
 
 #[test]

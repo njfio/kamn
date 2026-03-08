@@ -182,6 +182,7 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
 fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
     Some(match (method, path) {
         ("POST", "/v1/agents/register") => "agents:write",
+        ("POST", "/v1/agents/search") => "agents:read",
         ("POST", "/v1/messages/send") => "messages:write",
         ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
         _ => return None,
@@ -384,6 +385,60 @@ fn run_live_transport_contract_server(
                             .map_err(|error| format!("capability serialization failed: {error}"))?
                     );
                     write_http_response(&mut stream, 201, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/agents/search" {
+                    let parsed: serde_json::Value =
+                        serde_json::from_str(body.as_str()).map_err(|error| {
+                            format!("search payload should be valid json: {error}")
+                        })?;
+                    let capability = parsed
+                        .get("capability")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_owned);
+                    let model_family = parsed
+                        .get("model_family")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_owned);
+                    let candidate_rows = vec![
+                        serde_json::json!({
+                            "did": "kamn:did:agent:alpha",
+                            "reputation_score": 777,
+                            "agent_type": "assistant",
+                            "model_family": "gpt-5",
+                            "capabilities": ["text", "code"],
+                        }),
+                        serde_json::json!({
+                            "did": "kamn:did:agent:beta",
+                            "reputation_score": 650,
+                            "agent_type": "assistant",
+                            "model_family": "gpt-4.1",
+                            "capabilities": ["text"],
+                        }),
+                    ];
+                    let filtered: Vec<serde_json::Value> = candidate_rows
+                        .into_iter()
+                        .filter(|row| match model_family.as_deref() {
+                            Some(expected) => row
+                                .get("model_family")
+                                .and_then(serde_json::Value::as_str)
+                                == Some(expected),
+                            None => true,
+                        })
+                        .filter(|row| match capability.as_deref() {
+                            Some(expected) => row
+                                .get("capabilities")
+                                .and_then(serde_json::Value::as_array)
+                                .map(|values| {
+                                    values.iter().any(|value| {
+                                        value.as_str().map(str::trim) == Some(expected)
+                                    })
+                                })
+                                .unwrap_or(false),
+                            None => true,
+                        })
+                        .collect();
+                    let payload = serde_json::to_string(&filtered)
+                        .map_err(|error| format!("search result serialization failed: {error}"))?;
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
                     let did = path.trim_start_matches("/v1/agents/");
                     let (agent_type, model_family, capabilities) =
@@ -665,12 +720,6 @@ fn spec_c05_live_transport_remaining_unsupported_methods_fail_closed() {
         let client = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
             .expect("endpoint format should be accepted");
 
-        assert_eq!(
-            client.search_agents(AgentQuery::default()),
-            Err(SdkError::NotImplemented(
-                "live transport agent search route is not available via service api"
-            ))
-        );
         assert_eq!(client.assert_transport_mode(TransportMode::Live), Ok(()));
     });
 }
@@ -705,6 +754,43 @@ fn spec_c06_live_transport_register_and_resolve_use_service_profile_metadata() {
         assert!(
             server_result.is_ok(),
             "live transport register/resolve server should satisfy request budget"
+        );
+    });
+}
+
+#[test]
+fn spec_c07_live_transport_search_agents_uses_service_route() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(server_addr, 1, DEFAULT_LIVE_REQUESTER_DID, None)
+        });
+        wait_for_server_ready(bind_addr.as_str());
+
+        let client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let results = client
+            .search_agents(AgentQuery {
+                capability: Some("code".to_owned()),
+                model_family: Some("gpt-5".to_owned()),
+            })
+            .expect("live search_agents should succeed");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].did.as_str(), "kamn:did:agent:alpha");
+        assert_eq!(results[0].agent_type, "assistant");
+        assert_eq!(results[0].model_family, "gpt-5");
+        assert_eq!(
+            results[0].capabilities,
+            vec!["text".to_owned(), "code".to_owned()]
+        );
+
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "live transport search server should satisfy request budget"
         );
     });
 }

@@ -543,6 +543,14 @@ mod tests {
     }
 
     #[test]
+    fn regression_required_scope_for_route_maps_agent_search_to_agents_read() {
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/agents/search").map(ServiceApiScope::as_str),
+            Some("agents:read")
+        );
+    }
+
+    #[test]
     fn unit_parse_scope_rejects_empty_and_unknown_values() {
         let empty_error = parse_scope("  ").expect_err("empty scope should fail");
         assert_eq!(empty_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);

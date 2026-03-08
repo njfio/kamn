@@ -4433,7 +4433,7 @@ fn integration_service_api_endpoint_persists_agent_profile_query_state_across_re
 
 #[test]
 fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_conflicts_on_mismatch()
- {
+{
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -4574,6 +4574,121 @@ fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_co
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after agent registration contract"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_searches_registered_agent_metadata() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-agent-search-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34121".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    for (nonce, caller_did, registration_body) in [
+        (
+            401_u64,
+            "kamn:did:agent:search-alpha",
+            r#"{"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}"#,
+        ),
+        (
+            402_u64,
+            "kamn:did:agent:search-beta",
+            r#"{"agent_type":"assistant","model_family":"gpt-4.1","capabilities":["text"]}"#,
+        ),
+    ] {
+        let signature = service_api_request_signature_for_fields(
+            caller_did,
+            nonce,
+            state_hash.as_str(),
+            registration_body,
+        );
+        let response = send_http_request_with_headers(
+            bind_addr.as_str(),
+            "POST",
+            "/v1/agents/register",
+            registration_body,
+            &[
+                ("X-KAMN-Sender-DID", caller_did),
+                ("X-KAMN-Request-Nonce", nonce.to_string().as_str()),
+                ("X-KAMN-Request-Signature", signature.as_str()),
+            ],
+        );
+        assert!(response.contains("HTTP/1.1 201 Created"));
+    }
+
+    let search_body = r#"{"capability":"code","model_family":"gpt-5"}"#;
+    let reader_did = "kamn:did:agent:search-reader";
+    let search_signature =
+        service_api_request_signature_for_fields(reader_did, 403, state_hash.as_str(), search_body);
+    let search_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/agents/search",
+        search_body,
+        &[
+            ("X-KAMN-Sender-DID", reader_did),
+            ("X-KAMN-Request-Nonce", "403"),
+            ("X-KAMN-Request-Signature", search_signature.as_str()),
+            ("X-KAMN-Authz-Scope", "agents:read"),
+        ],
+    );
+    assert!(search_response.contains("HTTP/1.1 200 OK"));
+    let search_payload: Vec<ServiceApiAgentGetBody> =
+        parse_service_api_payload(extract_http_response_body(search_response.as_str()))
+            .expect("search payload should deserialize");
+    assert_eq!(search_payload.len(), 1);
+    assert_eq!(search_payload[0].did, "kamn:did:agent:search-alpha");
+    assert_eq!(search_payload[0].agent_type, "assistant");
+    assert_eq!(search_payload[0].model_family, "gpt-5");
+    assert_eq!(
+        search_payload[0].capabilities,
+        vec!["text".to_owned(), "code".to_owned()]
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after agent search contract"
     );
 }
 
