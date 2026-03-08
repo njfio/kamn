@@ -9,7 +9,10 @@ mod task_escrow;
 
 pub use self::config::LiveTransportConfig;
 use self::state::LiveTransportState;
-use crate::{KamnTransport, SdkError, ServiceApiClient, ServiceHealthSnapshot, TransportMode};
+use crate::{
+    KamnServiceObservability, KamnTransport, SdkError, ServiceApiClient, ServiceHealthSnapshot,
+    TransportMode,
+};
 use std::sync::{Arc, Mutex};
 
 /// Live transport client backed by the Service API.
@@ -38,17 +41,27 @@ impl LiveTransportKamnClient {
 
     /// Reads the service health route through the live SDK transport.
     pub fn service_health(&self) -> Result<ServiceHealthSnapshot, SdkError> {
-        self::observability::service_health(self)
+        <Self as KamnServiceObservability>::service_health(self)
     }
 
     /// Reads raw service metrics exposition text through the live SDK transport.
     pub fn service_metrics(&self) -> Result<String, SdkError> {
-        self::observability::service_metrics(self)
+        <Self as KamnServiceObservability>::service_metrics(self)
     }
 }
 
 impl KamnTransport for LiveTransportKamnClient {
     fn transport_mode(&self) -> TransportMode {
         TransportMode::Live
+    }
+}
+
+impl KamnServiceObservability for LiveTransportKamnClient {
+    fn service_health(&self) -> Result<ServiceHealthSnapshot, SdkError> {
+        self::observability::service_health(self)
+    }
+
+    fn service_metrics(&self) -> Result<String, SdkError> {
+        self::observability::service_metrics(self)
     }
 }

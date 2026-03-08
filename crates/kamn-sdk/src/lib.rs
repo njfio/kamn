@@ -21,7 +21,7 @@ pub mod tcp;
 pub mod types;
 
 /// Re-exported agent traits and transport mode enum.
-pub use agent::{KamnAgent, KamnTransport, TransportMode};
+pub use agent::{KamnAgent, KamnServiceObservability, KamnTransport, TransportMode};
 /// Re-exported bridge lifecycle types.
 pub use bridge::{BridgeId, BridgeStatus};
 /// Re-exported service observability types.

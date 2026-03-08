@@ -57,6 +57,15 @@ fn regression_live_transport_service_health_rejects_malformed_payload() {
     );
 }
 
+#[test]
+fn regression_in_memory_client_does_not_implement_service_observability_trait() {
+    let memory_source = include_str!("../src/memory.rs");
+    assert!(
+        !memory_source.contains("impl KamnServiceObservability for InMemoryKamnClient"),
+        "in-memory client should stay outside the service observability trait surface"
+    );
+}
+
 fn live_client(endpoint: &str) -> LiveTransportKamnClient {
     let endpoint = format!("http://{endpoint}");
     LiveTransportKamnClient::connect(endpoint.as_str()).expect("live client should connect")
