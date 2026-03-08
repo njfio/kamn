@@ -20,11 +20,11 @@ Add high-level artifact expire to the SDK `KamnAgent` API so callers can advance
 - Repeated in-memory expire calls must remain deterministic and return expired status without corrupting state.
 
 # Acceptance criteria
-- [ ] `KamnAgent` exposes an artifact expire method returning `ArtifactStatus`.
-- [ ] `InMemoryKamnClient` expires known artifacts, returns expired status, and rejects unknown artifacts.
-- [ ] `LiveTransportKamnClient` resolves `ArtifactId` through the existing alias map and uses `POST /v1/content/{id}/expire`.
-- [ ] SDK tests cover in-memory and live high-level artifact expire, including unknown-alias and malformed-response failures.
-- [ ] Existing lower-level `ServiceApiClient::expire_content()` behavior remains green.
+- [x] `KamnAgent` exposes an artifact expire method returning `ArtifactStatus`.
+- [x] `InMemoryKamnClient` expires known artifacts, returns expired status, and rejects unknown artifacts.
+- [x] `LiveTransportKamnClient` resolves `ArtifactId` through the existing alias map and uses `POST /v1/content/{id}/expire`.
+- [x] SDK tests cover in-memory and live high-level artifact expire, including unknown-alias and malformed-response failures.
+- [x] Existing lower-level `ServiceApiClient::expire_content()` behavior remains green.
 
 # Files to touch
 - `crates/kamn-sdk/src/agent.rs`
@@ -48,3 +48,13 @@ Add high-level artifact expire to the SDK `KamnAgent` API so callers can advance
 - Add a live fail-closed test for malformed expire response payloads.
 - Re-run existing signed low-level `ServiceApiClient` route contract coverage.
 - Run strict `clippy` for `kamn-sdk` and targeted SDK tests.
+
+# Deviations
+- None.
+
+# Verification
+- `cargo test -p kamn-sdk --test memory_agent expire_artifact -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow spec_c06_live_transport_task_and_escrow_routes_execute_network_contract -- --exact --nocapture`
+- `cargo test -p kamn-sdk -- --nocapture`
+- `cargo clippy -p kamn-sdk --tests -- -D warnings`

@@ -59,8 +59,9 @@ fn task_and_escrow_requests() -> Vec<ExpectedRequest> {
         create_task_request(),
         accept_task_request(),
         submit_artifact_request(),
-        get_artifact_status_request(),
+        get_artifact_status_request("retained"),
         expire_artifact_request(),
+        get_artifact_status_request("expired"),
         complete_task_request(),
         create_escrow_request(),
         release_escrow_request(),
@@ -126,14 +127,16 @@ fn create_escrow_request() -> ExpectedRequest {
     }
 }
 
-fn get_artifact_status_request() -> ExpectedRequest {
+fn get_artifact_status_request(lifecycle_state: &str) -> ExpectedRequest {
     ExpectedRequest {
         method: "GET",
         path: "/v1/content/content-local-artifact-abc".to_owned(),
         body: String::new(),
         sender_did: "kamn:did:agent:live-requester".to_owned(),
         scope: "content:read",
-        response_body: r#"{"content_id":"content-local-artifact-abc","lifecycle_state":"retained","redaction_status":"none"}"#.to_owned(),
+        response_body: format!(
+            r#"{{"content_id":"content-local-artifact-abc","lifecycle_state":"{lifecycle_state}","redaction_status":"none"}}"#
+        ),
         ..Default::default()
     }
 }
@@ -201,6 +204,10 @@ fn assert_task_flow(client: &mut LiveTransportKamnClient) {
             redaction_status: "none".to_owned(),
         }
     );
+    let reread_status = client
+        .get_artifact_status(&expired_status.artifact_id)
+        .expect("get_artifact_status after expire should succeed");
+    assert_eq!(reread_status, expired_status);
     client
         .complete_task(&task_id)
         .expect("complete_task should succeed");
