@@ -146,7 +146,10 @@ impl DataLayerM2DidSessionService {
 
         let requester_did = request.requester_did.as_str().to_owned();
         let expected_credential = format!("sig:{requester_did}:{}", request.challenge);
-        if request.credential != expected_credential {
+        if !crate::constant_time_eq::constant_time_eq_bytes(
+            request.credential.as_bytes(),
+            expected_credential.as_bytes(),
+        ) {
             return Err(DataLayerM2GatewayError::InvalidCredential(
                 "credential signature mismatch".to_owned(),
             ));
