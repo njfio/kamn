@@ -18,6 +18,13 @@ fn input(message_id: &str, nonce: u64, received_at: &str) -> DeliveryGuardInput 
     }
 }
 
+fn assert_rejected(result: DeliveryValidationResult) -> kamn_runtime_guards::message_delivery_guards::FailedDeliveryNotice {
+    match result {
+        DeliveryValidationResult::Rejected(notice) => notice,
+        DeliveryValidationResult::Accepted => panic!("expected rejection"),
+    }
+}
+
 #[test]
 fn integration_runtime_guard_message_delivery_accepts_first_message_and_advances_nonce() {
     let mut guards = MessageDeliveryGuards::new();
@@ -37,33 +44,29 @@ fn integration_runtime_guard_message_delivery_rejects_replay_and_nonce_regressio
         DeliveryValidationResult::Accepted
     );
 
-    match guards.validate(input("urn:uuid:msg-2", 2, "2026-02-07T20:21:30.123Z")) {
-        DeliveryValidationResult::Rejected(notice) => {
-            assert_eq!(notice.code, DeliveryFailureCode::Replay);
-            assert_eq!(
-                notice.signature,
-                "notice:urn:uuid:msg-2:replay:kamn:did:agent:recipient-1:2026-02-07T20:21:30.123Z:2"
-            );
-        }
-        DeliveryValidationResult::Accepted => panic!("expected replay rejection"),
-    }
+    let replay_notice = assert_rejected(
+        guards.validate(input("urn:uuid:msg-2", 2, "2026-02-07T20:21:30.123Z")),
+    );
+    assert_eq!(replay_notice.code, DeliveryFailureCode::Replay);
+    assert_eq!(
+        replay_notice.signature,
+        "notice:urn:uuid:msg-2:replay:kamn:did:agent:recipient-1:2026-02-07T20:21:30.123Z:2"
+    );
 
-    match guards.validate(input("urn:uuid:msg-3", 1, "2026-02-07T20:22:30.123Z")) {
-        DeliveryValidationResult::Rejected(notice) => {
-            assert_eq!(
-                notice.code,
-                DeliveryFailureCode::NonceOutOfSequence {
-                    expected: 2,
-                    found: 1,
-                }
-            );
-            assert_eq!(
-                notice.signature,
-                "notice:urn:uuid:msg-3:nonce_out_of_sequence:kamn:did:agent:recipient-1:2026-02-07T20:22:30.123Z:1"
-            );
+    let nonce_notice = assert_rejected(
+        guards.validate(input("urn:uuid:msg-3", 1, "2026-02-07T20:22:30.123Z")),
+    );
+    assert_eq!(
+        nonce_notice.code,
+        DeliveryFailureCode::NonceOutOfSequence {
+            expected: 2,
+            found: 1,
         }
-        DeliveryValidationResult::Accepted => panic!("expected nonce rejection"),
-    }
+    );
+    assert_eq!(
+        nonce_notice.signature,
+        "notice:urn:uuid:msg-3:nonce_out_of_sequence:kamn:did:agent:recipient-1:2026-02-07T20:22:30.123Z:1"
+    );
 }
 
 #[test]
@@ -79,12 +82,10 @@ fn integration_runtime_guard_message_delivery_snapshot_roundtrip_restores_replay
     assert_eq!(restored.expected_nonce("kamn:did:agent:sender-1"), 2);
 
     let mut restored_mut = restored;
-    match restored_mut.validate(input("urn:uuid:msg-4", 2, "2026-02-07T20:21:30.123Z")) {
-        DeliveryValidationResult::Rejected(notice) => {
-            assert_eq!(notice.code, DeliveryFailureCode::Replay);
-        }
-        DeliveryValidationResult::Accepted => panic!("expected replay rejection after restore"),
-    }
+    let replay_notice = assert_rejected(
+        restored_mut.validate(input("urn:uuid:msg-4", 2, "2026-02-07T20:21:30.123Z")),
+    );
+    assert_eq!(replay_notice.code, DeliveryFailureCode::Replay);
 }
 
 #[test]
