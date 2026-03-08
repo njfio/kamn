@@ -554,6 +554,13 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/agents/register") => "agents:write",
         ("POST", "/v1/agents/search") => "agents:read",
+        ("POST", "/v1/content/register") => "content:write",
+        ("POST", _) if path.starts_with("/v1/content/") && path.ends_with("/expire") => {
+            "content:write"
+        }
+        ("POST", _) if path.starts_with("/v1/content/") && path.ends_with("/tombstone") => {
+            "content:write"
+        }
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
@@ -575,6 +582,7 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
         ("GET", _) if path.starts_with("/v1/channels/") && path.ends_with("/messages") => {
             "channels:read"
         }
+        ("GET", _) if path.starts_with("/v1/content/") => "content:read",
         ("GET", _) if path.starts_with("/v1/tasks/") && path != "/v1/tasks/create" => "tasks:read",
         ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
         _ => "protected:unknown",
@@ -703,6 +711,35 @@ fn run_service_contract_server_with_websocket_payload(
                         channel_id
                     );
                     write_http_response(&mut stream, 201, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/content/register" {
+                    let payload = r#"{"content_id":"content-local-sdk","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}"#;
+                    write_http_response(&mut stream, 201, payload)?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/content/")
+                    && path.ends_with("/expire")
+                {
+                    let content_id = path
+                        .trim_start_matches("/v1/content/")
+                        .trim_end_matches("/expire")
+                        .trim_end_matches('/');
+                    let payload = format!(
+                        "{{\"content_id\":\"{}\",\"lifecycle_state\":\"expired\",\"redaction_status\":\"none\"}}",
+                        content_id
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/content/")
+                    && path.ends_with("/tombstone")
+                {
+                    let content_id = path
+                        .trim_start_matches("/v1/content/")
+                        .trim_end_matches("/tombstone")
+                        .trim_end_matches('/');
+                    let payload = format!(
+                        "{{\"content_id\":\"{}\",\"lifecycle_state\":\"tombstoned\",\"redaction_status\":\"redacted\"}}",
+                        content_id
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "GET"
                     && path.starts_with("/v1/channels/")
                     && path.ends_with("/messages")
@@ -794,6 +831,13 @@ fn run_service_contract_server_with_websocket_payload(
                     let payload = format!(
                         "{{\"did\":\"{}\",\"reputation_score\":500,\"agent_type\":\"service-agent\",\"model_family\":\"service-api\",\"capabilities\":[\"profile:read\"]}}",
                         did
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "GET" && path.starts_with("/v1/content/") {
+                    let content_id = path.trim_start_matches("/v1/content/");
+                    let payload = format!(
+                        "{{\"content_id\":\"{}\",\"lifecycle_state\":\"retained\",\"redaction_status\":\"none\"}}",
+                        content_id
                     );
                     write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "GET"
@@ -1029,7 +1073,7 @@ fn regression_service_request_auth_rejects_crlf_scope_payload() {
 fn functional_service_api_client_executes_signed_http_route_contracts() {
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 10));
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 14));
     wait_for_server_ready(bind_addr.as_str());
 
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
@@ -1136,6 +1180,45 @@ fn functional_service_api_client_executes_signed_http_route_contracts() {
         search_results[0].capabilities,
         vec!["text".to_owned(), "code".to_owned()]
     );
+
+    let content_payload = r#"{"task_id":"task-local-sdk","artifact_name":"artifact.bin","artifact_bytes_hex":"616263"}"#;
+    let content_registration = client
+        .register_content(
+            content_payload,
+            &auth_with_scope(&sender, 9, content_payload, "content:write"),
+        )
+        .expect("content registration should succeed");
+    assert_eq!(content_registration.content_id, "content-local-sdk");
+    assert_eq!(content_registration.lifecycle_state, "retained");
+    assert_eq!(content_registration.redaction_status, "none");
+
+    let content_status = client
+        .get_content(
+            content_registration.content_id.as_str(),
+            &auth_with_scope(&sender, 10, "", "content:read"),
+        )
+        .expect("content status should succeed");
+    assert_eq!(content_status.content_id, "content-local-sdk");
+    assert_eq!(content_status.lifecycle_state, "retained");
+    assert_eq!(content_status.redaction_status, "none");
+
+    let expired_content = client
+        .expire_content(
+            content_registration.content_id.as_str(),
+            &auth_with_scope(&sender, 11, "{}", "content:write"),
+        )
+        .expect("content expire should succeed");
+    assert_eq!(expired_content.lifecycle_state, "expired");
+    assert_eq!(expired_content.redaction_status, "none");
+
+    let tombstoned_content = client
+        .tombstone_content(
+            content_registration.content_id.as_str(),
+            &auth_with_scope(&sender, 12, "{}", "content:write"),
+        )
+        .expect("content tombstone should succeed");
+    assert_eq!(tombstoned_content.lifecycle_state, "tombstoned");
+    assert_eq!(tombstoned_content.redaction_status, "redacted");
 
     let health = client.health().expect("health route should succeed");
     assert_eq!(health.status, "ok");

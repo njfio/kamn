@@ -92,6 +92,24 @@ impl InMemoryKamnClient {
         }
     }
 
+    fn set_artifact_status(
+        &mut self,
+        artifact_id: &ArtifactId,
+        lifecycle_state: &str,
+        redaction_status: &str,
+    ) -> Result<ArtifactStatus, SdkError> {
+        let artifact = self
+            .artifacts
+            .get_mut(artifact_id)
+            .ok_or_else(|| Self::artifact_not_found(artifact_id))?;
+        artifact.status = ArtifactStatus::from_lifecycle(
+            artifact_id,
+            lifecycle_state.to_owned(),
+            redaction_status.to_owned(),
+        );
+        Ok(artifact.status.clone())
+    }
+
     fn validate_metadata(metadata: &AgentMetadata) -> Result<(), SdkError> {
         if metadata.agent_type.trim().is_empty() {
             return Err(SdkError::InvalidInput {
@@ -327,16 +345,14 @@ impl KamnAgent for InMemoryKamnClient {
     }
 
     fn expire_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
-        let artifact = self
-            .artifacts
-            .get_mut(artifact_id)
-            .ok_or_else(|| Self::artifact_not_found(artifact_id))?;
-        artifact.status = ArtifactStatus::from_lifecycle(
-            artifact_id,
-            "expired".to_owned(),
-            "none".to_owned(),
-        );
-        Ok(artifact.status.clone())
+        self.set_artifact_status(artifact_id, "expired", "none")
+    }
+
+    fn tombstone_artifact(
+        &mut self,
+        artifact_id: &ArtifactId,
+    ) -> Result<ArtifactStatus, SdkError> {
+        self.set_artifact_status(artifact_id, "tombstoned", "redacted")
     }
 
     fn complete_task(&mut self, task_id: &TaskId) -> Result<(), SdkError> {
