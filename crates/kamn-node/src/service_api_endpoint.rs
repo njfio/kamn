@@ -173,6 +173,7 @@ pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT: usize = 2;
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 22;
 const REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID: &str =
     "service_api_agent_registration_payload_invalid";
+const REASON_CODE_AGENT_SEARCH_PAYLOAD_INVALID: &str = "service_api_agent_search_payload_invalid";
 const REASON_CODE_AGENT_REGISTRATION_CONFLICT: &str = "service_api_agent_registration_conflict";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";

@@ -1238,14 +1238,14 @@ fn parse_agent_search_payload(
     let parsed =
         serde_json::from_str::<ServiceApiAgentSearchRequestBody>(payload).map_err(|error| {
             ServiceApiReasonedError::new(
-                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                REASON_CODE_AGENT_SEARCH_PAYLOAD_INVALID,
                 format!("agent search payload must be valid json: {error}"),
             )
         })?;
     if let Some(model_family) = parsed.model_family.as_deref() {
         if model_family.trim().is_empty() {
             return Err(ServiceApiReasonedError::new(
-                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                REASON_CODE_AGENT_SEARCH_PAYLOAD_INVALID,
                 "agent search payload model_family must not be empty when provided",
             ));
         }
@@ -1253,7 +1253,7 @@ fn parse_agent_search_payload(
     if let Some(capability) = parsed.capability.as_deref() {
         if capability.trim().is_empty() {
             return Err(ServiceApiReasonedError::new(
-                REASON_CODE_AGENT_REGISTRATION_PAYLOAD_INVALID,
+                REASON_CODE_AGENT_SEARCH_PAYLOAD_INVALID,
                 "agent search payload capability must not be empty when provided",
             ));
         }
