@@ -19,28 +19,44 @@ fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_eviden
         81,
         r#"{"recipient_did":"kamn:did:agent:e2e-recipient","message":"e2e-runtime-evidence"}"#,
     );
-    let state_json = read_state_json(state_file.as_path());
-    let evidence =
-        &state_json["messages"][send_payload.message_id.as_str()]["data_layer_runtime_evidence"];
+    assert_runtime_evidence(
+        read_state_json(state_file.as_path())["messages"][send_payload.message_id.as_str()]
+            ["data_layer_runtime_evidence"]
+            .to_owned(),
+    );
+    let _ = fs::remove_file(state_file);
+}
+
+fn assert_runtime_evidence(evidence: Value) {
     assert_eq!(
         evidence["schema_version"],
         "kamn.runtime.service-api-data-layer-runtime-evidence.v1"
     );
-    assert!(evidence["m0_content_hash"]
-        .as_str()
-        .is_some_and(|value| value.starts_with("sha256:")));
-    assert!(evidence["m1_merkle_root"]
-        .as_str()
-        .is_some_and(|value| value.starts_with("sha256:")));
-    assert!(evidence["m2_authorization_reason_code"].as_str().is_some());
-    assert!(evidence["m3_blind_index_token"].as_str().is_some());
-    assert!(evidence["m4_transition_reason_code"].as_str().is_some());
-    assert!(evidence["m5_record_hash"].as_str().is_some());
-    assert!(evidence["m6_projection_edge_count"].as_u64().is_some());
-    assert!(evidence["m7_observability_health"].as_str().is_some());
-    assert!(evidence["m8_retention_due_count"].as_u64().is_some());
-    assert!(evidence["m9_dispatch_reason_code"].as_str().is_some());
-    assert!(evidence["m10_archived_partition_count"].as_u64().is_some());
-    assert!(evidence["m11_decision"].as_str().is_some());
-    let _ = fs::remove_file(state_file);
+    assert_hash_fields(&evidence);
+    for key in [
+        "m2_authorization_reason_code",
+        "m3_blind_index_token",
+        "m4_transition_reason_code",
+        "m5_record_hash",
+        "m7_observability_health",
+        "m9_dispatch_reason_code",
+        "m11_decision",
+    ] {
+        assert!(evidence[key].as_str().is_some());
+    }
+    for key in [
+        "m6_projection_edge_count",
+        "m8_retention_due_count",
+        "m10_archived_partition_count",
+    ] {
+        assert!(evidence[key].as_u64().is_some());
+    }
+}
+
+fn assert_hash_fields(evidence: &Value) {
+    for key in ["m0_content_hash", "m1_merkle_root"] {
+        assert!(evidence[key]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:")));
+    }
 }

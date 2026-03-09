@@ -26,25 +26,16 @@ pub(super) fn send_persisted_message(
     nonce: u64,
     payload: &str,
 ) -> ServiceApiMessageCreateBody {
-    let response = run_single_request_phase(snapshot, bind_addr, "send-phase", |addr| {
-        let nonce_text = nonce.to_string();
-        let signature = service_api_request_signature_for_fields(
-            sender_did,
-            nonce,
-            service_api_state_hash(snapshot).as_str(),
-            payload,
-        );
-        send_http_request_with_headers(
-            addr,
-            "POST",
-            "/v1/messages/send",
-            payload,
-            &request_headers(sender_did, nonce_text.as_str(), signature.as_str()),
-        )
-    });
-    assert!(response.contains("HTTP/1.1 202 Accepted"));
-    parse_service_api_payload(extract_http_response_body(response.as_str()))
-        .expect("send payload should deserialize")
+    parse_created_message(&signed_request_response(
+        snapshot,
+        bind_addr,
+        "send-phase",
+        "POST",
+        "/v1/messages/send",
+        sender_did,
+        nonce,
+        payload,
+    ))
 }
 
 pub(super) fn query_persisted_message(
@@ -54,25 +45,9 @@ pub(super) fn query_persisted_message(
     nonce: u64,
     query_path: &str,
 ) -> ServiceApiMessageGetBody {
-    let response = run_single_request_phase(snapshot, bind_addr, "query-phase", |addr| {
-        let nonce_text = nonce.to_string();
-        let signature = service_api_request_signature_for_fields(
-            sender_did,
-            nonce,
-            service_api_state_hash(snapshot).as_str(),
-            "",
-        );
-        send_http_request_with_headers(
-            addr,
-            "GET",
-            query_path,
-            "",
-            &request_headers(sender_did, nonce_text.as_str(), signature.as_str()),
-        )
-    });
-    assert!(response.contains("HTTP/1.1 200 OK"));
-    parse_service_api_payload(extract_http_response_body(response.as_str()))
-        .expect("query payload should deserialize")
+    parse_queried_message(&signed_request_response(
+        snapshot, bind_addr, "query-phase", "GET", query_path, sender_did, nonce, "",
+    ))
 }
 
 pub(super) fn unique_named_state_file(prefix: &str) -> PathBuf {
@@ -113,6 +88,30 @@ where
     response
 }
 
+fn signed_request_response(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    phase: &str,
+    method: &str,
+    path: &str,
+    sender_did: &str,
+    nonce: u64,
+    body: &str,
+) -> String {
+    run_single_request_phase(snapshot, bind_addr, phase, |addr| {
+        let nonce_text = nonce.to_string();
+        let signature =
+            service_api_request_signature_for_fields(sender_did, nonce, service_api_state_hash(snapshot).as_str(), body);
+        send_http_request_with_headers(
+            addr,
+            method,
+            path,
+            body,
+            &request_headers(sender_did, nonce_text.as_str(), signature.as_str()),
+        )
+    })
+}
+
 fn message_endpoint_config(bind_addr: &str) -> ServiceApiEndpointConfig {
     ServiceApiEndpointConfig {
         bind_addr: bind_addr.to_owned(),
@@ -142,4 +141,16 @@ fn service_api_state_hash(snapshot: &ServiceApiSnapshot) -> String {
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     )
+}
+
+fn parse_created_message(response: &str) -> ServiceApiMessageCreateBody {
+    assert!(response.contains("HTTP/1.1 202 Accepted"));
+    parse_service_api_payload(extract_http_response_body(response))
+        .expect("send payload should deserialize")
+}
+
+fn parse_queried_message(response: &str) -> ServiceApiMessageGetBody {
+    assert!(response.contains("HTTP/1.1 200 OK"));
+    parse_service_api_payload(extract_http_response_body(response))
+        .expect("query payload should deserialize")
 }
