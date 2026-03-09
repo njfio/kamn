@@ -170,6 +170,10 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 
 ## Decomposition Tranche Roadmap (Issue #6275)
 
+Dependency directions, temporary bridge rules, and the `kamn-types` inversion
+plan for these tranches are defined in
+`docs/architecture/kamn-core-target-crate-graph.md`.
+
 kamn_core_decomposition_map_version=kamn.arch.kamn-core-decomposition-map.v1
 kamn_core_decomposition_reason_taxonomy_version=kamn.arch.kamn-core-decomposition-reason-taxonomy.v1
 kamn_core_decomposition_reason_codes_csv=module_group_boundary_missing,tranche_ordering_missing,target_destination_missing,hotspot_prioritization_missing,architecture_index_link_missing

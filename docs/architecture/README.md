@@ -11,6 +11,7 @@ diagram references.
 
 - `docs/architecture/kamn-core-module-map.md`
 - `docs/architecture/kamn-core-module-map.md#decomposition-tranche-roadmap-issue-6275`
+- `docs/architecture/kamn-core-target-crate-graph.md`
 - `docs/architecture/kamn-node-module-map.md`
 
 ## Crate Architecture Notes
