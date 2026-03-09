@@ -186,8 +186,7 @@ fn candidate_doc_counts_match_filesystem_inventory() {
         filesystem_total_short
     );
     assert_eq!(
-        *ci_row,
-        TRACKED_CI_STATS,
+        *ci_row, TRACKED_CI_STATS,
         "tracked scripts/ci candidate row drifted"
     );
     assert_eq!(doc_table, filesystem, "candidate table drifted");

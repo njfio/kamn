@@ -70,7 +70,10 @@ fn integration_runtime_guard_fairness_policy_allows_gap_boundary_without_mutatin
     };
     let original = input.clone();
 
-    assert_eq!(evaluate_fairness_policy(&input), FairnessPolicyDecision::Allow);
+    assert_eq!(
+        evaluate_fairness_policy(&input),
+        FairnessPolicyDecision::Allow
+    );
     assert_eq!(input, original);
 }
 

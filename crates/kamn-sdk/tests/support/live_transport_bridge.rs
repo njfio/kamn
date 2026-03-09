@@ -4,8 +4,8 @@ mod shared;
 use kamn_sdk::LiveTransportKamnClient;
 
 pub(crate) use self::shared::{
-    ExpectedRequest, did, ensure_live_test_env, expected_request, reserve_loopback_addr,
-    run_contract_server, wait_for_server_ready,
+    did, ensure_live_test_env, expected_request, reserve_loopback_addr, run_contract_server,
+    wait_for_server_ready, ExpectedRequest,
 };
 
 pub(crate) fn deterministic_u64_tag(value: &str) -> u64 {

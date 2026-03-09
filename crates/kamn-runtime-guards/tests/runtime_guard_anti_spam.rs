@@ -1,8 +1,6 @@
-use kamn_runtime_guards::{
-    anti_spam::{
-        AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
-        AntiSpamTelemetry,
-    },
+use kamn_runtime_guards::anti_spam::{
+    AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
+    AntiSpamTelemetry,
 };
 
 fn funded_engine(config: AntiSpamConfig, sender_did: &str, deposit: u64) -> AntiSpamEngine {
@@ -119,9 +117,7 @@ fn integration_runtime_guard_anti_spam_rate_limits_then_suspends_then_recovers()
     assert_rate_limit(&mut engine, sender_did, "msg-rl-block-2", 103);
     assert_eq!(
         evaluate(&mut engine, sender_did, "msg-suspended", 104),
-        AntiSpamDecision::Rejected(AntiSpamRejection::SenderSuspended {
-            until_unix: 113,
-        })
+        AntiSpamDecision::Rejected(AntiSpamRejection::SenderSuspended { until_unix: 113 })
     );
     assert_eq!(
         evaluate(&mut engine, sender_did, "msg-recovered", 120),

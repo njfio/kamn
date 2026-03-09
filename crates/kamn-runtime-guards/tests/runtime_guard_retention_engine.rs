@@ -4,8 +4,7 @@ use kamn_runtime_guards::retention_engine::{
     evaluate_retention_policy, retention_policy_reason_codes_csv,
     retention_policy_reason_taxonomy_version, RetentionClass, RetentionDomain,
     RetentionEnginePolicy, RetentionPolicyCheckerInput, RetentionPolicyDecision,
-    RetentionPolicyEngine, RetentionPolicyError, RetentionPolicyViolationReason,
-    RetentionRecord,
+    RetentionPolicyEngine, RetentionPolicyError, RetentionPolicyViolationReason, RetentionRecord,
 };
 
 fn base_policy() -> RetentionEnginePolicy {
@@ -15,7 +14,11 @@ fn base_policy() -> RetentionEnginePolicy {
     }
 }
 
-fn checker_input(domain: &str, window_seconds: u64, record_age_seconds: u64) -> RetentionPolicyCheckerInput {
+fn checker_input(
+    domain: &str,
+    window_seconds: u64,
+    record_age_seconds: u64,
+) -> RetentionPolicyCheckerInput {
     RetentionPolicyCheckerInput {
         domain: domain.to_owned(),
         window_seconds,
@@ -31,7 +34,10 @@ fn record(domain: RetentionDomain, record_id: &str, created_at_secs: u64) -> Ret
     }
 }
 
-fn assert_checker_reject(input: RetentionPolicyCheckerInput, reason: RetentionPolicyViolationReason) {
+fn assert_checker_reject(
+    input: RetentionPolicyCheckerInput,
+    reason: RetentionPolicyViolationReason,
+) {
     assert_eq!(
         evaluate_retention_policy(&input),
         RetentionPolicyDecision::Reject { reason }

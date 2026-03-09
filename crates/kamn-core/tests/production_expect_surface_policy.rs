@@ -2,10 +2,10 @@
 mod support;
 
 use support::{
-    BASELINE_SCHEMA_VERSION, Baseline, CurrentSurface, REASON_CODES_CSV, REASON_TAXONOMY_VERSION,
-    THRESHOLD_SCHEMA_VERSION, Thresholds, count_expect_occurrences_excluding_cfg_test,
-    current_surface, evaluate_policy, is_test_only_source_path, load_baseline, load_thresholds,
-    read_file, repo_path,
+    count_expect_occurrences_excluding_cfg_test, current_surface, evaluate_policy,
+    is_test_only_source_path, load_baseline, load_thresholds, read_file, repo_path, Baseline,
+    CurrentSurface, Thresholds, BASELINE_SCHEMA_VERSION, REASON_CODES_CSV, REASON_TAXONOMY_VERSION,
+    THRESHOLD_SCHEMA_VERSION,
 };
 
 #[test]

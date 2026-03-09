@@ -41,11 +41,7 @@ fn engine() -> DirectMessageCryptoEngine {
         .expect("engine init should succeed")
 }
 
-fn assert_encrypt_error(
-    plaintext: &str,
-    nonce: u64,
-    expected: DirectMessageCryptoError,
-) {
+fn assert_encrypt_error(plaintext: &str, nonce: u64, expected: DirectMessageCryptoError) {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine = engine();
         assert_eq!(engine.encrypt(plaintext, nonce), Err(expected));
@@ -61,7 +57,11 @@ fn encrypt_payload(
 
 #[test]
 fn integration_encrypt_rejects_empty_plaintext_payload() {
-    assert_encrypt_error("", EMPTY_PAYLOAD_NONCE, DirectMessageCryptoError::EmptyPayload);
+    assert_encrypt_error(
+        "",
+        EMPTY_PAYLOAD_NONCE,
+        DirectMessageCryptoError::EmptyPayload,
+    );
 }
 
 #[test]
@@ -90,7 +90,9 @@ fn integration_decrypt_rejects_zero_nonce_ciphertext() {
 fn integration_encrypt_rejects_nonce_reuse() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let mut engine = engine();
-        engine.encrypt("payload", REUSED_NONCE).expect("first encrypt");
+        engine
+            .encrypt("payload", REUSED_NONCE)
+            .expect("first encrypt");
         assert_eq!(
             engine.encrypt("payload", REUSED_NONCE),
             Err(DirectMessageCryptoError::NonceReuse(REUSED_NONCE))

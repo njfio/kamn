@@ -1,5 +1,5 @@
 use kamn_sdk::{
-    AgentDid, SdkError, ServiceApiClient, ServiceRequestAuth, service_signature_for_fields,
+    service_signature_for_fields, AgentDid, SdkError, ServiceApiClient, ServiceRequestAuth,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Write};

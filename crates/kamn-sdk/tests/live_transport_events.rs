@@ -82,8 +82,8 @@ fn run_event_server(bind_addr: String, malformed_event: bool) -> Result<(), Stri
     use std::thread;
     use std::time::{Duration, Instant};
 
-    let listener = TcpListener::bind(bind_addr.as_str())
-        .map_err(|error| format!("bind failed: {error}"))?;
+    let listener =
+        TcpListener::bind(bind_addr.as_str()).map_err(|error| format!("bind failed: {error}"))?;
     listener
         .set_nonblocking(true)
         .map_err(|error| format!("nonblocking setup failed: {error}"))?;

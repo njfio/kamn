@@ -8,6 +8,9 @@ fn contract_runtime_guard_quota_policy_surface_exists_with_expected_markers() {
         "integration_runtime_guard_quota_policy_allows_limit_boundary_without_mutating_input",
         "integration_runtime_guard_quota_policy_reason_helpers_expose_deterministic_markers",
     ] {
-        assert!(QUOTA_POLICY_TEST_SURFACE.contains(marker), "missing marker: {marker}");
+        assert!(
+            QUOTA_POLICY_TEST_SURFACE.contains(marker),
+            "missing marker: {marker}"
+        );
     }
 }

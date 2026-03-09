@@ -22,7 +22,10 @@ fn assert_reject_reason(input: QuotaPolicyInput, reason: QuotaPolicyViolationRea
 #[test]
 fn integration_runtime_guard_quota_policy_allows_all_supported_scope_classes() {
     for scope in ["processor_ingress", "peer_sync", "channel_broadcast"] {
-        assert_eq!(evaluate_quota_policy(&valid_input(scope)), QuotaPolicyDecision::Allow);
+        assert_eq!(
+            evaluate_quota_policy(&valid_input(scope)),
+            QuotaPolicyDecision::Allow
+        );
     }
 }
 

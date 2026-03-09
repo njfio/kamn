@@ -16,10 +16,16 @@ fn seed_block(watchdog: &mut WatchdogNode) {
         .is_empty());
 }
 
-fn anomalous_block_alerts(watchdog: &mut WatchdogNode) -> Vec<kamn_runtime_guards::watchdog::WatchdogAlert> {
+fn anomalous_block_alerts(
+    watchdog: &mut WatchdogNode,
+) -> Vec<kamn_runtime_guards::watchdog::WatchdogAlert> {
     watchdog
         .observe(WatchdogObservation::block(
-            "block-2", "state-2", "wrong-parent", 1, 5,
+            "block-2",
+            "state-2",
+            "wrong-parent",
+            1,
+            5,
         ))
         .expect("valid anomalous block")
 }

@@ -8,6 +8,9 @@ fn contract_runtime_guard_watchdog_surface_exists_with_expected_markers() {
         "integration_runtime_guard_watchdog_snapshot_tracks_mixed_warning_and_critical_counts",
         "integration_runtime_guard_watchdog_invalid_config_and_input_fail_closed",
     ] {
-        assert!(WATCHDOG_TEST_SURFACE.contains(marker), "missing marker: {marker}");
+        assert!(
+            WATCHDOG_TEST_SURFACE.contains(marker),
+            "missing marker: {marker}"
+        );
     }
 }

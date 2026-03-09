@@ -21,7 +21,11 @@ fn spec_c01_live_transport_balance_route_executes_network_contract() {
         scope: "agents:read",
         response_status: 200,
         response_body: format!(r#"{{"did":"{TARGET_DID}","balance":100}}"#),
-        ..expected_request("GET", format!("/v1/agents/{TARGET_DID}/balance").as_str(), "")
+        ..expected_request(
+            "GET",
+            format!("/v1/agents/{TARGET_DID}/balance").as_str(),
+            "",
+        )
     }];
     let server_addr = bind_addr.clone();
     let server = thread::spawn(move || run_contract_server(server_addr, expected_requests));

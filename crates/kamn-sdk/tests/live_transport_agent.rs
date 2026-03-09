@@ -1,6 +1,6 @@
 use kamn_sdk::{
-    AgentDid, AgentMetadata, AgentQuery, KamnAgent, KamnTransport, LiveTransportConfig,
-    LiveTransportKamnClient, Message, SdkError, TransportMode, service_signature_for_fields,
+    service_signature_for_fields, AgentDid, AgentMetadata, AgentQuery, KamnAgent, KamnTransport,
+    LiveTransportConfig, LiveTransportKamnClient, Message, SdkError, TransportMode,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
@@ -447,8 +447,10 @@ fn run_live_transport_contract_server(
                         .map_err(|error| format!("search result serialization failed: {error}"))?;
                     write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "POST" && path == "/v1/channels/create" {
-                    let parsed: serde_json::Value = serde_json::from_str(body.as_str())
-                        .map_err(|error| format!("channel payload should be valid json: {error}"))?;
+                    let parsed: serde_json::Value =
+                        serde_json::from_str(body.as_str()).map_err(|error| {
+                            format!("channel payload should be valid json: {error}")
+                        })?;
                     let name = parsed
                         .get("name")
                         .and_then(serde_json::Value::as_str)

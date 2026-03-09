@@ -16,7 +16,11 @@ fn integration_runtime_peer_lifecycle_valid_sequence_reaches_expected_states() {
     let mut peer = PeerLifecycle::new("peer-1").expect("peer should construct");
 
     assert_eq!(peer.state(), PeerLifecycleState::Disconnected);
-    assert_transition(&mut peer, PeerLifecycleEvent::StartConnect, PeerLifecycleState::Connecting);
+    assert_transition(
+        &mut peer,
+        PeerLifecycleEvent::StartConnect,
+        PeerLifecycleState::Connecting,
+    );
     assert_transition(
         &mut peer,
         PeerLifecycleEvent::HandshakeSucceeded,
@@ -55,8 +59,12 @@ fn integration_runtime_peer_lifecycle_invalid_transition_fails_closed_with_reaso
 fn integration_runtime_queue_preserves_fifo_order() {
     let mut queue = BoundedRuntimeQueue::new(2).expect("queue should construct");
 
-    queue.enqueue("first").expect("first enqueue should succeed");
-    queue.enqueue("second").expect("second enqueue should succeed");
+    queue
+        .enqueue("first")
+        .expect("first enqueue should succeed");
+    queue
+        .enqueue("second")
+        .expect("second enqueue should succeed");
 
     assert_eq!(queue.len(), 2);
     assert_eq!(queue.dequeue(), Some("first"));
