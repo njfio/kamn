@@ -47,10 +47,18 @@ const BRIDGE_PERSISTENCE_RESTART_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/bridge_persistence_restart_contract_tests/bridge_persistence_restart_contract_tests.rs";
 const MAILBOX_RELAY_DELIVERY_MODULE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests.rs";
-const RECIPIENT_DELIVERY_FILE: &str =
-    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/recipient_delivery_contract_tests.rs";
+const RECIPIENT_MAILBOX_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/recipient_mailbox_contract_tests.rs";
 const RELAY_DELIVERY_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_delivery_contract_tests.rs";
+const RELAY_DID_REJECTION_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_did_rejection_contract_tests.rs";
+const RELAY_STATUS_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_status_contract_tests.rs";
+const MAILBOX_RELAY_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/support.rs";
+const MAILBOX_RELAY_STATE_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/state_support.rs";
 const ROOT_STAGED_MAX_LINES: usize = 4525;
 
 fn read_repo_file(path: &str) -> String {
@@ -688,39 +696,73 @@ fn spec_c33_service_api_endpoint_root_file_removes_moved_mailbox_relay_delivery_
 #[test]
 fn spec_c34_service_api_endpoint_mailbox_relay_delivery_module_exists_and_owns_moved_coverage() {
     let module_source = read_repo_file(MAILBOX_RELAY_DELIVERY_MODULE_FILE);
-    let recipient_delivery = read_repo_file(RECIPIENT_DELIVERY_FILE);
+    let recipient_mailbox = read_repo_file(RECIPIENT_MAILBOX_FILE);
     let relay_delivery = read_repo_file(RELAY_DELIVERY_FILE);
+    let relay_did_rejection = read_repo_file(RELAY_DID_REJECTION_FILE);
+    let relay_status = read_repo_file(RELAY_STATUS_FILE);
 
     assert!(
-        module_source.contains("mod recipient_delivery_contract_tests;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare recipient-delivery submodule"
+        module_source.contains("mod recipient_mailbox_contract_tests;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare recipient-mailbox submodule"
     );
     assert!(
         module_source.contains("mod relay_delivery_contract_tests;"),
         "mailbox_relay_delivery_contract_tests.rs should declare relay-delivery submodule"
     );
+    assert!(
+        module_source.contains("mod relay_did_rejection_contract_tests;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare relay-did-rejection submodule"
+    );
+    assert!(
+        module_source.contains("mod relay_status_contract_tests;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare relay-status submodule"
+    );
+    assert!(
+        module_source.contains("mod support;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare shared support submodule"
+    );
+    assert!(
+        module_source.contains("mod state_support;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare shared state-support submodule"
+    );
 
     for marker in [
         "fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract()",
-        "fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()",
-        "fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery()",
-        "fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered()",
-        "fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart()",
     ] {
         assert!(
-            recipient_delivery.contains(marker),
-            "recipient delivery contract file should include moved marker: {marker}"
+            recipient_mailbox.contains(marker),
+            "recipient mailbox contract file should include moved marker: {marker}"
         );
     }
 
     for marker in [
         "fn integration_service_api_endpoint_cross_node_relay_delivery_contract()",
-        "fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids()",
         "fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()",
     ] {
         assert!(
             relay_delivery.contains(marker),
             "relay delivery contract file should include moved marker: {marker}"
+        );
+    }
+
+    for marker in [
+        "fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()",
+        "fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids()",
+    ] {
+        assert!(
+            relay_did_rejection.contains(marker),
+            "relay did rejection contract file should include moved marker: {marker}"
+        );
+    }
+
+    for marker in [
+        "fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery()",
+        "fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered()",
+        "fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart()",
+    ] {
+        assert!(
+            relay_status.contains(marker),
+            "relay status contract file should include moved marker: {marker}"
         );
     }
 }
@@ -738,8 +780,12 @@ fn spec_c35_service_api_endpoint_root_declares_mailbox_relay_delivery_submodule(
 fn spec_c36_service_api_endpoint_mailbox_relay_delivery_split_files_stay_below_budget() {
     for path in [
         MAILBOX_RELAY_DELIVERY_MODULE_FILE,
-        RECIPIENT_DELIVERY_FILE,
+        RECIPIENT_MAILBOX_FILE,
         RELAY_DELIVERY_FILE,
+        RELAY_DID_REJECTION_FILE,
+        RELAY_STATUS_FILE,
+        MAILBOX_RELAY_SUPPORT_FILE,
+        MAILBOX_RELAY_STATE_SUPPORT_FILE,
     ] {
         let source = read_repo_file(path);
         let line_count = source.lines().count();
