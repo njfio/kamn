@@ -97,7 +97,7 @@ if ! printf '%s\n' "$pass_output" | grep -q '^reason_codes=none$'; then
   echo "expected checker reason_codes=none on compliant fixture" >&2
   exit 1
 fi
-if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.spec-phase6-evidence-policy-reason-taxonomy.v1$'; then
+if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.spec-phase6-evidence-policy-reason-taxonomy.v2$'; then
   echo "expected deterministic phase6 reason taxonomy marker" >&2
   exit 1
 fi

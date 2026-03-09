@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-REASON_TAXONOMY_VERSION="kamn.ci.spec-phase6-evidence-policy-reason-taxonomy.v1"
-REASON_CODES_CSV="spec_phase6_invalid_argument,spec_phase6_missing_execution_markers,spec_phase6_missing_section,spec_phase6_output_json_required,spec_phase6_output_write_failed,spec_phase6_repo_root_missing,spec_phase6_specs_root_missing"
+REASON_TAXONOMY_VERSION="kamn.ci.spec-phase6-evidence-policy-reason-taxonomy.v2"
+REASON_CODES_CSV="spec_phase6_invalid_argument,spec_phase6_missing_execution_markers,spec_phase6_missing_section,spec_phase6_noncanonical_section_heading,spec_phase6_output_json_required,spec_phase6_output_write_failed,spec_phase6_repo_root_missing,spec_phase6_specs_root_missing"
 
 repo_root="$ROOT_DIR"
 output_json=""
@@ -71,6 +71,10 @@ from pathlib import Path
 repo_root = Path(sys.argv[1]).resolve()
 report_path = Path(sys.argv[2]).resolve()
 specs_root = repo_root / "specs"
+legacy_heading_pattern = re.compile(
+    r"^##\s*(Integration [Ee]vidence|Phase 6 [Ee]vidence|Phase 6 [Nn]otes|Phase 6 Integration Evidence(?: \(to fill at close\))?)\s*$",
+    flags=re.MULTILINE,
+)
 
 fail_reasons: list[str] = []
 scanned_spec_count = 0
@@ -93,25 +97,25 @@ else:
             continue
 
         closure_ready_spec_count += 1
-        section_match = re.search(
-            r"^##\s*Phase\s*6\s*integration\s*evidence\b",
+        canonical_match = re.search(
+            r"^##\s+Phase 6 integration evidence\s*$",
             body,
-            flags=re.MULTILINE | re.IGNORECASE,
+            flags=re.MULTILINE,
         )
-        if not section_match:
-            fail_reasons.append("spec_phase6_missing_section")
+        if not canonical_match:
+            if legacy_heading_pattern.search(body):
+                fail_reasons.append("spec_phase6_noncanonical_section_heading")
+            else:
+                fail_reasons.append("spec_phase6_missing_section")
             continue
 
-        section_start = section_match.end()
+        section_start = canonical_match.end()
         next_heading_match = re.search(r"^##\s+", body[section_start:], flags=re.MULTILINE)
-        if next_heading_match:
-            section_end = section_start + next_heading_match.start()
-        else:
-            section_end = len(body)
+        section_end = section_start + next_heading_match.start() if next_heading_match else len(body)
         section_body = body[section_start:section_end]
 
         has_executed_marker = bool(
-            re.search(r"^\s*-\s*Executed:\s*$", section_body, flags=re.MULTILINE | re.IGNORECASE)
+            re.search(r"^\s*-\s*Executed:\s*$", section_body, flags=re.MULTILINE)
         )
         has_command_marker = bool(
             re.search(r"^\s*-\s+`[^`]+`\s*$", section_body, flags=re.MULTILINE)
@@ -129,10 +133,10 @@ final_decision = "GO" if status == "ok" else "NO-GO"
 reason_codes = "none" if not dedup_reasons else ",".join(dedup_reasons)
 
 payload = {
-    "schema_version": "kamn.ci.spec-phase6-evidence-policy-report.v1",
+    "schema_version": "kamn.ci.spec-phase6-evidence-policy-report.v2",
     "status": status,
     "final_decision": final_decision,
-    "reason_taxonomy_version": "kamn.ci.spec-phase6-evidence-policy-reason-taxonomy.v1",
+    "reason_taxonomy_version": "kamn.ci.spec-phase6-evidence-policy-reason-taxonomy.v2",
     "reason_codes": reason_codes,
     "metrics": {
         "scanned_spec_count": scanned_spec_count,
