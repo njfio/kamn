@@ -3,26 +3,34 @@ use kamn_core::{
     RuntimeLifecycleError, RuntimeQueueError,
 };
 
+fn assert_transition(
+    peer: &mut PeerLifecycle,
+    event: PeerLifecycleEvent,
+    expected: PeerLifecycleState,
+) {
+    assert_eq!(peer.transition(event), Ok(expected));
+}
+
 #[test]
 fn integration_runtime_peer_lifecycle_valid_sequence_reaches_expected_states() {
     let mut peer = PeerLifecycle::new("peer-1").expect("peer should construct");
 
     assert_eq!(peer.state(), PeerLifecycleState::Disconnected);
-    assert_eq!(
-        peer.transition(PeerLifecycleEvent::StartConnect),
-        Ok(PeerLifecycleState::Connecting)
+    assert_transition(&mut peer, PeerLifecycleEvent::StartConnect, PeerLifecycleState::Connecting);
+    assert_transition(
+        &mut peer,
+        PeerLifecycleEvent::HandshakeSucceeded,
+        PeerLifecycleState::Active,
     );
-    assert_eq!(
-        peer.transition(PeerLifecycleEvent::HandshakeSucceeded),
-        Ok(PeerLifecycleState::Active)
+    assert_transition(
+        &mut peer,
+        PeerLifecycleEvent::HeartbeatMissed,
+        PeerLifecycleState::Degraded,
     );
-    assert_eq!(
-        peer.transition(PeerLifecycleEvent::HeartbeatMissed),
-        Ok(PeerLifecycleState::Degraded)
-    );
-    assert_eq!(
-        peer.transition(PeerLifecycleEvent::Disconnect),
-        Ok(PeerLifecycleState::Disconnected)
+    assert_transition(
+        &mut peer,
+        PeerLifecycleEvent::Disconnect,
+        PeerLifecycleState::Disconnected,
     );
 }
 
