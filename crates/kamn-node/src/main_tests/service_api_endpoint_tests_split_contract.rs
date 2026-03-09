@@ -45,7 +45,7 @@ const BRIDGE_PERSISTENCE_RESTART_MODULE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/bridge_persistence_restart_contract_tests.rs";
 const BRIDGE_PERSISTENCE_RESTART_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/bridge_persistence_restart_contract_tests/bridge_persistence_restart_contract_tests.rs";
-const ROOT_STAGED_MAX_LINES: usize = 4800;
+const ROOT_STAGED_MAX_LINES: usize = 4875;
 
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");

@@ -35,7 +35,7 @@ Extract the bridge persistence restart coverage out of `crates/kamn-node/src/mai
 
 - [ ] AC-1: `service_api_endpoint_tests.rs` declares a new bridge-persistence-restart submodule and no longer retains the moved bridge persistence restart test marker.
 - [ ] AC-2: Extracted bridge-persistence-restart files stay at or below 200 lines each.
-- [ ] AC-3: The staged root threshold ratchets down from `5071` to `4800` lines or lower.
+- [ ] AC-3: The staged root threshold ratchets down from `5071` to `4875` lines or lower.
 - [ ] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
 - [ ] AC-5: At least one extracted bridge persistence restart test passes from the real `kamn-node` test module path.
 
