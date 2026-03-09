@@ -33,13 +33,13 @@ Extract the first executable governance slice from `kamn-core` into a new `kamn-
 
 ## Acceptance Criteria
 
-- [ ] A new `kamn-governance` crate exists in the workspace
-- [ ] `governance_workflow`, `operator_binding`, and `operator_actions` are owned by `kamn-governance`
-- [ ] `kamn-governance` does not depend on `kamn-core`
-- [ ] `kamn-core` depends on `kamn-governance` and preserves stable public module/re-export paths through compatibility shims
-- [ ] Existing governance/operator tests continue to pass through `kamn-core`
-- [ ] Contract coverage proves dashboards remain in `kamn-core` for this phase
-- [ ] `kamn-core` loses the moved implementation LOC from the extracted modules
+- [x] A new `kamn-governance` crate exists in the workspace
+- [x] `governance_workflow`, `operator_binding`, and `operator_actions` are owned by `kamn-governance`
+- [x] `kamn-governance` does not depend on `kamn-core`
+- [x] `kamn-core` depends on `kamn-governance` and preserves stable public module/re-export paths through compatibility shims
+- [x] Existing governance/operator tests continue to pass through `kamn-core`
+- [x] Contract coverage proves dashboards remain in `kamn-core` for this phase
+- [x] `kamn-core` loses the moved implementation LOC from the extracted modules
 
 ## Files To Touch
 
@@ -63,9 +63,21 @@ Extract the first executable governance slice from `kamn-core` into a new `kamn-
 
 ## Test Plan
 
+- Run `cargo test -p kamn-governance --test governance_workflow_internal -- --nocapture`
 - Run `cargo test -p kamn-core --test kamn_core_governance_phase1_contract -- --nocapture`
 - Run `cargo test -p kamn-core --test governance_workflow -- --nocapture`
 - Run `cargo test -p kamn-core --test operator_permissioned_actions -- --nocapture`
 - Run `cargo test -p kamn-core --test operator_dashboard_ui -- --nocapture`
 - Run `cargo test -p kamn-core --test operator_dashboard_api -- --nocapture`
 - Run `cargo test -p kamn-core --test governance_workflow_docs -- --nocapture`
+- Run `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6648-touched-size.json`
+
+## Phase 6 Evidence
+
+- `kamn-core` compatibility shims in `src/governance_workflow.rs`, `src/operator_binding.rs`, and `src/operator_actions.rs` continue to drive the extracted governance implementations through the original public module paths.
+- Cross-domain dashboard entrypoints stayed in `kamn-core` and passed their existing integration-style tests after extraction.
+- The touched-Rust size gate passed after splitting the new `kamn-governance` modules into bounded files and shrinking the branch-touched contract tests below the function limit.
+
+## Deviations
+
+- `kamn-governance` does not depend on `kamn-types` in Phase 1. The first attempt recreated a crate cycle through `kamn-core`, so the extracted crate now uses private DID parsing helpers until the broader `kamn-types` inversion work lands.
