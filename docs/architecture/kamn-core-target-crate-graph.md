@@ -29,6 +29,21 @@ inversion path.
 - That means `kamn-types` is currently a facade over `kamn-core`, not a
   foundational crate.
 
+### Concrete Coupling Points
+
+- Manifest edge:
+  - `crates/kamn-types/Cargo.toml` declares `kamn-core` in `[dependencies]`.
+- Re-export and parse coupling:
+  - `crates/kamn-types/src/lib.rs` re-exports `AgentDid`, `KamnDid`,
+    `DidDocument`, `DidService`, `DidVerificationMethod`,
+    `AgentDidKeyBindingError`, `AgentDidError`, and `KamnDidError` from
+    `kamn-core`.
+  - the same file constructs `SharedDidParseError` from `AgentDidError` and
+    `KamnDidError` and calls `AgentDid::parse(...)` / `KamnDid::parse(...)`
+    directly.
+- Source ownership today:
+  - the concrete DID value types still live in `crates/kamn-core/src/did.rs`.
+
 ## Target Layers
 
 ### Foundational Layer
