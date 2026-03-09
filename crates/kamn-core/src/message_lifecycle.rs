@@ -1075,128 +1075,111 @@ fn serialize_message_lifecycle_snapshot(
     Ok(payload)
 }
 
+struct ParsedMessageLifecycleRecordFields<'a> {
+    message_id: &'a str,
+    sender: &'a str,
+    recipients_raw: &'a str,
+    created: &'a str,
+    expires: &'a str,
+    status_raw: &'a str,
+    history_raw: &'a str,
+}
+
 fn parse_message_lifecycle_snapshot_payload(
     payload: &str,
 ) -> Result<MessageLifecycleSnapshot, MessageLifecycleSnapshotStoreError> {
     let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
-    let Some(schema_line) = lines.next() else {
-        return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-            "missing schema line".to_owned(),
-        ));
-    };
-
-    let mut schema_parts = schema_line.split('|');
-    let Some(schema_prefix) = schema_parts.next() else {
-        return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-            schema_line.to_owned(),
-        ));
-    };
-    let Some(schema_version_raw) = schema_parts.next() else {
-        return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-            schema_line.to_owned(),
-        ));
-    };
-    if schema_prefix != "schema" || schema_parts.next().is_some() {
-        return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-            schema_line.to_owned(),
-        ));
-    }
-    let schema_version = schema_version_raw
-        .parse::<u16>()
-        .map_err(|_| MessageLifecycleSnapshotStoreError::InvalidPayload(schema_line.to_owned()))?;
-
-    let mut records = Vec::new();
-    for line in lines {
-        let mut parts = line.split('|');
-        let Some(prefix) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        if prefix != "record" {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        }
-        let Some(message_id) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        let Some(sender) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        let Some(recipients_raw) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        let Some(created) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        let Some(expires) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        let Some(status_raw) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        let Some(history_raw) = parts.next() else {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        };
-        if parts.next().is_some() {
-            return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
-                line.to_owned(),
-            ));
-        }
-
-        let recipients = if recipients_raw.is_empty() {
-            Vec::new()
-        } else {
-            recipients_raw
-                .split(',')
-                .map(|value| value.to_owned())
-                .collect::<Vec<_>>()
-        };
-        let status = parse_message_status_code(status_raw)
-            .ok_or_else(|| MessageLifecycleSnapshotStoreError::InvalidPayload(line.to_owned()))?;
-        let history = if history_raw.is_empty() {
-            Vec::new()
-        } else {
-            history_raw
-                .split(',')
-                .map(|raw| {
-                    parse_message_status_code(raw).ok_or_else(|| {
-                        MessageLifecycleSnapshotStoreError::InvalidPayload(line.to_owned())
-                    })
-                })
-                .collect::<Result<Vec<_>, _>>()?
-        };
-
-        records.push(MessageRecordSnapshot {
-            message_id: message_id.to_owned(),
-            sender: sender.to_owned(),
-            recipients,
-            created: created.to_owned(),
-            expires: expires.to_owned(),
-            status,
-            history,
-        });
-    }
-
+    let schema_line = lines
+        .next()
+        .ok_or_else(|| invalid_message_lifecycle_snapshot_payload("missing schema line"))?;
+    let schema_version = parse_message_lifecycle_snapshot_schema(schema_line)?;
+    let records = lines
+        .map(parse_message_lifecycle_snapshot_record)
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(MessageLifecycleSnapshot {
         schema_version,
         records,
     })
+}
+
+fn parse_message_lifecycle_snapshot_schema(
+    schema_line: &str,
+) -> Result<u16, MessageLifecycleSnapshotStoreError> {
+    match schema_line.split('|').collect::<Vec<_>>().as_slice() {
+        ["schema", schema_version_raw] => schema_version_raw
+            .parse::<u16>()
+            .map_err(|_| invalid_message_lifecycle_snapshot_payload(schema_line)),
+        _ => Err(invalid_message_lifecycle_snapshot_payload(schema_line)),
+    }
+}
+
+fn parse_message_lifecycle_snapshot_record(
+    line: &str,
+) -> Result<MessageRecordSnapshot, MessageLifecycleSnapshotStoreError> {
+    let fields = parse_message_lifecycle_snapshot_record_fields(line)?;
+    let status = parse_message_lifecycle_snapshot_status(fields.status_raw, line)?;
+    let history = parse_message_lifecycle_snapshot_status_history(fields.history_raw, line)?;
+    Ok(MessageRecordSnapshot {
+        message_id: fields.message_id.to_owned(),
+        sender: fields.sender.to_owned(),
+        recipients: parse_message_lifecycle_snapshot_recipients(fields.recipients_raw),
+        created: fields.created.to_owned(),
+        expires: fields.expires.to_owned(),
+        status,
+        history,
+    })
+}
+
+fn parse_message_lifecycle_snapshot_record_fields(
+    line: &str,
+) -> Result<ParsedMessageLifecycleRecordFields<'_>, MessageLifecycleSnapshotStoreError> {
+    match line.split('|').collect::<Vec<_>>().as_slice() {
+        ["record", message_id, sender, recipients_raw, created, expires, status_raw, history_raw] =>
+        {
+            Ok(ParsedMessageLifecycleRecordFields {
+                message_id,
+                sender,
+                recipients_raw,
+                created,
+                expires,
+                status_raw,
+                history_raw,
+            })
+        }
+        _ => Err(invalid_message_lifecycle_snapshot_payload(line)),
+    }
+}
+
+fn parse_message_lifecycle_snapshot_recipients(raw: &str) -> Vec<String> {
+    if raw.is_empty() {
+        return Vec::new();
+    }
+    raw.split(',').map(|value| value.to_owned()).collect()
+}
+
+fn parse_message_lifecycle_snapshot_status(
+    raw: &str,
+    line: &str,
+) -> Result<MessageStatus, MessageLifecycleSnapshotStoreError> {
+    parse_message_status_code(raw).ok_or_else(|| invalid_message_lifecycle_snapshot_payload(line))
+}
+
+fn parse_message_lifecycle_snapshot_status_history(
+    raw: &str,
+    line: &str,
+) -> Result<Vec<MessageStatus>, MessageLifecycleSnapshotStoreError> {
+    if raw.is_empty() {
+        return Ok(Vec::new());
+    }
+    raw.split(',')
+        .map(|value| parse_message_lifecycle_snapshot_status(value, line))
+        .collect()
+}
+
+fn invalid_message_lifecycle_snapshot_payload(
+    value: &str,
+) -> MessageLifecycleSnapshotStoreError {
+    MessageLifecycleSnapshotStoreError::InvalidPayload(value.to_owned())
 }
 
 #[cfg(test)]
