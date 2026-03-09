@@ -25,10 +25,10 @@ Restore workspace-wide `rustfmt` compliance so `cargo fmt --all --check` passes 
 - A supposed formatting-only diff changes program behavior or test expectations
 
 ## Acceptance Criteria
-- [ ] In a clean checkout of the fix branch, `cargo fmt --all --check` passes
-- [ ] The diff contains only deterministic formatting changes in Rust files
-- [ ] No production or test behavior changes are introduced
-- [ ] A PR carrying the fix can satisfy the Fast Gate format stage
+- [x] In a clean checkout of the fix branch, `cargo fmt --all --check` passes
+- [x] The diff contains only deterministic formatting changes in Rust files
+- [x] No production or test behavior changes are introduced
+- [x] A PR carrying the fix can satisfy the Fast Gate format stage
 
 ## Files To Touch
 - Rust files reported by `cargo fmt --all --check`
@@ -45,3 +45,9 @@ Restore workspace-wide `rustfmt` compliance so `cargo fmt --all --check` passes 
 3. Re-run `cargo fmt --all --check` and require success as GREEN
 4. Inspect the diff to confirm formatting-only changes
 5. Open a PR and verify the Fast Gate format stage passes
+
+## Phase 6 Evidence
+- `cargo fmt --all --check` failed on clean `origin/main` checkout before the fix
+- `cargo fmt --all` applied deterministic formatting across 61 Rust files
+- `cargo fmt --all --check` passes on branch `6640-restore-workspace-rustfmt-compliance` after formatting
+- Diff review confirmed formatting-only rewrites with no intended behavioral changes
