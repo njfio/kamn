@@ -62,3 +62,20 @@ Extract the remaining shared helper surface out of `crates/kamn-node/src/main_te
    - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
    - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --nocapture`
 5. Run touched Rust size policy on the extracted set.
+
+## Phase 6 Evidence
+
+- Root helper surface now wires through `service_api_endpoint_tests/shared_support.rs` and its bounded support modules.
+- Residual root test path remains live through the extracted helpers:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --nocapture`
+- Extracted transport integration path remains live through the shared helper surface:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_tls_mode_serves_required_https_routes -- --nocapture`
+- Split contract still passes after the helper extraction:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+- Touched Rust size policy passes for the full `#6688` write set:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6688-touched-size.json`
+
+## Measured Outcome
+
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `1224 -> 381` lines
+- Added bounded helper modules under `crates/kamn-node/src/main_tests/service_api_endpoint_tests/shared_support/`
