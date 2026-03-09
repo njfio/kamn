@@ -49,6 +49,8 @@ fn regression_requires_coverage_guided_input_mutation_markers() {
     assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_MAX_SECONDS"));
     assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY"));
     assert!(DOC.contains("excluded from `ci-fast-gate`"));
+    assert!(DOC.contains("message_envelope_parser_input_bound_bytes=4096"));
+    assert!(DOC.contains("message_envelope_parser_bound_scope=pre-envelope-construction"));
 }
 
 #[test]
