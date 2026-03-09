@@ -98,8 +98,11 @@ fn read_response_until_timeout(stream: &mut TcpStream) -> String {
     loop {
         match stream.read(&mut chunk) {
             Ok(0) => break,
-            Ok(count) => response.push_str(std::str::from_utf8(&chunk[..count]).expect("response must be utf-8")),
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => break,
+            Ok(count) => response
+                .push_str(std::str::from_utf8(&chunk[..count]).expect("response must be utf-8")),
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break
+            }
             Err(error) => panic!("response should be readable: {error}"),
         }
     }
@@ -131,5 +134,6 @@ async fn read_async_response(stream: &mut tokio::net::TcpStream) -> Result<Strin
             Err(_) => break,
         }
     }
-    String::from_utf8(response).map_err(|error| format!("async http response was not utf-8: {error}"))
+    String::from_utf8(response)
+        .map_err(|error| format!("async http response was not utf-8: {error}"))
 }

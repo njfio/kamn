@@ -17,8 +17,7 @@ pub(crate) const SERVICE_API_AGENT_DID_PATH_INVALID_REASON_CODE: &str =
     "service_api_agent_did_path_invalid";
 pub(crate) const SERVICE_API_MESSAGE_RECIPIENT_DID_INVALID_REASON_CODE: &str =
     "service_api_message_recipient_did_invalid";
-pub(crate) const SERVICE_API_RELAY_DID_INVALID_REASON_CODE: &str =
-    "service_api_relay_did_invalid";
+pub(crate) const SERVICE_API_RELAY_DID_INVALID_REASON_CODE: &str = "service_api_relay_did_invalid";
 pub(crate) const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
     "service_api_auth_scope_route_mismatch";
 pub(crate) const TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX: &str =
@@ -49,10 +48,13 @@ pub(crate) fn test_service_api_sender_did(sender: &str) -> String {
     {
         return sender.to_owned();
     }
-    AgentDid::with_public_key_hex_binding(parsed_sender_did.method_specific_id(), public_key_hex.as_str())
-        .expect("test sender did should bind to fixture signer key")
-        .as_str()
-        .to_owned()
+    AgentDid::with_public_key_hex_binding(
+        parsed_sender_did.method_specific_id(),
+        public_key_hex.as_str(),
+    )
+    .expect("test sender did should bind to fixture signer key")
+    .as_str()
+    .to_owned()
 }
 
 pub(crate) fn service_api_request_signature_for_fields(

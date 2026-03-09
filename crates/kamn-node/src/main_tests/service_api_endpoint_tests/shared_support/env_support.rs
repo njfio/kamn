@@ -20,7 +20,10 @@ pub(crate) fn unique_service_api_test_state_file_path() -> String {
         .expect("clock should be monotonic")
         .as_nanos();
     std::env::temp_dir()
-        .join(format!("kamn-node-service-api-state-test-{}-{entropy}.json", std::process::id()))
+        .join(format!(
+            "kamn-node-service-api-state-test-{}-{entropy}.json",
+            std::process::id()
+        ))
         .to_string_lossy()
         .to_string()
 }
@@ -36,7 +39,10 @@ pub(crate) fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
             "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX",
             Some(test_service_api_auth_public_key_hex().as_str()),
         ),
-        _state_file_guard: EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file.as_str())),
+        _state_file_guard: EnvVarGuard::set(
+            "KAMN_SERVICE_API_STATE_FILE",
+            Some(state_file.as_str()),
+        ),
         _log_level_guard: EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", None),
         _log_format_guard: EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", None),
         _chain_id_guard: EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None),

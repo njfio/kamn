@@ -610,7 +610,8 @@ fn spec_c24_service_api_endpoint_task_escrow_persistence_split_files_stay_below_
 #[test]
 fn spec_c25_service_api_endpoint_root_file_removes_moved_content_lifecycle_restart_contract() {
     let source = read_repo_file(ROOT_FILE);
-    let marker = "fn integration_service_api_endpoint_persists_content_lifecycle_state_across_restart()";
+    let marker =
+        "fn integration_service_api_endpoint_persists_content_lifecycle_state_across_restart()";
     assert!(
         !source.contains(marker),
         "service_api_endpoint_tests.rs should not keep moved content lifecycle restart marker: {marker}"
@@ -669,7 +670,8 @@ fn spec_c29_service_api_endpoint_root_file_removes_moved_bridge_persistence_rest
 }
 
 #[test]
-fn spec_c30_service_api_endpoint_bridge_persistence_restart_module_exists_and_owns_moved_coverage() {
+fn spec_c30_service_api_endpoint_bridge_persistence_restart_module_exists_and_owns_moved_coverage()
+{
     let module_source = read_repo_file(BRIDGE_PERSISTENCE_RESTART_MODULE_FILE);
     let restart_source = read_repo_file(BRIDGE_PERSISTENCE_RESTART_FILE);
 
@@ -678,9 +680,8 @@ fn spec_c30_service_api_endpoint_bridge_persistence_restart_module_exists_and_ow
         "bridge_persistence_restart_contract_tests.rs should declare restart submodule"
     );
     assert!(
-        restart_source.contains(
-            "fn integration_service_api_endpoint_persists_bridge_state_across_restart()"
-        ),
+        restart_source
+            .contains("fn integration_service_api_endpoint_persists_bridge_state_across_restart()"),
         "bridge persistence restart contract file should include moved restart marker"
     );
 }
@@ -768,11 +769,7 @@ fn assert_mailbox_relay_markers(
     relay_did_rejection: &str,
     relay_status: &str,
 ) {
-    assert_mailbox_relay_delivery_markers(
-        recipient_mailbox,
-        relay_delivery,
-        relay_did_rejection,
-    );
+    assert_mailbox_relay_delivery_markers(recipient_mailbox, relay_delivery, relay_did_rejection);
     assert_mailbox_relay_status_markers(relay_status);
 }
 
@@ -1210,97 +1207,121 @@ fn spec_c46_service_api_endpoint_shared_support_module_exists_and_owns_helper_su
     let response_support = read_repo_file(RESPONSE_SUPPORT_FILE);
     let env_support = read_repo_file(ENV_SUPPORT_FILE);
 
-    for marker in [
-        "mod auth_fixture_support;",
-        "mod route_scope_support;",
-        "mod http_transport_support;",
-        "mod tls_transport_support;",
-        "mod response_support;",
-        "mod env_support;",
-    ] {
-        assert!(
-            module_source.contains(marker),
-            "shared_support.rs should declare helper submodule: {marker}"
-        );
-    }
+    assert_shared_support_modules_declared(module_source.as_str());
+    assert_auth_fixture_support_markers(auth_support.as_str());
+    assert_route_scope_support_markers(route_scope.as_str());
+    assert_http_transport_support_markers(http_transport.as_str());
+    assert_tls_transport_support_markers(tls_transport.as_str());
+    assert_response_support_markers(response_support.as_str());
+    assert_env_support_markers(env_support.as_str());
+}
 
-    for marker in [
-        "struct ServiceApiErrorEnvelope {",
-        "const SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE: &str =",
-        "fn test_service_api_auth_public_key_hex() -> String {",
-        "fn test_service_api_sender_did(sender: &str) -> String {",
-        "fn service_api_request_signature_for_fields(",
-    ] {
-        assert!(
-            auth_support.contains(marker),
-            "auth fixture support file should include moved marker: {marker}"
-        );
-    }
+fn assert_shared_support_modules_declared(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "mod auth_fixture_support;",
+            "mod route_scope_support;",
+            "mod http_transport_support;",
+            "mod tls_transport_support;",
+            "mod response_support;",
+            "mod env_support;",
+        ],
+        "shared_support.rs",
+    );
+}
 
-    for marker in [
-        "struct ServiceApiRouteAuthzMatrixRow {",
-        "struct ServiceApiScopePolicyFixtureRow {",
-        "fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {",
-        "fn parse_service_api_scope_policy_fixture(",
-        "fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static str> {",
-        "fn enrich_signed_headers_with_scope(",
-    ] {
-        assert!(
-            route_scope.contains(marker),
-            "route/scope support file should include moved marker: {marker}"
-        );
-    }
+fn assert_auth_fixture_support_markers(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "struct ServiceApiErrorEnvelope {",
+            "const SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE: &str =",
+            "fn test_service_api_auth_public_key_hex() -> String {",
+            "fn test_service_api_sender_did(sender: &str) -> String {",
+            "fn service_api_request_signature_for_fields(",
+        ],
+        "auth fixture support file",
+    );
+}
 
-    for marker in [
-        "fn reserve_loopback_addr() -> String {",
-        "fn send_http_request(addr: &str, method: &str, path: &str, body: &str) -> String {",
-        "fn send_http_request_with_headers(",
-        "fn send_http_request_with_headers_raw(",
-        "async fn send_http_request_with_headers_async(",
-    ] {
-        assert!(
-            http_transport.contains(marker),
-            "http transport support file should include moved marker: {marker}"
-        );
-    }
+fn assert_route_scope_support_markers(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "struct ServiceApiRouteAuthzMatrixRow {",
+            "struct ServiceApiScopePolicyFixtureRow {",
+            "fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {",
+            "fn parse_service_api_scope_policy_fixture(",
+            "fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static str> {",
+            "fn enrich_signed_headers_with_scope(",
+        ],
+        "route/scope support file",
+    );
+}
 
-    for marker in [
-        "const TEST_SERVICE_API_TLS_CERT_PEM: &str =",
-        "const TEST_SERVICE_API_TLS_KEY_PEM: &str =",
-        "struct TestSkipServerVerification(",
-        "fn send_https_request_with_headers(",
-        "fn send_https_request_with_headers_raw(",
-        "fn write_test_service_api_tls_materials() -> (String, String) {",
-    ] {
-        assert!(
-            tls_transport.contains(marker),
-            "tls transport support file should include moved marker: {marker}"
-        );
-    }
+fn assert_http_transport_support_markers(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "fn reserve_loopback_addr() -> String {",
+            "fn send_http_request(addr: &str, method: &str, path: &str, body: &str) -> String {",
+            "fn send_http_request_with_headers(",
+            "fn send_http_request_with_headers_raw(",
+            "async fn send_http_request_with_headers_async(",
+        ],
+        "http transport support file",
+    );
+}
 
-    for marker in [
-        "fn parse_http_content_length(response_head: &str) -> usize {",
-        "fn extract_http_response_body(response: &str) -> &str {",
-        "fn parse_error_envelope(body: &str) -> ServiceApiErrorEnvelope {",
-        "fn parse_error_envelope_from_http_response(response: &str) -> ServiceApiErrorEnvelope {",
-        "fn parse_scalar_metric_value(response: &str, metric_name: &str) -> Option<u64> {",
-        "fn read_single_http_response(stream: &mut TcpStream) -> String {",
-        "fn wait_for_endpoint_ready(addr: &str) {",
-    ] {
-        assert!(
-            response_support.contains(marker),
-            "response support file should include moved marker: {marker}"
-        );
-    }
+fn assert_tls_transport_support_markers(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "const TEST_SERVICE_API_TLS_CERT_PEM: &str =",
+            "const TEST_SERVICE_API_TLS_KEY_PEM: &str =",
+            "struct TestSkipServerVerification(",
+            "fn send_https_request_with_headers(",
+            "fn send_https_request_with_headers_raw(",
+            "fn write_test_service_api_tls_materials() -> (String, String) {",
+        ],
+        "tls transport support file",
+    );
+}
 
-    for marker in [
-        "struct ServiceApiTestEnvGuards {",
-        "fn unique_service_api_test_state_file_path() -> String {",
-        "fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {",
-    ] {
+fn assert_response_support_markers(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "fn parse_http_content_length(response_head: &str) -> usize {",
+            "fn extract_http_response_body(response: &str) -> &str {",
+            "fn parse_error_envelope(body: &str) -> ServiceApiErrorEnvelope {",
+            "fn parse_error_envelope_from_http_response(response: &str) -> ServiceApiErrorEnvelope {",
+            "fn parse_scalar_metric_value(response: &str, metric_name: &str) -> Option<u64> {",
+            "fn read_single_http_response(stream: &mut TcpStream) -> String {",
+            "fn wait_for_endpoint_ready(addr: &str) {",
+        ],
+        "response support file",
+    );
+}
+
+fn assert_env_support_markers(source: &str) {
+    assert_shared_support_file_markers(
+        source,
+        &[
+            "struct ServiceApiTestEnvGuards {",
+            "fn unique_service_api_test_state_file_path() -> String {",
+            "fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {",
+        ],
+        "env support file",
+    );
+}
+
+fn assert_shared_support_file_markers(source: &str, markers: &[&str], label: &str) {
+    for marker in markers {
         assert!(
-            env_support.contains(marker),
-            "env support file should include moved marker: {marker}"
+            source.contains(marker),
+            "{label} should include moved marker: {marker}"
         );
     }
 }

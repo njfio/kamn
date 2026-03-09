@@ -27,7 +27,12 @@ pub(crate) fn parse_scalar_metric_value(response: &str, metric_name: &str) -> Op
     let expected_prefix = format!("{metric_name} ");
     extract_http_response_body(response)
         .lines()
-        .find_map(|line| line.trim().strip_prefix(expected_prefix.as_str())?.parse::<u64>().ok())
+        .find_map(|line| {
+            line.trim()
+                .strip_prefix(expected_prefix.as_str())?
+                .parse::<u64>()
+                .ok()
+        })
 }
 
 pub(crate) fn read_single_http_response(stream: &mut TcpStream) -> String {
@@ -59,7 +64,9 @@ fn read_http_response_bytes(stream: &mut TcpStream) -> Vec<u8> {
         match stream.read(&mut chunk) {
             Ok(0) => break,
             Ok(count) => extend_response(stream, &mut response, &chunk, count, &mut expected_len),
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => break,
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break
+            }
             Err(error) => panic!("response should be readable: {error}"),
         }
         if expected_len.is_some_and(|total| response.len() >= total) {
@@ -83,7 +90,10 @@ fn extend_response(
 }
 
 fn expected_response_len(response: &[u8]) -> Option<usize> {
-    let header_end = response.windows(4).position(|window| window == b"\r\n\r\n")? + 4;
+    let header_end = response
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")?
+        + 4;
     let head = String::from_utf8_lossy(&response[..header_end]);
     Some(header_end + parse_http_content_length(head.as_ref()))
 }

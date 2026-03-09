@@ -1,5 +1,5 @@
 use super::super::*;
-use super::http_transport_support::{render_http_request};
+use super::http_transport_support::render_http_request;
 
 pub(crate) const TEST_SERVICE_API_TLS_CERT_PEM: &str = "-----BEGIN CERTIFICATE-----
 MIIDCTCCAfGgAwIBAgIUX9dYtx2K5dX0X33CQvg4re7nVwwwDQYJKoZIhvcNAQEL
@@ -79,7 +79,12 @@ impl rustls::client::danger::ServerCertVerifier for TestSkipServerVerification {
         cert: &CertificateDer<'_>,
         dss: &rustls::DigitallySignedStruct,
     ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        rustls::crypto::verify_tls12_signature(message, cert, dss, &self.0.signature_verification_algorithms)
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
     }
 
     fn verify_tls13_signature(
@@ -88,7 +93,12 @@ impl rustls::client::danger::ServerCertVerifier for TestSkipServerVerification {
         cert: &CertificateDer<'_>,
         dss: &rustls::DigitallySignedStruct,
     ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        rustls::crypto::verify_tls13_signature(message, cert, dss, &self.0.signature_verification_algorithms)
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
     }
 
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
@@ -123,7 +133,9 @@ pub(crate) fn send_https_request_with_headers_raw(
     let tcp_stream = configure_tls_stream(addr);
     let mut stream = rustls::StreamOwned::new(connection, tcp_stream);
     let request = render_http_request("localhost", method, path, body, headers);
-    stream.write_all(request.as_bytes()).expect("tls request should write");
+    stream
+        .write_all(request.as_bytes())
+        .expect("tls request should write");
     stream.flush().expect("tls request should flush");
     read_tls_response(&mut stream)
 }
@@ -133,9 +145,13 @@ pub(crate) fn write_test_service_api_tls_materials() -> (String, String) {
     fs::create_dir_all(&base).expect("temporary tls directory should be created");
     let cert_path = base.join("server-cert.pem");
     let key_path = base.join("server-key.pem");
-    fs::write(&cert_path, TEST_SERVICE_API_TLS_CERT_PEM.as_bytes()).expect("test cert should write");
+    fs::write(&cert_path, TEST_SERVICE_API_TLS_CERT_PEM.as_bytes())
+        .expect("test cert should write");
     fs::write(&key_path, TEST_SERVICE_API_TLS_KEY_PEM.as_bytes()).expect("test key should write");
-    (cert_path.to_string_lossy().to_string(), key_path.to_string_lossy().to_string())
+    (
+        cert_path.to_string_lossy().to_string(),
+        key_path.to_string_lossy().to_string(),
+    )
 }
 
 fn build_tls_client_config() -> rustls::ClientConfig {
@@ -153,14 +169,19 @@ fn configure_tls_stream(addr: &str) -> TcpStream {
     stream
 }
 
-fn read_tls_response(stream: &mut rustls::StreamOwned<rustls::ClientConnection, TcpStream>) -> String {
+fn read_tls_response(
+    stream: &mut rustls::StreamOwned<rustls::ClientConnection, TcpStream>,
+) -> String {
     let mut response = String::new();
     let mut chunk = [0_u8; 1024];
     loop {
         match stream.read(&mut chunk) {
             Ok(0) => break,
-            Ok(count) => response.push_str(std::str::from_utf8(&chunk[..count]).expect("response must be utf-8")),
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => break,
+            Ok(count) => response
+                .push_str(std::str::from_utf8(&chunk[..count]).expect("response must be utf-8")),
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break
+            }
             Err(error) => panic!("tls response should be readable: {error}"),
         }
     }
@@ -168,6 +189,12 @@ fn read_tls_response(stream: &mut rustls::StreamOwned<rustls::ClientConnection, 
 }
 
 fn tls_temp_dir() -> std::path::PathBuf {
-    let entropy = SystemTime::now().duration_since(UNIX_EPOCH).expect("clock should be monotonic").as_nanos();
-    std::env::temp_dir().join(format!("kamn-node-service-api-tls-{}-{entropy}", std::process::id()))
+    let entropy = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be monotonic")
+        .as_nanos();
+    std::env::temp_dir().join(format!(
+        "kamn-node-service-api-tls-{}-{entropy}",
+        std::process::id()
+    ))
 }
