@@ -33,11 +33,11 @@ Extract the content lifecycle restart coverage out of `crates/kamn-node/src/main
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `service_api_endpoint_tests.rs` declares a new content-lifecycle-restart submodule and no longer retains the moved content lifecycle restart test marker.
-- [ ] AC-2: Extracted content-lifecycle-restart files stay at or below 200 lines each.
-- [ ] AC-3: The staged root threshold ratchets down from `5331` to `5100` lines or lower.
-- [ ] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
-- [ ] AC-5: At least one extracted content lifecycle restart test passes from the real `kamn-node` test module path.
+- [x] AC-1: `service_api_endpoint_tests.rs` declares a new content-lifecycle-restart submodule and no longer retains the moved content lifecycle restart test marker.
+- [x] AC-2: Extracted content-lifecycle-restart files stay at or below 200 lines each.
+- [x] AC-3: The staged root threshold ratchets down from `5331` to `5100` lines or lower.
+- [x] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
+- [x] AC-5: At least one extracted content lifecycle restart test passes from the real `kamn-node` test module path.
 
 ## Files To Touch
 
@@ -59,3 +59,21 @@ Extract the content lifecycle restart coverage out of `crates/kamn-node/src/main
 2. Extract the content lifecycle restart coverage into bounded files until the split contract passes.
 3. Run the targeted split contract and directly affected `kamn-node` restart test.
 4. Record integration evidence and any deviations in this spec.
+
+## Phase 6 Evidence
+
+- Root module wiring:
+  - `#[path = "service_api_endpoint_tests/content_lifecycle_restart_contract_tests.rs"]`
+  - `mod content_lifecycle_restart_contract_tests;`
+- Final line counts:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `5071`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/content_lifecycle_restart_contract_tests.rs`: `4`
+  - `.../content_lifecycle_restart_contract_tests.rs`: `82`
+  - `.../support.rs`: `195`
+- Verified commands:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_persists_content_lifecycle_state_across_restart -- --nocapture`
+
+## Deviations
+
+- No behavioral deviation from scope. The refactor split the restart assertions into small local helpers to satisfy the function-size discipline while keeping the extracted support file under the 200-line budget.
