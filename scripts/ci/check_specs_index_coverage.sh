@@ -97,9 +97,10 @@ for shard_rel in shard_paths:
 top_level_specs = sorted(
     p.name for p in specs_root.glob("*.md") if p.name != "INDEX.md"
 )
+top_level_spec_set = set(top_level_specs)
 entry_set = set(entries)
-missing_entries = sorted(set(top_level_specs) - entry_set)
-unknown_entries = sorted(entry_set - set(top_level_specs))
+missing_entries = sorted(top_level_spec_set - entry_set)
+unknown_entries = sorted(entry_set - top_level_spec_set)
 duplicate_entries = sorted(name for name in entry_set if entries.count(name) > 1)
 
 if missing_entries:

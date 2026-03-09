@@ -18,6 +18,34 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+expect_reason() {
+  local output="$1"
+  local reason="$2"
+  if ! printf '%s\n' "$output" | grep -q "$reason"; then
+    echo "expected deterministic $reason reason marker" >&2
+    exit 1
+  fi
+}
+
+run_expect_failure() {
+  local repo_root="$1"
+  local report_path="$2"
+  local reason="$3"
+  local description="$4"
+  local output=""
+
+  set +e
+  output="$(bash "$CHECKER" --repo-root "$repo_root" --output-json "$report_path" 2>&1)"
+  local exit_code=$?
+  set -e
+
+  if [ "$exit_code" -eq 0 ]; then
+    echo "expected specs index checker to fail when $description" >&2
+    exit 1
+  fi
+  expect_reason "$output" "$reason"
+}
+
 PASS_ROOT="$TMP_DIR/pass-root"
 mkdir -p "$PASS_ROOT/specs/index"
 cat > "$PASS_ROOT/specs/INDEX.md" <<'EOF'
@@ -66,19 +94,11 @@ cat > "$MISSING_ENTRY_ROOT/specs/index/6500-6999.md" <<'EOF'
 
 EOF
 
-set +e
-missing_entry_output="$(bash "$CHECKER" --repo-root "$MISSING_ENTRY_ROOT" --output-json "$TMP_DIR/missing-entry-report.json" 2>&1)"
-missing_entry_exit=$?
-set -e
-
-if [ "$missing_entry_exit" -eq 0 ]; then
-  echo "expected specs index checker to fail when a top-level spec is omitted from shards" >&2
-  exit 1
-fi
-if ! printf '%s\n' "$missing_entry_output" | grep -q 'specs_index_missing_entry'; then
-  echo "expected deterministic specs_index_missing_entry reason marker" >&2
-  exit 1
-fi
+run_expect_failure \
+  "$MISSING_ENTRY_ROOT" \
+  "$TMP_DIR/missing-entry-report.json" \
+  "specs_index_missing_entry" \
+  "a top-level spec is omitted from shards"
 
 EXTRA_ENTRY_ROOT="$TMP_DIR/extra-entry-root"
 cp -R "$PASS_ROOT/." "$EXTRA_ENTRY_ROOT"
@@ -89,18 +109,10 @@ cat > "$EXTRA_ENTRY_ROOT/specs/index/6500-6999.md" <<'EOF'
 - [6999-missing.md](../6999-missing.md)
 EOF
 
-set +e
-extra_entry_output="$(bash "$CHECKER" --repo-root "$EXTRA_ENTRY_ROOT" --output-json "$TMP_DIR/extra-entry-report.json" 2>&1)"
-extra_entry_exit=$?
-set -e
-
-if [ "$extra_entry_exit" -eq 0 ]; then
-  echo "expected specs index checker to fail when a shard references a missing top-level spec" >&2
-  exit 1
-fi
-if ! printf '%s\n' "$extra_entry_output" | grep -q 'specs_index_unknown_entry'; then
-  echo "expected deterministic specs_index_unknown_entry reason marker" >&2
-  exit 1
-fi
+run_expect_failure \
+  "$EXTRA_ENTRY_ROOT" \
+  "$TMP_DIR/extra-entry-report.json" \
+  "specs_index_unknown_entry" \
+  "a shard references a missing top-level spec"
 
 echo "specs index coverage checker tests passed."
