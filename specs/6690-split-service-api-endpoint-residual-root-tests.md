@@ -64,3 +64,25 @@ Extract the remaining residual root tests from `crates/kamn-node/src/main_tests/
    - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --nocapture`
    - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_tls_mode_serves_required_https_routes -- --nocapture`
 5. Run `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6690-touched-size.json` on the final write set.
+
+## Phase 6 Evidence
+
+- `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+- `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --nocapture`
+- `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_tls_mode_serves_required_https_routes -- --nocapture`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6690-touched-size.json`
+
+## Measured Outcome
+
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `63` LOC
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/residual_root_contract_tests.rs`: `12` LOC
+- `env_lock_contract_tests.rs`: `10` LOC
+- `error_envelope_contract_tests.rs`: `167` LOC
+- `missing_resource_contract_tests.rs`: `122` LOC
+- `payload_parse_contract_tests.rs`: `22` LOC
+- `serde_payload_contract_tests.rs`: `95` LOC
+- touched-Rust size policy: `status=pass`, `policy_decision=GO`
+
+## Deviations
+
+- None.
