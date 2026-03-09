@@ -3075,10 +3075,17 @@ fn doc_contains_governance_feature_commit_ratio_gate_markers() {
         "governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env"
     ));
     assert!(DOC.contains(
-        "governance_feature_commit_ratio_activation_base_sha=f0252d24ff91859fe0b4051712ef98873aaae1f4"
+        "governance_feature_commit_ratio_activation_base_sha=e8a6de26ef277849b374e921c3e3307accbbacdf"
     ));
-    assert!(DOC
-        .contains("governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only"));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_activation_base_status=head_at_activation_base"
+    ));
+    assert!(DOC.contains(
+        "governance_feature_commit_ratio_preactivation_rerun_status=head_precedes_activation_base"
+    ));
     assert!(DOC.contains("governance_feature_commit_ratio_non_merge_only=true"));
 }
 
