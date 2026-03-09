@@ -56,6 +56,10 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 - Coverage-guided parser fuzz lane uses deterministic seed-frontier discovery
   with bounded replay-prefix minimization and emits replay metadata artifact key
   `input_mutation_coverage_guided_replay:v1`.
+- Cargo-fuzz parser harnesses keep deterministic per-target input caps before
+  deep parsing/build steps; current message-envelope cap:
+  - `message_envelope_parser_input_bound_bytes=4096`
+  - `message_envelope_parser_bound_scope=pre-envelope-construction`
 - Concurrency lanes use replay fixtures and deterministic round-based checks to
   guard winner exclusivity and terminal-state safety, and emit replay metadata
   artifact key `concurrency_mutation_replay:v1`.
