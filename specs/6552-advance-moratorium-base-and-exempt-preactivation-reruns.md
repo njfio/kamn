@@ -29,11 +29,11 @@ Advance the governance/feature commit-ratio moratorium start point past the roll
 - Docs or workflow contracts drift from the new activation-base semantics.
 
 ## Acceptance criteria
-- [ ] The checker returns a non-violating result when `head_sha` is equal to the configured activation base.
-- [ ] The checker returns a non-violating historical result when `head_sha` is an ancestor of the configured activation base.
-- [ ] The checker still returns `governance_commit_ratio_threshold_exceeded` for post-activation governance-only history.
-- [ ] `.ci/governance-feature-commit-ratio-moratorium.env` anchors the moratorium after the rollout head used by `#6551`.
-- [ ] `docs/ci/strategy.md` and `crates/kamn-core/tests/ci_strategy_docs.rs` document and pin the activation-base and pre-activation rerun semantics.
+- [x] The checker returns a non-violating result when `head_sha` is equal to the configured activation base.
+- [x] The checker returns a non-violating historical result when `head_sha` is an ancestor of the configured activation base.
+- [x] The checker still returns `governance_commit_ratio_threshold_exceeded` for post-activation governance-only history.
+- [x] `.ci/governance-feature-commit-ratio-moratorium.env` anchors the moratorium after the rollout head used by `#6551`.
+- [x] `docs/ci/strategy.md` and `crates/kamn-core/tests/ci_strategy_docs.rs` document and pin the activation-base and pre-activation rerun semantics.
 
 ## Files to touch
 - `.ci/governance-feature-commit-ratio-moratorium.env`
@@ -43,6 +43,10 @@ Advance the governance/feature commit-ratio moratorium start point past the roll
 - `scripts/ci/test_workflow_scope_policy.sh`
 - `docs/ci/strategy.md`
 - `crates/kamn-core/tests/ci_strategy_docs.rs`
+- `docs/developer/script-surface-index.md`
+- `docs/developer/script-surface-reduction-candidates.md`
+- `crates/kamn-core/tests/script_surface_index_docs.rs`
+- `crates/kamn-core/tests/script_surface_reduction_candidates_docs.rs`
 
 ## Error semantics
 - Invalid git arguments or repository state remain hard failures with `status=violation` and deterministic error payloads.
@@ -67,8 +71,11 @@ Advance the governance/feature commit-ratio moratorium start point past the roll
 - `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
 - `bash scripts/ci/test_workflow_scope_policy.sh`
 - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`
+- `cargo test -p kamn-core --test script_surface_index_docs -- --nocapture`
+- `cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture`
 - `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root /home/n/Code/kamn --base-sha e8a6de26ef277849b374e921c3e3307accbbacdf --head-sha e8a6de26ef277849b374e921c3e3307accbbacdf --window-size 50 --max-governance-ratio 0.2 --output-json /tmp/ratio-6551.json`
 - `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root /home/n/Code/kamn --base-sha e8a6de26ef277849b374e921c3e3307accbbacdf --head-sha 73212e841bfa77668424ba3b8c3b7e66fedf2d83 --window-size 50 --max-governance-ratio 0.2 --output-json /tmp/ratio-6550.json`
 
 ## Deviations
 - No pre-merge PR can make its own governance-ratio Fast Gate green once that gate is loaded from the unfixed base branch and the PR itself is governance-only work. This issue fixes the merged/base-branch semantics and historical reruns, but its own PR still requires an explicit merge exception or a post-merge rerun for clean evidence.
+- Rebasing onto `main` after March 7 added one new Python helper file under `scripts/ci`, so the script-surface inventory docs and their contract fixtures had to be refreshed to keep Workspace Pre-Merge green.

@@ -1,7 +1,7 @@
 # Script Surface Reduction Candidates
 
 script_surface_short_wrapper_schema_version=kamn.docs.script-surface-short-wrapper-candidates.v1
-script_surface_short_wrapper_generated_on=2026-03-07
+script_surface_short_wrapper_generated_on=2026-03-09
 script_surface_short_wrapper_shell_threshold_max_loc=25
 script_surface_short_wrapper_python_threshold_max_loc=40
 script_surface_short_wrapper_category_count=24
@@ -18,7 +18,7 @@ category using deterministic thresholds:
 
 | Category | Total scripts | Short-wrapper candidates | Candidate ratio |
 | --- | --- | --- | --- |
-| `scripts/ci` | `198` | `19` | `9.60%` |
+| `scripts/ci` | `199` | `19` | `9.55%` |
 | `scripts/sdk` | `80` | `16` | `20.00%` |
 | `scripts/runtime` | `229` | `5` | `2.18%` |
 | `scripts/kolme` | `217` | `5` | `2.30%` |
