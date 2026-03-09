@@ -15,6 +15,14 @@ const DEFAULT_CONTENT_TYPE: &str = "application/json";
 const DEFAULT_ENCRYPTION_ALG: &str = "X25519-XChaCha20-Poly1305";
 const DEFAULT_PROOF_PURPOSE: &str = "authentication";
 
+fn bounded_utf8(data: &[u8], max_len: usize) -> String {
+    let mut value = String::from_utf8_lossy(data).to_string();
+    if value.len() > max_len {
+        value.truncate(max_len);
+    }
+    value
+}
+
 fn bounded_field(parts: &[&str], index: usize, fallback: &str, max_len: usize) -> String {
     parts
         .get(index)
@@ -60,7 +68,7 @@ fn parse_body(input: &str) -> BTreeMap<String, String> {
 }
 
 fn envelope_from_input(data: &[u8]) -> CanonicalMessageEnvelope {
-    let raw = std::str::from_utf8(data).unwrap_or_default();
+    let raw = bounded_utf8(data, 4096);
     let parts = raw.split('|').take(16).collect::<Vec<_>>();
 
     let id = bounded_field(&parts, 0, "fuzz-envelope-id", 64);

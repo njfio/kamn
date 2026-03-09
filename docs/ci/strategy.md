@@ -219,6 +219,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo_fuzz_ci_smoke_max_seconds=120`
   - `cargo_fuzz_local_heavy_max_seconds=900`
   - `cargo_fuzz_local_heavy_excluded_from_ci_fast_gate=true`
+  - `message_envelope_parser_input_bound_bytes=4096`
+  - `message_envelope_parser_bound_scope=pre-envelope-construction`
   - `cargo_fuzz_seed_provenance_version=kamn.runtime.cargo-fuzz-seed-provenance.v1`
   - `cargo_fuzz_seed_replay_keys_csv=cargo_fuzz_seed_replay:message_envelope_parser:v1,cargo_fuzz_seed_replay:did_parser:v1,cargo_fuzz_seed_replay:signature_profile_parser:v1,cargo_fuzz_seed_replay:kolme_api_codec_parser:v1,cargo_fuzz_seed_replay:kolme_flat_json_parser:v1`
   - `cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds`
