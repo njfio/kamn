@@ -3086,7 +3086,7 @@ fn doc_contains_governance_feature_commit_ratio_gate_markers() {
         "governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env"
     ));
     assert!(DOC.contains(
-        "governance_feature_commit_ratio_activation_base_sha=d2c2fe1bbf68806cb153541f9dc192c81e7847cf"
+        "governance_feature_commit_ratio_activation_base_sha=d2c2fe1b901a1d53ea419f31778e1d836f2b1323"
     ));
     assert!(DOC.contains(
         "governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only"

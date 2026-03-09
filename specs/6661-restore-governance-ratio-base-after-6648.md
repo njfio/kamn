@@ -4,7 +4,7 @@
 
 Restore base-branch compliance for the governance/feature commit ratio gate by advancing the moratorium activation base to the current `main` head after `#6648`, then updating the supporting docs and regression tests so future PRs are judged against the refreshed window.
 
-Refreshed activation base SHA: `d2c2fe1bbf68806cb153541f9dc192c81e7847cf`
+Refreshed activation base SHA: `d2c2fe1b901a1d53ea419f31778e1d836f2b1323`
 Superseded activation base SHA: `0cb56974454e79789d594a7b8222060b9f3a9b95`
 
 ## Inputs/Outputs
@@ -60,5 +60,5 @@ Superseded activation base SHA: `0cb56974454e79789d594a7b8222060b9f3a9b95`
 - Run `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
 - Run `bash scripts/ci/test_workflow_scope_policy.sh`
 - Run `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`
-- Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1bbf68806cb153541f9dc192c81e7847cf --head-sha d2c2fe1bbf68806cb153541f9dc192c81e7847cf --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-at-base.json`
-- Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1bbf68806cb153541f9dc192c81e7847cf --head-sha ab06162ebee80e920e2ccfd12b1fb7fbec538248 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-preactivation.json`
+- Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-at-base.json`
+- Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha ab06162ebee80e920e2ccfd12b1fb7fbec538248 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-preactivation.json`

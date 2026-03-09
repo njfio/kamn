@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
-EXPECTED_GOVERNANCE_RATIO_ACTIVATION_BASE_SHA="d2c2fe1bbf68806cb153541f9dc192c81e7847cf"
+EXPECTED_GOVERNANCE_RATIO_ACTIVATION_BASE_SHA="d2c2fe1b901a1d53ea419f31778e1d836f2b1323"
 DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
 
 if ! grep -Fq "workflow_dispatch:" "$FAST_WORKFLOW"; then
