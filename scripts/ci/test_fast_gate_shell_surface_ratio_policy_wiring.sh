@@ -82,6 +82,27 @@ if ! grep -Fq "ci-kamn-sdk-service-rs-extraction-threshold.json" "$FAST_WORKFLOW
   exit 1
 fi
 
+if ! grep -Fq "name: Check touched Rust size policy" "$FAST_WORKFLOW"; then
+  echo "expected touched Rust size policy step in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "bash scripts/ci/check_touched_rust_size_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected touched Rust size policy checker command in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "fixtures/ci/touched_rust_size_policy_thresholds.json" "$FAST_WORKFLOW"; then
+  echo "expected touched Rust size policy threshold fixture wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "fixtures/ci/touched_rust_size_policy_baseline.json" "$FAST_WORKFLOW"; then
+  echo "expected touched Rust size policy baseline fixture wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "ci-touched-rust-size-policy.json" "$FAST_WORKFLOW"; then
+  echo "expected touched Rust size policy report output wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+
 if ! grep -Fq "name: Check shell-rust ratio guardrail" "$FAST_WORKFLOW"; then
   echo "expected shell-rust ratio guardrail step in ci-fast-gate workflow" >&2
   exit 1

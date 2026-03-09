@@ -598,6 +598,17 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("reason_codes=runtime_orchestration_rs_threshold_exception_applied"));
     assert!(DOC.contains("reason_codes=runtime_orchestration_rs_threshold_exception_expired"));
     assert!(DOC.contains("reason_codes=runtime_orchestration_rs_threshold_exception_cap_exceeded"));
+    assert!(DOC.contains("test_check_touched_rust_size_policy.sh"));
+    assert!(DOC.contains("fixtures/ci/touched_rust_size_policy_thresholds.json"));
+    assert!(DOC.contains("fixtures/ci/touched_rust_size_policy_baseline.json"));
+    assert!(DOC.contains(
+        "check_touched_rust_size_policy.sh --output-json /tmp/touched-rust-size-policy-report.json"
+    ));
+    assert!(DOC.contains("reason_codes=touched_rust_size_policy_new_oversized_file"));
+    assert!(DOC.contains("reason_codes=touched_rust_size_policy_new_oversized_function"));
+    assert!(DOC.contains("reason_codes=touched_rust_size_policy_git_base_unavailable"));
+    assert!(DOC.contains("reason_codes=touched_rust_size_policy_threshold_invalid"));
+    assert!(DOC.contains("reason_codes=touched_rust_size_policy_baseline_invalid"));
 }
 
 #[test]
