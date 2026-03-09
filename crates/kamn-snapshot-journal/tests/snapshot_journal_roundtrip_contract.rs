@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 const REQUIRED_TEST_MARKERS: [&str; 4] = [
-    "fn integration_append_and_parse_round_trip_empty_payload()",
+    "fn integration_append_and_parse_round_trip_whitespace_payload()",
     "fn integration_append_and_parse_round_trip_unicode_payload()",
     "fn integration_append_and_parse_round_trip_multiline_json_payload()",
     "fn integration_checked_parse_and_decode_restore_payload_exactly()",
