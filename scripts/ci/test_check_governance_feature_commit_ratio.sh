@@ -99,6 +99,15 @@ assert_failure() {
   fi
 }
 
+assert_activation_scope_ok() {
+  local output="$1"
+  local activation_scope_status="$2"
+  local status_message="$3"
+  local scope_message="$4"
+  assert_output_contains "$output" 'status=ok' "$status_message"
+  assert_output_contains "$output" "activation_scope_status=$activation_scope_status" "$scope_message"
+}
+
 PASS_SUBJECTS="$TMP_DIR/pass-subjects.txt"
 INTEGRATE_SUBJECTS="$TMP_DIR/integrate-subjects.txt"
 FAIL_RATIO_SUBJECTS="$TMP_DIR/fail-ratio-subjects.txt"
@@ -249,12 +258,18 @@ commit_repo_file "$ACTIVATION_REPO" "feat(ci): rollout activation policy" "scrip
 ACTIVATION_SHA="$(git -C "$ACTIVATION_REPO" rev-parse HEAD)"
 
 activation_base_output="$(run_range_checker "$ACTIVATION_REPO" "$ACTIVATION_SHA" "$ACTIVATION_SHA" 50 0.20 "$ACTIVATION_OUTPUT_JSON")"
-assert_output_contains "$activation_base_output" 'status=ok' "expected activation-base head to produce a non-violating result"
-assert_output_contains "$activation_base_output" 'activation_scope_status=head_at_activation_base' "expected activation-base head to emit explicit activation-scope status"
+assert_activation_scope_ok \
+  "$activation_base_output" \
+  'head_at_activation_base' \
+  "expected activation-base head to produce a non-violating result" \
+  "expected activation-base head to emit explicit activation-scope status"
 
 preactivation_output="$(run_range_checker "$ACTIVATION_REPO" "$ACTIVATION_SHA" "$PREACTIVATION_SHA" 50 0.20 "$ACTIVATION_OUTPUT_JSON")"
-assert_output_contains "$preactivation_output" 'status=ok' "expected preactivation head to produce a non-violating historical result"
-assert_output_contains "$preactivation_output" 'activation_scope_status=head_precedes_activation_base' "expected preactivation head to emit explicit historical activation-scope status"
+assert_activation_scope_ok \
+  "$preactivation_output" \
+  'head_precedes_activation_base' \
+  "expected preactivation head to produce a non-violating historical result" \
+  "expected preactivation head to emit explicit historical activation-scope status"
 
 commit_repo_file "$ACTIVATION_REPO" "docs(ci): post-activation governance drift" "scripts/ci/post_activation.sh" "echo post activation"
 POSTACTIVATION_GOVERNANCE_SHA="$(git -C "$ACTIVATION_REPO" rev-parse HEAD)"
