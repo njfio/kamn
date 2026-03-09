@@ -24,18 +24,7 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
     let _env = acquire_service_api_test_env();
     let snapshot = build_transport_snapshot("127.0.0.1:34066");
     let server = spawn_transport_server(&snapshot, 8);
-    let state_hash = state_hash(&snapshot);
-    let runtime = tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().expect("async runtime should initialize");
-    let (health, metrics, send_one, send_two) = runtime.block_on(async move {
-        let one = async_signed_send(server.bind_addr.as_str(), "kamn:did:agent:async-http-client-1", 900, state_hash.as_str(), "{\"message\":\"async-route-1\"}");
-        let two = async_signed_send(server.bind_addr.as_str(), "kamn:did:agent:async-http-client-2", 901, state_hash.as_str(), "{\"message\":\"async-route-2\"}");
-        tokio::join!(
-            send_http_request_with_headers_async(server.bind_addr.as_str(), "GET", "/healthz", "", &[]),
-            send_http_request_with_headers_async(server.bind_addr.as_str(), "GET", "/metrics", "", &[]),
-            one,
-            two,
-        )
-    });
+    let (health, metrics, send_one, send_two) = run_async_transport_burst(server.bind_addr.as_str(), state_hash(&snapshot).as_str());
 
     assert!(health.expect("async health request should succeed").contains("HTTP/1.1 200 OK"));
     assert!(metrics.expect("async metrics request should succeed").contains("HTTP/1.1 200 OK"));
@@ -132,4 +121,19 @@ async fn async_signed_send(bind_addr: &str, sender_did: &str, nonce: u64, state_
         ("X-KAMN-Request-Signature", signature.as_str()),
     ];
     send_http_request_with_headers_async(bind_addr, "POST", "/v1/messages/send", body, &headers).await
+}
+
+fn run_async_transport_burst(bind_addr: &str, state_hash: &str) -> (Result<String, String>, Result<String, String>, Result<String, String>, Result<String, String>) {
+    let runtime =
+        tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().expect("async runtime should initialize");
+    runtime.block_on(async move {
+        let one = async_signed_send(bind_addr, "kamn:did:agent:async-http-client-1", 900, state_hash, "{\"message\":\"async-route-1\"}");
+        let two = async_signed_send(bind_addr, "kamn:did:agent:async-http-client-2", 901, state_hash, "{\"message\":\"async-route-2\"}");
+        tokio::join!(
+            send_http_request_with_headers_async(bind_addr, "GET", "/healthz", "", &[]),
+            send_http_request_with_headers_async(bind_addr, "GET", "/metrics", "", &[]),
+            one,
+            two,
+        )
+    })
 }

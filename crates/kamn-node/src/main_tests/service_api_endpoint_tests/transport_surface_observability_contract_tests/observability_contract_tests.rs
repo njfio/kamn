@@ -43,22 +43,12 @@ fn functional_service_api_endpoint_emits_structured_ingress_correlation_markers(
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     };
-    let signature = service_api_request_signature_for_fields("kamn:did:agent:test-client-correlation", 41, super::support::state_hash(&snapshot).as_str(), "{\"message\":\"structured-correlation\"}");
-    let client_addr = bind_addr.clone();
-    let client = thread::spawn(move || {
-        thread::sleep(Duration::from_millis(50));
-        send_http_request_with_headers(client_addr.as_str(), "POST", "/v1/messages/send", "{\"message\":\"structured-correlation\"}", &[("X-KAMN-Sender-DID", "kamn:did:agent:test-client-correlation"), ("X-KAMN-Request-Nonce", "41"), ("X-KAMN-Request-Signature", signature.as_str())])
-    });
+    let client = spawn_correlation_client(bind_addr.clone(), super::support::state_hash(&snapshot).as_str());
     let (serve_result, captured_logs) = capture_test_logs(|| serve_service_api_endpoint(&endpoint_config, &snapshot));
     let response = client.join().expect("client request should complete");
     assert!(serve_result.is_ok());
     assert!(response.contains("HTTP/1.1 202 Accepted"));
-    let ingress_line = captured_logs.iter().find(|line| line.contains("\"event\":\"service.api.request.received\"")).expect("service api ingress should emit received marker");
-    let outcome_line = captured_logs.iter().find(|line| line.contains("\"event\":\"service.api.request.outcome\"")).expect("service api ingress should emit outcome marker");
-    assert_eq!(extract_json_string_field(ingress_line, "correlation_id"), extract_json_string_field(outcome_line, "correlation_id"));
-    assert_eq!(extract_json_string_field(ingress_line, "method").as_deref(), Some("POST"));
-    assert_eq!(extract_json_string_field(ingress_line, "path").as_deref(), Some("/v1/messages/send"));
-    assert_eq!(extract_json_string_field(outcome_line, "status_code").as_deref(), Some("202"));
+    assert_correlation_markers(captured_logs.as_slice());
 }
 
 #[test]
@@ -75,4 +65,45 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     assert!(metrics.body.contains("kamn_service_api_observability_source{source=\"daemon\"} 1"));
     assert!(metrics.body.contains("kamn_service_api_observability_health{health=\"healthy\"} 1"));
     route_render_contract_tests::assert_common_route_metrics(metrics.body.as_str());
+}
+
+fn spawn_correlation_client(bind_addr: String, state_hash: &str) -> thread::JoinHandle<String> {
+    let signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-correlation",
+        41,
+        state_hash,
+        "{\"message\":\"structured-correlation\"}",
+    );
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(50));
+        send_http_request_with_headers(
+            bind_addr.as_str(),
+            "POST",
+            "/v1/messages/send",
+            "{\"message\":\"structured-correlation\"}",
+            &[
+                ("X-KAMN-Sender-DID", "kamn:did:agent:test-client-correlation"),
+                ("X-KAMN-Request-Nonce", "41"),
+                ("X-KAMN-Request-Signature", signature.as_str()),
+            ],
+        )
+    })
+}
+
+fn assert_correlation_markers(captured_logs: &[String]) {
+    let ingress_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"service.api.request.received\""))
+        .expect("service api ingress should emit received marker");
+    let outcome_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"service.api.request.outcome\""))
+        .expect("service api ingress should emit outcome marker");
+    assert_eq!(
+        extract_json_string_field(ingress_line, "correlation_id"),
+        extract_json_string_field(outcome_line, "correlation_id")
+    );
+    assert_eq!(extract_json_string_field(ingress_line, "method").as_deref(), Some("POST"));
+    assert_eq!(extract_json_string_field(ingress_line, "path").as_deref(), Some("/v1/messages/send"));
+    assert_eq!(extract_json_string_field(outcome_line, "status_code").as_deref(), Some("202"));
 }
