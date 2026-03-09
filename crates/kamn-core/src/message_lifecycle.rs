@@ -1134,8 +1134,7 @@ fn parse_message_lifecycle_snapshot_record_fields(
     line: &str,
 ) -> Result<ParsedMessageLifecycleRecordFields<'_>, MessageLifecycleSnapshotStoreError> {
     match line.split('|').collect::<Vec<_>>().as_slice() {
-        ["record", message_id, sender, recipients_raw, created, expires, status_raw, history_raw] =>
-        {
+        ["record", message_id, sender, recipients_raw, created, expires, status_raw, history_raw] => {
             Ok(ParsedMessageLifecycleRecordFields {
                 message_id,
                 sender,
@@ -1176,9 +1175,7 @@ fn parse_message_lifecycle_snapshot_status_history(
         .collect()
 }
 
-fn invalid_message_lifecycle_snapshot_payload(
-    value: &str,
-) -> MessageLifecycleSnapshotStoreError {
+fn invalid_message_lifecycle_snapshot_payload(value: &str) -> MessageLifecycleSnapshotStoreError {
     MessageLifecycleSnapshotStoreError::InvalidPayload(value.to_owned())
 }
 
