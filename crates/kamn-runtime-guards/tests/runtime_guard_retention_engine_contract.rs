@@ -8,6 +8,9 @@ fn contract_runtime_guard_retention_engine_surface_exists_with_expected_markers(
         "integration_runtime_guard_retention_engine_evaluate_returns_deterministic_expired_ids",
         "integration_runtime_guard_retention_engine_rejects_resurfaced_expired_record",
     ] {
-        assert!(RETENTION_ENGINE_TEST_SURFACE.contains(marker), "missing marker: {marker}");
+        assert!(
+            RETENTION_ENGINE_TEST_SURFACE.contains(marker),
+            "missing marker: {marker}"
+        );
     }
 }

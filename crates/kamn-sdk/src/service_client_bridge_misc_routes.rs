@@ -1,7 +1,7 @@
 use super::super::{
-    SdkError, ServiceAgentBalance, ServiceAgentProfile, ServiceBridgeStatus,
-    ServiceBridgeSubmission, ServiceHealthStatus, ServiceRequestAuth, expect_status,
-    json_string_array_field, json_string_field, json_u64_field, normalize_route_segment,
+    expect_status, json_string_array_field, json_string_field, json_u64_field,
+    normalize_route_segment, SdkError, ServiceAgentBalance, ServiceAgentProfile,
+    ServiceBridgeStatus, ServiceBridgeSubmission, ServiceHealthStatus, ServiceRequestAuth,
 };
 use super::ServiceApiClient;
 use crate::{AgentDid, AgentMetadata, AgentQuery};

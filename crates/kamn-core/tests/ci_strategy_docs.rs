@@ -3066,24 +3066,19 @@ fn doc_contains_governance_feature_commit_ratio_gate_markers() {
     assert!(DOC.contains("governance_feature_commit_ratio_threshold_max=0.20"));
     assert!(DOC.contains("governance_feature_commit_ratio_feature_ratio_min=0.80"));
     assert!(DOC.contains("governance_feature_commit_ratio_window_size=50"));
-    assert!(DOC.contains(
-        "governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits"
-    ));
-    assert!(DOC.contains(
-        "governance_feature_commit_ratio_policy_source=base_branch"
-    ));
-    assert!(DOC.contains(
-        "governance_feature_commit_ratio_classification_mode=changed_path_surface"
-    ));
+    assert!(DOC.contains("governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits"));
+    assert!(DOC.contains("governance_feature_commit_ratio_policy_source=base_branch"));
+    assert!(
+        DOC.contains("governance_feature_commit_ratio_classification_mode=changed_path_surface")
+    );
     assert!(DOC.contains(
         "governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env"
     ));
     assert!(DOC.contains(
         "governance_feature_commit_ratio_activation_base_sha=f0252d24ff91859fe0b4051712ef98873aaae1f4"
     ));
-    assert!(DOC.contains(
-        "governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only"
-    ));
+    assert!(DOC
+        .contains("governance_feature_commit_ratio_activation_scope=post_moratorium_commits_only"));
     assert!(DOC.contains("governance_feature_commit_ratio_non_merge_only=true"));
 }
 

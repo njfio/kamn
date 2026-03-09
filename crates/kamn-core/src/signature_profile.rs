@@ -473,14 +473,14 @@ pub fn signature_matches_supported_profile_for_fields(
 #[cfg(test)]
 mod tests {
     use super::{
-        BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID,
-        SERVICE_AUTH_SIGNATURE_ALGORITHM, SERVICE_AUTH_SIGNATURE_PROFILE_ID,
-        UNKNOWN_SIGNATURE_ALGORITHM_ID, baseline_signature_algorithm,
-        baseline_signature_for_fields, baseline_signature_profile_id, legacy_signature_for_fields,
-        parse_signature_profile_metadata, service_auth_public_key_hex_from_private_key_hex,
-        service_auth_sign_with_private_key_hex, service_auth_signing_payload_for_fields,
-        service_auth_verify_with_public_key_hex, signature_matches_supported_profile_for_fields,
-        signature_profile_compatibility_fixtures_for_fields,
+        baseline_signature_algorithm, baseline_signature_for_fields, baseline_signature_profile_id,
+        legacy_signature_for_fields, parse_signature_profile_metadata,
+        service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+        service_auth_signing_payload_for_fields, service_auth_verify_with_public_key_hex,
+        signature_matches_supported_profile_for_fields,
+        signature_profile_compatibility_fixtures_for_fields, BASELINE_SIGNATURE_PROFILE_ID,
+        LEGACY_SIGNATURE_PROFILE_ID, SERVICE_AUTH_SIGNATURE_ALGORITHM,
+        SERVICE_AUTH_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
     };
 
     const SOURCE: &str = include_str!("signature_profile.rs");

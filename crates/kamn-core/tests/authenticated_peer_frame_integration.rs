@@ -1,6 +1,4 @@
-use kamn_core::{
-    AuthenticatedPeerFrame, AuthenticatedPeerFrameError, PeerFrameAuthenticator,
-};
+use kamn_core::{AuthenticatedPeerFrame, AuthenticatedPeerFrameError, PeerFrameAuthenticator};
 
 fn valid_sender() -> &'static str {
     "kamn:did:agent:peer-a"
@@ -20,10 +18,7 @@ fn signed_frame(
         .expect("signed frame should construct")
 }
 
-fn authenticator(
-    local_peer_did: &str,
-    allowed_sender_dids: Vec<String>,
-) -> PeerFrameAuthenticator {
+fn authenticator(local_peer_did: &str, allowed_sender_dids: Vec<String>) -> PeerFrameAuthenticator {
     PeerFrameAuthenticator::new(local_peer_did, allowed_sender_dids)
         .expect("authenticator should construct")
 }
@@ -46,8 +41,8 @@ fn assert_invalid_new(expected: AuthenticatedPeerFrameError, payload: &str, sign
 fn integration_authenticated_peer_frame_valid_signed_roundtrip_and_inbound_validation() {
     let frame = signed_frame("frame-1", valid_recipient(), 1, "payload-1");
     let wire = frame.to_wire().expect("wire encode should succeed");
-    let decoded = AuthenticatedPeerFrame::from_wire(wire.as_str())
-        .expect("wire decode should succeed");
+    let decoded =
+        AuthenticatedPeerFrame::from_wire(wire.as_str()).expect("wire decode should succeed");
 
     assert_eq!(decoded, frame);
     assert_eq!(decoded.frame_id(), "frame-1");
@@ -92,7 +87,8 @@ fn integration_authenticated_peer_frame_invalid_inputs_fail_closed() {
 }
 
 #[test]
-fn integration_authenticated_peer_frame_authenticator_rejects_wrong_recipient_unauthorized_sender_and_replay() {
+fn integration_authenticated_peer_frame_authenticator_rejects_wrong_recipient_unauthorized_sender_and_replay(
+) {
     assert_wrong_recipient_rejected();
     assert_unauthorized_sender_rejected();
     assert_replay_nonce_rejected();
@@ -100,10 +96,8 @@ fn integration_authenticated_peer_frame_authenticator_rejects_wrong_recipient_un
 
 fn assert_wrong_recipient_rejected() {
     let frame = signed_frame("frame-1", valid_recipient(), 1, "payload-1");
-    let mut peer_authenticator = authenticator(
-        "kamn:did:agent:peer-c",
-        vec![valid_sender().to_owned()],
-    );
+    let mut peer_authenticator =
+        authenticator("kamn:did:agent:peer-c", vec![valid_sender().to_owned()]);
     assert_eq!(
         peer_authenticator.validate_inbound(&frame),
         Err(AuthenticatedPeerFrameError::WrongRecipient {
@@ -115,10 +109,8 @@ fn assert_wrong_recipient_rejected() {
 
 fn assert_unauthorized_sender_rejected() {
     let frame = signed_frame("frame-2", valid_recipient(), 2, "payload-2");
-    let mut peer_authenticator = authenticator(
-        valid_recipient(),
-        vec!["kamn:did:agent:peer-z".to_owned()],
-    );
+    let mut peer_authenticator =
+        authenticator(valid_recipient(), vec!["kamn:did:agent:peer-z".to_owned()]);
     assert_eq!(
         peer_authenticator.validate_inbound(&frame),
         Err(AuthenticatedPeerFrameError::UnauthorizedSender(

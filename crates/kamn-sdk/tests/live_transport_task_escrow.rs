@@ -401,7 +401,9 @@ fn regression_live_transport_artifact_status_rejects_malformed_service_payload()
             body: String::new(),
             sender_did: "kamn:did:agent:live-requester".to_owned(),
             scope: "content:read",
-            response_body: r#"{"content_id":"content-local-artifact-abc","redaction_status":"none"}"#.to_owned(),
+            response_body:
+                r#"{"content_id":"content-local-artifact-abc","redaction_status":"none"}"#
+                    .to_owned(),
             ..Default::default()
         },
     ];
@@ -485,7 +487,9 @@ fn regression_live_transport_artifact_expire_rejects_malformed_service_payload()
             body: "{}".to_owned(),
             sender_did: "kamn:did:agent:live-requester".to_owned(),
             scope: "content:write",
-            response_body: r#"{"content_id":"content-local-artifact-abc","redaction_status":"none"}"#.to_owned(),
+            response_body:
+                r#"{"content_id":"content-local-artifact-abc","redaction_status":"none"}"#
+                    .to_owned(),
             ..Default::default()
         },
     ];
@@ -531,7 +535,9 @@ fn regression_live_transport_artifact_tombstone_rejects_malformed_service_payloa
             body: "{}".to_owned(),
             sender_did: "kamn:did:agent:live-requester".to_owned(),
             scope: "content:write",
-            response_body: r#"{"content_id":"content-local-artifact-abc","redaction_status":"redacted"}"#.to_owned(),
+            response_body:
+                r#"{"content_id":"content-local-artifact-abc","redaction_status":"redacted"}"#
+                    .to_owned(),
             ..Default::default()
         },
     ];

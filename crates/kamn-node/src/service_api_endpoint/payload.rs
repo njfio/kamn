@@ -695,9 +695,9 @@ pub(super) fn escape_metrics_label(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        ROUTE_BRIDGE_SUBMIT, ROUTE_CONTENT_REGISTER, bridge_forward_path_id, bridge_path_id,
-        content_expire_path_id, content_path_id, content_tombstone_path_id,
-        route_exists_for_other_method,
+        bridge_forward_path_id, bridge_path_id, content_expire_path_id, content_path_id,
+        content_tombstone_path_id, route_exists_for_other_method, ROUTE_BRIDGE_SUBMIT,
+        ROUTE_CONTENT_REGISTER,
     };
 
     #[test]

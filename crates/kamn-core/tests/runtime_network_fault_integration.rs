@@ -1,9 +1,7 @@
+use kamn_core::runtime::{WatchdogAnomalyError, WatchdogAnomalyKind, WatchdogAnomalySeverity};
 use kamn_core::{
-    DeterministicNetworkFaultSimulator, NetworkFaultSimulationError, NetworkFaultSimulationInput,
-    PeerLifecycleState, RuntimeBackpressureAction, simulate_daemon_network_fault,
-};
-use kamn_core::runtime::{
-    WatchdogAnomalyError, WatchdogAnomalyKind, WatchdogAnomalySeverity,
+    simulate_daemon_network_fault, DeterministicNetworkFaultSimulator, NetworkFaultSimulationError,
+    NetworkFaultSimulationInput, PeerLifecycleState, RuntimeBackpressureAction,
 };
 
 fn make_input(
@@ -63,8 +61,14 @@ fn integration_runtime_network_fault_valid_simulation_returns_expected_report() 
     assert_eq!(report.queue_capacity, 10);
     assert_eq!(report.queued_events, 8);
     assert_eq!(report.queue_overflow_attempts, 0);
-    assert_eq!(report.backpressure_last_action, RuntimeBackpressureAction::SlowProducer);
-    assert_eq!(report.backpressure_last_reason_code, "runtime_backpressure_slow_producer");
+    assert_eq!(
+        report.backpressure_last_action,
+        RuntimeBackpressureAction::SlowProducer
+    );
+    assert_eq!(
+        report.backpressure_last_reason_code,
+        "runtime_backpressure_slow_producer"
+    );
     assert_eq!(report.backpressure_rejected_events, 0);
     assert_eq!(report.backpressure_purged_events, 0);
     assert_eq!(report.backpressure_slow_events, 1);

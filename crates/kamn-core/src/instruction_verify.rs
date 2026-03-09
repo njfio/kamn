@@ -293,8 +293,8 @@ impl InstructionVerifier {
 #[cfg(test)]
 mod tests {
     use super::{
-        DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS, InstructionClaim, InstructionRecord,
-        InstructionVerifier, VerificationContext, VerificationFailure, VerificationOutcome,
+        InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
+        VerificationFailure, VerificationOutcome, DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS,
     };
 
     const SOURCE: &str = include_str!("instruction_verify.rs");

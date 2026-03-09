@@ -55,10 +55,7 @@ pub fn signer_public_key_hex_for_private_key(private_key_hex: &str) -> String {
     })
 }
 
-pub fn handshake_signature(
-    envelope: &TcpSignedEnvelope,
-    signer_private_key_hex: &str,
-) -> String {
+pub fn handshake_signature(envelope: &TcpSignedEnvelope, signer_private_key_hex: &str) -> String {
     service_auth_sign_with_private_key_hex(
         envelope.from.as_str(),
         envelope.nonce,

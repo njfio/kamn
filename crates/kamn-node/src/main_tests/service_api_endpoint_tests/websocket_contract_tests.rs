@@ -77,14 +77,10 @@ fn regression_service_api_endpoint_websocket_reason_taxonomy_includes_presence_d
     assert!(
         SERVICE_API_WEBSOCKET_REASON_CODES_CSV.contains(WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE)
     );
-    assert!(
-        SERVICE_API_WEBSOCKET_REASON_CODES_CSV
-            .contains(WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE)
-    );
-    assert!(
-        SERVICE_API_WEBSOCKET_REASON_CODES_CSV
-            .contains(WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE)
-    );
+    assert!(SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .contains(WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE));
+    assert!(SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .contains(WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE));
 }
 
 fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
@@ -769,11 +765,9 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_owner_
         payload.reason_code,
         WS_PRESENCE_OWNER_DID_INVALID_REASON_CODE
     );
-    assert!(
-        payload
-            .message
-            .contains("invalid presence owner did header")
-    );
+    assert!(payload
+        .message
+        .contains("invalid presence owner did header"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -847,11 +841,9 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target
         payload.reason_code,
         WS_PRESENCE_TARGET_OWNER_DID_INVALID_REASON_CODE
     );
-    assert!(
-        payload
-            .message
-            .contains("invalid presence target owner did header")
-    );
+    assert!(payload
+        .message
+        .contains("invalid presence target owner did header"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -924,11 +916,9 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target
         payload.reason_code,
         WS_PRESENCE_TARGET_AGENT_DID_INVALID_REASON_CODE
     );
-    assert!(
-        payload
-            .message
-            .contains("invalid presence target agent did header")
-    );
+    assert!(payload
+        .message
+        .contains("invalid presence target agent did header"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -1063,11 +1053,9 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
     let payload = parse_error_envelope_from_http_response(response.as_str());
     assert_eq!(payload.error, "bad-request");
     assert_eq!(payload.reason_code, "service_api_ws_upgrade_header_missing");
-    assert!(
-        payload
-            .message
-            .contains("missing required websocket upgrade header")
-    );
+    assert!(payload
+        .message
+        .contains("missing required websocket upgrade header"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

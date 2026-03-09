@@ -8,6 +8,9 @@ fn contract_runtime_guard_message_delivery_surface_exists_with_expected_markers(
         "integration_runtime_guard_message_delivery_snapshot_roundtrip_restores_replay_state",
         "integration_runtime_guard_message_delivery_invalid_snapshot_fails_closed",
     ] {
-        assert!(MESSAGE_DELIVERY_TEST_SURFACE.contains(marker), "missing marker: {marker}");
+        assert!(
+            MESSAGE_DELIVERY_TEST_SURFACE.contains(marker),
+            "missing marker: {marker}"
+        );
     }
 }

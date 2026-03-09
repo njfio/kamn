@@ -303,11 +303,7 @@ struct CodeScanState {
     escaped: bool,
 }
 
-fn consume_active_non_code(
-    bytes: &[u8],
-    index: usize,
-    state: &mut CodeScanState,
-) -> Option<usize> {
+fn consume_active_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Option<usize> {
     if let Some(hash_count) = state.raw_string_hash_count {
         if closes_raw_string(bytes, index, hash_count) {
             state.raw_string_hash_count = None;

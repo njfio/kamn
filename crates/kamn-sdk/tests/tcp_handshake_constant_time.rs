@@ -2,12 +2,13 @@ use kamn_sdk::{SdkError, TcpSignedEnvelope, TcpTransportAdapter, TcpTransportCon
 #[path = "support/tcp_handshake_constant_time_support.rs"]
 mod support;
 
-use support::{
-    TEST_TCP_SIGNING_PRIVATE_KEY_HEX, TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT, did, free_addr,
-    handshake_payload, handshake_signature, send_raw_payload, signer_public_key_hex_for_private_key,
-};
 use std::thread;
 use std::time::Duration;
+use support::{
+    did, free_addr, handshake_payload, handshake_signature, send_raw_payload,
+    signer_public_key_hex_for_private_key, TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+    TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT,
+};
 
 const SOURCE: &str = include_str!("../src/tcp.rs");
 
@@ -85,7 +86,8 @@ fn integration_tcp_listener_rejects_mismatched_handshake_signer_key() {
     )
     .unwrap_or_else(|error| panic!("envelope build failed: {error}"));
 
-    let forged_signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT);
+    let forged_signer_public_key =
+        signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT);
     let payload = handshake_payload(
         &envelope,
         forged_signer_public_key.as_str(),
@@ -117,8 +119,14 @@ fn integration_tcp_listener_rejects_mismatched_handshake_signature() {
     let listener_adapter = TcpTransportAdapter::new(listener_config);
 
     let envelope = TcpSignedEnvelope::new(
-        did("sender-signature-mismatch", TEST_TCP_SIGNING_PRIVATE_KEY_HEX),
-        did("listener-signature-mismatch", TEST_TCP_SIGNING_PRIVATE_KEY_HEX),
+        did(
+            "sender-signature-mismatch",
+            TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+        ),
+        did(
+            "listener-signature-mismatch",
+            TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+        ),
         9,
         "state:signature-mismatch",
         "mismatched-handshake-signature",

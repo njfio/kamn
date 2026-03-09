@@ -8,9 +8,9 @@ use kamn_crypto::direct_message_crypto::{
     DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
 };
 use support::{
-    RECIPIENT_KEY_REF, SENDER_KEY_REF, TEST_KEY_SEED_HEX, canonical_aad, derive_aead_key,
-    derive_shared_secret, hex_decode, legacy_raw_prefix_nonce_bytes_v1,
-    legacy_v2_raw_prefix_ciphertext, with_key_agreement_seed,
+    canonical_aad, derive_aead_key, derive_shared_secret, hex_decode,
+    legacy_raw_prefix_nonce_bytes_v1, legacy_v2_raw_prefix_ciphertext, with_key_agreement_seed,
+    RECIPIENT_KEY_REF, SENDER_KEY_REF, TEST_KEY_SEED_HEX,
 };
 
 #[test]
@@ -64,7 +64,9 @@ fn integration_encrypt_output_no_longer_authenticates_under_legacy_raw_prefix_no
         let key = derive_aead_key(&shared_secret);
         let mut engine =
             DirectMessageCryptoEngine::new(SENDER_KEY_REF, RECIPIENT_KEY_REF).expect("engine");
-        let sealed = engine.encrypt("integration-nonce-layout", nonce).expect("encrypt");
+        let sealed = engine
+            .encrypt("integration-nonce-layout", nonce)
+            .expect("encrypt");
 
         let mut combined = hex_decode(sealed.ciphertext.as_str());
         combined.extend_from_slice(&hex_decode(sealed.auth_tag.as_str()));

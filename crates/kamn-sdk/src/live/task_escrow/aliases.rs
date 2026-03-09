@@ -58,7 +58,10 @@ pub(crate) fn prepare_task_complete(
         .ok_or_else(|| missing_alias("task", task_id.0))?;
     Ok((
         entry.service_id.clone(),
-        entry.assignee.clone().unwrap_or_else(|| entry.creator.clone()),
+        entry
+            .assignee
+            .clone()
+            .unwrap_or_else(|| entry.creator.clone()),
     ))
 }
 
@@ -79,12 +82,9 @@ pub(crate) fn prepare_task_artifact_submission(
     let entry = task_aliases
         .get(&task_id.0)
         .ok_or_else(|| missing_alias("task", task_id.0))?;
-    let assignee = entry
-        .assignee
-        .clone()
-        .ok_or(SdkError::Conflict(
-            "task must be accepted before artifact submission",
-        ))?;
+    let assignee = entry.assignee.clone().ok_or(SdkError::Conflict(
+        "task must be accepted before artifact submission",
+    ))?;
     Ok((entry.service_id.clone(), assignee))
 }
 
@@ -151,10 +151,7 @@ pub(crate) fn prepare_escrow_release(
     Ok((entry.service_id.clone(), entry.payer.clone()))
 }
 
-pub(crate) fn validate_service_id(
-    entity: &'static str,
-    service_id: &str,
-) -> Result<(), SdkError> {
+pub(crate) fn validate_service_id(entity: &'static str, service_id: &str) -> Result<(), SdkError> {
     if service_id.trim().is_empty() {
         return Err(SdkError::TransportFailure(match entity {
             "task" => "service returned empty task_id in task response",

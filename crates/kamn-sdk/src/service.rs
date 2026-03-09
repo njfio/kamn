@@ -21,12 +21,12 @@ pub use self::service_auth_crypto::{
     service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
     service_verify_signature_with_public_key,
 };
+pub(crate) use self::service_client::service_client_bridge_misc_routes::agent_search_payload;
 use self::service_client::HttpResponse;
 pub use self::service_client::ServiceApiClient;
-pub(crate) use self::service_client::service_client_bridge_misc_routes::agent_search_payload;
-use self::service_endpoint::ServiceEndpoint;
 #[cfg(test)]
 use self::service_endpoint::resolve_request_timeout_seconds;
+use self::service_endpoint::ServiceEndpoint;
 use self::service_http_io::{
     normalize_route_segment, read_response_bytes, read_response_text, render_auth_headers,
     validate_http_header_value, validate_request_method, validate_request_path,

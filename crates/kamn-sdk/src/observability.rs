@@ -1,5 +1,5 @@
-use crate::ServiceHealthStatus;
 use crate::SdkError;
+use crate::ServiceHealthStatus;
 
 /// Stable SDK view of the service health route.
 #[derive(Debug, Clone, PartialEq, Eq)]

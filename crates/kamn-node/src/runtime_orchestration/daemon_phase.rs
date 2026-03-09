@@ -1,9 +1,9 @@
 use super::*;
 use kamn_core::{
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
     Libp2pLivePeerLifecycleTransport, NodeRole, P2pSwarmDeterministicConfig, P2pSwarmHarnessMode,
     PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
-    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, service_auth_public_key_hex_from_private_key_hex,
-    service_auth_sign_with_private_key_hex,
+    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -497,8 +497,8 @@ pub(crate) fn live_postgres_multi_host_execution_bundle_row_count_for_test() -> 
 }
 
 #[cfg(test)]
-pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test()
--> String {
+pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test(
+) -> String {
     let rows = project_live_postgres_multi_host_execution_bundle_selector_rows();
     project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(rows.as_slice())
 }
@@ -981,8 +981,8 @@ fn build_daemon_service_api_relay_p2p_context(
     })
 }
 
-fn resolve_daemon_service_api_relay_p2p_context()
--> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
+fn resolve_daemon_service_api_relay_p2p_context(
+) -> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
     #[cfg(test)]
     if let Some(override_json) = daemon_service_api_relay_p2p_config_override_json_for_tests() {
         return resolve_daemon_service_api_relay_p2p_context_from_json(override_json.as_str())
@@ -1301,8 +1301,8 @@ fn execute_daemon_service_api_relay_tick_loop(
     Ok(runtime_processing)
 }
 
-fn resolve_daemon_service_api_relay_recipient_route_map()
--> Result<BTreeMap<String, String>, ConfigError> {
+fn resolve_daemon_service_api_relay_recipient_route_map(
+) -> Result<BTreeMap<String, String>, ConfigError> {
     let raw = match env::var(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV) {
         Ok(value) => value,
         Err(env::VarError::NotPresent) => return Ok(BTreeMap::new()),
@@ -1496,12 +1496,12 @@ fn daemon_tick_remaining_sleep_duration(
 #[cfg(test)]
 mod tests {
     use super::{
-        SERVICE_API_RELAY_P2P_DEFAULT_TOPIC, SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
         daemon_tick_remaining_sleep_duration, drain_daemon_service_api_relay_p2p_inbox_for_test,
         execute_daemon_service_api_relay_tick_loop,
         forward_service_api_relay_entry_via_p2p_for_test,
         resolve_daemon_service_api_relay_p2p_in_memory_context_from_json_for_test,
         set_daemon_service_api_relay_p2p_config_override_for_test,
+        SERVICE_API_RELAY_P2P_DEFAULT_TOPIC, SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV,
     };
     use std::env;
     use std::fs;

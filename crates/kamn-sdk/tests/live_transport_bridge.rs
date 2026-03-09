@@ -30,7 +30,10 @@ fn spec_c09_live_transport_bridge_routes_execute_network_contract() {
     let submitted = client
         .submit_bridge(&source_message_id, "testnet")
         .expect("submit_bridge should succeed");
-    assert_eq!(submitted.bridge_id, BridgeId(deterministic_u64_tag("bridge-local-abc")));
+    assert_eq!(
+        submitted.bridge_id,
+        BridgeId(deterministic_u64_tag("bridge-local-abc"))
+    );
     assert_eq!(submitted.bridge_status, "submitted");
     assert_eq!(submitted.target_message_id, None);
     assert_eq!(submitted.forward_tx_hash, None);
@@ -61,7 +64,10 @@ fn spec_c09_live_transport_bridge_routes_execute_network_contract() {
     assert_eq!(queried_forwarded, forwarded);
 
     let server_result = server.join().expect("server thread should join");
-    assert!(server_result.is_ok(), "bridge route server should satisfy request budget");
+    assert!(
+        server_result.is_ok(),
+        "bridge route server should satisfy request budget"
+    );
 }
 
 #[test]
@@ -115,5 +121,8 @@ fn regression_live_transport_bridge_status_rejects_malformed_service_payload() {
     );
 
     let server_result = server.join().expect("server thread should join");
-    assert!(server_result.is_ok(), "malformed bridge status should satisfy request budget");
+    assert!(
+        server_result.is_ok(),
+        "malformed bridge status should satisfy request budget"
+    );
 }

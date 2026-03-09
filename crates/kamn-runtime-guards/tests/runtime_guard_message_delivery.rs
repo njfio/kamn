@@ -1,9 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use kamn_runtime_guards::message_delivery_guards::{
-    DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot,
-    DeliveryGuardSnapshotError, DeliveryValidationResult, MessageDeliveryGuards,
-    DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
+    DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
+    DeliveryValidationResult, MessageDeliveryGuards, DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
 };
 
 fn input(message_id: &str, nonce: u64, received_at: &str) -> DeliveryGuardInput {
@@ -18,7 +17,9 @@ fn input(message_id: &str, nonce: u64, received_at: &str) -> DeliveryGuardInput 
     }
 }
 
-fn assert_rejected(result: DeliveryValidationResult) -> kamn_runtime_guards::message_delivery_guards::FailedDeliveryNotice {
+fn assert_rejected(
+    result: DeliveryValidationResult,
+) -> kamn_runtime_guards::message_delivery_guards::FailedDeliveryNotice {
     match result {
         DeliveryValidationResult::Rejected(notice) => notice,
         DeliveryValidationResult::Accepted => panic!("expected rejection"),
@@ -44,18 +45,16 @@ fn integration_runtime_guard_message_delivery_rejects_replay_and_nonce_regressio
         DeliveryValidationResult::Accepted
     );
 
-    let replay_notice = assert_rejected(
-        guards.validate(input("urn:uuid:msg-2", 2, "2026-02-07T20:21:30.123Z")),
-    );
+    let replay_notice =
+        assert_rejected(guards.validate(input("urn:uuid:msg-2", 2, "2026-02-07T20:21:30.123Z")));
     assert_eq!(replay_notice.code, DeliveryFailureCode::Replay);
     assert_eq!(
         replay_notice.signature,
         "notice:urn:uuid:msg-2:replay:kamn:did:agent:recipient-1:2026-02-07T20:21:30.123Z:2"
     );
 
-    let nonce_notice = assert_rejected(
-        guards.validate(input("urn:uuid:msg-3", 1, "2026-02-07T20:22:30.123Z")),
-    );
+    let nonce_notice =
+        assert_rejected(guards.validate(input("urn:uuid:msg-3", 1, "2026-02-07T20:22:30.123Z")));
     assert_eq!(
         nonce_notice.code,
         DeliveryFailureCode::NonceOutOfSequence {
@@ -82,9 +81,11 @@ fn integration_runtime_guard_message_delivery_snapshot_roundtrip_restores_replay
     assert_eq!(restored.expected_nonce("kamn:did:agent:sender-1"), 2);
 
     let mut restored_mut = restored;
-    let replay_notice = assert_rejected(
-        restored_mut.validate(input("urn:uuid:msg-4", 2, "2026-02-07T20:21:30.123Z")),
-    );
+    let replay_notice = assert_rejected(restored_mut.validate(input(
+        "urn:uuid:msg-4",
+        2,
+        "2026-02-07T20:21:30.123Z",
+    )));
     assert_eq!(replay_notice.code, DeliveryFailureCode::Replay);
 }
 
@@ -112,10 +113,7 @@ fn integration_runtime_guard_message_delivery_invalid_snapshot_fails_closed() {
     assert_eq!(
         MessageDeliveryGuards::from_snapshot(DeliveryGuardSnapshot {
             schema_version: DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
-            next_nonce_by_sender: BTreeMap::from([(
-                "kamn:did:agent:sender-1".to_owned(),
-                0,
-            )]),
+            next_nonce_by_sender: BTreeMap::from([("kamn:did:agent:sender-1".to_owned(), 0,)]),
             seen_message_ids: BTreeSet::new(),
         }),
         Err(DeliveryGuardSnapshotError::InvalidNonce {

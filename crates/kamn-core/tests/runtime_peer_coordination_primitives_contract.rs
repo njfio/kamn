@@ -8,6 +8,9 @@ fn contract_runtime_peer_coordination_primitives_surface_exists_with_expected_ma
         "integration_runtime_queue_preserves_fifo_order",
         "integration_runtime_queue_invalid_capacity_and_overflow_fail_closed",
     ] {
-        assert!(PRIMITIVES_TEST_SURFACE.contains(marker), "missing marker: {marker}");
+        assert!(
+            PRIMITIVES_TEST_SURFACE.contains(marker),
+            "missing marker: {marker}"
+        );
     }
 }

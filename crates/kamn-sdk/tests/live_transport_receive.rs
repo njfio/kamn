@@ -30,9 +30,14 @@ fn spec_c07_live_transport_receive_routes_execute_network_contract() {
         ExpectedRequest {
             sender_did: REQUESTER_DID.to_owned(),
             scope: "agents:read",
-            response_body:
-                format!(r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":["msg-live-1"]}}"#),
-            ..expected_request("GET", format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(), "")
+            response_body: format!(
+                r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":["msg-live-1"]}}"#
+            ),
+            ..expected_request(
+                "GET",
+                format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(),
+                "",
+            )
         },
         ExpectedRequest {
             sender_did: REQUESTER_DID.to_owned(),
@@ -80,9 +85,14 @@ fn regression_live_transport_receive_stream_uses_real_receive_path() {
         ExpectedRequest {
             sender_did: REQUESTER_DID.to_owned(),
             scope: "agents:read",
-            response_body:
-                format!(r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":["msg-stream-1"]}}"#),
-            ..expected_request("GET", format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(), "")
+            response_body: format!(
+                r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":["msg-stream-1"]}}"#
+            ),
+            ..expected_request(
+                "GET",
+                format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(),
+                "",
+            )
         },
         ExpectedRequest {
             sender_did: REQUESTER_DID.to_owned(),
@@ -120,7 +130,11 @@ fn regression_live_transport_empty_mailbox_returns_no_records() {
         sender_did: REQUESTER_DID.to_owned(),
         scope: "agents:read",
         response_body: format!(r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":[]}}"#),
-        ..expected_request("GET", format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(), "")
+        ..expected_request(
+            "GET",
+            format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(),
+            "",
+        )
     }];
     let server_addr = bind_addr.clone();
     let server = thread::spawn(move || run_contract_server(server_addr, expected_requests));
@@ -149,9 +163,14 @@ fn regression_live_transport_malformed_message_payload_fails_closed() {
         ExpectedRequest {
             sender_did: REQUESTER_DID.to_owned(),
             scope: "agents:read",
-            response_body:
-                format!(r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":["msg-bad-1"]}}"#),
-            ..expected_request("GET", format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(), "")
+            response_body: format!(
+                r#"{{"channel_id":"recipient:{RECIPIENT_DID}","messages":["msg-bad-1"]}}"#
+            ),
+            ..expected_request(
+                "GET",
+                format!("/v1/channels/recipient:{RECIPIENT_DID}/messages").as_str(),
+                "",
+            )
         },
         ExpectedRequest {
             sender_did: REQUESTER_DID.to_owned(),

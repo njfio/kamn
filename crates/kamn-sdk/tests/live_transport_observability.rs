@@ -1,7 +1,9 @@
 #[path = "support/live_transport_observability.rs"]
 mod support;
 
-use kamn_sdk::{KamnServiceObservability, LiveTransportKamnClient, SdkError, ServiceHealthSnapshot};
+use kamn_sdk::{
+    KamnServiceObservability, LiveTransportKamnClient, SdkError, ServiceHealthSnapshot,
+};
 use std::io::Write;
 use std::thread;
 
@@ -86,8 +88,8 @@ fn run_observability_server(bind_addr: String, malformed_health: bool) -> Result
     use std::thread;
     use std::time::{Duration, Instant};
 
-    let listener = TcpListener::bind(bind_addr.as_str())
-        .map_err(|error| format!("bind failed: {error}"))?;
+    let listener =
+        TcpListener::bind(bind_addr.as_str()).map_err(|error| format!("bind failed: {error}"))?;
     listener
         .set_nonblocking(true)
         .map_err(|error| format!("nonblocking setup failed: {error}"))?;

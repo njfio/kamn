@@ -100,7 +100,10 @@ fn integration_durable_guard_in_memory_store_round_trips_bundle() {
         .save_bundle(bundle.clone())
         .expect("save should succeed");
 
-    assert_eq!(store.load_bundle().expect("load should succeed"), Some(bundle));
+    assert_eq!(
+        store.load_bundle().expect("load should succeed"),
+        Some(bundle)
+    );
 }
 
 #[test]
@@ -113,7 +116,10 @@ fn integration_durable_guard_file_store_round_trips_bundle_from_disk() {
         .save_bundle(bundle.clone())
         .expect("save should succeed");
 
-    assert_eq!(store.load_bundle().expect("load should succeed"), Some(bundle));
+    assert_eq!(
+        store.load_bundle().expect("load should succeed"),
+        Some(bundle)
+    );
     remove_if_present(&path);
 }
 
@@ -124,10 +130,12 @@ fn integration_durable_guard_store_invalid_schema_and_payload_fail_closed() {
     bundle.schema_version = DURABLE_GUARD_BUNDLE_SCHEMA_VERSION + 1;
     assert_eq!(
         store.save_bundle(bundle),
-        Err(DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch {
-            expected: DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
-            found: DURABLE_GUARD_BUNDLE_SCHEMA_VERSION + 1,
-        })
+        Err(
+            DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch {
+                expected: DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
+                found: DURABLE_GUARD_BUNDLE_SCHEMA_VERSION + 1,
+            }
+        )
     );
 
     let path = temp_snapshot_path();

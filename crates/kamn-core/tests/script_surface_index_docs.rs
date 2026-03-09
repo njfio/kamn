@@ -197,8 +197,7 @@ fn index_inventory_matches_filesystem_counts() {
 
     assert_eq!(recorded_sh, filesystem_totals.sh, "sh total drifted");
     assert_eq!(
-        recorded_py,
-        TRACKED_TOTAL_PY_FILES,
+        recorded_py, TRACKED_TOTAL_PY_FILES,
         "tracked py total marker drifted"
     );
     assert_eq!(recorded_py, filesystem_totals.py, "py total drifted");
@@ -213,8 +212,7 @@ fn index_inventory_matches_filesystem_counts() {
         "category count marker drifted"
     );
     assert_eq!(
-        *recorded_ci,
-        TRACKED_CI_COUNTS,
+        *recorded_ci, TRACKED_CI_COUNTS,
         "tracked scripts/ci row drifted"
     );
     assert_eq!(recorded_rows, filesystem_rows, "category table drifted");

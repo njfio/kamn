@@ -711,11 +711,9 @@ mod tests {
             error.reason_code,
             REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
         );
-        assert!(
-            error
-                .message
-                .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER)
-        );
+        assert!(error
+            .message
+            .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER));
     }
 
     #[test]
@@ -933,11 +931,9 @@ mod tests {
             error.reason_code,
             REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
         );
-        assert!(
-            error
-                .message
-                .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER)
-        );
+        assert!(error
+            .message
+            .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER));
     }
 
     #[test]
