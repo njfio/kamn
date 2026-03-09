@@ -47,6 +47,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Remediation rule:
   - split touched oversized files/functions before merge; baseline inventory remains visibility-only and does not waive new regressions.
 
+## Touched Shell Strict-Mode Contract
+- Touched executable shell scripts under `scripts/` stay fail-closed on `set -euo pipefail` without forcing repo-wide rewrites of untouched libraries.
+- Contract test command:
+  - `bash scripts/ci/test_check_touched_shell_strict_mode.sh`
+- Exception inventory fixture:
+  - `fixtures/ci/touched_shell_strict_mode_exceptions.txt`
+- Fast-gate checker command:
+  - `check_touched_shell_strict_mode.sh --output-json /tmp/touched-shell-strict-mode-report.json`
+- Deterministic reason codes:
+  - `reason_codes=touched_shell_strict_mode_missing_strict_mode`
+  - `reason_codes=touched_shell_strict_mode_git_base_unavailable`
+  - `reason_codes=touched_shell_strict_mode_exception_file_invalid`
+- Exception rule:
+  - sourced helper libraries must be listed explicitly in `fixtures/ci/touched_shell_strict_mode_exceptions.txt`; missing or malformed exception metadata fails closed.
+
 ## Heavy Integration CI Scope Contracts
 - Heavy local integration run-mode lanes must remain excluded from fast-gate command surfaces.
 - Selector/workflow regression commands:
