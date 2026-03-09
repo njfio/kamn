@@ -33,11 +33,11 @@ Extract the mailbox and relay delivery coverage out of `crates/kamn-node/src/mai
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `service_api_endpoint_tests.rs` declares a new mailbox-relay-delivery submodule and no longer retains the moved mailbox and relay delivery test markers.
-- [ ] AC-2: Extracted mailbox-relay-delivery files stay at or below 200 lines each.
-- [ ] AC-3: The staged root threshold ratchets down from `4856` to `4525` lines or lower.
-- [ ] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
-- [ ] AC-5: At least one extracted mailbox or relay delivery test passes from the real `kamn-node` test module path.
+- [x] AC-1: `service_api_endpoint_tests.rs` declares a new mailbox-relay-delivery submodule and no longer retains the moved mailbox and relay delivery test markers.
+- [x] AC-2: Extracted mailbox-relay-delivery files stay at or below 200 lines each.
+- [x] AC-3: The staged root threshold ratchets down from `4856` to `4525` lines or lower.
+- [x] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
+- [x] AC-5: At least one extracted mailbox or relay delivery test passes from the real `kamn-node` test module path.
 
 ## Files To Touch
 
@@ -59,3 +59,32 @@ Extract the mailbox and relay delivery coverage out of `crates/kamn-node/src/mai
 2. Extract the mailbox and relay delivery coverage into bounded files until the split contract passes.
 3. Run the targeted split contract and directly affected `kamn-node` mailbox or relay delivery tests.
 4. Record integration evidence and any deviations in this spec.
+
+## Deviations
+
+- The extracted cross-node relay leaf no longer duplicates the sender spool append/idempotency assertion that was previously embedded in the root file variant. Durable spool coverage remains exercised by the dedicated relay spool test.
+- The extracted cross-node relay leaf no longer includes the restart re-query tail. Restart and relayed-to-delivered persistence coverage remains in `relay_status_contract_tests.rs`.
+- Relay-status fixture generation now uses `serde_json::json!` plus `serde_json::to_string_pretty(...)` instead of hand-built JSON strings because the string-built fixture was malformed and prevented the service API server from starting during the moved tests.
+
+## Phase 6 Evidence
+
+- Root wiring:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs` declares `#[path = "service_api_endpoint_tests/mailbox_relay_delivery_contract_tests.rs"]` and `mod mailbox_relay_delivery_contract_tests;`
+- File sizes:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `3248`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests.rs`: `12`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/recipient_mailbox_contract_tests.rs`: `148`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_delivery_contract_tests.rs`: `160`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_did_rejection_contract_tests.rs`: `117`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_status_contract_tests.rs`: `68`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/support.rs`: `180`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/state_support.rs`: `57`
+- Touched-Rust size policy:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6682-touched-size.json`
+  - Result: `status=pass`, `policy_decision=GO`
+- Targeted evidence:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_cross_node_relay_delivery_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart -- --nocapture`
