@@ -182,6 +182,21 @@ jobs:
             --ceiling-file .ci/shell-loc-hard-ceiling.env \
             --output-json ci-shell-loc-hard-ceiling.json
 
+      - name: Check touched shell strict mode
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_touched_shell_strict_mode.sh \
+            --exception-file fixtures/ci/touched_shell_strict_mode_exceptions.txt \
+            --output-json ci-touched-shell-strict-mode-report.json
+
+      - name: Upload touched shell strict-mode telemetry
+        if: always() && hashFiles('ci-touched-shell-strict-mode-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-touched-shell-strict-mode-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-touched-shell-strict-mode-report.json
+          if-no-files-found: error
+
       - name: Upload shell LOC hard-ceiling telemetry
         if: always() && hashFiles('ci-shell-loc-hard-ceiling.json') != ''
         uses: actions/upload-artifact@v4

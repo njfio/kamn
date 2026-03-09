@@ -1,0 +1,4 @@
+# Sourced shell helper libraries are exempt because setting shell options here
+# would bleed into callers.
+scripts/lib/common.sh
+scripts/lib/test_harness.sh

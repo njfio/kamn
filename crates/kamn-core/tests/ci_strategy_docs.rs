@@ -612,6 +612,18 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
 }
 
 #[test]
+fn doc_contains_touched_shell_strict_mode_markers() {
+    assert!(DOC.contains("test_check_touched_shell_strict_mode.sh"));
+    assert!(DOC.contains("fixtures/ci/touched_shell_strict_mode_exceptions.txt"));
+    assert!(DOC.contains(
+        "check_touched_shell_strict_mode.sh --output-json /tmp/touched-shell-strict-mode-report.json"
+    ));
+    assert!(DOC.contains("reason_codes=touched_shell_strict_mode_missing_strict_mode"));
+    assert!(DOC.contains("reason_codes=touched_shell_strict_mode_git_base_unavailable"));
+    assert!(DOC.contains("reason_codes=touched_shell_strict_mode_exception_file_invalid"));
+}
+
+#[test]
 fn doc_contains_signer_provenance_fallback_policy_contract_markers() {
     assert!(
         DOC.contains("### Signer Provenance and Fallback-Prohibition Docs/Config Parity Contract")

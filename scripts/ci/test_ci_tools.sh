@@ -33,6 +33,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_check_shell_surface_threshold_ratchet.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_kamn_sdk_service_rs_extraction_threshold.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_touched_rust_size_policy.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_touched_shell_strict_mode.sh"
   bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_compaction.sh"
   bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
