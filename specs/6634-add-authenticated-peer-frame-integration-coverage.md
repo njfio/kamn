@@ -50,3 +50,12 @@ Add dedicated crate-level integration coverage for the public authenticated peer
 2. Add a dedicated integration surface covering one valid signed round-trip and the public fail-closed constructor, wire, recipient, authorization, and replay paths.
 3. Run targeted contract and integration tests.
 4. Run `test_file_size_policy` and refresh its baseline only if the new test targets change inventory counts.
+
+## Deviations
+- The workspace `test_file_size_policy` inventory changed from `485` to `487`, so `fixtures/ci/test_file_size_policy_baseline.env` was refreshed during integration.
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test authenticated_peer_frame_contract -- --nocapture`
+- `cargo test -p kamn-core --test authenticated_peer_frame_integration -- --nocapture`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+- `cargo clippy -p kamn-core --tests -- -D warnings`
