@@ -17,7 +17,13 @@ const ROUTE_RESPONSE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/route_render_contract_tests/route_response_contract_tests.rs";
 const ROUTE_METRICS_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/route_render_contract_tests/route_metrics_contract_tests.rs";
-const ROOT_STAGED_MAX_LINES: usize = 7800;
+const MESSAGE_PERSISTENCE_MODULE_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/message_persistence_contract_tests.rs";
+const MESSAGE_RESTART_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/message_persistence_contract_tests/message_restart_contract_tests.rs";
+const MESSAGE_RUNTIME_EVIDENCE_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/message_persistence_contract_tests/message_runtime_evidence_contract_tests.rs";
+const ROOT_STAGED_MAX_LINES: usize = 6650;
 
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -273,6 +279,87 @@ fn spec_c12_service_api_endpoint_route_render_split_files_stay_below_budget() {
         ROUTE_RENDER_MODULE_FILE,
         ROUTE_RESPONSE_FILE,
         ROUTE_METRICS_FILE,
+    ] {
+        let source = read_repo_file(path);
+        let line_count = source.lines().count();
+        assert!(
+            line_count <= 200,
+            "{path} should stay below 200 lines after extraction: line_count={line_count}"
+        );
+    }
+}
+
+#[test]
+fn spec_c13_service_api_endpoint_root_file_removes_moved_message_persistence_contracts() {
+    let source = read_repo_file(ROOT_FILE);
+    for marker in [
+        "fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env(",
+        "fn integration_service_api_endpoint_persists_message_state_across_restart()",
+        "fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11()",
+        "let query_path = format!(\"/v1/messages/{}\", send_payload.message_id);",
+        "data_layer_runtime_evidence",
+    ] {
+        assert!(
+            !source.contains(marker),
+            "service_api_endpoint_tests.rs should not keep moved message-persistence marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c14_service_api_endpoint_message_persistence_module_exists_and_owns_moved_coverage() {
+    let module_source = read_repo_file(MESSAGE_PERSISTENCE_MODULE_FILE);
+    let restart_source = read_repo_file(MESSAGE_RESTART_FILE);
+    let runtime_evidence_source = read_repo_file(MESSAGE_RUNTIME_EVIDENCE_FILE);
+
+    assert!(
+        module_source.contains("mod message_restart_contract_tests;"),
+        "message_persistence_contract_tests.rs should declare restart submodule"
+    );
+    assert!(
+        module_source.contains("mod message_runtime_evidence_contract_tests;"),
+        "message_persistence_contract_tests.rs should declare runtime-evidence submodule"
+    );
+
+    for marker in [
+        "fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env(",
+        "fn integration_service_api_endpoint_persists_message_state_across_restart()",
+        "let query_path = format!(\"/v1/messages/{}\", send_payload.message_id);",
+        "let _ = fs::remove_file(state_file);",
+    ] {
+        assert!(
+            restart_source.contains(marker),
+            "message_restart_contract_tests.rs should include moved marker: {marker}"
+        );
+    }
+
+    for marker in [
+        "fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11()",
+        "data_layer_runtime_evidence",
+        "m11_decision",
+    ] {
+        assert!(
+            runtime_evidence_source.contains(marker),
+            "message_runtime_evidence_contract_tests.rs should include moved marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c15_service_api_endpoint_root_declares_message_persistence_submodule() {
+    let source = read_repo_file(ROOT_FILE);
+    assert!(
+        source.contains("mod message_persistence_contract_tests;"),
+        "service_api_endpoint_tests.rs should declare message-persistence submodule"
+    );
+}
+
+#[test]
+fn spec_c16_service_api_endpoint_message_persistence_split_files_stay_below_budget() {
+    for path in [
+        MESSAGE_PERSISTENCE_MODULE_FILE,
+        MESSAGE_RESTART_FILE,
+        MESSAGE_RUNTIME_EVIDENCE_FILE,
     ] {
         let source = read_repo_file(path);
         let line_count = source.lines().count();
