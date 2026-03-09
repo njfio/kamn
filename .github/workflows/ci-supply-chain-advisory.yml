@@ -1,0 +1,92 @@
+name: Supply-Chain Advisory
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  supply-chain-advisory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build advisory image
+        run: docker build -t kamn-supply-chain-advisory:${{ github.sha }} .
+
+      - name: Trivy filesystem advisory scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,license
+          format: json
+          output: ci-supply-chain-advisory-trivy-fs.json
+          exit-code: "0"
+          ignore-unfixed: true
+
+      - name: Trivy image advisory scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: kamn-supply-chain-advisory:${{ github.sha }}
+          scanners: vuln
+          format: json
+          output: ci-supply-chain-advisory-trivy-image.json
+          exit-code: "0"
+          ignore-unfixed: true
+
+      - name: Trivy image SBOM generation
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: kamn-supply-chain-advisory:${{ github.sha }}
+          format: cyclonedx
+          output: ci-supply-chain-advisory-sbom.cdx.json
+          exit-code: "0"
+
+      - name: Advisory workspace license inventory
+        run: |
+          set +e
+          python3 scripts/ci/check_workspace_license_policy.py \
+            --workspace-root . \
+            --expected-license Apache-2.0 \
+            --license-policy-file LICENSE \
+            --lane-profile ci-smoke \
+            --output-json ci-supply-chain-advisory-license.json
+          status=$?
+          set -e
+          echo "license_inventory_exit_code=$status" >> "$GITHUB_STEP_SUMMARY"
+          test -f ci-supply-chain-advisory-license.json
+
+      - name: Verify advisory reports exist
+        run: |
+          for report in \
+            ci-supply-chain-advisory-trivy-fs.json \
+            ci-supply-chain-advisory-trivy-image.json \
+            ci-supply-chain-advisory-sbom.cdx.json \
+            ci-supply-chain-advisory-license.json; do
+            test -f "$report"
+          done
+
+      - name: Upload supply-chain advisory artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-advisory-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ci-supply-chain-advisory-trivy-fs.json
+            ci-supply-chain-advisory-trivy-image.json
+            ci-supply-chain-advisory-sbom.cdx.json
+            ci-supply-chain-advisory-license.json
+          if-no-files-found: error
