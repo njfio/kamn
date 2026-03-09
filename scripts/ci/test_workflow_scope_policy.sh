@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
+EXPECTED_GOVERNANCE_RATIO_ACTIVATION_BASE_SHA="0cb56974454e79789d594a7b8222060b9f3a9b95"
 DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
 
 if ! grep -Fq "workflow_dispatch:" "$FAST_WORKFLOW"; then
@@ -135,8 +136,8 @@ if ! grep -Fq 'grep -Fq -- "--base-sha" "$tmp_dir/check_governance_feature_commi
   exit 1
 fi
 
-if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=e8a6de26ef277849b374e921c3e3307accbbacdf" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
-  echo "expected governance/feature commit ratio moratorium env to anchor after the path-based rollout head" >&2
+if ! grep -Fq "GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA=$EXPECTED_GOVERNANCE_RATIO_ACTIVATION_BASE_SHA" "$ROOT_DIR/.ci/governance-feature-commit-ratio-moratorium.env"; then
+  echo "expected governance/feature commit ratio moratorium env to anchor at the restored base-branch compliance head" >&2
   exit 1
 fi
 
