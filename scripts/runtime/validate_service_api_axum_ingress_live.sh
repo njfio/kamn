@@ -320,7 +320,7 @@ auth_state_hash="service-api:kamn-devnet:v0.1.0"
 
 probe_report="$TMP_DIR/service-api-axum-ingress-probes.json"
 python3 \
-  - "$api_addr" "$probe_report" "$auth_sender_did" "$auth_state_hash" "$auth_private_key_hex" "$auth_public_key_hex" <<'PY'
+  - "$api_addr" "$probe_report" "$auth_state_hash" "$auth_private_key_hex" <<'PY'
 import concurrent.futures
 import hashlib
 import http.client
@@ -333,10 +333,8 @@ from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 api_addr = sys.argv[1]
 probe_report = sys.argv[2]
-sender_did = sys.argv[3]
-state_hash = sys.argv[4]
-private_key_hex = sys.argv[5]
-auth_public_key_hex = sys.argv[6]
+state_hash = sys.argv[3]
+private_key_hex = sys.argv[4]
 host, port_text = api_addr.rsplit(":", 1)
 port = int(port_text)
 secp256k1_order = int(
