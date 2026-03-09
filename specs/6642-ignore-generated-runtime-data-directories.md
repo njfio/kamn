@@ -24,9 +24,9 @@ Declare generated runtime storage directories as ignored workspace state so loca
 - `.gitignore` broadens far enough to hide tracked source unintentionally
 
 ## Acceptance criteria
-- [ ] `.gitignore` contains deterministic markers for `data/` and `crates/kamn-node/data/`
-- [ ] a contract test fails if either required ignore marker is absent
-- [ ] the contract only validates the intended runtime-data markers and does not depend on ambient workspace state
+- [x] `.gitignore` contains deterministic markers for `data/` and `crates/kamn-node/data/`
+- [x] a contract test fails if either required ignore marker is absent
+- [x] the contract only validates the intended runtime-data markers and does not depend on ambient workspace state
 
 ## Files to touch
 - `.gitignore`
@@ -43,3 +43,8 @@ Declare generated runtime storage directories as ignored workspace state so loca
 2. Add the `.gitignore` markers
 3. Re-run the targeted contract tests and require green
 4. Confirm `git status --short` remains clean after the change
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test workspace_gitignore_runtime_data_policy_contract -- --nocapture`
+- `cargo test -p kamn-core --test workspace_gitignore_python_cache_policy_contract -- --nocapture`
+- `git status --short --branch` stayed clean aside from the intended branch context after the ignore markers were added
