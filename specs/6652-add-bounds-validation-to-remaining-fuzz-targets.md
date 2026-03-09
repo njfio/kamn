@@ -31,19 +31,20 @@ Add explicit overall input bounds to the remaining unbounded fuzz target and rat
 
 ## Acceptance Criteria
 
-- [ ] Each remaining fuzz target validates input size/shape before deep processing
-- [ ] Bounds are documented and justified
-- [ ] Regression tests or harness checks cover the bound behavior
-- [ ] Fuzz targets continue to run under existing local/CI fuzz workflows
-- [ ] No remaining target accepts effectively unbounded pathological input without an explicit reason
+- [x] Each remaining fuzz target validates input size/shape before deep processing
+- [x] Bounds are documented and justified
+- [x] Regression tests or harness checks cover the bound behavior
+- [x] Fuzz targets continue to run under existing local/CI fuzz workflows
+- [x] No remaining target accepts effectively unbounded pathological input without an explicit reason
 
 ## Files To Touch
 
 - `specs/6652-add-bounds-validation-to-remaining-fuzz-targets.md`
 - `fuzz/fuzz_targets/message_envelope_parser.rs`
 - `crates/kamn-core/tests/cargo_fuzz_target_contract.rs`
-- `docs/planning/fuzz_harness_budget_policy.md`
+- `crates/kamn-core/tests/invariant_and_fuzz_strategy_docs.rs`
 - `docs/testing/invariant-and-fuzz-strategy.md`
+- `docs/ci/strategy.md`
 
 ## Error Semantics
 
@@ -66,3 +67,28 @@ Add explicit overall input bounds to the remaining unbounded fuzz target and rat
   - `kolme_flat_json_parser.rs`
   - `kolme_flat_json_policy_parser.rs`
 - `message_envelope_parser.rs` is the remaining gap because it bounds individual fields and entry counts but not the overall input slice before envelope construction.
+
+## Refactor Evidence
+
+- The touched fuzz target remains below the file-size limit at `150` LOC.
+- Every touched function in `fuzz/fuzz_targets/message_envelope_parser.rs` is within the 25 LOC function limit after extracting:
+  - `build_metadata`
+  - `build_header`
+  - `build_body`
+  - `build_attachment`
+  - `build_proof`
+
+## Integration Evidence
+
+- `cargo test -p kamn-core --test cargo_fuzz_target_contract -- --nocapture`
+  - passed
+- `cargo test -p kamn-core --test message_envelope_fuzz_smoke -- --nocapture`
+  - passed
+- `cargo test -p kamn-core --test invariant_and_fuzz_strategy_docs -- --nocapture`
+  - passed
+
+## Deviations
+
+- The issue body described “several remaining targets,” but current repo inspection showed only one real remaining unbounded target:
+  - `fuzz/fuzz_targets/message_envelope_parser.rs`
+- No other fuzz harnesses were modified because the other current targets already apply explicit deterministic truncation or equivalent input-shape bounds.
