@@ -120,7 +120,8 @@ impl AgentDid {
             .key_binding_fingerprint()
             .ok_or(AgentDidKeyBindingError::MissingKeyBinding)?;
         let actual = agent_did_key_binding_fingerprint_for_public_key_hex(public_key_hex)?;
-        if !crate::constant_time_eq::constant_time_eq_bytes(actual.as_bytes(), expected.as_bytes()) {
+        if !crate::constant_time_eq::constant_time_eq_bytes(actual.as_bytes(), expected.as_bytes())
+        {
             return Err(AgentDidKeyBindingError::KeyBindingMismatch {
                 expected: expected.to_owned(),
                 actual,
@@ -863,7 +864,9 @@ mod tests {
             .find("pub fn ensure_public_key_hex_binding(")
             .expect("function must exist");
         let function_end = SOURCE[function_start..]
-            .find("\n    /// Builds an agent DID with deterministic key-binding fingerprint suffix.")
+            .find(
+                "\n    /// Builds an agent DID with deterministic key-binding fingerprint suffix.",
+            )
             .map(|offset| function_start + offset)
             .expect("function boundary must exist");
         &SOURCE[function_start..function_end]

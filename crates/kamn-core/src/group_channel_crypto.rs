@@ -783,8 +783,8 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, GroupChannelCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        GROUP_MESSAGE_CIPHER_ALGORITHM, GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
         GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
+        GROUP_MESSAGE_CIPHER_ALGORITHM, GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
     };
     use chacha20poly1305::aead::{Aead, KeyInit, Payload};
     use chacha20poly1305::{XChaCha20Poly1305, XNonce};
@@ -1172,8 +1172,8 @@ mod tests {
     }
 
     #[test]
-    fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize()
-     {
+    fn spec_c09_group_channel_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
+    ) {
         let production_source = SOURCE.split("\n#[cfg(test)]").next().unwrap_or(SOURCE);
         let derive_line = production_source
             .split("pub struct GroupChannelCryptoEngine")
