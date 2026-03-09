@@ -25,16 +25,16 @@ pub mod types;
 pub use agent::{KamnAgent, KamnTransport, TransportMode};
 /// Re-exported bridge lifecycle types.
 pub use bridge::{BridgeId, BridgeStatus};
-/// Re-exported service events types.
-pub use events::{KamnServiceEvents, ServiceEventSnapshot};
-/// Re-exported service observability types.
-pub use observability::{KamnServiceObservability, ServiceHealthSnapshot};
 /// Re-exported SDK error type.
 pub use error::SdkError;
+/// Re-exported service events types.
+pub use events::{KamnServiceEvents, ServiceEventSnapshot};
 /// Re-exported live transport client and configuration.
 pub use live::{LiveTransportConfig, LiveTransportKamnClient};
 /// Re-exported in-memory client.
 pub use memory::InMemoryKamnClient;
+/// Re-exported service observability types.
+pub use observability::{KamnServiceObservability, ServiceHealthSnapshot};
 /// Re-exported service API client primitives.
 pub use service::{
     service_public_key_for_private_key, service_signature_for_fields,

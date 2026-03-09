@@ -1,5 +1,4 @@
 use super::{
-    LiveTransportKamnClient,
     bridge::{
         bridge_read_auth, bridge_status_from_service, bridge_status_from_submission,
         bridge_submit_payload, bridge_write_auth, resolve_service_bridge_id,
@@ -10,16 +9,18 @@ use super::{
         agent_profile_to_document, agent_profile_to_reputation, agent_profile_to_summary,
         channel_create_payload, recipient_mailbox_channel_id, service_message_to_record,
     },
+    state::{
+        build_agents_read_auth, build_agents_read_auth_with_body, build_auth, remember_message_id,
+    },
     task_escrow::{prepare_artifact_status_lookup, prepare_task_status_lookup},
-    state::{build_agents_read_auth, build_agents_read_auth_with_body, build_auth, remember_message_id},
+    LiveTransportKamnClient,
 };
 use crate::{
-    channel_create::channel_id as validate_channel_id,
-    AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ArtifactStatus, BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId,
-    KamnAgent, Message, MessageId, MessageRecord, MessageStatus, MessageStream, SdkError,
-    ServiceContentStatus, ServiceMessageStatus, ServiceRequestAuth, TaskDefinition, TaskId,
-    TaskStatus, TokenAmount, service::agent_search_payload,
+    channel_create::channel_id as validate_channel_id, service::agent_search_payload, AgentDid,
+    AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId, ArtifactStatus,
+    BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, Message,
+    MessageId, MessageRecord, MessageStatus, MessageStream, SdkError, ServiceContentStatus,
+    ServiceMessageStatus, ServiceRequestAuth, TaskDefinition, TaskId, TaskStatus, TokenAmount,
 };
 
 impl KamnAgent for LiveTransportKamnClient {
@@ -108,7 +109,9 @@ impl KamnAgent for LiveTransportKamnClient {
             payload.as_str(),
             Some(CHANNELS_WRITE_SCOPE),
         )?;
-        let receipt = self.service_client.create_channel(payload.as_str(), &auth)?;
+        let receipt = self
+            .service_client
+            .create_channel(payload.as_str(), &auth)?;
         validate_channel_id(receipt.channel_id)
     }
 
@@ -173,10 +176,7 @@ impl KamnAgent for LiveTransportKamnClient {
         Ok(artifact_status_from_service(artifact_id, status))
     }
 
-    fn tombstone_artifact(
-        &mut self,
-        artifact_id: &ArtifactId,
-    ) -> Result<ArtifactStatus, SdkError> {
+    fn tombstone_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
         let service_content_id = resolve_service_content_id(self, artifact_id)?;
         let auth = build_auth(
             &self.state,
@@ -267,9 +267,5 @@ fn artifact_status_from_service(
     artifact_id: &ArtifactId,
     status: ServiceContentStatus,
 ) -> ArtifactStatus {
-    ArtifactStatus::from_lifecycle(
-        artifact_id,
-        status.lifecycle_state,
-        status.redaction_status,
-    )
+    ArtifactStatus::from_lifecycle(artifact_id, status.lifecycle_state, status.redaction_status)
 }

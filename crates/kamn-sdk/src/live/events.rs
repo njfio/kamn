@@ -1,4 +1,4 @@
-use super::{LiveTransportKamnClient, config::EVENTS_READ_SCOPE, state::build_auth};
+use super::{config::EVENTS_READ_SCOPE, state::build_auth, LiveTransportKamnClient};
 use crate::{SdkError, ServiceEventSnapshot, ServiceRequestAuth};
 
 pub(super) fn read_service_event(

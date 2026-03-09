@@ -1,5 +1,4 @@
 use super::{
-    LiveTransportKamnClient,
     config::{
         AGENTS_WRITE_SCOPE, CONTENT_WRITE_SCOPE, ESCROW_WRITE_SCOPE, MESSAGES_WRITE_SCOPE,
         TASKS_WRITE_SCOPE,
@@ -10,6 +9,7 @@ use super::{
         prepare_task_artifact_submission, prepare_task_complete, remember_artifact_alias,
         remember_escrow_alias, remember_task_alias, task_payload,
     },
+    LiveTransportKamnClient,
 };
 use crate::{
     AgentDid, AgentMetadata, Artifact, ArtifactId, EscrowConfig, EscrowId, Message, MessageId,

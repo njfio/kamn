@@ -1,12 +1,12 @@
 use super::{
-    LiveTransportKamnClient,
     config::{BRIDGE_READ_SCOPE, BRIDGE_WRITE_SCOPE},
     state::{build_auth, remember_message_id},
     task_escrow::deterministic_u64_tag,
+    LiveTransportKamnClient,
 };
 use crate::{
-    BridgeId, BridgeStatus, MessageId, SdkError, ServiceBridgeStatus, ServiceBridgeSubmission,
-    ServiceRequestAuth, bridge::target_network,
+    bridge::target_network, BridgeId, BridgeStatus, MessageId, SdkError, ServiceBridgeStatus,
+    ServiceBridgeSubmission, ServiceRequestAuth,
 };
 
 pub(crate) fn bridge_read_auth(

@@ -1,10 +1,9 @@
 use crate::{
-    bridge::target_network,
-    channel_create::channel_name,
-    AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    ArtifactStatus, BridgeId, BridgeStatus, ChannelId, DidDocument, EscrowConfig, EscrowId,
-    KamnAgent, KamnTransport, Message, MessageId, MessageRecord, MessageStatus, MessageStream,
-    SdkError, TaskDefinition, TaskId, TaskStatus, TokenAmount, TransportMode,
+    bridge::target_network, channel_create::channel_name, AgentDid, AgentMetadata, AgentQuery,
+    AgentReputation, AgentSummary, Artifact, ArtifactId, ArtifactStatus, BridgeId, BridgeStatus,
+    ChannelId, DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport, Message, MessageId,
+    MessageRecord, MessageStatus, MessageStream, SdkError, TaskDefinition, TaskId, TaskStatus,
+    TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 
@@ -467,10 +466,7 @@ impl KamnAgent for InMemoryKamnClient {
         self.set_artifact_status(artifact_id, "expired", "none")
     }
 
-    fn tombstone_artifact(
-        &mut self,
-        artifact_id: &ArtifactId,
-    ) -> Result<ArtifactStatus, SdkError> {
+    fn tombstone_artifact(&mut self, artifact_id: &ArtifactId) -> Result<ArtifactStatus, SdkError> {
         self.set_artifact_status(artifact_id, "tombstoned", "redacted")
     }
 
