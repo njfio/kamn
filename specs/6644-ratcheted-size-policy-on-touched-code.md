@@ -38,14 +38,14 @@ Add a fail-closed ratcheted size-policy gate for touched Rust code so newly over
 
 ## Acceptance Criteria
 
-- [ ] A dedicated checker evaluates touched Rust files/functions against size limits using git-base comparison
-- [ ] The checker fails when a changed file exceeds the file-size policy and its base version was compliant or absent
-- [ ] The checker fails when a changed function exceeds the function-size policy and its base version was compliant or absent
-- [ ] Existing oversized Rust files/functions are captured in a committed baseline inventory fixture with schema version
-- [ ] Checker output identifies exact offending file/function paths and measured line counts
-- [ ] Fast Gate executes the checker and uploads its report artifact
-- [ ] Local CI tool regression coverage exercises pass/fail/error-path behavior for the checker and workflow wiring
-- [ ] CI docs/contracts mention the touched-code size ratchet markers and command surface
+- [x] A dedicated checker evaluates touched Rust files/functions against size limits using git-base comparison
+- [x] The checker fails when a changed file exceeds the file-size policy and its base version was compliant or absent
+- [x] The checker fails when a changed function exceeds the function-size policy and its base version was compliant or absent
+- [x] Existing oversized Rust files/functions are captured in a committed baseline inventory fixture with schema version
+- [x] Checker output identifies exact offending file/function paths and measured line counts
+- [x] Fast Gate executes the checker and uploads its report artifact
+- [x] Local CI tool regression coverage exercises pass/fail/error-path behavior for the checker and workflow wiring
+- [x] CI docs/contracts mention the touched-code size ratchet markers and command surface
 
 ## Files To Touch
 
@@ -87,3 +87,15 @@ Add a fail-closed ratcheted size-policy gate for touched Rust code so newly over
 
 - Function-size comparison will use a fail-closed lexical Rust function-span scanner based on balanced braces and normalized function headers rather than a new AST dependency.
 - The committed baseline inventory is for visibility and drift review; the touched-code ratchet will use git-base comparison as the enforcement authority.
+- The issue was created without the required shell-surface DoR markers even though the implementation touches `scripts/**` and `.github/workflows/**`; the issue body was corrected during Phase 7 before PR creation.
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` reached and passed the new touched-Rust lane, but the overall fast-mode harness still stops later in the pre-existing `shell_test_surface_ratio_policy` contract because `fixtures/ci/shell_test_surface_ratio_baseline.env` is stale relative to the current repo census. That failure is outside `#6644`'s touched-code size-ratchet scope.
+
+## Final Evidence
+
+- `bash scripts/ci/test_check_touched_rust_size_policy.sh` -> pass
+- `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh` -> pass
+- `bash scripts/ci/test_ci_strategy_contract.sh` -> pass
+- `bash scripts/ci/test_collect_shell_rust_loc_telemetry.sh` -> pass
+- `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture` -> pass
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root . --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/ci-touched-rust-size-policy-local.json` -> pass
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` -> partial pass; the new touched-Rust lane passed in the real entrypoint before the run hit the unrelated stale `shell_test_surface_ratio_policy` failure.
