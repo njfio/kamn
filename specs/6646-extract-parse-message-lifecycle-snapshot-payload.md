@@ -62,3 +62,9 @@ Reduce `parse_message_lifecycle_snapshot_payload()` in `crates/kamn-core/src/mes
 ## Notes / Deviations
 
 - The current function is 122 LOC on `origin/main`, not ~702 LOC as stated in the issue body, but it still violates the 25 LOC function policy and has obvious extraction seams.
+
+## Integration Evidence
+
+- `cargo test -p kamn-core --test message_lifecycle_parser_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core parse_message_lifecycle_snapshot_payload -- --nocapture`
+- `cargo test -p kamn-core file_message_lifecycle_snapshot_store -- --nocapture`
