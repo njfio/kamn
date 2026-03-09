@@ -34,10 +34,10 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[path = "service_api_endpoint_tests/balance_contract_tests.rs"]
-mod balance_contract_tests;
 #[path = "service_api_endpoint_tests/auth_scope_contract_tests.rs"]
 mod auth_scope_contract_tests;
+#[path = "service_api_endpoint_tests/balance_contract_tests.rs"]
+mod balance_contract_tests;
 #[path = "service_api_endpoint_tests/websocket_contract_tests.rs"]
 mod websocket_contract_tests;
 

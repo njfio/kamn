@@ -8,6 +8,15 @@ pub(super) fn start_service_api_server(
     String,
     thread::JoinHandle<Result<(), String>>,
 ) {
+    let snapshot = build_service_api_test_snapshot(api_bind);
+    let bind_addr = reserve_loopback_addr();
+    let server = spawn_service_api_server(&snapshot, bind_addr.as_str(), max_requests);
+    (snapshot, bind_addr, server)
+}
+
+fn build_service_api_test_snapshot(
+    api_bind: &str,
+) -> crate::service_api_endpoint::ServiceApiSnapshot {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -20,10 +29,16 @@ pub(super) fn start_service_api_server(
     ])
     .expect("api args should parse");
     let report = execute(parsed).expect("api execution should succeed");
-    let snapshot = build_service_api_snapshot(&report);
-    let bind_addr = reserve_loopback_addr();
+    build_service_api_snapshot(&report)
+}
+
+fn spawn_service_api_server(
+    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
+    bind_addr: &str,
+    max_requests: u64,
+) -> thread::JoinHandle<Result<(), String>> {
     let endpoint_config = ServiceApiEndpointConfig {
-        bind_addr: bind_addr.clone(),
+        bind_addr: bind_addr.to_owned(),
         max_requests,
         idle_timeout_ms: 2_500,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
@@ -31,11 +46,10 @@ pub(super) fn start_service_api_server(
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     };
     let server_snapshot = snapshot.clone();
-    let server = thread::spawn(move || {
-        serve_service_api_endpoint(&endpoint_config, &server_snapshot)
-    });
-    wait_for_endpoint_ready(bind_addr.as_str());
-    (snapshot, bind_addr, server)
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr);
+    server
 }
 
 pub(super) fn join_service_api_server(

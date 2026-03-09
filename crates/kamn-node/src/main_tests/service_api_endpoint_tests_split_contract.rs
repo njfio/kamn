@@ -1,7 +1,8 @@
 use std::fs;
 
 const ROOT_FILE: &str = "src/main_tests/service_api_endpoint_tests.rs";
-const WEBSOCKET_FILE: &str = "src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs";
+const WEBSOCKET_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs";
 const AUTH_SCOPE_MODULE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/auth_scope_contract_tests.rs";
 const AUTH_BINDING_FILE: &str =
@@ -179,8 +180,12 @@ fn spec_c07_service_api_endpoint_root_file_is_below_staged_threshold_after_auth_
 
 #[test]
 fn spec_c08_service_api_endpoint_auth_scope_split_files_stay_below_budget() {
-    for path in [AUTH_SCOPE_MODULE_FILE, AUTH_BINDING_FILE, ROUTE_SCOPE_POLICY_FILE, LEGACY_SIGNATURE_FILE]
-    {
+    for path in [
+        AUTH_SCOPE_MODULE_FILE,
+        AUTH_BINDING_FILE,
+        ROUTE_SCOPE_POLICY_FILE,
+        LEGACY_SIGNATURE_FILE,
+    ] {
         let source = read_repo_file(path);
         let line_count = source.lines().count();
         assert!(
