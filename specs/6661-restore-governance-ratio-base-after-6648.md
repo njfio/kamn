@@ -34,11 +34,11 @@ Superseded activation base SHA: `0cb56974454e79789d594a7b8222060b9f3a9b95`
 
 ## Acceptance Criteria
 
-- [ ] `.ci/governance-feature-commit-ratio-moratorium.env` points at the refreshed base SHA
-- [ ] The governance ratio checker returns `status=ok` with `activation_scope_status=head_at_activation_base` when run at the refreshed base SHA
-- [ ] The governance ratio checker returns `status=ok` with `activation_scope_status=head_precedes_activation_base` for an ancestor of the refreshed base SHA
-- [ ] Docs and contract tests that pin the activation base SHA are updated to the refreshed value
-- [ ] The spec records why the reset was required and what prior activation base it superseded
+- [x] `.ci/governance-feature-commit-ratio-moratorium.env` points at the refreshed base SHA
+- [x] The governance ratio checker returns `status=ok` with `activation_scope_status=head_at_activation_base` when run at the refreshed base SHA
+- [x] The governance ratio checker returns `status=ok` with `activation_scope_status=head_precedes_activation_base` for an ancestor of the refreshed base SHA
+- [x] Docs and contract tests that pin the activation base SHA are updated to the refreshed value
+- [x] The spec records why the reset was required and what prior activation base it superseded
 
 ## Files To Touch
 
@@ -62,3 +62,24 @@ Superseded activation base SHA: `0cb56974454e79789d594a7b8222060b9f3a9b95`
 - Run `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`
 - Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-at-base.json`
 - Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha ab06162ebee80e920e2ccfd12b1fb7fbec538248 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-preactivation.json`
+
+## Integration Evidence
+
+- `origin/main` before the reset returned `status=violation`, `activation_scope_status=post_activation_window`, `governance_commit_count=8`, `feature_commit_count=8`, `governance_ratio=0.5`
+- `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
+  - passed
+- `bash scripts/ci/test_workflow_scope_policy.sh`
+  - passed
+- `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`
+  - passed
+- `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-at-base.json`
+  - `status=ok`
+  - `activation_scope_status=head_at_activation_base`
+- `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha ab06162ebee80e920e2ccfd12b1fb7fbec538248 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6661-preactivation.json`
+  - `status=ok`
+  - `activation_scope_status=head_precedes_activation_base`
+
+## Deviations
+
+- None in implementation scope.
+- Operationally, this repair is expected to deadlock its own PR fast-gate until the refreshed activation base lands on `main`, because the gate intentionally evaluates PRs against the current base-branch moratorium config.
