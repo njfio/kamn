@@ -52,3 +52,12 @@ Add dedicated crate-level integration coverage for the public `PeerLifecycle` an
 2. Add a dedicated integration surface covering lifecycle progression, invalid transitions, FIFO queue behavior, overflow rejection, and invalid-capacity rejection via the public API.
 3. Run targeted contract and integration tests.
 4. Run `test_file_size_policy` and refresh its baseline only if the new test targets change inventory counts.
+
+## Deviations
+- The workspace `test_file_size_policy` inventory changed from `481` to `483`, so `fixtures/ci/test_file_size_policy_baseline.env` was refreshed during integration.
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test runtime_peer_coordination_primitives_contract -- --nocapture`
+- `cargo test -p kamn-core --test runtime_peer_coordination_primitives -- --nocapture`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+- `cargo clippy -p kamn-core --tests -- -D warnings`
