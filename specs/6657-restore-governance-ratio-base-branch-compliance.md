@@ -4,6 +4,9 @@
 
 Restore base-branch compliance for the governance/feature commit ratio gate by advancing the moratorium activation base to the current compliant reset point on `main`, then updating the supporting docs and tests so future PRs are judged against the refreshed window.
 
+Refreshed activation base SHA: `0cb56974454e79789d594a7b8222060b9f3a9b95`
+Superseded activation base SHA: `e8a6de26ef277849b374e921c3e3307accbbacdf`
+
 ## Inputs/Outputs
 
 - Inputs:
@@ -59,3 +62,18 @@ Restore base-branch compliance for the governance/feature commit ratio gate by a
 - Run `cargo test -p kamn-core --test ci_strategy_docs doc_contains_governance_feature_commit_ratio_gate_markers -- --exact --nocapture`
 - Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha <refreshed_sha> --head-sha <refreshed_sha> --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/governance-feature-ratio-at-base.json`
 - Run `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha <refreshed_sha> --head-sha <ancestor_of_refreshed_sha> --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/governance-feature-ratio-preactivation.json`
+
+## Integration Evidence
+
+- `origin/main` before the reset returned `status=violation`, `governance_commit_count=21`, `feature_commit_count=27`, `unknown_commit_count=2`, `governance_ratio=0.4375`
+- `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha 0cb56974454e79789d594a7b8222060b9f3a9b95 --head-sha 0cb56974454e79789d594a7b8222060b9f3a9b95 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6657-at-base.json`
+  - `status=ok`
+  - `activation_scope_status=head_at_activation_base`
+- `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha 0cb56974454e79789d594a7b8222060b9f3a9b95 --head-sha e8412d97bfd95519921cdb0f32b5d11d12fa27f2 --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6657-preactivation.json`
+  - `status=ok`
+  - `activation_scope_status=head_precedes_activation_base`
+
+## Deviations
+
+- None in implementation scope.
+- Operationally, this repair is expected to deadlock its own PR fast-gate until the new activation base lands on `main`, because the PR is judged against the stale base-branch policy by design.
