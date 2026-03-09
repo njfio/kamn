@@ -38,24 +38,24 @@ transport tests.
 - workspace `test_file_size_policy` inventory drifts after adding new test targets
 
 ## Acceptance criteria (testable booleans)
-- [ ] `runtime_wiring_transport_profile_contract` fails when the dedicated integration surface or
+- [x] `runtime_wiring_transport_profile_contract` fails when the dedicated integration surface or
       its required marker cases disappear
-- [ ] integration coverage asserts default `build_runtime_wiring(...)` returns in-memory transport
+- [x] integration coverage asserts default `build_runtime_wiring(...)` returns in-memory transport
       profile markers and excludes live-provider markers
-- [ ] integration coverage asserts
+- [x] integration coverage asserts
       `build_runtime_wiring_with_transport_profile(..., RuntimeTransportProfile::Libp2pLive)`
       emits live transport, provider, and compile-mode markers through the public API
-- [ ] integration coverage asserts gossip-disabled wiring emits deterministic disabled-gossip marker
+- [x] integration coverage asserts gossip-disabled wiring emits deterministic disabled-gossip marker
       and excludes transport markers
-- [ ] integration coverage asserts processor/listener/approver configs return their expected
+- [x] integration coverage asserts processor/listener/approver configs return their expected
       public role components
-- [ ] integration coverage asserts `libp2p_feature_gate_name()` and
+- [x] integration coverage asserts `libp2p_feature_gate_name()` and
       `resolve_libp2p_compile_mode().marker_component()` stay aligned with the active feature state
-- [ ] `cargo test -p kamn-core --test runtime_wiring_transport_profile_contract -- --nocapture`
+- [x] `cargo test -p kamn-core --test runtime_wiring_transport_profile_contract -- --nocapture`
       passes
-- [ ] `cargo test -p kamn-core --test runtime_wiring_transport_profile_integration -- --nocapture`
+- [x] `cargo test -p kamn-core --test runtime_wiring_transport_profile_integration -- --nocapture`
       passes
-- [ ] `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test test_file_size_policy -- --nocapture` passes
 
 ## Files to touch
 - `specs/6638-add-runtime-wiring-transport-profile-coverage.md`
@@ -79,7 +79,11 @@ transport tests.
    inventory counts.
 
 ## Deviations
-- None.
+- The workspace `test_file_size_policy` inventory changed from `489` to `491`, so
+  `fixtures/ci/test_file_size_policy_baseline.env` was refreshed during integration.
 
 ## Phase 6 Evidence
-- Pending.
+- `cargo test -p kamn-core --test runtime_wiring_transport_profile_contract -- --nocapture`
+- `cargo test -p kamn-core --test runtime_wiring_transport_profile_integration -- --nocapture`
+- `cargo test -p kamn-core --test test_file_size_policy -- --nocapture`
+- `cargo clippy -p kamn-core --tests -- -D warnings`
