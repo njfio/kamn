@@ -3,8 +3,35 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
+SUPPLY_CHAIN_WORKFLOW="$ROOT_DIR/.github/workflows/ci-supply-chain-advisory.yml"
 EXPECTED_GOVERNANCE_RATIO_ACTIVATION_BASE_SHA="d2c2fe1b901a1d53ea419f31778e1d836f2b1323"
 DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
+
+if [ ! -f "$SUPPLY_CHAIN_WORKFLOW" ]; then
+  echo "expected advisory supply-chain workflow file to exist" >&2
+  exit 1
+fi
+
+for marker in \
+  "name: Supply-Chain Advisory" \
+  "workflow_dispatch:" \
+  "pull_request:" \
+  "schedule:" \
+  "continue-on-error: true" \
+  "aquasecurity/trivy-action" \
+  "scanners: vuln,secret,license" \
+  'docker build -t kamn-supply-chain-advisory:${{ github.sha }} .' \
+  "format: cyclonedx" \
+  "scripts/ci/check_workspace_license_policy.py" \
+  "ci-supply-chain-advisory-trivy-fs.json" \
+  "ci-supply-chain-advisory-trivy-image.json" \
+  "ci-supply-chain-advisory-sbom.cdx.json" \
+  "ci-supply-chain-advisory-license.json"; do
+  if ! grep -Fq "$marker" "$SUPPLY_CHAIN_WORKFLOW"; then
+    echo "expected advisory supply-chain workflow marker in ci-supply-chain-advisory.yml: $marker" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "workflow_dispatch:" "$FAST_WORKFLOW"; then
   echo "expected workflow_dispatch trigger in ci-fast-gate.yml" >&2
