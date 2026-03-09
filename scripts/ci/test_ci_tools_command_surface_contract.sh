@@ -158,6 +158,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_supply_chain_advisory_workflow.sh"'
   'cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract'
   'cargo test -p kamn-core --test e2e_live_workflow_lane'
   'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"'

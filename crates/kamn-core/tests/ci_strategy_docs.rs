@@ -1363,6 +1363,23 @@ fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_mar
     ));
 }
 
+fn assert_supply_chain_doc_marker(marker: &str) {
+    assert!(DOC.contains(marker), "missing supply-chain advisory marker: {marker}");
+}
+
+#[test]
+fn doc_contains_supply_chain_advisory_lane_markers() {
+    for marker in [
+        "supply_chain_advisory_lane_status=advisory_only",
+        "supply_chain_advisory_tools_csv=trivy_fs,trivy_image,workspace_license_policy",
+        "supply_chain_advisory_sbom_format=cyclonedx",
+        "supply_chain_advisory_false_positive_controls=.trivyignore + workflow continue-on-error",
+        "supply_chain_advisory_promotion_follow_up_issue=",
+    ] {
+        assert_supply_chain_doc_marker(marker);
+    }
+}
+
 #[test]
 fn doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_codes() {
     assert!(DOC.contains("metadata_governance_remediation_map_version=v1"));
