@@ -28,6 +28,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - `fast_gate_cargo_audit_feedback=enabled`
 - When `run_rust=true`, `Fast Gate (PR)` runs `cargo-audit`, enforces the existing waiver policy, and uploads the `ci-cargo-audit` artifact for earlier security feedback.
 
+## Touched Rust Size Policy Contract
+- AGENTS.md size rules stay fail-closed for touched Rust code without freezing untouched legacy debt.
+- Contract test command:
+  - `bash scripts/ci/test_check_touched_rust_size_policy.sh`
+- Threshold fixture:
+  - `fixtures/ci/touched_rust_size_policy_thresholds.json`
+- Baseline inventory fixture:
+  - `fixtures/ci/touched_rust_size_policy_baseline.json`
+- Fast-gate checker command:
+  - `check_touched_rust_size_policy.sh --output-json /tmp/touched-rust-size-policy-report.json`
+- Deterministic reason codes:
+  - `reason_codes=touched_rust_size_policy_new_oversized_file`
+  - `reason_codes=touched_rust_size_policy_new_oversized_function`
+  - `reason_codes=touched_rust_size_policy_git_base_unavailable`
+  - `reason_codes=touched_rust_size_policy_threshold_invalid`
+  - `reason_codes=touched_rust_size_policy_baseline_invalid`
+- Remediation rule:
+  - split touched oversized files/functions before merge; baseline inventory remains visibility-only and does not waive new regressions.
+
 ## Heavy Integration CI Scope Contracts
 - Heavy local integration run-mode lanes must remain excluded from fast-gate command surfaces.
 - Selector/workflow regression commands:

@@ -1,0 +1,5 @@
+{
+  "schema_version": "kamn.ci.touched-rust-size-policy-thresholds.v1",
+  "max_file_lines": 200,
+  "max_function_lines": 25
+}
