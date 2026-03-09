@@ -43,7 +43,9 @@ Increase direct public-surface regression coverage in the first Wave 1 utility c
 ## Files To Touch
 
 - `specs/6651-increase-test-density-in-utility-crates-wave-1.md`
+- `crates/kamn-types/tests/did_boundary_regressions_contract.rs`
 - `crates/kamn-types/tests/did_boundary_regressions.rs`
+- `crates/kamn-snapshot-journal/tests/snapshot_journal_roundtrip_contract.rs`
 - `crates/kamn-snapshot-journal/tests/snapshot_journal_roundtrip_integration.rs`
 
 ## Error Semantics
@@ -66,3 +68,13 @@ Increase direct public-surface regression coverage in the first Wave 1 utility c
 - Before Wave 1, inventory is:
   - `kamn-types`: 19 tests across 4 integration targets plus 5 unit tests in `src/lib.rs`
   - `kamn-snapshot-journal`: 14 tests across 3 integration targets plus 4 unit tests in `src/lib.rs`
+- The initial red sketch assumed an empty payload round-trip target for `kamn-snapshot-journal`; that was corrected during implementation because the current public API intentionally fail-closes empty `payload_hex` records. Wave 1 instead adds round-trip coverage for whitespace, unicode, multiline JSON, and exact decode restoration.
+
+## Refactor Evidence
+
+- All new test files remain below the 200 LOC file limit:
+  - `crates/kamn-types/tests/did_boundary_regressions.rs` = 70 LOC
+  - `crates/kamn-snapshot-journal/tests/snapshot_journal_roundtrip_integration.rs` = 55 LOC
+  - `crates/kamn-types/tests/did_boundary_regressions_contract.rs` = 26 LOC
+  - `crates/kamn-snapshot-journal/tests/snapshot_journal_roundtrip_contract.rs` = 27 LOC
+- New helper functions remain single-purpose and under the function-size target.
