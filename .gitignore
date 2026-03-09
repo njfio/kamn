@@ -1,4 +1,6 @@
 /target
+data/
+crates/kamn-node/data/
 __pycache__/
 *.pyc
 *.pyo
