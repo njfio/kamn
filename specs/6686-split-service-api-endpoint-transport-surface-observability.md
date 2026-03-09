@@ -33,11 +33,11 @@ Extract the service API transport-surface and observability coverage out of `cra
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `service_api_endpoint_tests.rs` declares a new transport-surface-observability submodule and no longer retains the moved transport-surface test markers.
-- [ ] AC-2: Extracted transport-surface-observability files stay at or below 200 lines each.
-- [ ] AC-3: The staged root threshold ratchets down from `2400` to `1350` lines or lower.
-- [ ] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
-- [ ] AC-5: At least one extracted transport-surface integration test passes from the real `kamn-node` test module path.
+- [x] AC-1: `service_api_endpoint_tests.rs` declares a new transport-surface-observability submodule and no longer retains the moved transport-surface test markers.
+- [x] AC-2: Extracted transport-surface-observability files stay at or below 200 lines each.
+- [x] AC-3: The staged root threshold ratchets down from `2400` to `1350` lines or lower.
+- [x] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
+- [x] AC-5: At least one extracted transport-surface integration test passes from the real `kamn-node` test module path.
 
 ## Files To Touch
 
@@ -59,3 +59,28 @@ Extract the service API transport-surface and observability coverage out of `cra
 2. Extract the transport and observability coverage into bounded files until the split contract passes.
 3. Run the targeted split contract and directly affected `kamn-node` transport or observability tests.
 4. Record integration evidence and any deviations in this spec.
+
+## Deviations
+
+- No behavioral deviations were introduced. The extraction preserved the transport, TLS, keep-alive, ingress-correlation, and observability assertions while moving them into bounded files.
+
+## Phase 6 Evidence
+
+- Root wiring:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs` declares `#[path = "service_api_endpoint_tests/transport_surface_observability_contract_tests.rs"]` and `mod transport_surface_observability_contract_tests;`
+- File sizes:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `1224`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests.rs`: `8`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/http_connection_contract_tests.rs`: `24`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/observability_contract_tests.rs`: `109`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/route_tls_contract_tests.rs`: `139`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/support.rs`: `91`
+- Touched-Rust size policy:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6686-touched-size.json`
+  - Result: `status=pass`, `policy_decision=GO`
+- Targeted evidence:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node transport_surface_observability_contract_tests -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_supports_keep_alive_requests_on_single_connection -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node regression_service_api_runtime_observability_projects_live_metrics_under_traffic -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_tls_mode_serves_required_https_routes -- --nocapture`
