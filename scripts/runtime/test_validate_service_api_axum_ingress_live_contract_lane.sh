@@ -25,6 +25,14 @@ if [ ! -f "$RUNBOOK_DOC" ]; then
   echo "expected service api axum ingress runbook doc to exist" >&2
   exit 1
 fi
+if ! grep -Fq '"X-KAMN-Signer-Public-Key": auth_public_key_hex' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script auth helper to propagate signer public key header" >&2
+  exit 1
+fi
+if ! grep -Fq 'f"X-KAMN-Signer-Public-Key: {auth_public_key_hex}\\r\\n"' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script websocket probe to propagate signer public key header" >&2
+  exit 1
+fi
 
 lane_report="$TMP_DIR/service-api-axum-ingress-contract-lane-report.json"
 policy_report="$TMP_DIR/service-api-axum-ingress-policy-report.json"
