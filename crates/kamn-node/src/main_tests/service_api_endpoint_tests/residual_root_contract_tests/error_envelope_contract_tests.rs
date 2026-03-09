@@ -1,44 +1,12 @@
 use super::*;
+use crate::service_api_endpoint::ServiceApiSnapshot;
 
 #[test]
 fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts() {
-    let _env = acquire_service_api_test_env();
-    let parsed = parse_args(vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "api".to_owned(),
-        "--api-bind".to_owned(),
-        "127.0.0.1:34061".to_owned(),
-    ])
-    .expect("api args should parse");
-    let report = execute(parsed).expect("api execution should succeed");
-    let snapshot = build_service_api_snapshot(&report);
-
-    let websocket_required = render_service_api_endpoint_response(&snapshot, "GET", "/v1/events/ws", "");
-    assert_eq!(websocket_required.status_code, 400);
-    let websocket_required_payload = parse_error_envelope(websocket_required.body.as_str());
-    assert_eq!(websocket_required_payload.error, "bad-request");
-    assert_eq!(
-        websocket_required_payload.reason_code,
-        route_render_contract_tests::websocket_upgrade_required_reason_code()
-    );
-    assert!(websocket_required_payload.message.contains("websocket upgrade required"));
-
-    let method_not_allowed = render_service_api_endpoint_response(&snapshot, "DELETE", "/v1/messages/send", "");
-    assert_eq!(method_not_allowed.status_code, 405);
-    let method_not_allowed_payload = parse_error_envelope(method_not_allowed.body.as_str());
-    assert_eq!(method_not_allowed_payload.error, "method-not-allowed");
-    assert_eq!(method_not_allowed_payload.reason_code, "service_api_method_not_allowed");
-    assert!(method_not_allowed_payload.message.contains("method not allowed"));
-
-    let not_found = render_service_api_endpoint_response(&snapshot, "GET", "/v1/nope", "");
-    assert_eq!(not_found.status_code, 404);
-    let not_found_payload = parse_error_envelope(not_found.body.as_str());
-    assert_eq!(not_found_payload.error, "not-found");
-    assert_eq!(not_found_payload.reason_code, "service_api_route_not_found");
-    assert!(not_found_payload.message.contains("not found"));
+    let snapshot = error_contract_snapshot();
+    assert_websocket_upgrade_error(&snapshot);
+    assert_method_not_allowed_error(&snapshot);
+    assert_not_found_error(&snapshot);
 
     let baseline_config = ServiceApiEndpointConfig {
         bind_addr: "127.0.0.1:0".to_owned(),
@@ -53,39 +21,135 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
     assert_daemon_relay_upsert_marks_message_relayed();
 }
 
+fn error_contract_snapshot() -> ServiceApiSnapshot {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34061".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    build_service_api_snapshot(&report)
+}
+
+fn assert_websocket_upgrade_error(snapshot: &ServiceApiSnapshot) {
+    let response = render_service_api_endpoint_response(snapshot, "GET", "/v1/events/ws", "");
+    assert_eq!(response.status_code, 400);
+    let payload = parse_error_envelope(response.body.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(
+        payload.reason_code,
+        route_render_contract_tests::websocket_upgrade_required_reason_code()
+    );
+    assert!(payload.message.contains("websocket upgrade required"));
+}
+
+fn assert_method_not_allowed_error(snapshot: &ServiceApiSnapshot) {
+    let response =
+        render_service_api_endpoint_response(snapshot, "DELETE", "/v1/messages/send", "");
+    assert_eq!(response.status_code, 405);
+    let payload = parse_error_envelope(response.body.as_str());
+    assert_eq!(payload.error, "method-not-allowed");
+    assert_eq!(payload.reason_code, "service_api_method_not_allowed");
+    assert!(payload.message.contains("method not allowed"));
+}
+
+fn assert_not_found_error(snapshot: &ServiceApiSnapshot) {
+    let response = render_service_api_endpoint_response(snapshot, "GET", "/v1/nope", "");
+    assert_eq!(response.status_code, 404);
+    let payload = parse_error_envelope(response.body.as_str());
+    assert_eq!(payload.error, "not-found");
+    assert_eq!(payload.reason_code, "service_api_route_not_found");
+    assert!(payload.message.contains("not found"));
+}
+
 fn assert_endpoint_config_rejects_zero_values(
     baseline_config: &ServiceApiEndpointConfig,
-    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
+    snapshot: &ServiceApiSnapshot,
 ) {
-    let mut max_requests_zero = baseline_config.clone();
-    max_requests_zero.max_requests = 0;
-    let max_requests_error = serve_service_api_endpoint(&max_requests_zero, snapshot)
-        .expect_err("max_requests=0 must fail closed");
-    assert_eq!(max_requests_error, "service api max requests must be greater than zero");
+    assert_endpoint_config_zero_limits(baseline_config, snapshot);
+    assert_endpoint_config_zero_timeouts(baseline_config, snapshot);
+}
 
-    let mut idle_timeout_zero = baseline_config.clone();
-    idle_timeout_zero.idle_timeout_ms = 0;
-    let idle_timeout_error = serve_service_api_endpoint(&idle_timeout_zero, snapshot)
-        .expect_err("idle_timeout_ms=0 must fail closed");
-    assert_eq!(idle_timeout_error, "service api idle timeout must be greater than zero");
+fn assert_endpoint_config_zero_limits(
+    baseline_config: &ServiceApiEndpointConfig,
+    snapshot: &ServiceApiSnapshot,
+) {
+    assert_endpoint_config_error(
+        baseline_config,
+        snapshot,
+        |config| config.max_requests = 0,
+        "service api max requests must be greater than zero",
+        "max_requests=0 must fail closed",
+    );
+    assert_endpoint_config_error(
+        baseline_config,
+        snapshot,
+        |config| config.concurrency_limit = 0,
+        "service api concurrency limit must be greater than zero",
+        "concurrency_limit=0 must fail closed",
+    );
+}
 
-    let mut body_limit_zero = baseline_config.clone();
-    body_limit_zero.body_limit_bytes = 0;
-    let body_limit_error = serve_service_api_endpoint(&body_limit_zero, snapshot)
-        .expect_err("body_limit_bytes=0 must fail closed");
-    assert_eq!(body_limit_error, "service api body limit bytes must be greater than zero");
+fn assert_endpoint_config_zero_timeouts(
+    baseline_config: &ServiceApiEndpointConfig,
+    snapshot: &ServiceApiSnapshot,
+) {
+    assert_endpoint_idle_timeout_zero(baseline_config, snapshot);
+    assert_endpoint_body_limit_and_rate_zero(baseline_config, snapshot);
+}
 
-    let mut concurrency_limit_zero = baseline_config.clone();
-    concurrency_limit_zero.concurrency_limit = 0;
-    let concurrency_limit_error = serve_service_api_endpoint(&concurrency_limit_zero, snapshot)
-        .expect_err("concurrency_limit=0 must fail closed");
-    assert_eq!(concurrency_limit_error, "service api concurrency limit must be greater than zero");
+fn assert_endpoint_idle_timeout_zero(
+    baseline_config: &ServiceApiEndpointConfig,
+    snapshot: &ServiceApiSnapshot,
+) {
+    assert_endpoint_config_error(
+        baseline_config,
+        snapshot,
+        |config| config.idle_timeout_ms = 0,
+        "service api idle timeout must be greater than zero",
+        "idle_timeout_ms=0 must fail closed",
+    );
+}
 
-    let mut rate_limit_zero = baseline_config.clone();
-    rate_limit_zero.rate_limit_per_second = 0;
-    let rate_limit_error = serve_service_api_endpoint(&rate_limit_zero, snapshot)
-        .expect_err("rate_limit_per_second=0 must fail closed");
-    assert_eq!(rate_limit_error, "service api rate limit per second must be greater than zero");
+fn assert_endpoint_body_limit_and_rate_zero(
+    baseline_config: &ServiceApiEndpointConfig,
+    snapshot: &ServiceApiSnapshot,
+) {
+    assert_endpoint_config_error(
+        baseline_config,
+        snapshot,
+        |config| config.body_limit_bytes = 0,
+        "service api body limit bytes must be greater than zero",
+        "body_limit_bytes=0 must fail closed",
+    );
+    assert_endpoint_config_error(
+        baseline_config,
+        snapshot,
+        |config| config.rate_limit_per_second = 0,
+        "service api rate limit per second must be greater than zero",
+        "rate_limit_per_second=0 must fail closed",
+    );
+}
+
+fn assert_endpoint_config_error<F>(
+    baseline_config: &ServiceApiEndpointConfig,
+    snapshot: &ServiceApiSnapshot,
+    mutate: F,
+    expected_error: &str,
+    expected_context: &str,
+) where
+    F: FnOnce(&mut ServiceApiEndpointConfig),
+{
+    let mut invalid = baseline_config.clone();
+    mutate(&mut invalid);
+    let error = serve_service_api_endpoint(&invalid, snapshot).expect_err(expected_context);
+    assert_eq!(error, expected_error);
 }
 
 fn assert_daemon_relay_upsert_marks_message_relayed() {
