@@ -45,7 +45,13 @@ const BRIDGE_PERSISTENCE_RESTART_MODULE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/bridge_persistence_restart_contract_tests.rs";
 const BRIDGE_PERSISTENCE_RESTART_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/bridge_persistence_restart_contract_tests/bridge_persistence_restart_contract_tests.rs";
-const ROOT_STAGED_MAX_LINES: usize = 4875;
+const MAILBOX_RELAY_DELIVERY_MODULE_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests.rs";
+const RECIPIENT_DELIVERY_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/recipient_delivery_contract_tests.rs";
+const RELAY_DELIVERY_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_delivery_contract_tests.rs";
+const ROOT_STAGED_MAX_LINES: usize = 4525;
 
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -649,6 +655,91 @@ fn spec_c32_service_api_endpoint_bridge_persistence_restart_split_files_stay_bel
     for path in [
         BRIDGE_PERSISTENCE_RESTART_MODULE_FILE,
         BRIDGE_PERSISTENCE_RESTART_FILE,
+    ] {
+        let source = read_repo_file(path);
+        let line_count = source.lines().count();
+        assert!(
+            line_count <= 200,
+            "{path} should stay below 200 lines after extraction: line_count={line_count}"
+        );
+    }
+}
+
+#[test]
+fn spec_c33_service_api_endpoint_root_file_removes_moved_mailbox_relay_delivery_contracts() {
+    let source = read_repo_file(ROOT_FILE);
+    for marker in [
+        "fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract()",
+        "fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()",
+        "fn integration_service_api_endpoint_cross_node_relay_delivery_contract()",
+        "fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids()",
+        "fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery()",
+        "fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered()",
+        "fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart()",
+        "fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()",
+    ] {
+        assert!(
+            !source.contains(marker),
+            "service_api_endpoint_tests.rs should not keep moved mailbox/relay marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c34_service_api_endpoint_mailbox_relay_delivery_module_exists_and_owns_moved_coverage() {
+    let module_source = read_repo_file(MAILBOX_RELAY_DELIVERY_MODULE_FILE);
+    let recipient_delivery = read_repo_file(RECIPIENT_DELIVERY_FILE);
+    let relay_delivery = read_repo_file(RELAY_DELIVERY_FILE);
+
+    assert!(
+        module_source.contains("mod recipient_delivery_contract_tests;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare recipient-delivery submodule"
+    );
+    assert!(
+        module_source.contains("mod relay_delivery_contract_tests;"),
+        "mailbox_relay_delivery_contract_tests.rs should declare relay-delivery submodule"
+    );
+
+    for marker in [
+        "fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract()",
+        "fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()",
+        "fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery()",
+        "fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered()",
+        "fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart()",
+    ] {
+        assert!(
+            recipient_delivery.contains(marker),
+            "recipient delivery contract file should include moved marker: {marker}"
+        );
+    }
+
+    for marker in [
+        "fn integration_service_api_endpoint_cross_node_relay_delivery_contract()",
+        "fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids()",
+        "fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()",
+    ] {
+        assert!(
+            relay_delivery.contains(marker),
+            "relay delivery contract file should include moved marker: {marker}"
+        );
+    }
+}
+
+#[test]
+fn spec_c35_service_api_endpoint_root_declares_mailbox_relay_delivery_submodule() {
+    let source = read_repo_file(ROOT_FILE);
+    assert!(
+        source.contains("mod mailbox_relay_delivery_contract_tests;"),
+        "service_api_endpoint_tests.rs should declare mailbox-relay-delivery submodule"
+    );
+}
+
+#[test]
+fn spec_c36_service_api_endpoint_mailbox_relay_delivery_split_files_stay_below_budget() {
+    for path in [
+        MAILBOX_RELAY_DELIVERY_MODULE_FILE,
+        RECIPIENT_DELIVERY_FILE,
+        RELAY_DELIVERY_FILE,
     ] {
         let source = read_repo_file(path);
         let line_count = source.lines().count();
