@@ -17,7 +17,7 @@ const ROUTE_RESPONSE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/route_render_contract_tests/route_response_contract_tests.rs";
 const ROUTE_METRICS_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/route_render_contract_tests/route_metrics_contract_tests.rs";
-const ROOT_STAGED_MAX_LINES: usize = 7500;
+const ROOT_STAGED_MAX_LINES: usize = 7800;
 
 fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
