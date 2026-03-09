@@ -79,11 +79,15 @@ fn governance_phase1_contract_documents_new_crate_boundary() {
         "architecture index should link kamn-governance.md"
     );
     assert!(
-        governance_doc.contains("kamn_governance_phase1_scope=governance_workflow,operator_binding,operator_actions"),
+        governance_doc.contains(
+            "kamn_governance_phase1_scope=governance_workflow,operator_binding,operator_actions"
+        ),
         "kamn-governance doc should record the phase1 scope"
     );
     assert!(
-        governance_doc.contains("kamn_governance_phase1_retained_in_core=operator_dashboard_api,operator_dashboard_ui"),
+        governance_doc.contains(
+            "kamn_governance_phase1_retained_in_core=operator_dashboard_api,operator_dashboard_ui"
+        ),
         "kamn-governance doc should record the retained dashboard modules"
     );
 }
