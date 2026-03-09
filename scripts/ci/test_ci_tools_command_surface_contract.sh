@@ -113,6 +113,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_no_production_expect.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_governance_feature_commit_ratio.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_review_document_freeze.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_touched_shell_strict_mode.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh"'

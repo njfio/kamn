@@ -108,6 +108,26 @@ if ! grep -Fq "if: steps.scope.outputs.run_script_surface_budget_checks == 'true
   exit 1
 fi
 
+if ! grep -Fq "Check touched shell strict mode" "$FAST_WORKFLOW"; then
+  echo "expected touched shell strict-mode gate step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/check_touched_shell_strict_mode.sh" "$FAST_WORKFLOW"; then
+  echo "expected touched shell strict-mode gate to run checker wrapper in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "fixtures/ci/touched_shell_strict_mode_exceptions.txt" "$FAST_WORKFLOW"; then
+  echo "expected touched shell strict-mode gate to pass the exception fixture in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-touched-shell-strict-mode-report.json" "$FAST_WORKFLOW"; then
+  echo "expected touched shell strict-mode report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "Production-target expect() gate" "$FAST_WORKFLOW"; then
   echo "expected production-target expect gate step in ci-fast-gate.yml" >&2
   exit 1
