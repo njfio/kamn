@@ -21,6 +21,8 @@ const KOLME_FLAT_JSON_SEED_VALID: &str =
     include_str!("../../../fuzz/corpus/kolme_flat_json_parser/seed-0001-valid-flat-json.txt");
 const KOLME_FLAT_JSON_SEED_MALFORMED: &str =
     include_str!("../../../fuzz/corpus/kolme_flat_json_parser/seed-0002-malformed-flat-json.txt");
+const MESSAGE_ENVELOPE_TARGET: &str =
+    include_str!("../../../fuzz/fuzz_targets/message_envelope_parser.rs");
 
 #[test]
 fn cargo_fuzz_package_and_targets_exist() {
@@ -142,6 +144,14 @@ fn regression_ci_strategy_contains_cargo_fuzz_seed_provenance_budget_markers() {
         CI_STRATEGY_DOC
             .contains("cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds")
     );
+}
+
+#[test]
+fn regression_message_envelope_fuzz_target_declares_input_bounds_markers() {
+    assert!(MESSAGE_ENVELOPE_TARGET.contains("fn bounded_utf8(data: &[u8], max_len: usize) -> String"));
+    assert!(MESSAGE_ENVELOPE_TARGET.contains("let raw = bounded_utf8(data, 4096);"));
+    assert!(CI_STRATEGY_DOC.contains("message_envelope_parser_input_bound_bytes=4096"));
+    assert!(CI_STRATEGY_DOC.contains("message_envelope_parser_bound_scope=pre-envelope-construction"));
 }
 
 #[test]
