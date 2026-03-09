@@ -1,0 +1,2 @@
+# Advisory false-positive suppressions for the supply-chain workflow.
+# Each entry must be temporary and traced to a follow-up issue before promotion.
