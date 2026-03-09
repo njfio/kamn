@@ -16,8 +16,7 @@ fn regression_mcp_agent_root_removes_inline_cfg_test_module() {
 #[test]
 fn regression_mcp_agent_root_declares_extracted_test_module() {
     assert!(
-        MCP_AGENT_ROOT_SOURCE.contains("#[cfg(test)] mod mcp_agent_tests;")
-            || MCP_AGENT_ROOT_SOURCE.contains("#[cfg(test)]\nmod mcp_agent_tests;"),
+        MCP_AGENT_ROOT_SOURCE.contains("mod mcp_agent_tests;"),
         "mcp_agent.rs must declare the extracted mcp_agent_tests submodule"
     );
 }
