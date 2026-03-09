@@ -72,3 +72,8 @@ Reduce `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs` by extrac
 
 - This issue is a first extraction wave, not the full end-state decomposition of the 8.8K root file.
 - The staged reduction target will be set from the current file after red contracts are written so the ratchet is evidence-backed rather than guessed.
+
+## Integration Evidence
+
+- `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+- `cargo test -p kamn-node auth_scope_contract_tests -- --nocapture`
