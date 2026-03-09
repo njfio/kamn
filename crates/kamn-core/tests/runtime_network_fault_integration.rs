@@ -6,9 +6,48 @@ use kamn_core::runtime::{
     WatchdogAnomalyError, WatchdogAnomalyKind, WatchdogAnomalySeverity,
 };
 
+fn make_input(
+    sample_id: &str,
+    peer_id: &str,
+    expected_deliveries: u32,
+    delivered_deliveries: u32,
+    queue_capacity: usize,
+) -> Result<NetworkFaultSimulationInput, NetworkFaultSimulationError> {
+    NetworkFaultSimulationInput::new(
+        sample_id,
+        peer_id,
+        expected_deliveries,
+        delivered_deliveries,
+        4,
+        4,
+        30,
+        0,
+        queue_capacity,
+        8,
+    )
+}
+
 fn valid_input() -> NetworkFaultSimulationInput {
-    NetworkFaultSimulationInput::new("sample-a", "peer-1", 10, 10, 4, 4, 30, 0, 10, 8)
-        .expect("valid network fault input")
+    make_input("sample-a", "peer-1", 10, 10, 10).expect("valid network fault input")
+}
+
+fn assert_invalid_input(
+    sample_id: &str,
+    peer_id: &str,
+    expected_deliveries: u32,
+    delivered_deliveries: u32,
+    queue_capacity: usize,
+    expected_error: NetworkFaultSimulationError,
+) {
+    let error = make_input(
+        sample_id,
+        peer_id,
+        expected_deliveries,
+        delivered_deliveries,
+        queue_capacity,
+    )
+    .expect_err("input must fail closed");
+    assert_eq!(error, expected_error);
 }
 
 #[test]
@@ -37,28 +76,39 @@ fn integration_runtime_network_fault_valid_simulation_returns_expected_report() 
 
 #[test]
 fn integration_runtime_network_fault_invalid_inputs_fail_closed_with_reason_codes() {
-    let error = NetworkFaultSimulationInput::new("", "peer-1", 10, 10, 4, 4, 30, 0, 10, 1)
-        .expect_err("empty sample id must fail closed");
-    assert_eq!(error, NetworkFaultSimulationError::InvalidSampleId);
-
-    let error = NetworkFaultSimulationInput::new("sample-a", "", 10, 10, 4, 4, 30, 0, 10, 1)
-        .expect_err("empty peer id must fail closed");
-    assert_eq!(error, NetworkFaultSimulationError::InvalidPeerId);
-
-    let error = NetworkFaultSimulationInput::new("sample-a", "peer-1", 10, 10, 4, 4, 30, 0, 0, 1)
-        .expect_err("zero queue capacity must fail closed");
-    assert_eq!(
-        error,
-        NetworkFaultSimulationError::InvalidQueueCapacity { capacity: 0 }
+    assert_invalid_input(
+        "",
+        "peer-1",
+        10,
+        10,
+        10,
+        NetworkFaultSimulationError::InvalidSampleId,
     );
-
-    let error = NetworkFaultSimulationInput::new("sample-a", "peer-1", 0, 0, 4, 4, 30, 0, 10, 1)
-        .expect_err("invalid watchdog input must fail closed");
-    assert_eq!(
-        error,
+    assert_invalid_input(
+        "sample-a",
+        "",
+        10,
+        10,
+        10,
+        NetworkFaultSimulationError::InvalidPeerId,
+    );
+    assert_invalid_input(
+        "sample-a",
+        "peer-1",
+        10,
+        10,
+        0,
+        NetworkFaultSimulationError::InvalidQueueCapacity { capacity: 0 },
+    );
+    assert_invalid_input(
+        "sample-a",
+        "peer-1",
+        0,
+        0,
+        10,
         NetworkFaultSimulationError::Watchdog(WatchdogAnomalyError::InvalidExpectedDeliveries {
             expected_deliveries: 0,
-        })
+        }),
     );
 }
 
