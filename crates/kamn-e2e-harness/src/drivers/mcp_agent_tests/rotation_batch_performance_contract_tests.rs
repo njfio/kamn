@@ -34,8 +34,14 @@ fn s11_updates() -> [(&'static str, Option<&'static str>); 4] {
     [
         ("KAMN_ENDPOINT", Some("http://localhost:8080")),
         ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
-        ("KAMN_E2E_S11_PRIMARY_AGENT_NAME", Some("kamn-e2e-mcp-s11-primary")),
-        ("KAMN_E2E_S11_ROTATED_AGENT_NAME", Some("kamn-e2e-mcp-s11-rotated")),
+        (
+            "KAMN_E2E_S11_PRIMARY_AGENT_NAME",
+            Some("kamn-e2e-mcp-s11-primary"),
+        ),
+        (
+            "KAMN_E2E_S11_ROTATED_AGENT_NAME",
+            Some("kamn-e2e-mcp-s11-rotated"),
+        ),
     ]
 }
 

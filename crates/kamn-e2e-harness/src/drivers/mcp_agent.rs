@@ -2536,7 +2536,6 @@ fn escape_json_scalar(input: &str) -> String {
     escaped
 }
 
-
 #[cfg(test)]
 #[path = "mcp_agent_tests.rs"]
 mod mcp_agent_tests;

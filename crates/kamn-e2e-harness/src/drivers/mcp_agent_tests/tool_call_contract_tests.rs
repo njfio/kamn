@@ -88,7 +88,10 @@ where
     F: FnOnce() -> Result<String, String>,
 {
     let error = runner().expect_err("tool call should fail");
-    assert!(error.contains(expected), "error should mention {expected}: {error}");
+    assert!(
+        error.contains(expected),
+        "error should mention {expected}: {error}"
+    );
 }
 
 fn s04_missing_binary_result() -> Result<String, String> {

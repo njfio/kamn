@@ -53,12 +53,18 @@ fn spec_c15_live_s08_driver_path_fails_closed_when_crash_recovery_probe_errors()
 
 #[test]
 fn spec_c16_live_s09_driver_path_fails_closed_when_transport_failover_probe_errors() {
-    assert_driver_scenario_fails_closed("S-09", "mcp-agent live s09 transport-failover probe failed");
+    assert_driver_scenario_fails_closed(
+        "S-09",
+        "mcp-agent live s09 transport-failover probe failed",
+    );
 }
 
 #[test]
 fn spec_c17_live_s10_driver_path_fails_closed_when_topology_coherence_probe_errors() {
-    assert_driver_scenario_fails_closed("S-10", "mcp-agent live s10 topology-coherence probe failed");
+    assert_driver_scenario_fails_closed(
+        "S-10",
+        "mcp-agent live s10 topology-coherence probe failed",
+    );
 }
 
 #[test]
@@ -68,12 +74,18 @@ fn spec_c18_live_s11_driver_path_fails_closed_when_signer_rotation_probe_errors(
 
 #[test]
 fn spec_c19_live_s12_driver_path_fails_closed_when_retention_deletion_probe_errors() {
-    assert_driver_scenario_fails_closed("S-12", "mcp-agent live s12 retention-deletion probe failed");
+    assert_driver_scenario_fails_closed(
+        "S-12",
+        "mcp-agent live s12 retention-deletion probe failed",
+    );
 }
 
 #[test]
 fn spec_c20_live_s13_driver_path_fails_closed_when_bridge_forwarding_probe_errors() {
-    assert_driver_scenario_fails_closed("S-13", "mcp-agent live s13 bridge-forwarding probe failed");
+    assert_driver_scenario_fails_closed(
+        "S-13",
+        "mcp-agent live s13 bridge-forwarding probe failed",
+    );
 }
 
 #[test]
@@ -83,13 +95,17 @@ fn spec_c21_live_s14_driver_path_fails_closed_when_batch_merkle_probe_errors() {
 
 #[test]
 fn spec_c22_live_s15_driver_path_fails_closed_when_performance_smoke_probe_errors() {
-    assert_driver_scenario_fails_closed("S-15", "mcp-agent live s15 performance-smoke probe failed");
+    assert_driver_scenario_fails_closed(
+        "S-15",
+        "mcp-agent live s15 performance-smoke probe failed",
+    );
 }
 
 fn assert_driver_scenario_fails_closed(scenario_id: &'static str, message: &str) {
     let message = message.to_owned();
-    let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, move || Err(message.clone()))
-        .expect("driver should build");
+    let driver =
+        McpAgentDriver::with_probe(ExecutionMode::McpTau, true, move || Err(message.clone()))
+            .expect("driver should build");
     let result = crate::drivers::HarnessDriver::execute(&driver, scenario_id);
     assert_eq!(result.status, "fail");
 }

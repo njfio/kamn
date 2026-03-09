@@ -146,7 +146,11 @@ pub(crate) fn write_mcp_s11_probe_script(script_path: &Path) {
     write_executable_python_script(script_path, S11_TEMPLATE);
 }
 
-fn render_s03_script(query_message_id: &str, list_channel_id: &str, include_messages: bool) -> String {
+fn render_s03_script(
+    query_message_id: &str,
+    list_channel_id: &str,
+    include_messages: bool,
+) -> String {
     let include_messages_literal = if include_messages { "True" } else { "False" };
     S03_TEMPLATE
         .replace("__QUERY_MESSAGE_ID__", &format!("{query_message_id:?}"))

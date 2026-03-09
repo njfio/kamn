@@ -23,7 +23,12 @@ fn unit_validate_s12_content_id_match_rejects_mismatch() {
 #[test]
 fn unit_validate_s12_content_field_coherence_rejects_drift() {
     assert_error_contains(
-        validate_s12_content_field_coherence("tombstoned", "expired", "lifecycle_state", "test step"),
+        validate_s12_content_field_coherence(
+            "tombstoned",
+            "expired",
+            "lifecycle_state",
+            "test step",
+        ),
         "lifecycle_state drift",
     );
 }
@@ -86,5 +91,8 @@ fn unit_validate_s08_mcp_query_message_response_rejects_mismatched_message_id() 
 
 fn assert_error_contains<T: std::fmt::Debug>(result: Result<T, String>, expected: &str) {
     let error = result.expect_err("validator should fail");
-    assert!(error.contains(expected), "error should mention {expected}: {error}");
+    assert!(
+        error.contains(expected),
+        "error should mention {expected}: {error}"
+    );
 }

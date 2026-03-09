@@ -24,11 +24,13 @@ where
 pub(crate) fn assert_missing_binary_probe_failure<F>(
     extra_updates: &[(&str, Option<&str>)],
     runner: F,
-)
-where
+) where
     F: FnOnce() -> Result<(), String>,
 {
-    let mut updates = vec![(MCP_AGENT_BINARY_ENV, Some("/definitely/missing/kamn-mcp-server"))];
+    let mut updates = vec![(
+        MCP_AGENT_BINARY_ENV,
+        Some("/definitely/missing/kamn-mcp-server"),
+    )];
     updates.extend_from_slice(extra_updates);
     with_env_vars(&updates, || assert_spawn_failure(runner()));
 }
@@ -64,6 +66,50 @@ pub(crate) fn assert_scripted_probe_error_contains<FWrite, FRun>(
             "error should mention {expected}: {error}"
         );
     });
+}
+
+pub(crate) fn default_endpoint_agent_updates() -> [(&'static str, Option<&'static str>); 3] {
+    [
+        ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+        ("KAMN_AGENT_NAME", Some("probe")),
+        ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+    ]
+}
+
+pub(crate) fn default_endpoint_key_updates() -> [(&'static str, Option<&'static str>); 2] {
+    [
+        ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+        ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+    ]
+}
+
+pub(crate) fn transport_failover_updates() -> [(&'static str, Option<&'static str>); 3] {
+    [
+        ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+        (
+            "KAMN_E2E_S09_FAILOVER_ENDPOINT",
+            Some("http://localhost:8081"),
+        ),
+        ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+    ]
+}
+
+pub(crate) fn topology_endpoint_updates() -> [(&'static str, Option<&'static str>); 4] {
+    [
+        (
+            "KAMN_E2E_S10_PRIMARY_ENDPOINT",
+            Some("http://localhost:8080"),
+        ),
+        (
+            "KAMN_E2E_S10_SECONDARY_ENDPOINT",
+            Some("http://localhost:8081"),
+        ),
+        (
+            "KAMN_E2E_S10_TERTIARY_ENDPOINT",
+            Some("http://localhost:8082"),
+        ),
+        ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+    ]
 }
 
 fn with_scripted_probe_env<FWrite, FRun>(

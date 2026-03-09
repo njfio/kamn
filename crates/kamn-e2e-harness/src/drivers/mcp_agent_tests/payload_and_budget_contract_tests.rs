@@ -9,7 +9,11 @@ fn unit_validate_s14_mcp_verify_proof_response_accepts_valid_payload() {
 #[test]
 fn unit_validate_s14_mcp_verify_proof_response_rejects_mismatched_message_id() {
     assert_error_contains(
-        validate_s14_mcp_verify_proof_response(MISMATCHED_PROOF_PAYLOAD, "message-1", "test helper"),
+        validate_s14_mcp_verify_proof_response(
+            MISMATCHED_PROOF_PAYLOAD,
+            "message-1",
+            "test helper",
+        ),
         "mismatched message_id",
     );
 }
@@ -17,7 +21,11 @@ fn unit_validate_s14_mcp_verify_proof_response_rejects_mismatched_message_id() {
 #[test]
 fn unit_validate_s14_mcp_verify_proof_response_rejects_unverified_payload() {
     assert_error_contains(
-        validate_s14_mcp_verify_proof_response(UNVERIFIED_PROOF_PAYLOAD, "message-1", "test helper"),
+        validate_s14_mcp_verify_proof_response(
+            UNVERIFIED_PROOF_PAYLOAD,
+            "message-1",
+            "test helper",
+        ),
         "verified=false",
     );
 }
@@ -33,7 +41,11 @@ fn unit_validate_s14_mcp_verify_proof_response_rejects_non_final_finality() {
 #[test]
 fn unit_validate_s14_mcp_verify_proof_response_rejects_zero_block_height() {
     assert_error_contains(
-        validate_s14_mcp_verify_proof_response(ZERO_HEIGHT_PROOF_PAYLOAD, "message-1", "test helper"),
+        validate_s14_mcp_verify_proof_response(
+            ZERO_HEIGHT_PROOF_PAYLOAD,
+            "message-1",
+            "test helper",
+        ),
         "block_height=0",
     );
 }
@@ -112,9 +124,16 @@ fn unit_percentile_index_clamps_percentile_above_hundred_to_last_index() {
 
 #[test]
 fn unit_json_optional_string_field_extracts_known_value_and_missing_is_none() {
-    let payload = r#"{"jsonrpc":"2.0","id":"probe","result":{"task_id":"task-1","state":"created"}}"#;
-    assert_eq!(json_optional_string_field(payload, "task_id"), Some("task-1".to_owned()));
-    assert_eq!(json_optional_string_field(payload, "state"), Some("created".to_owned()));
+    let payload =
+        r#"{"jsonrpc":"2.0","id":"probe","result":{"task_id":"task-1","state":"created"}}"#;
+    assert_eq!(
+        json_optional_string_field(payload, "task_id"),
+        Some("task-1".to_owned())
+    );
+    assert_eq!(
+        json_optional_string_field(payload, "state"),
+        Some("created".to_owned())
+    );
     assert_eq!(json_optional_string_field(payload, "missing"), None);
 }
 
@@ -135,14 +154,15 @@ const VALID_PROOF_PAYLOAD: &str =
     r#"{"result":{"message_id":"message-1","verified":true,"finality":"FINAL","block_height":42}}"#;
 const MISMATCHED_PROOF_PAYLOAD: &str =
     r#"{"result":{"message_id":"message-2","verified":true,"finality":"FINAL","block_height":42}}"#;
-const UNVERIFIED_PROOF_PAYLOAD: &str =
-    r#"{"result":{"message_id":"message-1","verified":false,"finality":"FINAL","block_height":42}}"#;
-const NON_FINAL_PROOF_PAYLOAD: &str =
-    r#"{"result":{"message_id":"message-1","verified":true,"finality":"PENDING","block_height":42}}"#;
+const UNVERIFIED_PROOF_PAYLOAD: &str = r#"{"result":{"message_id":"message-1","verified":false,"finality":"FINAL","block_height":42}}"#;
+const NON_FINAL_PROOF_PAYLOAD: &str = r#"{"result":{"message_id":"message-1","verified":true,"finality":"PENDING","block_height":42}}"#;
 const ZERO_HEIGHT_PROOF_PAYLOAD: &str =
     r#"{"result":{"message_id":"message-1","verified":true,"finality":"FINAL","block_height":0}}"#;
 
 fn assert_error_contains(result: Result<(), String>, expected: &str) {
     let error = result.expect_err("validator should fail");
-    assert!(error.contains(expected), "error should mention {expected}: {error}");
+    assert!(
+        error.contains(expected),
+        "error should mention {expected}: {error}"
+    );
 }
