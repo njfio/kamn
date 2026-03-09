@@ -337,6 +337,23 @@ jobs:
         if: steps.scope.outputs.run_rust == 'true'
         run: cargo audit --json > cargo-audit-report.json
 
+      - name: Check touched Rust size policy
+        if: steps.scope.outputs.run_rust == 'true'
+        run: |
+          bash scripts/ci/check_touched_rust_size_policy.sh \
+            --base-ref "${{ github.base_ref || 'main' }}" \
+            --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json \
+            --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json \
+            --output-json ci-touched-rust-size-policy.json
+
+      - name: Upload touched Rust size policy telemetry
+        if: always() && hashFiles('ci-touched-rust-size-policy.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-touched-rust-size-policy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-touched-rust-size-policy.json
+          if-no-files-found: error
+
       - name: Enforce cargo-audit policy gate
         if: steps.scope.outputs.run_rust == 'true'
         run: |

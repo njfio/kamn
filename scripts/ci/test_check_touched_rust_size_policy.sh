@@ -149,7 +149,7 @@ EOF
 
 bash "$CHECKER" \
   --repo-root "$REPO_DIR" \
-  --base-ref HEAD~1 \
+  --base-ref HEAD \
   --threshold-file "$TMP_DIR/thresholds-function.json" \
   --baseline-file "$TMP_DIR/baseline.json" \
   --output-json "$TMP_DIR/legacy-pass.json" >"$TMP_DIR/legacy-pass.out"
