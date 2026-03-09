@@ -1,6 +1,13 @@
 use super::super::*;
-use super::support::{assert_server_ok, build_ingress_snapshot, spawn_ingress_server, state_hash};
+use super::support::{
+    assert_server_ok, build_ingress_snapshot, send_signed_message_request_with_signature,
+    spawn_ingress_server, state_hash,
+};
+use crate::service_api_endpoint::project_service_api_lifecycle_rejection;
 use std::sync::{Arc, Barrier};
+
+const LIFECYCLE_PROJECTION_SENDER_DID: &str = "kamn:did:agent:test-client-lifecycle-projection";
+const LIFECYCLE_PROJECTION_BODY: &str = "{\"message\":\"lifecycle-projection-check\"}";
 
 #[test]
 fn unit_service_api_endpoint_lifecycle_rejection_projection_is_deterministic() {
@@ -77,33 +84,44 @@ fn performance_service_api_endpoint_lifecycle_projection_loop_stays_within_local
 
 fn lifecycle_projection_responses(bind_addr: &str, worker_count: usize, state_hash: &str) -> Vec<String> {
     let barrier = Arc::new(Barrier::new(worker_count));
-    let mut clients = Vec::with_capacity(worker_count);
-    for request_index in 0..worker_count {
-        let client_bind_addr = bind_addr.to_owned();
-        let barrier = barrier.clone();
-        let state_hash = state_hash.to_owned();
-        clients.push(thread::spawn(move || {
-            let nonce = 810 + request_index as u64;
-            let signature = service_api_request_signature_for_fields(
-                "kamn:did:agent:test-client-lifecycle-projection",
-                nonce,
-                state_hash.as_str(),
-                "{\"message\":\"lifecycle-projection-check\"}",
-            );
-            let nonce_text = nonce.to_string();
-            barrier.wait();
-            send_http_request_with_headers(
-                client_bind_addr.as_str(),
-                "POST",
-                "/v1/messages/send",
-                "{\"message\":\"lifecycle-projection-check\"}",
-                &[
-                    ("X-KAMN-Sender-DID", "kamn:did:agent:test-client-lifecycle-projection"),
-                    ("X-KAMN-Request-Nonce", nonce_text.as_str()),
-                    ("X-KAMN-Request-Signature", signature.as_str()),
-                ],
-            )
-        }));
-    }
-    clients.into_iter().map(|client| client.join().expect("client request should complete")).collect()
+    (0..worker_count)
+        .map(|idx| spawn_lifecycle_projection_client(bind_addr, state_hash, barrier.clone(), idx))
+        .map(|client| client.join().expect("client request should complete"))
+        .collect()
+}
+
+fn spawn_lifecycle_projection_client(
+    bind_addr: &str,
+    state_hash: &str,
+    barrier: Arc<Barrier>,
+    request_index: usize,
+) -> thread::JoinHandle<String> {
+    let client_bind_addr = bind_addr.to_owned();
+    let state_hash = state_hash.to_owned();
+    let nonce = 810 + request_index as u64;
+    thread::spawn(move || {
+        lifecycle_projection_response(client_bind_addr.as_str(), state_hash.as_str(), barrier, nonce)
+    })
+}
+
+fn lifecycle_projection_response(
+    bind_addr: &str,
+    state_hash: &str,
+    barrier: Arc<Barrier>,
+    nonce: u64,
+) -> String {
+    let signature = service_api_request_signature_for_fields(
+        LIFECYCLE_PROJECTION_SENDER_DID,
+        nonce,
+        state_hash,
+        LIFECYCLE_PROJECTION_BODY,
+    );
+    barrier.wait();
+    send_signed_message_request_with_signature(
+        bind_addr,
+        LIFECYCLE_PROJECTION_SENDER_DID,
+        nonce,
+        signature.as_str(),
+        LIFECYCLE_PROJECTION_BODY,
+    )
 }

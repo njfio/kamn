@@ -3,7 +3,6 @@ use crate::service_api_endpoint::ServiceApiSnapshot;
 
 pub(super) struct IngressServer {
     pub bind_addr: String,
-    pub snapshot: ServiceApiSnapshot,
     pub server: thread::JoinHandle<Result<(), String>>,
 }
 
@@ -43,7 +42,7 @@ pub(super) fn spawn_ingress_server(
     let server =
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
-    IngressServer { bind_addr, snapshot: snapshot.clone(), server }
+    IngressServer { bind_addr, server }
 }
 
 pub(super) fn assert_server_ok(
@@ -69,6 +68,27 @@ pub(super) fn send_signed_message_request(
         sender_did,
         nonce,
         body,
+    )
+}
+
+pub(super) fn send_signed_message_request_with_signature(
+    bind_addr: &str,
+    sender_did: &str,
+    nonce: u64,
+    signature: &str,
+    body: &str,
+) -> String {
+    let nonce_text = nonce.to_string();
+    send_http_request_with_headers(
+        bind_addr,
+        "POST",
+        "/v1/messages/send",
+        body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+            ("X-KAMN-Request-Signature", signature),
+        ],
     )
 }
 

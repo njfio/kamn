@@ -1,9 +1,8 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, project_service_api_lifecycle_rejection,
-    upsert_service_api_relayed_message_from_daemon, ServiceApiAgentGetBody,
-    ServiceApiChannelCreateBody, ServiceApiErrorBody,
-    ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody,
+    parse_service_api_payload, upsert_service_api_relayed_message_from_daemon,
+    ServiceApiAgentGetBody, ServiceApiChannelCreateBody, ServiceApiErrorBody,
+    ServiceApiHealthBody, ServiceApiMessageCreateBody,
     ServiceApiRelaySpoolEntry, ServiceApiTaskCreateBody,
     DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
     DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND, SERVICE_API_AUTH_REASON_CODES_CSV,
@@ -27,7 +26,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Barrier, MutexGuard};
+use std::sync::{Arc, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

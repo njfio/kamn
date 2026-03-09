@@ -903,8 +903,16 @@ fn assert_ingress_guard_markers(
     concurrency_guard: &str,
     lifecycle_projection: &str,
 ) {
+    assert_ingress_budget_markers(ingress_budget);
+    assert_sender_anti_spam_markers(sender_anti_spam);
+    assert_replay_guard_markers(replay_guard);
+    assert_concurrency_guard_markers(concurrency_guard);
+    assert_lifecycle_projection_markers(lifecycle_projection);
+}
+
+fn assert_ingress_budget_markers(source: &str) {
     assert_ingress_guard_file_markers(
-        ingress_budget,
+        source,
         &[
             "fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded()",
             "fn regression_service_api_endpoint_oversized_payload_maps_body_limit_reason_code()",
@@ -913,16 +921,22 @@ fn assert_ingress_guard_markers(
         ],
         "ingress budget contract file",
     );
+}
+
+fn assert_sender_anti_spam_markers(source: &str) {
     assert_ingress_guard_file_markers(
-        sender_anti_spam,
+        source,
         &[
             "fn functional_service_api_endpoint_applies_sender_anti_spam_throttle_and_suspension()",
             "fn integration_service_api_endpoint_sender_anti_spam_burst_rounds_remain_deterministic()",
         ],
         "sender anti-spam contract file",
     );
+}
+
+fn assert_replay_guard_markers(source: &str) {
     assert_ingress_guard_file_markers(
-        replay_guard,
+        source,
         &[
             "fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender()",
             "fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_spam_enforcement()",
@@ -930,8 +944,11 @@ fn assert_ingress_guard_markers(
         ],
         "replay guard contract file",
     );
+}
+
+fn assert_concurrency_guard_markers(source: &str) {
     assert_ingress_guard_file_markers(
-        concurrency_guard,
+        source,
         &[
             "fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded()",
             "fn integration_service_api_endpoint_concurrency_rejection_reason_stays_stable_under_bounded_bursts()",
@@ -939,8 +956,11 @@ fn assert_ingress_guard_markers(
         ],
         "concurrency guard contract file",
     );
+}
+
+fn assert_lifecycle_projection_markers(source: &str) {
     assert_ingress_guard_file_markers(
-        lifecycle_projection,
+        source,
         &[
             "fn unit_service_api_endpoint_lifecycle_rejection_projection_is_deterministic()",
             "fn functional_service_api_endpoint_lifecycle_rejection_projection_maps_limiter_classes()",
