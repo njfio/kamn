@@ -25,25 +25,33 @@ pub(super) fn write_relayed_message_fixture(
     recipient_did: &str,
     body: &str,
 ) {
-    let payload = format!(
-        r#"{{
-  "schema_version":"kamn.runtime.service-api-message-store.v2",
-  "messages":{{
-    "{message_id}":{{
-      "message_id":"{message_id}",
-      "status":"relayed",
-      "channel_id":null,
-      "sender_did":"{sender_did}",
-      "recipient_did":"{recipient_did}",
-      "body":{body:?}
-    }}
-  }},
-  "channel_messages":{{
-    "recipient:{recipient_did}":["{message_id}"]
-  }},
-  "tasks":{{}},
-  "escrows":{{}}
-}}"#,
-    );
-    std::fs::write(path, payload).expect("state fixture should write");
+    let payload = relayed_message_fixture_value(message_id, sender_did, recipient_did, body);
+    let json = serde_json::to_string_pretty(&payload).expect("state fixture should serialize");
+    std::fs::write(path, json).expect("state fixture should write");
+}
+
+fn relayed_message_fixture_value(
+    message_id: &str,
+    sender_did: &str,
+    recipient_did: &str,
+    body: &str,
+) -> Value {
+    serde_json::json!({
+        "schema_version": "kamn.runtime.service-api-message-store.v2",
+        "messages": {
+            message_id: {
+                "message_id": message_id,
+                "status": "relayed",
+                "channel_id": Value::Null,
+                "sender_did": sender_did,
+                "recipient_did": recipient_did,
+                "body": body,
+            }
+        },
+        "channel_messages": {
+            format!("recipient:{recipient_did}"): [message_id]
+        },
+        "tasks": {},
+        "escrows": {},
+    })
 }

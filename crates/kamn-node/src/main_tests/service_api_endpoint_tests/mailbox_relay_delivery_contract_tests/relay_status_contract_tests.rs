@@ -35,7 +35,7 @@ fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivere
     let observer_did = test_service_api_sender_did("kamn:did:agent:recipient-relayed-observer");
     write_relayed_message_fixture(state_file.as_path(), "msg-relayed-to-delivered-1", "kamn:did:agent:sender-relayed", recipient_did.as_str(), &format!(r#"{{\"recipient_did\":\"{recipient_did}\",\"message\":\"relay-complete\"}}"#));
     let _state_guard = set_state_file_env(state_file.as_path());
-    let snapshot = build_mailbox_relay_snapshot("127.0.0.1:34109");
+    let snapshot = build_mailbox_relay_snapshot(reserve_loopback_addr().as_str());
     let bind_addr = reserve_loopback_addr();
     let server = spawn_api_server(&snapshot, bind_addr.as_str(), 2);
     assert_eq!(query_message(&snapshot, bind_addr.as_str(), observer_did.as_str(), 50, "msg-relayed-to-delivered-1")["status"], "relayed");
@@ -50,14 +50,14 @@ fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_acro
     let state_file = unique_named_state_file("kamn-node-service-api-relayed-non-recipient-restart-state");
     write_relayed_message_fixture(state_file.as_path(), "msg-relayed-non-recipient-restart-1", "kamn:did:agent:sender-relayed-restart", "kamn:did:agent:recipient-relayed-restart", r#"{\"recipient_did\":\"kamn:did:agent:recipient-relayed-restart\",\"message\":\"relay-restart\"}"#);
     let _state_guard = set_state_file_env(state_file.as_path());
-    assert_non_recipient_restart_phase("127.0.0.1:34115", 81, state_file.as_path());
-    assert_non_recipient_restart_phase("127.0.0.1:34116", 82, state_file.as_path());
+    assert_non_recipient_restart_phase(81, state_file.as_path());
+    assert_non_recipient_restart_phase(82, state_file.as_path());
     assert_eq!(read_state_json(state_file.as_path())["messages"]["msg-relayed-non-recipient-restart-1"]["status"], "relayed");
     let _ = fs::remove_file(state_file);
 }
 
-fn assert_non_recipient_restart_phase(api_bind: &str, nonce: u64, state_file: &Path) {
-    let snapshot = build_mailbox_relay_snapshot(api_bind);
+fn assert_non_recipient_restart_phase(nonce: u64, state_file: &Path) {
+    let snapshot = build_mailbox_relay_snapshot(reserve_loopback_addr().as_str());
     let bind_addr = reserve_loopback_addr();
     let server = spawn_api_server(&snapshot, bind_addr.as_str(), 1);
     let payload = query_message(&snapshot, bind_addr.as_str(), "kamn:did:agent:recipient-relayed-restart-observer", nonce, "msg-relayed-non-recipient-restart-1");

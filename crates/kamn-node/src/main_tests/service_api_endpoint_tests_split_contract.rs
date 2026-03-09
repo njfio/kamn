@@ -701,68 +701,102 @@ fn spec_c34_service_api_endpoint_mailbox_relay_delivery_module_exists_and_owns_m
     let relay_did_rejection = read_repo_file(RELAY_DID_REJECTION_FILE);
     let relay_status = read_repo_file(RELAY_STATUS_FILE);
 
-    assert!(
-        module_source.contains("mod recipient_mailbox_contract_tests;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare recipient-mailbox submodule"
+    assert_mailbox_relay_module_declarations(module_source.as_str());
+    assert_mailbox_relay_markers(
+        recipient_mailbox.as_str(),
+        relay_delivery.as_str(),
+        relay_did_rejection.as_str(),
+        relay_status.as_str(),
     );
-    assert!(
-        module_source.contains("mod relay_delivery_contract_tests;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare relay-delivery submodule"
-    );
-    assert!(
-        module_source.contains("mod relay_did_rejection_contract_tests;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare relay-did-rejection submodule"
-    );
-    assert!(
-        module_source.contains("mod relay_status_contract_tests;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare relay-status submodule"
-    );
-    assert!(
-        module_source.contains("mod support;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare shared support submodule"
-    );
-    assert!(
-        module_source.contains("mod state_support;"),
-        "mailbox_relay_delivery_contract_tests.rs should declare shared state-support submodule"
-    );
+}
 
+fn assert_mailbox_relay_module_declarations(module_source: &str) {
     for marker in [
-        "fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract()",
+        "mod recipient_mailbox_contract_tests;",
+        "mod relay_delivery_contract_tests;",
+        "mod relay_did_rejection_contract_tests;",
+        "mod relay_status_contract_tests;",
+        "mod support;",
+        "mod state_support;",
     ] {
         assert!(
-            recipient_mailbox.contains(marker),
-            "recipient mailbox contract file should include moved marker: {marker}"
+            module_source.contains(marker),
+            "mailbox_relay_delivery_contract_tests.rs should declare submodule marker: {marker}"
         );
     }
+}
 
-    for marker in [
-        "fn integration_service_api_endpoint_cross_node_relay_delivery_contract()",
-        "fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()",
-    ] {
-        assert!(
-            relay_delivery.contains(marker),
-            "relay delivery contract file should include moved marker: {marker}"
-        );
-    }
+fn assert_mailbox_relay_markers(
+    recipient_mailbox: &str,
+    relay_delivery: &str,
+    relay_did_rejection: &str,
+    relay_status: &str,
+) {
+    assert_mailbox_relay_delivery_markers(
+        recipient_mailbox,
+        relay_delivery,
+        relay_did_rejection,
+    );
+    assert_mailbox_relay_status_markers(relay_status);
+}
 
-    for marker in [
-        "fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()",
-        "fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids()",
-    ] {
-        assert!(
-            relay_did_rejection.contains(marker),
-            "relay did rejection contract file should include moved marker: {marker}"
-        );
-    }
+fn assert_mailbox_relay_delivery_markers(
+    recipient_mailbox: &str,
+    relay_delivery: &str,
+    relay_did_rejection: &str,
+) {
+    assert_recipient_mailbox_markers(recipient_mailbox);
+    assert_relay_delivery_markers(relay_delivery);
+    assert_relay_did_rejection_markers(relay_did_rejection);
+}
 
-    for marker in [
-        "fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery()",
-        "fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered()",
-        "fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart()",
-    ] {
+fn assert_recipient_mailbox_markers(source: &str) {
+    assert_mailbox_relay_file_markers(
+        source,
+        &["fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract()"],
+        "recipient mailbox contract file",
+    );
+}
+
+fn assert_relay_delivery_markers(source: &str) {
+    assert_mailbox_relay_file_markers(
+        source,
+        &[
+            "fn integration_service_api_endpoint_cross_node_relay_delivery_contract()",
+            "fn integration_service_api_endpoint_enqueues_recipient_relays_to_durable_spool()",
+        ],
+        "relay delivery contract file",
+    );
+}
+
+fn assert_relay_did_rejection_markers(source: &str) {
+    assert_mailbox_relay_file_markers(
+        source,
+        &[
+            "fn integration_service_api_endpoint_rejects_legacy_message_send_recipient_dids()",
+            "fn integration_service_api_endpoint_rejects_legacy_relay_ingest_dids()",
+        ],
+        "relay did rejection contract file",
+    );
+}
+
+fn assert_mailbox_relay_status_markers(relay_status: &str) {
+    assert_mailbox_relay_file_markers(
+        relay_status,
+        &[
+            "fn regression_service_api_endpoint_recipient_query_requires_relayed_state_before_delivery()",
+            "fn integration_service_api_endpoint_recipient_query_promotes_relayed_to_delivered()",
+            "fn regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart()",
+        ],
+        "relay status contract file",
+    );
+}
+
+fn assert_mailbox_relay_file_markers(source: &str, markers: &[&str], label: &str) {
+    for marker in markers {
         assert!(
-            relay_status.contains(marker),
-            "relay status contract file should include moved marker: {marker}"
+            source.contains(marker),
+            "{label} should include moved marker: {marker}"
         );
     }
 }

@@ -88,23 +88,36 @@ pub(super) fn send_signed_request(
     nonce: u64,
     body: &str,
 ) -> String {
-    let signature = service_api_request_signature_for_fields(
-        caller_did,
-        nonce,
-        state_hash(snapshot).as_str(),
-        body,
-    );
+    let nonce_text = nonce.to_string();
+    let signature = request_signature(snapshot, caller_did, nonce, body);
     send_http_request_with_headers(
         bind_addr,
         method,
         path,
         body,
-        &[
-            ("X-KAMN-Sender-DID", caller_did),
-            ("X-KAMN-Request-Nonce", nonce.to_string().as_str()),
-            ("X-KAMN-Request-Signature", signature.as_str()),
-        ],
+        request_headers(caller_did, nonce_text.as_str(), signature.as_str()).as_slice(),
     )
+}
+
+fn request_signature(
+    snapshot: &ServiceApiSnapshot,
+    caller_did: &str,
+    nonce: u64,
+    body: &str,
+) -> String {
+    service_api_request_signature_for_fields(caller_did, nonce, state_hash(snapshot).as_str(), body)
+}
+
+fn request_headers<'a>(
+    caller_did: &'a str,
+    nonce: &'a str,
+    signature: &'a str,
+) -> [(&'a str, &'a str); 3] {
+    [
+        ("X-KAMN-Sender-DID", caller_did),
+        ("X-KAMN-Request-Nonce", nonce),
+        ("X-KAMN-Request-Signature", signature),
+    ]
 }
 
 pub(super) fn send_message(
