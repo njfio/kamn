@@ -1,15 +1,7 @@
-use kamn_core::{
-    DeterministicProposalPlanner, ProposalCandidate, ProposalPlannerError,
-};
+use kamn_core::{DeterministicProposalPlanner, ProposalCandidate, ProposalPlannerError};
 
-fn candidate(
-    id: &str,
-    sender_did: &str,
-    nonce: u64,
-    state_hash: &str,
-) -> ProposalCandidate {
-    ProposalCandidate::new(id, sender_did, nonce, state_hash)
-        .expect("candidate should construct")
+fn candidate(id: &str, sender_did: &str, nonce: u64, state_hash: &str) -> ProposalCandidate {
+    ProposalCandidate::new(id, sender_did, nonce, state_hash).expect("candidate should construct")
 }
 
 fn assert_invalid_candidate(
@@ -44,9 +36,15 @@ fn integration_deterministic_proposal_planner_valid_plan_returns_expected_order(
             "cand-c".to_owned(),
         ]
     );
-    assert_eq!(plan.ordered_candidates()[0].sender_did(), "kamn:did:agent:peer-a");
+    assert_eq!(
+        plan.ordered_candidates()[0].sender_did(),
+        "kamn:did:agent:peer-a"
+    );
     assert_eq!(plan.ordered_candidates()[0].nonce(), 1);
-    assert_eq!(plan.ordered_candidates()[1].sender_did(), "kamn:did:agent:peer-b");
+    assert_eq!(
+        plan.ordered_candidates()[1].sender_did(),
+        "kamn:did:agent:peer-b"
+    );
     assert_eq!(plan.ordered_candidates()[1].nonce(), 1);
     assert_eq!(plan.ordered_candidates()[2].nonce(), 2);
 }
