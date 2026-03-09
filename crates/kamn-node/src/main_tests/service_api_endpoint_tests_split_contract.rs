@@ -269,7 +269,11 @@ fn spec_c11_service_api_endpoint_root_declares_route_render_submodule() {
 
 #[test]
 fn spec_c12_service_api_endpoint_route_render_split_files_stay_below_budget() {
-    for path in [ROUTE_RENDER_MODULE_FILE, ROUTE_RESPONSE_FILE, ROUTE_METRICS_FILE] {
+    for path in [
+        ROUTE_RENDER_MODULE_FILE,
+        ROUTE_RESPONSE_FILE,
+        ROUTE_METRICS_FILE,
+    ] {
         let source = read_repo_file(path);
         let line_count = source.lines().count();
         assert!(
