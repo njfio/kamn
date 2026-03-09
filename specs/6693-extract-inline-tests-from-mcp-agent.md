@@ -60,3 +60,22 @@ Move the inline `#[cfg(test)]` surface out of `crates/kamn-e2e-harness/src/drive
    - `cargo test -p kamn-e2e-harness mcp_agent -- --nocapture`
    - targeted MCP-agent extraction contract coverage
 5. Run the touched-Rust size policy on the final write set.
+
+## Phase 6 Evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness mcp_agent -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test mcp_agent_inline_test_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test mcp_agent_live_toggle_contract -- --nocapture`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6693-touched-size.json`
+
+## Measured Outcome
+
+- `crates/kamn-e2e-harness/src/drivers/mcp_agent.rs`: `2541` LOC
+- `crates/kamn-e2e-harness/src/drivers/mcp_agent_tests.rs`: `46` LOC
+- extracted leaf files remain `<= 200` LOC
+- extracted support files remain `<= 200` LOC
+- touched-Rust size policy: `status=pass`, `policy_decision=GO`
+
+## Deviations
+
+- None.
