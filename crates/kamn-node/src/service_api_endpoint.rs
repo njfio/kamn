@@ -13,29 +13,28 @@ mod tests;
 mod websocket;
 
 use crate::{
-    NodeBootstrapReport,
     logging::{log_info, log_warn},
+    NodeBootstrapReport,
 };
 use axum::{
-    Extension, Router,
-    body::{Body, Bytes, to_bytes},
+    body::{to_bytes, Body, Bytes},
     extract::{
-        Request, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
+        Request, State,
     },
     http::{HeaderMap, HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{any, get},
+    Extension, Router,
 };
 use kamn_core::{
-    AgentDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
-    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE, DataLayerM9GatewayBridgeError,
-    DataLayerM9GatewayPresenceProjectionRequest, DataLayerM9PresenceConnectRequest,
-    DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
-    DataLayerM9RealtimeDeliveryRegistry, KamnDid, cross_store_replay_reason_codes_csv,
-    cross_store_replay_reason_taxonomy_version, data_layer_m9_gateway_project_presence_event,
-    service_auth_verify_with_public_key_hex,
+    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
+    data_layer_m9_gateway_project_presence_event, service_auth_verify_with_public_key_hex,
+    AgentDid, DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
+    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
+    DataLayerM9RealtimeDeliveryRegistry, KamnDid, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
 };
 use kamn_runtime_guards::anti_spam::{
     AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
@@ -45,8 +44,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, AtomicU64, Ordering},
+    Arc,
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs, net::SocketAddr};
