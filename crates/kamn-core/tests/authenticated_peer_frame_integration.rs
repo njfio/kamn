@@ -10,17 +10,41 @@ fn valid_recipient() -> &'static str {
     "kamn:did:agent:peer-b"
 }
 
+fn signed_frame(
+    frame_id: &str,
+    recipient_did: &str,
+    nonce: u64,
+    payload: &str,
+) -> AuthenticatedPeerFrame {
+    AuthenticatedPeerFrame::signed(frame_id, valid_sender(), recipient_did, nonce, payload)
+        .expect("signed frame should construct")
+}
+
+fn authenticator(
+    local_peer_did: &str,
+    allowed_sender_dids: Vec<String>,
+) -> PeerFrameAuthenticator {
+    PeerFrameAuthenticator::new(local_peer_did, allowed_sender_dids)
+        .expect("authenticator should construct")
+}
+
+fn assert_invalid_new(expected: AuthenticatedPeerFrameError, payload: &str, signature: &str) {
+    assert_eq!(
+        AuthenticatedPeerFrame::new(
+            "frame-1",
+            valid_sender(),
+            valid_recipient(),
+            1,
+            payload,
+            signature,
+        ),
+        Err(expected)
+    );
+}
+
 #[test]
 fn integration_authenticated_peer_frame_valid_signed_roundtrip_and_inbound_validation() {
-    let frame = AuthenticatedPeerFrame::signed(
-        "frame-1",
-        valid_sender(),
-        valid_recipient(),
-        1,
-        "payload-1",
-    )
-    .expect("signed frame should construct");
-
+    let frame = signed_frame("frame-1", valid_recipient(), 1, "payload-1");
     let wire = frame.to_wire().expect("wire encode should succeed");
     let decoded = AuthenticatedPeerFrame::from_wire(wire.as_str())
         .expect("wire decode should succeed");
@@ -32,12 +56,7 @@ fn integration_authenticated_peer_frame_valid_signed_roundtrip_and_inbound_valid
     assert_eq!(decoded.nonce(), 1);
     assert_eq!(decoded.payload(), "payload-1");
 
-    let mut authenticator = PeerFrameAuthenticator::new(
-        valid_recipient(),
-        vec![valid_sender().to_owned()],
-    )
-    .expect("authenticator should construct");
-    authenticator
+    authenticator(valid_recipient(), vec![valid_sender().to_owned()])
         .validate_inbound(&decoded)
         .expect("inbound validation should succeed");
 }
@@ -59,19 +78,11 @@ fn integration_authenticated_peer_frame_invalid_inputs_fail_closed() {
             detail: "invalid agent did prefix: bad-did".to_owned(),
         })
     );
-
-    assert_eq!(
-        AuthenticatedPeerFrame::new(
-            "frame-1",
-            valid_sender(),
-            valid_recipient(),
-            1,
-            "payload|bad",
-            "sig-1",
-        ),
-        Err(AuthenticatedPeerFrameError::InvalidWireFieldDelimiter { field: "payload" })
+    assert_invalid_new(
+        AuthenticatedPeerFrameError::InvalidWireFieldDelimiter { field: "payload" },
+        "payload|bad",
+        "sig-1",
     );
-
     assert_eq!(
         AuthenticatedPeerFrame::from_wire("frame|frame-1|kamn:did:agent:peer-a"),
         Err(AuthenticatedPeerFrameError::InvalidWireFormat(
@@ -82,65 +93,48 @@ fn integration_authenticated_peer_frame_invalid_inputs_fail_closed() {
 
 #[test]
 fn integration_authenticated_peer_frame_authenticator_rejects_wrong_recipient_unauthorized_sender_and_replay() {
-    let wrong_recipient_frame = AuthenticatedPeerFrame::signed(
-        "frame-1",
-        valid_sender(),
-        valid_recipient(),
-        1,
-        "payload-1",
-    )
-    .expect("signed frame should construct");
-    let mut wrong_recipient_authenticator = PeerFrameAuthenticator::new(
+    assert_wrong_recipient_rejected();
+    assert_unauthorized_sender_rejected();
+    assert_replay_nonce_rejected();
+}
+
+fn assert_wrong_recipient_rejected() {
+    let frame = signed_frame("frame-1", valid_recipient(), 1, "payload-1");
+    let mut peer_authenticator = authenticator(
         "kamn:did:agent:peer-c",
         vec![valid_sender().to_owned()],
-    )
-    .expect("authenticator should construct");
+    );
     assert_eq!(
-        wrong_recipient_authenticator.validate_inbound(&wrong_recipient_frame),
+        peer_authenticator.validate_inbound(&frame),
         Err(AuthenticatedPeerFrameError::WrongRecipient {
             expected: "kamn:did:agent:peer-c".to_owned(),
             found: valid_recipient().to_owned(),
         })
     );
+}
 
-    let unauthorized_sender_frame = AuthenticatedPeerFrame::signed(
-        "frame-2",
-        valid_sender(),
-        valid_recipient(),
-        2,
-        "payload-2",
-    )
-    .expect("signed frame should construct");
-    let mut unauthorized_sender_authenticator = PeerFrameAuthenticator::new(
+fn assert_unauthorized_sender_rejected() {
+    let frame = signed_frame("frame-2", valid_recipient(), 2, "payload-2");
+    let mut peer_authenticator = authenticator(
         valid_recipient(),
         vec!["kamn:did:agent:peer-z".to_owned()],
-    )
-    .expect("authenticator should construct");
+    );
     assert_eq!(
-        unauthorized_sender_authenticator.validate_inbound(&unauthorized_sender_frame),
+        peer_authenticator.validate_inbound(&frame),
         Err(AuthenticatedPeerFrameError::UnauthorizedSender(
             valid_sender().to_owned(),
         ))
     );
+}
 
-    let replay_frame = AuthenticatedPeerFrame::signed(
-        "frame-3",
-        valid_sender(),
-        valid_recipient(),
-        3,
-        "payload-3",
-    )
-    .expect("signed frame should construct");
-    let mut replay_authenticator = PeerFrameAuthenticator::new(
-        valid_recipient(),
-        vec![valid_sender().to_owned()],
-    )
-    .expect("authenticator should construct");
-    replay_authenticator
-        .validate_inbound(&replay_frame)
+fn assert_replay_nonce_rejected() {
+    let frame = signed_frame("frame-3", valid_recipient(), 3, "payload-3");
+    let mut peer_authenticator = authenticator(valid_recipient(), vec![valid_sender().to_owned()]);
+    peer_authenticator
+        .validate_inbound(&frame)
         .expect("first frame should succeed");
     assert_eq!(
-        replay_authenticator.validate_inbound(&replay_frame),
+        peer_authenticator.validate_inbound(&frame),
         Err(AuthenticatedPeerFrameError::ReplayNonce {
             sender_did: valid_sender().to_owned(),
             last_nonce: 3,
