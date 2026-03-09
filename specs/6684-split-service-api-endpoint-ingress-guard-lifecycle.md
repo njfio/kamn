@@ -33,11 +33,11 @@ Extract the ingress guard coverage out of `crates/kamn-node/src/main_tests/servi
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `service_api_endpoint_tests.rs` declares a new ingress-guard-lifecycle submodule and no longer retains the moved ingress-guard test markers.
-- [ ] AC-2: Extracted ingress-guard-lifecycle files stay at or below 200 lines each.
-- [ ] AC-3: The staged root threshold ratchets down from `4525` to `2400` lines or lower.
-- [ ] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
-- [ ] AC-5: At least one extracted ingress-guard integration test passes from the real `kamn-node` test module path.
+- [x] AC-1: `service_api_endpoint_tests.rs` declares a new ingress-guard-lifecycle submodule and no longer retains the moved ingress-guard test markers.
+- [x] AC-2: Extracted ingress-guard-lifecycle files stay at or below 200 lines each.
+- [x] AC-3: The staged root threshold ratchets down from `4525` to `2400` lines or lower.
+- [x] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
+- [x] AC-5: At least one extracted ingress-guard integration test passes from the real `kamn-node` test module path.
 
 ## Files To Touch
 
@@ -59,3 +59,28 @@ Extract the ingress guard coverage out of `crates/kamn-node/src/main_tests/servi
 2. Extract the ingress guard coverage into bounded files until the split contract passes.
 3. Run the targeted split contract and directly affected `kamn-node` ingress-guard tests.
 4. Record integration evidence and any deviations in this spec.
+
+## Deviations
+
+- No behavioral deviations were introduced. The extraction preserved the existing ingress guard assertions and kept the moved coverage on the real `kamn-node` test path.
+
+## Phase 6 Evidence
+
+- Root wiring:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs` declares `#[path = "service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests.rs"]` and `mod ingress_guard_lifecycle_contract_tests;`
+- File sizes:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `1973`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests.rs`: `12`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/concurrency_guard_contract_tests.rs`: `149`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/ingress_budget_contract_tests.rs`: `85`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/lifecycle_projection_contract_tests.rs`: `127`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/replay_guard_contract_tests.rs`: `95`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/sender_anti_spam_contract_tests.rs`: `59`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/support.rs`: `134`
+- Touched-Rust size policy:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6684-touched-size.json`
+  - Result: `status=pass`, `policy_decision=GO`
+- Targeted evidence:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_spam_enforcement -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded -- --nocapture`
