@@ -25,12 +25,24 @@ if [ ! -f "$RUNBOOK_DOC" ]; then
   echo "expected service api axum ingress runbook doc to exist" >&2
   exit 1
 fi
-if ! grep -Fq '"X-KAMN-Signer-Public-Key": auth_public_key_hex' "$VALIDATION_SCRIPT"; then
-  echo "expected service api axum ingress validation script auth helper to propagate signer public key header" >&2
+if ! grep -Fq '"X-KAMN-Signer-Public-Key": signer["public_key_hex"]' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script auth helper to propagate signer-derived public key header" >&2
   exit 1
 fi
-if ! grep -Fq 'f"X-KAMN-Signer-Public-Key: {auth_public_key_hex}\\r\\n"' "$VALIDATION_SCRIPT"; then
-  echo "expected service api axum ingress validation script websocket probe to propagate signer public key header" >&2
+if ! grep -Fq 'f"X-KAMN-Signer-Public-Key: {websocket_signer['"'"'public_key_hex'"'"']}\r\n"' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script websocket probe to propagate signer-derived public key header" >&2
+  exit 1
+fi
+if ! grep -Fq 'auth_sender_did="kamn:did:agent:pkh-${auth_public_key_hex}"' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to use self-certifying sender did binding" >&2
+  exit 1
+fi
+if ! grep -Fq 'request_validation_signer = signer_context(1)' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to isolate request-validation sender context" >&2
+  exit 1
+fi
+if ! grep -Fq 'websocket_signer = signer_context(2)' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to isolate websocket sender context" >&2
   exit 1
 fi
 
