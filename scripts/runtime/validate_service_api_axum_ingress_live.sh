@@ -315,27 +315,26 @@ if [ "$wait_for_ready" -ne 1 ]; then
   exit 1
 fi
 
-auth_sender_did="kamn:did:agent:axum-ingress-validator"
+auth_sender_did="kamn:did:agent:pkh-${auth_public_key_hex}"
 auth_state_hash="service-api:kamn-devnet:v0.1.0"
 
 probe_report="$TMP_DIR/service-api-axum-ingress-probes.json"
 python3 \
-  - "$api_addr" "$probe_report" "$auth_sender_did" "$auth_state_hash" "$auth_private_key_hex" <<'PY'
+  - "$api_addr" "$probe_report" "$auth_state_hash" "$auth_private_key_hex" <<'PY'
 import concurrent.futures
 import hashlib
 import http.client
 import json
 import socket
 import sys
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 api_addr = sys.argv[1]
 probe_report = sys.argv[2]
-sender_did = sys.argv[3]
-state_hash = sys.argv[4]
-private_key_hex = sys.argv[5]
+state_hash = sys.argv[3]
+private_key_hex = sys.argv[4]
 host, port_text = api_addr.rsplit(":", 1)
 port = int(port_text)
 secp256k1_order = int(
@@ -348,7 +347,27 @@ except ValueError as exc:
     raise SystemExit("service api axum ingress probe private key hex is invalid") from exc
 if private_scalar <= 0 or private_scalar >= secp256k1_order:
     raise SystemExit("service api axum ingress probe private key scalar is invalid")
-signing_key = ec.derive_private_key(private_scalar, ec.SECP256K1())
+
+
+def signer_context(offset: int) -> dict[str, object]:
+    derived_scalar = (private_scalar + offset) % secp256k1_order
+    if derived_scalar == 0:
+        derived_scalar = 1
+    signing_key = ec.derive_private_key(derived_scalar, ec.SECP256K1())
+    public_key_hex = signing_key.public_key().public_bytes(
+        encoding=serialization.Encoding.X962,
+        format=serialization.PublicFormat.CompressedPoint,
+    ).hex()
+    return {
+        "private_scalar": derived_scalar,
+        "signing_key": signing_key,
+        "public_key_hex": public_key_hex,
+        "sender_did": f"kamn:did:agent:pkh-{public_key_hex}",
+    }
+
+
+request_validation_signer = signer_context(1)
+websocket_signer = signer_context(2)
 
 
 def signing_payload(nonce: int, payload: str, sender: str) -> str:
@@ -363,16 +382,22 @@ def signing_payload(nonce: int, payload: str, sender: str) -> str:
     )
 
 
-def signature(nonce: int, payload: str, sender: str | None = None) -> str:
-    sender_value = sender_did if sender is None else sender
+def signature(
+    nonce: int,
+    payload: str,
+    signer: dict[str, object],
+    sender: str | None = None,
+) -> str:
+    sender_value = signer["sender_did"] if sender is None else sender
     message = signing_payload(nonce, payload, sender_value).encode("utf-8")
-    der_signature = signing_key.sign(message, ec.ECDSA(hashes.SHA256()))
+    der_signature = signer["signing_key"].sign(message, ec.ECDSA(hashes.SHA256()))
     r_value, s_value = decode_dss_signature(der_signature)
     if s_value > secp256k1_order // 2:
         s_value = secp256k1_order - s_value
     message_hash = int.from_bytes(hashlib.sha256(message).digest(), byteorder="big")
     nonce_scalar = (
-        (message_hash + (r_value * private_scalar)) * pow(s_value, -1, secp256k1_order)
+        (message_hash + (r_value * signer["private_scalar"]))
+        * pow(s_value, -1, secp256k1_order)
     ) % secp256k1_order
     if nonce_scalar == 0:
         raise SystemExit("service api axum ingress probe nonce scalar resolved to zero")
@@ -469,13 +494,19 @@ def run_keep_alive_probe() -> None:
 
 
 def auth_headers(
-    nonce: int, *, scope: str, body: str = "", sender: str | None = None
+    nonce: int,
+    *,
+    scope: str,
+    signer: dict[str, object],
+    body: str = "",
+    sender: str | None = None,
 ) -> dict[str, str]:
-    sender_value = sender_did if sender is None else sender
+    sender_value = signer["sender_did"] if sender is None else sender
     return {
         "X-KAMN-Sender-DID": sender_value,
         "X-KAMN-Request-Nonce": str(nonce),
-        "X-KAMN-Request-Signature": signature(nonce, body, sender_value),
+        "X-KAMN-Request-Signature": signature(nonce, body, signer, sender_value),
+        "X-KAMN-Signer-Public-Key": signer["public_key_hex"],
         "X-KAMN-Authz-Scope": scope,
     }
 
@@ -495,12 +526,17 @@ def parse_error_envelope(payload: str, status: int, expected_status: int) -> dic
 
 
 def run_request_validation_probe() -> None:
-    request_validation_sender = "kamn:did:agent:axum-ingress-validator-request-validation"
+    request_validation_sender = request_validation_signer["sender_did"]
     websocket_status, websocket_body = request(
         "GET",
         "/v1/events/ws",
         "",
-        auth_headers(530, sender=request_validation_sender, scope="events:read"),
+        auth_headers(
+            530,
+            sender=request_validation_sender,
+            scope="events:read",
+            signer=request_validation_signer,
+        ),
     )
     websocket_payload = parse_error_envelope(websocket_body, websocket_status, 400)
     if websocket_payload.get("error") != "bad-request":
@@ -516,7 +552,12 @@ def run_request_validation_probe() -> None:
         "DELETE",
         "/v1/messages/send",
         "",
-        auth_headers(531, sender=request_validation_sender, scope="protected:unknown"),
+        auth_headers(
+            531,
+            sender=request_validation_sender,
+            scope="protected:unknown",
+            signer=request_validation_signer,
+        ),
     )
     method_payload = parse_error_envelope(method_body, method_status, 405)
     if method_payload.get("error") != "method-not-allowed":
@@ -530,7 +571,12 @@ def run_request_validation_probe() -> None:
         "GET",
         "/v1/nope",
         "",
-        auth_headers(532, sender=request_validation_sender, scope="protected:unknown"),
+        auth_headers(
+            532,
+            sender=request_validation_sender,
+            scope="protected:unknown",
+            signer=request_validation_signer,
+        ),
     )
     route_payload = parse_error_envelope(route_body, route_status, 404)
     if route_payload.get("error") != "not-found":
@@ -551,11 +597,12 @@ def run_websocket_probe() -> None:
                 f"Host: {api_addr}\r\n"
                 "Connection: Upgrade\r\n"
                 "Upgrade: websocket\r\n"
-                "Sec-WebSocket-Key: test-axum-key\r\n"
+                "Sec-WebSocket-Key: test-live-key\r\n"
                 f"Sec-WebSocket-Version: {version}\r\n"
-                f"X-KAMN-Sender-DID: {sender_did}\r\n"
+                f"X-KAMN-Sender-DID: {websocket_signer['sender_did']}\r\n"
                 f"X-KAMN-Request-Nonce: {nonce}\r\n"
-                f"X-KAMN-Request-Signature: {signature(nonce, '')}\r\n"
+                f"X-KAMN-Request-Signature: {signature(nonce, '', websocket_signer)}\r\n"
+                f"X-KAMN-Signer-Public-Key: {websocket_signer['public_key_hex']}\r\n"
                 "X-KAMN-Authz-Scope: events:read\r\n"
                 "Content-Length: 0\r\n\r\n"
             )
@@ -593,7 +640,8 @@ def run_concurrency_probe() -> None:
     def post_message(index: int) -> None:
         payload = json.dumps({"message": f"concurrency-{index}"}, separators=(",", ":"))
         nonce = 600 + index
-        sender = f"kamn:did:agent:axum-ingress-validator-concurrency-{index}"
+        signer = signer_context(100 + index)
+        sender = signer["sender_did"]
         status, body = request(
             "POST",
             "/v1/messages/send",
@@ -602,7 +650,8 @@ def run_concurrency_probe() -> None:
                 "content-type": "application/json",
                 "X-KAMN-Sender-DID": sender,
                 "X-KAMN-Request-Nonce": str(nonce),
-                "X-KAMN-Request-Signature": signature(nonce, payload, sender),
+                "X-KAMN-Request-Signature": signature(nonce, payload, signer, sender),
+                "X-KAMN-Signer-Public-Key": signer["public_key_hex"],
                 "X-KAMN-Authz-Scope": "messages:write",
             },
         )
@@ -708,6 +757,7 @@ oversized_status="$(curl -sS -o "$oversized_response_file" -w '%{http_code}' \
   -H "X-KAMN-Sender-DID: ${auth_sender_did}" \
   -H "X-KAMN-Request-Nonce: ${oversized_nonce}" \
   -H "X-KAMN-Request-Signature: ${oversized_signature}" \
+  -H "X-KAMN-Signer-Public-Key: ${auth_public_key_hex}" \
   -H "X-KAMN-Authz-Scope: messages:write" \
   --data-binary "@${oversized_body_file}")"
 if [ "$oversized_status" != "400" ]; then
