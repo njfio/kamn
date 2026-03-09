@@ -53,6 +53,8 @@ Add a ratcheted CI policy that fails closed when a touched shell script under `s
 - `scripts/ci/test_ci_strategy_contract.sh`
 - `scripts/ci/test_workflow_scope_policy.sh`
 - `.github/workflows/ci-fast-gate.yml`
+- `.ci/shell_test_surface_ratio_thresholds.env`
+- `.ci/shell_test_surface_ratio_waiver_6650.env`
 - `docs/ci/strategy.md`
 - `crates/kamn-core/tests/ci_strategy_docs.rs`
 
@@ -75,3 +77,31 @@ Add a ratcheted CI policy that fails closed when a touched shell script under `s
 ## Notes / Deviations
 
 - Current repo sampling shows only `scripts/lib/common.sh` and `scripts/lib/test_harness.sh` lack `set -euo pipefail`; both are sourced helper libraries and will be represented as explicit exceptions rather than retrofitted in this issue.
+
+## Integration Evidence
+
+- `bash scripts/ci/test_check_touched_shell_strict_mode.sh`
+  - passed
+- `bash scripts/ci/test_workflow_scope_policy.sh`
+  - passed
+- `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
+  - passed
+- `bash scripts/ci/test_ci_strategy_contract.sh`
+  - passed
+- `cargo test -p kamn-core --test ci_strategy_docs doc_contains_touched_shell_strict_mode_markers -- --exact --nocapture`
+  - passed
+- `bash scripts/ci/check_touched_shell_strict_mode.sh --output-json /tmp/touched-shell-strict-mode-report.json`
+  - passed with `status=pass` and `reason_codes=none`
+- `bash scripts/ci/test_collect_shell_rust_loc_telemetry.sh`
+  - passed after switching the shell-test ratio waiver pointer to `.ci/shell_test_surface_ratio_waiver_6650.env`
+- `cargo test -p kamn-core --test shell_test_surface_ratio_policy -- --nocapture`
+  - passed with the new bounded `#6650` shell-test ratio waiver
+- `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+  - passed in isolation
+
+## Deviations
+
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` now passes through the new touched-shell strict-mode lane, the shell-ratio waiver path, and the surrounding shell-surface contracts, but it still reaches the pre-existing late runtime-suite interaction already recorded during `#6649` work:
+  - `request-validation probe expected 400 status; got 401`
+  - `expected service api axum ingress validation marker status=pass`
+- The isolated `scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh` contract still passes on this branch, so that late-suite interaction was not pursued inside `#6650`.
