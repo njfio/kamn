@@ -12,6 +12,19 @@ fn candidate(
         .expect("candidate should construct")
 }
 
+fn assert_invalid_candidate(
+    id: &str,
+    sender_did: &str,
+    nonce: u64,
+    state_hash: &str,
+    expected: ProposalPlannerError,
+) {
+    assert_eq!(
+        ProposalCandidate::new(id, sender_did, nonce, state_hash),
+        Err(expected)
+    );
+}
+
 #[test]
 fn integration_deterministic_proposal_planner_valid_plan_returns_expected_order() {
     let planner = DeterministicProposalPlanner::new("state-hash-a");
@@ -40,21 +53,33 @@ fn integration_deterministic_proposal_planner_valid_plan_returns_expected_order(
 
 #[test]
 fn integration_deterministic_proposal_planner_invalid_candidates_fail_closed() {
-    assert_eq!(
-        ProposalCandidate::new("", "kamn:did:agent:peer-a", 1, "state-hash-a"),
-        Err(ProposalPlannerError::InvalidCandidateId)
+    assert_invalid_candidate(
+        "",
+        "kamn:did:agent:peer-a",
+        1,
+        "state-hash-a",
+        ProposalPlannerError::InvalidCandidateId,
     );
-    assert_eq!(
-        ProposalCandidate::new("cand-a", "", 1, "state-hash-a"),
-        Err(ProposalPlannerError::InvalidSenderDid)
+    assert_invalid_candidate(
+        "cand-a",
+        "",
+        1,
+        "state-hash-a",
+        ProposalPlannerError::InvalidSenderDid,
     );
-    assert_eq!(
-        ProposalCandidate::new("cand-a", "kamn:did:agent:peer-a", 0, "state-hash-a"),
-        Err(ProposalPlannerError::InvalidNonce)
+    assert_invalid_candidate(
+        "cand-a",
+        "kamn:did:agent:peer-a",
+        0,
+        "state-hash-a",
+        ProposalPlannerError::InvalidNonce,
     );
-    assert_eq!(
-        ProposalCandidate::new("cand-a", "kamn:did:agent:peer-a", 1, ""),
-        Err(ProposalPlannerError::InvalidStateHash)
+    assert_invalid_candidate(
+        "cand-a",
+        "kamn:did:agent:peer-a",
+        1,
+        "",
+        ProposalPlannerError::InvalidStateHash,
     );
 }
 
