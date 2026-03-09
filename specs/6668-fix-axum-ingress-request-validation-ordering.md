@@ -1,5 +1,7 @@
 # Issue 6668: Fix Service API Axum Ingress Request-Validation Status Ordering
 
+- Status: Implemented
+
 ## Objective
 
 Restore the documented request-validation ordering in the live axum-ingress validator path so malformed websocket upgrade requests, invalid methods, and unknown routes are classified by request-shape/route validation before auth failures, producing the expected `400`, `405`, and `404` envelopes in the real runtime lane.
@@ -34,11 +36,11 @@ Restore the documented request-validation ordering in the live axum-ingress vali
 
 ## Acceptance Criteria
 
-- [ ] AC-1: The live websocket upgrade validation probe returns `400 Bad Request` with `service_api_ws_upgrade_header_missing` in the real validator path.
-- [ ] AC-2: The live invalid-method probe returns `405 Method Not Allowed` with `service_api_method_not_allowed` in the real validator path.
-- [ ] AC-3: The live unknown-route probe returns `404 Not Found` with `service_api_route_not_found` in the real validator path.
-- [ ] AC-4: `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh` passes locally.
-- [ ] AC-5: Any touched docs/contracts remain aligned on the restored request-validation ordering semantics.
+- [x] AC-1: The live websocket upgrade validation probe returns `400 Bad Request` with `service_api_ws_upgrade_header_missing` in the real validator path.
+- [x] AC-2: The live invalid-method probe returns `405 Method Not Allowed` with `service_api_method_not_allowed` in the real validator path.
+- [x] AC-3: The live unknown-route probe returns `404 Not Found` with `service_api_route_not_found` in the real validator path.
+- [x] AC-4: `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh` passes locally.
+- [x] AC-5: Any touched docs/contracts remain aligned on the restored request-validation ordering semantics.
 
 ## Files To Touch
 
@@ -63,3 +65,33 @@ Restore the documented request-validation ordering in the live axum-ingress vali
 3. Implement the minimal runtime fix to restore request-validation ordering.
 4. Re-run the targeted runtime policy lane and any touched Rust/docs contracts.
 5. Record live-lane integration evidence in this spec.
+
+## Refactor Evidence
+
+- The live validator now isolates request-validation, websocket, and concurrency probe families behind separate signer contexts instead of reusing one sender until anti-spam throttles the lane.
+- Stale embedded Python runner inputs were removed so the signer-context flow is self-contained.
+- The touched runtime shell files remain legacy oversized files outside the repo’s ideal size target; this issue kept the fix localized instead of attempting a risky decomposition of the full validator surface.
+
+## Phase 6 integration evidence
+
+- Executed:
+  - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/6668-axum-ingress-live.json`
+  - `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+- Results:
+  - The live validator returned `status=pass` and `final_decision=GO`.
+  - Request-validation probes now classify through the documented envelopes:
+    - websocket upgrade missing header -> `400` / `service_api_ws_upgrade_header_missing`
+    - invalid method -> `405` / `service_api_method_not_allowed`
+    - unknown route -> `404` / `service_api_route_not_found`
+  - The axum-ingress contract lane passed end to end.
+  - The policy checker wrapper passed end to end.
+  - Both runtime scripts are already exercised by the broader harness through `scripts/ci/test_ci_tools.sh` and referenced from release/runbook docs, so the fix is wired into real entrypoints rather than a mock-only path.
+
+## Deviations
+
+- The underlying regression was not middleware ordering after all. The live validator itself had drifted behind the production auth contract by:
+  - omitting `X-KAMN-Signer-Public-Key`
+  - using legacy non-self-certifying sender DIDs
+  - reusing one sender long enough to trigger anti-spam before the websocket success probe
+- Restoring the live probe/auth inputs fixed the request-validation status ordering without changing production auth or route middleware behavior.
