@@ -8,6 +8,7 @@ members = [
   "crates/kamn-crypto",
   "crates/kamn-data-layer",
   "crates/kamn-e2e-harness",
+  "crates/kamn-governance",
   "crates/kamn-kolme",
   "crates/kamn-live-probe-matrix",
   "crates/kamn-mcp-server",

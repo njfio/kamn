@@ -1637,6 +1637,7 @@ dependencies = [
  "kamn-bridges",
  "kamn-crypto",
  "kamn-data-layer",
+ "kamn-governance",
  "kamn-kolme",
  "kamn-live-probe-matrix",
  "kamn-runtime-guards",
@@ -1684,6 +1685,10 @@ dependencies = [
  "kamn-cli",
  "kamn-mcp-server",
 ]
+
+[[package]]
+name = "kamn-governance"
+version = "0.1.0"
 
 [[package]]
 name = "kamn-kolme"

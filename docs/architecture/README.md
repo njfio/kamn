@@ -21,6 +21,7 @@ diagram references.
 - `docs/architecture/kamn-crypto.md`
 - `docs/architecture/kamn-data-layer.md`
 - `docs/architecture/kamn-e2e-harness.md`
+- `docs/architecture/kamn-governance.md`
 - `docs/architecture/kamn-snapshot-journal.md`
 - `docs/architecture/kamn-types.md`
 
