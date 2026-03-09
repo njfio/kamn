@@ -1,15 +1,14 @@
 use super::super::*;
 use super::support::{
     accept_task, build_task_escrow_snapshot, create_task, fund_escrow, release_escrow,
-    unique_named_state_file,
+    set_state_file_env, unique_named_state_file,
 };
 
 #[test]
 fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes() {
     let _env = acquire_service_api_test_env();
     let state_file = unique_named_state_file("kamn-node-service-api-task-escrow-state");
-    let state_file_text = state_file.to_string_lossy().to_string();
-    let _state_file_guard = EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_text.as_str()));
+    let (_state_file_text, _state_file_guard) = set_state_file_env(state_file.as_path());
     let snapshot = build_task_escrow_snapshot("127.0.0.1:34106");
     let task_caller_did = "kamn:did:agent:test-client-task-state";
     let escrow_caller_did = "kamn:did:agent:test-client-escrow-state";

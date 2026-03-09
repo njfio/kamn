@@ -33,6 +33,12 @@ pub(super) fn read_state_json(path: &Path) -> Value {
     serde_json::from_str(payload.as_str()).expect("state payload should parse")
 }
 
+pub(super) fn set_state_file_env(path: &Path) -> (String, EnvVarGuard) {
+    let path_text = path.to_string_lossy().to_string();
+    let guard = EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(path_text.as_str()));
+    (path_text, guard)
+}
+
 pub(super) fn create_task(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
