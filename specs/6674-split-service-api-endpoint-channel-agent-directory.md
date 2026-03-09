@@ -33,11 +33,11 @@ Extract the channel and agent directory contract coverage out of `crates/kamn-no
 
 ## Acceptance Criteria
 
-- [ ] AC-1: `service_api_endpoint_tests.rs` declares a new channel-agent-directory submodule and no longer retains the moved channel/agent directory test markers.
-- [ ] AC-2: Extracted channel-agent-directory files stay at or below 200 lines each.
-- [ ] AC-3: The staged root threshold ratchets down from `6571` to `5900` lines or lower.
-- [ ] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
-- [ ] AC-5: At least one extracted channel/agent directory test passes from the real `kamn-node` test module path.
+- [x] AC-1: `service_api_endpoint_tests.rs` declares a new channel-agent-directory submodule and no longer retains the moved channel/agent directory test markers.
+- [x] AC-2: Extracted channel-agent-directory files stay at or below 200 lines each.
+- [x] AC-3: The staged root threshold ratchets down from `6571` to `5900` lines or lower.
+- [x] AC-4: `cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture` passes.
+- [x] AC-5: At least one extracted channel/agent directory test passes from the real `kamn-node` test module path.
 
 ## Files To Touch
 
@@ -59,3 +59,25 @@ Extract the channel and agent directory contract coverage out of `crates/kamn-no
 2. Extract the channel and agent directory coverage into bounded files until the split contract passes.
 3. Run the targeted split contract and directly affected `kamn-node` directory-state tests.
 4. Record integration evidence and any deviations in this spec.
+
+## Phase 6 Evidence
+
+- Root module wiring:
+  - `#[path = "service_api_endpoint_tests/channel_agent_directory_contract_tests.rs"]`
+  - `mod channel_agent_directory_contract_tests;`
+- Final line counts:
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs`: `5718`
+  - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/channel_agent_directory_contract_tests.rs`: `12`
+  - `.../channel_state_contract_tests.rs`: `60`
+  - `.../agent_profile_contract_tests.rs`: `68`
+  - `.../agent_registry_contract_tests.rs`: `105`
+  - `.../request_support.rs`: `193`
+  - `.../state_support.rs`: `42`
+  - `.../support.rs`: `7`
+- Verified commands:
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+  - `CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node integration_service_api_endpoint_registers_agent_metadata_idempotently_and_conflicts_on_mismatch -- --nocapture`
+
+## Deviations
+
+- The original single helper file exceeded the 200-line file budget, so the refactor split directory support into `request_support.rs` and `state_support.rs` with `support.rs` kept as a thin façade for existing imports.
