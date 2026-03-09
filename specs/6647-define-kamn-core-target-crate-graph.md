@@ -61,3 +61,24 @@ Define the target crate graph that should exist after `kamn-core` decomposition,
 - Run `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
 - Run `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
 - Verify the architecture index links the new target graph document
+
+## Findings
+
+- `cargo metadata` shows the current direct workspace edge `kamn-types -> kamn-core`.
+- `crates/kamn-types/src/lib.rs` is the concrete inversion hotspot: it re-exports
+  DID types/errors from `kamn-core`, stores `AgentDidError` and `KamnDidError`
+  inside `SharedDidParseError`, and calls `AgentDid::parse(...)` /
+  `KamnDid::parse(...)` directly.
+- Existing decomposition planning already lives in `docs/architecture/kamn-core-module-map.md`,
+  but it did not define the target dependency directions or bridge rules before
+  this issue.
+
+## Integration Evidence
+
+- `cargo test -p kamn-core --test kamn_core_target_crate_graph_docs -- --nocapture`
+- `cargo test -p kamn-types --test identity_boundary_contract -- --nocapture`
+- `cargo test -p kamn-core --test kamn_core_decomposition_map_docs -- --nocapture`
+
+## Deviations
+
+- None. The issue stayed architecture-definition only.
