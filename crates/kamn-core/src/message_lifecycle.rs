@@ -1202,10 +1202,11 @@ fn parse_message_lifecycle_snapshot_payload(
 #[cfg(test)]
 mod tests {
     use super::{
-        serialize_message_lifecycle_snapshot, FileMessageLifecycleSnapshotStore,
-        MessageLifecycleError, MessageLifecycleSnapshot, MessageLifecycleSnapshotError,
-        MessageLifecycleSnapshotStore, MessageLifecycleSnapshotStoreError, MessageLifecycleStore,
-        MessageProofAdmissionError, MessageStatus,
+        parse_message_lifecycle_snapshot_payload, serialize_message_lifecycle_snapshot,
+        FileMessageLifecycleSnapshotStore, MessageLifecycleError, MessageLifecycleSnapshot,
+        MessageLifecycleSnapshotError, MessageLifecycleSnapshotStore,
+        MessageLifecycleSnapshotStoreError, MessageLifecycleStore, MessageProofAdmissionError,
+        MessageStatus,
     };
     use crate::{ProcessorProofAdmissionEvaluator, ProcessorProofArtifact, ZkDesignError};
     use std::fs;
@@ -1502,6 +1503,77 @@ mod tests {
         assert_eq!(
             restored.ids_by_recipient("kamn:did:agent:recipient-1"),
             vec!["urn:uuid:msg-snapshot-1".to_owned()]
+        );
+    }
+
+    #[test]
+    fn unit_parse_message_lifecycle_snapshot_payload_roundtrips_valid_payload() {
+        let snapshot = MessageLifecycleSnapshot {
+            schema_version: 1,
+            records: vec![super::MessageRecordSnapshot {
+                message_id: "urn:uuid:msg-parser-1".to_owned(),
+                sender: "kamn:did:agent:sender-1".to_owned(),
+                recipients: vec![
+                    "kamn:did:agent:recipient-1".to_owned(),
+                    "kamn:did:agent:recipient-2".to_owned(),
+                ],
+                created: "2026-02-07T20:15:30.123Z".to_owned(),
+                expires: "2026-02-07T20:45:30.123Z".to_owned(),
+                status: MessageStatus::Delivered,
+                history: vec![
+                    MessageStatus::Created,
+                    MessageStatus::Signed,
+                    MessageStatus::Delivered,
+                ],
+            }],
+        };
+        let payload =
+            serialize_message_lifecycle_snapshot(&snapshot).expect("snapshot should serialize");
+
+        assert_eq!(
+            parse_message_lifecycle_snapshot_payload(&payload).expect("payload should parse"),
+            snapshot
+        );
+    }
+
+    #[test]
+    fn regression_parse_message_lifecycle_snapshot_payload_rejects_malformed_schema_line() {
+        assert_eq!(
+            parse_message_lifecycle_snapshot_payload("schema\nrecord|broken"),
+            Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
+                "schema".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_parse_message_lifecycle_snapshot_payload_rejects_malformed_record_field_count() {
+        assert_eq!(
+            parse_message_lifecycle_snapshot_payload("schema|1\nrecord|broken"),
+            Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
+                "record|broken".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_parse_message_lifecycle_snapshot_payload_rejects_invalid_status_and_history_codes(
+    ) {
+        assert_eq!(
+            parse_message_lifecycle_snapshot_payload(
+                "schema|1\nrecord|urn:uuid:msg|sender|recipient|created|expires|99|0"
+            ),
+            Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
+                "record|urn:uuid:msg|sender|recipient|created|expires|99|0".to_owned()
+            ))
+        );
+        assert_eq!(
+            parse_message_lifecycle_snapshot_payload(
+                "schema|1\nrecord|urn:uuid:msg|sender|recipient|created|expires|1|0,99"
+            ),
+            Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
+                "record|urn:uuid:msg|sender|recipient|created|expires|1|0,99".to_owned()
+            ))
         );
     }
 
