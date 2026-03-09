@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/ci/check_specs_index_coverage.sh"
 INDEX_DOC="$ROOT_DIR/specs/INDEX.md"
+CONTRIBUTING_FILE="$ROOT_DIR/.github/CONTRIBUTING.md"
+CI_TOOLS_FILE="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected specs index coverage checker to be executable: $CHECKER" >&2
@@ -12,6 +14,16 @@ fi
 
 if [ ! -f "$INDEX_DOC" ]; then
   echo "expected specs index entrypoint document: $INDEX_DOC" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash scripts/ci/check_specs_index_coverage.sh --output-json /tmp/specs-index-coverage.json' "$CONTRIBUTING_FILE"; then
+  echo "expected contributor guidance to mention specs index coverage verification command" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash "$ROOT_DIR/scripts/ci/test_check_specs_index_coverage.sh"' "$CI_TOOLS_FILE"; then
+  echo "expected CI tools regression lane to run specs index coverage contract test" >&2
   exit 1
 fi
 

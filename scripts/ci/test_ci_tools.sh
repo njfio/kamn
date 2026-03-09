@@ -28,6 +28,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_spec_phase6_evidence_policy.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_specs_index_coverage.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_stale_script_references.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_shell_surface_threshold_ratchet.sh"

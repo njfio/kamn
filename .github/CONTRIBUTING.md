@@ -155,6 +155,8 @@ For every Task / Subtask, follow this exact sequence:
      - add/fix `## Phase 6 integration evidence` in the issue spec.
      - include `Executed:` with concrete verification commands.
      - re-run the checker until `status=ok` and `final_decision=GO`.
+   - Verify the top-level specs index still covers the full issue-spec corpus:
+     - `bash scripts/ci/check_specs_index_coverage.sh --output-json /tmp/specs-index-coverage.json`
 
 ### Process Logging
 
