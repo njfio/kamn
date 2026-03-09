@@ -27,10 +27,12 @@ if [ ! -f "$POLICY_DOC" ]; then
 fi
 
 required_policy_markers=(
-  'spec_phase6_policy_version=kamn.spec-phase6-evidence-policy.v1'
+  'spec_phase6_policy_version=kamn.spec-phase6-evidence-policy.v2'
   'spec_phase6_scope=specs/*.md closure-ready specs'
-  'spec_phase6_required_section=## Phase 6 integration evidence'
+  'spec_phase6_canonical_section=## Phase 6 integration evidence'
+  'spec_phase6_noncanonical_headings_fail_closed=true'
   'spec_phase6_required_execution_marker=Executed:'
+  'spec_phase6_migration_plan_status=defined'
   'spec_phase6_policy_status=verified|fail-closed'
 )
 
@@ -139,6 +141,38 @@ if [ "$missing_executed_exit" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$missing_executed_output" | grep -q 'spec_phase6_missing_execution_markers'; then
   echo "expected deterministic spec_phase6_missing_execution_markers reason marker" >&2
+  exit 1
+fi
+
+NONCANONICAL_HEADING_ROOT="$TMP_DIR/noncanonical-heading-root"
+mkdir -p "$NONCANONICAL_HEADING_ROOT/specs"
+cat > "$NONCANONICAL_HEADING_ROOT/specs/9002-fixture.md" <<'EOF'
+# Spec: Issue #9002 - Fixture
+
+- Status: Implemented
+
+## Acceptance criteria
+- [x] AC-1
+
+## Phase 6 Evidence
+
+- Wiring:
+  - Connected fixture entrypoint
+- Executed:
+  - `cargo test -p kamn-core fixture_case`
+EOF
+
+set +e
+noncanonical_heading_output="$(bash "$CHECKER" --repo-root "$NONCANONICAL_HEADING_ROOT" --output-json "$TMP_DIR/noncanonical-heading-report.json" 2>&1)"
+noncanonical_heading_exit=$?
+set -e
+
+if [ "$noncanonical_heading_exit" -eq 0 ]; then
+  echo "expected checker to fail when closure-ready spec uses a noncanonical Phase 6 heading" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$noncanonical_heading_output" | grep -q 'spec_phase6_noncanonical_section_heading'; then
+  echo "expected deterministic spec_phase6_noncanonical_section_heading reason marker" >&2
   exit 1
 fi
 
