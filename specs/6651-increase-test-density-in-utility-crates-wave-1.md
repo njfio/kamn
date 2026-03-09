@@ -78,3 +78,25 @@ Increase direct public-surface regression coverage in the first Wave 1 utility c
   - `crates/kamn-types/tests/did_boundary_regressions_contract.rs` = 26 LOC
   - `crates/kamn-snapshot-journal/tests/snapshot_journal_roundtrip_contract.rs` = 27 LOC
 - New helper functions remain single-purpose and under the function-size target.
+
+## Integration Evidence
+
+- `cargo test -p kamn-types --test did_boundary_regressions -- --nocapture`
+  - passed
+- `cargo test -p kamn-types --test did_boundary_regressions_contract -- --nocapture`
+  - passed
+- `cargo test -p kamn-types -- --nocapture`
+  - passed
+- `cargo test -p kamn-snapshot-journal --test snapshot_journal_roundtrip_integration -- --nocapture`
+  - passed
+- `cargo test -p kamn-snapshot-journal --test snapshot_journal_roundtrip_contract -- --nocapture`
+  - passed
+- `cargo test -p kamn-snapshot-journal -- --nocapture`
+  - passed
+- After Wave 1, inventory is:
+  - `kamn-types`: 29 total tests (`24` before -> `29` after)
+  - `kamn-snapshot-journal`: 23 total tests (`18` before -> `23` after)
+
+## Deviations
+
+- No `kamn-bridges` tests were added in this wave. The issue body allowed selection of 2-3 crates, and repo inspection showed `kamn-bridges` already had broader direct normalization/settlement coverage than the first-pass issue summary implied, so the wave stayed focused on the two highest-leverage crates instead of diluting the change set.
