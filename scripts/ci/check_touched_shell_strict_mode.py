@@ -122,16 +122,20 @@ def evaluate(
 
 
 def is_shell_script(path: Path) -> bool:
-    lines = path.read_text(encoding='utf-8', errors='ignore').splitlines()
+    lines = read_script_lines(path)
     return bool(lines) and lines[0].startswith('#!') and ('bash' in lines[0] or 'sh' in lines[0])
 
 
 def has_strict_mode(path: Path) -> bool:
-    lines = path.read_text(encoding='utf-8', errors='ignore').splitlines()
+    lines = read_script_lines(path)
     for line in lines[1:8]:
         if line.strip() == 'set -euo pipefail':
             return True
     return False
+
+
+def read_script_lines(path: Path) -> list[str]:
+    return path.read_text(encoding='utf-8', errors='ignore').splitlines()
 
 
 def build_report(
