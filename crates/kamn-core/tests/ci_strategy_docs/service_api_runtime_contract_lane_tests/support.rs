@@ -1,7 +1,7 @@
 use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
 
-pub(super) fn assert_runtime_lane_markers(
+pub(super) fn assert_runtime_lane_contract_markers(
     heading: &str,
     commands: &[&str],
     exclusion_marker: &str,

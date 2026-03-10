@@ -1,10 +1,10 @@
-use super::support::assert_runtime_lane_markers;
+use super::support::assert_runtime_lane_contract_markers;
 use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
 
 #[test]
 fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Axum Ingress Contract Lane",
         &[
             "validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json",

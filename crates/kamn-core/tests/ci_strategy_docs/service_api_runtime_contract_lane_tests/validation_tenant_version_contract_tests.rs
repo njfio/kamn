@@ -1,8 +1,8 @@
-use super::support::assert_runtime_lane_markers;
+use super::support::assert_runtime_lane_contract_markers;
 
 #[test]
 fn doc_contains_runtime_service_api_validation_negative_matrix_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Validation Negative-Matrix Contract Lane",
         &[
             "validate_service_api_validation_negative_matrix_live.sh --mode dry-run --output-json /tmp/service-api-validation-negative-matrix-live-summary.json",
@@ -20,7 +20,7 @@ fn doc_contains_runtime_service_api_validation_negative_matrix_contract_lane_ci_
 
 #[test]
 fn doc_contains_runtime_service_api_tenant_isolation_matrix_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Tenant-Isolation Matrix Contract Lane",
         &[
             "validate_service_api_tenant_isolation_matrix_live.sh --mode dry-run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json",
@@ -38,7 +38,7 @@ fn doc_contains_runtime_service_api_tenant_isolation_matrix_contract_lane_ci_mod
 
 #[test]
 fn doc_contains_runtime_api_version_policy_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime API Version-Policy Contract Lane",
         &[
             "validate_api_version_policy_live.sh --mode dry-run --output-json /tmp/api-version-policy-live-summary.json",

@@ -1,8 +1,8 @@
-use super::support::assert_runtime_lane_markers;
+use super::support::assert_runtime_lane_contract_markers;
 
 #[test]
 fn doc_contains_runtime_service_api_graceful_shutdown_drain_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Graceful-Shutdown Drain Contract Lane",
         &[
             "validate_service_api_graceful_shutdown_drain_live.sh --mode dry-run --output-json /tmp/service-api-graceful-shutdown-drain-live-summary.json",
@@ -20,7 +20,7 @@ fn doc_contains_runtime_service_api_graceful_shutdown_drain_contract_lane_ci_mod
 
 #[test]
 fn doc_contains_runtime_service_api_shutdown_abrupt_close_regression_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Shutdown Abrupt-Close Regression Contract Lane",
         &[
             "validate_service_api_shutdown_abrupt_close_regression_live.sh --mode dry-run --output-json /tmp/service-api-shutdown-abrupt-close-regression-live-summary.json",
@@ -38,7 +38,7 @@ fn doc_contains_runtime_service_api_shutdown_abrupt_close_regression_contract_la
 
 #[test]
 fn doc_contains_runtime_service_api_prometheus_metrics_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Prometheus Metrics Contract Lane",
         &[
             "validate_service_api_prometheus_metrics_live.sh --mode dry-run --output-json /tmp/service-api-prometheus-metrics-live-summary.json",

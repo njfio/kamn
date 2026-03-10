@@ -1,8 +1,8 @@
-use super::support::assert_runtime_lane_markers;
+use super::support::assert_runtime_lane_contract_markers;
 
 #[test]
 fn doc_contains_runtime_service_api_serde_payload_parity_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Serde Payload Parity Contract Lane",
         &[
             "validate_service_api_serde_payload_parity_live.sh --output-json /tmp/service-api-serde-payload-parity-live-summary.json",
@@ -19,7 +19,7 @@ fn doc_contains_runtime_service_api_serde_payload_parity_contract_lane_ci_mode_m
 
 #[test]
 fn doc_contains_runtime_service_api_reason_code_compatibility_contract_lane_ci_mode_markers() {
-    assert_runtime_lane_markers(
+    assert_runtime_lane_contract_markers(
         "## Runtime Service API Reason-Code Compatibility Contract Lane",
         &[
             "validate_service_api_reason_code_compatibility_live.sh --output-json /tmp/service-api-reason-code-compatibility-live-summary.json",
