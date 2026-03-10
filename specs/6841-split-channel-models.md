@@ -23,13 +23,13 @@ Reduce `crates/kamn-core/src/channel_models.rs` from a 1780 LOC production monol
 - Touched-Rust size policy remains `NO-GO`
 
 ## Acceptance Criteria
-- [ ] `crates/kamn-core/src/channel_models.rs` is reduced to a thin root shell at or below a staged extraction cap defined by the red contract
-- [ ] Extracted sibling modules are organized by concern rather than arbitrary line slicing
-- [ ] All touched extracted files remain at or below 200 LOC
-- [ ] Existing channel model behavior, snapshot semantics, and snapshot-store behavior remain unchanged
-- [ ] Existing tests that exercise the channel model surface still pass
-- [ ] At least one new extraction contract enforces the staged root shell and module layout
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root <repo-root> --base-ref origin/main --output-json <path>` returns `policy_decision=GO`
+- [x] `crates/kamn-core/src/channel_models.rs` is reduced to a thin root shell at or below a staged extraction cap defined by the red contract
+- [x] Extracted sibling modules are organized by concern rather than arbitrary line slicing
+- [x] All touched extracted files remain at or below 200 LOC
+- [x] Existing channel model behavior, snapshot semantics, and snapshot-store behavior remain unchanged
+- [x] Existing tests that exercise the channel model surface still pass
+- [x] At least one new extraction contract enforces the staged root shell and module layout
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root <repo-root> --base-ref origin/main --output-json <path>` returns `policy_decision=GO`
 
 ## Files To Touch
 - `specs/6841-split-channel-models.md`
@@ -52,3 +52,16 @@ Reduce `crates/kamn-core/src/channel_models.rs` from a 1780 LOC production monol
    - internal tests moved under `src/channel_models/tests/` while preserving stable paths if needed
 3. Run the extraction contract and the existing `channel_models` test lane.
 4. Run the touched-Rust size ratchet and require `policy_decision=GO`.
+
+## Phase 6 Evidence
+- Root shell and real entrypoint preserved through `crates/kamn-core/src/channel_models.rs`, which still owns the exported `kamn_core::channel_models` surface while delegating to bounded child modules.
+- Verified real path:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core channel_models::tests:: -- --nocapture`
+- Verified structural contract:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test channel_models_module_extraction_contract -- --nocapture`
+- Verified touched-Rust gate:
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6840-remote --base-ref origin/main --output-json /tmp/6841-touched-size-final.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+- None.
