@@ -45,3 +45,25 @@ Split `crates/kamn-core/tests/e2e_live_workflow_lane.rs` into a thin root shell 
 3. Run the extraction contract target
 4. Run the real `e2e_live_workflow_lane` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Results
+- [x] `crates/kamn-core/tests/e2e_live_workflow_lane.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for taxonomy/baseline, live markers, trigger/scope guards, scenario/PR markers, strategy markers, and CLI smoke coverage
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-core --test e2e_live_workflow_lane_extraction_contract -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test e2e_live_workflow_lane -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6808-touched-size.json` returns `policy_decision=GO`
+
+## Phase 6 Evidence
+- Root shell size: `12` LOC
+- Extraction modules: `23`, `54`, `31`, `62`, `32` LOC
+- Support modules: `8`, `53`, `13`, `17`, `8`, `47`, `61`, `189` LOC
+- Real target exercises the wired root shell and extracted sibling modules without behavior drift
+
+## Command Evidence
+- `cargo test -p kamn-core --test e2e_live_workflow_lane_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test e2e_live_workflow_lane -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6808-touched-size.json`
+
+## Deviations
+- None.
