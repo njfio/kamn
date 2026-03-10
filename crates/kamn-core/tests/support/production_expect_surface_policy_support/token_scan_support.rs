@@ -60,26 +60,39 @@ fn start_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Opti
         return Some(skip_line_comment(bytes, index + 2));
     }
     if starts_with(bytes, index, b"/*") {
-        state.block_comment_depth = 1;
-        return Some(index + 2);
+        return Some(start_block_comment(index, state));
     }
     if let Some((prefix_len, hash_count)) = raw_string_start(bytes, index) {
-        state.raw_string_hash_count = Some(hash_count);
-        return Some(index + prefix_len);
+        return Some(start_raw_string(index, prefix_len, hash_count, state));
     }
     if let Some(end) = char_literal_end(bytes, index) {
         return Some(end);
     }
     if starts_with(bytes, index, b"b\"") {
-        state.in_string = true;
-        state.escaped = false;
-        return Some(index + 2);
+        return Some(start_string(index, 2, state));
     }
-    (bytes[index] == b'"').then(|| {
-        state.in_string = true;
-        state.escaped = false;
-        index + 1
-    })
+    (bytes[index] == b'"').then(|| start_string(index, 1, state))
+}
+
+fn start_block_comment(index: usize, state: &mut CodeScanState) -> usize {
+    state.block_comment_depth = 1;
+    index + 2
+}
+
+fn start_raw_string(
+    index: usize,
+    prefix_len: usize,
+    hash_count: usize,
+    state: &mut CodeScanState,
+) -> usize {
+    state.raw_string_hash_count = Some(hash_count);
+    index + prefix_len
+}
+
+fn start_string(index: usize, width: usize, state: &mut CodeScanState) -> usize {
+    state.in_string = true;
+    state.escaped = false;
+    index + width
 }
 
 fn skip_whitespace(bytes: &[u8], mut index: usize, state: &mut CodeScanState) -> usize {
