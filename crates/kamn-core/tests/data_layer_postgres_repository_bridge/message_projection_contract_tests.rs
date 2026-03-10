@@ -16,21 +16,7 @@ fn spec_c01_insert_projection_is_deterministic() {
     .expect("valid record and identities should project insert descriptor");
     assert_eq!(descriptor.kind, DataLayerPgOperationKind::InsertMessage);
     assert!(descriptor.sql.starts_with("INSERT INTO messages"));
-    assert_eq!(
-        descriptor.bind_markers,
-        vec![
-            "message_id",
-            "owner_did",
-            "sender_did",
-            "recipient_did",
-            "envelope_ciphertext",
-            "envelope_nonce",
-            "content_hash_sha256",
-            "hash_chain_prev",
-            "blind_indexes",
-            "retention_class"
-        ]
-    );
+    assert_insert_bind_markers(&descriptor.bind_markers);
     assert_eq!(descriptor.session.requester_did, "kamn:did:agent:agent-1");
 }
 
@@ -52,7 +38,10 @@ fn spec_c02_query_and_search_projection_include_session_context() {
             limit: 25,
         })
         .expect("valid search request should project");
-    assert_eq!(search.kind, DataLayerPgOperationKind::SearchMessagesByBlindIndex);
+    assert_eq!(
+        search.kind,
+        DataLayerPgOperationKind::SearchMessagesByBlindIndex
+    );
     assert!(search.sql.contains("blind_indexes ->> $2 = $3"));
 }
 
@@ -61,12 +50,12 @@ fn spec_c03_default_rls_projection_is_deterministic() {
     let statements = data_layer_pg_project_default_rls_statements();
     assert!(statements.len() >= 4);
     assert_eq!(statements[0].table_name, "access_log");
-    assert!(
-        statements
-            .iter()
-            .any(|entry| entry.sql.contains("ENABLE ROW LEVEL SECURITY"))
-    );
-    assert!(statements.iter().any(|entry| entry.sql.contains("CREATE POLICY")));
+    assert!(statements
+        .iter()
+        .any(|entry| entry.sql.contains("ENABLE ROW LEVEL SECURITY")));
+    assert!(statements
+        .iter()
+        .any(|entry| entry.sql.contains("CREATE POLICY")));
 }
 
 #[test]
@@ -83,4 +72,22 @@ fn spec_c04_invalid_requester_did_fails_closed() {
         }
         other => panic!("unexpected error variant: {other:?}"),
     }
+}
+
+fn assert_insert_bind_markers(markers: &[&str]) {
+    assert_eq!(
+        markers,
+        [
+            "message_id",
+            "owner_did",
+            "sender_did",
+            "recipient_did",
+            "envelope_ciphertext",
+            "envelope_nonce",
+            "content_hash_sha256",
+            "hash_chain_prev",
+            "blind_indexes",
+            "retention_class",
+        ]
+    );
 }

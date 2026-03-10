@@ -53,8 +53,9 @@ pub(crate) fn fixture_record() -> DataLayerM0EnvelopeRecord {
 }
 
 pub(crate) fn fixture_m5_embedding_record() -> DataLayerM5EmbeddingRecord {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     registry
         .append(DataLayerM5EmbeddingRecordInput {
             embedding_id: "embed-pg-1".to_owned(),
@@ -72,22 +73,8 @@ pub(crate) fn fixture_m5_embedding_record() -> DataLayerM5EmbeddingRecord {
 
 pub(crate) fn fixture_m6_edge_record() -> DataLayerM6GraphEdgeRecord {
     let mut registry = DataLayerM6GraphRegistry::new();
-    registry
-        .register_node(DataLayerM6GraphNodeInput {
-            owner_did: "kamn:did:owner:owner-1".to_owned(),
-            node_id: "agent-a".to_owned(),
-            kind: DataLayerM6GraphNodeKind::Agent,
-            label: "agent-a".to_owned(),
-        })
-        .expect("source node should register");
-    registry
-        .register_node(DataLayerM6GraphNodeInput {
-            owner_did: "kamn:did:owner:owner-1".to_owned(),
-            node_id: "agent-b".to_owned(),
-            kind: DataLayerM6GraphNodeKind::Agent,
-            label: "agent-b".to_owned(),
-        })
-        .expect("target node should register");
+    register_agent_node(&mut registry, "agent-a", "source node should register");
+    register_agent_node(&mut registry, "agent-b", "target node should register");
     registry
         .register_edge(DataLayerM6GraphEdgeInput {
             owner_did: "kamn:did:owner:owner-1".to_owned(),
@@ -99,6 +86,17 @@ pub(crate) fn fixture_m6_edge_record() -> DataLayerM6GraphEdgeRecord {
             observed_at_epoch_seconds: 1_900_000_000,
         })
         .expect("trust edge should register")
+}
+
+fn register_agent_node(registry: &mut DataLayerM6GraphRegistry, node_id: &str, message: &str) {
+    registry
+        .register_node(DataLayerM6GraphNodeInput {
+            owner_did: "kamn:did:owner:owner-1".to_owned(),
+            node_id: node_id.to_owned(),
+            kind: DataLayerM6GraphNodeKind::Agent,
+            label: node_id.to_owned(),
+        })
+        .expect(message);
 }
 
 pub(crate) fn fixture_m7_telemetry_record() -> DataLayerM7TelemetryPointRecord {
