@@ -1,60 +1,23 @@
 #[test]
 fn parses_runtime_mode_daemon_with_bounded_controls() {
-    let args = vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "3".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "25".to_owned(),
-        "--daemon-shutdown-signal-tick".to_owned(),
-        "99".to_owned(),
-        "--daemon-shutdown-drain-ticks".to_owned(),
-        "1".to_owned(),
-        "--daemon-shutdown-timeout-ticks".to_owned(),
-        "1".to_owned(),
-        "--daemon-peer-id".to_owned(),
-        "peer-alpha".to_owned(),
-        "--daemon-lifecycle-event".to_owned(),
-        "start-connect".to_owned(),
-        "--daemon-lifecycle-event".to_owned(),
-        "handshake-succeeded".to_owned(),
-    ];
-
-    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
-    assert_eq!(parsed.runtime_mode, RuntimeMode::daemon());
-    assert_eq!(parsed.daemon_max_ticks, Some(3));
-    assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
-    assert!(!parsed.daemon_shutdown_os_signals);
-    assert_eq!(parsed.daemon_peer_id, Some("peer-alpha".to_owned()));
-    assert_eq!(parsed.daemon_lifecycle_events.len(), 2);
+    let parsed = parse_daemon(bounded_control_args());
+    assert_bounded_controls(&parsed);
 }
 
 #[test]
 fn parses_runtime_mode_daemon_with_shutdown_controls() {
-    let args = vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "8".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "25".to_owned(),
-        "--daemon-shutdown-signal-tick".to_owned(),
-        "3".to_owned(),
-        "--daemon-shutdown-drain-ticks".to_owned(),
-        "2".to_owned(),
-        "--daemon-shutdown-timeout-ticks".to_owned(),
-        "4".to_owned(),
-    ];
-
-    let parsed = parse_args_with_clean_daemon_env(args)
-        .expect("daemon args with shutdown controls should parse");
+    let parsed = parse_daemon(&[
+        "--daemon-max-ticks",
+        "8",
+        "--daemon-tick-interval-ms",
+        "25",
+        "--daemon-shutdown-signal-tick",
+        "3",
+        "--daemon-shutdown-drain-ticks",
+        "2",
+        "--daemon-shutdown-timeout-ticks",
+        "4",
+    ]);
     assert_eq!(parsed.daemon_shutdown_signal_ticks, vec![3]);
     assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
@@ -63,25 +26,17 @@ fn parses_runtime_mode_daemon_with_shutdown_controls() {
 
 #[test]
 fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
-    let args = vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "12".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "5".to_owned(),
-        "--daemon-shutdown-os-signals".to_owned(),
-        "--daemon-shutdown-drain-ticks".to_owned(),
-        "2".to_owned(),
-        "--daemon-shutdown-timeout-ticks".to_owned(),
-        "4".to_owned(),
-    ];
-
-    let parsed = parse_args_with_clean_daemon_env(args)
-        .expect("daemon args with os signal controls should parse");
+    let parsed = parse_daemon(&[
+        "--daemon-max-ticks",
+        "12",
+        "--daemon-tick-interval-ms",
+        "5",
+        "--daemon-shutdown-os-signals",
+        "--daemon-shutdown-drain-ticks",
+        "2",
+        "--daemon-shutdown-timeout-ticks",
+        "4",
+    ]);
     assert_eq!(parsed.daemon_shutdown_signal_ticks, Vec::<u64>::new());
     assert!(parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
@@ -90,41 +45,8 @@ fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
 
 #[test]
 fn parses_runtime_mode_daemon_with_observability_endpoint_controls() {
-    let args = vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "12".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "5".to_owned(),
-        "--observability-endpoint-bind".to_owned(),
-        "127.0.0.1:9108".to_owned(),
-        "--observability-endpoint-metrics-path".to_owned(),
-        "/runtime/metrics".to_owned(),
-        "--observability-endpoint-health-path".to_owned(),
-        "/runtime/health".to_owned(),
-        "--observability-endpoint-max-requests".to_owned(),
-        "3".to_owned(),
-        "--observability-endpoint-idle-timeout-ms".to_owned(),
-        "1200".to_owned(),
-    ];
-
-    let parsed = parse_args_with_clean_daemon_env(args)
-        .expect("daemon args with observability endpoint should parse");
-    assert_eq!(
-        parsed.observability_endpoint_bind_addr,
-        Some("127.0.0.1:9108".to_owned())
-    );
-    assert_eq!(
-        parsed.observability_endpoint_metrics_path,
-        "/runtime/metrics"
-    );
-    assert_eq!(parsed.observability_endpoint_health_path, "/runtime/health");
-    assert_eq!(parsed.observability_endpoint_max_requests, 3);
-    assert_eq!(parsed.observability_endpoint_idle_timeout_ms, 1200);
+    let parsed = parse_daemon(observability_control_args());
+    assert_observability_controls(&parsed);
 }
 
 #[test]
@@ -174,3 +96,65 @@ fn regression_3202_invalid_daemon_env_override_fails_closed_without_config_file(
     );
 }
 
+fn bounded_control_args() -> &'static [&'static str] {
+    &[
+        "--daemon-max-ticks",
+        "3",
+        "--daemon-tick-interval-ms",
+        "25",
+        "--daemon-shutdown-signal-tick",
+        "99",
+        "--daemon-shutdown-drain-ticks",
+        "1",
+        "--daemon-shutdown-timeout-ticks",
+        "1",
+        "--daemon-peer-id",
+        "peer-alpha",
+        "--daemon-lifecycle-event",
+        "start-connect",
+        "--daemon-lifecycle-event",
+        "handshake-succeeded",
+    ]
+}
+
+fn observability_control_args() -> &'static [&'static str] {
+    &[
+        "--daemon-max-ticks",
+        "12",
+        "--daemon-tick-interval-ms",
+        "5",
+        "--observability-endpoint-bind",
+        "127.0.0.1:9108",
+        "--observability-endpoint-metrics-path",
+        "/runtime/metrics",
+        "--observability-endpoint-health-path",
+        "/runtime/health",
+        "--observability-endpoint-max-requests",
+        "3",
+        "--observability-endpoint-idle-timeout-ms",
+        "1200",
+    ]
+}
+
+fn assert_bounded_controls(parsed: &crate::NodeCli) {
+    assert_eq!(parsed.runtime_mode, RuntimeMode::daemon());
+    assert_eq!(parsed.daemon_max_ticks, Some(3));
+    assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
+    assert!(!parsed.daemon_shutdown_os_signals);
+    assert_eq!(parsed.daemon_peer_id, Some("peer-alpha".to_owned()));
+    assert_eq!(parsed.daemon_lifecycle_events.len(), 2);
+}
+
+fn assert_observability_controls(parsed: &crate::NodeCli) {
+    assert_eq!(
+        parsed.observability_endpoint_bind_addr,
+        Some("127.0.0.1:9108".to_owned())
+    );
+    assert_eq!(
+        parsed.observability_endpoint_metrics_path,
+        "/runtime/metrics"
+    );
+    assert_eq!(parsed.observability_endpoint_health_path, "/runtime/health");
+    assert_eq!(parsed.observability_endpoint_max_requests, 3);
+    assert_eq!(parsed.observability_endpoint_idle_timeout_ms, 1200);
+}
