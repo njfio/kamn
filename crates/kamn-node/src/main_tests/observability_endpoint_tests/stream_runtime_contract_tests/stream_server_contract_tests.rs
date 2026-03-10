@@ -1,39 +1,7 @@
 use super::super::support::*;
 use super::super::*;
 
-#[test]
-fn integration_runtime_observability_endpoint_serves_stream_path() {
-    let parsed = parse_args_with_clean_daemon_env(vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "3".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "25".to_owned(),
-    ])
-    .expect("daemon args should parse");
-    let report = execute(parsed).expect("daemon execution should succeed");
-    let snapshot =
-        build_runtime_observability_snapshot(&report).expect("daemon report should map snapshot");
-    let bind_addr = reserve_loopback_addr();
-    let endpoint_config = ObservabilityEndpointConfig {
-        bind_addr: bind_addr.clone(),
-        metrics_path: "/metrics".to_owned(),
-        health_path: "/healthz".to_owned(),
-        max_requests: 2,
-        idle_timeout_ms: 2_000,
-    };
-
-    let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
-    wait_for_endpoint_ready(bind_addr.as_str());
-    let stream_response = send_http_get(bind_addr.as_str(), "/metrics.stream");
-    assert!(stream_response.contains("HTTP/1.1 200 OK"));
-    assert!(stream_response.contains("application/x-ndjson"));
+fn assert_ok_join(server: thread::JoinHandle<Result<(), String>>) {
     assert!(server
         .join()
         .expect("endpoint thread should complete")
@@ -41,35 +9,19 @@ fn integration_runtime_observability_endpoint_serves_stream_path() {
 }
 
 #[test]
-fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_stream_requests() {
-    let parsed = parse_args_with_clean_daemon_env(vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "3".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "25".to_owned(),
-    ])
-    .expect("daemon args should parse");
-    let report = execute(parsed).expect("daemon execution should succeed");
-    let snapshot =
-        build_runtime_observability_snapshot(&report).expect("daemon report should map snapshot");
-    let bind_addr = reserve_loopback_addr();
-    let endpoint_config = ObservabilityEndpointConfig {
-        bind_addr: bind_addr.clone(),
-        metrics_path: "/metrics".to_owned(),
-        health_path: "/healthz".to_owned(),
-        max_requests: 5,
-        idle_timeout_ms: 2_000,
-    };
+fn integration_runtime_observability_endpoint_serves_stream_path() {
+    let snapshot = daemon_observability_snapshot();
+    let (bind_addr, server) = spawn_observability_server(&snapshot, 2, 2_000);
+    let stream_response = send_http_get(bind_addr.as_str(), "/metrics.stream");
+    assert!(stream_response.contains("HTTP/1.1 200 OK"));
+    assert!(stream_response.contains("application/x-ndjson"));
+    assert_ok_join(server);
+}
 
-    let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
-    wait_for_endpoint_ready(bind_addr.as_str());
+#[test]
+fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_stream_requests() {
+    let snapshot = daemon_observability_snapshot();
+    let (bind_addr, server) = spawn_observability_server(&snapshot, 5, 2_000);
     let barrier = Arc::new(Barrier::new(3));
     let metrics_barrier = Arc::clone(&barrier);
     let metrics_addr = bind_addr.clone();
@@ -94,10 +46,7 @@ fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_str
         .contains("HTTP/1.1 200 OK"));
     assert!(send_http_get(bind_addr.as_str(), "/healthz").contains("HTTP/1.1 200 OK"));
     assert!(send_http_get(bind_addr.as_str(), "/readyz").contains("HTTP/1.1 200 OK"));
-    assert!(server
-        .join()
-        .expect("endpoint thread should complete")
-        .is_ok());
+    assert_ok_join(server);
 }
 
 #[test]

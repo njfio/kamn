@@ -1,6 +1,13 @@
 use super::super::support::*;
 use super::super::*;
 
+fn kolme_live_snapshot() -> RuntimeObservabilitySnapshot {
+    let mut snapshot = sample_observability_snapshot();
+    snapshot.source = "kolme-live".to_owned();
+    snapshot.runtime_mode = "kolme-live".to_owned();
+    snapshot
+}
+
 #[test]
 fn regression_runtime_observability_endpoint_tls_mode_defaults_to_require_for_kolme_live() {
     let _env_lock = daemon_test_env_lock()
@@ -10,9 +17,7 @@ fn regression_runtime_observability_endpoint_tls_mode_defaults_to_require_for_ko
     let _tls_cert_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE", None);
     let _tls_key_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE", None);
 
-    let mut snapshot = sample_observability_snapshot();
-    snapshot.source = "kolme-live".to_owned();
-    snapshot.runtime_mode = "kolme-live".to_owned();
+    let snapshot = kolme_live_snapshot();
     let endpoint_config = ObservabilityEndpointConfig {
         bind_addr: reserve_loopback_addr(),
         metrics_path: "/metrics".to_owned(),
@@ -39,22 +44,8 @@ fn integration_runtime_observability_endpoint_tls_mode_allows_explicit_disabled_
     let _tls_cert_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE", None);
     let _tls_key_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE", None);
 
-    let mut snapshot = sample_observability_snapshot();
-    snapshot.source = "kolme-live".to_owned();
-    snapshot.runtime_mode = "kolme-live".to_owned();
-    let bind_addr = reserve_loopback_addr();
-    let endpoint_config = ObservabilityEndpointConfig {
-        bind_addr: bind_addr.clone(),
-        metrics_path: "/metrics".to_owned(),
-        health_path: "/healthz".to_owned(),
-        max_requests: 2,
-        idle_timeout_ms: 2_000,
-    };
-
-    let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
-    wait_for_endpoint_ready(bind_addr.as_str());
+    let snapshot = kolme_live_snapshot();
+    let (bind_addr, server) = spawn_observability_server(&snapshot, 2, 2_000);
     assert!(send_http_get(bind_addr.as_str(), "/metrics").contains("HTTP/1.1 200 OK"));
     assert!(server
         .join()

@@ -1,34 +1,37 @@
 use super::support::*;
 use super::*;
 
+fn assert_surface_contract(surface: ObservabilityEndpointPayloadSurface, body: &str) {
+    assert!(validate_observability_endpoint_payload_contract(surface, body).is_ok());
+}
+
 #[test]
 fn spec_c01_observability_endpoint_contract_checker_accepts_valid_surface_payloads() {
     let snapshot = sample_observability_snapshot();
-    let metrics = render_observability_endpoint_response(&snapshot, "/metrics");
-    let health = render_observability_endpoint_response(&snapshot, "/healthz");
-    let readiness = render_observability_endpoint_response(&snapshot, "/readyz");
-    let stream = render_observability_endpoint_response(&snapshot, "/metrics.stream");
-
-    assert!(validate_observability_endpoint_payload_contract(
+    assert_surface_contract(
         ObservabilityEndpointPayloadSurface::Metrics,
-        metrics.body.as_str()
-    )
-    .is_ok());
-    assert!(validate_observability_endpoint_payload_contract(
+        render_observability_endpoint_response(&snapshot, "/metrics")
+            .body
+            .as_str(),
+    );
+    assert_surface_contract(
         ObservabilityEndpointPayloadSurface::Health,
-        health.body.as_str()
-    )
-    .is_ok());
-    assert!(validate_observability_endpoint_payload_contract(
+        render_observability_endpoint_response(&snapshot, "/healthz")
+            .body
+            .as_str(),
+    );
+    assert_surface_contract(
         ObservabilityEndpointPayloadSurface::Readiness,
-        readiness.body.as_str()
-    )
-    .is_ok());
-    assert!(validate_observability_endpoint_payload_contract(
+        render_observability_endpoint_response(&snapshot, "/readyz")
+            .body
+            .as_str(),
+    );
+    assert_surface_contract(
         ObservabilityEndpointPayloadSurface::Stream,
-        stream.body.as_str()
-    )
-    .is_ok());
+        render_observability_endpoint_response(&snapshot, "/metrics.stream")
+            .body
+            .as_str(),
+    );
 }
 
 #[test]
