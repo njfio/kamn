@@ -60,3 +60,22 @@ Extract the S-11 through S-15 live probe implementations out of `crates/kamn-e2e
 2. Extract the final production tranche into bounded sibling modules until the contract passes.
 3. Run focused `kamn-e2e-harness` tests covering CLI-scripted driver behavior and runtime contracts.
 4. Run touched-Rust size policy on the full issue write set.
+
+# Phase 6 Evidence
+
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6709-touched-size-refactor-clean.json`
+  - `policy_decision=GO`
+- `cargo test -p kamn-e2e-harness --test cli_scripted_tranche_three_extraction_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness cli_scripted -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+
+# Outcomes
+
+- `crates/kamn-e2e-harness/src/drivers/cli_scripted.rs` reduced to `387` LOC
+- `crates/kamn-e2e-harness/src/drivers/cli_scripted/live_probe_tranche_three.rs` reduced to `83` LOC
+- All touched tranche-three files are within the `<= 200` LOC limit
+- All touched tranche-three helpers satisfy the touched-Rust function-size gate
+
+# Deviations
+
+- The primary `6709-split-cli-scripted-live-probe-tranche-3` worktree inherited unrelated tracked edits from earlier issue work. I verified the green and refactor heads in detached clean worktrees so the touched-Rust size policy evaluated only the `#6709` diff.
