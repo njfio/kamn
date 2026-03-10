@@ -56,3 +56,12 @@ Outputs:
 4. Run `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6769-touched-size.json`.
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test ci_strategy_docs_make_demo_governance_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6769-touched-size-refactor.json`
+- Result: the make/demo governance tranche is wired through the real `ci_strategy_docs` target; root file reduced to `477` LOC and touched-Rust returned `policy_decision=GO`.
+
+## Deviations
+- The root file remains above the long-term 200 LOC target and will require follow-up tranche extraction. This issue only covers the remaining `doc_contains_make_and_demo_scope_contract_rules()` block defined in the issue scope.
