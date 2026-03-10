@@ -79,6 +79,23 @@ pub(in super::super) fn spawn_observability_server(
     (bind_addr, server)
 }
 
+fn serve_with_tls_override(
+    endpoint_config: ObservabilityEndpointConfig,
+    snapshot: RuntimeObservabilitySnapshot,
+    cert_file: String,
+    key_file: String,
+) -> Result<(), String> {
+    set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(Some(
+        ObservabilityEndpointTlsModeOverride::Require {
+            cert_file,
+            key_file,
+        },
+    ));
+    let result = serve_observability_endpoint(&endpoint_config, &snapshot);
+    set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(None);
+    result
+}
+
 pub(in super::super) fn spawn_tls_observability_server(
     snapshot: &RuntimeObservabilitySnapshot,
     max_requests: u64,
@@ -96,15 +113,7 @@ pub(in super::super) fn spawn_tls_observability_server(
     };
     let server_snapshot = snapshot.clone();
     let server = thread::spawn(move || {
-        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(Some(
-            ObservabilityEndpointTlsModeOverride::Require {
-                cert_file,
-                key_file,
-            },
-        ));
-        let result = serve_observability_endpoint(&endpoint_config, &server_snapshot);
-        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(None);
-        result
+        serve_with_tls_override(endpoint_config, server_snapshot, cert_file, key_file)
     });
     wait_for_https_endpoint_ready(bind_addr.as_str());
     (bind_addr, server)
