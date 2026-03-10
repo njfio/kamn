@@ -48,7 +48,7 @@ const ROLE_PROFILE_SPECS: [RoleProfileSpec; 6] = [
     ),
 ];
 
-fn role_profiles_from_specs(specs: &[RoleProfileSpec]) -> Vec<LivePostgresLoadProfile> {
+fn build_role_profiles(specs: &[RoleProfileSpec]) -> Vec<LivePostgresLoadProfile> {
     specs
         .iter()
         .copied()
@@ -59,5 +59,5 @@ fn role_profiles_from_specs(specs: &[RoleProfileSpec]) -> Vec<LivePostgresLoadPr
 }
 
 pub(crate) fn project_live_postgres_role_profiles() -> Vec<LivePostgresLoadProfile> {
-    role_profiles_from_specs(&ROLE_PROFILE_SPECS)
+    build_role_profiles(&ROLE_PROFILE_SPECS)
 }

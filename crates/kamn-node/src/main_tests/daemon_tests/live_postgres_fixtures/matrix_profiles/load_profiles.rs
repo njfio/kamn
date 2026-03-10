@@ -71,7 +71,7 @@ pub(crate) fn load_profile(
     }
 }
 
-fn load_profiles_from_specs(specs: &[LoadProfileSpec]) -> Vec<LivePostgresLoadProfile> {
+fn build_load_profiles(specs: &[LoadProfileSpec]) -> Vec<LivePostgresLoadProfile> {
     specs
         .iter()
         .copied()
@@ -89,11 +89,11 @@ fn load_profiles_from_specs(specs: &[LoadProfileSpec]) -> Vec<LivePostgresLoadPr
 }
 
 fn applied_load_profiles() -> Vec<LivePostgresLoadProfile> {
-    load_profiles_from_specs(&APPLIED_LOAD_PROFILE_SPECS)
+    build_load_profiles(&APPLIED_LOAD_PROFILE_SPECS)
 }
 
 fn deferred_load_profiles() -> Vec<LivePostgresLoadProfile> {
-    load_profiles_from_specs(&DEFERRED_LOAD_PROFILE_SPECS)
+    build_load_profiles(&DEFERRED_LOAD_PROFILE_SPECS)
 }
 
 pub(crate) fn project_live_postgres_load_profiles() -> Vec<LivePostgresLoadProfile> {

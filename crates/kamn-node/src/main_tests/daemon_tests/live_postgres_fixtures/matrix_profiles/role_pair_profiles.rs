@@ -91,7 +91,7 @@ pub(crate) fn role_pair_profile(
     }
 }
 
-pub(crate) fn role_pair_profiles_from_specs(
+pub(crate) fn build_role_pair_profiles(
     specs: &[RolePairProfileSpec],
 ) -> Vec<LivePostgresRolePairProfile> {
     specs
@@ -113,5 +113,5 @@ pub(crate) fn role_pair_profiles_from_specs(
 }
 
 pub(crate) fn project_live_postgres_role_pair_profiles() -> Vec<LivePostgresRolePairProfile> {
-    role_pair_profiles_from_specs(&ROLE_PAIR_PROFILE_SPECS)
+    build_role_pair_profiles(&ROLE_PAIR_PROFILE_SPECS)
 }

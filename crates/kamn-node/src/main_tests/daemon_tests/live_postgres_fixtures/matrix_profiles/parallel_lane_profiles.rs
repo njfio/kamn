@@ -73,12 +73,12 @@ const ASYMMETRIC_PARALLEL_LANE_SPECS: [RolePairProfileSpec; 4] = [
 ];
 
 pub(crate) fn project_live_postgres_parallel_role_pair_lanes() -> Vec<LivePostgresRolePairProfile> {
-    role_pair_profiles_from_specs(&PARALLEL_ROLE_PAIR_PROFILE_SPECS)
+    build_role_pair_profiles(&PARALLEL_ROLE_PAIR_PROFILE_SPECS)
 }
 
 pub(crate) fn project_live_postgres_asymmetric_parallel_lanes() -> Vec<LivePostgresRolePairProfile>
 {
-    role_pair_profiles_from_specs(&ASYMMETRIC_PARALLEL_LANE_SPECS)
+    build_role_pair_profiles(&ASYMMETRIC_PARALLEL_LANE_SPECS)
 }
 
 pub(crate) fn project_live_postgres_parallel_lane_topology_profiles(
