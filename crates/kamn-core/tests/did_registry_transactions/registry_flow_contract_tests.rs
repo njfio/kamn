@@ -1,5 +1,5 @@
 use super::support::*;
-use kamn_core::{DidRegistryError, DidLifecycleMutationAction};
+use kamn_core::DidRegistryError;
 
 #[test]
 fn register_and_resolve_round_trip() {

@@ -1,5 +1,5 @@
 use super::support::*;
-use kamn_core::{DidRegistryError, InMemoryDidRegistrationChainAdapter};
+use kamn_core::DidRegistryError;
 
 #[test]
 fn functional_chain_submission_adapter_returns_typed_submitted_outcome() {
