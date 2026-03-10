@@ -65,3 +65,18 @@ Outputs:
    - `cargo test -p kamn-e2e-harness --test command_contract_extraction_contract -- --nocapture`
    - `cargo test -p kamn-e2e-harness command_contract -- --nocapture`
    - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json <path>`
+
+# Phase 6 Evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test command_contract_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6746 --base-ref origin/main --output-json /tmp/6746-touched-size.json`
+
+Result:
+- extraction contract: pass
+- real `command_contract` target: `90 passed, 0 failed`
+- touched-Rust size policy: `policy_decision=GO`
+
+# Deviations
+
+- Verification used `TMPDIR=/home/n/Code/kamn/tmp` and `CARGO_TARGET_DIR=/home/n/Code/kamn/target` because `/tmp` ran out of space during compile/link on the clean clone. This did not change source inputs; it only moved transient build artifacts.
