@@ -29,6 +29,29 @@ fn functional_runtime_daemon_projects_phase6_deferred_runtime_markers_when_shutd
     );
 }
 
+#[test]
+fn regression_runtime_daemon_deferred_phase6_log_selection_uses_execution_id() {
+    let target_execution_id = "node-runtime:daemon:phase6-deferred-contract:processor";
+    let captured_logs = vec![
+        format!(
+            "{{\"event\":\"node.runtime.daemon.execute.complete\",\"execution_id\":\"node-runtime:daemon:foreign:processor\",\"phase6_reason_code\":\"m10_phase6_scheduler_cycle_applied\"}}"
+        ),
+        format!(
+            "{{\"event\":\"node.runtime.daemon.execute.complete\",\"execution_id\":\"{target_execution_id}\",\"phase6_reason_code\":\"m10_phase6_scheduler_cycle_deferred\"}}"
+        ),
+    ];
+    let selected = find_daemon_complete_log_for_execution(
+        &captured_logs,
+        target_execution_id,
+    );
+    assert_json_log_field(selected, "execution_id", target_execution_id);
+    assert_json_log_field(
+        selected,
+        "phase6_reason_code",
+        "m10_phase6_scheduler_cycle_deferred",
+    );
+}
+
 fn assert_selector_bundle_accepts_canonical_rows(canonical_rows: &[String]) {
     let canonical_fingerprint =
         crate::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test();
@@ -102,9 +125,9 @@ fn capture_deferred_phase6_json_and_complete_log() -> (String, String) {
         "--output",
         "json",
     ]);
-    let complete_line = find_first_daemon_log(
+    let complete_line = find_daemon_complete_log_for_execution(
         &captured_logs,
-        "\"event\":\"node.runtime.daemon.execute.complete\"",
+        "node-runtime:daemon:kamn-devnet:processor",
     );
     (rendered, complete_line.to_owned())
 }
