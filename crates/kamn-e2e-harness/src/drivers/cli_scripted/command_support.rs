@@ -1,7 +1,7 @@
 use super::{
     AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV, AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
 };
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 
 pub(crate) fn run_cli_command_capture_stdout(
     cli_binary: &str,
@@ -19,9 +19,7 @@ pub(crate) fn run_cli_command_expect_failure_with_agent_name(
 ) -> Result<String, String> {
     let mut command = configured_command(cli_binary, args, Some(agent_name));
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
-    let output = command
-        .output()
-        .map_err(|error| format!("{step} failed to spawn: {error}"))?;
+    let output = spawn_output(&mut command, step)?;
     if output.status.success() {
         return Err(format!("{step} unexpectedly succeeded"));
     }
@@ -56,24 +54,7 @@ pub(crate) fn run_cli_command_capture_stdout_with_optional_agent_name(
 ) -> Result<String, String> {
     let mut command = configured_command(cli_binary, args, agent_name);
     command.stdout(Stdio::piped()).stderr(Stdio::null());
-    let output = command
-        .output()
-        .map_err(|error| format!("{step} failed to spawn: {error}"))?;
-    if !output.status.success() {
-        let exit_status = output
-            .status
-            .code()
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "signal".to_owned());
-        return Err(format!("{step} failed (exit_status={exit_status})"));
-    }
-    let stdout = String::from_utf8_lossy(output.stdout.as_slice())
-        .trim()
-        .to_owned();
-    if stdout.is_empty() {
-        return Err(format!("{step} returned empty stdout"));
-    }
-    Ok(stdout)
+    stdout_from_output(spawn_output(&mut command, step)?, step)
 }
 
 pub(crate) fn parse_text_output_field<'a>(output: &'a str, key: &str) -> Option<&'a str> {
@@ -93,4 +74,28 @@ fn configured_command(cli_binary: &str, args: &[&str], agent_name: Option<&str>)
         command.env("KAMN_AGENT_NAME", agent_name);
     }
     command
+}
+
+fn spawn_output(command: &mut Command, step: &str) -> Result<Output, String> {
+    command
+        .output()
+        .map_err(|error| format!("{step} failed to spawn: {error}"))
+}
+
+fn stdout_from_output(output: Output, step: &str) -> Result<String, String> {
+    if !output.status.success() {
+        let exit_status = output
+            .status
+            .code()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "signal".to_owned());
+        return Err(format!("{step} failed (exit_status={exit_status})"));
+    }
+    let stdout = String::from_utf8_lossy(output.stdout.as_slice())
+        .trim()
+        .to_owned();
+    if stdout.is_empty() {
+        return Err(format!("{step} returned empty stdout"));
+    }
+    Ok(stdout)
 }

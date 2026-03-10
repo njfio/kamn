@@ -14,6 +14,9 @@ use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
 use std::sync::Arc;
 
+pub(crate) trait CliRunner: Fn() -> Result<(), String> + Send + Sync + 'static {}
+impl<T> CliRunner for T where T: Fn() -> Result<(), String> + Send + Sync + 'static {}
+
 /// CLI-scripted driver with optional live execution for S-01 through S-15.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
@@ -62,10 +65,7 @@ impl CliScriptedDriver {
     }
 
     /// Creates CLI-scripted driver with one runner reused for all live-bound scenarios.
-    pub fn with_runner<F>(live_execution_enabled: bool, live_runner: F) -> Self
-    where
-        F: Fn() -> Result<(), String> + Send + Sync + 'static,
-    {
+    pub fn with_runner<F: CliRunner>(live_execution_enabled: bool, live_runner: F) -> Self {
         Self::from_runner_map(
             live_execution_enabled,
             shared_runner_map(Arc::new(live_runner)),
@@ -73,68 +73,15 @@ impl CliScriptedDriver {
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
-        live_execution_enabled: bool,
-        discovery_runner: F,
-        direct_message_runner: G,
-        group_channel_runner: H,
-        task_lifecycle_runner: I,
-        escrow_settlement_runner: J,
-        late_runners: (K, L, M, N, O, P, Q, R, S, T),
-    ) -> Self
-    where
-        F: Fn() -> Result<(), String> + Send + Sync + 'static,
-        G: Fn() -> Result<(), String> + Send + Sync + 'static,
-        H: Fn() -> Result<(), String> + Send + Sync + 'static,
-        I: Fn() -> Result<(), String> + Send + Sync + 'static,
-        J: Fn() -> Result<(), String> + Send + Sync + 'static,
-        K: Fn() -> Result<(), String> + Send + Sync + 'static,
-        L: Fn() -> Result<(), String> + Send + Sync + 'static,
-        M: Fn() -> Result<(), String> + Send + Sync + 'static,
-        N: Fn() -> Result<(), String> + Send + Sync + 'static,
-        O: Fn() -> Result<(), String> + Send + Sync + 'static,
-        P: Fn() -> Result<(), String> + Send + Sync + 'static,
-        Q: Fn() -> Result<(), String> + Send + Sync + 'static,
-        R: Fn() -> Result<(), String> + Send + Sync + 'static,
-        S: Fn() -> Result<(), String> + Send + Sync + 'static,
-        T: Fn() -> Result<(), String> + Send + Sync + 'static,
-    {
-        let (
-            proof,
-            replay,
-            crash,
-            transport,
-            topology,
-            signer,
-            retention,
-            bridge,
-            merkle,
-            performance,
-        ) = late_runners;
-        Self::from_runner_map(
-            live_execution_enabled,
-            explicit_runner_map(
-                [
-                    Arc::new(discovery_runner),
-                    Arc::new(direct_message_runner),
-                    Arc::new(group_channel_runner),
-                    Arc::new(task_lifecycle_runner),
-                    Arc::new(escrow_settlement_runner),
-                ],
-                [
-                    Arc::new(proof),
-                    Arc::new(replay),
-                    Arc::new(crash),
-                    Arc::new(transport),
-                    Arc::new(topology),
-                    Arc::new(signer),
-                    Arc::new(retention),
-                    Arc::new(bridge),
-                    Arc::new(merkle),
-                    Arc::new(performance),
-                ],
-            ),
-        )
+    #[rustfmt::skip]
+    pub fn with_runners<F: CliRunner, G: CliRunner, H: CliRunner, I: CliRunner, J: CliRunner, K: CliRunner, L: CliRunner, M: CliRunner, N: CliRunner, O: CliRunner, P: CliRunner, Q: CliRunner, R: CliRunner, S: CliRunner, T: CliRunner>(
+        live_execution_enabled: bool, discovery_runner: F, direct_message_runner: G, group_channel_runner: H, task_lifecycle_runner: I, escrow_settlement_runner: J, late_runners: (K, L, M, N, O, P, Q, R, S, T),
+    ) -> Self {
+        let (proof, replay, crash, transport, topology, signer, retention, bridge, merkle, performance) = late_runners;
+        Self::from_runner_map(live_execution_enabled, explicit_runner_map(
+            [Arc::new(discovery_runner), Arc::new(direct_message_runner), Arc::new(group_channel_runner), Arc::new(task_lifecycle_runner), Arc::new(escrow_settlement_runner)],
+            [Arc::new(proof), Arc::new(replay), Arc::new(crash), Arc::new(transport), Arc::new(topology), Arc::new(signer), Arc::new(retention), Arc::new(bridge), Arc::new(merkle), Arc::new(performance)],
+        ))
     }
 
     fn from_runner_map(live_execution_enabled: bool, live_runners: LiveRunnerMap) -> Self {
