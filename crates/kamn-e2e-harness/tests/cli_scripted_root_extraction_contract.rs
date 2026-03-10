@@ -3,8 +3,7 @@ use std::path::PathBuf;
 
 const CLI_SCRIPTED_ROOT_SOURCE: &str = include_str!("../src/drivers/cli_scripted.rs");
 const CLI_SCRIPTED_DRIVER_CORE_FILE: &str = "src/drivers/cli_scripted/driver_core.rs";
-const CLI_SCRIPTED_COMMAND_SUPPORT_FILE: &str =
-    "src/drivers/cli_scripted/command_support.rs";
+const CLI_SCRIPTED_COMMAND_SUPPORT_FILE: &str = "src/drivers/cli_scripted/command_support.rs";
 const ROOT_MAX_LINES: usize = 200;
 const EXTRACTED_MAX_LINES: usize = 200;
 
@@ -37,7 +36,10 @@ fn regression_cli_scripted_root_removes_residual_driver_and_command_helper_defin
 
 #[test]
 fn regression_cli_scripted_root_extracted_module_files_exist() {
-    for relative_path in [CLI_SCRIPTED_DRIVER_CORE_FILE, CLI_SCRIPTED_COMMAND_SUPPORT_FILE] {
+    for relative_path in [
+        CLI_SCRIPTED_DRIVER_CORE_FILE,
+        CLI_SCRIPTED_COMMAND_SUPPORT_FILE,
+    ] {
         let full_path = manifest_dir().join(relative_path);
         assert!(
             full_path.exists(),
@@ -58,15 +60,18 @@ fn regression_cli_scripted_root_respects_full_file_budget() {
 
 #[test]
 fn regression_cli_scripted_root_extracted_files_stay_within_line_budget() {
-    let offenders = [CLI_SCRIPTED_DRIVER_CORE_FILE, CLI_SCRIPTED_COMMAND_SUPPORT_FILE]
-        .into_iter()
-        .filter_map(|relative_path| {
-            let full_path = manifest_dir().join(relative_path);
-            let line_count = fs::read_to_string(&full_path).ok()?.lines().count();
-            (line_count > EXTRACTED_MAX_LINES)
-                .then(|| format!("{} ({line_count})", full_path.display()))
-        })
-        .collect::<Vec<String>>();
+    let offenders = [
+        CLI_SCRIPTED_DRIVER_CORE_FILE,
+        CLI_SCRIPTED_COMMAND_SUPPORT_FILE,
+    ]
+    .into_iter()
+    .filter_map(|relative_path| {
+        let full_path = manifest_dir().join(relative_path);
+        let line_count = fs::read_to_string(&full_path).ok()?.lines().count();
+        (line_count > EXTRACTED_MAX_LINES)
+            .then(|| format!("{} ({line_count})", full_path.display()))
+    })
+    .collect::<Vec<String>>();
 
     assert!(
         offenders.is_empty(),
