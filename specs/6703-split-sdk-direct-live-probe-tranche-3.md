@@ -59,3 +59,22 @@ Extract the S-11 through S-15 live probe implementations out of `crates/kamn-e2e
 2. Extract the final production tranche into bounded sibling modules until the contract passes.
 3. Run focused `kamn-e2e-harness` tests covering SDK-direct driver behavior, validators, and command/runtime contracts.
 4. Run touched-Rust size policy on the full issue write set.
+
+# Phase 6 Evidence
+
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6703-rebuild-touched-size.json`
+  - `policy_decision=GO`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test sdk_direct_tranche_three_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness sdk_direct -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+
+# Outcomes
+
+- `crates/kamn-e2e-harness/src/drivers/sdk_direct.rs` reduced to `47` LOC
+- `crates/kamn-e2e-harness/src/drivers/sdk_direct/live_probe_tranche_three/bridge_forwarding_probe.rs` reduced to `188` LOC
+- All touched tranche-three files are within the `<= 200` LOC limit
+- All touched tranche-three helpers satisfy the touched-Rust function-size gate
+
+# Deviations
+
+- The original `6703-split-sdk-direct-live-probe-tranche-3` branch inherited unrelated tracked modifications and stale ancestry from another worktree. I rebuilt the issue onto a clean `origin/main` branch as `6703-split-sdk-direct-live-probe-tranche-3-rebuild` to preserve the issue-only diff and validate the touched-size gate correctly.
