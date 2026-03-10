@@ -1,17 +1,6 @@
 const DOC: &str = include_str!("../../../docs/ops/configuration.md");
-
-fn assert_doc_contains_all(markers: &[&str]) {
-    for marker in markers {
-        assert!(DOC.contains(marker), "missing doc marker: {marker}");
-    }
-}
-
-fn assert_doc_contains_prefixed_entries(prefix: &str, codes: &[&str]) {
-    for code in codes {
-        let marker = format!("{prefix}.{code}=");
-        assert!(DOC.contains(&marker), "missing doc marker: {marker}");
-    }
-}
+#[path = "service_api_ops_configuration_docs/shared_support.rs"]
+mod shared_support;
 
 #[path = "service_api_ops_configuration_docs/dependency_supply_chain_contract_tests.rs"]
 mod dependency_supply_chain_contract_tests;

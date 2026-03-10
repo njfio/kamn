@@ -1,4 +1,5 @@
 use super::*;
+use super::shared_support::*;
 
 #[path = "live_postgres_matrix_contract_tests/runtime_gate_contract_tests.rs"]
 mod runtime_gate_contract_tests;

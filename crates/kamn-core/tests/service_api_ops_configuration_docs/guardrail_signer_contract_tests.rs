@@ -1,4 +1,5 @@
 use super::*;
+use super::shared_support::*;
 
 #[path = "guardrail_signer_contract_tests/retention_fairness_contract_tests.rs"]
 mod retention_fairness_contract_tests;
