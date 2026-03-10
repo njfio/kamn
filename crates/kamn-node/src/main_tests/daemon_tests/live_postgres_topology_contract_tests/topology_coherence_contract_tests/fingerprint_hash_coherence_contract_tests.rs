@@ -1,0 +1,6 @@
+// include!("live_postgres_topology_contract_tests/topology_coherence_contract_tests/fingerprint_hash_coherence_contract_tests/lane_fingerprint_bundle_contract_tests.rs");
+#[path = "fingerprint_hash_coherence_contract_tests/lane_fingerprint_bundle_contract_tests.rs"]
+mod lane_fingerprint_bundle_contract_tests;
+// include!("live_postgres_topology_contract_tests/topology_coherence_contract_tests/fingerprint_hash_coherence_contract_tests/lane_fingerprint_hash_contract_tests.rs");
+#[path = "fingerprint_hash_coherence_contract_tests/lane_fingerprint_hash_contract_tests.rs"]
+mod lane_fingerprint_hash_contract_tests;
