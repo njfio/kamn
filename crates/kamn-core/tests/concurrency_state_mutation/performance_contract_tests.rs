@@ -1,14 +1,13 @@
-use crate::support::{run_escrow_dispute_refund_race, run_task_accept_race};
+use crate::support::{
+    deep_lane_accept_contenders, performance_accept_contenders, run_escrow_dispute_refund_race,
+    run_task_accept_race,
+};
 use std::time::Instant;
 
 #[test]
 fn performance_concurrency_state_mutation_contract_lane_stays_within_budget() {
     let started = Instant::now();
-    let contenders = [
-        "kamn:did:agent:worker-perf-1",
-        "kamn:did:agent:worker-perf-2",
-        "kamn:did:agent:worker-perf-3",
-    ];
+    let contenders = performance_accept_contenders();
     for round in 0..48 {
         let task_id = format!("task-concurrency-performance-{round}");
         let (success_count, unauthorized_count, _) = run_task_accept_race(&task_id, &contenders);
@@ -35,13 +34,7 @@ fn performance_escrow_dispute_refund_concurrency_lane_stays_within_budget() {
 #[test]
 #[ignore = "scheduled concurrency stress deep lane"]
 fn performance_concurrency_state_mutation_deep_lane_stress() {
-    let contenders = [
-        "kamn:did:agent:worker-deep-1",
-        "kamn:did:agent:worker-deep-2",
-        "kamn:did:agent:worker-deep-3",
-        "kamn:did:agent:worker-deep-4",
-        "kamn:did:agent:worker-deep-5",
-    ];
+    let contenders = deep_lane_accept_contenders();
     for round in 0..512 {
         let task_id = format!("task-concurrency-deep-{round}");
         let (success_count, unauthorized_count, _) = run_task_accept_race(&task_id, &contenders);

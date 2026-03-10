@@ -8,6 +8,9 @@ mod lifecycle_races;
 mod task_races;
 
 pub(crate) use escrow_races::{run_escrow_dispute_refund_race, run_escrow_refund_race};
-pub(crate) use fixtures::concurrency_replay_fixture;
+pub(crate) use fixtures::{
+    concurrency_replay_fixture, deep_lane_accept_contenders, performance_accept_contenders,
+    regression_accept_contenders,
+};
 pub(crate) use lifecycle_races::run_peer_lifecycle_race;
 pub(crate) use task_races::{run_task_accept_race, run_task_submit_race};

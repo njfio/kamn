@@ -1,4 +1,4 @@
-use crate::support::{concurrency_replay_fixture, run_task_accept_race};
+use crate::support::{concurrency_replay_fixture, regression_accept_contenders, run_task_accept_race};
 
 #[test]
 fn task_accept_concurrency_has_single_winner_and_consistent_state() {
@@ -24,12 +24,7 @@ fn functional_task_accept_concurrency_replay_fixture_preserves_invariants() {
 
 #[test]
 fn regression_concurrency_accept_race_never_allows_multiple_winners() {
-    let contenders = [
-        "kamn:did:agent:worker-reg-1",
-        "kamn:did:agent:worker-reg-2",
-        "kamn:did:agent:worker-reg-3",
-        "kamn:did:agent:worker-reg-4",
-    ];
+    let contenders = regression_accept_contenders();
     for round in 0..24 {
         let task_id = format!("task-concurrency-regression-{round}");
         assert_accept_outcome(&task_id, &contenders, contenders.len() - 1);
