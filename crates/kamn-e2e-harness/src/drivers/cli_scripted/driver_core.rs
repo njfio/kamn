@@ -149,6 +149,19 @@ impl CliScriptedDriver {
             .get(scenario_id)
             .map(|runner| runner.as_ref()())
     }
+
+    fn status_for_scenario(&self, scenario_id: &'static str) -> &'static str {
+        if !is_live_bound_scenario_id(scenario_id) {
+            return "pass";
+        }
+        if !self.live_execution_enabled {
+            return "fail";
+        }
+        match self.live_runner_for_scenario(scenario_id) {
+            Some(result) if result.is_ok() => "pass",
+            Some(_) | None => "fail",
+        }
+    }
 }
 
 impl HarnessDriver for CliScriptedDriver {
@@ -157,19 +170,9 @@ impl HarnessDriver for CliScriptedDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        let status = if !is_live_bound_scenario_id(scenario_id) {
-            "pass"
-        } else if !self.live_execution_enabled {
-            "fail"
-        } else {
-            match self.live_runner_for_scenario(scenario_id) {
-                Some(result) if result.is_ok() => "pass",
-                Some(_) | None => "fail",
-            }
-        };
         DriverExecutionResult {
             scenario_id,
-            status,
+            status: self.status_for_scenario(scenario_id),
         }
     }
 }

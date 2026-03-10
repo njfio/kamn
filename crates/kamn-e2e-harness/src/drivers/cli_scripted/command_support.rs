@@ -17,17 +17,8 @@ pub(crate) fn run_cli_command_expect_failure_with_agent_name(
     step: &str,
     agent_name: &str,
 ) -> Result<String, String> {
-    let mut command = Command::new(cli_binary);
-    command
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .env(
-            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV,
-            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
-        )
-        .env("KAMN_AGENT_NAME", agent_name);
+    let mut command = configured_command(cli_binary, args, Some(agent_name));
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
     let output = command
         .output()
         .map_err(|error| format!("{step} failed to spawn: {error}"))?;
@@ -63,19 +54,8 @@ pub(crate) fn run_cli_command_capture_stdout_with_optional_agent_name(
     step: &str,
     agent_name: Option<&str>,
 ) -> Result<String, String> {
-    let mut command = Command::new(cli_binary);
-    command
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .env(
-            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV,
-            AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
-        );
-    if let Some(agent_name) = agent_name {
-        command.env("KAMN_AGENT_NAME", agent_name);
-    }
+    let mut command = configured_command(cli_binary, args, agent_name);
+    command.stdout(Stdio::piped()).stderr(Stdio::null());
     let output = command
         .output()
         .map_err(|error| format!("{step} failed to spawn: {error}"))?;
@@ -101,4 +81,16 @@ pub(crate) fn parse_text_output_field<'a>(output: &'a str, key: &str) -> Option<
         let (field, value) = token.split_once('=')?;
         (field == key).then_some(value)
     })
+}
+
+fn configured_command(cli_binary: &str, args: &[&str], agent_name: Option<&str>) -> Command {
+    let mut command = Command::new(cli_binary);
+    command.args(args).stdin(Stdio::null()).env(
+        AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV,
+        AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
+    );
+    if let Some(agent_name) = agent_name {
+        command.env("KAMN_AGENT_NAME", agent_name);
+    }
+    command
 }
