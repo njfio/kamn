@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 
 const ROOT: &str = "tests/ci_strategy_docs.rs";
 const ROOT_CAP: usize = 220;
-const MODULE_ROOT: &str = "tests/ci_strategy_docs/residual_root_contract_tests.rs";
 const MODULE_FILES: &[&str] = &[
     "tests/ci_strategy_docs/residual_root_contract_tests.rs",
     "tests/ci_strategy_docs/residual_root_contract_tests/startup_surface_contract_tests.rs",
