@@ -3,14 +3,14 @@ use super::support::*;
 #[test]
 fn functional_transport_fed_restart_replay_harness_reports_boundary_and_checkpoint_markers() {
     let path = temp_canonical_commit_store_path("restart-replay-functional");
-    let _ = fs::remove_file(&path);
+    cleanup_store_path(&path);
 
-    let mut store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    let mut store = open_file_store(&path);
     store.persist_canonical_commit(sample_canonical_record(11, "digest-11", "tx-11")).expect("first record should persist");
     store.persist_canonical_commit(sample_canonical_record(12, "digest-12", "tx-12")).expect("second record should persist");
     let pre_restart = store.list_canonical_commits().expect("pre-restart list should load");
 
-    let restarted_store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    let restarted_store = open_file_store(&path);
     let post_restart = restarted_store.list_canonical_commits().expect("post-restart list should load");
     let evidence: CanonicalReplayEvidenceBundle = build_canonical_replay_evidence_bundle(&pre_restart, &post_restart).expect("restart replay evidence should validate");
     assert_eq!(evidence.restart_boundary_block_height, 12);
@@ -18,20 +18,20 @@ fn functional_transport_fed_restart_replay_harness_reports_boundary_and_checkpoi
     assert_eq!(evidence.pre_restart_commit_count, 2);
     assert_eq!(evidence.post_restart_commit_count, 2);
 
-    let _ = fs::remove_file(path);
+    cleanup_store_path(&path);
 }
 
 #[test]
 fn integration_transport_fed_restart_replay_preserves_canonical_lineage_across_restart() {
     let path = temp_canonical_commit_store_path("restart-replay-integration");
-    let _ = fs::remove_file(&path);
+    cleanup_store_path(&path);
     let (pre_restart, mut pipeline) = build_restart_replay_pipeline(&path);
     assert_duplicate_reconciliation(pipeline.reconcile_transport_candidates().expect("reconciliation should succeed"));
     let post_restart = pipeline
         .list_canonical_commits()
         .expect("post-restart list should load");
     assert_replay_lineage(pre_restart, post_restart);
-    let _ = fs::remove_file(path);
+    cleanup_store_path(&path);
 }
 
 #[test]

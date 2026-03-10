@@ -86,6 +86,14 @@ pub(crate) fn temp_canonical_commit_store_path(tag: &str) -> PathBuf {
     std::env::temp_dir().join(format!("kamn-canonical-commit-{tag}-{nonce}.log"))
 }
 
+pub(crate) fn cleanup_store_path(path: &PathBuf) {
+    let _ = fs::remove_file(path);
+}
+
+pub(crate) fn open_file_store(path: &PathBuf) -> FileCanonicalCommitStore {
+    FileCanonicalCommitStore::new(path.clone()).expect("store should build")
+}
+
 pub(crate) fn advertise_transport_topic(
     transport: &InMemoryPeerLifecycleTransport,
     sender: &str,
@@ -107,7 +115,7 @@ pub(crate) fn advertise_transport_topic(
 }
 
 pub(crate) fn persist_record(path: &PathBuf, record: CanonicalCommitRecord) -> Vec<CanonicalCommitRecord> {
-    let mut store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    let mut store = open_file_store(path);
     store
         .persist_canonical_commit(record)
         .expect("baseline record should persist");
@@ -142,7 +150,7 @@ pub(crate) fn restart_replay_pipeline(
 ) -> TransportFedBlockPipeline<TransportEventMempoolFeed<InMemoryPeerLifecycleTransport>, FileCanonicalCommitStore, DeterministicCompetingBranchForkChoiceHook> {
     let feed = TransportEventMempoolFeed::new(transport, recipient, Some(vec![topic.to_owned()]))
         .expect("feed should build");
-    let store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    let store = open_file_store(path);
     let hook = DeterministicCompetingBranchForkChoiceHook::with_canonical_head(canonical_head);
     TransportFedBlockPipeline::new(true, 1, 1, feed, store, hook)
         .expect("transport-fed pipeline should build")
