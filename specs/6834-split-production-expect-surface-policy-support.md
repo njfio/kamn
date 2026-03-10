@@ -51,3 +51,9 @@ Reduce `crates/kamn-core/tests/support/production_expect_surface_policy_support.
 3. Run the extraction contract.
 4. Run the dependent production-expect policy tests.
 5. Run the touched-Rust size ratchet and require `policy_decision=GO`.
+
+## Phase 6 Evidence
+- Root shell wiring verified through `cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture`
+- Extraction contract verified through `cargo test -p kamn-core --test production_expect_surface_policy_support_extraction_contract -- --nocapture`
+- Touched-Rust policy verified through `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6834-touched-size.json`
+- Result: `policy_decision=GO`
