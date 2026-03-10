@@ -1,29 +1,39 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-const ROOT: &str = "crates/kamn-core/tests/ci_strategy_docs.rs";
+const ROOT: &str = "tests/ci_strategy_docs.rs";
 const ROOT_CAP: usize = 520;
-const MODULE_ROOT: &str =
-    "crates/kamn-core/tests/ci_strategy_docs/make_demo_governance_contract_tests.rs";
+const MODULE_ROOT: &str = "tests/ci_strategy_docs/make_demo_governance_contract_tests.rs";
 const MODULE_FILES: &[&str] = &[
-    "crates/kamn-core/tests/ci_strategy_docs/make_demo_governance_contract_tests/workflow_contract_tests.rs",
-    "crates/kamn-core/tests/ci_strategy_docs/make_demo_governance_contract_tests/wrapper_family_budget_contract_tests.rs",
-    "crates/kamn-core/tests/ci_strategy_docs/make_demo_governance_contract_tests/local_kolme_lane_contract_tests.rs",
-    "crates/kamn-core/tests/ci_strategy_docs/make_demo_governance_contract_tests/fast_gate_threshold_contract_tests.rs",
-    "crates/kamn-core/tests/ci_strategy_docs/make_demo_governance_contract_tests/support.rs",
+    "tests/ci_strategy_docs/make_demo_governance_contract_tests/workflow_contract_tests.rs",
+    "tests/ci_strategy_docs/make_demo_governance_contract_tests/wrapper_family_budget_contract_tests.rs",
+    "tests/ci_strategy_docs/make_demo_governance_contract_tests/local_kolme_lane_contract_tests.rs",
+    "tests/ci_strategy_docs/make_demo_governance_contract_tests/fast_gate_threshold_contract_tests.rs",
+    "tests/ci_strategy_docs/make_demo_governance_contract_tests/support.rs",
 ];
 
 fn line_count(path: &str) -> usize {
-    fs::read_to_string(path).unwrap().lines().count()
+    fs::read_to_string(repo_path(path)).unwrap().lines().count()
 }
 
 fn read(path: &str) -> String {
-    fs::read_to_string(path).unwrap_or_default()
+    fs::read_to_string(repo_path(path)).unwrap_or_default()
+}
+
+fn repo_path(path: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
 }
 
 #[test]
 fn ci_strategy_docs_make_demo_governance_extraction_contract() {
     let root = read(ROOT);
+    assert_root_markers(&root);
+    assert_root_budget();
+    assert_module_root_exists();
+    assert_extracted_files_fit_budget();
+}
+
+fn assert_root_markers(root: &str) {
     assert!(
         root.contains("#[path = \"ci_strategy_docs/make_demo_governance_contract_tests.rs\"]"),
         "root missing make/demo governance module path marker"
@@ -36,16 +46,27 @@ fn ci_strategy_docs_make_demo_governance_extraction_contract() {
         !root.contains("fn doc_contains_make_and_demo_scope_contract_rules()"),
         "root still contains inline make/demo governance contract"
     );
+}
+
+fn assert_root_budget() {
+    let lines = line_count(ROOT);
     assert!(
-        line_count(ROOT) <= ROOT_CAP,
+        lines <= ROOT_CAP,
         "root line count {} exceeds staged cap {}",
-        line_count(ROOT),
+        lines,
         ROOT_CAP
     );
+}
 
-    assert!(Path::new(MODULE_ROOT).exists(), "missing module root {MODULE_ROOT}");
+fn assert_module_root_exists() {
+    let path = repo_path(MODULE_ROOT);
+    assert!(path.exists(), "missing module root {}", path.display());
+}
+
+fn assert_extracted_files_fit_budget() {
     for path in MODULE_FILES {
-        assert!(Path::new(path).exists(), "missing extracted file {path}");
+        let full_path = repo_path(path);
+        assert!(full_path.exists(), "missing extracted file {}", full_path.display());
         assert!(
             line_count(path) <= 200,
             "extracted file {path} exceeds 200 lines with {}",
