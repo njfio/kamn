@@ -1,8 +1,8 @@
 #[cfg(feature = "libp2p-live-transport")]
 use super::p2p_transport_live::{
     apply_libp2p_runtime_network_config, build_libp2p_runtime_swarm,
-    runtime_channel_closed_behavior_failure_class, validate_libp2p_runtime_stack_composition,
-    Libp2pLiveDataPlaneState,
+    runtime_channel_closed_behavior_failure_class, runtime_inbox::Libp2pLiveDataPlaneState,
+    validate_libp2p_runtime_stack_composition,
 };
 #[cfg(feature = "libp2p-live-transport")]
 use libp2p::{futures::StreamExt, gossipsub, swarm::Swarm};
@@ -55,43 +55,37 @@ enum Libp2pNativeSwarmCommand {
 
 #[cfg(feature = "libp2p-live-transport")]
 #[derive(Debug, Clone)]
-pub(super) struct Libp2pNativeRuntimeAdapterLoop {
+pub(crate) struct Libp2pNativeRuntimeAdapterLoop {
     command_tx: std::sync::mpsc::Sender<Libp2pNativeRuntimeAdapterLoopCommand>,
     state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 }
 
 #[cfg(feature = "libp2p-live-transport")]
 impl Libp2pNativeRuntimeAdapterLoop {
-    pub(super) fn start(
+    pub(crate) fn start(
         config: super::P2pSwarmDeterministicConfig,
         state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
     ) -> Result<Self, super::P2pTransportError> {
         validate_libp2p_runtime_stack_composition(&config)?;
         let local_peer_id = config.local_peer_id().to_owned();
         let (swarm_command_tx, swarm_command_rx) = std::sync::mpsc::channel();
-        let swarm_config = config.clone();
-        let swarm_state = state.clone();
-        std::thread::Builder::new()
-            .name(format!("kamn-libp2p-swarm-{local_peer_id}"))
-            .spawn(move || {
-                run_libp2p_native_swarm_loop(swarm_config, swarm_command_rx, swarm_state);
-            })
-            .map_err(|_| super::P2pTransportError::StateUnavailable)?;
+        spawn_libp2p_native_swarm_thread(
+            local_peer_id.as_str(),
+            config.clone(),
+            swarm_command_rx,
+            state.clone(),
+        )?;
         let (command_tx, command_rx) = std::sync::mpsc::channel();
-        let runtime_state = state.clone();
-        std::thread::Builder::new()
-            .name(format!("kamn-libp2p-adapter-{local_peer_id}"))
-            .spawn(move || {
-                run_libp2p_native_runtime_adapter_loop(command_rx, swarm_command_tx, state);
-            })
-            .map_err(|_| super::P2pTransportError::StateUnavailable)?;
-        Ok(Self {
-            command_tx,
-            state: runtime_state,
-        })
+        spawn_libp2p_native_adapter_thread(
+            local_peer_id.as_str(),
+            command_rx,
+            swarm_command_tx,
+            state.clone(),
+        )?;
+        Ok(Self { command_tx, state })
     }
 
-    pub(super) fn marker(&self) -> &'static str {
+    pub(crate) fn marker(&self) -> &'static str {
         LIBP2P_RUNTIME_ADAPTER_LOOP_MARKER
     }
 
@@ -114,7 +108,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
         super::P2pTransportError::Libp2pRuntimeAdapterChannelClosed(operation)
     }
 
-    pub(super) fn advertise(
+    pub(crate) fn advertise(
         &self,
         record: super::PeerDiscoveryRecord,
     ) -> Result<(), super::P2pTransportError> {
@@ -134,7 +128,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(super::Libp2pRuntimeAdapterOperation::Connect))?
     }
 
-    pub(super) fn discover(
+    pub(crate) fn discover(
         &self,
         requester_peer_id: &str,
         topic: &str,
@@ -156,7 +150,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
         })?
     }
 
-    pub(super) fn send(
+    pub(crate) fn send(
         &self,
         frame: super::PeerGossipFrame,
     ) -> Result<(), super::P2pTransportError> {
@@ -176,7 +170,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(super::Libp2pRuntimeAdapterOperation::Publish))?
     }
 
-    pub(super) fn drain_inbox(
+    pub(crate) fn drain_inbox(
         &self,
         recipient_peer_id: &str,
     ) -> Result<Vec<super::PeerGossipFrame>, super::P2pTransportError> {
@@ -196,7 +190,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(super::Libp2pRuntimeAdapterOperation::Receive))?
     }
 
-    pub(super) fn drain_runtime_events(
+    pub(crate) fn drain_runtime_events(
         &self,
     ) -> Result<Vec<super::Libp2pRuntimeEvent>, super::P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
@@ -215,11 +209,43 @@ impl Libp2pNativeRuntimeAdapterLoop {
     }
 
     #[cfg(test)]
-    pub(super) fn build_closed_for_test(state: Arc<Mutex<Libp2pLiveDataPlaneState>>) -> Self {
+    pub(crate) fn build_closed_for_test(state: Arc<Mutex<Libp2pLiveDataPlaneState>>) -> Self {
         let (command_tx, command_rx) = std::sync::mpsc::channel();
         drop(command_rx);
         Self { command_tx, state }
     }
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+fn spawn_libp2p_native_swarm_thread(
+    local_peer_id: &str,
+    config: super::P2pSwarmDeterministicConfig,
+    command_rx: std::sync::mpsc::Receiver<Libp2pNativeSwarmCommand>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
+) -> Result<(), super::P2pTransportError> {
+    std::thread::Builder::new()
+        .name(format!("kamn-libp2p-swarm-{local_peer_id}"))
+        .spawn(move || {
+            run_libp2p_native_swarm_loop(config, command_rx, state);
+        })
+        .map(|_| ())
+        .map_err(|_| super::P2pTransportError::StateUnavailable)
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+fn spawn_libp2p_native_adapter_thread(
+    local_peer_id: &str,
+    command_rx: std::sync::mpsc::Receiver<Libp2pNativeRuntimeAdapterLoopCommand>,
+    swarm_command_tx: std::sync::mpsc::Sender<Libp2pNativeSwarmCommand>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
+) -> Result<(), super::P2pTransportError> {
+    std::thread::Builder::new()
+        .name(format!("kamn-libp2p-adapter-{local_peer_id}"))
+        .spawn(move || {
+            run_libp2p_native_runtime_adapter_loop(command_rx, swarm_command_tx, state);
+        })
+        .map(|_| ())
+        .map_err(|_| super::P2pTransportError::StateUnavailable)
 }
 
 #[cfg(feature = "libp2p-live-transport")]
