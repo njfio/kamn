@@ -12,6 +12,11 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+mod file_store;
+mod in_memory;
+mod journal;
+mod sqlite_store;
+
 /// Persistence contract for channel snapshots.
 pub trait ChannelSnapshotStore {
     fn write(&mut self, snapshot: ChannelSnapshot) -> Result<(), ChannelSnapshotStoreError>;
@@ -44,5 +49,3 @@ pub struct ChannelRecoveryResult {
 pub struct SqliteChannelSnapshotStore {
     backend: SqliteStoreBackend,
 }
-
-include!("snapshot_store/ops.rs");
