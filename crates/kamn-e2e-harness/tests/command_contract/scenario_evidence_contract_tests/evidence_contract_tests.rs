@@ -76,44 +76,16 @@ fn spec_c81_run_output_contains_mode_execution_contract_markers() {
 
 #[test]
 fn spec_c82_mode_execution_contract_driver_marker_is_mode_coherent() {
-    let sdk = RunCommandConfig {
-        mode: "sdk-direct".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: None,
-        external_execution: false,
-        evidence_dir: "/tmp/evidence".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let sdk_output = execute_run_contract(&sdk).expect("sdk run should render");
-    assert!(sdk_output.contains(
-        "\"mode_execution_contract\":{\"mode\":\"sdk-direct\",\"driver\":\"sdk-direct-driver\""
-    ));
+    assert_mode_driver("sdk-direct", None, "sdk-direct-driver");
+    assert_mode_driver("cli-scripted", None, "cli-scripted-driver");
+    assert_mode_driver("mcp-tau", Some("/tmp/tau"), "mcp-agent-driver");
+}
 
-    let cli = RunCommandConfig {
-        mode: "cli-scripted".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: None,
-        external_execution: false,
-        evidence_dir: "/tmp/evidence".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let cli_output = execute_run_contract(&cli).expect("cli run should render");
-    assert!(cli_output.contains(
-        "\"mode_execution_contract\":{\"mode\":\"cli-scripted\",\"driver\":\"cli-scripted-driver\""
-    ));
-
-    let mcp = RunCommandConfig {
-        mode: "mcp-tau".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: Some("/tmp/tau".to_owned()),
-        external_execution: false,
-        evidence_dir: "/tmp/evidence".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let mcp_output = execute_run_contract(&mcp).expect("mcp run should render");
-    assert!(mcp_output.contains(
-        "\"mode_execution_contract\":{\"mode\":\"mcp-tau\",\"driver\":\"mcp-agent-driver\""
-    ));
+fn assert_mode_driver(mode: &str, agent_binary: Option<&str>, driver: &str) {
+    let output = render_run(&run_config(mode, agent_binary, false, "/tmp/evidence", &["S-01"]));
+    assert!(output.contains(&format!(
+        "\"mode_execution_contract\":{{\"mode\":\"{mode}\",\"driver\":\"{driver}\""
+    )));
 }
 
 #[test]

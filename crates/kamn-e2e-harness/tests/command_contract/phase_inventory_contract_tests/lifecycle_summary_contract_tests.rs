@@ -73,33 +73,18 @@ fn spec_c19_run_output_contains_lifecycle_summary_totals() {
 
 #[test]
 fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
-    let normal = RunCommandConfig {
-        mode: "sdk-direct".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: None,
-        external_execution: false,
-        evidence_dir: "/tmp/evidence".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let normal_output = execute_run_contract(&normal).expect("normal run should render");
-    assert!(
-        normal_output.contains("\"phase_totals\":{\"total\":5,\"pass\":5,\"fail\":0,\"skip\":0}")
+    assert_lifecycle_summary_totals(
+        &render_run(&run_config("sdk-direct", None, false, "/tmp/evidence", &["S-01"])),
+        "\"phase_totals\":{\"total\":5,\"pass\":5,\"fail\":0,\"skip\":0}",
+        "\"step_totals\":{\"total\":27,\"pass\":24,\"fail\":0,\"skip\":3}",
     );
-    assert!(
-        normal_output.contains("\"step_totals\":{\"total\":27,\"pass\":24,\"fail\":0,\"skip\":3}")
+    assert_lifecycle_summary_totals(
+        &render_run(&run_config("sdk-direct", None, false, "/tmp/fail-path", &["S-01"])),
+        "\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":1,\"skip\":0}",
+        "\"step_totals\":{\"total\":27,\"pass\":23,\"fail\":1,\"skip\":3}",
     );
+}
 
-    let fail = RunCommandConfig {
-        mode: "sdk-direct".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: None,
-        external_execution: false,
-        evidence_dir: "/tmp/fail-path".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let fail_output = execute_run_contract(&fail).expect("fail-path run should render");
-    assert!(fail_output.contains("\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":1,\"skip\":0}"));
-    assert!(
-        fail_output.contains("\"step_totals\":{\"total\":27,\"pass\":23,\"fail\":1,\"skip\":3}")
-    );
+fn assert_lifecycle_summary_totals(output: &str, phase_marker: &str, step_marker: &str) {
+    assert_contains_all(output, &[phase_marker, step_marker]);
 }

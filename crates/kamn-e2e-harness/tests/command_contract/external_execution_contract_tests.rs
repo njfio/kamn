@@ -1,4 +1,5 @@
 use super::*;
+use super::shared_support::*;
 
 #[path = "external_execution_contract_tests/runtime_execution_contract_tests.rs"]
 mod runtime_execution_contract_tests;

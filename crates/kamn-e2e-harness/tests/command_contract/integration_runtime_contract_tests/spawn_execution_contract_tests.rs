@@ -21,33 +21,21 @@ fn spec_c39_run_output_contains_spawn_plan_markers() {
 
 #[test]
 fn spec_c40_spawn_plan_markers_are_deterministic_and_mode_coherent() {
-    let sdk_direct = RunCommandConfig {
-        mode: "sdk-direct".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: None,
-        external_execution: false,
-        evidence_dir: "/tmp/evidence".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let sdk_output = execute_run_contract(&sdk_direct).expect("run output should render");
-    assert!(sdk_output
-        .contains("\"postgres_cmd\":\"docker run --rm --name kamn-e2e-postgres postgres:15\""));
-    assert!(sdk_output.contains(
-        "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode sdk-direct\""
-    ));
+    assert_spawn_plan_markers(
+        &render_run(&run_config("sdk-direct", None, false, "/tmp/evidence", &["S-01"])),
+        &[
+            "\"postgres_cmd\":\"docker run --rm --name kamn-e2e-postgres postgres:15\"",
+            "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode sdk-direct\"",
+        ],
+    );
+    assert_spawn_plan_markers(
+        &render_run(&run_config("mcp-tau", Some("/tmp/tau"), false, "/tmp/evidence", &["S-01"])),
+        &["\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode mcp-tau\""],
+    );
+}
 
-    let mcp_tau = RunCommandConfig {
-        mode: "mcp-tau".to_owned(),
-        kolme_binary: "/tmp/kolme-node".to_owned(),
-        agent_binary: Some("/tmp/tau".to_owned()),
-        external_execution: false,
-        evidence_dir: "/tmp/evidence".to_owned(),
-        scenario_ids: vec!["S-01".to_owned()],
-    };
-    let mcp_output = execute_run_contract(&mcp_tau).expect("run output should render");
-    assert!(mcp_output.contains(
-        "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode mcp-tau\""
-    ));
+fn assert_spawn_plan_markers(output: &str, markers: &[&str]) {
+    assert_contains_all(output, markers);
 }
 
 #[test]

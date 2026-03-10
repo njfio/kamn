@@ -1,4 +1,6 @@
 mod support;
+#[path = "command_contract/shared_support.rs"]
+mod shared_support;
 
 use kamn_e2e_harness::{
     all_orchestration_phases, all_phase_result_statuses, execute_run_contract,
