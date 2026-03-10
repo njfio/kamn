@@ -38,3 +38,13 @@ Make `functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_repor
 - Fix the applied-path selector to bind deterministically
 - Run the isolated applied-path test
 - Run `cargo test -p kamn-node daemon_tests -- --nocapture`
+
+## Phase 6 evidence
+- Isolated regression: `cargo test -p kamn-node regression_runtime_daemon_applied_phase6_log_selection_uses_execution_id -- --nocapture`
+- Isolated applied-path contract: `cargo test -p kamn-node functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output -- --nocapture`
+- Real suite path: `cargo test -p kamn-node daemon_tests -- --nocapture`
+- Touched-Rust ratchet: `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6742-baseline-VGAsi1 --base-ref origin/main --output-json /tmp/6743-touched-size.json`
+- Ratchet result: `policy_decision=GO`
+
+## Deviations
+- The applied-path test now captures JSON and text renders through the same dedicated chain id (`phase6-applied-contract`) so completion-log assertions bind to the intended execution consistently under full-suite ordering.
