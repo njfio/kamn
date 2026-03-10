@@ -32,7 +32,7 @@ fn doc_contains_performance_baseline_provenance_contract_markers() {
 fn doc_contains_performance_ci_smoke_docs_parity_and_remediation_markers() {
     assert_performance_ci_smoke_doc_headers();
     assert_performance_ci_smoke_doc_status_markers();
-    assert_performance_ci_smoke_doc_commands();
+    assert_performance_ci_smoke_reason_codes_non_empty();
     assert!(DOC.contains("Regression: #4002, #4003"));
 }
 
@@ -77,6 +77,6 @@ fn assert_performance_ci_smoke_doc_status_markers() {
     );
 }
 
-fn assert_performance_ci_smoke_doc_commands() {
+fn assert_performance_ci_smoke_reason_codes_non_empty() {
     assert!(!performance_ci_smoke_reason_codes().is_empty());
 }
