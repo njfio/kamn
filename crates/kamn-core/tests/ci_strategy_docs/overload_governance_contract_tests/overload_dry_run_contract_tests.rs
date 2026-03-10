@@ -46,24 +46,35 @@ fn assert_overload_runner_contract_markers() {
 }
 
 fn assert_overload_threshold_key_markers() {
-    for threshold_key in [
-        "REPORT_SCHEMA_VERSION",
-        "MAX_RUNTIME_SECONDS",
-        "ALLOWED_REASON_CODES_CSV",
-        "REPORT_REASON_TAXONOMY_VERSION",
-        "REPORT_REASON_CODES_CSV",
-        "CI_TOOLS_REQUIRED_ENTRY",
-        "CI_TOOLS_FORBIDDEN_ENTRY",
-    ] {
-        assert!(DOC.contains(threshold_key), "missing overload dry-run threshold key marker {threshold_key}");
-    }
+    assert_doc_contains_markers(
+        &[
+            "REPORT_SCHEMA_VERSION",
+            "MAX_RUNTIME_SECONDS",
+            "ALLOWED_REASON_CODES_CSV",
+            "REPORT_REASON_TAXONOMY_VERSION",
+            "REPORT_REASON_CODES_CSV",
+            "CI_TOOLS_REQUIRED_ENTRY",
+            "CI_TOOLS_FORBIDDEN_ENTRY",
+        ],
+        "overload dry-run threshold key",
+    );
 }
 
 fn assert_overload_policy_reason_markers() {
-    for reason in [
-        "overload_policy_report_reason_taxonomy_mismatch",
-        "overload_policy_report_reason_codes_csv_mismatch",
-    ] {
-        assert!(DOC.contains(reason), "missing overload dry-run reason marker {reason}");
+    assert_doc_contains_markers(
+        &[
+            "overload_policy_report_reason_taxonomy_mismatch",
+            "overload_policy_report_reason_codes_csv_mismatch",
+        ],
+        "overload dry-run reason",
+    );
+}
+
+fn assert_doc_contains_markers(markers: &[&str], marker_kind: &str) {
+    for marker in markers {
+        assert!(
+            DOC.contains(marker),
+            "missing {marker_kind} marker {marker}"
+        );
     }
 }
