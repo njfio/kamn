@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::{assert_plan_contains_all};
 
 const PLAN_CONTAINS_LOCAL_FORK_SYNC_METADATA_LANE_PLAN_MARKERS: &[&str] = &[
     "## Deterministic Local Fork Sync Metadata Lane",

@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::{assert_plan_contains_all};
 
 const PLAN_CONTAINS_TRIADIC_SMOKE_CONTRACT_COMMANDS_PLAN_MARKERS: &[&str] = &[
     "run_triadic_devnet_smoke.sh",

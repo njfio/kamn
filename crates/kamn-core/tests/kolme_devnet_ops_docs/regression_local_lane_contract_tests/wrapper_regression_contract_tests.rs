@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::{assert_plan_contains_all};
 
 const REGRESSION_REQUIRES_REAL_FORK_LOCAL_PROCESS_WRAPPER_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
     "real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).",

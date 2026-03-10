@@ -1,4 +1,4 @@
-use super::shared_support::{assert_plan_contains_all};
+use super::docs_assert_support::{assert_plan_contains_all};
 
 const REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_SCHEDULED_CADENCE_GUARDS_PLAN_MARKERS: &[&str] = &[
     "Failover/sync budget overruns and unscheduled deep-lane execution fail closed",

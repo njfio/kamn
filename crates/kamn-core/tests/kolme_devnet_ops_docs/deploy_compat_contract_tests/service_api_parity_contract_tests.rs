@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_deploy_contains_all};
+use super::super::docs_assert_support::{assert_deploy_contains_all};
 
 const DEPLOY_COMPAT_CONTAINS_SERVICE_API_AXUM_PROTOCOL_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS: &[&str] = &[
     "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)",

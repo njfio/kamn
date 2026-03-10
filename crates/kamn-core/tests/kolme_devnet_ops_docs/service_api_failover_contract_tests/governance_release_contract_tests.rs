@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::{assert_plan_contains_all};
 
 const PLAN_CONTAINS_MILESTONE_UPGRADE_LINEAGE_POLICY_MARKERS_PLAN_MARKERS: &[&str] = &[
     "## Milestone Review Aggregate Evidence Bundle (Issue #3247)",

@@ -1,4 +1,4 @@
-use super::super::shared_support::assert_plan_contains_all;
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_RUNTIME_COMMIT_ADAPTER_REPLAY_LANE_POLICY_PLAN_MARKERS: &[&str] = &[
     "## Runtime Commit Adapter Replay/Finality Fast Lane",

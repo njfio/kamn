@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_deploy_contains_all};
+use super::super::docs_assert_support::{assert_deploy_contains_all};
 
 const DEPLOY_COMPAT_CONTAINS_KOLME_UPGRADE_COMPATIBILITY_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS: &[&str] = &[
     "## Kolme Upgrade Compatibility Taxonomy and Runbook Marker Parity Contracts (Issues #4182, #4183)",

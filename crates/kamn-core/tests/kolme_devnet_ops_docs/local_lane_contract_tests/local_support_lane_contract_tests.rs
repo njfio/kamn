@@ -1,4 +1,4 @@
-use super::super::shared_support::assert_plan_contains_all;
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_STAGED_REHEARSAL_SIGNOFF_ARTIFACT_CONTRACT_PLAN_MARKERS: &[&str] = &[
     "## Staged Rehearsal Signoff Artifact Contract (Issue #3241)",

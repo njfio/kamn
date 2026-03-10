@@ -1,8 +1,8 @@
 const PLAN: &str = include_str!("../../../docs/planning/kolme-devnet-ops.md");
 const DEPLOY_COMPAT: &str = include_str!("../../../docs/deploy/kolme_devnet_ops.md");
 
-#[path = "kolme_devnet_ops_docs/shared_support.rs"]
-mod shared_support;
+#[path = "kolme_devnet_ops_docs/docs_assert_support.rs"]
+mod docs_assert_support;
 #[path = "kolme_devnet_ops_docs/service_api_failover_contract_tests.rs"]
 mod service_api_failover_contract_tests;
 #[path = "kolme_devnet_ops_docs/deploy_compat_contract_tests.rs"]

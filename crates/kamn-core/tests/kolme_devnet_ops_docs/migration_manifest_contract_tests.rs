@@ -1,4 +1,4 @@
-use super::shared_support::{assert_plan_contains_all};
+use super::docs_assert_support::{assert_plan_contains_all};
 
 const PLAN_CONTAINS_LANE_MIGRATION_MATRIX_CONTRACT_PLAN_MARKERS: &[&str] = &[
     "## Lane Migration Matrix (Issue #1721)",

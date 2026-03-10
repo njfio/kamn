@@ -1,4 +1,4 @@
-use super::super::shared_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::{assert_plan_contains_all};
 
 const REGRESSION_REQUIRES_LOCAL_KOLME_API_PROBE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
     "local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).",
