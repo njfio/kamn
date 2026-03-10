@@ -1,4 +1,5 @@
 use super::*;
+use crate::support::contract_server_support::strip_suffix_id;
 
 pub(super) fn write_response(
     stream: &mut TcpStream,
@@ -62,10 +63,4 @@ fn forwarded_payload(bridge_id: &str) -> String {
         "{{\"bridge_id\":\"{}\",\"bridge_status\":\"forwarded\",\"target_message_id\":\"msg-bridge-target-{}\",\"forward_tx_hash\":\"sha256:bridge-forwarded-{}\"}}",
         bridge_id, bridge_id, bridge_id
     )
-}
-
-fn strip_suffix_id<'a>(path: &'a str, prefix: &str, suffix: &str) -> &'a str {
-    path.trim_start_matches(prefix)
-        .trim_end_matches(suffix)
-        .trim_end_matches('/')
 }

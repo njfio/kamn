@@ -1,4 +1,5 @@
 use super::super::super::*;
+use crate::support::contract_server_support::strip_suffix_id;
 
 pub(super) fn write_response(
     stream: &mut TcpStream,
@@ -76,10 +77,4 @@ fn write_release_escrow_response(
     let payload = format!("{{\"escrow_id\":\"{}\",\"state\":\"released\"}}", escrow_id);
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
-}
-
-fn strip_suffix_id<'a>(path: &'a str, prefix: &str, suffix: &str) -> &'a str {
-    path.trim_start_matches(prefix)
-        .trim_end_matches(suffix)
-        .trim_end_matches('/')
 }

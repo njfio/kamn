@@ -8,6 +8,10 @@ mod bridge_route_support;
 mod message_task_route_support;
 #[path = "contract_server_support/public_route_support.rs"]
 mod public_route_support;
+#[path = "contract_server_support/route_id_support.rs"]
+mod route_id_support;
+
+pub(crate) use route_id_support::strip_suffix_id;
 
 pub(crate) fn run_service_contract_server(
     bind_addr: String,
