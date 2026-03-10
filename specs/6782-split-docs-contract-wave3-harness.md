@@ -29,12 +29,12 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-core/tests/docs_contract_wave3_harness.rs` into bounded sibling modules
-- [ ] root `docs_contract_wave3_harness.rs` is reduced below the staged extraction cap enforced by the new contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] `cargo test -p kamn-core --test docs_contract_wave3_harness -- --nocapture` passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-core/tests/docs_contract_wave3_harness.rs` into bounded sibling modules
+- [x] root `docs_contract_wave3_harness.rs` is reduced below the staged extraction cap enforced by the new contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] `cargo test -p kamn-core --test docs_contract_wave3_harness -- --nocapture` passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -56,3 +56,17 @@ Outputs:
 4. Run `cargo test -p kamn-core --test docs_contract_wave3_harness -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6778-remote --base-ref origin/main --output-json /tmp/6782-touched-size.json`.
+
+# Phase 6 Evidence
+
+- Root shell reduced to `73` LOC in `crates/kamn-core/tests/docs_contract_wave3_harness.rs`.
+- Extracted 35 sibling modules under `crates/kamn-core/tests/docs_contract_wave3_harness/`.
+- Verified with:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test docs_contract_wave3_harness_extraction_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test docs_contract_wave3_harness -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6778-remote --base-ref origin/main --output-json /tmp/6782-touched-size-staged.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- Mechanical extraction required `include_str!` path rewrites from `../../../` to `../../../../` because the contract modules moved one directory deeper.
