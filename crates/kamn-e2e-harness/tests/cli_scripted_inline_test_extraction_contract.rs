@@ -38,13 +38,19 @@ fn regression_cli_scripted_extracted_test_module_file_exists() {
 fn regression_cli_scripted_extracted_test_layout_exists() {
     for relative_path in [
         "src/drivers/cli_scripted_tests/base_contract_tests.rs",
+        "src/drivers/cli_scripted_tests/continuity_probe_contract_tests.rs",
         "src/drivers/cli_scripted_tests/driver_path_contract_tests.rs",
         "src/drivers/cli_scripted_tests/live_probe_contract_tests.rs",
+        "src/drivers/cli_scripted_tests/missing_binary_probe_contract_tests.rs",
+        "src/drivers/cli_scripted_tests/missing_binary_probe_extended_contract_tests.rs",
         "src/drivers/cli_scripted_tests/payload_and_budget_contract_tests.rs",
+        "src/drivers/cli_scripted_tests/rotation_batch_contract_tests.rs",
         "src/drivers/cli_scripted_tests/validator_contract_tests.rs",
         "src/drivers/cli_scripted_tests/support.rs",
         "src/drivers/cli_scripted_tests/support/env_support.rs",
         "src/drivers/cli_scripted_tests/support/script_fixture_support.rs",
+        "src/drivers/cli_scripted_tests/support/script_source_support.rs",
+        "src/drivers/cli_scripted_tests/support/update_support.rs",
     ] {
         let full_path = manifest_dir().join(relative_path);
         assert!(
