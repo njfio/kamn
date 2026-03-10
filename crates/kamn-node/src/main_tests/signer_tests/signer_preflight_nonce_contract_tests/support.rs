@@ -87,28 +87,19 @@ pub(super) fn quorum_env_guards(
     required_approvals: &'static str,
     approved_signers: &'static str,
 ) -> Vec<EnvVarGuard> {
-    vec![
-        EnvVarGuard::set(
-            "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
-            Some(previous_profile),
-        ),
-        EnvVarGuard::set(
-            "KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH",
-            Some(rotation_epoch),
-        ),
-        EnvVarGuard::set(
+    let mut guards = vec![
+        guard("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", previous_profile),
+        guard("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", rotation_epoch),
+        guard(
             "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH",
-            Some(previous_rotation_epoch),
+            previous_rotation_epoch,
         ),
-        EnvVarGuard::set(
-            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
-            Some(required_approvals),
-        ),
-        EnvVarGuard::set(
-            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
-            Some(approved_signers),
-        ),
-    ]
+    ];
+    guards.extend(quorum_requirement_guards(
+        required_approvals,
+        approved_signers,
+    ));
+    guards
 }
 
 pub(super) fn assert_preflight_reason(
@@ -158,4 +149,24 @@ pub(super) fn assert_preflight_matrix_case(case: &PreflightMatrixCase) {
             "matrix success case must remain ready",
         ),
     }
+}
+
+fn guard(name: &'static str, value: &'static str) -> EnvVarGuard {
+    EnvVarGuard::set(name, Some(value))
+}
+
+fn quorum_requirement_guards(
+    required_approvals: &'static str,
+    approved_signers: &'static str,
+) -> [EnvVarGuard; 2] {
+    [
+        guard(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+            required_approvals,
+        ),
+        guard(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+            approved_signers,
+        ),
+    ]
 }

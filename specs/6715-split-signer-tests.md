@@ -61,3 +61,34 @@ Reduce `crates/kamn-node/src/main_tests/signer_tests.rs` to a thin wiring surfac
 2. Extract signer tests by concern until the contract passes.
 3. Run focused `kamn-node` signer tests that cover direct signing, preflight/profile behavior, and managed-external backend response paths.
 4. Run touched-Rust size policy on the issue write set.
+
+# Outcome
+
+- [x] `crates/kamn-node/src/main_tests/signer_tests.rs` is reduced to <= 200 LOC or an explicitly staged root cap enforced by contract
+- [x] signer tests are extracted into bounded sibling modules organized by coherent signer concerns
+- [x] extracted signer files remain within the intended staged file budget
+- [x] a contract test fails if the root file regresses above its staged cap or the extracted layout disappears
+- [x] focused signer test coverage still passes through the real `kamn-node` test surface after extraction
+- [x] touched-Rust size policy passes on the issue branch
+
+# Phase 6 Evidence
+
+- Root/signpost files:
+  - `crates/kamn-node/src/main_tests/signer_tests.rs`: `6` LOC
+  - `crates/kamn-node/src/main_tests/signer_tests_split_contract.rs`: `8` LOC
+  - support files remained under budget:
+    - direct/profile support: `99` LOC
+    - managed-external support: `181` LOC
+    - preflight support: `172` LOC
+- Verified on the committed refactor head:
+  - `cargo test -p kamn-node signer_tests_split_contract -- --nocapture`
+  - `cargo test -p kamn-node signer_tests -- --nocapture`
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6715-touched-size-final.json`
+- Result:
+  - signer split contract: pass
+  - signer test surface: 46 passed, 0 failed
+  - touched-Rust size policy: `policy_decision=GO`
+
+# Deviations
+
+- None.

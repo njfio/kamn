@@ -49,7 +49,15 @@ pub(super) fn assert_lowercase_hex_128(value: &str, label: &str) {
 }
 
 pub(super) fn runtime_args(base_url: String, key_source: &str) -> Vec<String> {
-    let mut args = vec![
+    let mut args = common_runtime_args(base_url, key_source);
+    if key_source == "managed-external" {
+        args.extend(managed_external_runtime_flags());
+    }
+    args
+}
+
+fn common_runtime_args(base_url: String, key_source: &str) -> Vec<String> {
+    vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -65,15 +73,15 @@ pub(super) fn runtime_args(base_url: String, key_source: &str) -> Vec<String> {
         key_source.to_owned(),
         "--output".to_owned(),
         "json".to_owned(),
-    ];
-    if key_source == "managed-external" {
-        args.extend([
-            "--kolme-live-strict-signer-contracts".to_owned(),
-            "--kolme-live-signer-profile".to_owned(),
-            "ops-primary".to_owned(),
-        ]);
-    }
-    args
+    ]
+}
+
+fn managed_external_runtime_flags() -> [String; 3] {
+    [
+        "--kolme-live-strict-signer-contracts".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+    ]
 }
 
 pub(super) fn local_heavy_probe_inputs() -> Option<(String, String)> {
