@@ -94,6 +94,10 @@ pub(crate) fn assert_parse_error(args: Vec<String>, expected: ConfigError) {
     assert_eq!(parse_args(args), Err(expected));
 }
 
+pub(crate) fn missing_arg(flag: &'static str) -> ConfigError {
+    ConfigError::MissingArgumentValue(flag)
+}
+
 pub(crate) fn parse_cli(args: Vec<String>, context: &str) -> NodeCli {
     parse_args(args).unwrap_or_else(|error| panic!("{context}: {error:?}"))
 }

@@ -9,7 +9,7 @@ fn rejects_kolme_live_without_base_url() {
             ("--kolme-live-signing-profile", "kolme-fork-secp256k1-v1"),
         ],
     );
-    assert_parse_error(args, ConfigError::MissingArgumentValue("--kolme-live-base-url"));
+    assert_parse_error(args, missing_arg("--kolme-live-base-url"));
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn rejects_kolme_live_without_provider_hint() {
             ("--kolme-live-signing-profile", "kolme-fork-secp256k1-v1"),
         ],
     );
-    assert_parse_error(args, ConfigError::MissingArgumentValue("--kolme-live-provider-hint"));
+    assert_parse_error(args, missing_arg("--kolme-live-provider-hint"));
 }
 
 #[test]
@@ -33,13 +33,13 @@ fn rejects_kolme_live_without_signing_profile() {
             ("--kolme-live-provider-hint", "kolme-fork-local"),
         ],
     );
-    assert_parse_error(args, ConfigError::MissingArgumentValue("--kolme-live-signing-profile"));
+    assert_parse_error(args, missing_arg("--kolme-live-signing-profile"));
 }
 
 #[test]
 fn rejects_kolme_live_without_signer_key_source() {
     let args = kolme_live_declared_args();
-    assert_parse_error(args, ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"));
+    assert_parse_error(args, missing_arg("--kolme-live-signer-key-source"));
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn rejects_kolme_live_continuous_mode_without_tick_interval() {
         kolme_live_declared_args(),
         &[("--kolme-live-signer-key-source", "env-local"), ("--daemon-max-ticks", "2")],
     );
-    assert_parse_error(args, ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"));
+    assert_parse_error(args, missing_arg("--daemon-tick-interval-ms"));
 }
 
 #[test]
@@ -60,5 +60,5 @@ fn rejects_kolme_live_continuous_mode_without_max_ticks() {
             ("--daemon-tick-interval-ms", "25"),
         ],
     );
-    assert_parse_error(args, ConfigError::MissingArgumentValue("--daemon-max-ticks"));
+    assert_parse_error(args, missing_arg("--daemon-max-ticks"));
 }
