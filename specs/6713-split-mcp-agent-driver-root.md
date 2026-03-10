@@ -37,12 +37,12 @@ Reduce `crates/kamn-e2e-harness/src/drivers/mcp_agent.rs` to a thin public wirin
 
 # Acceptance criteria
 
-- [ ] `crates/kamn-e2e-harness/src/drivers/mcp_agent.rs` is reduced to <= 200 LOC
-- [ ] residual root responsibilities are extracted into bounded sibling modules organized by concern
-- [ ] real MCP-agent driver wiring remains unchanged
-- [ ] a contract test fails if the root grows above the staged cap or the extracted module layout regresses
-- [ ] relevant `kamn-e2e-harness` MCP-agent tests and command contracts pass after extraction
-- [ ] touched-Rust size policy passes on the issue branch
+- [x] `crates/kamn-e2e-harness/src/drivers/mcp_agent.rs` is reduced to <= 200 LOC
+- [x] residual root responsibilities are extracted into bounded sibling modules organized by concern
+- [x] real MCP-agent driver wiring remains unchanged
+- [x] a contract test fails if the root grows above the staged cap or the extracted module layout regresses
+- [x] relevant `kamn-e2e-harness` MCP-agent tests and command contracts pass after extraction
+- [x] touched-Rust size policy passes on the issue branch
 
 # Files to touch
 
@@ -63,3 +63,19 @@ Reduce `crates/kamn-e2e-harness/src/drivers/mcp_agent.rs` to a thin public wirin
 2. Extract the driver-core, live-probe tranches, and support seams until the contract passes.
 3. Run focused `kamn-e2e-harness` MCP-agent tests and command contracts.
 4. Run touched-Rust size policy on the issue write set.
+
+# Phase 6 evidence
+
+- `crates/kamn-e2e-harness/src/drivers/mcp_agent.rs` is now 113 LOC on branch `6713-split-mcp-agent-driver-root`
+- Real driver path remained wired through `McpAgentDriver` and `spec_c32_process_runtime_agent_runtime_is_mcp_agent_for_mcp_mode`
+- Extraction contract and MCP-agent suite passed after the root/module split:
+  - `cargo test -p kamn-e2e-harness mcp_agent -- --nocapture`
+  - `cargo test -p kamn-e2e-harness --test mcp_agent_root_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-e2e-harness --test command_contract spec_c32_process_runtime_agent_runtime_is_mcp_agent_for_mcp_mode -- --exact --nocapture`
+- Clean detached touched-size verification passed from `/tmp/kamn-6713-verify-pnataK`:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6713-touched-size-clean-final.json`
+  - result: `policy_decision=GO`
+
+# Deviations
+
+- None
