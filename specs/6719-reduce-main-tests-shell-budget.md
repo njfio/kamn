@@ -59,3 +59,35 @@ Reduce `crates/kamn-node/src/main_tests.rs` below the enforced shell budget by e
 3. Run focused `kamn-node` tests that exercise the extracted helper surface.
 4. Run the full `main_module_extraction_contract` target.
 5. Run touched-Rust size policy on the issue write set.
+
+# Outcome
+
+- [x] `crates/kamn-node/src/main_tests.rs` is reduced to `<= 260` LOC while remaining a shell-only module root
+- [x] extracted helper files created by this issue stay within the active size policy on the touched write set
+- [x] existing `main_tests` domain modules continue to compile with the extracted helper surface
+- [x] `cargo test -p kamn-node --test main_module_extraction_contract -- --nocapture` passes on the issue branch
+- [x] focused `kamn-node` test coverage using the extracted helper surface still passes through the real test wiring
+- [x] touched-Rust size policy returns `policy_decision=GO` on the issue write set
+
+# Phase 6 Evidence
+
+- Root/signpost files:
+  - `crates/kamn-node/src/main_tests.rs`: `54` LOC
+  - `crates/kamn-node/src/main_tests/support.rs`: `8` LOC
+  - `crates/kamn-node/src/main_tests/support/env_json.rs`: `96` LOC
+  - `crates/kamn-node/src/main_tests/support/http_mock.rs`: `136` LOC
+  - `crates/kamn-node/tests/main_tests_shell_budget_contract.rs`: `63` LOC
+- Verified on the branch head from a clean clone at `/home/n/Code/kamn-6719-verify-1773129406`:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node --test main_tests_shell_budget_contract --manifest-path /home/n/Code/kamn-6719-verify-1773129406/crates/kamn-node/Cargo.toml -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node --test main_module_extraction_contract --manifest-path /home/n/Code/kamn-6719-verify-1773129406/crates/kamn-node/Cargo.toml -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node cli_contract_tests --manifest-path /home/n/Code/kamn-6719-verify-1773129406/crates/kamn-node/Cargo.toml -- --nocapture`
+  - `python3 /home/n/Code/kamn-6719-verify-1773129406/scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6719-verify-1773129406 --base-ref 8cbed28a --output-json /home/n/Code/kamn/tmp/6719-touched-size-clean-final-direct.json`
+- Result:
+  - `main_tests_shell_budget_contract`: `3 passed, 0 failed`
+  - `main_module_extraction_contract`: `15 passed, 0 failed`
+  - `cli_contract_tests`: `53 passed, 0 failed`
+  - touched-Rust size policy: `policy_decision=GO`
+
+# Deviations
+
+- The shell wrapper `scripts/ci/check_touched_rust_size_policy.sh` resolves `KAMN_ROOT` through the primary checkout, so for clean-clone verification the direct Python checker entrypoint was used with `--repo-root` pinned to the verify clone. The underlying policy result on the branch head was `GO`.
