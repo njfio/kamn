@@ -65,3 +65,16 @@ Split `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs` into bound
    - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --nocapture`
    - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport_extraction_contract -- --nocapture`
    - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6750-touched-size.json`
+
+## Phase 6 Evidence
+
+- `cargo test -p kamn-core --test kolme_runtime_commit_http_transport_extraction_contract -- --nocapture`
+  - result: pass
+- `cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --nocapture`
+  - result: pass (`38 passed; 0 failed`)
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6750-touched-size-final.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+
+- None.

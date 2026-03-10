@@ -31,7 +31,7 @@ fn spawn_https_server_process(
     Command::new("python3")
         .arg("-u")
         .arg("-c")
-        .arg(https_server_script())
+        .arg(HTTPS_SERVER_SCRIPT)
         .arg("0")
         .arg(server_cert_path)
         .arg(server_key_path)
@@ -60,8 +60,7 @@ fn read_bound_port(child: &mut Child) -> u16 {
         .expect("python https test server should emit a valid port")
 }
 
-fn https_server_script() -> &'static str {
-    r#"
+const HTTPS_SERVER_SCRIPT: &str = r#"
 import http.server
 import ssl
 import sys
@@ -97,5 +96,4 @@ context.load_cert_chain(certfile=cert_file, keyfile=key_file)
 httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 print(httpd.server_address[1], flush=True)
 httpd.handle_request()
-"#
-}
+"#;
