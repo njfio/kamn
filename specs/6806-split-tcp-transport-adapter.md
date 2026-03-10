@@ -45,3 +45,12 @@ Split `crates/kamn-sdk/tests/tcp_transport_adapter.rs` into a thin root shell pl
 3. Run the extraction contract target
 4. Run the real `tcp_transport_adapter` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- `cargo test -p kamn-sdk --test tcp_transport_adapter_extraction_contract -- --nocapture`
+- `cargo test -p kamn-sdk --test tcp_transport_adapter -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6806-touched-size-refactor.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None.
