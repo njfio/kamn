@@ -118,6 +118,14 @@ fn validate_query_bridge_response(
         "bridge_status",
         step,
     )?;
+    validate_forwarded_bridge_fields(response, forwarded, step)
+}
+
+fn validate_forwarded_bridge_fields(
+    response: &str,
+    forwarded: &ForwardedBridge,
+    step: &str,
+) -> Result<(), String> {
     let queried_target_message_id = required_bridge_field(response, "target_message_id", step)?;
     validate_s13_bridge_field_coherence(
         forwarded.target_message_id.as_str(),
