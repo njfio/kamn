@@ -62,3 +62,25 @@ Restore `kamn-node` observability endpoint test compilation on current `origin/m
 4. Re-run the observability endpoint test target.
 5. Run the touched-Rust size policy on the issue write set.
 6. Record final evidence and any deviations in this spec.
+
+# Phase 6 evidence
+
+- Restored explicit imports in the split observability endpoint support and leaf modules only:
+  - `crates/kamn-node/src/main_tests/observability_endpoint_tests/support.rs`
+  - `crates/kamn-node/src/main_tests/observability_endpoint_tests/support/tls_support.rs`
+  - `crates/kamn-node/src/main_tests/observability_endpoint_tests/support/transport_support.rs`
+  - `crates/kamn-node/src/main_tests/observability_endpoint_tests/async_regression_contract_tests.rs`
+  - `crates/kamn-node/src/main_tests/observability_endpoint_tests/async_regression_contract_tests/negative_path_contract_tests.rs`
+  - `crates/kamn-node/src/main_tests/observability_endpoint_tests/stream_runtime_contract_tests/stream_server_contract_tests.rs`
+- Added import regression coverage in `crates/kamn-node/tests/observability_endpoint_import_regression_contract.rs`.
+- Real target restored:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node observability_endpoint -- --nocapture`
+- Regression contract restored:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node --test observability_endpoint_import_regression_contract -- --nocapture`
+- Touched-Rust ratchet passed:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6724-touched-size.json`
+  - result: `status=pass`, `policy_decision=GO`
+
+# Deviations
+
+- None.
