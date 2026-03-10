@@ -12,62 +12,8 @@ use super::support::{pending, scripted_orchestrator};
 
 #[test]
 fn spec_c04_final_receipt_requires_confirmation_metadata() {
-    let mut orchestrator = scripted_orchestrator(
-        "kamn:did:agent:m1-orchestrator-c04",
-        vec![final_receipt("commit-c04-final")],
-    );
-
-    let missing_confirmation = orchestrator
-        .plan_tick(
-            &[pending(
-                "00000000-0000-0000-0000-000000000401",
-                "sha256:c04a",
-                1_900_000_000,
-            )],
-            1_900_000_010,
-            1_900_000_010,
-            1_900_000_011,
-            None,
-        )
-        .expect_err("missing confirmation metadata should fail closed");
-    assert_eq!(
-        missing_confirmation,
-        DataLayerM1AnchoringOrchestratorError::MissingConfirmationMetadata {
-            reason_code: DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
-            transaction_id: "commit-c04-final".to_owned(),
-        }
-    );
-
-    let mut orchestrator = scripted_orchestrator(
-        "kamn:did:agent:m1-orchestrator-c04-ok",
-        vec![final_receipt("commit-c04-final-ok")],
-    );
-    let outcome = orchestrator
-        .plan_tick(
-            &[pending(
-                "00000000-0000-0000-0000-000000000402",
-                "sha256:c04b",
-                1_900_000_000,
-            )],
-            1_900_000_010,
-            1_900_000_010,
-            1_900_000_011,
-            Some(DataLayerM1AnchoringConfirmationMetadata {
-                kolme_block_height: 123_456,
-                confirmed_at_unix_seconds: 1_900_000_020,
-            }),
-        )
-        .expect("final receipt with confirmation metadata should succeed");
-    let DataLayerM1AnchoringTickOutcome::Planned { persistence_plan, .. } = outcome else {
-        panic!("expected planned outcome");
-    };
-    assert_eq!(
-        persistence_plan.confirmation,
-        Some(DataLayerM1AnchoringConfirmationMetadata {
-            kolme_block_height: 123_456,
-            confirmed_at_unix_seconds: 1_900_000_020,
-        })
-    );
+    assert_missing_confirmation_error();
+    assert_final_confirmation_projection();
 }
 
 #[test]
@@ -93,6 +39,62 @@ fn spec_c04_rejected_anchor_projects_rejected_outcome() {
         )
         .expect("rejected anchors should project deterministic outcome");
 
+    assert_rejected_outcome(outcome);
+}
+
+#[test]
+fn spec_c04_duplicate_pending_anchor_projects_retry_follow_up_policy() {
+    let outcome = duplicate_pending_outcome();
+    assert_duplicate_retry_follow_up(outcome);
+}
+
+fn final_receipt(commit_id: &str) -> KolmeRuntimeCommitOutcome {
+    KolmeRuntimeCommitOutcome::Submitted(KolmeRuntimeCommitReceipt {
+        provider: "kolme-scripted".to_owned(),
+        commit_id: commit_id.to_owned(),
+        finality: KolmeCommitReceiptFinality::Final,
+    })
+}
+
+fn assert_missing_confirmation_error() {
+    let mut orchestrator = scripted_orchestrator(
+        "kamn:did:agent:m1-orchestrator-c04",
+        vec![final_receipt("commit-c04-final")],
+    );
+    let missing_confirmation = plan_scripted_tick(&mut orchestrator, "00000000-0000-0000-0000-000000000401", "sha256:c04a", None)
+        .expect_err("missing confirmation metadata should fail closed");
+    assert_eq!(
+        missing_confirmation,
+        DataLayerM1AnchoringOrchestratorError::MissingConfirmationMetadata {
+            reason_code: DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
+            transaction_id: "commit-c04-final".to_owned(),
+        }
+    );
+}
+
+fn assert_final_confirmation_projection() {
+    let confirmation = DataLayerM1AnchoringConfirmationMetadata {
+        kolme_block_height: 123_456,
+        confirmed_at_unix_seconds: 1_900_000_020,
+    };
+    let mut orchestrator = scripted_orchestrator(
+        "kamn:did:agent:m1-orchestrator-c04-ok",
+        vec![final_receipt("commit-c04-final-ok")],
+    );
+    let outcome = plan_scripted_tick(
+        &mut orchestrator,
+        "00000000-0000-0000-0000-000000000402",
+        "sha256:c04b",
+        Some(confirmation.clone()),
+    )
+    .expect("final receipt with confirmation metadata should succeed");
+    let DataLayerM1AnchoringTickOutcome::Planned { persistence_plan, .. } = outcome else {
+        panic!("expected planned outcome");
+    };
+    assert_eq!(persistence_plan.confirmation, Some(confirmation));
+}
+
+fn assert_rejected_outcome(outcome: DataLayerM1AnchoringTickOutcome) {
     let DataLayerM1AnchoringTickOutcome::Rejected {
         reason_code,
         rejection_reason,
@@ -113,31 +115,7 @@ fn spec_c04_rejected_anchor_projects_rejected_outcome() {
     assert!(follow_up_policy.poll_after_unix_seconds.is_none());
 }
 
-#[test]
-fn spec_c04_duplicate_pending_anchor_projects_retry_follow_up_policy() {
-    let mut orchestrator = scripted_orchestrator(
-        "kamn:did:agent:m1-orchestrator-c04-duplicate",
-        vec![KolmeRuntimeCommitOutcome::Duplicate(KolmeRuntimeCommitReceipt {
-            provider: "kolme-scripted".to_owned(),
-            commit_id: "commit-c04-duplicate".to_owned(),
-            finality: KolmeCommitReceiptFinality::Pending,
-        })],
-    );
-
-    let outcome = orchestrator
-        .plan_tick(
-            &[pending(
-                "00000000-0000-0000-0000-000000000404",
-                "sha256:c04d",
-                1_900_000_000,
-            )],
-            1_900_000_010,
-            1_900_000_010,
-            1_900_000_011,
-            None,
-        )
-        .expect("duplicate pending anchors should evaluate deterministically");
-
+fn assert_duplicate_retry_follow_up(outcome: DataLayerM1AnchoringTickOutcome) {
     let DataLayerM1AnchoringTickOutcome::Planned { follow_up_policy, .. } = outcome else {
         panic!("expected planned outcome");
     };
@@ -154,10 +132,35 @@ fn spec_c04_duplicate_pending_anchor_projects_retry_follow_up_policy() {
     );
 }
 
-fn final_receipt(commit_id: &str) -> KolmeRuntimeCommitOutcome {
-    KolmeRuntimeCommitOutcome::Submitted(KolmeRuntimeCommitReceipt {
-        provider: "kolme-scripted".to_owned(),
-        commit_id: commit_id.to_owned(),
-        finality: KolmeCommitReceiptFinality::Final,
-    })
+fn duplicate_pending_outcome() -> DataLayerM1AnchoringTickOutcome {
+    let mut orchestrator = scripted_orchestrator(
+        "kamn:did:agent:m1-orchestrator-c04-duplicate",
+        vec![KolmeRuntimeCommitOutcome::Duplicate(KolmeRuntimeCommitReceipt {
+            provider: "kolme-scripted".to_owned(),
+            commit_id: "commit-c04-duplicate".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        })],
+    );
+    plan_scripted_tick(
+        &mut orchestrator,
+        "00000000-0000-0000-0000-000000000404",
+        "sha256:c04d",
+        None,
+    )
+    .expect("duplicate pending anchors should evaluate deterministically")
+}
+
+fn plan_scripted_tick(
+    orchestrator: &mut kamn_core::DataLayerM1AnchoringOrchestrator<super::support::ScriptedKolmeRuntimeCommitClient>,
+    message_id: &str,
+    content_hash: &str,
+    confirmation: Option<DataLayerM1AnchoringConfirmationMetadata>,
+) -> Result<DataLayerM1AnchoringTickOutcome, DataLayerM1AnchoringOrchestratorError> {
+    orchestrator.plan_tick(
+        &[pending(message_id, content_hash, 1_900_000_000)],
+        1_900_000_010,
+        1_900_000_010,
+        1_900_000_011,
+        confirmation,
+    )
 }

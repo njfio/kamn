@@ -33,21 +33,27 @@ fn spec_c01_orchestrator_tick_defers_when_scheduler_thresholds_are_not_met() {
 #[test]
 fn spec_c02_orchestrator_tick_projects_planned_persistence_metadata() {
     let mut orchestrator = memory_orchestrator("kamn:did:agent:m1-orchestrator-c02", 1);
+    let outcome = planned_tick(&mut orchestrator, "00000000-0000-0000-0000-000000000201", "sha256:c02a");
+    assert_planned_persistence(outcome, "00000000-0000-0000-0000-000000000201");
+}
 
-    let outcome = orchestrator
+fn planned_tick(
+    orchestrator: &mut kamn_core::DataLayerM1AnchoringOrchestrator<impl kamn_core::KolmeRuntimeCommitClient>,
+    message_id: &str,
+    content_hash: &str,
+) -> DataLayerM1AnchoringTickOutcome {
+    orchestrator
         .plan_tick(
-            &[pending(
-                "00000000-0000-0000-0000-000000000201",
-                "sha256:c02a",
-                1_900_000_000,
-            )],
+            &[pending(message_id, content_hash, 1_900_000_000)],
             1_900_000_010,
             1_900_000_010,
             1_900_000_011,
             None,
         )
-        .expect("tick should evaluate");
+        .expect("tick should evaluate")
+}
 
+fn assert_planned_persistence(outcome: DataLayerM1AnchoringTickOutcome, message_id: &str) {
     let DataLayerM1AnchoringTickOutcome::Planned {
         reason_code,
         persistence_plan,
@@ -58,14 +64,22 @@ fn spec_c02_orchestrator_tick_projects_planned_persistence_metadata() {
         panic!("expected planned outcome");
     };
     assert_eq!(reason_code, DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE);
+    assert_planned_metadata(&persistence_plan, message_id);
+    assert_pending_follow_up(follow_up_policy);
+}
+
+fn assert_planned_metadata(
+    persistence_plan: &kamn_core::DataLayerM1AnchoringPersistencePlan,
+    message_id: &str,
+) {
     assert_eq!(persistence_plan.leaf_count, 1);
     assert_eq!(persistence_plan.assignments.len(), 1);
-    assert_eq!(
-        persistence_plan.assignments[0].message_id,
-        "00000000-0000-0000-0000-000000000201"
-    );
+    assert_eq!(persistence_plan.assignments[0].message_id, message_id);
     assert!(persistence_plan.submission.is_some());
     assert!(persistence_plan.confirmation.is_none());
+}
+
+fn assert_pending_follow_up(follow_up_policy: DataLayerM1AnchoringFollowUpPolicy) {
     assert_eq!(
         follow_up_policy,
         DataLayerM1AnchoringFollowUpPolicy {
