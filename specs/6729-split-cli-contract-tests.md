@@ -33,12 +33,12 @@ Split `crates/kamn-node/src/main_tests/cli_contract_tests.rs` into bounded sibli
 
 # Acceptance criteria (testable booleans)
 
-- [ ] `crates/kamn-node/src/main_tests/cli_contract_tests.rs` is reduced to a bounded root shell under the active size policy
-- [ ] CLI contract coverage is split into coherent sibling modules that reflect the existing CLI concern seams
-- [ ] extracted files added by this issue remain within the active touched-Rust size policy on the issue write set
-- [ ] a contract fails if the CLI root shell regresses or the extracted module layout disappears
-- [ ] `cargo test -p kamn-node cli_contract_tests -- --nocapture` passes after extraction
-- [ ] touched-Rust size policy returns `policy_decision=GO` on the issue write set
+- [x] `crates/kamn-node/src/main_tests/cli_contract_tests.rs` is reduced to a bounded root shell under the active size policy
+- [x] CLI contract coverage is split into coherent sibling modules that reflect the existing CLI concern seams
+- [x] extracted files added by this issue remain within the active touched-Rust size policy on the issue write set
+- [x] a contract fails if the CLI root shell regresses or the extracted module layout disappears
+- [x] `cargo test -p kamn-node cli_contract_tests -- --nocapture` passes after extraction
+- [x] touched-Rust size policy returns `policy_decision=GO` on the issue write set
 
 # Files to touch
 
@@ -61,3 +61,28 @@ Split `crates/kamn-node/src/main_tests/cli_contract_tests.rs` into bounded sibli
 4. Run the CLI extraction contract.
 5. Run the touched-Rust size policy on the issue write set.
 6. Record final evidence and any deviations in this spec before opening the PR.
+
+# Final evidence
+
+- `cargo test -p kamn-node cli_contract_tests -- --nocapture`
+  - result: `53 passed, 0 failed`
+- `cargo test -p kamn-node --test cli_contract_tests_extraction_contract -- --nocapture`
+  - result: `3 passed, 0 failed`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6729-touched-size.json`
+  - result: `status=pass`, `policy_decision=GO`
+
+# Measured outcome
+
+- `crates/kamn-node/src/main_tests/cli_contract_tests.rs`
+  - reduced from `1434` LOC to `15` LOC
+- extracted CLI modules now cover:
+  - required argument validation
+  - `kolme-live` provider and strict-signer contracts
+  - generic and proposal/rejoin parse validation
+  - planning, recovery, daemon, and observability runtime regressions
+- largest extracted file:
+  - `crates/kamn-node/src/main_tests/cli_contract_tests/kolme_live_contract_tests/startup_negative_matrix_contract_tests.rs` at `122` LOC
+
+# Deviations
+
+- None.
