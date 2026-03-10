@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 const ROOT: &str = "tests/kolme_runtime_commit_client.rs";
 const ROOT_CAP: usize = 180;
+const MODULE_CAP: usize = 200;
 const MODULE_FILES: &[&str] = &[
     "tests/kolme_runtime_commit_client/request_validation_contract_tests.rs",
     "tests/kolme_runtime_commit_client/adapter_backed_client_contract_tests.rs",
@@ -78,8 +79,8 @@ fn assert_module_files_exist_and_fit_budget() {
             .lines()
             .count();
         assert!(
-            lines <= 200,
-            "extracted module exceeds 200 lines: {}",
+            lines <= MODULE_CAP,
+            "extracted module exceeds {MODULE_CAP} lines: {}",
             full.display()
         );
     }
