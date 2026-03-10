@@ -78,8 +78,7 @@ fn regression_cli_scripted_extracted_files_stay_within_line_budget() {
         .into_iter()
         .filter_map(|path| {
             let line_count = fs::read_to_string(&path).ok()?.lines().count();
-            (line_count > EXTRACTED_MAX_LINES)
-                .then(|| format!("{} ({line_count})", path.display()))
+            (line_count > EXTRACTED_MAX_LINES).then(|| format!("{} ({line_count})", path.display()))
         })
         .collect::<Vec<String>>();
 
