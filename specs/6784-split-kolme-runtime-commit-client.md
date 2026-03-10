@@ -30,12 +30,12 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-core/tests/kolme_runtime_commit_client.rs` into bounded sibling modules
-- [ ] root `kolme_runtime_commit_client.rs` is reduced below the staged extraction cap enforced by the new contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] `cargo test -p kamn-core --test kolme_runtime_commit_client -- --nocapture` passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-core/tests/kolme_runtime_commit_client.rs` into bounded sibling modules
+- [x] root `kolme_runtime_commit_client.rs` is reduced below the staged extraction cap enforced by the new contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] `cargo test -p kamn-core --test kolme_runtime_commit_client -- --nocapture` passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -57,3 +57,22 @@ Outputs:
 4. Run `cargo test -p kamn-core --test kolme_runtime_commit_client -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6778-remote --base-ref origin/main --output-json /tmp/6784-touched-size.json`.
+
+# Phase 6 Evidence
+
+- Root shell reduced to `5` module declarations in `crates/kamn-core/tests/kolme_runtime_commit_client.rs`.
+- Extracted module tree under `crates/kamn-core/tests/kolme_runtime_commit_client/` covers:
+  - request validation
+  - adapter-backed client behavior
+  - live provider behavior
+  - finality checker behavior
+  - shared support fixtures and transports
+- Verified with:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test kolme_runtime_commit_client_extraction_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test kolme_runtime_commit_client -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6784-remote-size-post-refactor.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- The first “fresh” clone was invalid because it was cloned from the dirty local checkout rather than from the remote repository; the final verification and merge branch used `/tmp/kamn-6784-remote` cloned directly from `https://github.com/njfio/kamn.git`.
