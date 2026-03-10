@@ -8,7 +8,10 @@ use super::super::support::vector_input;
 
 #[test]
 fn spec_c06_recall_drift_is_stable_when_recall_and_rank_shift_are_within_thresholds() {
-    let mut registry = make_recall_registry(&[("embed-m5-r1", "msg-m5-r1", vec![1.0, 0.0, 0.0]), ("embed-m5-r2", "msg-m5-r2", vec![0.9, 0.1, 0.0])]);
+    let registry = make_recall_registry(&[
+        ("embed-m5-r1", "msg-m5-r1", vec![1.0, 0.0, 0.0]),
+        ("embed-m5-r2", "msg-m5-r2", vec![0.9, 0.1, 0.0]),
+    ]);
 
     let report = registry
         .evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
@@ -29,7 +32,7 @@ fn spec_c06_recall_drift_is_stable_when_recall_and_rank_shift_are_within_thresho
 
 #[test]
 fn spec_c07_recall_drift_is_degraded_when_baseline_ids_are_missing() {
-    let mut registry = make_recall_registry(&[("embed-m5-r3", "msg-m5-r3", vec![1.0, 0.0, 0.0])]);
+    let registry = make_recall_registry(&[("embed-m5-r3", "msg-m5-r3", vec![1.0, 0.0, 0.0])]);
 
     let report = registry
         .evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
@@ -48,7 +51,10 @@ fn spec_c07_recall_drift_is_degraded_when_baseline_ids_are_missing() {
 
 #[test]
 fn spec_c08_recall_drift_is_degraded_when_rank_shift_exceeds_threshold() {
-    let mut registry = make_recall_registry(&[("embed-m5-r5", "msg-m5-r5", vec![1.0, 0.0, 0.0]), ("embed-m5-r6", "msg-m5-r6", vec![0.9, 0.1, 0.0])]);
+    let registry = make_recall_registry(&[
+        ("embed-m5-r5", "msg-m5-r5", vec![1.0, 0.0, 0.0]),
+        ("embed-m5-r6", "msg-m5-r6", vec![0.9, 0.1, 0.0]),
+    ]);
 
     let report = registry
         .evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
@@ -70,29 +76,8 @@ fn spec_c09_recall_drift_rejects_invalid_threshold_and_empty_baseline() {
     let registry =
         DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
 
-    let empty_baseline = registry.evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
-        owner_did: "kamn:did:owner:alpha".to_owned(),
-        query_vector: vec![1.0, 0.0, 0.0],
-        baseline_top_k_embedding_ids: Vec::new(),
-        min_recall_at_k: 0.8,
-        max_allowed_rank_shift: 1,
-    });
-    assert!(matches!(
-        empty_baseline,
-        Err(DataLayerM5VectorIntegrationError::EmptyField("baseline_top_k_embedding_ids"))
-    ));
-
-    let invalid_threshold = registry.evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
-        owner_did: "kamn:did:owner:alpha".to_owned(),
-        query_vector: vec![1.0, 0.0, 0.0],
-        baseline_top_k_embedding_ids: vec!["embed-m5-r1".to_owned()],
-        min_recall_at_k: 1.5,
-        max_allowed_rank_shift: 1,
-    });
-    assert!(matches!(
-        invalid_threshold,
-        Err(DataLayerM5VectorIntegrationError::InvalidVectorValue("min_recall_at_k"))
-    ));
+    assert_empty_baseline_rejected(&registry);
+    assert_invalid_threshold_rejected(&registry);
 }
 
 fn make_recall_registry(entries: &[(&str, &str, Vec<f32>)]) -> DataLayerM5EmbeddingRegistry {
@@ -110,4 +95,32 @@ fn make_recall_registry(entries: &[(&str, &str, Vec<f32>)]) -> DataLayerM5Embedd
             .expect("recall append should succeed");
     }
     registry
+}
+
+fn assert_empty_baseline_rejected(registry: &DataLayerM5EmbeddingRegistry) {
+    let empty_baseline = registry.evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
+        owner_did: "kamn:did:owner:alpha".to_owned(),
+        query_vector: vec![1.0, 0.0, 0.0],
+        baseline_top_k_embedding_ids: Vec::new(),
+        min_recall_at_k: 0.8,
+        max_allowed_rank_shift: 1,
+    });
+    assert!(matches!(
+        empty_baseline,
+        Err(DataLayerM5VectorIntegrationError::EmptyField("baseline_top_k_embedding_ids"))
+    ));
+}
+
+fn assert_invalid_threshold_rejected(registry: &DataLayerM5EmbeddingRegistry) {
+    let invalid_threshold = registry.evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
+        owner_did: "kamn:did:owner:alpha".to_owned(),
+        query_vector: vec![1.0, 0.0, 0.0],
+        baseline_top_k_embedding_ids: vec!["embed-m5-r1".to_owned()],
+        min_recall_at_k: 1.5,
+        max_allowed_rank_shift: 1,
+    });
+    assert!(matches!(
+        invalid_threshold,
+        Err(DataLayerM5VectorIntegrationError::InvalidVectorValue("min_recall_at_k"))
+    ));
 }

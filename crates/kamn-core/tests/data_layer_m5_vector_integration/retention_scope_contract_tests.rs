@@ -1,10 +1,8 @@
 use kamn_core::{
     ContentRetentionClass, DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput,
-    DataLayerM5EmbeddingRegistry, DataLayerM5RetentionDueCandidate, DataLayerM5SemanticQuery,
-    DataLayerM5VectorIntegrationError, DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
+    DataLayerM5EmbeddingRegistry, DataLayerM5RetentionDueCandidate, DataLayerM5VectorIntegrationError,
+    DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
 };
-
-use super::support::vector_input;
 
 #[test]
 fn spec_c11_retention_due_projection_aligns_with_content_lifecycle_windows() {
