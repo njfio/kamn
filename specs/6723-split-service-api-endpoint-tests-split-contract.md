@@ -61,3 +61,35 @@ Split `crates/kamn-node/src/main_tests/service_api_endpoint_tests_split_contract
 4. Run `cargo test -p kamn-node --test service_api_endpoint_tests_split_contract_extraction_contract -- --nocapture`.
 5. Run the touched-Rust size policy on the issue write set.
 6. Record final evidence and any deviations in this spec before opening the PR.
+
+# Phase 6 evidence
+
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests_split_contract.rs` reduced from `1500` LOC to `33` LOC as a thin root shell.
+- Extracted split-contract files are all within budget:
+  - `auth_scope_contract_tests.rs`: `102` LOC
+  - `bridge_persistence_restart_contract_tests.rs`: `52` LOC
+  - `budget_contract_tests.rs`: `36` LOC
+  - `channel_agent_directory_contract_tests.rs`: `82` LOC
+  - `content_lifecycle_restart_contract_tests.rs`: `53` LOC
+  - `ingress_guard_lifecycle_contract_tests.rs`: `169` LOC
+  - `mailbox_relay_delivery_contract_tests.rs`: `154` LOC
+  - `message_persistence_contract_tests.rs`: `82` LOC
+  - `residual_root_contract_tests.rs`: `133` LOC
+  - `root_layout_contract_tests.rs`: `48` LOC
+  - `route_render_contract_tests.rs`: `71` LOC
+  - `shared_support_contract_tests.rs`: `177` LOC
+  - `support.rs`: `131` LOC
+  - `task_escrow_persistence_contract_tests.rs`: `74` LOC
+  - `transport_surface_observability_contract_tests.rs`: `140` LOC
+  - `websocket_contract_tests.rs`: `62` LOC
+- Real `kamn-node` split-contract target passed after extraction:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node service_api_endpoint_tests_split_contract -- --nocapture`
+- External extraction contract passed after extraction:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node --test service_api_endpoint_tests_split_contract_extraction_contract -- --nocapture`
+- Touched-Rust ratchet passed:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6723-touched-size.json`
+  - result: `status=pass`, `policy_decision=GO`
+
+# Deviations
+
+- `#6723` was rebuilt on a fresh post-`#6724` branch because current `main` had an unrelated observability-endpoint import regression that blocked `kamn-node` compilation during the first attempt. `#6724` restored the baseline first, then this issue was rebuilt cleanly on top of the repaired `main`.
