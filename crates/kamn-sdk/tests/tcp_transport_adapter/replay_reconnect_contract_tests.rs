@@ -31,10 +31,7 @@ fn integration_tcp_adapter_replay_nonce_is_rejected_across_reconnect() {
     sender_adapter
         .send(&replayed)
         .unwrap_or_else(|error| panic!("replay send failed: {error}"));
-    assert_eq!(
-        join_listener(replay_thread),
-        Err(SdkError::Conflict("tcp handshake replay detected"))
-    );
+    assert_listener_error(replay_thread, SdkError::Conflict("tcp handshake replay detected"));
 }
 
 fn assert_received_envelope(

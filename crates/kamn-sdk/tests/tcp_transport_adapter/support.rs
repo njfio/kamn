@@ -124,3 +124,10 @@ pub(crate) fn join_listener(
 pub(crate) fn wait_for_listener() {
     thread::sleep(Duration::from_millis(30));
 }
+
+pub(crate) fn assert_listener_error(
+    handle: thread::JoinHandle<Result<kamn_sdk::TcpReceivedEnvelope, SdkError>>,
+    expected: SdkError,
+) {
+    assert_eq!(join_listener(handle), Err(expected));
+}

@@ -42,12 +42,12 @@ fn regression_forged_handshake_frame_is_rejected() {
     let listener_thread = listen_once_in_thread(listener_adapter);
     wait_for_listener();
     send_raw_payload(addr.as_str(), forged_payload.as_str());
-    assert_eq!(
-        join_listener(listener_thread),
-        Err(SdkError::InvalidInput {
+    assert_listener_error(
+        listener_thread,
+        SdkError::InvalidInput {
             field: "handshake.signature",
             reason: "does not match envelope signature",
-        })
+        },
     );
 }
 
