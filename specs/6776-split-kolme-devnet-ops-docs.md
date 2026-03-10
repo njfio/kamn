@@ -67,3 +67,17 @@ Outputs:
 - `regression_migration_contract_tests.rs`
 - `regression_local_lane_contract_tests.rs`
 - `runtime_transport_contract_tests.rs`
+
+# Phase 6 Evidence
+
+- `cargo test -p kamn-core --test kolme_devnet_ops_docs_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test kolme_devnet_ops_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6776-touched-size-refactor.json`
+- Root shell result: `crates/kamn-core/tests/kolme_devnet_ops_docs.rs` = `19` LOC.
+- Largest extracted file in the staged write set: `deploy_compat_contract_tests/compatibility_marker_contract_tests.rs` = `175` LOC.
+- Touched-Rust result: `policy_decision=GO`.
+
+# Deviations
+
+- No behavioral deviations from the original docs-contract surface.
+- The local-lane and regression-local seams required second-level module splits to keep every touched file within the active 200 LOC cap.
