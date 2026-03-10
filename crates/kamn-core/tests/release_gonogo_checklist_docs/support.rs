@@ -6,7 +6,7 @@ pub fn assert_checklist_contains_all(markers: &[&str], label: &str) {
     }
 }
 
-pub fn assert_checklist_lacks_all(markers: &[&str], label: &str) {
+pub fn assert_checklist_omits_all(markers: &[&str], label: &str) {
     for marker in markers {
         assert!(!CHECKLIST.contains(marker), "unexpected {label} marker: {marker}");
     }
