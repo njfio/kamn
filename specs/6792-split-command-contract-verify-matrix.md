@@ -30,13 +30,13 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-e2e-harness/tests/command_contract_verify_matrix.rs` into bounded sibling modules organized by concern
-- [ ] root `command_contract_verify_matrix.rs` is reduced below a staged extraction cap enforced by a new extraction contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] the real `kamn-e2e-harness` verification-matrix target remains wired and passes
-- [ ] `cargo test -p kamn-e2e-harness --test command_contract_verify_matrix -- --nocapture` passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-e2e-harness/tests/command_contract_verify_matrix.rs` into bounded sibling modules organized by concern
+- [x] root `command_contract_verify_matrix.rs` is reduced below a staged extraction cap enforced by a new extraction contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] the real `kamn-e2e-harness` verification-matrix target remains wired and passes
+- [x] `cargo test -p kamn-e2e-harness --test command_contract_verify_matrix -- --nocapture` passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -67,3 +67,17 @@ Outputs:
 - `verify_chain_dump_contract_tests.rs` for chain dump and continuity failures
 - `run_probe_contract_tests.rs` for external execution probe/run-output failure projection coverage
 - `run_persistence_contract_tests.rs` for pass/fail evidence persistence coverage
+
+# Phase 6 evidence
+
+- Root shell reduced to `14` LOC at `crates/kamn-e2e-harness/tests/command_contract_verify_matrix.rs`.
+- Extracted sibling modules are all within the active `<=200` LOC file budget.
+- Real integration path verified with:
+  - `cargo test -p kamn-e2e-harness --test command_contract_verify_matrix -- --nocapture`
+  - `cargo test -p kamn-e2e-harness --test command_contract_verify_matrix_extraction_contract -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6792-touched-size-refactor.json`
+- Touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- None.
