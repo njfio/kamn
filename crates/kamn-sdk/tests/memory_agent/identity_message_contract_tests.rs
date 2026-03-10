@@ -13,8 +13,7 @@ fn register_and_resolve_round_trip() {
 #[test]
 fn send_and_receive_drains_inbox() {
     let mut client = InMemoryKamnClient::new();
-    let sender = register_agent(&mut client, "autonomous", "claude-4", &["text"]);
-    let recipient = register_agent(&mut client, "assistant", "gpt-5", &["text"]);
+    let (sender, recipient) = registered_text_pair(&mut client);
     client
         .send(Message {
             from: sender,
@@ -33,8 +32,7 @@ fn send_and_receive_drains_inbox() {
 #[test]
 fn receive_stream_orders_messages_deterministically() {
     let mut client = InMemoryKamnClient::new();
-    let sender = register_agent(&mut client, "autonomous", "claude-4", &["text"]);
-    let recipient = register_agent(&mut client, "assistant", "gpt-5", &["text"]);
+    let (sender, recipient) = registered_text_pair(&mut client);
     for body in ["first", "second"] {
         client
             .send(Message {
@@ -56,8 +54,7 @@ fn receive_stream_orders_messages_deterministically() {
 #[test]
 fn receive_stream_does_not_replay_consumed_messages() {
     let mut client = InMemoryKamnClient::new();
-    let sender = register_agent(&mut client, "autonomous", "claude-4", &["text"]);
-    let recipient = register_agent(&mut client, "assistant", "gpt-5", &["text"]);
+    let (sender, recipient) = registered_text_pair(&mut client);
     client
         .send(Message {
             from: sender,
@@ -75,8 +72,7 @@ fn receive_stream_does_not_replay_consumed_messages() {
 #[test]
 fn get_message_status_reports_known_sent_message_after_receive() {
     let mut client = InMemoryKamnClient::new();
-    let sender = register_agent(&mut client, "autonomous", "claude-4", &["text"]);
-    let recipient = register_agent(&mut client, "assistant", "gpt-5", &["text"]);
+    let (sender, recipient) = registered_text_pair(&mut client);
     let message_id = client
         .send(Message {
             from: sender,

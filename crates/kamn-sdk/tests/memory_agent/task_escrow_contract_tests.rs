@@ -3,8 +3,7 @@ use super::support::*;
 #[test]
 fn task_accept_rejects_second_acceptance() {
     let mut client = InMemoryKamnClient::new();
-    let creator = register_agent(&mut client, "autonomous", "claude-4", &["research"]);
-    let assignee = register_agent(&mut client, "assistant", "gpt-5", &["research"]);
+    let (creator, assignee) = registered_research_pair(&mut client);
     let task_id = submit_analysis_task(&mut client, creator, "research", "compare protocols");
     client.accept_task(&task_id, &assignee).expect("first accept failed");
     assert_eq!(
@@ -16,8 +15,7 @@ fn task_accept_rejects_second_acceptance() {
 #[test]
 fn get_task_status_reports_submitted_accepted_and_completed_states() {
     let mut client = InMemoryKamnClient::new();
-    let creator = register_agent(&mut client, "autonomous", "claude-4", &["research"]);
-    let assignee = register_agent(&mut client, "assistant", "gpt-5", &["research"]);
+    let (creator, assignee) = registered_research_pair(&mut client);
     let task_id = submit_analysis_task(&mut client, creator, "research", "compare protocols");
     assert_eq!(client.get_task_status(&task_id).expect("submitted status").state, "submitted");
     client.accept_task(&task_id, &assignee).expect("accept task should succeed");
@@ -56,8 +54,7 @@ fn escrow_moves_balances_from_payer_to_payee() {
 #[test]
 fn submit_artifact_and_complete_task_flow() {
     let mut client = InMemoryKamnClient::new();
-    let creator = register_agent(&mut client, "autonomous", "claude-4", &["research"]);
-    let assignee = register_agent(&mut client, "assistant", "gpt-5", &["research"]);
+    let (creator, assignee) = registered_research_pair(&mut client);
     let task_id = submit_analysis_task(&mut client, creator, "analysis", "analyze benchmark results");
     client.accept_task(&task_id, &assignee).expect("accept task failed");
     let artifact_id = submit_report_artifact(&mut client, &task_id);

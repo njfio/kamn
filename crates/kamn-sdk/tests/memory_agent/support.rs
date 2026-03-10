@@ -30,6 +30,18 @@ pub(crate) fn register_agent(
         .unwrap_or_else(|error| panic!("register failed: {error}"))
 }
 
+pub(crate) fn registered_text_pair(client: &mut InMemoryKamnClient) -> (AgentDid, AgentDid) {
+    let sender = register_agent(client, "autonomous", "claude-4", &["text"]);
+    let recipient = register_agent(client, "assistant", "gpt-5", &["text"]);
+    (sender, recipient)
+}
+
+pub(crate) fn registered_research_pair(client: &mut InMemoryKamnClient) -> (AgentDid, AgentDid) {
+    let creator = register_agent(client, "autonomous", "claude-4", &["research"]);
+    let assignee = register_agent(client, "assistant", "gpt-5", &["research"]);
+    (creator, assignee)
+}
+
 pub(crate) fn submit_analysis_task(
     client: &mut InMemoryKamnClient,
     creator: AgentDid,
