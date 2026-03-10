@@ -1,5 +1,6 @@
 use super::super::{
-    DOC, LOCAL_HEAVY_REDACTION_POLICY_REASON_CODES_CSV, LOCAL_HEAVY_REDACTION_POLICY_REASON_TAXONOMY_VERSION,
+    local_heavy_redaction_policy_reason_codes, DOC,
+    LOCAL_HEAVY_REDACTION_POLICY_REASON_CODES_CSV, LOCAL_HEAVY_REDACTION_POLICY_REASON_TAXONOMY_VERSION,
     LOCAL_HEAVY_REDACTION_REASON_CODES_CSV, LOCAL_HEAVY_REDACTION_REASON_TAXONOMY_VERSION,
     LOCAL_HEAVY_REDACTION_RUNNER_SOURCE, OPS_DOC,
 };
@@ -35,7 +36,7 @@ fn doc_enforces_local_heavy_redaction_policy_checker_docs_parity_matches_runner_
 
 #[test]
 fn doc_enforces_local_heavy_redaction_policy_checker_reason_codes_have_deterministic_marker_coverage() {
-    for reason_code in LOCAL_HEAVY_REDACTION_POLICY_REASON_CODES_CSV.split(',') {
+    for reason_code in local_heavy_redaction_policy_reason_codes() {
         assert!(DOC.contains(reason_code), "ci strategy docs missing redaction policy reason marker {reason_code}");
     }
 }
