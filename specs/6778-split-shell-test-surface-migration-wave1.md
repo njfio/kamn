@@ -66,3 +66,14 @@ Outputs:
 - `wrapper_parity_contract_tests.rs`
 - `command_contract_tests.rs`
 - `service_api_contract_tests.rs`
+
+# Phase 6 evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test shell_test_surface_migration_wave1_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test shell_test_surface_migration_wave1 -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6778-remote --base-ref origin/main --output-json /tmp/6778-remote-size-go3.json`
+
+# Deviations
+
+- Verification moved to isolated clone `/tmp/kamn-6778-remote` because linked worktrees inherited unrelated tracked edits from the primary repo and made the touched-Rust gate non-authoritative for `#6778`.
+- Formatting used targeted `rustfmt` on the `#6778` write set instead of `cargo fmt --all`; full-workspace formatting in the dirty local environment broadened the touched set beyond the issue scope.
