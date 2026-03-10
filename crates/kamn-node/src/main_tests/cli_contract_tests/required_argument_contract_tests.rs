@@ -1,0 +1,6 @@
+#[path = "required_argument_contract_tests/core_runtime_required_argument_contract_tests.rs"]
+mod core_runtime_required_argument_contract_tests;
+#[path = "required_argument_contract_tests/daemon_required_argument_contract_tests.rs"]
+mod daemon_required_argument_contract_tests;
+#[path = "required_argument_contract_tests/kolme_live_required_argument_contract_tests.rs"]
+mod kolme_live_required_argument_contract_tests;
