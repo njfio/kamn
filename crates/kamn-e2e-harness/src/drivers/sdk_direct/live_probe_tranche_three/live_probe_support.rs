@@ -48,23 +48,10 @@ pub(crate) fn validate_s14_proof_response(
     observed_verified: bool,
     step: &str,
 ) -> Result<(), String> {
-    if observed_message_id != expected_message_id {
-        return Err(format!(
-            "{step} returned mismatched message_id: expected={expected_message_id}, got={observed_message_id}"
-        ));
-    }
-    if !observed_verified {
-        return Err(format!("{step} returned verified=false"));
-    }
-    if observed_finality.trim() != "FINAL" {
-        return Err(format!(
-            "{step} returned non-final finality: {observed_finality}"
-        ));
-    }
-    if observed_block_height == 0 {
-        return Err(format!("{step} returned block_height=0"));
-    }
-    Ok(())
+    validate_s14_message_id(expected_message_id, observed_message_id, step)?;
+    validate_s14_verified(observed_verified, step)?;
+    validate_s14_finality(observed_finality, step)?;
+    validate_s14_block_height(observed_block_height, step)
 }
 
 pub(super) fn validate_content_state(
@@ -100,4 +87,40 @@ pub(super) fn validate_bridge_forward_fields(
         forward_tx_hash,
         &format!("{step} returned empty forward_tx_hash"),
     )
+}
+
+fn validate_s14_message_id(
+    expected_message_id: &str,
+    observed_message_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_message_id == expected_message_id {
+        return Ok(());
+    }
+    Err(format!(
+        "{step} returned mismatched message_id: expected={expected_message_id}, got={observed_message_id}"
+    ))
+}
+
+fn validate_s14_verified(observed_verified: bool, step: &str) -> Result<(), String> {
+    if observed_verified {
+        return Ok(());
+    }
+    Err(format!("{step} returned verified=false"))
+}
+
+fn validate_s14_finality(observed_finality: &str, step: &str) -> Result<(), String> {
+    if observed_finality.trim() == "FINAL" {
+        return Ok(());
+    }
+    Err(format!(
+        "{step} returned non-final finality: {observed_finality}"
+    ))
+}
+
+fn validate_s14_block_height(observed_block_height: u64, step: &str) -> Result<(), String> {
+    if observed_block_height != 0 {
+        return Ok(());
+    }
+    Err(format!("{step} returned block_height=0"))
 }

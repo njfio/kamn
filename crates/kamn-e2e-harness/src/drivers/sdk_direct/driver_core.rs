@@ -22,6 +22,10 @@ const LIVE_SCENARIO_IDS: [&str; 15] = [
     "S-01", "S-02", "S-03", "S-04", "S-05", "S-06", "S-07", "S-08", "S-09", "S-10", "S-11", "S-12",
     "S-13", "S-14", "S-15",
 ];
+const EARLY_SCENARIO_IDS: [&str; 5] = ["S-01", "S-02", "S-03", "S-04", "S-05"];
+const LATE_SCENARIO_IDS: [&str; 10] = [
+    "S-06", "S-07", "S-08", "S-09", "S-10", "S-11", "S-12", "S-13", "S-14", "S-15",
+];
 
 /// SDK-direct driver with optional live execution for S-01 through S-15.
 #[derive(Clone)]
@@ -148,7 +152,7 @@ fn explicit_probe_map(
     tranche_two_and_three_probes: TrancheTwoAndThreeProbeFns,
 ) -> LiveProbeMap {
     let mut live_probes = scenario_map(
-        ["S-01", "S-02", "S-03", "S-04", "S-05"],
+        EARLY_SCENARIO_IDS,
         [
             discovery_probe,
             direct_message_probe,
@@ -158,9 +162,7 @@ fn explicit_probe_map(
         ],
     );
     live_probes.extend(scenario_map(
-        [
-            "S-06", "S-07", "S-08", "S-09", "S-10", "S-11", "S-12", "S-13", "S-14", "S-15",
-        ],
+        LATE_SCENARIO_IDS,
         tranche_two_and_three_probes,
     ));
     live_probes

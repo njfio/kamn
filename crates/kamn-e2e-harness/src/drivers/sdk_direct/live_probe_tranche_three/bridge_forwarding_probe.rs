@@ -81,16 +81,12 @@ fn forward_bridge_message(
     let forwarded = handle
         .forward_bridge_message(bridge_id)
         .map_err(|error| format!("sdk-direct live s13 forward-bridge-message failed: {error}"))?;
-    super::super::validate_s13_bridge_id_match(
+    validate_forwarded_bridge_state(
         bridge_id,
         forwarded.bridge_id.as_str(),
-        "sdk-direct live s13 forward-bridge-message",
-    )?;
-    validate_bridge_forward_fields(
         forwarded.bridge_status.as_str(),
         forwarded.target_message_id.as_str(),
         forwarded.forward_tx_hash.as_str(),
-        "sdk-direct live s13 forward-bridge-message",
     )?;
     Ok(S13ForwardedState {
         bridge_status: forwarded.bridge_status,
@@ -112,28 +108,13 @@ fn query_bridge_message(
     let queried = handle
         .query_bridge_message(bridge_id)
         .map_err(|error| format!("sdk-direct live s13 query-bridge-message failed: {error}"))?;
-    super::super::validate_s13_bridge_id_match(
+    validate_queried_bridge_state(
         bridge_id,
+        forwarded,
         queried.bridge_id.as_str(),
-        "sdk-direct live s13 query-bridge-message",
-    )?;
-    super::super::validate_s13_bridge_field_coherence(
-        forwarded.bridge_status.as_str(),
         queried.bridge_status.as_str(),
-        "bridge_status",
-        "sdk-direct live s13 query-bridge-message",
-    )?;
-    super::super::validate_s13_bridge_field_coherence(
-        forwarded.target_message_id.as_str(),
         queried.target_message_id.as_str(),
-        "target_message_id",
-        "sdk-direct live s13 query-bridge-message",
-    )?;
-    super::super::validate_s13_bridge_field_coherence(
-        forwarded.forward_tx_hash.as_str(),
         queried.forward_tx_hash.as_str(),
-        "forward_tx_hash",
-        "sdk-direct live s13 query-bridge-message",
     )
 }
 
@@ -147,5 +128,68 @@ fn connect_bridge_agent(
         settings.kolme_endpoint.as_str(),
         format!("{}-{suffix}", settings.base_agent_name).as_str(),
         context,
+    )
+}
+
+fn validate_forwarded_bridge_state(
+    bridge_id: &str,
+    observed_bridge_id: &str,
+    observed_bridge_status: &str,
+    observed_target_message_id: &str,
+    observed_forward_tx_hash: &str,
+) -> Result<(), String> {
+    super::super::validate_s13_bridge_id_match(
+        bridge_id,
+        observed_bridge_id,
+        "sdk-direct live s13 forward-bridge-message",
+    )?;
+    validate_bridge_forward_fields(
+        observed_bridge_status,
+        observed_target_message_id,
+        observed_forward_tx_hash,
+        "sdk-direct live s13 forward-bridge-message",
+    )
+}
+
+fn validate_queried_bridge_state(
+    bridge_id: &str,
+    forwarded: &S13ForwardedState,
+    observed_bridge_id: &str,
+    observed_bridge_status: &str,
+    observed_target_message_id: &str,
+    observed_forward_tx_hash: &str,
+) -> Result<(), String> {
+    super::super::validate_s13_bridge_id_match(
+        bridge_id,
+        observed_bridge_id,
+        "sdk-direct live s13 query-bridge-message",
+    )?;
+    validate_queried_bridge_field(
+        forwarded.bridge_status.as_str(),
+        observed_bridge_status,
+        "bridge_status",
+    )?;
+    validate_queried_bridge_field(
+        forwarded.target_message_id.as_str(),
+        observed_target_message_id,
+        "target_message_id",
+    )?;
+    validate_queried_bridge_field(
+        forwarded.forward_tx_hash.as_str(),
+        observed_forward_tx_hash,
+        "forward_tx_hash",
+    )
+}
+
+fn validate_queried_bridge_field(
+    expected: &str,
+    observed: &str,
+    field: &str,
+) -> Result<(), String> {
+    super::super::validate_s13_bridge_field_coherence(
+        expected,
+        observed,
+        field,
+        "sdk-direct live s13 query-bridge-message",
     )
 }

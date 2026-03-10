@@ -26,10 +26,7 @@ struct S11Settings {
 }
 
 fn s11_settings() -> S11Settings {
-    let primary_agent_name = super::super::env_var_or_default(
-        "KAMN_E2E_S11_PRIMARY_AGENT_NAME",
-        DEFAULT_S11_PRIMARY_AGENT_NAME,
-    );
+    let primary_agent_name = s11_primary_agent_name();
     S11Settings {
         endpoint: default_endpoint(),
         kolme_endpoint: kolme_endpoint(),
@@ -37,18 +34,9 @@ fn s11_settings() -> S11Settings {
             "KAMN_E2E_S11_ROTATED_AGENT_NAME",
             || format!("{primary_agent_name}-rotated"),
         ),
-        message_payload: super::super::env_var_or_default(
-            "KAMN_E2E_S11_MESSAGE_PAYLOAD",
-            DEFAULT_S11_MESSAGE_PAYLOAD,
-        ),
-        rotated_message_payload: super::super::env_var_or_default(
-            "KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD",
-            DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD,
-        ),
-        stale_message_payload: super::super::env_var_or_default(
-            "KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD",
-            DEFAULT_S11_STALE_MESSAGE_PAYLOAD,
-        ),
+        message_payload: s11_message_payload(),
+        rotated_message_payload: s11_rotated_message_payload(),
+        stale_message_payload: s11_stale_message_payload(),
         primary_agent_name,
     }
 }
@@ -122,5 +110,30 @@ fn reject_stale_primary(settings: &S11Settings) -> Result<(), String> {
     super::super::validate_s07_replay_reason_marker(
         stale_primary_error.to_string().as_str(),
         "sdk-direct live s11 stale-primary send-message",
+    )
+}
+
+fn s11_primary_agent_name() -> String {
+    super::super::env_var_or_default(
+        "KAMN_E2E_S11_PRIMARY_AGENT_NAME",
+        DEFAULT_S11_PRIMARY_AGENT_NAME,
+    )
+}
+
+fn s11_message_payload() -> String {
+    super::super::env_var_or_default("KAMN_E2E_S11_MESSAGE_PAYLOAD", DEFAULT_S11_MESSAGE_PAYLOAD)
+}
+
+fn s11_rotated_message_payload() -> String {
+    super::super::env_var_or_default(
+        "KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD",
+        DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD,
+    )
+}
+
+fn s11_stale_message_payload() -> String {
+    super::super::env_var_or_default(
+        "KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD",
+        DEFAULT_S11_STALE_MESSAGE_PAYLOAD,
     )
 }

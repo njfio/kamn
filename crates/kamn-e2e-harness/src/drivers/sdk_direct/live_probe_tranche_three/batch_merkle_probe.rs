@@ -66,18 +66,16 @@ fn parse_s14_block_height() -> Result<u64, String> {
 }
 
 fn send_batch_messages(settings: &S14Settings) -> Result<S14BatchIds, String> {
-    let batch_a_message_id = send_message_with_validated_receipt(
-        settings.endpoint.as_str(),
-        settings.kolme_endpoint.as_str(),
-        format!("{}-batch-a", settings.base_agent_name).as_str(),
+    let batch_a_message_id = send_named_batch_message(
+        settings,
+        "batch-a",
         settings.payload_a.as_str(),
         "sdk-direct live s14 batch-a connect failed",
         "sdk-direct live s14 batch-a send-message",
     )?;
-    let batch_b_message_id = send_message_with_validated_receipt(
-        settings.endpoint.as_str(),
-        settings.kolme_endpoint.as_str(),
-        format!("{}-batch-b", settings.base_agent_name).as_str(),
+    let batch_b_message_id = send_named_batch_message(
+        settings,
+        "batch-b",
         settings.payload_b.as_str(),
         "sdk-direct live s14 batch-b connect failed",
         "sdk-direct live s14 batch-b send-message",
@@ -91,6 +89,23 @@ fn send_batch_messages(settings: &S14Settings) -> Result<S14BatchIds, String> {
         batch_a_message_id,
         batch_b_message_id,
     })
+}
+
+fn send_named_batch_message(
+    settings: &S14Settings,
+    suffix: &str,
+    payload: &str,
+    connect_error: &str,
+    step: &str,
+) -> Result<String, String> {
+    send_message_with_validated_receipt(
+        settings.endpoint.as_str(),
+        settings.kolme_endpoint.as_str(),
+        format!("{}-{suffix}", settings.base_agent_name).as_str(),
+        payload,
+        connect_error,
+        step,
+    )
 }
 
 fn query_batch_messages(settings: &S14Settings, batch_ids: &S14BatchIds) -> Result<(), String> {

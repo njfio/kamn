@@ -49,18 +49,11 @@ fn register_content(settings: &S12Settings) -> Result<S12ContentState, String> {
     let registration = handle
         .register_content(settings.register_payload.as_str())
         .map_err(|error| format!("sdk-direct live s12 register-content failed: {error}"))?;
-    validate_non_empty(
+    validate_registration(
         registration.content_id.as_str(),
-        "sdk-direct live s12 register-content returned empty content_id",
-    )?;
-    validate_non_empty(
         registration.retention_class.as_str(),
-        "sdk-direct live s12 register-content returned empty retention_class",
-    )?;
-    validate_content_state(
         registration.lifecycle_state.as_str(),
         registration.redaction_status.as_str(),
-        "sdk-direct live s12 register-content",
     )?;
     Ok(S12ContentState {
         content_id: registration.content_id,
@@ -129,22 +122,12 @@ fn query_content(
     let queried = handle
         .query_content(content_id)
         .map_err(|error| format!("sdk-direct live s12 query-content failed: {error}"))?;
-    super::super::validate_s12_content_id_match(
+    validate_query_state(
         content_id,
+        expected,
         queried.content_id.as_str(),
-        "sdk-direct live s12 query-content",
-    )?;
-    super::super::validate_s12_content_field_coherence(
-        expected.lifecycle_state.as_str(),
         queried.lifecycle_state.as_str(),
-        "lifecycle_state",
-        "sdk-direct live s12 query-content",
-    )?;
-    super::super::validate_s12_content_field_coherence(
-        expected.redaction_status.as_str(),
         queried.redaction_status.as_str(),
-        "redaction_status",
-        "sdk-direct live s12 query-content",
     )
 }
 
@@ -158,5 +141,59 @@ fn connect_content_agent(
         settings.kolme_endpoint.as_str(),
         format!("{}-{suffix}", settings.base_agent_name).as_str(),
         context,
+    )
+}
+
+fn validate_registration(
+    content_id: &str,
+    retention_class: &str,
+    lifecycle_state: &str,
+    redaction_status: &str,
+) -> Result<(), String> {
+    validate_non_empty(
+        content_id,
+        "sdk-direct live s12 register-content returned empty content_id",
+    )?;
+    validate_non_empty(
+        retention_class,
+        "sdk-direct live s12 register-content returned empty retention_class",
+    )?;
+    validate_content_state(
+        lifecycle_state,
+        redaction_status,
+        "sdk-direct live s12 register-content",
+    )
+}
+
+fn validate_query_state(
+    content_id: &str,
+    expected: &S12ContentState,
+    observed_id: &str,
+    observed_lifecycle: &str,
+    observed_redaction: &str,
+) -> Result<(), String> {
+    super::super::validate_s12_content_id_match(
+        content_id,
+        observed_id,
+        "sdk-direct live s12 query-content",
+    )?;
+    validate_query_field(
+        expected.lifecycle_state.as_str(),
+        observed_lifecycle,
+        "lifecycle_state",
+    )?;
+    validate_query_field(
+        expected.redaction_status.as_str(),
+        observed_redaction,
+        "redaction_status",
+    )
+}
+
+fn validate_query_field(expected: &str, observed: &str, field: &str) -> Result<(), String> {
+    super::super::validate_s12_content_field_coherence(
+        expected,
+        observed,
+        field,
+        "sdk-direct live s12 query-content",
     )
 }
