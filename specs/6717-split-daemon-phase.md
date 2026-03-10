@@ -76,3 +76,36 @@ Non-goals:
    - `cargo test -p kamn-node daemon_tests -- --nocapture`
    - `cargo test -p kamn-node --test main_module_extraction_contract -- --nocapture`
    - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json <tmpfile>`
+
+# Outcome
+
+- [x] `crates/kamn-node/src/runtime_orchestration/daemon_phase.rs` is reduced to a bounded root module that delegates production logic to submodules
+- [x] `daemon_phase.rs` no longer contains inline implementations for phase-6/convergence projection helpers, live-postgres selector bundle helpers, service-api relay P2P helpers, or the daemon relay tick loop
+- [x] `daemon_phase.rs` no longer contains an inline `#[cfg(test)] mod tests`
+- [x] New extracted production/test files created by this issue stay within the active size policy on the touched write set
+- [x] `crates/kamn-node/tests/main_module_extraction_contract.rs` or a dedicated daemon extraction contract fails if the extracted seams are re-inlined into the root
+- [x] Existing daemon runtime contract/integration tests that exercise the re-exported test helpers and relay tick loop still pass through the real `runtime_orchestration` wiring
+
+# Phase 6 Evidence
+
+- Root/signpost files:
+  - `crates/kamn-node/src/runtime_orchestration/daemon_phase.rs`: `49` LOC
+  - `crates/kamn-node/tests/daemon_phase_module_extraction_contract.rs`: `113` LOC
+  - `crates/kamn-node/src/runtime_orchestration/daemon_phase/runtime_execution/execution_builder.rs`: `132` LOC
+  - `crates/kamn-node/src/runtime_orchestration/daemon_phase/runtime_execution/reporting.rs`: `124` LOC
+  - `crates/kamn-node/src/runtime_orchestration/daemon_phase/service_api_relay_tick_loop/forwarding.rs`: `181` LOC
+- Verified on the refactor head:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node daemon_phase -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node daemon_tests -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node --test main_module_extraction_contract main_module_extraction_contract_daemon_tests_decomposition_shell_markers_remain_stable -- --exact --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node --test daemon_phase_module_extraction_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6717-clean-touched-size.json`
+- Result:
+  - `daemon_phase` slice: pass
+  - `daemon_tests` slice: `85 passed, 0 failed`
+  - daemon extraction contract: `5 passed, 0 failed`
+  - touched-Rust size policy: `policy_decision=GO`
+
+# Deviations
+
+- The full unfiltered `cargo test -p kamn-node --test main_module_extraction_contract -- --nocapture` target currently has a pre-existing unrelated failure on `origin/main` because `crates/kamn-node/src/main_tests.rs` is already `261` LOC while that contract still asserts `<=260`. `#6717` did not touch `main_tests.rs` or that budget marker, so the daemon-specific extraction assertion was verified directly instead.
