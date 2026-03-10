@@ -57,3 +57,12 @@ Outputs:
 4. Run `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6771-touched-size.json`.
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test ci_strategy_docs_residual_root_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6771-touched-size-refactor.json`
+- Result: residual root tests are wired through the real `ci_strategy_docs` target; root file reduced to a thin shell and touched-Rust returned `policy_decision=GO`.
+
+## Deviations
+- None.
