@@ -56,3 +56,17 @@ Outputs:
 4. Run `cargo test -p kamn-core --test release_gonogo_checklist_docs -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6773-touched-size.json`.
+
+# Phase 6 Evidence
+
+- `cargo test -p kamn-core --test release_gonogo_checklist_docs_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test release_gonogo_checklist_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6773-touched-size-refactor.json`
+- Root shell result: `crates/kamn-core/tests/release_gonogo_checklist_docs.rs` = `25` LOC.
+- Largest extracted file in the staged write set: `runtime_reconciliation_contract_tests.rs` = `171` LOC.
+- Touched-Rust result: `policy_decision=GO`.
+
+# Deviations
+
+- No behavioral deviations from the original docs-contract surface.
+- The regression-governance block required a second-level split under `regression_governance_launch_contract_tests/` to keep every touched file within the active 200 LOC cap.
