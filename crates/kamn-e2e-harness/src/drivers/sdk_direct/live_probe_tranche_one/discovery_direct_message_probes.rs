@@ -24,33 +24,50 @@ pub(super) fn run_live_s01_discovery_probe() -> Result<(), String> {
 
 pub(super) fn run_live_s02_direct_message_probe() -> Result<(), String> {
     let agent_name = base_agent_name();
+    let (message_payload, reply_payload) = s02_payloads();
+    run_message_roundtrip(
+        agent_name.as_str(),
+        "send",
+        message_payload.as_str(),
+        "sdk-direct live s02 send-message",
+    )?;
+    run_message_roundtrip(
+        agent_name.as_str(),
+        "reply",
+        reply_payload.as_str(),
+        "sdk-direct live s02 reply send-message",
+    )?;
+    Ok(())
+}
+
+fn s02_payloads() -> (String, String) {
     let message_payload = super::super::env_var_or_default(
         "KAMN_E2E_S02_MESSAGE_PAYLOAD",
         DEFAULT_S02_MESSAGE_PAYLOAD,
     );
     let reply_payload =
         super::super::env_var_or_default("KAMN_E2E_S02_REPLY_PAYLOAD", DEFAULT_S02_REPLY_PAYLOAD);
-    let sent = send_message_receipt(
-        &format!("{agent_name}-s02-send"),
-        &message_payload,
-        "sdk-direct live s02 send-message",
-    )?;
+    (message_payload, reply_payload)
+}
+
+fn run_message_roundtrip(
+    agent_name: &str,
+    suffix: &str,
+    payload: &str,
+    context: &str,
+) -> Result<(), String> {
+    let sent = send_message_receipt(&format!("{agent_name}-s02-{suffix}"), payload, context)?;
+    let query_suffix = if suffix == "send" {
+        "query"
+    } else {
+        "query-reply"
+    };
+    let query_context = context.replace(" send-message", " query-message");
     query_message_receipt(
-        &format!("{agent_name}-s02-query"),
+        &format!("{agent_name}-s02-{query_suffix}"),
         sent.0.as_str(),
-        "sdk-direct live s02 query-message",
-    )?;
-    let reply = send_message_receipt(
-        &format!("{agent_name}-s02-reply"),
-        &reply_payload,
-        "sdk-direct live s02 reply send-message",
-    )?;
-    query_message_receipt(
-        &format!("{agent_name}-s02-query-reply"),
-        reply.0.as_str(),
-        "sdk-direct live s02 reply query-message",
-    )?;
-    Ok(())
+        query_context.as_str(),
+    )
 }
 
 fn send_message_receipt(
