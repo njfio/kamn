@@ -1,0 +1,56 @@
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_ID_BUNDLE_COHERENCE_CONTRACT: &str =
+    "topology_id_to_host_mode_host_pair_lane_set_lane_id_bundle_rows_must_remain_stable_under_repeated_runs_and_permutations";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_BUNDLE_COHERENCE_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-bundle-coherence.v1";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_BUNDLE_COHERENCE_ROWS_CSV: &str =
+    "same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->listener_approver_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+listener_approver_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1,distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->listener_approver_asymmetric_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+listener_approver_asymmetric_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_asymmetric_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_asymmetric_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_BUNDLE_COHERENCE_CONTRACT: &str =
+    "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_bundle_rows_must_remain_stable_under_repeated_runs_and_permutations";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-hash-coherence.v1";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_ROWS_CSV: &str =
+    "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e,same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_CONTRACT: &str =
+    "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows_must_remain_stable_under_repeated_runs_and_permutations";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-hash-order-normalization.v1";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_ROWS_CSV: &str =
+    "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e,same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_CONTRACT: &str =
+    "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows_must_remain_canonically_sorted_after_order_normalization";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_DIGEST_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-hash-order-normalization-digest.v1";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_DIGEST_ROWS_CSV: &str =
+    "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e,same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_DIGEST_ROWS_FNV1A64_HEX: &str =
+    "25b9729eaeb44fe9";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_ORDER_NORMALIZATION_DIGEST_CONTRACT: &str =
+    "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows_digest_must_remain_stable_under_order_normalization_and_permutations";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_ORDER_CSV: &str =
+    "topology_id,host_a,host_b,lane_fingerprint_bundle";
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER: char = '#';
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_BUNDLE_DELIMITER: char = ';';
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_COUNT: usize = 4;
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_LANE_ID_BUNDLE_DELIMITER: char = '+';
+pub(crate) const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_LANE_FINGERPRINT_BUNDLE_DELIMITER: char = '+';
+pub(crate) const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
+    "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
+pub(crate) const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str =
+    "env_unset,env_set_no_shutdown,env_set_shutdown";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.multi-host-execution.reason-taxonomy.v1";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_READY_REASON_CODE: &str =
+    "live_postgres_multi_host_prerequisites_ready";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITES_MISSING_REASON_CODE: &str =
+    "live_postgres_multi_host_prerequisites_missing";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_HOST_PAIR_INVALID_REASON_CODE: &str =
+    "live_postgres_multi_host_host_pair_invalid";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITE_ENV_KEYS_CSV: &str =
+    "KAMN_TEST_POSTGRES_URL|DATABASE_URL,KAMN_TEST_LIVE_POSTGRES_DISTRIBUTED_HOSTS";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITE_REASON_CODES_CSV: &str =
+    "live_postgres_multi_host_prerequisites_ready,live_postgres_multi_host_prerequisites_missing,live_postgres_multi_host_host_pair_invalid";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX: &str =
+    "main_tests::daemon_tests::";
+pub(crate) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS_CSV: &str =
+    "b01_runtime_matrix_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs,b02_parallel_lane_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable,b03_topology_mapping_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable,b04_topology_coherence_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_id_bundle_coherence_is_stable,b05_fingerprint_stability_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable,b06_multi_host_execution_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable";
+
