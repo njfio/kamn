@@ -33,12 +33,12 @@ Split `crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_cont
 
 # Acceptance criteria (testable booleans)
 
-- [ ] `crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs` is reduced to a bounded root shell under the active size policy
-- [ ] websocket contract coverage is split into coherent sibling modules that reflect the existing websocket concern seams
-- [ ] extracted files added by this issue remain within the active touched-Rust size policy on the issue write set
-- [ ] a contract fails if the websocket root shell regresses or the extracted module layout disappears
-- [ ] `cargo test -p kamn-node websocket_contract_tests -- --nocapture` passes after extraction
-- [ ] touched-Rust size policy returns `policy_decision=GO` on the issue write set
+- [x] `crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs` is reduced to a bounded root shell under the active size policy
+- [x] websocket contract coverage is split into coherent sibling modules that reflect the existing websocket concern seams
+- [x] extracted files added by this issue remain within the active touched-Rust size policy on the issue write set
+- [x] a contract fails if the websocket root shell regresses or the extracted module layout disappears
+- [x] `cargo test -p kamn-node websocket_contract_tests -- --nocapture` passes after extraction
+- [x] touched-Rust size policy returns `policy_decision=GO` on the issue write set
 
 # Files to touch
 
@@ -61,3 +61,27 @@ Split `crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_cont
 4. Run the websocket extraction contract.
 5. Run the touched-Rust size policy on the issue write set.
 6. Record final evidence and any deviations in this spec before opening the PR.
+
+# Final evidence
+
+- `cargo test -p kamn-node websocket_contract_tests -- --nocapture`
+  - result: `18 passed, 0 failed`
+- `cargo test -p kamn-node --test websocket_contract_tests_extraction_contract -- --nocapture`
+  - result: `3 passed, 0 failed`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6727-touched-size.json`
+  - result: `status=pass`, `policy_decision=GO`
+
+# Measured outcome
+
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_contract_tests.rs`
+  - reduced from `1129` LOC to a bounded root shell
+- extracted websocket modules now cover:
+  - upgrade flow and live delivery
+  - presence projection and validation
+  - legacy-header rejection coverage
+  - route/header rejection coverage
+  - shared websocket request/frame support
+
+# Deviations
+
+- A broad `cargo fmt --all` run temporarily touched unrelated files during Phase 5. Those changes were restored before final verification, and the final touched-Rust report was rerun on the websocket-only write set.
