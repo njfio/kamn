@@ -18,10 +18,7 @@ fn regression_runtime_daemon_applied_phase6_log_selection_uses_execution_id() {
             "{{\"event\":\"node.runtime.daemon.execute.complete\",\"execution_id\":\"{target_execution_id}\",\"phase6_reason_code\":\"m10_phase6_scheduler_cycle_applied\"}}"
         ),
     ];
-    let selected = find_applied_phase6_complete_log(
-        &captured_logs,
-        target_execution_id,
-    );
+    let selected = find_applied_phase6_complete_log(&captured_logs, target_execution_id);
     assert_json_log_field(selected, "execution_id", target_execution_id);
     assert_json_log_field(
         selected,

@@ -68,15 +68,6 @@ fn capture_daemon_text_with_chain(chain_id: &str, extra_args: &[&str]) -> String
     render_bootstrap_report(&report, OutputMode::text())
 }
 
-fn capture_daemon_renderings_and_logs(extra_args: &[&str]) -> (String, String, Vec<String>) {
-    let parsed = parse_daemon(extra_args);
-    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
-    let report = report_result.expect("daemon execution should succeed");
-    let rendered_json = render_bootstrap_report(&report, OutputMode::json());
-    let rendered_text = render_bootstrap_report(&report, OutputMode::text());
-    (rendered_json, rendered_text, captured_logs)
-}
-
 fn find_daemon_log<'a>(captured_logs: &'a [String], event: &str, execution_id: &str) -> &'a str {
     captured_logs
         .iter()
@@ -84,14 +75,6 @@ fn find_daemon_log<'a>(captured_logs: &'a [String], event: &str, execution_id: &
             line.contains(event)
                 && extract_json_string_field(line, "execution_id").as_deref() == Some(execution_id)
         })
-        .map(|line| line.as_str())
-        .expect("daemon execution should emit structured log marker")
-}
-
-fn find_first_daemon_log<'a>(captured_logs: &'a [String], event: &str) -> &'a str {
-    captured_logs
-        .iter()
-        .find(|line| line.contains(event))
         .map(|line| line.as_str())
         .expect("daemon execution should emit structured log marker")
 }
