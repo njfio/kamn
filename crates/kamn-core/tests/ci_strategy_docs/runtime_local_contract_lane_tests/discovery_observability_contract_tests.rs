@@ -1,10 +1,10 @@
-use super::support::assert_runtime_local_lane_contract_markers;
+use super::support::assert_runtime_local_contract_lane_markers;
 use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
 
 #[test]
 fn doc_contains_runtime_libp2p_three_node_discovery_contract_lane_ci_mode_markers() {
-    assert_runtime_local_lane_contract_markers(
+    assert_runtime_local_contract_lane_markers(
         "## Runtime Libp2p Three-Node Discovery Live Validation Contract Lane",
         &[
             "validate_libp2p_three_node_discovery_live.sh --mode dry-run --output-json /tmp/libp2p-three-node-discovery-live-summary.json",
@@ -31,7 +31,7 @@ fn doc_contains_runtime_libp2p_three_node_discovery_contract_lane_ci_mode_marker
 
 #[test]
 fn doc_contains_runtime_local_observability_scrape_contract_lane_ci_mode_markers() {
-    assert_runtime_local_lane_contract_markers(
+    assert_runtime_local_contract_lane_markers(
         "## Runtime Local Observability Scrape Contract Lane",
         &[
             "validate_local_observability_scrape_live.sh --mode dry-run --output-json /tmp/local-observability-scrape-live-summary.json",
