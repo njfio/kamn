@@ -45,3 +45,12 @@ Split `crates/kamn-core/tests/p2p_libp2p_native_adapter_runtime.rs` into a thin 
 3. Run the extraction contract target
 4. Run the real `p2p_libp2p_native_adapter_runtime` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- `cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6802-touched-size-refactor.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- The default `cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime -- --nocapture` path compiles the target with zero executed tests because the file is gated on `libp2p-live-transport`. The real integration evidence for this issue therefore uses the feature-enabled test invocation above.
