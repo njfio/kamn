@@ -1,7 +1,29 @@
+use super::support::*;
 use super::*;
+
 #[test]
 fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_lane_count_mapping_contract_is_canonical(
 ) {
+    assert_lane_count_mapping_contract_metadata();
+    assert_lane_count_mapping_sample_row();
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_lane_count_mapping_is_stable(
+) {
+    with_live_postgres_validation_database_url(|database_url| {
+        apply_live_postgres_validation_migrations(database_url);
+        let baseline_rows = lane_count_mapping_rows("baseline");
+        assert_lane_count_mapping_baseline(&baseline_rows);
+        assert_rows_stable_across_permutations(
+            &baseline_rows,
+            lane_count_mapping_rows,
+            "topology-id to lane-count rows should remain stable",
+        );
+    });
+}
+
+fn assert_lane_count_mapping_contract_metadata() {
     assert_eq!(
         LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_LANE_COUNT_MAPPING_SCHEMA_VERSION,
         "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-lane-count-mapping.v1"
@@ -14,23 +36,14 @@ fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topolo
         LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_LANE_COUNT_MAPPING_CONTRACT,
         "topology_id_to_lane_count_rows_must_remain_stable_under_repeated_runs_and_permutations"
     );
+}
 
-    let sample_lane_fingerprint = format_parallel_lane_fingerprint(
-        "processor_listener_parallel_applied",
-        &LivePostgresPhase6Projection {
-            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
-            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
-        },
-        &LivePostgresPhase6Projection {
-            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
-            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
-        },
-    );
-    let topology_fingerprint = format_parallel_lane_topology_fingerprint(
+fn assert_lane_count_mapping_sample_row() {
+    let topology_fingerprint = sample_topology_fingerprint(
         "same_host_parallel",
         "node_alpha",
         "node_alpha",
-        vec![sample_lane_fingerprint],
+        "processor_listener_parallel_applied",
     );
     assert_eq!(
         extract_parallel_lane_topology_id_lane_count_row(&topology_fingerprint),
@@ -38,68 +51,20 @@ fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topolo
     );
 }
 
-#[test]
-fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_lane_count_mapping_is_stable(
-) {
-    let _lock = log_env_lock()
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
-    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
-    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
-    let Some(database_url) = maybe_database_url else {
-        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
-        return;
-    };
-    assert_eq!(
-        gate_reason_code,
-        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
-    );
+fn lane_count_mapping_rows(permutation: &str) -> Vec<String> {
+    collect_parallel_lane_topology_id_lane_count_rows(permuted_topology_profiles(permutation))
+}
 
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("tokio runtime should be constructible for live postgres validation");
-    runtime.block_on(async move {
-        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
-            kamn_core::DataLayerPgExecutionAdapterConfig {
-                database_url,
-                max_connections: 4,
-            },
-        )
-        .await
-        .expect("live postgres connection should succeed when test URL is provided");
-        adapter
-            .apply_migrations()
-            .await
-            .expect("live postgres migrations should apply for validation slice");
-    });
-
-    let permutation_ids = ["baseline", "reverse", "rotate_left_1"];
-    let baseline_rows =
-        collect_parallel_lane_topology_id_lane_count_rows(permute_parallel_lane_topology_profiles(
-            project_live_postgres_parallel_lane_topology_profiles(),
-            permutation_ids[0],
-        ));
+fn assert_lane_count_mapping_baseline(baseline_rows: &[String]) {
     assert_eq!(
         baseline_rows,
-        vec!["distributed_label_parallel->4", "same_host_parallel->4"]
+        [
+            "distributed_label_parallel->4".to_owned(),
+            "same_host_parallel->4".to_owned()
+        ]
     );
     assert_eq!(
         baseline_rows.join(","),
         LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_LANE_COUNT_MAPPING_ROWS_CSV
     );
-
-    for permutation in permutation_ids.iter().skip(1) {
-        let permuted_rows = collect_parallel_lane_topology_id_lane_count_rows(
-            permute_parallel_lane_topology_profiles(
-                project_live_postgres_parallel_lane_topology_profiles(),
-                permutation,
-            ),
-        );
-        assert_eq!(
-            baseline_rows, permuted_rows,
-            "topology-id to lane-count rows should remain stable under permutation {permutation}"
-        );
-    }
 }

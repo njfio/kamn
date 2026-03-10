@@ -42,12 +42,7 @@ fn read_repo_file(path: &str) -> String {
 #[test]
 fn regression_topology_mapping_root_declares_extracted_submodules() {
     let root = read_repo_file(ROOT_FILE);
-    for marker in EXPECTED_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "topology_mapping_contract_tests.rs missing extracted-module marker: {marker}"
-        );
-    }
+    assert_markers_present(&root, EXPECTED_ROOT_MARKERS);
 }
 
 #[test]
@@ -66,12 +61,7 @@ fn regression_topology_mapping_module_files_exist() {
 #[test]
 fn regression_topology_mapping_root_removes_moved_test_bodies() {
     let root = read_repo_file(ROOT_FILE);
-    for marker in MOVED_TEST_MARKERS {
-        assert!(
-            !root.contains(marker),
-            "topology_mapping_contract_tests.rs should not retain moved test marker: {marker}"
-        );
-    }
+    assert_markers_absent(&root, MOVED_TEST_MARKERS);
 }
 
 #[test]
@@ -81,4 +71,22 @@ fn regression_topology_mapping_root_stays_within_shell_budget() {
         line_count <= ROOT_MAX_LINES,
         "topology_mapping_contract_tests.rs should stay within {ROOT_MAX_LINES} lines after extraction, found {line_count}"
     );
+}
+
+fn assert_markers_present(root: &str, markers: &[&str]) {
+    for marker in markers {
+        assert!(
+            root.contains(marker),
+            "topology_mapping_contract_tests.rs missing extracted-module marker: {marker}"
+        );
+    }
+}
+
+fn assert_markers_absent(root: &str, markers: &[&str]) {
+    for marker in markers {
+        assert!(
+            !root.contains(marker),
+            "topology_mapping_contract_tests.rs should not retain moved test marker: {marker}"
+        );
+    }
 }
