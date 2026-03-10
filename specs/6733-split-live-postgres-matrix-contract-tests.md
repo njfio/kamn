@@ -21,12 +21,12 @@ Split `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contrac
 - Module wiring compiles but no longer runs the extracted tests from the real crate entrypoint
 
 ## Acceptance criteria
-- [ ] `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contract_tests.rs` is reduced to a thin module shell under the touched-file budget
-- [ ] The matrix contract surface is split into bounded modules grouped by logical concern rather than arbitrary line ranges
-- [ ] An extraction contract verifies the required module layout and root-shell budget
-- [ ] Existing live-postgres matrix tests still run from the real `kamn-node` test entrypoint
-- [ ] Canonical ordering, CSV/taxonomy bridge, and permutation invariance assertions remain intact
-- [ ] The touched-Rust size policy reports `GO` for the issue write set
+- [x] `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contract_tests.rs` is reduced to a thin module shell under the touched-file budget
+- [x] The matrix contract surface is split into bounded modules grouped by logical concern rather than arbitrary line ranges
+- [x] An extraction contract verifies the required module layout and root-shell budget
+- [x] Existing live-postgres matrix tests still run from the real `kamn-node` test entrypoint
+- [x] Canonical ordering, CSV/taxonomy bridge, and permutation invariance assertions remain intact
+- [x] The touched-Rust size policy reports `GO` for the issue write set
 
 ## Files to touch
 - `specs/6733-split-live-postgres-matrix-contract-tests.md`
@@ -45,3 +45,37 @@ Split `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contrac
 3. Run `cargo test -p kamn-node --test live_postgres_matrix_contract_tests_extraction_contract -- --nocapture`
 4. Run `cargo test -p kamn-node daemon_tests -- --nocapture`
 5. Run `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6733-touched-size.json`
+
+## Implementation summary
+- Reduced `live_postgres_matrix_contract_tests.rs` from `1030` LOC to `11` LOC
+- Split the matrix surface into bounded files for:
+  - env/gate execution
+  - projection/taxonomy bridge
+  - load profiles
+  - role profiles
+  - role pairs
+  - symmetric parallel role-pair lanes
+  - asymmetric parallel lanes
+  - lane order/permutation invariance
+- Added `support.rs` to centralize live-postgres setup and repeated projection assertions so the touched-file function budget stays green
+- Added `live_postgres_matrix_contract_tests_extraction_contract.rs` to ratchet the root shell and module layout
+
+## Evidence
+- `cargo test -p kamn-node --test live_postgres_matrix_contract_tests_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node daemon_tests -- --nocapture`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6733-touched-size-with-support.json`
+- Measured extracted file sizes:
+  - root shell: `11` LOC
+  - `env_gate_execution_contract_tests.rs`: `69` LOC
+  - `projection_taxonomy_contract_tests.rs`: `70` LOC
+  - `load_profile_contract_tests.rs`: `48` LOC
+  - `role_profile_contract_tests.rs`: `48` LOC
+  - `role_pair_contract_tests.rs`: `31` LOC
+  - `parallel_role_pair_lane_contract_tests.rs`: `34` LOC
+  - `asymmetric_parallel_lane_contract_tests.rs`: `34` LOC
+  - `parallel_lane_invariance_contract_tests/order_invariance_contract_tests.rs`: `45` LOC
+  - `parallel_lane_invariance_contract_tests/permutation_invariance_contract_tests.rs`: `77` LOC
+  - `support.rs`: `195` LOC
+
+## Deviations
+- The first green extraction used line-slice boundaries that left trailing `#[test]` attributes in several child files; this was corrected before the final green/refactor verification and no coverage was removed.
