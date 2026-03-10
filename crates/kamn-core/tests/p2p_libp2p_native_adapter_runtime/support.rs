@@ -147,6 +147,27 @@ pub(crate) fn settle_mesh() {
     std::thread::sleep(Duration::from_millis(250));
 }
 
+pub(crate) fn disconnected_transport_pair(
+    sender_peer_id: &str,
+    recipient_peer_id: &str,
+) -> (
+    Libp2pLivePeerLifecycleTransport,
+    Libp2pLivePeerLifecycleTransport,
+) {
+    let bootstrap_seed = unique_bootstrap_seed();
+    let sender = new_transport(
+        sender_peer_id,
+        unique_listen_address().as_str(),
+        bootstrap_seed.as_str(),
+    );
+    let recipient = new_transport(
+        recipient_peer_id,
+        unique_listen_address().as_str(),
+        bootstrap_seed.as_str(),
+    );
+    (sender, recipient)
+}
+
 fn append_drained_frames(
     transport: &Libp2pLivePeerLifecycleTransport,
     recipient_peer_id: &str,

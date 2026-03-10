@@ -20,16 +20,8 @@ fn disconnected_pair() -> (
     Libp2pLivePeerLifecycleTransport,
     Libp2pLivePeerLifecycleTransport,
 ) {
-    let bootstrap_seed = unique_bootstrap_seed();
-    let sender = new_transport(
+    disconnected_transport_pair(
         "peer-native-disconnected-sender",
-        unique_listen_address().as_str(),
-        bootstrap_seed.as_str(),
-    );
-    let recipient = new_transport(
         "peer-native-disconnected-recipient",
-        unique_listen_address().as_str(),
-        bootstrap_seed.as_str(),
-    );
-    (sender, recipient)
+    )
 }

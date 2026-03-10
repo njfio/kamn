@@ -36,16 +36,8 @@ fn reason_regression_pair() -> (
     Libp2pLivePeerLifecycleTransport,
     Libp2pLivePeerLifecycleTransport,
 ) {
-    let bootstrap_seed = unique_bootstrap_seed();
-    let sender = new_transport(
+    disconnected_transport_pair(
         "peer-native-reason-regression-sender",
-        unique_listen_address().as_str(),
-        bootstrap_seed.as_str(),
-    );
-    let recipient = new_transport(
         "peer-native-reason-regression-recipient",
-        unique_listen_address().as_str(),
-        bootstrap_seed.as_str(),
-    );
-    (sender, recipient)
+    )
 }
