@@ -3,13 +3,7 @@ use super::support::*;
 #[test]
 fn spec_c08_live_transport_create_channel_uses_service_route() {
     with_env_lock(|| {
-        ensure_live_test_env();
-        let bind_addr = reserve_loopback_addr();
-        let server_addr = bind_addr.clone();
-        let server = thread::spawn(move || {
-            run_live_transport_contract_server(server_addr, 1, "kamn:did:agent:live-tester", None)
-        });
-        wait_for_server_ready(bind_addr.as_str());
+        let (bind_addr, server) = start_contract_server(1, "kamn:did:agent:live-tester", None);
 
         let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
             .expect("live client should connect");
@@ -19,10 +13,9 @@ fn spec_c08_live_transport_create_channel_uses_service_route() {
 
         assert_eq!(channel_id.0, "channel-live-ops-lane");
 
-        let server_result = server.join().expect("server thread should join");
-        assert!(
-            server_result.is_ok(),
-            "test service contract server should satisfy request budget"
+        assert_server_result(
+            server,
+            "test service contract server should satisfy request budget",
         );
     });
 }
@@ -30,13 +23,7 @@ fn spec_c08_live_transport_create_channel_uses_service_route() {
 #[test]
 fn regression_live_transport_create_channel_rejects_empty_service_channel_id() {
     with_env_lock(|| {
-        ensure_live_test_env();
-        let bind_addr = reserve_loopback_addr();
-        let server_addr = bind_addr.clone();
-        let server = thread::spawn(move || {
-            run_live_transport_contract_server(server_addr, 1, "kamn:did:agent:live-tester", None)
-        });
-        wait_for_server_ready(bind_addr.as_str());
+        let (bind_addr, server) = start_contract_server(1, "kamn:did:agent:live-tester", None);
 
         let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
             .expect("live client should connect");
@@ -51,10 +38,9 @@ fn regression_live_transport_create_channel_rejects_empty_service_channel_id() {
             )
         );
 
-        let server_result = server.join().expect("server thread should join");
-        assert!(
-            server_result.is_ok(),
-            "test service contract server should satisfy request budget"
+        assert_server_result(
+            server,
+            "test service contract server should satisfy request budget",
         );
     });
 }

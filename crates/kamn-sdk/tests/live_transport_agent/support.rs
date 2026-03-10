@@ -17,6 +17,8 @@ mod contract_server_support;
 mod env_support;
 #[path = "support/request_parse_support.rs"]
 mod request_parse_support;
+#[path = "support/server_test_support.rs"]
+mod server_test_support;
 
 pub(crate) use auth_support::validate_auth;
 pub(crate) use contract_server_support::run_live_transport_contract_server;
@@ -26,3 +28,4 @@ pub(crate) use env_support::{
     LIVE_REQUESTER_DID_ENV, REQUEST_AUTH_SCOPE_HEADER,
 };
 pub(crate) use request_parse_support::{parse_http_request, write_http_response};
+pub(crate) use server_test_support::{assert_server_result, start_contract_server};

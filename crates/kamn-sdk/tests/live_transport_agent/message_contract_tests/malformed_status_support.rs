@@ -18,11 +18,6 @@ pub(super) fn run_malformed_message_status_server(bind_addr: String) -> Result<(
     Ok(())
 }
 
-pub(super) fn assert_server_result(server: thread::JoinHandle<Result<(), String>>, message: &str) {
-    let server_result = server.join().expect("server thread should join");
-    assert!(server_result.is_ok(), "{message}");
-}
-
 fn serve_malformed_once(
     listener: &TcpListener,
     replay_guard: &mut BTreeSet<(String, u64)>,
