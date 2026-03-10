@@ -1,7 +1,7 @@
 #[path = "live_probe_tranche_two/crash_recovery_probe.rs"]
 mod crash_recovery_probe;
 #[path = "live_probe_tranche_two/message_query_support.rs"]
-mod message_query_support;
+pub(crate) mod message_query_support;
 #[path = "live_probe_tranche_two/proof_verification_probe.rs"]
 mod proof_verification_probe;
 #[path = "live_probe_tranche_two/replay_protection_probe.rs"]

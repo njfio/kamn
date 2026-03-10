@@ -1,4 +1,6 @@
 use super::driver_core::live_execution_enabled_from_env;
+use super::probe_protocol_support::validate_probe_health_response;
+use super::tool_call_support::run_live_s15_mcp_tool_call;
 use super::{
     build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
     json_optional_u64_field, parse_framed_jsonrpc_payloads, parse_s15_budget_env_u128,
@@ -10,8 +12,7 @@ use super::{
     run_live_s10_mcp_topology_coherence_probe, run_live_s11_mcp_signer_rotation_probe,
     run_live_s12_mcp_retention_deletion_probe, run_live_s13_mcp_bridge_forwarding_probe,
     run_live_s13_mcp_tool_call, run_live_s14_mcp_batch_merkle_probe, run_live_s14_mcp_tool_call,
-    run_live_s15_mcp_performance_smoke_probe, run_live_s15_mcp_tool_call,
-    validate_live_s05_release_escrow_response, validate_probe_health_response,
+    run_live_s15_mcp_performance_smoke_probe, validate_live_s05_release_escrow_response,
     validate_probe_initialize_response, validate_s07_replay_reason_marker,
     validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
     validate_s12_content_field_coherence, validate_s12_content_id_match,

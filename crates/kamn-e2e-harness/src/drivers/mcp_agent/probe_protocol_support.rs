@@ -7,6 +7,7 @@ pub(crate) fn validate_probe_initialize_response(payload: &str) -> Result<(), St
     require_marker(payload, r#""serverInfo""#, "serverInfo")
 }
 
+#[cfg(test)]
 pub(crate) fn validate_probe_health_response(payload: &str) -> Result<(), String> {
     if super::json_optional_bool_field(payload, "ok").unwrap_or(false) {
         return Ok(());

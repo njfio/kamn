@@ -31,19 +31,17 @@ macro_rules! scenario_tool_call {
     };
 }
 
-scenario_tool_call!(run_live_s02_mcp_tool_call, "mcp live s02");
 scenario_tool_call!(run_live_s03_mcp_tool_call, "mcp live s03");
 scenario_tool_call!(run_live_s04_mcp_tool_call, "mcp live s04");
 scenario_tool_call!(run_live_s05_mcp_tool_call, "mcp live s05");
 scenario_tool_call!(run_live_s06_mcp_tool_call, "mcp live s06");
 scenario_tool_call!(run_live_s07_mcp_tool_call, "mcp live s07");
 scenario_tool_call!(run_live_s08_mcp_tool_call, "mcp live s08");
-scenario_tool_call!(run_live_s09_mcp_tool_call, "mcp live s09");
-scenario_tool_call!(run_live_s10_mcp_tool_call, "mcp live s10");
 scenario_tool_call!(run_live_s11_mcp_tool_call, "mcp live s11");
 scenario_tool_call!(run_live_s12_mcp_tool_call, "mcp live s12");
 scenario_tool_call!(run_live_s13_mcp_tool_call, "mcp live s13");
 scenario_tool_call!(run_live_s14_mcp_tool_call, "mcp live s14");
+#[cfg(test)]
 scenario_tool_call!(run_live_s15_mcp_tool_call, "mcp live s15");
 
 pub(crate) fn run_named_mcp_tool_call(
@@ -69,35 +67,16 @@ pub(crate) fn run_named_mcp_tool_call(
     validate_tool_call_output(step_prefix, request_id, tool_name, stdout.as_str())
 }
 
-pub(crate) fn spawn_mcp_tool_call(
-    step_prefix: &str,
-    binary: &str,
-    endpoint: &str,
-    agent_name: &str,
-    key_file: &str,
-    request_id: &str,
-    tool_name: &str,
-    arguments_json: &str,
-) -> Result<String, String> {
+#[rustfmt::skip]
+pub(crate) fn spawn_mcp_tool_call(step_prefix: &str, binary: &str, endpoint: &str, agent_name: &str, key_file: &str, request_id: &str, tool_name: &str, arguments_json: &str) -> Result<String, String> {
     let mut child = Command::new(binary)
-        .arg("--endpoint")
-        .arg(endpoint)
-        .arg("--agent-name")
-        .arg(agent_name)
-        .arg("--key-file")
-        .arg(key_file)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .arg("--endpoint").arg(endpoint)
+        .arg("--agent-name").arg(agent_name)
+        .arg("--key-file").arg(key_file)
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null())
         .spawn()
         .map_err(|error| format!("{step_prefix} {tool_name} failed to spawn: {error}"))?;
-    write_request_stream(
-        step_prefix,
-        request_id,
-        tool_name,
-        arguments_json,
-        child.stdin.take(),
-    )?;
+    write_request_stream(step_prefix, request_id, tool_name, arguments_json, child.stdin.take())?;
     wait_for_stdout(step_prefix, tool_name, child)
 }
 

@@ -96,15 +96,13 @@ use live_probe_tranche_two::{
 };
 use probe_protocol_support::{
     build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
-    json_optional_u64_field, parse_framed_jsonrpc_payloads, validate_probe_health_response,
-    validate_probe_initialize_response,
+    json_optional_u64_field, parse_framed_jsonrpc_payloads, validate_probe_initialize_response,
 };
-use tool_call_support::{
-    run_live_s02_mcp_tool_call, run_live_s03_mcp_tool_call, run_live_s04_mcp_tool_call,
-    run_live_s05_mcp_tool_call, run_live_s06_mcp_tool_call, run_live_s07_mcp_tool_call,
-    run_live_s08_mcp_tool_call, run_live_s09_mcp_tool_call, run_live_s10_mcp_tool_call,
+pub(crate) use tool_call_support::{
+    run_live_s03_mcp_tool_call, run_live_s04_mcp_tool_call, run_live_s05_mcp_tool_call,
+    run_live_s06_mcp_tool_call, run_live_s07_mcp_tool_call, run_live_s08_mcp_tool_call,
     run_live_s11_mcp_tool_call, run_live_s12_mcp_tool_call, run_live_s13_mcp_tool_call,
-    run_live_s14_mcp_tool_call, run_live_s15_mcp_tool_call,
+    run_live_s14_mcp_tool_call, run_named_mcp_tool_call,
 };
 
 #[cfg(test)]
