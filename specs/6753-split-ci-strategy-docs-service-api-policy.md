@@ -60,3 +60,12 @@ Extract the service-API policy tranche from `crates/kamn-core/tests/ci_strategy_
    - `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`
    - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6753-touched-size.json`
 5. Record final evidence and deviations, then open the PR
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test ci_strategy_docs_service_api_policy_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6753-touched-size-refactor-clean.json`
+- Result: `policy_decision=GO`
+
+## Deviations
+- None.
