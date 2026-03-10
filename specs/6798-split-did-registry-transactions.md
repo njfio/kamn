@@ -30,12 +30,12 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-core/tests/did_registry_transactions.rs` into bounded sibling modules organized by transaction concern
-- [ ] root `did_registry_transactions.rs` is reduced below a staged extraction cap enforced by a new extraction contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] the real `cargo test -p kamn-core --test did_registry_transactions -- --nocapture` target remains wired and passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-core/tests/did_registry_transactions.rs` into bounded sibling modules organized by transaction concern
+- [x] root `did_registry_transactions.rs` is reduced below a staged extraction cap enforced by a new extraction contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] the real `cargo test -p kamn-core --test did_registry_transactions -- --nocapture` target remains wired and passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -65,3 +65,17 @@ Outputs:
 - `retry_finality_contract_tests.rs` for duplicate/retry/finality boundary coverage
 - `chain_submission_contract_tests.rs` for chain-submission adapter outcomes and malformed-payload regressions
 - `lifecycle_mutation_contract_tests.rs` for nonce, rotate, recover, replay, and mutation contract-lane coverage
+
+# Phase 6 evidence
+
+- Root shell reduced to `10` LOC at `crates/kamn-core/tests/did_registry_transactions.rs`.
+- Extracted module tree totals `422` LOC across bounded sibling files; the largest touched file is `145` LOC.
+- Real integration path verified with:
+  - `cargo test -p kamn-core --test did_registry_transactions_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core --test did_registry_transactions -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6798-touched-size-refactor.json`
+- Touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- None.
