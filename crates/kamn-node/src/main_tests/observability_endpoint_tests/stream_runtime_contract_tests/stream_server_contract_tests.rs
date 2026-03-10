@@ -1,5 +1,7 @@
 use super::super::support::*;
 use super::super::*;
+use std::sync::Arc;
+use std::thread;
 
 fn assert_ok_join(server: thread::JoinHandle<Result<(), String>>) {
     assert!(server

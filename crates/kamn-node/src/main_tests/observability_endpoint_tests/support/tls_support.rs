@@ -1,5 +1,8 @@
 use super::super::*;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use std::io::{ErrorKind, Read, Write};
+use std::sync::Arc;
+use std::thread;
 
 #[derive(Debug)]
 struct TestSkipServerVerification(Arc<rustls::crypto::CryptoProvider>);

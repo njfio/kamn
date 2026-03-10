@@ -1,5 +1,6 @@
 use super::super::support::*;
 use super::super::*;
+use std::thread;
 
 fn spawn_server(
     snapshot: RuntimeObservabilitySnapshot,
