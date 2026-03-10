@@ -47,7 +47,7 @@ fn spec_c46_service_api_endpoint_shared_support_module_exists_and_owns_helper_su
 }
 
 fn assert_shared_support_modules_declared(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "mod auth_fixture_support;",
@@ -62,7 +62,7 @@ fn assert_shared_support_modules_declared(source: &str) {
 }
 
 fn assert_auth_fixture_support_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "struct ServiceApiErrorEnvelope {",
@@ -76,7 +76,7 @@ fn assert_auth_fixture_support_markers(source: &str) {
 }
 
 fn assert_route_scope_support_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "struct ServiceApiRouteAuthzMatrixRow {",
@@ -91,7 +91,7 @@ fn assert_route_scope_support_markers(source: &str) {
 }
 
 fn assert_http_transport_support_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "fn reserve_loopback_addr() -> String {",
@@ -105,7 +105,7 @@ fn assert_http_transport_support_markers(source: &str) {
 }
 
 fn assert_tls_transport_support_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "const TEST_SERVICE_API_TLS_CERT_PEM: &str =",
@@ -120,7 +120,7 @@ fn assert_tls_transport_support_markers(source: &str) {
 }
 
 fn assert_response_support_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "fn parse_http_content_length(response_head: &str) -> usize {",
@@ -136,7 +136,7 @@ fn assert_response_support_markers(source: &str) {
 }
 
 fn assert_env_support_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "struct ServiceApiTestEnvGuards {",

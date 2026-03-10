@@ -1,5 +1,21 @@
 use super::support::*;
 
+const MESSAGE_PERSISTENCE_SUBMODULE_MARKERS: &[&str] = &[
+    "mod message_restart_contract_tests;",
+    "mod message_runtime_evidence_contract_tests;",
+];
+const MESSAGE_RESTART_MARKERS: &[&str] = &[
+    "fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env(",
+    "fn integration_service_api_endpoint_persists_message_state_across_restart()",
+    "let query_path = format!(\"/v1/messages/{}\", send_payload.message_id);",
+    "let _ = fs::remove_file(state_file);",
+];
+const MESSAGE_RUNTIME_EVIDENCE_MARKERS: &[&str] = &[
+    "fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11()",
+    "data_layer_runtime_evidence",
+    "m11_decision",
+];
+
 #[test]
 fn spec_c13_service_api_endpoint_root_file_removes_moved_message_persistence_contracts() {
     let source = read_repo_file(ROOT_FILE);
@@ -23,37 +39,21 @@ fn spec_c14_service_api_endpoint_message_persistence_module_exists_and_owns_move
     let restart_source = read_repo_file(MESSAGE_RESTART_FILE);
     let runtime_evidence_source = read_repo_file(MESSAGE_RUNTIME_EVIDENCE_FILE);
 
-    assert!(
-        module_source.contains("mod message_restart_contract_tests;"),
-        "message_persistence_contract_tests.rs should declare restart submodule"
+    assert_contains_markers(
+        module_source.as_str(),
+        MESSAGE_PERSISTENCE_SUBMODULE_MARKERS,
+        "message-persistence module",
     );
-    assert!(
-        module_source.contains("mod message_runtime_evidence_contract_tests;"),
-        "message_persistence_contract_tests.rs should declare runtime-evidence submodule"
+    assert_contains_markers(
+        restart_source.as_str(),
+        MESSAGE_RESTART_MARKERS,
+        "message-restart contract file",
     );
-
-    for marker in [
-        "fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env(",
-        "fn integration_service_api_endpoint_persists_message_state_across_restart()",
-        "let query_path = format!(\"/v1/messages/{}\", send_payload.message_id);",
-        "let _ = fs::remove_file(state_file);",
-    ] {
-        assert!(
-            restart_source.contains(marker),
-            "message_restart_contract_tests.rs should include moved marker: {marker}"
-        );
-    }
-
-    for marker in [
-        "fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11()",
-        "data_layer_runtime_evidence",
-        "m11_decision",
-    ] {
-        assert!(
-            runtime_evidence_source.contains(marker),
-            "message_runtime_evidence_contract_tests.rs should include moved marker: {marker}"
-        );
-    }
+    assert_contains_markers(
+        runtime_evidence_source.as_str(),
+        MESSAGE_RUNTIME_EVIDENCE_MARKERS,
+        "message-runtime-evidence contract file",
+    );
 }
 
 #[test]

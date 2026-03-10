@@ -121,7 +121,7 @@ pub(super) fn line_count(path: &str) -> usize {
     read_repo_file(path).lines().count()
 }
 
-pub(super) fn assert_file_markers(source: &str, markers: &[&str], label: &str) {
+pub(super) fn assert_contains_markers(source: &str, markers: &[&str], label: &str) {
     for marker in markers {
         assert!(
             source.contains(marker),

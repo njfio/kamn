@@ -37,7 +37,7 @@ fn spec_c50_service_api_endpoint_residual_root_module_exists_and_owns_moved_cove
 }
 
 fn assert_residual_root_module_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &[
             "mod env_lock_contract_tests;",
@@ -65,7 +65,7 @@ fn assert_residual_root_leaf_markers(
 }
 
 fn assert_env_lock_residual_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &["fn regression_service_api_env_lock_recovers_from_signer_lock_poison() {"],
         "env-lock residual test file",
@@ -73,7 +73,7 @@ fn assert_env_lock_residual_markers(source: &str) {
 }
 
 fn assert_serde_residual_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &["fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {"],
         "serde residual test file",
@@ -81,7 +81,7 @@ fn assert_serde_residual_markers(source: &str) {
 }
 
 fn assert_error_envelope_residual_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &["fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts() {"],
         "error-envelope residual test file",
@@ -89,7 +89,7 @@ fn assert_error_envelope_residual_markers(source: &str) {
 }
 
 fn assert_payload_parse_residual_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &["fn regression_service_api_payload_parse_reason_codes_fail_closed() {"],
         "payload-parse residual test file",
@@ -97,7 +97,7 @@ fn assert_payload_parse_residual_markers(source: &str) {
 }
 
 fn assert_missing_resource_residual_markers(source: &str) {
-    assert_file_markers(
+    assert_contains_markers(
         source,
         &["fn regression_service_api_endpoint_rejects_unknown_task_and_escrow_resource_transitions() {"],
         "missing-resource residual test file",

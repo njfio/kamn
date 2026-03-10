@@ -1,5 +1,16 @@
 use super::support::*;
 
+const TASK_ESCROW_SUBMODULE_MARKERS: &[&str] = &[
+    "mod task_escrow_routes_contract_tests;",
+    "mod task_escrow_restart_contract_tests;",
+];
+const TASK_ESCROW_ROUTES_MARKERS: &[&str] = &[
+    "fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes()",
+];
+const TASK_ESCROW_RESTART_MARKERS: &[&str] = &[
+    "fn integration_service_api_endpoint_persists_task_and_escrow_state_across_restart()",
+];
+
 #[test]
 fn spec_c21_service_api_endpoint_root_file_removes_moved_task_escrow_persistence_contracts() {
     let source = read_repo_file(ROOT_FILE);
@@ -20,26 +31,20 @@ fn spec_c22_service_api_endpoint_task_escrow_persistence_module_exists_and_owns_
     let routes_source = read_repo_file(TASK_ESCROW_ROUTES_FILE);
     let restart_source = read_repo_file(TASK_ESCROW_RESTART_FILE);
 
-    assert!(
-        module_source.contains("mod task_escrow_routes_contract_tests;"),
-        "task_escrow_persistence_contract_tests.rs should declare routes submodule"
+    assert_contains_markers(
+        module_source.as_str(),
+        TASK_ESCROW_SUBMODULE_MARKERS,
+        "task-escrow-persistence module",
     );
-    assert!(
-        module_source.contains("mod task_escrow_restart_contract_tests;"),
-        "task_escrow_persistence_contract_tests.rs should declare restart submodule"
+    assert_contains_markers(
+        routes_source.as_str(),
+        TASK_ESCROW_ROUTES_MARKERS,
+        "task-escrow-routes contract file",
     );
-
-    assert!(
-        routes_source.contains(
-            "fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes()"
-        ),
-        "task_escrow_routes_contract_tests.rs should include moved routes marker"
-    );
-    assert!(
-        restart_source.contains(
-            "fn integration_service_api_endpoint_persists_task_and_escrow_state_across_restart()"
-        ),
-        "task_escrow_restart_contract_tests.rs should include moved restart marker"
+    assert_contains_markers(
+        restart_source.as_str(),
+        TASK_ESCROW_RESTART_MARKERS,
+        "task-escrow-restart contract file",
     );
 }
 

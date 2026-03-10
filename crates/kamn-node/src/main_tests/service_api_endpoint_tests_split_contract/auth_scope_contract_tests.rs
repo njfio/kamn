@@ -1,5 +1,27 @@
 use super::support::*;
 
+const AUTH_SCOPE_SUBMODULE_MARKERS: &[&str] = &[
+    "mod auth_binding_contract_tests;",
+    "mod route_scope_policy_contract_tests;",
+    "mod legacy_signature_contract_tests;",
+];
+const AUTH_BINDING_MARKERS: &[&str] = &[
+    "fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_did_binding()",
+    "fn regression_service_api_endpoint_rejects_legacy_sender_binding_without_signer_public_key_header()",
+];
+const ROUTE_SCOPE_POLICY_MARKERS: &[&str] = &[
+    "fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths()",
+    "fn integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers()",
+    "fn unit_service_api_scope_policy_fixture_parser_contract()",
+    "fn functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping()",
+    "fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes()",
+    "fn integration_service_api_endpoint_rejects_missing_request_auth_headers()",
+];
+const LEGACY_SIGNATURE_MARKERS: &[&str] = &[
+    "fn integration_service_api_endpoint_rejects_legacy_deterministic_signature_profile()",
+    "fn regression_service_api_endpoint_rejects_legacy_signature_when_toggle_env_is_true()",
+];
+
 #[test]
 fn spec_c04_service_api_endpoint_root_file_removes_moved_auth_scope_tests() {
     let source = read_repo_file(ROOT_FILE);
@@ -29,52 +51,18 @@ fn spec_c05_service_api_endpoint_auth_scope_module_exists_and_owns_moved_coverag
     let route_scope_policy = read_repo_file(ROUTE_SCOPE_POLICY_FILE);
     let legacy_signature = read_repo_file(LEGACY_SIGNATURE_FILE);
 
-    assert!(
-        auth_scope_module.contains("mod auth_binding_contract_tests;"),
-        "auth_scope_contract_tests.rs should declare auth-binding submodule"
+    assert_contains_markers(auth_scope_module.as_str(), AUTH_SCOPE_SUBMODULE_MARKERS, "auth-scope module");
+    assert_contains_markers(auth_binding.as_str(), AUTH_BINDING_MARKERS, "auth-binding contract file");
+    assert_contains_markers(
+        route_scope_policy.as_str(),
+        ROUTE_SCOPE_POLICY_MARKERS,
+        "route/scope-policy contract file",
     );
-    assert!(
-        auth_scope_module.contains("mod route_scope_policy_contract_tests;"),
-        "auth_scope_contract_tests.rs should declare route/scope-policy submodule"
+    assert_contains_markers(
+        legacy_signature.as_str(),
+        LEGACY_SIGNATURE_MARKERS,
+        "legacy-signature contract file",
     );
-    assert!(
-        auth_scope_module.contains("mod legacy_signature_contract_tests;"),
-        "auth_scope_contract_tests.rs should declare legacy-signature submodule"
-    );
-
-    for marker in [
-        "fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_did_binding()",
-        "fn regression_service_api_endpoint_rejects_legacy_sender_binding_without_signer_public_key_header()",
-    ] {
-        assert!(
-            auth_binding.contains(marker),
-            "auth-binding contract file should include moved marker: {marker}"
-        );
-    }
-
-    for marker in [
-        "fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths()",
-        "fn integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers()",
-        "fn unit_service_api_scope_policy_fixture_parser_contract()",
-        "fn functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping()",
-        "fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes()",
-        "fn integration_service_api_endpoint_rejects_missing_request_auth_headers()",
-    ] {
-        assert!(
-            route_scope_policy.contains(marker),
-            "route/scope-policy contract file should include moved marker: {marker}"
-        );
-    }
-
-    for marker in [
-        "fn integration_service_api_endpoint_rejects_legacy_deterministic_signature_profile()",
-        "fn regression_service_api_endpoint_rejects_legacy_signature_when_toggle_env_is_true()",
-    ] {
-        assert!(
-            legacy_signature.contains(marker),
-            "legacy-signature contract file should include moved marker: {marker}"
-        );
-    }
 }
 
 #[test]
