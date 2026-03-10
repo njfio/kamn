@@ -258,3 +258,4 @@ mod runtime_tests;
 mod service_api_endpoint_tests;
 mod service_api_endpoint_tests_split_contract;
 mod signer_tests;
+mod signer_tests_split_contract;
