@@ -32,14 +32,14 @@ Extract the inline `#[cfg(test)] mod tests` block from `crates/kamn-e2e-harness/
 
 # Acceptance criteria
 
-- [ ] `sdk_direct.rs` no longer contains an inline `#[cfg(test)] mod tests` block
-- [ ] `sdk_direct.rs` declares a sibling path-based test module entrypoint
-- [ ] Extracted tests live under `crates/kamn-e2e-harness/src/drivers/sdk_direct_tests/`
-- [ ] All extracted leaf/support files are <= 200 LOC
-- [ ] `sdk_direct.rs` is reduced to <= 1800 LOC after the initial extraction wave
-- [ ] A contract test fails if inline tests return or the staged layout regresses
-- [ ] Relevant `kamn-e2e-harness` tests pass after extraction
-- [ ] Touched-Rust size policy passes on the issue branch
+- [x] `sdk_direct.rs` no longer contains an inline `#[cfg(test)] mod tests` block
+- [x] `sdk_direct.rs` declares a sibling path-based test module entrypoint
+- [x] Extracted tests live under `crates/kamn-e2e-harness/src/drivers/sdk_direct_tests/`
+- [x] All extracted leaf/support files are <= 200 LOC
+- [x] `sdk_direct.rs` is reduced to <= 1800 LOC after the initial extraction wave
+- [x] A contract test fails if inline tests return or the staged layout regresses
+- [x] Relevant `kamn-e2e-harness` tests pass after extraction
+- [x] Touched-Rust size policy passes on the issue branch
 
 # Files to touch
 
@@ -61,3 +61,19 @@ Extract the inline `#[cfg(test)] mod tests` block from `crates/kamn-e2e-harness/
 2. Extract the inline tests into bounded sibling files until the contract passes.
 3. Run focused `kamn-e2e-harness` tests covering extracted SDK-direct driver behavior.
 4. Run touched-Rust size policy on the full issue write set.
+
+# Deviations
+
+- Renamed the support helper leaf from `script_fixture_support.rs` to `probe_fixture_support.rs` during Phase 5 because the file stores endpoint/probe fixtures rather than script fixtures.
+
+# Final evidence
+
+- `sdk_direct.rs` reduced from `2548` LOC to `1645` LOC.
+- Extracted files live under `crates/kamn-e2e-harness/src/drivers/sdk_direct_tests/`, including `base_contract_tests.rs`, `driver_path_contract_tests.rs`, `invalid_endpoint_probe_contract_tests.rs`, `live_probe_contract_tests.rs`, `payload_and_budget_contract_tests.rs`, `validator_contract_tests.rs`, and bounded support helpers.
+- Clean detached verification worktree: `/tmp/kamn-6697-verify-iMVPpc`
+- Verified commands:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness sdk_direct -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test sdk_direct_inline_test_extraction_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test sdk_direct_live_toggle_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6697-clean-touched-size.json`
