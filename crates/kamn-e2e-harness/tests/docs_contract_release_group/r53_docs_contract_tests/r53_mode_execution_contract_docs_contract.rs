@@ -1,5 +1,8 @@
 use super::super::support::*;
 
+const R53_MILESTONE_INDEX: &str = "specs/milestones/r53-e2e-scenario-execution-activation/index.md";
+const R53_MILESTONE_MESSAGE: &str = "r53 milestone index should exist";
+
 #[test]
 fn spec_c01_r53_mode_execution_contract_docs_markers_present() {
     assert_doc_markers(
@@ -15,18 +18,14 @@ fn spec_c01_r53_mode_execution_contract_docs_markers_present() {
 
 #[test]
 fn spec_c02_r53_milestone_index_references_active_issue_5626() {
-    assert_milestone_markers(
-        "specs/milestones/r53-e2e-scenario-execution-activation/index.md",
-        "r53 milestone index should exist",
-        &["#5626"],
-    );
+    assert_milestone_markers(R53_MILESTONE_INDEX, R53_MILESTONE_MESSAGE, &["#5626"]);
 }
 
 #[test]
 fn spec_c03_r53_milestone_index_marks_milestone_closed() {
     assert_milestone_markers(
-        "specs/milestones/r53-e2e-scenario-execution-activation/index.md",
-        "r53 milestone index should exist",
+        R53_MILESTONE_INDEX,
+        R53_MILESTONE_MESSAGE,
         &[
             "Active issue(s): None",
             "Completed issue(s): #5620, #5622, #5624, #5626",
