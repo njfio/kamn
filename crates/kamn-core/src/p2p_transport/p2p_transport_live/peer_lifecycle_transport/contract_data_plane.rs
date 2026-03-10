@@ -2,6 +2,7 @@ use super::super::runtime_inbox::{
     emit_backpressure_runtime_event, enqueue_live_runtime_inbox_frame,
 };
 use super::*;
+use crate::runtime::PeerLifecycleState;
 
 pub(super) fn advertise(
     transport: &Libp2pLivePeerLifecycleTransport,
@@ -48,28 +49,8 @@ pub(super) fn send(
     frame: PeerGossipFrame,
 ) -> Result<(), P2pTransportError> {
     let mut state = transport.lock_live_data_plane_state()?;
-    if !state.peers_by_id.contains_key(&frame.sender_peer_id) {
-        state
-            .runtime_events
-            .push_back(Libp2pRuntimeEvent::behavior_failure(
-                Libp2pBehaviorFailureClass::UnknownSenderPeer,
-                Some(frame.sender_peer_id.as_str()),
-                Some(frame.topic.as_str()),
-            )?);
-        return Err(P2pTransportError::UnknownSenderPeer(frame.sender_peer_id));
-    }
-    if !state.peers_by_id.contains_key(&frame.recipient_peer_id) {
-        state
-            .runtime_events
-            .push_back(Libp2pRuntimeEvent::behavior_failure(
-                Libp2pBehaviorFailureClass::UnknownRecipientPeer,
-                Some(frame.recipient_peer_id.as_str()),
-                Some(frame.topic.as_str()),
-            )?);
-        return Err(P2pTransportError::UnknownRecipientPeer(
-            frame.recipient_peer_id,
-        ));
-    }
+    ensure_known_sender(&mut state, &frame)?;
+    ensure_known_recipient(&mut state, &frame)?;
     send_known_frame(&mut state, frame)
 }
 
@@ -77,32 +58,9 @@ fn send_known_frame(
     state: &mut Libp2pLiveDataPlaneState,
     frame: PeerGossipFrame,
 ) -> Result<(), P2pTransportError> {
-    let sender_peer_id = frame.sender_peer_id.clone();
-    let recipient_peer_id = frame.recipient_peer_id.clone();
-    let topic = frame.topic.clone();
-    let payload = frame.payload.clone();
-    if let Err(error) = enqueue_live_runtime_inbox_frame(
-        state,
-        recipient_peer_id.as_str(),
-        PeerLifecycleState::Active,
-        frame,
-    ) {
-        emit_backpressure_runtime_event(state, recipient_peer_id.as_str(), topic.as_str(), &error);
-        return Err(error);
-    }
-    let published = Libp2pRuntimeEvent::gossip_published(
-        sender_peer_id.as_str(),
-        topic.as_str(),
-        payload.as_str(),
-    )?;
-    let received = Libp2pRuntimeEvent::gossip_received(
-        recipient_peer_id.as_str(),
-        topic.as_str(),
-        payload.as_str(),
-    )?;
-    state.runtime_events.push_back(published);
-    state.runtime_events.push_back(received);
-    Ok(())
+    let event_fields = clone_event_fields(&frame);
+    enqueue_known_frame(state, &event_fields, frame)?;
+    record_delivery_events(state, &event_fields)
 }
 
 pub(super) fn drain_inbox(
@@ -116,4 +74,103 @@ pub(super) fn drain_inbox(
         .entry(recipient_peer_id.to_owned())
         .or_insert_with(VecDeque::new);
     Ok(queue.drain(..).collect())
+}
+
+fn ensure_known_sender(
+    state: &mut Libp2pLiveDataPlaneState,
+    frame: &PeerGossipFrame,
+) -> Result<(), P2pTransportError> {
+    ensure_known_peer(
+        state,
+        state.peers_by_id.contains_key(&frame.sender_peer_id),
+        Libp2pBehaviorFailureClass::UnknownSenderPeer,
+        frame.sender_peer_id.as_str(),
+        frame.topic.as_str(),
+        P2pTransportError::UnknownSenderPeer(frame.sender_peer_id.clone()),
+    )
+}
+
+fn ensure_known_recipient(
+    state: &mut Libp2pLiveDataPlaneState,
+    frame: &PeerGossipFrame,
+) -> Result<(), P2pTransportError> {
+    ensure_known_peer(
+        state,
+        state.peers_by_id.contains_key(&frame.recipient_peer_id),
+        Libp2pBehaviorFailureClass::UnknownRecipientPeer,
+        frame.recipient_peer_id.as_str(),
+        frame.topic.as_str(),
+        P2pTransportError::UnknownRecipientPeer(frame.recipient_peer_id.clone()),
+    )
+}
+
+fn ensure_known_peer(
+    state: &mut Libp2pLiveDataPlaneState,
+    is_known: bool,
+    class: Libp2pBehaviorFailureClass,
+    peer_id: &str,
+    topic: &str,
+    error: P2pTransportError,
+) -> Result<(), P2pTransportError> {
+    if is_known {
+        return Ok(());
+    }
+    state
+        .runtime_events
+        .push_back(Libp2pRuntimeEvent::behavior_failure(
+            class,
+            Some(peer_id),
+            Some(topic),
+        )?);
+    Err(error)
+}
+
+fn clone_event_fields(frame: &PeerGossipFrame) -> (String, String, String, String) {
+    (
+        frame.sender_peer_id.clone(),
+        frame.recipient_peer_id.clone(),
+        frame.topic.clone(),
+        frame.payload.clone(),
+    )
+}
+
+fn enqueue_known_frame(
+    state: &mut Libp2pLiveDataPlaneState,
+    event_fields: &(String, String, String, String),
+    frame: PeerGossipFrame,
+) -> Result<(), P2pTransportError> {
+    if let Err(error) = enqueue_live_runtime_inbox_frame(
+        state,
+        event_fields.1.as_str(),
+        PeerLifecycleState::Active,
+        frame,
+    ) {
+        emit_backpressure_runtime_event(
+            state,
+            event_fields.1.as_str(),
+            event_fields.2.as_str(),
+            &error,
+        );
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn record_delivery_events(
+    state: &mut Libp2pLiveDataPlaneState,
+    event_fields: &(String, String, String, String),
+) -> Result<(), P2pTransportError> {
+    let published = Libp2pRuntimeEvent::gossip_published(
+        event_fields.0.as_str(),
+        event_fields.2.as_str(),
+        event_fields.3.as_str(),
+    )?;
+    let received = Libp2pRuntimeEvent::gossip_received(
+        event_fields.1.as_str(),
+        event_fields.2.as_str(),
+        event_fields.3.as_str(),
+    )?;
+    state.runtime_events.push_back(published);
+    state.runtime_events.push_back(received);
+    Ok(())
 }

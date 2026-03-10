@@ -1,5 +1,3 @@
-#![allow(missing_docs)]
-
 use super::deterministic_config::{
     P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask,
 };
@@ -15,13 +13,17 @@ use super::*;
 #[cfg(not(feature = "libp2p-live-transport"))]
 mod contract_data_plane;
 
+/// Selects the concrete live runtime backend wired for the current build.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Libp2pLiveRuntimeBackend {
+    /// Uses the in-memory contract data plane used by non-libp2p builds.
     ContractDataPlane,
+    /// Uses the native libp2p socket-backed runtime adapter loop.
     NativeSocket,
 }
 
 impl Libp2pLiveRuntimeBackend {
+    /// Returns the stable diagnostics marker for the active backend.
     pub fn marker(self) -> &'static str {
         match self {
             Self::ContractDataPlane => "contract-data-plane",
@@ -30,6 +32,7 @@ impl Libp2pLiveRuntimeBackend {
     }
 }
 
+/// Resolves the runtime backend enabled by the current feature set.
 pub fn resolve_libp2p_live_runtime_backend() -> Libp2pLiveRuntimeBackend {
     #[cfg(feature = "libp2p-live-transport")]
     {
@@ -41,6 +44,8 @@ pub fn resolve_libp2p_live_runtime_backend() -> Libp2pLiveRuntimeBackend {
     }
 }
 
+/// Coordinates the live peer lifecycle transport over either the contract data
+/// plane or the native libp2p runtime loop.
 #[derive(Debug, Clone)]
 pub struct Libp2pLivePeerLifecycleTransport {
     swarm_config: P2pSwarmDeterministicConfig,
@@ -53,6 +58,8 @@ pub struct Libp2pLivePeerLifecycleTransport {
 }
 
 impl Libp2pLivePeerLifecycleTransport {
+    /// Builds a live peer lifecycle transport and starts the requested runtime
+    /// backend harness.
     pub fn new(
         config: P2pSwarmDeterministicConfig,
         harness_mode: P2pSwarmHarnessMode,
@@ -77,26 +84,32 @@ impl Libp2pLivePeerLifecycleTransport {
         })
     }
 
+    /// Returns the runtime transport profile exposed by this transport.
     pub fn transport_profile(&self) -> RuntimeTransportProfile {
         RuntimeTransportProfile::Libp2pLive
     }
 
+    /// Returns the harness report captured during startup.
     pub fn harness_report(&self) -> &P2pSwarmHarnessReport {
         &self.harness_report
     }
 
+    /// Returns the currently selected runtime backend.
     pub fn runtime_backend(&self) -> Libp2pLiveRuntimeBackend {
         resolve_libp2p_live_runtime_backend()
     }
 
+    /// Returns the configured listen address for the live runtime.
     pub fn listen_address(&self) -> &str {
         self.swarm_config.listen_address()
     }
 
+    /// Returns the deterministic network identifier used by the live data plane.
     pub fn live_data_plane_network_id(&self) -> &str {
         self.live_network_id.as_str()
     }
 
+    /// Drains runtime events emitted by the active backend.
     pub fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
         #[cfg(feature = "libp2p-live-transport")]
         {
@@ -110,6 +123,7 @@ impl Libp2pLivePeerLifecycleTransport {
     }
 
     #[cfg(feature = "libp2p-live-transport")]
+    /// Returns the stable marker for the native runtime loop implementation.
     pub fn native_runtime_loop_marker(&self) -> &'static str {
         self.native_runtime_loop.marker()
     }

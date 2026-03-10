@@ -3,7 +3,7 @@ use super::*;
 #[cfg(not(feature = "libp2p-live-transport"))]
 use crate::runtime::{
     DeterministicBackpressureController, PeerLifecycleState, RuntimeBackpressureAction,
-    RuntimeBackpressureInput, RuntimeBackpressurePolicy,
+    RuntimeBackpressureDecision, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
 };
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -34,43 +34,80 @@ pub(crate) fn enqueue_live_runtime_inbox_frame(
     lifecycle_state: PeerLifecycleState,
     frame: PeerGossipFrame,
 ) -> Result<(), P2pTransportError> {
+    let queue_len = state
+        .inbox_by_peer
+        .get(recipient_peer_id)
+        .map_or(0, VecDeque::len);
+    let decision =
+        evaluate_runtime_inbox_backpressure(recipient_peer_id, queue_len, lifecycle_state)?;
     let queue = state
         .inbox_by_peer
         .entry(recipient_peer_id.to_owned())
         .or_default();
+    apply_runtime_inbox_decision(queue, frame, decision)
+}
+
+#[cfg(not(feature = "libp2p-live-transport"))]
+fn evaluate_runtime_inbox_backpressure(
+    recipient_peer_id: &str,
+    queue_len: usize,
+    lifecycle_state: PeerLifecycleState,
+) -> Result<RuntimeBackpressureDecision, P2pTransportError> {
     let controller = build_live_runtime_inbox_backpressure_controller()?;
-    let backpressure_peer_id = if recipient_peer_id.starts_with("kamn:did:") {
-        recipient_peer_id.to_owned()
-    } else {
-        format!("kamn:did:peer:{}", recipient_peer_id.replace(':', "-"))
-    };
     let input = RuntimeBackpressureInput::new(
-        backpressure_peer_id.as_str(),
-        queue.len(),
+        runtime_backpressure_peer_id(recipient_peer_id).as_str(),
+        queue_len,
         LIVE_RUNTIME_INBOX_QUEUE_CAPACITY,
         lifecycle_state,
     )?;
-    let decision = controller.evaluate(input)?;
+    controller.evaluate(input).map_err(P2pTransportError::from)
+}
+
+#[cfg(not(feature = "libp2p-live-transport"))]
+fn runtime_backpressure_peer_id(recipient_peer_id: &str) -> String {
+    if recipient_peer_id.starts_with("kamn:did:") {
+        return recipient_peer_id.to_owned();
+    }
+    format!("kamn:did:peer:{}", recipient_peer_id.replace(':', "-"))
+}
+
+#[cfg(not(feature = "libp2p-live-transport"))]
+fn apply_runtime_inbox_decision(
+    queue: &mut VecDeque<PeerGossipFrame>,
+    frame: PeerGossipFrame,
+    decision: RuntimeBackpressureDecision,
+) -> Result<(), P2pTransportError> {
     match decision.action {
         RuntimeBackpressureAction::Accept | RuntimeBackpressureAction::SlowProducer => {
             queue.push_back(frame);
             Ok(())
         }
-        RuntimeBackpressureAction::RejectNewEnqueue => {
-            Err(P2pTransportError::RuntimeBackpressureRejected {
-                reason_code: decision.reason_code(),
-                queue_utilization_per_mille: decision.queue_utilization_per_mille,
-            })
-        }
+        RuntimeBackpressureAction::RejectNewEnqueue => reject_new_enqueue(decision),
         RuntimeBackpressureAction::PurgeStalePeerQueue => {
             let purged_entries = queue.len();
             queue.clear();
-            Err(P2pTransportError::RuntimeBackpressurePurgedStalePeerQueue {
-                reason_code: decision.reason_code(),
-                purged_entries,
-            })
+            purge_stale_peer_queue(decision, purged_entries)
         }
     }
+}
+
+#[cfg(not(feature = "libp2p-live-transport"))]
+fn reject_new_enqueue(decision: RuntimeBackpressureDecision) -> Result<(), P2pTransportError> {
+    Err(P2pTransportError::RuntimeBackpressureRejected {
+        reason_code: decision.reason_code(),
+        queue_utilization_per_mille: decision.queue_utilization_per_mille,
+    })
+}
+
+#[cfg(not(feature = "libp2p-live-transport"))]
+fn purge_stale_peer_queue(
+    decision: RuntimeBackpressureDecision,
+    purged_entries: usize,
+) -> Result<(), P2pTransportError> {
+    Err(P2pTransportError::RuntimeBackpressurePurgedStalePeerQueue {
+        reason_code: decision.reason_code(),
+        purged_entries,
+    })
 }
 
 #[cfg(not(feature = "libp2p-live-transport"))]
