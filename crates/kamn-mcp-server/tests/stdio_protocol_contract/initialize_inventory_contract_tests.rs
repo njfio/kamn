@@ -24,7 +24,7 @@ fn spec_c02_mcp_tools_list_framed_tool_inventory_contract() {
     let body = tools_list_body();
     assert_tools_inventory(&body);
     let response_json = parse_tools_json(&body);
-    let tools = response_tools(&response_json);
+    let tools = result_tools(&response_json);
     assert_query_task_schema(tools);
     assert_verify_proof_schema(tools);
 }
@@ -64,7 +64,7 @@ fn parse_tools_json(body: &str) -> Value {
     serde_json::from_str(body).expect("tools/list response should parse as JSON")
 }
 
-fn response_tools(response_json: &Value) -> &[Value] {
+fn result_tools(response_json: &Value) -> &[Value] {
     response_json
         .get("result")
         .and_then(|value| value.get("tools"))
@@ -75,14 +75,14 @@ fn response_tools(response_json: &Value) -> &[Value] {
 
 fn assert_query_task_schema(tools: &[Value]) {
     let query_task = find_tool(tools, "query_task");
-    let required = required_fields(query_task, "query_task");
+    let required = required_schema_fields(query_task, "query_task");
     assert_eq!(required.len(), 1);
     assert_eq!(required.first().and_then(Value::as_str), Some("task_id"));
 }
 
 fn assert_verify_proof_schema(tools: &[Value]) {
     let verify_proof = find_tool(tools, "verify_proof");
-    let required = required_fields(verify_proof, "verify_proof");
+    let required = required_schema_fields(verify_proof, "verify_proof");
     assert_eq!(required.len(), 4);
     assert!(required.iter().any(|field| field.as_str() == Some("block_height")));
 }
@@ -94,7 +94,7 @@ fn find_tool<'a>(tools: &'a [Value], name: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("tools/list should expose {name} descriptor"))
 }
 
-fn required_fields<'a>(tool: &'a Value, name: &str) -> &'a [Value] {
+fn required_schema_fields<'a>(tool: &'a Value, name: &str) -> &'a [Value] {
     tool.get("inputSchema")
         .and_then(|value| value.get("required"))
         .and_then(Value::as_array)

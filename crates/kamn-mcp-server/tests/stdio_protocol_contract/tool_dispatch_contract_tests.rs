@@ -33,7 +33,7 @@ fn spec_c08_mcp_tools_call_content_lifecycle_dispatch_contract() {
 }
 
 fn assert_query_task_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-7",
         "query_task",
         r#"{"task_id":"task-1"}"#,
@@ -44,7 +44,7 @@ fn assert_query_task_dispatch() {
 }
 
 fn assert_query_profile_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-8",
         "query_agent_profile",
         r#"{"did":"kamn:did:agent:alice"}"#,
@@ -54,7 +54,7 @@ fn assert_query_profile_dispatch() {
 }
 
 fn assert_register_content_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-9",
         "register_content",
         r#"{"payload":"{\"content\":\"abc\"}"}"#,
@@ -64,12 +64,12 @@ fn assert_register_content_dispatch() {
 }
 
 fn assert_expire_content_dispatch() {
-    let body = dispatch_body("req-10", "expire_content", r#"{"content_id":"content-1"}"#);
+    let body = dispatch_tool_call_body("req-10", "expire_content", r#"{"content_id":"content-1"}"#);
     assert!(body.contains(r#""lifecycle_state":"expired""#));
 }
 
 fn assert_tombstone_content_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-11",
         "tombstone_content",
         r#"{"content_id":"content-1"}"#,
@@ -78,13 +78,13 @@ fn assert_tombstone_content_dispatch() {
 }
 
 fn assert_query_content_dispatch() {
-    let body = dispatch_body("req-12", "query_content", r#"{"content_id":"content-1"}"#);
+    let body = dispatch_tool_call_body("req-12", "query_content", r#"{"content_id":"content-1"}"#);
     assert!(body.contains(r#""tool":"query_content""#));
     assert!(body.contains(r#""lifecycle_state":"tombstoned""#));
 }
 
 fn assert_submit_bridge_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-13",
         "submit_bridge_message",
         r#"{"payload":"{\"source_message_id\":\"msg-1\"}"}"#,
@@ -94,7 +94,7 @@ fn assert_submit_bridge_dispatch() {
 }
 
 fn assert_forward_bridge_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-14",
         "forward_bridge_message",
         r#"{"bridge_id":"bridge-1"}"#,
@@ -103,7 +103,7 @@ fn assert_forward_bridge_dispatch() {
 }
 
 fn assert_query_bridge_dispatch() {
-    let body = dispatch_body(
+    let body = dispatch_tool_call_body(
         "req-15",
         "query_bridge_message",
         r#"{"bridge_id":"bridge-1"}"#,
@@ -112,7 +112,7 @@ fn assert_query_bridge_dispatch() {
     assert!(body.contains(r#""forward_tx_hash":"sha256:bridge-bridge-1""#));
 }
 
-fn dispatch_body(request_id: &str, tool_name: &str, arguments: &str) -> String {
+fn dispatch_tool_call_body(request_id: &str, tool_name: &str, arguments: &str) -> String {
     let backend = ProtocolBackend;
     let request = frame_request(&format!(
         r#"{{"jsonrpc":"2.0","id":"{}","method":"tools/call","params":{{"name":"{}","arguments":{}}}}}"#,
