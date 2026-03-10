@@ -1,0 +1,6 @@
+// include!("live_postgres_topology_contract_tests/topology_coherence_contract_tests/hash_normalization_contract_tests/order_normalization_contract_tests.rs");
+#[path = "hash_normalization_contract_tests/order_normalization_contract_tests.rs"]
+mod order_normalization_contract_tests;
+// include!("live_postgres_topology_contract_tests/topology_coherence_contract_tests/hash_normalization_contract_tests/order_normalization_digest_contract_tests.rs");
+#[path = "hash_normalization_contract_tests/order_normalization_digest_contract_tests.rs"]
+mod order_normalization_digest_contract_tests;
