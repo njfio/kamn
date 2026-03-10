@@ -1,0 +1,52 @@
+use super::support::assert_doc_contains_all;
+
+const REGRESSION_MARKERS: &[&str] = &[
+    "Regression: #900",
+    "make-target and selector workflow drift",
+    "Regression: #1419",
+    "Regression: #1431",
+    "Regression: #1682",
+    "Regression: #1687",
+    "Regression: #1697",
+    "Regression: #1702",
+    "Regression: #1707",
+    "Regression: #1692",
+    "Regression: #1441",
+    "Regression: #1451",
+    "Regression: #1467",
+    "Regression: #1468",
+    "Regression: #1482",
+    "Regression: #1483",
+    "Regression: #1488",
+    "Regression: #1489",
+    "Regression: #1494",
+    "Regression: #1462",
+    "Regression: #1466",
+    "Regression: #1497",
+    "Regression: #2694",
+    "Regression: #2690",
+    "Regression: #2691",
+    "Regression: #2692",
+    "Regression: #2693",
+    "Regression: #2093",
+    "Regression: #2095",
+    "Regression: #2658",
+    "Regression: #2703",
+    "Regression: #2705",
+    "Regression: #2711",
+    "Regression: #2714",
+    "Regression: #2717",
+    "Regression: #2720",
+    "Regression: #2723",
+    "Regression: #2726",
+    "Regression: #2729",
+    "Regression: #2732",
+    "Regression: #2735",
+    "Regression: #2738",
+    "Regression: #2741",
+];
+
+#[test]
+fn regression_requires_make_and_selector_demo_contract_marker() {
+    assert_doc_contains_all(REGRESSION_MARKERS, "regression selector");
+}
