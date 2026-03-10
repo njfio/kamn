@@ -253,6 +253,7 @@ mod constants;
 mod core_behavior_tests;
 mod daemon_tests;
 mod observability_endpoint_tests;
+mod observability_endpoint_tests_split_contract;
 mod report_tests;
 mod runtime_tests;
 mod service_api_endpoint_tests;
