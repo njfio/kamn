@@ -9,6 +9,24 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert_phase6_selector_rows(&complete_line);
 }
 
+#[test]
+fn regression_runtime_daemon_applied_phase6_log_selection_uses_execution_id() {
+    let target_execution_id = "node-runtime:daemon:phase6-applied-contract:processor";
+    let captured_logs = vec![
+        "{\"event\":\"node.runtime.daemon.execute.complete\",\"execution_id\":\"node-runtime:daemon:foreign:processor\",\"phase6_reason_code\":\"m10_phase6_scheduler_cycle_deferred\"}".to_owned(),
+        format!(
+            "{{\"event\":\"node.runtime.daemon.execute.complete\",\"execution_id\":\"{target_execution_id}\",\"phase6_reason_code\":\"m10_phase6_scheduler_cycle_applied\"}}"
+        ),
+    ];
+    let selected = find_applied_phase6_complete_log(&captured_logs, target_execution_id);
+    assert_json_log_field(selected, "execution_id", target_execution_id);
+    assert_json_log_field(
+        selected,
+        "phase6_reason_code",
+        "m10_phase6_scheduler_cycle_applied",
+    );
+}
+
 fn expected_selector_rows_fingerprint() -> String {
     crate::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test()
 }
@@ -121,17 +139,14 @@ fn assert_selector_rows_fingerprint(complete_line: &str) {
 
 fn capture_phase6_renderings_and_complete_log() -> (String, String, String) {
     let _guards = runtime_json_log_guards();
-    let (rendered_json, rendered_text, captured_logs) = capture_daemon_renderings_and_logs(&[
-        "--daemon-max-ticks",
-        "5",
-        "--daemon-tick-interval-ms",
-        "25",
-        "--output",
-        "json",
-    ]);
-    let complete_line = find_first_daemon_log(
-        &captured_logs,
-        "\"event\":\"node.runtime.daemon.execute.complete\"",
+    let (rendered_json, captured_logs, execution_id) = capture_daemon_json_with_chain(
+        "phase6-applied-contract",
+        &["--daemon-max-ticks", "5", "--daemon-tick-interval-ms", "25"],
     );
+    let rendered_text = capture_daemon_text_with_chain(
+        "phase6-applied-contract",
+        &["--daemon-max-ticks", "5", "--daemon-tick-interval-ms", "25"],
+    );
+    let complete_line = find_applied_phase6_complete_log(&captured_logs, execution_id.as_str());
     (rendered_json, rendered_text, complete_line.to_owned())
 }
