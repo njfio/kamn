@@ -5,17 +5,17 @@ const ROOT: &str = "tests/public_api_surface_policy.rs";
 const ROOT_BUDGET: usize = 180;
 const REQUIRED_MODULE_MARKERS: &[&str] = &[
     "#[path = \"public_api_surface_policy/support.rs\"]",
-    "#[path = \"public_api_surface_policy/directory_contract_tests.rs\"]",
-    "#[path = \"public_api_surface_policy/task_artifact_contract_tests.rs\"]",
-    "#[path = \"public_api_surface_policy/control_surface_contract_tests.rs\"]",
-    "#[path = \"public_api_surface_policy/response_envelope_contract_tests.rs\"]",
+    "#[path = \"public_api_surface_policy/schema_report_contract_tests.rs\"]",
+    "#[path = \"public_api_surface_policy/task_artifact_policy_shell.rs\"]",
+    "#[path = \"public_api_surface_policy/threshold_policy_contract_tests.rs\"]",
+    "#[path = \"public_api_surface_policy/response_envelope_policy_shell.rs\"]",
 ];
 const REQUIRED_FILES: &[&str] = &[
     "tests/public_api_surface_policy/support.rs",
-    "tests/public_api_surface_policy/directory_contract_tests.rs",
-    "tests/public_api_surface_policy/task_artifact_contract_tests.rs",
-    "tests/public_api_surface_policy/control_surface_contract_tests.rs",
-    "tests/public_api_surface_policy/response_envelope_contract_tests.rs",
+    "tests/public_api_surface_policy/schema_report_contract_tests.rs",
+    "tests/public_api_surface_policy/task_artifact_policy_shell.rs",
+    "tests/public_api_surface_policy/threshold_policy_contract_tests.rs",
+    "tests/public_api_surface_policy/response_envelope_policy_shell.rs",
 ];
 
 #[test]
