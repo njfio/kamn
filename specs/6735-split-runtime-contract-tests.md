@@ -44,3 +44,17 @@ Split `crates/kamn-node/src/main_tests/daemon_tests/runtime_contract_tests.rs` i
 3. Run `cargo test -p kamn-node --test runtime_contract_tests_extraction_contract -- --nocapture`
 4. Run `cargo test -p kamn-node daemon_tests -- --nocapture`
 5. Run `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6735-touched-size.json`
+
+## Final evidence
+- Root shell: `crates/kamn-node/src/main_tests/daemon_tests/runtime_contract_tests.rs`
+- Shared helper surface: `crates/kamn-node/src/main_tests/daemon_tests/runtime_contract_tests/support.rs`
+- Extracted concern modules remain under the 200 LOC file cap after the mandatory refactor pass
+- Verified on issue head:
+  - `cargo test -p kamn-node --test runtime_contract_tests_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-node daemon_tests -- --nocapture`
+  - `cargo test -p kamn-node --test main_module_extraction_contract main_module_extraction_contract_daemon_tests_decomposition_shell_markers_remain_stable -- --exact --nocapture`
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6735-touched-size-final.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None
