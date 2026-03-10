@@ -51,3 +51,9 @@ Reduce `crates/kamn-core/tests/data_layer_m1_anchoring_orchestrator.rs` from a 5
 3. Run `cargo test -p kamn-core --test data_layer_m1_anchoring_orchestrator_extraction_contract -- --nocapture`.
 4. Run `cargo test -p kamn-core --test data_layer_m1_anchoring_orchestrator -- --nocapture`.
 5. Run the touched-Rust size ratchet against the issue write set and require `policy_decision=GO`.
+
+## Phase 6 Evidence
+- Root shell wiring verified through `cargo test -p kamn-core --test data_layer_m1_anchoring_orchestrator -- --nocapture`
+- Extraction contract verified through `cargo test -p kamn-core --test data_layer_m1_anchoring_orchestrator_extraction_contract -- --nocapture`
+- Touched-Rust policy verified through `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6836-touched-size.json`
+- Result: `policy_decision=GO`
