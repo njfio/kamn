@@ -1,0 +1,8 @@
+#[path = "r61_r64_docs_contract_tests/r61_verification_finality_value_docs_contract.rs"]
+mod r61_verification_finality_value_docs_contract;
+#[path = "r61_r64_docs_contract_tests/r62_verification_hash_format_docs_contract.rs"]
+mod r62_verification_hash_format_docs_contract;
+#[path = "r61_r64_docs_contract_tests/r63_verification_anchor_height_format_docs_contract.rs"]
+mod r63_verification_anchor_height_format_docs_contract;
+#[path = "r61_r64_docs_contract_tests/r64_verification_captured_at_format_docs_contract.rs"]
+mod r64_verification_captured_at_format_docs_contract;
