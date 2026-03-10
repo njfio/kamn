@@ -8,3 +8,5 @@ mod profile_selection_contract_tests;
 mod runtime_selection_contract_tests;
 #[path = "signer_direct_profile_contract_tests/signer_source_policy_contract_tests.rs"]
 mod signer_source_policy_contract_tests;
+#[path = "signer_direct_profile_contract_tests/support.rs"]
+mod support;

@@ -16,3 +16,5 @@ mod key_source_contract_tests;
 mod runtime_pubkey_contract_tests;
 #[path = "signer_managed_external_contract_tests/selection_contract_tests.rs"]
 mod selection_contract_tests;
+#[path = "signer_managed_external_contract_tests/support.rs"]
+mod support;

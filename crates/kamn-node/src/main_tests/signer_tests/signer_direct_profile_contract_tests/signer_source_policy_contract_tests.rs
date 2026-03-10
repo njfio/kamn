@@ -88,14 +88,36 @@ fn regression_signer_secret_source_precedence_path_requires_zeroize_markers() {
 
 #[test]
 fn regression_live_signer_vector_probe_must_not_be_ignored() {
-    const SOURCE: &str = include_str!("direct_signature_contract_tests.rs");
-    let lines: Vec<&str> = SOURCE.lines().collect();
-    let fn_line = lines
+    let attributes = vector_probe_attributes();
+    assert!(
+        attributes.iter().all(|line| !line.contains("ignore")),
+        "live signer vector probe must stay active; local-heavy gating belongs in runtime preflight, not #[ignore]"
+    );
+}
+
+fn vector_probe_attributes() -> Vec<&'static str> {
+    let lines = vector_probe_source_lines();
+    let fn_line = find_required_line(
+        &lines,
+        "fn integration_kolme_live_signer_vector_probe_contract() {",
+    );
+    collect_attributes_before(&lines, fn_line)
+}
+
+fn vector_probe_source_lines() -> Vec<&'static str> {
+    include_str!("direct_signature_contract_tests.rs")
+        .lines()
+        .collect()
+}
+
+fn find_required_line(lines: &[&str], signature: &str) -> usize {
+    lines
         .iter()
-        .position(|line| {
-            line.trim() == "fn integration_kolme_live_signer_vector_probe_contract() {"
-        })
-        .expect("live signer vector probe function must exist");
+        .position(|line| line.trim() == signature)
+        .expect("live signer vector probe function must exist")
+}
+
+fn collect_attributes_before(lines: &[&'static str], fn_line: usize) -> Vec<&'static str> {
     let mut attributes = Vec::new();
     let mut cursor = fn_line;
     while cursor > 0 {
@@ -110,9 +132,5 @@ fn regression_live_signer_vector_probe_must_not_be_ignored() {
         }
         break;
     }
-
-    assert!(
-        attributes.iter().all(|line| !line.contains("ignore")),
-        "live signer vector probe must stay active; local-heavy gating belongs in runtime preflight, not #[ignore]"
-    );
+    attributes
 }

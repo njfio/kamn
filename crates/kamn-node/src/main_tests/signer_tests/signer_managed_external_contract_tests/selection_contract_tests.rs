@@ -1,83 +1,49 @@
-use super::super::support::managed_external_core_signer_env_guards;
 use super::super::*;
+use super::support::{
+    backend_command_guard, managed_payload_and_request_count, managed_request,
+    primary_managed_core_env, primary_managed_pubkey_guard,
+};
+use crate::signer::KolmeLiveSignerSelection;
 
 #[test]
 fn integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer_selection() {
-    // Regression: #2323
     let _lock = lock_signer_env_guard();
-    let (_core_signer_key_guard, _core_service_key_guard) =
-        managed_external_core_signer_env_guards();
-    let _profile_env_guard =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
-    let _key_ref_guard = EnvVarGuard::set(
-        "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-        Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
-    );
-    let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
-    let _fallback_key_guard =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
-    let request = KolmeRuntimeCommitRequest::deterministic(
-        "op-node-live-2323",
-        "state:node-live-2323",
-        "kamn:did:agent:node-live-2323",
-        1,
-        "payload:node-live-2323",
-    )
-    .expect("request should build");
-    let signing_key = build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
-        .expect("managed signing key should derive");
-    let managed_pubkey = encode_kolme_hex_lower(
-        signing_key
-            .verifying_key()
-            .to_encoded_point(true)
-            .as_bytes(),
-    );
-    let _managed_signer_public_key_guard = EnvVarGuard::set(
-        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
-        Some(managed_pubkey.as_str()),
-    );
-    let canonical_message =
-        render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 41)
-            .expect("canonical message should render");
-    let (backend_signature, backend_recovery_id) = signing_key
-        .sign_recoverable(canonical_message.as_bytes())
-        .expect("managed signing key should sign canonical message");
-    let backend_command = format!(
-        "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
-        encode_kolme_hex_lower(backend_signature.to_bytes().as_ref()),
-        backend_recovery_id.to_byte(),
-        managed_pubkey,
-    );
-    let _backend_command_guard = EnvVarGuard::set(
-        "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
-        Some(backend_command.as_str()),
-    );
+    let (payload, selection, request_count) = managed_selection_result();
+    assert_selection_payload(payload.as_str(), &selection, request_count);
+}
 
-    let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
-        r#"{"next_nonce":41,"account_id":"acct-2323"}"#,
-    )]);
-    let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-    let (signed_wire_payload, signer_selection) = build_kolme_live_direct_signed_wire_payload(
-        base_url.as_str(),
-        &mut transport,
+fn managed_selection_result() -> (String, KolmeLiveSignerSelection, usize) {
+    let (_env, _core_env) = primary_managed_core_env();
+    let request = managed_request("2323");
+    let expected_pubkey = managed_signer_public_key_hex(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE);
+    let _pubkey_guard = primary_managed_pubkey_guard();
+    let _backend_command_guard =
+        backend_command_guard(&request, 41, Some(expected_pubkey.as_str()));
+    managed_payload_and_request_count(
         &request,
+        41,
+        "acct-2323",
         Some("ops-primary"),
         Some("managed-external"),
     )
-    .expect("managed-external signing should succeed through secure backend route");
-    assert_eq!(signer_selection.profile, "ops-primary");
-    assert_eq!(signer_selection.key_source, "managed-external");
+}
+
+fn assert_selection_payload(
+    payload: &str,
+    selection: &KolmeLiveSignerSelection,
+    request_count: usize,
+) {
+    assert_eq!(selection.profile, "ops-primary");
+    assert_eq!(selection.key_source, "managed-external");
     assert_eq!(
-        signer_selection.private_key_env,
+        selection.private_key_env,
         "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
     );
-    let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
+    let signature = extract_json_string_field(payload, "signature")
         .expect("direct signed payload must include signature field");
     assert_eq!(signature.len(), 128);
-    let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(
-        recorded_requests.len(),
-        1,
+        request_count, 1,
         "managed-external signing should issue one nonce lookup before payload emission"
     );
 }
