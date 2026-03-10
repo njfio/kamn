@@ -189,6 +189,10 @@ jobs:
             --exception-file fixtures/ci/touched_shell_strict_mode_exceptions.txt \
             --output-json ci-touched-shell-strict-mode-report.json
 
+      - name: Enforce workflow runtime ceiling policy
+        if: steps.scope.outputs.run_ci_tool_checks == 'true'
+        run: bash scripts/ci/test_workflow_runtime_ceiling_policy.sh
+
       - name: Upload touched shell strict-mode telemetry
         if: always() && hashFiles('ci-touched-shell-strict-mode-report.json') != ''
         uses: actions/upload-artifact@v4
