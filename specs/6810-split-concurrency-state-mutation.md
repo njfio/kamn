@@ -45,3 +45,25 @@ Split `crates/kamn-core/tests/concurrency_state_mutation.rs` into a thin root sh
 3. Run the extraction contract target
 4. Run the real `concurrency_state_mutation` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Results
+- [x] `crates/kamn-core/tests/concurrency_state_mutation.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for task race coverage, lifecycle/escrow replay coverage, performance lanes, and shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-core --test concurrency_state_mutation_extraction_contract -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test concurrency_state_mutation -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6810-touched-size.json` returns `policy_decision=GO`
+
+## Phase 6 Evidence
+- Root shell size: `8` LOC
+- Top-level extracted modules: `4`, `4`, `13`, `51` LOC
+- Nested support/test modules: `18`, `162`, `94`, `91`, `45`, `11`, `33`, `43` LOC
+- Real `concurrency_state_mutation` target remains wired through the root shell and preserves all existing replay and performance assertions
+
+## Command Evidence
+- `cargo test -p kamn-core --test concurrency_state_mutation_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test concurrency_state_mutation -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6810-touched-size.json`
+
+## Deviations
+- None.
