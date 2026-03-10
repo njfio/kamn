@@ -118,23 +118,43 @@ const MOVED_TEST_MARKERS: &[&str] = &[
 #[test]
 fn docs_contract_wave3_harness_root_is_extracted() {
     let root = fs::read_to_string(repo_path(ROOT)).expect("read root");
+    assert_root_shell_budget(&root);
+    assert_required_markers(&root);
+    assert_moved_markers_removed(&root);
+    assert_module_files_exist_and_fit_budget();
+}
+
+fn repo_path(path: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
+}
+
+fn assert_root_shell_budget(root: &str) {
     let lines = root.lines().count();
     assert!(
         lines <= ROOT_CAP,
         "expected {ROOT} <= {ROOT_CAP} lines after extraction, found {lines}"
     );
+}
+
+fn assert_required_markers(root: &str) {
     for marker in REQUIRED_MARKERS {
         assert!(
             root.contains(marker),
             "missing root module marker: {marker}"
         );
     }
+}
+
+fn assert_moved_markers_removed(root: &str) {
     for marker in MOVED_TEST_MARKERS {
         assert!(
             !root.contains(marker),
             "moved test marker still present: {marker}"
         );
     }
+}
+
+fn assert_module_files_exist_and_fit_budget() {
     for path in MODULE_FILES {
         let full = repo_path(path);
         assert!(
@@ -142,18 +162,18 @@ fn docs_contract_wave3_harness_root_is_extracted() {
             "missing extracted module: {}",
             full.display()
         );
-        assert!(
-            fs::read_to_string(&full)
-                .expect("read module")
-                .lines()
-                .count()
-                <= 200,
-            "extracted module exceeds 200 lines: {}",
-            full.display()
-        );
+        assert_module_fits_budget(&full);
     }
 }
 
-fn repo_path(path: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
+fn assert_module_fits_budget(path: &Path) {
+    let lines = fs::read_to_string(path)
+        .expect("read module")
+        .lines()
+        .count();
+    assert!(
+        lines <= 200,
+        "extracted module exceeds 200 lines: {}",
+        path.display()
+    );
 }
