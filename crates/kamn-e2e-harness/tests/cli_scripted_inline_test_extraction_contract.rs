@@ -19,8 +19,9 @@ fn regression_cli_scripted_root_removes_inline_cfg_test_module() {
 #[test]
 fn regression_cli_scripted_root_declares_extracted_test_module() {
     assert!(
-        CLI_SCRIPTED_ROOT_SOURCE.contains("mod cli_scripted_tests;"),
-        "cli_scripted.rs must declare the extracted cli_scripted_tests submodule"
+        CLI_SCRIPTED_ROOT_SOURCE.contains("#[path = \"cli_scripted_tests.rs\"]")
+            && CLI_SCRIPTED_ROOT_SOURCE.contains("mod cli_scripted_tests;"),
+        "cli_scripted.rs must wire the extracted cli_scripted_tests path module"
     );
 }
 
