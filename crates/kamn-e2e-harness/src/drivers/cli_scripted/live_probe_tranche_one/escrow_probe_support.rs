@@ -12,6 +12,20 @@ pub(super) fn run_live_s05_cli_escrow_settlement_probe() -> Result<(), String> {
 }
 
 fn fund_escrow(agent_name: &str) -> Result<String, String> {
+    let output = fund_escrow_output(agent_name)?;
+    let escrow_id = require_field(output.as_str(), "escrow_id", "cli live s05 fund-escrow")?;
+    validate_non_empty(
+        escrow_id,
+        "cli live s05 fund-escrow returned empty escrow_id",
+    )?;
+    validate_non_empty(
+        require_field(output.as_str(), "state", "cli live s05 fund-escrow")?,
+        "cli live s05 fund-escrow returned empty state",
+    )?;
+    Ok(escrow_id.to_owned())
+}
+
+fn fund_escrow_output(agent_name: &str) -> Result<String, String> {
     let output = run_cli_command_capture_stdout_with_agent_name(
         cli_binary().as_str(),
         &[
@@ -29,16 +43,7 @@ fn fund_escrow(agent_name: &str) -> Result<String, String> {
         "cli live s05 fund-escrow",
         format!("{agent_name}-fund").as_str(),
     )?;
-    let escrow_id = require_field(output.as_str(), "escrow_id", "cli live s05 fund-escrow")?;
-    validate_non_empty(
-        escrow_id,
-        "cli live s05 fund-escrow returned empty escrow_id",
-    )?;
-    validate_non_empty(
-        require_field(output.as_str(), "state", "cli live s05 fund-escrow")?,
-        "cli live s05 fund-escrow returned empty state",
-    )?;
-    Ok(escrow_id.to_owned())
+    Ok(output)
 }
 
 fn release_escrow(agent_name: &str, escrow_id: &str) -> Result<(), String> {
