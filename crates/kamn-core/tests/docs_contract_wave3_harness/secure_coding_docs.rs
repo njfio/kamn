@@ -2,9 +2,19 @@ const DOC: &str = include_str!("../../../../docs/security/secure-coding.md");
 
 #[test]
 fn doc_contains_panic_path_reachability_and_unsafe_fallback_markers() {
+    assert_header_and_policy_markers();
+    assert_detection_command_markers();
+    assert_reason_taxonomy_markers();
+    assert_runtime_evidence_markers();
+}
+
+fn assert_header_and_policy_markers() {
     assert!(DOC.contains("# Secure Coding"));
     assert!(DOC.contains("panic_path_reachability_policy=fail_closed"));
     assert!(DOC.contains("unsafe_fallback_default_policy=fail_closed"));
+}
+
+fn assert_detection_command_markers() {
     assert!(DOC.contains(
         "scripts/ci/check_no_production_expect.sh --root crates/kamn-node/src --output-json /tmp/no-production-expect-report.json"
     ));
@@ -14,6 +24,9 @@ fn doc_contains_panic_path_reachability_and_unsafe_fallback_markers() {
     assert!(
         DOC.contains("production_panic_path_violation_class=panic_reachability|unsafe_fallback")
     );
+}
+
+fn assert_reason_taxonomy_markers() {
     assert!(DOC.contains(
         "panic_replacement_reason_taxonomy_version=kamn.ci.production-panic-replacement-reason-taxonomy.v1"
     ));
@@ -24,6 +37,9 @@ fn doc_contains_panic_path_reachability_and_unsafe_fallback_markers() {
     assert!(DOC.contains(
         "panic_replacement_reason_class=stable|panic_reachability|unsafe_fallback|mixed|configuration"
     ));
+}
+
+fn assert_runtime_evidence_markers() {
     assert!(DOC.contains("runtime_panic_replacement_evidence_status=verified|violation"));
     assert!(DOC.contains("runtime_panic_replacement_evidence_violation_count=<n>"));
     assert!(DOC.contains("runtime_panic_replacement_evidence_files_csv=none|<csv>"));
