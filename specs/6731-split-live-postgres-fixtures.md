@@ -33,12 +33,12 @@ Split `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs` i
 
 # Acceptance criteria (testable booleans)
 
-- [ ] `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs` is reduced to a bounded root shell under the active size policy
-- [ ] live-postgres fixture helpers are split into coherent sibling modules that reflect the existing concern seams
-- [ ] extracted files added by this issue remain within the active touched-Rust size policy on the issue write set
-- [ ] a contract fails if the fixture root shell regresses or the extracted module layout disappears
-- [ ] daemon tests that rely on the live-postgres fixture surface continue to pass after extraction
-- [ ] touched-Rust size policy returns `policy_decision=GO` on the issue write set
+- [x] `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs` is reduced to a bounded root shell under the active size policy
+- [x] live-postgres fixture helpers are split into coherent sibling modules that reflect the existing concern seams
+- [x] extracted files added by this issue remain within the active touched-Rust size policy on the issue write set
+- [x] a contract fails if the fixture root shell regresses or the extracted module layout disappears
+- [x] daemon tests that rely on the live-postgres fixture surface continue to pass after extraction
+- [x] touched-Rust size policy returns `policy_decision=GO` on the issue write set
 
 # Files to touch
 
@@ -61,3 +61,27 @@ Split `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs` i
 4. Run the extraction contract.
 5. Run the touched-Rust size policy on the issue write set.
 6. Record final evidence and any deviations in this spec before opening the PR.
+
+# Final evidence
+
+- `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs` is now `21` LOC
+- extracted modules are grouped under:
+  - `constants/`
+  - `matrix_profiles/`
+  - `topology_projections/`
+  - `gate_support.rs`
+  - `models.rs`
+  - `multi_host_execution.rs`
+- extraction contract:
+  - `cargo test -p kamn-node --test live_postgres_fixtures_extraction_contract -- --nocapture`
+  - result: pass
+- real daemon test surface:
+  - `cargo test -p kamn-node daemon_tests -- --nocapture`
+  - result: pass
+- touched-Rust size policy:
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6731-touched-size.json`
+  - result: `policy_decision=GO`
+
+# Deviations
+
+- None
