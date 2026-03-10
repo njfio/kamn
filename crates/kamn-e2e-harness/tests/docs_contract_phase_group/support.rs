@@ -37,3 +37,26 @@ pub(crate) fn assert_required_paths_exist(paths: &[&str]) {
         assert!(root.join(path).is_file(), "required path missing: {path}");
     }
 }
+
+macro_rules! phase_doc_contract_tests {
+    (
+        $doc_test:ident,
+        $doc_path:literal,
+        $doc_message:literal,
+        [$($doc_marker:literal),+ $(,)?],
+        $milestone_test:ident,
+        [$($milestone_marker:literal),+ $(,)?]
+    ) => {
+        #[test]
+        fn $doc_test() {
+            crate::support::assert_doc_markers($doc_path, $doc_message, &[$($doc_marker),+]);
+        }
+
+        #[test]
+        fn $milestone_test() {
+            crate::support::assert_milestone_markers(&[$($milestone_marker),+]);
+        }
+    };
+}
+
+pub(crate) use phase_doc_contract_tests;
