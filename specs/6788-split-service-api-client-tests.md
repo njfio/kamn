@@ -30,13 +30,13 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-sdk/tests/service_api_client.rs` into bounded sibling modules organized by concern
-- [ ] root `service_api_client.rs` is reduced below a staged extraction cap enforced by a new extraction contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] the real `kamn-sdk` service API client target remains wired and passes
-- [ ] `cargo test -p kamn-sdk --test service_api_client -- --nocapture` passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-sdk/tests/service_api_client.rs` into bounded sibling modules organized by concern
+- [x] root `service_api_client.rs` is reduced below a staged extraction cap enforced by a new extraction contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] the real `kamn-sdk` service API client target remains wired and passes
+- [x] `cargo test -p kamn-sdk --test service_api_client -- --nocapture` passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -68,3 +68,20 @@ Outputs:
 - `signed_http_route_contract_tests.rs` for signed route execution coverage
 - `websocket_contract_tests.rs` for websocket frame and extended-length coverage
 - `route_family_contract_tests.rs` for channel, registration, task/escrow, and bridge route groups
+
+# Results
+
+- `crates/kamn-sdk/tests/service_api_client.rs` now acts as a 12 LOC root shell.
+- Shared helpers are split under `crates/kamn-sdk/tests/service_api_client/support/`.
+- Route-family and signed-route coverage are further subdivided so touched files and functions stay under the active ratchet.
+
+# Verification evidence
+
+- `cargo test -p kamn-sdk --test service_api_client_extraction_contract -- --nocapture`
+- `cargo test -p kamn-sdk --test service_api_client -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6788-touched-size-refactor.json`
+- touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- None.
