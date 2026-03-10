@@ -1,3 +1,4 @@
+#[test]
 fn integration_runtime_daemon_renders_bounded_completion_output() {
     let args = vec![
         "kamn-node".to_owned(),
@@ -163,4 +164,3 @@ pub(super) fn integration_runtime_daemon_applies_graceful_shutdown_on_os_signal(
     assert!(rendered.contains("\"daemon_completion_reason\":\"graceful-shutdown:signal@"));
 }
 
-#[test]

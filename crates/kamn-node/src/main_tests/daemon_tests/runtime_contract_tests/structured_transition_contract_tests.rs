@@ -104,4 +104,3 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
     assert_eq!(start_execution_id, complete_execution_id);
 }
 
-#[test]

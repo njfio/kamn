@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_live_postgres_selector_bundle_validation_contract_is_deterministic() {
     let canonical_rows = crate::live_postgres_multi_host_execution_bundle_selector_rows_for_test();
     let canonical_fingerprint =

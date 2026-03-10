@@ -1,3 +1,4 @@
+#[test]
 fn parses_runtime_mode_daemon_with_bounded_controls() {
     let args = vec![
         "kamn-node".to_owned(),
@@ -173,4 +174,3 @@ fn regression_3202_invalid_daemon_env_override_fails_closed_without_config_file(
     );
 }
 
-#[test]

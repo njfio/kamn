@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output() {
     let _lock = log_env_lock()
         .lock()
@@ -139,4 +140,3 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     );
 }
 
-#[test]

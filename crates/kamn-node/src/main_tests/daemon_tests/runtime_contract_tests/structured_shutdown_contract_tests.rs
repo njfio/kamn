@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() {
     let _lock = log_env_lock()
         .lock()
@@ -154,4 +155,3 @@ pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeou
     );
 }
 
-#[test]
