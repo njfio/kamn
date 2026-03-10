@@ -96,13 +96,19 @@ fn read_repo_file(path: &str) -> String {
 
 fn assert_markers_present(source: &str, markers: &[&str], path: &str) {
     for marker in markers {
-        assert!(source.contains(marker), "{path} should contain marker: {marker}");
+        assert!(
+            source.contains(marker),
+            "{path} should contain marker: {marker}"
+        );
     }
 }
 
 fn assert_markers_absent(source: &str, markers: &[&str], path: &str) {
     for marker in markers {
-        assert!(!source.contains(marker), "{path} should not contain marker: {marker}");
+        assert!(
+            !source.contains(marker),
+            "{path} should not contain marker: {marker}"
+        );
     }
 }
 
