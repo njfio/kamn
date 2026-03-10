@@ -20,12 +20,12 @@ Split `crates/kamn-core/tests/data_layer_postgres_execution_adapter.rs` into a t
 - Extraction contract markers drift from the real root layout
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/tests/data_layer_postgres_execution_adapter.rs` is reduced to a thin root shell at or below 180 LOC
-- [ ] Root shell wires bounded sibling modules for the current execution-adapter contract concerns and shared support
-- [ ] All extracted files touched by the split remain at or below 200 LOC
-- [ ] `cargo test -p kamn-core --test data_layer_postgres_execution_adapter -- --nocapture` passes
-- [ ] `cargo test -p kamn-core --test data_layer_postgres_execution_adapter_extraction_contract -- --nocapture` passes
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-postgres-execution-adapter-size.json` returns `policy_decision=GO`
+- [x] `crates/kamn-core/tests/data_layer_postgres_execution_adapter.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for the current execution-adapter contract concerns and shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-core --test data_layer_postgres_execution_adapter -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test data_layer_postgres_execution_adapter_extraction_contract -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-postgres-execution-adapter-size.json` returns `policy_decision=GO`
 
 ## Files to touch
 - `specs/6828-split-data-layer-postgres-execution-adapter.md`
@@ -44,3 +44,13 @@ Split `crates/kamn-core/tests/data_layer_postgres_execution_adapter.rs` into a t
 3. Run the extraction contract target
 4. Run the real `data_layer_postgres_execution_adapter` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- `cargo test -p kamn-core --test data_layer_postgres_execution_adapter_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_postgres_execution_adapter -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-postgres-execution-adapter-size.json`
+- Result: `policy_decision=GO`
+- Integration note: the extracted layout is exercised through the real `data_layer_postgres_execution_adapter` test target with all 9 live/guard/orchestrator checks still wired and passing
+
+## Deviations
+- None
