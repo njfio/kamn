@@ -20,12 +20,12 @@ Split `crates/kamn-core/tests/journal_wal_partial_write_fault_contract.rs` into 
 - Extraction contract markers drift from the real root layout
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/tests/journal_wal_partial_write_fault_contract.rs` is reduced to a thin root shell at or below 180 LOC
-- [ ] Root shell wires bounded sibling modules for fixture parsing, store-case runners, matrix execution, and taxonomy/performance checks plus shared support
-- [ ] All extracted files touched by the split remain at or below 200 LOC
-- [ ] `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract_extraction_contract -- --nocapture` passes
-- [ ] `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract -- --nocapture` passes
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/journal-wal-partial-write-fault-size.json` returns `policy_decision=GO`
+- [x] `crates/kamn-core/tests/journal_wal_partial_write_fault_contract.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for fixture parsing, store-case runners, matrix execution, and taxonomy/performance checks plus shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract_extraction_contract -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/journal-wal-partial-write-fault-size.json` returns `policy_decision=GO`
 
 ## Files to touch
 - `specs/6820-split-journal-wal-partial-write-fault-contract.md`
@@ -44,3 +44,13 @@ Split `crates/kamn-core/tests/journal_wal_partial_write_fault_contract.rs` into 
 3. Run the extraction contract target
 4. Run the real `journal_wal_partial_write_fault_contract` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- Root shell reduced to `10` LOC and now only wires extracted sibling modules plus shared support
+- `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/journal-wal-partial-write-fault-size.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None
