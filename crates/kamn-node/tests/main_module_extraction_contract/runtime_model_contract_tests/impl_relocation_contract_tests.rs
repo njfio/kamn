@@ -50,6 +50,11 @@ fn assert_signer_impls(signer_rs: &str) {
 }
 
 fn assert_runtime_impls(runtime_kolme_live_rs: &str, runtime_orchestration_rs: &str) {
+    assert_runtime_kolme_live_impls(runtime_kolme_live_rs);
+    assert_runtime_orchestration_exports(runtime_orchestration_rs);
+}
+
+fn assert_runtime_kolme_live_impls(runtime_kolme_live_rs: &str) {
     assert!(
         runtime_kolme_live_rs.contains("pub(crate) fn build_kolme_live_request("),
         "runtime_kolme_live module should own request builder"
@@ -66,6 +71,9 @@ fn assert_runtime_impls(runtime_kolme_live_rs: &str, runtime_orchestration_rs: &
         runtime_kolme_live_rs.contains("pub(crate) fn execute_kolme_live_runtime("),
         "runtime_kolme_live module should own Kolme live runtime branch execution"
     );
+}
+
+fn assert_runtime_orchestration_exports(runtime_orchestration_rs: &str) {
     assert!(
         runtime_orchestration_rs.contains("pub(crate) fn execute(cli: NodeCli)"),
         "runtime_orchestration module should own runtime mode execution dispatch"
@@ -78,10 +86,11 @@ fn assert_runtime_impls(runtime_kolme_live_rs: &str, runtime_orchestration_rs: &
         "runtime_orchestration module should surface full supervisor stop contract validation"
     );
     assert!(
-        runtime_orchestration_rs.contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy(")
-            || runtime_orchestration_rs.contains(
-                "pub(crate) use runtime_policy_contracts::enforce_kolme_live_signer_key_source_policy;",
-            ),
+        runtime_orchestration_rs.contains(
+            "pub(crate) fn enforce_kolme_live_signer_key_source_policy(",
+        ) || runtime_orchestration_rs.contains(
+            "pub(crate) use runtime_policy_contracts::enforce_kolme_live_signer_key_source_policy;",
+        ),
         "runtime_orchestration module should surface signer key-source policy enforcement"
     );
 }
