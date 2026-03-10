@@ -56,3 +56,14 @@ Outputs:
 4. Run `cargo test -p kamn-core --test docs_contract_wave4_harness -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6778-remote --base-ref origin/main --output-json /tmp/6780-touched-size.json`.
+
+# Phase 6 evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test docs_contract_wave4_harness_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test docs_contract_wave4_harness -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6778-remote --base-ref origin/main --output-json /tmp/6780-touched-size-go.json`
+
+# Deviations
+
+- Extraction required rebasing all `include_str!` paths one level deeper because the harness modules moved from the test root into `tests/docs_contract_wave4_harness/`.
+- Verification stayed in isolated remote clone `/tmp/kamn-6778-remote` to keep the touched-Rust gate authoritative for the `#6780` write set.
