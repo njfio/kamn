@@ -1,4 +1,5 @@
 use super::*;
+use super::service_api_policy_support::assert_reason_code_present_in_docs_and_ops;
 
 #[test]
 fn doc_contains_api_version_policy_docs_parity_markers() {
@@ -93,7 +94,5 @@ fn assert_api_version_ops_markers() {
 }
 
 fn assert_api_version_reason_code_present(reason_code: &str) {
-    assert!(!reason_code.trim().is_empty(), "reason code entries must stay non-empty");
-    assert!(DOC.contains(reason_code), "ci strategy docs missing api version-policy reason code marker: {reason_code}");
-    assert!(OPS_DOC.contains(reason_code), "ops docs missing api version-policy reason code marker: {reason_code}");
+    assert_reason_code_present_in_docs_and_ops(reason_code, "api version-policy");
 }

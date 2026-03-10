@@ -1,4 +1,5 @@
 use super::*;
+use super::service_api_policy_support::assert_reason_code_present_in_docs_and_ops;
 
 #[test]
 fn doc_contains_runtime_request_response_schema_compatibility_contract_lane_ci_mode_markers() {
@@ -99,7 +100,5 @@ fn assert_request_response_ops_markers() {
 }
 
 fn assert_request_response_reason_code_present(reason_code: &str) {
-    assert!(!reason_code.trim().is_empty(), "reason code entries must stay non-empty");
-    assert!(DOC.contains(reason_code), "ci strategy docs missing schema-compatibility reason code marker: {reason_code}");
-    assert!(OPS_DOC.contains(reason_code), "ops docs missing schema-compatibility reason code marker: {reason_code}");
+    assert_reason_code_present_in_docs_and_ops(reason_code, "schema-compatibility");
 }

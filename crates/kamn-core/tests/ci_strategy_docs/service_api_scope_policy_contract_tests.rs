@@ -1,4 +1,5 @@
 use super::*;
+use super::service_api_policy_support::assert_remediation_marker_in_docs_and_ops;
 
 #[test]
 fn doc_contains_service_api_scope_policy_docs_parity_markers() {
@@ -100,12 +101,9 @@ fn assert_scope_policy_ops_markers() {
 }
 
 fn assert_scope_policy_remediation_markers(reason_code: &str) {
-    assert!(
-        DOC.contains(&format!("service_api_scope_policy_remediation.{reason_code}=")),
-        "missing scope policy remediation marker for {reason_code}"
-    );
-    assert!(
-        OPS_DOC.contains(&format!("service_api_scope_policy_remediation.{reason_code}=")),
-        "ops docs missing scope policy remediation marker for {reason_code}"
+    assert_remediation_marker_in_docs_and_ops(
+        "service_api_scope_policy_remediation",
+        reason_code,
+        "scope policy",
     );
 }

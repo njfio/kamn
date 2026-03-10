@@ -156,6 +156,8 @@ fn dependency_license_metadata_governance_reason_codes() -> Vec<&'static str> {
         .collect()
 }
 
+#[path = "ci_strategy_docs/service_api_policy_support.rs"]
+mod service_api_policy_support;
 #[path = "ci_strategy_docs/service_api_request_path_authz_contract_tests.rs"]
 mod service_api_request_path_authz_contract_tests;
 #[path = "ci_strategy_docs/service_api_scope_policy_contract_tests.rs"]

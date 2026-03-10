@@ -1,4 +1,5 @@
 use super::*;
+use super::service_api_policy_support::assert_remediation_marker_in_docs_and_ops;
 
 #[test]
 fn doc_contains_service_api_request_path_authz_docs_parity_markers() {
@@ -107,12 +108,9 @@ fn assert_request_path_authz_ops_markers() {
 }
 
 fn assert_request_path_authz_remediation_markers(reason_code: &str) {
-    assert!(
-        DOC.contains(&format!("service_api_request_path_authz_remediation.{reason_code}=")),
-        "missing request-path authz remediation marker for {reason_code}"
-    );
-    assert!(
-        OPS_DOC.contains(&format!("service_api_request_path_authz_remediation.{reason_code}=")),
-        "ops docs missing request-path authz remediation marker for {reason_code}"
+    assert_remediation_marker_in_docs_and_ops(
+        "service_api_request_path_authz_remediation",
+        reason_code,
+        "request-path authz",
     );
 }
