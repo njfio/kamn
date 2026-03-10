@@ -53,3 +53,12 @@ Extract the governance/advisory tail tranche from `crates/kamn-core/tests/ci_str
    - `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`
    - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6767-touched-size.json`
 5. Record evidence and open the PR
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test ci_strategy_docs_governance_advisory_tail_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test ci_strategy_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6767-touched-size-refactor.json`
+- Result: extracted governance/advisory tail wired through the real `ci_strategy_docs` test target; touched-Rust ratchet returned `policy_decision=GO`.
+
+## Deviations
+- None.
