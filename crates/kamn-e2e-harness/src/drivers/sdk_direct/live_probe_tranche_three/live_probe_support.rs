@@ -89,6 +89,19 @@ pub(super) fn validate_bridge_forward_fields(
     )
 }
 
+pub(super) fn validate_queried_bridge_field(
+    expected: &str,
+    observed: &str,
+    field: &str,
+) -> Result<(), String> {
+    super::super::validate_s13_bridge_field_coherence(
+        expected,
+        observed,
+        field,
+        "sdk-direct live s13 query-bridge-message",
+    )
+}
+
 fn validate_s14_message_id(
     expected_message_id: &str,
     observed_message_id: &str,

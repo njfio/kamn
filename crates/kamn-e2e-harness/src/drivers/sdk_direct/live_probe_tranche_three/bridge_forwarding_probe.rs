@@ -2,13 +2,15 @@ use super::{
     default_endpoint, kolme_endpoint, validate_non_empty, DEFAULT_S13_AGENT_NAME,
     DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD,
 };
-use crate::drivers::sdk_direct::live_probe_tranche_three::live_probe_support::validate_bridge_forward_fields;
+use crate::drivers::sdk_direct::live_probe_tranche_three::live_probe_support::{
+    validate_bridge_forward_fields, validate_queried_bridge_field,
+};
 
 pub(super) fn run_live_s13_bridge_forwarding_probe() -> Result<(), String> {
     let settings = s13_settings();
-    let submitted = submit_bridge_message(&settings)?;
-    let forwarded = forward_bridge_message(&settings, submitted.bridge_id.as_str())?;
-    query_bridge_message(&settings, submitted.bridge_id.as_str(), &forwarded)
+    let bridge_id = submit_bridge_message(&settings)?;
+    let forwarded = forward_bridge_message(&settings, bridge_id.as_str())?;
+    query_bridge_message(&settings, bridge_id.as_str(), &forwarded)
 }
 
 struct S13Settings {
@@ -22,10 +24,6 @@ struct S13ForwardedState {
     bridge_status: String,
     target_message_id: String,
     forward_tx_hash: String,
-}
-
-struct S13SubmittedState {
-    bridge_id: String,
 }
 
 fn s13_settings() -> S13Settings {
@@ -43,7 +41,7 @@ fn s13_settings() -> S13Settings {
     }
 }
 
-fn submit_bridge_message(settings: &S13Settings) -> Result<S13SubmittedState, String> {
+fn submit_bridge_message(settings: &S13Settings) -> Result<String, String> {
     let handle = connect_bridge_agent(
         settings,
         "submit",
@@ -64,9 +62,7 @@ fn submit_bridge_message(settings: &S13Settings) -> Result<S13SubmittedState, St
         submitted.bridge_status.as_str(),
         "sdk-direct live s13 submit-bridge-message returned empty bridge_status",
     )?;
-    Ok(S13SubmittedState {
-        bridge_id: submitted.bridge_id,
-    })
+    Ok(submitted.bridge_id)
 }
 
 fn forward_bridge_message(
@@ -111,10 +107,12 @@ fn query_bridge_message(
     validate_queried_bridge_state(
         bridge_id,
         forwarded,
-        queried.bridge_id.as_str(),
-        queried.bridge_status.as_str(),
-        queried.target_message_id.as_str(),
-        queried.forward_tx_hash.as_str(),
+        (
+            queried.bridge_id.as_str(),
+            queried.bridge_status.as_str(),
+            queried.target_message_id.as_str(),
+            queried.forward_tx_hash.as_str(),
+        ),
     )
 }
 
@@ -154,42 +152,37 @@ fn validate_forwarded_bridge_state(
 fn validate_queried_bridge_state(
     bridge_id: &str,
     forwarded: &S13ForwardedState,
-    observed_bridge_id: &str,
-    observed_bridge_status: &str,
-    observed_target_message_id: &str,
-    observed_forward_tx_hash: &str,
+    observed_fields: (&str, &str, &str, &str),
 ) -> Result<(), String> {
+    validate_queried_bridge_id(bridge_id, observed_fields.0)?;
+    validate_queried_bridge_fields(forwarded, observed_fields)
+}
+
+fn validate_queried_bridge_id(bridge_id: &str, observed_bridge_id: &str) -> Result<(), String> {
     super::super::validate_s13_bridge_id_match(
         bridge_id,
         observed_bridge_id,
         "sdk-direct live s13 query-bridge-message",
-    )?;
-    validate_queried_bridge_field(
-        forwarded.bridge_status.as_str(),
-        observed_bridge_status,
-        "bridge_status",
-    )?;
-    validate_queried_bridge_field(
-        forwarded.target_message_id.as_str(),
-        observed_target_message_id,
-        "target_message_id",
-    )?;
-    validate_queried_bridge_field(
-        forwarded.forward_tx_hash.as_str(),
-        observed_forward_tx_hash,
-        "forward_tx_hash",
     )
 }
 
-fn validate_queried_bridge_field(
-    expected: &str,
-    observed: &str,
-    field: &str,
+fn validate_queried_bridge_fields(
+    forwarded: &S13ForwardedState,
+    observed_fields: (&str, &str, &str, &str),
 ) -> Result<(), String> {
-    super::super::validate_s13_bridge_field_coherence(
-        expected,
-        observed,
-        field,
-        "sdk-direct live s13 query-bridge-message",
-    )
+    [observed_fields.1, observed_fields.2, observed_fields.3]
+        .into_iter()
+        .zip(queried_bridge_expected_fields(forwarded))
+        .zip(["bridge_status", "target_message_id", "forward_tx_hash"])
+        .try_for_each(|((observed, expected), field)| {
+            validate_queried_bridge_field(expected, observed, field)
+        })
+}
+
+fn queried_bridge_expected_fields(forwarded: &S13ForwardedState) -> [&str; 3] {
+    [
+        forwarded.bridge_status.as_str(),
+        forwarded.target_message_id.as_str(),
+        forwarded.forward_tx_hash.as_str(),
+    ]
 }
