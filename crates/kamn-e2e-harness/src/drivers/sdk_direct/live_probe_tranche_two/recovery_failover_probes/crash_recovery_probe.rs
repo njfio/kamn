@@ -6,32 +6,41 @@ use crate::drivers::sdk_direct::live_probe_tranche_two::validate_s08_distinct_me
 
 pub(super) fn run_live_s08_crash_recovery_probe() -> Result<(), String> {
     let settings = s08_settings();
+    let pre_message_id = run_s08_pre_boundary(&settings)?;
+    require_s08_health(&settings, "boundary")?;
+    run_s08_post_boundary(&settings, pre_message_id.as_str())
+}
+
+fn run_s08_pre_boundary(settings: &S08Settings) -> Result<String, String> {
     let pre_message_id = send_s08_message(
-        &settings,
+        settings,
         "pre-send",
         settings.pre_message_payload.as_str(),
         "pre-boundary",
     )?;
     query_s08_message(
-        &settings,
+        settings,
         "pre-query",
         pre_message_id.as_str(),
         "pre-boundary",
     )?;
-    require_s08_health(&settings, "boundary")?;
+    Ok(pre_message_id)
+}
+
+fn run_s08_post_boundary(settings: &S08Settings, pre_message_id: &str) -> Result<(), String> {
     let post_message_id = send_s08_message(
-        &settings,
+        settings,
         "post-send",
         settings.post_message_payload.as_str(),
         "post-boundary",
     )?;
     validate_s08_distinct_message_ids(
-        pre_message_id.as_str(),
+        pre_message_id,
         post_message_id.as_str(),
         "sdk-direct live s08 post-boundary send-message",
     )?;
     query_s08_message(
-        &settings,
+        settings,
         "post-query",
         post_message_id.as_str(),
         "post-boundary",
