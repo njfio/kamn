@@ -44,7 +44,7 @@ fn regression_sdk_direct_extracted_test_layout_exists() {
         "src/drivers/sdk_direct_tests/validator_contract_tests.rs",
         "src/drivers/sdk_direct_tests/support.rs",
         "src/drivers/sdk_direct_tests/support/env_support.rs",
-        "src/drivers/sdk_direct_tests/support/script_fixture_support.rs",
+        "src/drivers/sdk_direct_tests/support/probe_fixture_support.rs",
     ] {
         let full_path = manifest_dir().join(relative_path);
         assert!(
