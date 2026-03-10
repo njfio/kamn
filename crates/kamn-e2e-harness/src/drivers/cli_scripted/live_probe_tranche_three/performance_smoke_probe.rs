@@ -35,27 +35,36 @@ fn s15_settings() -> Result<S15Settings, String> {
     if iterations == 0 {
         return Err("cli live s15 iterations must be greater than zero".to_owned());
     }
+    let (max_total_millis, max_p50_millis, max_p99_millis) = s15_budgets()?;
     Ok(S15Settings {
         endpoint: default_endpoint(),
         base_agent_name: env_value("KAMN_E2E_S15_AGENT_NAME", DEFAULT_S15_AGENT_NAME),
         message_payload: env_payload("KAMN_E2E_S15_MESSAGE_PAYLOAD", DEFAULT_S15_MESSAGE_PAYLOAD),
         iterations,
-        max_total_millis: parse_budget(
+        max_total_millis,
+        max_p50_millis,
+        max_p99_millis,
+    })
+}
+
+fn s15_budgets() -> Result<(u128, u128, u128), String> {
+    Ok((
+        parse_budget(
             "KAMN_E2E_S15_MAX_TOTAL_MILLIS",
             DEFAULT_S15_MAX_TOTAL_MILLIS,
             "cli live s15 max-total budget",
         )?,
-        max_p50_millis: parse_budget(
+        parse_budget(
             "KAMN_E2E_S15_MAX_P50_MILLIS",
             DEFAULT_S15_MAX_P50_MILLIS,
             "cli live s15 max-p50 budget",
         )?,
-        max_p99_millis: parse_budget(
+        parse_budget(
             "KAMN_E2E_S15_MAX_P99_MILLIS",
             DEFAULT_S15_MAX_P99_MILLIS,
             "cli live s15 max-p99 budget",
         )?,
-    })
+    ))
 }
 
 fn parse_s15_iterations() -> Result<u64, String> {

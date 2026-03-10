@@ -153,31 +153,42 @@ fn verify_batch_message(
     proof_args: &S14ProofArgs,
     suffix: &str,
 ) -> Result<(), String> {
+    let step = verify_step(suffix);
     let output = super::super::run_cli_command_capture_stdout_with_agent_name(
         super::cli_binary().as_str(),
-        &[
-            "verify-proof",
-            "--endpoint",
-            settings.endpoint.as_str(),
-            "--format",
-            "text",
-            message_id,
-            proof_args.batch_root.as_str(),
-            proof_args.block_height.as_str(),
-            proof_args.finality.as_str(),
-        ],
-        &format!(
-            "cli live s14 batch-{} verify-proof",
-            &suffix[suffix.len() - 1..]
-        ),
+        verify_args(settings, message_id, proof_args).as_slice(),
+        step.as_str(),
         format!("{}-{suffix}", settings.base_agent_name).as_str(),
     )?;
-    super::validate_s14_cli_verify_proof_response(
-        output.as_str(),
+    super::validate_s14_cli_verify_proof_response(output.as_str(), message_id, step.as_str())
+}
+
+fn verify_args<'a>(
+    settings: &'a S14Settings,
+    message_id: &'a str,
+    proof_args: &'a S14ProofArgs,
+) -> [&'a str; 9] {
+    [
+        "verify-proof",
+        "--endpoint",
+        settings.endpoint.as_str(),
+        "--format",
+        "text",
         message_id,
-        &format!(
-            "cli live s14 batch-{} verify-proof",
-            &suffix[suffix.len() - 1..]
-        ),
-    )
+        proof_args.batch_root.as_str(),
+        proof_args.block_height.as_str(),
+        proof_args.finality.as_str(),
+    ]
+}
+
+fn verify_step(suffix: &str) -> String {
+    format!("cli live s14 {} verify-proof", batch_label(suffix))
+}
+
+fn batch_label(suffix: &str) -> &'static str {
+    match suffix {
+        "proof-a" => "batch-a",
+        "proof-b" => "batch-b",
+        _ => "batch-unknown",
+    }
 }
