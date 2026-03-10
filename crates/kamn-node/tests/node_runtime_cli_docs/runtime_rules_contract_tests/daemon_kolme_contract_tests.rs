@@ -1,4 +1,4 @@
-use crate::support::{assert_markers, DOC};
+use crate::support::{assert_doc_markers, DOC};
 
 const DAEMON_RULE_MARKERS: &[&str] = &[
     "## Daemon Runtime Rules",
@@ -60,15 +60,15 @@ const KOLME_LIVE_MARKERS: &[&str] = &[
 
 #[test]
 fn doc_contains_runtime_daemon_rules() {
-    assert_markers(DOC, DAEMON_RULE_MARKERS, "node runtime CLI daemon rules");
+    assert_doc_markers(DOC, DAEMON_RULE_MARKERS, "node runtime CLI daemon rules");
 }
 
 #[test]
 fn doc_contains_daemon_shutdown_drain_marker_fields() {
-    assert_markers(DOC, DAEMON_DRAIN_MARKERS, "node runtime CLI daemon drain markers");
+    assert_doc_markers(DOC, DAEMON_DRAIN_MARKERS, "node runtime CLI daemon drain markers");
 }
 
 #[test]
 fn doc_contains_runtime_kolme_live_rules() {
-    assert_markers(DOC, KOLME_LIVE_MARKERS, "node runtime CLI kolme-live rules");
+    assert_doc_markers(DOC, KOLME_LIVE_MARKERS, "node runtime CLI kolme-live rules");
 }

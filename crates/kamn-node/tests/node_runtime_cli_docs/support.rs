@@ -8,7 +8,7 @@ pub(crate) const R42_API_SHELL_SURFACE_AUDIT_DOC: &str =
 pub(crate) const SIGNER_LIFECYCLE_DOC: &str =
     include_str!("../../../../docs/architecture/signer-lifecycle.md");
 
-pub(crate) fn assert_markers(document: &str, markers: &[&str], label: &str) {
+pub(crate) fn assert_doc_markers(document: &str, markers: &[&str], label: &str) {
     for marker in markers {
         assert!(
             document.contains(marker),

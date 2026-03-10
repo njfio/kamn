@@ -1,4 +1,4 @@
-use crate::support::{assert_markers, DOC};
+use crate::support::{assert_doc_markers, DOC};
 
 const SERVICE_API_INGRESS_MARKERS: &[&str] = &[
     "--api-body-limit-bytes",
@@ -57,20 +57,20 @@ const PROCESSOR_HA_REFERENCE_MARKERS: &[&str] = &[
 
 #[test]
 fn doc_contains_service_api_ingress_limiter_matrix_rules() {
-    assert_markers(DOC, SERVICE_API_INGRESS_MARKERS, "node runtime CLI service-api ingress rules");
+    assert_doc_markers(DOC, SERVICE_API_INGRESS_MARKERS, "node runtime CLI service-api ingress rules");
 }
 
 #[test]
 fn doc_contains_p2p_swarm_harness_contracts() {
-    assert_markers(DOC, P2P_SWARM_MARKERS, "node runtime CLI p2p swarm harness rules");
+    assert_doc_markers(DOC, P2P_SWARM_MARKERS, "node runtime CLI p2p swarm harness rules");
 }
 
 #[test]
 fn doc_contains_decomposition_guardrails() {
-    assert_markers(DOC, DECOMPOSITION_GUARDRAIL_MARKERS, "node runtime CLI decomposition guardrails");
+    assert_doc_markers(DOC, DECOMPOSITION_GUARDRAIL_MARKERS, "node runtime CLI decomposition guardrails");
 }
 
 #[test]
 fn doc_contains_processor_ha_reference_section() {
-    assert_markers(DOC, PROCESSOR_HA_REFERENCE_MARKERS, "node runtime CLI processor ha references");
+    assert_doc_markers(DOC, PROCESSOR_HA_REFERENCE_MARKERS, "node runtime CLI processor ha references");
 }
