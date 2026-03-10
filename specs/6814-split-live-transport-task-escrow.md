@@ -44,3 +44,25 @@ Split `crates/kamn-sdk/tests/live_transport_task_escrow.rs` into a thin root she
 3. Run the extraction contract target
 4. Run the real `live_transport_task_escrow` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Results
+- [x] `crates/kamn-sdk/tests/live_transport_task_escrow.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for the current transport/task/escrow concerns and shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-sdk --test live_transport_task_escrow_extraction_contract -- --nocapture` passes
+- [x] `cargo test -p kamn-sdk --test live_transport_task_escrow -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6814-touched-size.json` returns `policy_decision=GO`
+
+## Phase 6 Evidence
+- Root shell size: `8` LOC
+- Top-level extracted modules: `21`, `34`, `111`, `26` LOC
+- Nested support modules: `34`, `175`, `114`, `8` LOC
+- Real `live_transport_task_escrow` target remains wired through the root shell and preserves the live route, fail-closed, and malformed-payload regression coverage
+
+## Command Evidence
+- `cargo test -p kamn-sdk --test live_transport_task_escrow_extraction_contract -- --nocapture`
+- `cargo test -p kamn-sdk --test live_transport_task_escrow -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6814-touched-size.json`
+
+## Deviations
+- The refactor phase required one follow-up fix commit to restore the shared server helper import after the DRY pass. No behavior changed.
