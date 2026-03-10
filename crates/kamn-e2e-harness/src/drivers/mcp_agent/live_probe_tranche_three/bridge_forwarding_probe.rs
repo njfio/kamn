@@ -86,6 +86,11 @@ fn query_bridge_message(
     bridge_id: &str,
     forwarded: &ForwardedBridge,
 ) -> Result<(), String> {
+    let response = query_bridge_response(settings, bridge_id)?;
+    validate_query_bridge_response(response.as_str(), bridge_id, forwarded)
+}
+
+fn query_bridge_response(settings: &S13Settings, bridge_id: &str) -> Result<String, String> {
     let response = run_live_s13_mcp_tool_call(
         settings.binary.as_str(),
         settings.endpoint.as_str(),
@@ -95,25 +100,32 @@ fn query_bridge_message(
         "query_bridge_message",
         bridge_id_arguments(bridge_id).as_str(),
     )?;
+    Ok(response)
+}
+
+fn validate_query_bridge_response(
+    response: &str,
+    bridge_id: &str,
+    forwarded: &ForwardedBridge,
+) -> Result<(), String> {
     let step = "mcp live s13 query_bridge_message";
-    let queried_bridge_id = required_bridge_field(response.as_str(), "bridge_id", step)?;
+    let queried_bridge_id = required_bridge_field(response, "bridge_id", step)?;
     validate_s13_bridge_id_match(bridge_id, queried_bridge_id.as_str(), step)?;
-    let queried_bridge_status = required_bridge_field(response.as_str(), "bridge_status", step)?;
+    let queried_bridge_status = required_bridge_field(response, "bridge_status", step)?;
     validate_s13_bridge_field_coherence(
         forwarded.bridge_status.as_str(),
         queried_bridge_status.as_str(),
         "bridge_status",
         step,
     )?;
-    let queried_target_message_id =
-        required_bridge_field(response.as_str(), "target_message_id", step)?;
+    let queried_target_message_id = required_bridge_field(response, "target_message_id", step)?;
     validate_s13_bridge_field_coherence(
         forwarded.target_message_id.as_str(),
         queried_target_message_id.as_str(),
         "target_message_id",
         step,
     )?;
-    let queried_tx_hash = required_bridge_field(response.as_str(), "forward_tx_hash", step)?;
+    let queried_tx_hash = required_bridge_field(response, "forward_tx_hash", step)?;
     validate_s13_bridge_field_coherence(
         forwarded.forward_tx_hash.as_str(),
         queried_tx_hash.as_str(),

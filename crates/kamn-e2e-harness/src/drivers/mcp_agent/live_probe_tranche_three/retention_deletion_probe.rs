@@ -93,6 +93,11 @@ fn query_content(
     content_id: &str,
     tombstone: &TombstoneState,
 ) -> Result<(), String> {
+    let response = query_content_response(settings, content_id)?;
+    validate_query_content_response(response.as_str(), content_id, tombstone)
+}
+
+fn query_content_response(settings: &S12Settings, content_id: &str) -> Result<String, String> {
     let response = run_live_s12_mcp_tool_call(
         settings.binary.as_str(),
         settings.endpoint.as_str(),
@@ -102,19 +107,25 @@ fn query_content(
         "query_content",
         content_id_arguments(content_id).as_str(),
     )?;
+    Ok(response)
+}
+
+fn validate_query_content_response(
+    response: &str,
+    content_id: &str,
+    tombstone: &TombstoneState,
+) -> Result<(), String> {
     let step = "mcp live s12 query_content";
-    let queried_content_id = required_content_field(response.as_str(), "content_id", step)?;
+    let queried_content_id = required_content_field(response, "content_id", step)?;
     validate_s12_content_id_match(content_id, queried_content_id.as_str(), step)?;
-    let queried_lifecycle_state =
-        required_content_field(response.as_str(), "lifecycle_state", step)?;
+    let queried_lifecycle_state = required_content_field(response, "lifecycle_state", step)?;
     validate_s12_content_field_coherence(
         tombstone.lifecycle_state.as_str(),
         queried_lifecycle_state.as_str(),
         "lifecycle_state",
         step,
     )?;
-    let queried_redaction_status =
-        required_content_field(response.as_str(), "redaction_status", step)?;
+    let queried_redaction_status = required_content_field(response, "redaction_status", step)?;
     validate_s12_content_field_coherence(
         tombstone.redaction_status.as_str(),
         queried_redaction_status.as_str(),

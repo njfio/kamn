@@ -110,6 +110,7 @@ fn verify_batch(
     message_id: &str,
     batch_root: &str,
 ) -> Result<(), String> {
+    let step = format!("mcp live s14 batch-{label} verify_proof");
     let response = run_live_s14_mcp_tool_call(
         settings.binary.as_str(),
         settings.endpoint.as_str(),
@@ -117,18 +118,17 @@ fn verify_batch(
         settings.key_file.as_str(),
         format!("probe-verify-proof-batch-{label}").as_str(),
         "verify_proof",
-        format!(
-            "{{\"message_id\":\"{}\",\"tx_hash\":\"{}\",\"block_height\":\"{}\",\"finality\":\"{}\"}}",
-            escape_json_scalar(message_id),
-            escape_json_scalar(batch_root),
-            settings.block_height,
-            escape_json_scalar(settings.finality.as_str()),
-        )
-        .as_str(),
+        verify_arguments(settings, message_id, batch_root).as_str(),
     )?;
-    validate_s14_mcp_verify_proof_response(
-        response.as_str(),
-        message_id,
-        format!("mcp live s14 batch-{label} verify_proof").as_str(),
+    validate_s14_mcp_verify_proof_response(response.as_str(), message_id, step.as_str())
+}
+
+fn verify_arguments(settings: &S14Settings, message_id: &str, batch_root: &str) -> String {
+    format!(
+        "{{\"message_id\":\"{}\",\"tx_hash\":\"{}\",\"block_height\":\"{}\",\"finality\":\"{}\"}}",
+        escape_json_scalar(message_id),
+        escape_json_scalar(batch_root),
+        settings.block_height,
+        escape_json_scalar(settings.finality.as_str()),
     )
 }
