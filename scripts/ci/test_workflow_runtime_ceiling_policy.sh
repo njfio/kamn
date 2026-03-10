@@ -5,10 +5,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORKFLOWS_DIR="$ROOT_DIR/.github/workflows"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 MAX_TIMEOUT=60
+STATUS=0
 
 fail() {
   echo "$1" >&2
   exit 1
+}
+
+record_violation() {
+  echo "$1" >&2
+  STATUS=1
 }
 
 require_file() {
@@ -33,7 +39,7 @@ assert_pr_concurrency_policy() {
     in_block && /^[^[:space:]]/ { in_block=0 }
     in_block && $1 ~ /^cancel-in-progress:/ && $2 == "true" { cancel=1 }
     END { exit (seen && cancel) ? 0 : 1 }
-  ' "$file" || fail "workflow missing top-level PR concurrency cancellation: $file"
+  ' "$file" || record_violation "workflow missing top-level PR concurrency cancellation: $file"
 }
 
 assert_timeout_policy() {
@@ -54,13 +60,13 @@ assert_timeout_policy() {
         exit 3
       }
     }
-  ' "$file" || exit $?
+  ' "$file" || STATUS=1
 }
 
 assert_strategy_doc_markers() {
   require_file "$STRATEGY_DOC"
-  grep -Fq "workflow_runtime_ceiling_minutes=60" "$STRATEGY_DOC" || fail "missing workflow runtime ceiling marker in docs/ci/strategy.md"
-  grep -Fq "workflow_pr_concurrency_cancel_in_progress=true" "$STRATEGY_DOC" || fail "missing workflow PR concurrency cancellation marker in docs/ci/strategy.md"
+  grep -Fq "workflow_runtime_ceiling_minutes=60" "$STRATEGY_DOC" || record_violation "missing workflow runtime ceiling marker in docs/ci/strategy.md"
+  grep -Fq "workflow_pr_concurrency_cancel_in_progress=true" "$STRATEGY_DOC" || record_violation "missing workflow PR concurrency cancellation marker in docs/ci/strategy.md"
 }
 
 main() {
@@ -76,9 +82,10 @@ main() {
     if workflow_has_pr_trigger "$file"; then
       assert_pr_concurrency_policy "$file"
     fi
-  done < <(find "$WORKFLOWS_DIR" -maxdepth 1 -name '*.yml' | sort)
+  done < <(find "$WORKFLOWS_DIR" -maxdepth 1 \( -name '*.yml' -o -name '*.yaml' \) | sort)
 
   assert_strategy_doc_markers
+  exit "$STATUS"
 }
 
 main "$@"
