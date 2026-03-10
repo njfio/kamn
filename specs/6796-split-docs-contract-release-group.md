@@ -30,12 +30,12 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-e2e-harness/tests/docs_contract_release_group.rs` into bounded sibling modules organized by release group
-- [ ] root `docs_contract_release_group.rs` is reduced below a staged extraction cap enforced by a new extraction contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] the real `cargo test -p kamn-e2e-harness --test docs_contract_release_group -- --nocapture` target remains wired and passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-e2e-harness/tests/docs_contract_release_group.rs` into bounded sibling modules organized by release group
+- [x] root `docs_contract_release_group.rs` is reduced below a staged extraction cap enforced by a new extraction contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] the real `cargo test -p kamn-e2e-harness --test docs_contract_release_group -- --nocapture` target remains wired and passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -66,3 +66,17 @@ Outputs:
 - `r54_r55_docs_contract_tests.rs` for the r54 evidence/teardown and r55 evidence-step/live-s02 docs checks
 - `r56_r60_docs_contract_tests.rs` for the r56-r60 verification hardening docs checks
 - `r61_r64_docs_contract_tests.rs` for the r61-r64 verification format docs checks
+
+# Phase 6 evidence
+
+- Root shell reduced to `12` LOC at `crates/kamn-e2e-harness/tests/docs_contract_release_group.rs`.
+- Extracted module tree totals `375` LOC across bounded sibling files; the largest touched file is `58` LOC.
+- Real integration path verified with:
+  - `cargo test -p kamn-e2e-harness --test docs_contract_release_group_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-e2e-harness --test docs_contract_release_group -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6796-touched-size.json`
+- Touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- None.
