@@ -6,7 +6,7 @@ use kamn_core::{
     DataLayerM3SearchCatalog, DataLayerM3SearchError,
 };
 
-use crate::support::{blind_index_map, derive_token, register_record, RecordSeed};
+use crate::support::{blind_index_map, derive_blind_index_token, register_record, RecordSeed};
 
 #[test]
 fn spec_c04_metadata_search_applies_filters_and_returns_stable_order() {
@@ -32,7 +32,7 @@ fn spec_c04_metadata_search_applies_filters_and_returns_stable_order() {
 
 #[test]
 fn spec_c09_blind_index_projection_builds_deterministic_content_retrieval_requests() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_projection_records(&mut catalog, &token);
 
@@ -59,7 +59,7 @@ fn spec_c09_blind_index_projection_builds_deterministic_content_retrieval_reques
 
 #[test]
 fn spec_c10_blind_index_projection_fails_closed_when_message_cid_map_missing() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_projection_error_record(&mut catalog, "msg-missing-cid", &token, "session-m");
 
@@ -78,7 +78,7 @@ fn spec_c10_blind_index_projection_fails_closed_when_message_cid_map_missing() {
 
 #[test]
 fn spec_c11_blind_index_projection_fails_closed_for_invalid_requester_contract() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_projection_error_record(&mut catalog, "msg-invalid-requester", &token, "session-i");
 

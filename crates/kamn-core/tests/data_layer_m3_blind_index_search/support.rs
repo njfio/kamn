@@ -37,7 +37,7 @@ pub(crate) fn blind_index_map(entries: &[(&str, &str)]) -> BTreeMap<String, Stri
         .collect()
 }
 
-pub(crate) fn derive_token(owner_key: &str, field_name: &str, value: &str) -> String {
+pub(crate) fn derive_blind_index_token(owner_key: &str, field_name: &str, value: &str) -> String {
     data_layer_m3_compute_blind_index(owner_key, field_name, value)
         .expect("blind index token should be derived")
 }

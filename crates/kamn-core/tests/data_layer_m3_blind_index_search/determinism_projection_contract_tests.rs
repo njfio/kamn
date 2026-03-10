@@ -5,11 +5,11 @@ use kamn_core::{
     DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
 };
 
-use crate::support::{blind_index_map, derive_token, owner_a_text_record, register_record};
+use crate::support::{blind_index_map, derive_blind_index_token, owner_a_text_record, register_record};
 
 #[test]
 fn spec_c06_blind_index_determinism_reports_stable_when_baseline_matches_query_order() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_determinism_records(&mut catalog, &token, "msg-d");
 
@@ -29,7 +29,7 @@ fn spec_c06_blind_index_determinism_reports_stable_when_baseline_matches_query_o
 
 #[test]
 fn spec_c07_blind_index_determinism_reports_drift_with_missing_and_out_of_order_evidence() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_determinism_records(&mut catalog, &token, "msg-e");
 
@@ -52,7 +52,7 @@ fn spec_c07_blind_index_determinism_reports_drift_with_missing_and_out_of_order_
 
 #[test]
 fn spec_c08_blind_index_determinism_rejects_empty_baseline_and_invalid_limit() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let catalog = DataLayerM3SearchCatalog::new();
 
     let empty_baseline = catalog.evaluate_blind_index_determinism(determinism_input(

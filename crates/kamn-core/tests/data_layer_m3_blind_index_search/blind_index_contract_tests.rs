@@ -3,28 +3,28 @@ use kamn_core::{
     DataLayerM3SearchError,
 };
 
-use crate::support::{blind_index_map, derive_token, owner_a_text_record, register_record};
+use crate::support::{blind_index_map, derive_blind_index_token, owner_a_text_record, register_record};
 
 #[test]
 fn spec_c01_blind_index_normalization_is_case_and_whitespace_deterministic() {
-    let token_a = derive_token("owner-key-a", "subject", "   Invoice   42 ");
-    let token_b = derive_token("owner-key-a", "subject", "invoice 42");
+    let token_a = derive_blind_index_token("owner-key-a", "subject", "   Invoice   42 ");
+    let token_b = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     assert_eq!(token_a, token_b);
     assert!(token_a.starts_with("sha256:"));
 }
 
 #[test]
 fn spec_c02_blind_index_tokens_are_owner_scoped_by_key_material() {
-    let owner_a = derive_token("owner-key-a", "subject", "invoice 42");
-    let owner_b = derive_token("owner-key-b", "subject", "invoice 42");
+    let owner_a = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
+    let owner_b = derive_blind_index_token("owner-key-b", "subject", "invoice 42");
     assert_ne!(owner_a, owner_b);
 }
 
 #[test]
 fn spec_c03_exact_match_blind_index_search_is_owner_scoped_and_deterministic() {
-    let owner_a_invoice = derive_token("owner-key-a", "subject", "invoice 42");
-    let owner_b_invoice = derive_token("owner-key-b", "subject", "invoice 42");
-    let owner_a_other = derive_token("owner-key-a", "subject", "invoice 99");
+    let owner_a_invoice = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
+    let owner_b_invoice = derive_blind_index_token("owner-key-b", "subject", "invoice 42");
+    let owner_a_other = derive_blind_index_token("owner-key-a", "subject", "invoice 99");
 
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_owner_a_invoice_records(&mut catalog, &owner_a_invoice);
@@ -46,7 +46,7 @@ fn spec_c03_exact_match_blind_index_search_is_owner_scoped_and_deterministic() {
 
 #[test]
 fn spec_c05_invalid_blind_index_modes_and_bounds_fail_closed() {
-    let token = derive_token("owner-key-a", "subject", "invoice 42");
+    let token = derive_blind_index_token("owner-key-a", "subject", "invoice 42");
     let mut catalog = DataLayerM3SearchCatalog::new();
     register_record(
         &mut catalog,
