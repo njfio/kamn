@@ -142,17 +142,14 @@ fn assert_selector_rows_fingerprint(complete_line: &str) {
 
 fn capture_phase6_renderings_and_complete_log() -> (String, String, String) {
     let _guards = runtime_json_log_guards();
-    let (rendered_json, rendered_text, captured_logs) = capture_daemon_renderings_and_logs(&[
-        "--daemon-max-ticks",
-        "5",
-        "--daemon-tick-interval-ms",
-        "25",
-        "--output",
-        "json",
-    ]);
-    let complete_line = find_first_daemon_log(
-        &captured_logs,
-        "\"event\":\"node.runtime.daemon.execute.complete\"",
+    let (rendered_json, captured_logs, execution_id) = capture_daemon_json_with_chain(
+        "phase6-applied-contract",
+        &["--daemon-max-ticks", "5", "--daemon-tick-interval-ms", "25"],
     );
+    let rendered_text = capture_daemon_text_with_chain(
+        "phase6-applied-contract",
+        &["--daemon-max-ticks", "5", "--daemon-tick-interval-ms", "25"],
+    );
+    let complete_line = find_applied_phase6_complete_log(&captured_logs, execution_id.as_str());
     (rendered_json, rendered_text, complete_line.to_owned())
 }

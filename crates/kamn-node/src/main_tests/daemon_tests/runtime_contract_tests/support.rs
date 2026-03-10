@@ -62,6 +62,12 @@ fn capture_daemon_json_with_chain(
     (rendered, captured_logs, execution_id)
 }
 
+fn capture_daemon_text_with_chain(chain_id: &str, extra_args: &[&str]) -> String {
+    let parsed = parse_daemon_with_chain(chain_id, extra_args);
+    let report = execute(parsed).expect("daemon execution should succeed");
+    render_bootstrap_report(&report, OutputMode::text())
+}
+
 fn capture_daemon_renderings_and_logs(extra_args: &[&str]) -> (String, String, Vec<String>) {
     let parsed = parse_daemon(extra_args);
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
@@ -99,6 +105,19 @@ fn find_daemon_complete_log_for_execution<'a>(
         "\"event\":\"node.runtime.daemon.execute.complete\"",
         execution_id,
     )
+}
+
+fn find_applied_phase6_complete_log<'a>(
+    captured_logs: &'a [String],
+    execution_id: &str,
+) -> &'a str {
+    let complete_line = find_daemon_complete_log_for_execution(captured_logs, execution_id);
+    assert_json_log_field(
+        complete_line,
+        "phase6_reason_code",
+        "m10_phase6_scheduler_cycle_applied",
+    );
+    complete_line
 }
 
 fn assert_json_log_field(log_line: &str, field: &str, expected: &str) {
