@@ -1,3 +1,4 @@
+use super::live_probe_tranche_three::validate_s14_cli_verify_proof_response;
 use super::{
     live_execution_enabled_from_env, live_s07_probe_agent_suffix, parse_s15_budget_env_u128,
     parse_text_output_field, run_cli_command_capture_stdout,
@@ -9,12 +10,14 @@ use super::{
     run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
     run_live_s12_cli_retention_deletion_probe, run_live_s13_cli_bridge_forwarding_probe,
     run_live_s14_cli_batch_merkle_probe, run_live_s15_cli_performance_smoke_probe,
-    validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
-    validate_s08_message_receipt_fields, validate_s08_query_message_response,
-    validate_s12_content_field_coherence, validate_s12_content_id_match,
-    validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
-    validate_s14_cli_verify_proof_response, validate_s15_latency_budget_samples, CliScriptedDriver,
+    validate_live_s05_release_escrow_response, validate_s08_message_receipt_fields,
+    validate_s08_query_message_response, validate_s15_latency_budget_samples, CliScriptedDriver,
     CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+};
+use crate::drivers::shared_helpers::{
+    validate_s07_replay_reason_marker, validate_s12_content_field_coherence,
+    validate_s12_content_id_match, validate_s13_bridge_field_coherence,
+    validate_s13_bridge_id_match,
 };
 
 #[path = "cli_scripted_tests/base_contract_tests.rs"]
