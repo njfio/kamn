@@ -111,23 +111,26 @@ fn assert_selector_bundle_rejects_row_count_mismatch(canonical_rows: &[String]) 
 
 fn capture_deferred_phase6_json_and_complete_log() -> (String, String) {
     let _guards = runtime_json_log_guards();
-    let (rendered, captured_logs) = capture_daemon_json_and_logs(&[
-        "--daemon-max-ticks",
-        "5",
-        "--daemon-tick-interval-ms",
-        "25",
-        "--daemon-shutdown-signal-tick",
-        "3",
-        "--daemon-shutdown-drain-ticks",
-        "2",
-        "--daemon-shutdown-timeout-ticks",
-        "4",
-        "--output",
-        "json",
-    ]);
+    let (rendered, captured_logs, execution_id) = capture_daemon_json_with_chain(
+        "phase6-deferred-contract",
+        &[
+            "--daemon-max-ticks",
+            "5",
+            "--daemon-tick-interval-ms",
+            "25",
+            "--daemon-shutdown-signal-tick",
+            "3",
+            "--daemon-shutdown-drain-ticks",
+            "2",
+            "--daemon-shutdown-timeout-ticks",
+            "4",
+            "--output",
+            "json",
+        ],
+    );
     let complete_line = find_daemon_complete_log_for_execution(
         &captured_logs,
-        "node-runtime:daemon:kamn-devnet:processor",
+        execution_id.as_str(),
     );
     (rendered, complete_line.to_owned())
 }
