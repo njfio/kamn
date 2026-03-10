@@ -22,12 +22,12 @@ Reduce `crates/kamn-core/src/message_lifecycle.rs` from a 1832 LOC monolith to a
 - Touched-Rust size policy remains `NO-GO`
 
 ## Acceptance Criteria
-- [ ] `crates/kamn-core/src/message_lifecycle.rs` is reduced to a thin root shell at or below a staged extraction cap defined by the red contract
-- [ ] Extracted sibling modules are organized by message lifecycle concern rather than arbitrary line slicing
-- [ ] All touched extracted files remain at or below 200 LOC
-- [ ] Existing tests that exercise message lifecycle behavior still pass
-- [ ] At least one new extraction contract enforces the staged root shell and module layout
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json <path>` returns `policy_decision=GO`
+- [x] `crates/kamn-core/src/message_lifecycle.rs` is reduced to a thin root shell at or below a staged extraction cap defined by the red contract
+- [x] Extracted sibling modules are organized by message lifecycle concern rather than arbitrary line slicing
+- [x] All touched extracted files remain at or below 200 LOC
+- [x] Existing tests that exercise message lifecycle behavior still pass
+- [x] At least one new extraction contract enforces the staged root shell and module layout
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root <repo-root> --base-ref origin/main --output-json <path>` returns `policy_decision=GO`
 
 ## Files To Touch
 - `specs/6838-split-message-lifecycle.md`
@@ -51,3 +51,23 @@ Reduce `crates/kamn-core/src/message_lifecycle.rs` from a 1832 LOC monolith to a
    - error and formatting types if needed
 3. Run the extraction contract and existing message lifecycle tests.
 4. Run the touched-Rust size ratchet and require `policy_decision=GO`.
+
+## Phase 6 Evidence
+- Real integration path remains the public `kamn_core::message_lifecycle` module root via `crates/kamn-core/src/lib.rs`.
+- The root shell keeps the exported lifecycle, snapshot, and proof-admission surface wired through real production entrypoints rather than test-only wrappers.
+- Verified:
+  - `cargo test -p kamn-core --test message_lifecycle_module_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core --test message_lifecycle_parser_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core --test message_lifecycle_docs -- --nocapture`
+  - `cargo test -p kamn-core message_lifecycle::tests:: -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6838-remote --base-ref origin/main --output-json /tmp/6838-remote-touched-size-final.json`
+- Result:
+  - extraction contract: pass
+  - parser contract: pass
+  - docs contract: pass
+  - lifecycle unit lane: `20 passed, 1 ignored`
+  - touched-Rust size ratchet: `policy_decision=GO`
+
+## Deviations
+- Internal tests moved into `crates/kamn-core/src/message_lifecycle/tests/` and are loaded via `#[path = ...] mod tests;` plus `include!` so the existing `message_lifecycle::tests::...` test paths remain stable.
+- The root shell retains thin parser wrapper functions and the `kamn_snapshot_journal` ownership marker comment because existing structural contracts assert those source markers directly.

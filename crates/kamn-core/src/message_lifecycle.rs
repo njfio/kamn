@@ -4,6 +4,9 @@ mod lifecycle_types;
 mod proof_admission;
 mod snapshot_store;
 
+// Keep the public module surface centralized here so downstream callers keep
+// importing `kamn_core::message_lifecycle::*` while the implementation lives in
+// bounded sibling modules.
 // Preserve the root module's `kamn_snapshot_journal` ownership marker for split contracts.
 pub use lifecycle_errors::{
     MessageLifecycleError, MessageLifecycleSnapshotError, MessageLifecycleSnapshotStoreError,
