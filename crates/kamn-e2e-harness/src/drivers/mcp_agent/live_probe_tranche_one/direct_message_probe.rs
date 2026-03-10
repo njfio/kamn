@@ -18,8 +18,7 @@ pub(crate) fn run_live_s02_mcp_direct_message_probe() -> Result<(), String> {
         "reply",
         "query-reply",
         settings.reply_payload.as_str(),
-    )?;
-    Ok(())
+    )
 }
 
 struct S02Settings {
@@ -50,26 +49,34 @@ fn send_and_query(
     query_suffix: &str,
     payload: &str,
 ) -> Result<(), String> {
-    let send_step = format!("mcp live s02 {send_suffix} send_message");
-    let message_id = send_message_with_receipt(
+    let message_id = send_message(settings, send_suffix, payload)?;
+    query_message(settings, query_suffix, message_id.as_str())
+}
+
+fn send_message(settings: &S02Settings, suffix: &str, payload: &str) -> Result<String, String> {
+    let step = format!("mcp live s02 {suffix} send_message");
+    send_message_with_receipt(
         "mcp live s02",
         settings.binary.as_str(),
         settings.endpoint.as_str(),
-        format!("{}-s02-{send_suffix}", settings.base_agent_name).as_str(),
+        format!("{}-s02-{suffix}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
-        &format!("probe-send-message-{send_suffix}"),
+        format!("probe-send-message-{suffix}").as_str(),
         payload,
-        send_step.as_str(),
-    )?;
-    let query_step = format!("mcp live s02 {query_suffix} query_message");
+        step.as_str(),
+    )
+}
+
+fn query_message(settings: &S02Settings, suffix: &str, message_id: &str) -> Result<(), String> {
+    let step = format!("mcp live s02 {suffix} query_message");
     query_message_with_validation(
         "mcp live s02",
         settings.binary.as_str(),
         settings.endpoint.as_str(),
-        format!("{}-s02-{query_suffix}", settings.base_agent_name).as_str(),
+        format!("{}-s02-{suffix}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
-        &format!("probe-query-message-{query_suffix}"),
-        message_id.as_str(),
-        query_step.as_str(),
+        format!("probe-query-message-{suffix}").as_str(),
+        message_id,
+        step.as_str(),
     )
 }

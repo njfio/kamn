@@ -46,18 +46,15 @@ fn create_channel(settings: &S03Settings) -> Result<String, String> {
         "create_channel",
         payload_arguments(settings.channel_payload.as_str()).as_str(),
     )?;
-    let channel_id = required_string_field(
-        response.as_str(),
-        "channel_id",
-        "mcp live s03 create_channel",
-    )?;
-    require_non_empty(
-        channel_id.as_str(),
-        "mcp live s03 create_channel",
-        "channel_id",
-    )?;
-    let status = required_string_field(response.as_str(), "status", "mcp live s03 create_channel")?;
-    require_non_empty(status.as_str(), "mcp live s03 create_channel", "status")?;
+    validate_create_channel(response.as_str())
+}
+
+fn validate_create_channel(response: &str) -> Result<String, String> {
+    let step = "mcp live s03 create_channel";
+    let channel_id = required_string_field(response, "channel_id", step)?;
+    require_non_empty(channel_id.as_str(), step, "channel_id")?;
+    let status = required_string_field(response, "status", step)?;
+    require_non_empty(status.as_str(), step, "status")?;
     Ok(channel_id)
 }
 
@@ -88,7 +85,12 @@ fn query_message(settings: &S03Settings, message_id: &str) -> Result<(), String>
 }
 
 fn list_messages(settings: &S03Settings, channel_id: &str) -> Result<(), String> {
-    let response = run_live_s03_mcp_tool_call(
+    let response = list_messages_response(settings, channel_id)?;
+    validate_list_messages(response.as_str(), channel_id)
+}
+
+fn list_messages_response(settings: &S03Settings, channel_id: &str) -> Result<String, String> {
+    run_live_s03_mcp_tool_call(
         settings.binary.as_str(),
         settings.endpoint.as_str(),
         format!("{}-s03-list-messages", settings.base_agent_name).as_str(),
@@ -96,18 +98,17 @@ fn list_messages(settings: &S03Settings, channel_id: &str) -> Result<(), String>
         "probe-list-messages",
         "list_messages",
         format!("{{\"channel_id\":\"{}\"}}", escape_json_scalar(channel_id)).as_str(),
-    )?;
-    let listed = required_string_field(
-        response.as_str(),
-        "channel_id",
-        "mcp live s03 list_messages",
-    )?;
+    )
+}
+
+fn validate_list_messages(response: &str, channel_id: &str) -> Result<(), String> {
+    let listed = required_string_field(response, "channel_id", "mcp live s03 list_messages")?;
     if listed != channel_id {
         return Err(format!(
             "mcp live s03 list_messages returned mismatched channel_id: expected={channel_id}, got={listed}"
         ));
     }
-    if response.contains(r#""messages":["#) {
+    if response.contains(r#"\"messages\":["#) {
         return Ok(());
     }
     Err(format!(

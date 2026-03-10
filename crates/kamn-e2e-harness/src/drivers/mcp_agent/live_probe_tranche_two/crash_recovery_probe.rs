@@ -55,7 +55,18 @@ fn send_and_query(
     suffix: &str,
     step_prefix: &str,
 ) -> Result<String, String> {
-    let message_id = send_message_with_receipt(
+    let message_id = send_message(settings, payload, suffix, step_prefix)?;
+    query_message(settings, message_id.as_str(), suffix, step_prefix)?;
+    Ok(message_id)
+}
+
+fn send_message(
+    settings: &S08Settings,
+    payload: &str,
+    suffix: &str,
+    step_prefix: &str,
+) -> Result<String, String> {
+    send_message_with_receipt(
         "mcp live s08",
         settings.binary.as_str(),
         settings.endpoint.as_str(),
@@ -64,7 +75,15 @@ fn send_and_query(
         format!("probe-send-message-{suffix}").as_str(),
         payload,
         format!("{step_prefix} send_message").as_str(),
-    )?;
+    )
+}
+
+fn query_message(
+    settings: &S08Settings,
+    message_id: &str,
+    suffix: &str,
+    step_prefix: &str,
+) -> Result<(), String> {
     query_message_with_validation(
         "mcp live s08",
         settings.binary.as_str(),
@@ -72,10 +91,9 @@ fn send_and_query(
         format!("{}-{suffix}-query", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-{suffix}").as_str(),
-        message_id.as_str(),
+        message_id,
         format!("{step_prefix} query_message").as_str(),
-    )?;
-    Ok(message_id)
+    )
 }
 
 fn run_boundary_health(settings: &S08Settings) -> Result<(), String> {

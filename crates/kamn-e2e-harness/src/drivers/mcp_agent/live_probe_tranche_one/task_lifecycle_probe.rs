@@ -9,27 +9,8 @@ pub(crate) fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     let settings = s04_settings();
     let task_id = create_task(&settings)?;
     let escrow_id = fund_escrow(&settings, task_id.as_str())?;
-    run_state_call(
-        &settings,
-        "accept_task",
-        "probe-accept-task",
-        task_id.as_str(),
-        "task_id",
-    )?;
-    run_state_call(
-        &settings,
-        "complete_task",
-        "probe-complete-task",
-        task_id.as_str(),
-        "task_id",
-    )?;
-    run_state_call(
-        &settings,
-        "release_escrow",
-        "probe-release-escrow",
-        escrow_id.as_str(),
-        "escrow_id",
-    )
+    run_task_transitions(&settings, task_id.as_str())?;
+    release_escrow(&settings, escrow_id.as_str())
 }
 
 struct S04Settings {
@@ -94,6 +75,33 @@ fn fund_escrow(settings: &S04Settings, task_id: &str) -> Result<String, String> 
         required_string_field(response.as_str(), "escrow_id", "mcp live s04 fund_escrow")?;
     require_non_empty(escrow_id.as_str(), "mcp live s04 fund_escrow", "escrow_id")?;
     Ok(escrow_id)
+}
+
+fn run_task_transitions(settings: &S04Settings, task_id: &str) -> Result<(), String> {
+    run_state_call(
+        settings,
+        "accept_task",
+        "probe-accept-task",
+        task_id,
+        "task_id",
+    )?;
+    run_state_call(
+        settings,
+        "complete_task",
+        "probe-complete-task",
+        task_id,
+        "task_id",
+    )
+}
+
+fn release_escrow(settings: &S04Settings, escrow_id: &str) -> Result<(), String> {
+    run_state_call(
+        settings,
+        "release_escrow",
+        "probe-release-escrow",
+        escrow_id,
+        "escrow_id",
+    )
 }
 
 fn run_state_call(

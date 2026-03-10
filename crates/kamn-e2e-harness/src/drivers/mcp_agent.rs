@@ -91,8 +91,7 @@ use live_probe_tranche_three::{
 use live_probe_tranche_two::{
     run_live_s06_mcp_proof_verification_probe, run_live_s07_mcp_replay_protection_probe,
     run_live_s08_mcp_crash_recovery_probe, run_live_s09_mcp_transport_failover_probe,
-    run_live_s10_mcp_topology_coherence_probe, validate_s08_mcp_message_receipt_fields,
-    validate_s08_mcp_query_message_response,
+    run_live_s10_mcp_topology_coherence_probe,
 };
 use probe_protocol_support::{
     build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,

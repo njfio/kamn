@@ -1,4 +1,7 @@
 use super::driver_core::live_execution_enabled_from_env;
+use super::live_probe_tranche_two::message_query_support::{
+    validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
+};
 use super::probe_protocol_support::validate_probe_health_response;
 use super::tool_call_support::run_live_s15_mcp_tool_call;
 use super::{
@@ -14,7 +17,6 @@ use super::{
     run_live_s13_mcp_tool_call, run_live_s14_mcp_batch_merkle_probe, run_live_s14_mcp_tool_call,
     run_live_s15_mcp_performance_smoke_probe, validate_live_s05_release_escrow_response,
     validate_probe_initialize_response, validate_s07_replay_reason_marker,
-    validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
     validate_s12_content_field_coherence, validate_s12_content_id_match,
     validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
     validate_s14_mcp_verify_proof_response, validate_s15_latency_budget_samples, McpAgentDriver,

@@ -63,29 +63,45 @@ fn send_and_query(
     payload: &str,
     label: &str,
 ) -> Result<String, String> {
-    let send_step = format!("mcp live s11 {label} send_message");
-    let message_id = send_message_with_receipt(
+    let message_id = send_message(settings, agent_name, payload, label)?;
+    query_message(settings, agent_name, message_id.as_str(), label)?;
+    Ok(message_id)
+}
+
+fn send_message(
+    settings: &S11Settings,
+    agent_name: &str,
+    payload: &str,
+    label: &str,
+) -> Result<String, String> {
+    send_message_with_receipt(
         "mcp live s11",
         settings.binary.as_str(),
         settings.endpoint.as_str(),
         agent_name,
         settings.key_file.as_str(),
-        &format!("probe-send-message-{label}"),
+        format!("probe-send-message-{label}").as_str(),
         payload,
-        send_step.as_str(),
-    )?;
-    let query_step = format!("mcp live s11 {label} query_message");
+        format!("mcp live s11 {label} send_message").as_str(),
+    )
+}
+
+fn query_message(
+    settings: &S11Settings,
+    agent_name: &str,
+    message_id: &str,
+    label: &str,
+) -> Result<(), String> {
     query_message_with_validation(
         "mcp live s11",
         settings.binary.as_str(),
         settings.endpoint.as_str(),
         format!("{agent_name}-query").as_str(),
         settings.key_file.as_str(),
-        &format!("probe-query-message-{label}"),
-        message_id.as_str(),
-        query_step.as_str(),
-    )?;
-    Ok(message_id)
+        format!("probe-query-message-{label}").as_str(),
+        message_id,
+        format!("mcp live s11 {label} query_message").as_str(),
+    )
 }
 
 fn reject_stale_primary(settings: &S11Settings) -> Result<(), String> {

@@ -15,15 +15,7 @@ pub(crate) fn run_live_s09_mcp_transport_failover_probe() -> Result<(), String> 
         "pre",
         "mcp live s09 pre-failover",
     )?;
-    health_status(
-        "mcp live s09",
-        settings.binary.as_str(),
-        settings.failover_endpoint.as_str(),
-        format!("{}-boundary", settings.base_agent_name).as_str(),
-        settings.key_file.as_str(),
-        "probe-boundary-health",
-        "mcp live s09 failover boundary health",
-    )?;
+    run_failover_boundary(&settings)?;
     let post_message_id = send_and_query(
         &settings,
         settings.failover_endpoint.as_str(),
@@ -73,7 +65,19 @@ fn send_and_query(
     suffix: &str,
     step_prefix: &str,
 ) -> Result<String, String> {
-    let message_id = send_message_with_receipt(
+    let message_id = send_message(settings, endpoint, payload, suffix, step_prefix)?;
+    query_message(settings, endpoint, message_id.as_str(), suffix, step_prefix)?;
+    Ok(message_id)
+}
+
+fn send_message(
+    settings: &S09Settings,
+    endpoint: &str,
+    payload: &str,
+    suffix: &str,
+    step_prefix: &str,
+) -> Result<String, String> {
+    send_message_with_receipt(
         "mcp live s09",
         settings.binary.as_str(),
         endpoint,
@@ -82,7 +86,16 @@ fn send_and_query(
         format!("probe-send-message-{suffix}").as_str(),
         payload,
         format!("{step_prefix} send_message").as_str(),
-    )?;
+    )
+}
+
+fn query_message(
+    settings: &S09Settings,
+    endpoint: &str,
+    message_id: &str,
+    suffix: &str,
+    step_prefix: &str,
+) -> Result<(), String> {
     query_message_with_validation(
         "mcp live s09",
         settings.binary.as_str(),
@@ -90,8 +103,20 @@ fn send_and_query(
         format!("{}-{suffix}-query", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-{suffix}").as_str(),
-        message_id.as_str(),
+        message_id,
         format!("{step_prefix} query_message").as_str(),
-    )?;
-    Ok(message_id)
+    )
+}
+
+fn run_failover_boundary(settings: &S09Settings) -> Result<(), String> {
+    health_status(
+        "mcp live s09",
+        settings.binary.as_str(),
+        settings.failover_endpoint.as_str(),
+        format!("{}-boundary", settings.base_agent_name).as_str(),
+        settings.key_file.as_str(),
+        "probe-boundary-health",
+        "mcp live s09 failover boundary health",
+    )
+    .map(|_| ())
 }
