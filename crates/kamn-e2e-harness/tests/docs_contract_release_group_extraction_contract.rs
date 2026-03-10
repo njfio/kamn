@@ -1,0 +1,67 @@
+use std::fs;
+use std::path::Path;
+
+const ROOT: &str = "tests/docs_contract_release_group.rs";
+const ROOT_BUDGET: usize = 180;
+const REQUIRED_MODULE_MARKERS: &[&str] = &[
+    "#[path = \"docs_contract_release_group/r52_docs_contract_tests.rs\"]",
+    "#[path = \"docs_contract_release_group/r53_docs_contract_tests.rs\"]",
+    "#[path = \"docs_contract_release_group/r54_r55_docs_contract_tests.rs\"]",
+    "#[path = \"docs_contract_release_group/r56_r60_docs_contract_tests.rs\"]",
+    "#[path = \"docs_contract_release_group/r61_r64_docs_contract_tests.rs\"]",
+];
+const REQUIRED_FILES: &[&str] = &[
+    "tests/docs_contract_release_group/r52_docs_contract_tests.rs",
+    "tests/docs_contract_release_group/r53_docs_contract_tests.rs",
+    "tests/docs_contract_release_group/r54_r55_docs_contract_tests.rs",
+    "tests/docs_contract_release_group/r56_r60_docs_contract_tests.rs",
+    "tests/docs_contract_release_group/r61_r64_docs_contract_tests.rs",
+];
+
+#[test]
+fn docs_contract_release_group_root_is_extracted() {
+    let source = fs::read_to_string(ROOT).expect("root docs-contract file should be readable");
+    assert_root_budget(source.as_str());
+    assert_root_markers(source.as_str());
+    assert_extracted_files();
+}
+
+fn assert_root_budget(source: &str) {
+    let line_count = source.lines().count();
+    assert!(
+        line_count <= ROOT_BUDGET,
+        "expected {ROOT} to be <= {ROOT_BUDGET} lines after extraction, got {line_count}"
+    );
+}
+
+fn assert_root_markers(source: &str) {
+    for marker in REQUIRED_MODULE_MARKERS {
+        assert!(
+            source.contains(marker),
+            "expected root shell to contain module marker `{marker}`"
+        );
+    }
+}
+
+fn assert_extracted_files() {
+    for path in REQUIRED_FILES {
+        assert_file_exists(path);
+        assert_file_budget(path);
+    }
+}
+
+fn assert_file_exists(path: &str) {
+    let file = Path::new(path);
+    assert!(file.exists(), "expected extracted file `{path}` to exist");
+}
+
+fn assert_file_budget(path: &str) {
+    let count = fs::read_to_string(Path::new(path))
+        .unwrap_or_else(|error| panic!("failed to read `{path}`: {error}"))
+        .lines()
+        .count();
+    assert!(
+        count <= 200,
+        "expected extracted file `{path}` to stay within 200 lines, got {count}"
+    );
+}
