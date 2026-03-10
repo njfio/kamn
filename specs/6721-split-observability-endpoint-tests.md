@@ -65,3 +65,37 @@ Split `crates/kamn-node/src/main_tests/observability_endpoint_tests.rs` into bou
 3. Run focused `kamn-node` observability endpoint tests that exercise the real endpoint path.
 4. Run the extraction contract.
 5. Run touched-Rust size policy on the issue write set.
+
+# Phase 6 evidence
+
+- `crates/kamn-node/src/main_tests/observability_endpoint_tests.rs` reduced from `1564` LOC on `origin/main` to `24` LOC as a thin module shell.
+- Concern-based extracted modules remained bounded in the final layout:
+  - `payload_contract_tests.rs`: `112` LOC
+  - `runtime_projection_contract_tests.rs`: `78` LOC
+  - `endpoint_runtime_contract_tests.rs`: `49` LOC
+  - `endpoint_runtime_contract_tests/readiness_contract_tests.rs`: `86` LOC
+  - `tls_contract_tests.rs`: `41` LOC
+  - `tls_contract_tests/tls_mode_regression_contract_tests.rs`: `118` LOC
+  - `stream_runtime_contract_tests.rs`: `33` LOC
+  - `stream_runtime_contract_tests/stream_server_contract_tests.rs`: `74` LOC
+  - `async_regression_contract_tests.rs`: `94` LOC
+  - `async_regression_contract_tests/negative_path_contract_tests.rs`: `68` LOC
+  - `support.rs`: `145` LOC
+  - `support/env_support.rs`: `14` LOC
+  - `support/tls_support.rs`: `154` LOC
+  - `support/transport_support.rs`: `62` LOC
+- Real `kamn-node` observability endpoint coverage remained wired through the main test surface and passed after extraction:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node observability_endpoint_tests_split_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-node observability_endpoint -- --nocapture`
+- Clean verification clone: `/tmp/kamn-6721-verify-1111636`
+- Clean verification head: `e23574ed`
+- Clean touched-Rust ratchet passed from the verify clone:
+  - `TMPDIR=/home/n/Code/kamn/tmp bash scripts/ci/check_touched_rust_size_policy.sh --output-json /home/n/Code/kamn/tmp/6721-clean-touched-size.json`
+  - result: `status=pass`, `policy_decision=GO`
+- Clean verify-clone reruns passed and produced no working tree drift:
+  - `/home/n/Code/kamn/tmp/6721-contract-clean.out`
+  - `/home/n/Code/kamn/tmp/6721-observability-clean.out`
+
+# Deviations
+
+- Final touched-Rust ratchet verification was executed from the clean verify clone instead of the issue worktree because `/home/n/Code/kamn-6721-1773129604` contains unrelated tracked modifications outside `#6721`. The issue branch commits and the clean verify clone both contained only the `#6721` change set.
