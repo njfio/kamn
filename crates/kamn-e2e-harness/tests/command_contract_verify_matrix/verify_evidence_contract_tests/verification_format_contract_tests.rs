@@ -48,8 +48,10 @@ fn spec_c106_verify_command_rejects_evidence_artifact_invalid_captured_at_format
 fn assert_evidence_format_failure(case: &str, artifact: &str, expected: &str) {
     let paths =
         setup_verify_case_with_artifact(case, VALID_MANIFEST, artifact, valid_chain_dump_json());
-    let err = execute_verify_contract(&verify_config(&paths))
-        .expect_err("verify should fail for invalid evidence format");
-    assert!(err.contains(expected));
+    expect_verify_failure(
+        &paths,
+        "verify should fail for invalid evidence format",
+        expected,
+    );
     cleanup_verify_case(&paths);
 }

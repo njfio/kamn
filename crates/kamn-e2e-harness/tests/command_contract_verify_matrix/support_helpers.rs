@@ -46,6 +46,19 @@ pub(crate) fn verify_config(paths: &VerifyPaths) -> VerifyCommandConfig {
     }
 }
 
+pub(crate) fn expect_verify_failure(
+    paths: &VerifyPaths,
+    failure_message: &str,
+    expected_fragment: &str,
+) {
+    let err = execute_verify_contract(&verify_config(paths)).expect_err(failure_message);
+    assert!(err.contains(expected_fragment));
+}
+
+pub(crate) fn expect_verify_success(paths: &VerifyPaths, success_message: &str) -> String {
+    execute_verify_contract(&verify_config(paths)).expect(success_message)
+}
+
 pub(crate) fn cleanup_verify_case(paths: &VerifyPaths) {
     let _ = std::fs::remove_file(&paths.output_path);
     let _ = std::fs::remove_file(&paths.chain_dump_path);

@@ -7,9 +7,11 @@ fn spec_c91_verify_command_rejects_missing_infrastructure_kolme_version_marker()
         MISSING_INFRA_KOLME_VERSION_MANIFEST,
         valid_chain_dump_json(),
     );
-    let err = execute_verify_contract(&verify_config(&paths))
-        .expect_err("verify should fail for missing marker");
-    assert!(err.contains("manifest missing infrastructure.kolme_version"));
+    expect_verify_failure(
+        &paths,
+        "verify should fail for missing marker",
+        "manifest missing infrastructure.kolme_version",
+    );
     cleanup_verify_case(&paths);
 }
 
@@ -20,8 +22,10 @@ fn spec_c92_verify_command_rejects_missing_summary_proofs_verified_marker() {
         MISSING_SUMMARY_PROOFS_VERIFIED_MANIFEST,
         valid_chain_dump_json(),
     );
-    let err = execute_verify_contract(&verify_config(&paths))
-        .expect_err("verify should fail for missing marker");
-    assert!(err.contains("manifest missing summary.proofs_verified"));
+    expect_verify_failure(
+        &paths,
+        "verify should fail for missing marker",
+        "manifest missing summary.proofs_verified",
+    );
     cleanup_verify_case(&paths);
 }

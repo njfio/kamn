@@ -38,8 +38,10 @@ fn spec_c99_verify_command_rejects_chain_dump_block_missing_previous_block_hash_
 
 fn assert_chain_dump_failure(case: &str, chain_dump: &str, expected: &str) {
     let paths = setup_verify_case(case, VALID_MANIFEST, chain_dump);
-    let err = execute_verify_contract(&verify_config(&paths))
-        .expect_err("verify should fail for chain dump marker regression");
-    assert!(err.contains(expected));
+    expect_verify_failure(
+        &paths,
+        "verify should fail for chain dump marker regression",
+        expected,
+    );
     cleanup_verify_case(&paths);
 }
