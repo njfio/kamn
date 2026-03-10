@@ -1,5 +1,11 @@
 use super::{DOC, OPS_DOC};
 
+pub(crate) fn assert_contains_all(haystack: &str, markers: &[&str], label: &str) {
+    for marker in markers {
+        assert!(haystack.contains(marker), "missing {label} marker: {marker}");
+    }
+}
+
 pub(crate) fn assert_reason_codes_non_empty(reason_codes: Vec<&str>, label: &str) {
     for reason_code in reason_codes {
         assert!(
