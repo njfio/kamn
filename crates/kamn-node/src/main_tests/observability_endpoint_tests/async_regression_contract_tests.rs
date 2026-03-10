@@ -1,5 +1,6 @@
 use super::support::*;
 use super::*;
+use std::thread;
 
 #[path = "async_regression_contract_tests/negative_path_contract_tests.rs"]
 mod negative_path_contract_tests;
