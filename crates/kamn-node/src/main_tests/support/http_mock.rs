@@ -29,30 +29,41 @@ fn read_http_request(stream: &mut std::net::TcpStream) -> String {
         .expect("read timeout should be set");
 
     loop {
-        let read_count = match stream.read(&mut chunk) {
-            Ok(read_count) => read_count,
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break;
-            }
-            Err(error) => panic!("request bytes should be readable: {error}"),
-        };
-        if read_count == 0 {
+        let Some(read_count) = read_request_chunk(stream, &mut chunk) else {
             break;
-        }
+        };
         buffer.extend_from_slice(&chunk[..read_count]);
-        if header_end.is_none() {
-            header_end = buffer
-                .windows(4)
-                .position(|window| window == b"\r\n\r\n")
-                .map(|pos| pos + 4);
-            expected_total = header_end.map(|end| end + content_length(&buffer[..end]));
-        }
+        update_expected_total(&buffer, &mut header_end, &mut expected_total);
         if expected_total.is_some_and(|total| buffer.len() >= total) {
             break;
         }
     }
 
     String::from_utf8(buffer).expect("request should be valid utf-8")
+}
+
+fn read_request_chunk(stream: &mut std::net::TcpStream, chunk: &mut [u8; 1024]) -> Option<usize> {
+    match stream.read(chunk) {
+        Ok(0) => None,
+        Ok(read_count) => Some(read_count),
+        Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => None,
+        Err(error) => panic!("request bytes should be readable: {error}"),
+    }
+}
+
+fn update_expected_total(
+    buffer: &[u8],
+    header_end: &mut Option<usize>,
+    expected_total: &mut Option<usize>,
+) {
+    if header_end.is_some() {
+        return;
+    }
+    *header_end = buffer
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .map(|pos| pos + 4);
+    *expected_total = header_end.map(|end| end + content_length(&buffer[..end]));
 }
 
 fn content_length(headers: &[u8]) -> usize {
