@@ -14,7 +14,7 @@ fn spec_c01_and_c03_live_adapter_executes_insert_and_lookup_with_session_context
         let adapter = connect_live_adapter(database_url).await;
         let message_id = uuid_from_u128(current_suffix());
         let record = fixture_record(message_id.clone());
-        insert_message(&adapter, &record).await;
+        insert_fixture_message(&adapter, &record).await;
         assert_stored_message(&adapter, &message_id).await;
     });
 }
@@ -55,7 +55,7 @@ fn spec_c03_live_adapter_persists_blind_indexes_on_insert_and_search_retrieves_r
     });
 }
 
-async fn insert_message(
+async fn insert_fixture_message(
     adapter: &kamn_core::DataLayerPgExecutionAdapter,
     record: &kamn_core::DataLayerM0EnvelopeRecord,
 ) {

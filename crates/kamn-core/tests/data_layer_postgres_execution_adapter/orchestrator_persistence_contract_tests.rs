@@ -24,7 +24,7 @@ fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
         let message_id = uuid_from_u128(current_suffix() + 200);
         let record = fixture_record(message_id.clone());
 
-        insert_message(&adapter, &record).await;
+        insert_fixture_message(&adapter, &record).await;
         let mut orchestrator = build_orchestrator();
         let outcome = plan_outcome(&mut orchestrator, &message_id, &record.content_hash);
         let final_projection = reconcile_projection(&outcome);
@@ -106,7 +106,7 @@ fn assert_follow_up_policy(outcome: &DataLayerM1AnchoringTickOutcome) {
     );
 }
 
-async fn insert_message(
+async fn insert_fixture_message(
     adapter: &kamn_core::DataLayerPgExecutionAdapter,
     record: &kamn_core::DataLayerM0EnvelopeRecord,
 ) {

@@ -19,7 +19,7 @@ fn spec_c03_live_adapter_persists_merkle_batch_assignment_and_lifecycle_transiti
         let batch_id = uuid_from_u128(suffix + 1);
         let record = fixture_record(message_id.clone());
 
-        insert_message(&adapter, &record).await;
+        insert_fixture_message(&adapter, &record).await;
         assert_batch_create(&adapter, &batch_id).await;
         assert_assignment(&adapter, &message_id, &batch_id).await;
         assert_submitted(&adapter, &batch_id).await;
@@ -41,7 +41,7 @@ fn spec_c04_merkle_batch_lifecycle_fails_closed_for_invalid_payloads() {
     });
 }
 
-async fn insert_message(
+async fn insert_fixture_message(
     adapter: &kamn_core::DataLayerPgExecutionAdapter,
     record: &kamn_core::DataLayerM0EnvelopeRecord,
 ) {
