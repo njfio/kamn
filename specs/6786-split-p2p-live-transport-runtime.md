@@ -30,12 +30,12 @@ Outputs:
 
 # Acceptance criteria
 
-- [ ] root test surface is extracted from `crates/kamn-core/tests/p2p_live_transport_runtime.rs` into bounded sibling modules
-- [ ] root `p2p_live_transport_runtime.rs` is reduced below the staged extraction cap enforced by the new contract
-- [ ] extracted sibling files stay within the active file-size budget
-- [ ] `cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture` passes
-- [ ] the extraction contract passes
-- [ ] touched-Rust size policy returns `policy_decision=GO` for the staged write set
+- [x] root test surface is extracted from `crates/kamn-core/tests/p2p_live_transport_runtime.rs` into bounded sibling modules
+- [x] root `p2p_live_transport_runtime.rs` is reduced below the staged extraction cap enforced by the new contract
+- [x] extracted sibling files stay within the active file-size budget
+- [x] `cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture` passes
+- [x] the extraction contract passes
+- [x] touched-Rust size policy returns `policy_decision=GO` for the staged write set
 
 # Files to touch
 
@@ -57,3 +57,16 @@ Outputs:
 4. Run `cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture`.
 5. Run the extraction contract again and confirm green.
 6. Run `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6786-touched-size.json`.
+
+# Evidence
+
+- Root shell reduced to `12` LOC at `crates/kamn-core/tests/p2p_live_transport_runtime.rs`
+- Verification commands:
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test p2p_live_transport_runtime_extraction_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6786-touched-size-final.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+# Deviations
+
+- None
