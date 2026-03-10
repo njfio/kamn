@@ -54,3 +54,9 @@ Stabilize the `kamn-node` daemon Phase 6 deferred-runtime marker projection so `
 4. Re-run the isolated failing test
 5. Re-run `cargo test -p kamn-node daemon_tests -- --nocapture`
 6. Re-run touched-Rust size policy on the issue branch
+
+# Root cause and outcome
+
+- Root cause: the deferred Phase 6 projection test selected the first `node.runtime.daemon.execute.complete` log line in the captured buffer and reused the default `kamn-devnet` execution identity. In the full suite, other daemon tests emit completion lines with the same event and default execution identity, so the test could bind to the wrong completion record.
+- Fix: the test now runs under a dedicated chain id (`phase6-deferred-contract`) and resolves the completion log through an execution-id-aware helper instead of first-match selection.
+- Result: the regression selector test passes, the deferred Phase 6 test passes in isolation, and the full `daemon_tests` target is green on the clean final branch.
