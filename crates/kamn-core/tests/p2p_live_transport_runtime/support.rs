@@ -69,47 +69,61 @@ pub(super) fn unique_tcp_listen_address() -> String {
     format!("/ip4/127.0.0.1/tcp/{port}")
 }
 
-pub(super) fn send_with_retry(
+pub(super) fn pause_for_live_handshake() {
+    std::thread::sleep(Duration::from_millis(250));
+}
+
+pub(super) fn build_live_transport(
+    peer_id: &str,
+    listen_address: &str,
+    bootstrap_peers: Vec<String>,
+) -> Libp2pLivePeerLifecycleTransport {
+    Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer_with_bootstrap(peer_id, listen_address, bootstrap_peers),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("live transport should initialize")
+}
+
+pub(super) fn build_seeded_live_transport(
+    peer_id: &str,
+    bootstrap_seed: &str,
+) -> Libp2pLivePeerLifecycleTransport {
+    Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer(
+            peer_id,
+            unique_tcp_listen_address().as_str(),
+            bootstrap_seed,
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("live transport should initialize")
+}
+
+pub(super) fn advertise_messages_peer(
     transport: &Libp2pLivePeerLifecycleTransport,
-    frame: &PeerGossipFrame,
-    timeout: Duration,
-) -> Result<(), P2pTransportError> {
-    let started = Instant::now();
-    loop {
-        match transport.send(frame.clone()) {
-            Ok(()) => return Ok(()),
-            Err(P2pTransportError::LiveSocketSendFailed) if started.elapsed() < timeout => {
-                std::thread::sleep(Duration::from_millis(25));
-            }
-            Err(error) => return Err(error),
-        }
+    peer_id: &str,
+    role: NodeRole,
+) {
+    transport
+        .advertise(
+            PeerDiscoveryRecord::new(peer_id, role, vec!["messages".to_owned()])
+                .expect("discovery record should build"),
+        )
+        .expect("peer advertise should pass");
+}
+
+pub(super) fn runtime_backpressure_reject(error: P2pTransportError) -> Option<&'static str> {
+    match error {
+        P2pTransportError::RuntimeBackpressureRejected { reason_code, .. } => Some(reason_code),
+        _ => None,
     }
 }
 
-pub(super) fn drain_until_count(
-    transport: &Libp2pLivePeerLifecycleTransport,
-    recipient_peer_id: &str,
-    expected: usize,
-    timeout: Duration,
-) -> Vec<PeerGossipFrame> {
-    let started = Instant::now();
-    let mut frames = Vec::new();
-    loop {
-        let mut drained = transport
-            .drain_inbox(recipient_peer_id)
-            .expect("recipient inbox should drain");
-        if !drained.is_empty() {
-            frames.append(&mut drained);
-        }
-        if frames.len() >= expected {
-            return frames;
-        }
-        assert!(
-            started.elapsed() < timeout,
-            "expected {expected} frames but only received {} within {:?}",
-            frames.len(),
-            timeout
-        );
-        std::thread::sleep(Duration::from_millis(25));
-    }
-}
+#[path = "support/transport_io_support.rs"]
+mod transport_io_support;
+
+pub(crate) use transport_io_support::{
+    drain_runtime_events_until, drain_until_count, send_frames_expect_success,
+    send_frames_until_error, send_with_retry,
+};

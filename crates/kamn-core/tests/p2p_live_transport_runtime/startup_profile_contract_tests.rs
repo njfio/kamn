@@ -30,37 +30,10 @@ fn unit_libp2p_runtime_protocol_and_topic_ids_are_deterministic() {
 
 #[test]
 fn functional_live_transport_signal_bridge_maps_deterministic_lifecycle_states() {
-    let transport =
-        Libp2pLivePeerLifecycleTransport::new(live_swarm_config(), P2pSwarmHarnessMode::DryRun)
-            .expect("live transport should initialize");
-    let mut coordinator =
-        PeerLifecycleTransportCoordinator::new("peer-processor", NodeRole::Processor, transport)
-            .expect("coordinator should initialize");
-
-    assert_eq!(
-        coordinator.apply_live_transport_signal(PeerLifecycleEvent::HandshakeSucceeded),
-        Ok(PeerLifecycleState::Active)
-    );
-    assert_eq!(
-        coordinator.apply_live_transport_signal(PeerLifecycleEvent::HeartbeatMissed),
-        Ok(PeerLifecycleState::Degraded)
-    );
-    assert_eq!(
-        coordinator.apply_live_transport_signal(PeerLifecycleEvent::HeartbeatRestored),
-        Ok(PeerLifecycleState::Active)
-    );
-    assert_eq!(
-        coordinator.apply_live_transport_signal(PeerLifecycleEvent::Disconnect),
-        Ok(PeerLifecycleState::Disconnected)
-    );
-    assert_eq!(
-        coordinator.apply_live_transport_signal(PeerLifecycleEvent::Rejoin),
-        Ok(PeerLifecycleState::Connecting)
-    );
-    assert_eq!(
-        coordinator.apply_live_transport_signal(PeerLifecycleEvent::HandshakeSucceeded),
-        Ok(PeerLifecycleState::Active)
-    );
+    let mut coordinator = build_live_coordinator();
+    for (event, expected) in signal_sequence() {
+        assert_signal_state(&mut coordinator, event, expected);
+    }
 }
 
 #[test]
@@ -87,4 +60,46 @@ fn integration_runtime_wiring_can_enable_live_transport_profile_markers() {
     assert!(default_wiring
         .all_components()
         .contains(&"p2p-in-memory-transport-fallback"));
+}
+
+fn build_live_coordinator() -> PeerLifecycleTransportCoordinator<Libp2pLivePeerLifecycleTransport> {
+    let transport =
+        Libp2pLivePeerLifecycleTransport::new(live_swarm_config(), P2pSwarmHarnessMode::DryRun)
+            .expect("live transport should initialize");
+    PeerLifecycleTransportCoordinator::new("peer-processor", NodeRole::Processor, transport)
+        .expect("coordinator should initialize")
+}
+
+fn assert_signal_state(
+    coordinator: &mut PeerLifecycleTransportCoordinator<Libp2pLivePeerLifecycleTransport>,
+    event: PeerLifecycleEvent,
+    expected: PeerLifecycleState,
+) {
+    assert_eq!(coordinator.apply_live_transport_signal(event), Ok(expected));
+}
+
+fn signal_sequence() -> Vec<(PeerLifecycleEvent, PeerLifecycleState)> {
+    vec![
+        (
+            PeerLifecycleEvent::HandshakeSucceeded,
+            PeerLifecycleState::Active,
+        ),
+        (
+            PeerLifecycleEvent::HeartbeatMissed,
+            PeerLifecycleState::Degraded,
+        ),
+        (
+            PeerLifecycleEvent::HeartbeatRestored,
+            PeerLifecycleState::Active,
+        ),
+        (
+            PeerLifecycleEvent::Disconnect,
+            PeerLifecycleState::Disconnected,
+        ),
+        (PeerLifecycleEvent::Rejoin, PeerLifecycleState::Connecting),
+        (
+            PeerLifecycleEvent::HandshakeSucceeded,
+            PeerLifecycleState::Active,
+        ),
+    ]
 }

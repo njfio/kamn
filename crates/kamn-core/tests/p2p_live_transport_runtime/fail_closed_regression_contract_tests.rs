@@ -24,36 +24,8 @@ fn integration_live_transport_invalid_event_retries_are_idempotent() {
 #[test]
 fn regression_live_transport_data_plane_unknown_recipient_fails_closed() {
     // Regression: #3574
-    let bootstrap_seed = unique_tcp_listen_address();
-    let transport = Libp2pLivePeerLifecycleTransport::new(
-        live_swarm_config_for_peer(
-            "peer-processor-live-fail-closed",
-            unique_tcp_listen_address().as_str(),
-            bootstrap_seed.as_str(),
-        ),
-        P2pSwarmHarnessMode::DryRun,
-    )
-    .expect("live transport should initialize");
-
-    transport
-        .advertise(
-            PeerDiscoveryRecord::new(
-                "peer-processor-live-fail-closed",
-                NodeRole::Processor,
-                vec!["messages".to_owned()],
-            )
-            .expect("discovery record should build"),
-        )
-        .expect("local peer should advertise");
-
-    let frame = PeerGossipFrame::new(
-        "messages",
-        "peer-processor-live-fail-closed",
-        "peer-missing-live",
-        "tx-live-fail-closed",
-    )
-    .expect("frame should build");
-    let result = transport.send(frame);
+    let transport = build_unknown_recipient_transport();
+    let result = transport.send(missing_recipient_frame());
     assert_eq!(
         result,
         Err(P2pTransportError::UnknownRecipientPeer(
@@ -106,4 +78,26 @@ fn regression_live_transport_signal_bridge_fails_closed_on_invalid_sequence() {
             }
         ))
     );
+}
+
+fn build_unknown_recipient_transport() -> Libp2pLivePeerLifecycleTransport {
+    let bootstrap_seed = unique_tcp_listen_address();
+    let transport =
+        build_seeded_live_transport("peer-processor-live-fail-closed", bootstrap_seed.as_str());
+    advertise_messages_peer(
+        &transport,
+        "peer-processor-live-fail-closed",
+        NodeRole::Processor,
+    );
+    transport
+}
+
+fn missing_recipient_frame() -> PeerGossipFrame {
+    PeerGossipFrame::new(
+        "messages",
+        "peer-processor-live-fail-closed",
+        "peer-missing-live",
+        "tx-live-fail-closed",
+    )
+    .expect("frame should build")
 }
