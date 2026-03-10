@@ -20,12 +20,12 @@ Split `crates/kamn-core/tests/data_layer_m3_blind_index_search.rs` into a thin r
 - Extraction contract markers drift from the real root layout
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/tests/data_layer_m3_blind_index_search.rs` is reduced to a thin root shell at or below 180 LOC
-- [ ] Root shell wires bounded sibling modules for the current blind-index search contract concerns and shared support
-- [ ] All extracted files touched by the split remain at or below 200 LOC
-- [ ] `cargo test -p kamn-core --test data_layer_m3_blind_index_search -- --nocapture` passes
-- [ ] `cargo test -p kamn-core --test data_layer_m3_blind_index_search_extraction_contract -- --nocapture` passes
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-m3-blind-index-search-size.json` returns `policy_decision=GO`
+- [x] `crates/kamn-core/tests/data_layer_m3_blind_index_search.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for the current blind-index search contract concerns and shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-core --test data_layer_m3_blind_index_search -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test data_layer_m3_blind_index_search_extraction_contract -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-m3-blind-index-search-size.json` returns `policy_decision=GO`
 
 ## Files to touch
 - `specs/6830-split-data-layer-m3-blind-index-search.md`
@@ -44,3 +44,13 @@ Split `crates/kamn-core/tests/data_layer_m3_blind_index_search.rs` into a thin r
 3. Run the extraction contract target
 4. Run the real `data_layer_m3_blind_index_search` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- `cargo test -p kamn-core --test data_layer_m3_blind_index_search_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_m3_blind_index_search -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-m3-blind-index-search-size.json`
+- Result: `policy_decision=GO`
+- Integration note: the extracted layout is exercised through the real `data_layer_m3_blind_index_search` test target with all 11 search/determinism/projection checks still wired and passing
+
+## Deviations
+- None
