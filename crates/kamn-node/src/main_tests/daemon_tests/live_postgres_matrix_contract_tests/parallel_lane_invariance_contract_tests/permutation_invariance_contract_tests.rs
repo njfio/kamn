@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_permutation_contract_is_canonical(
 ) {
     assert_eq!(

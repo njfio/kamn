@@ -184,4 +184,3 @@ fn functional_runtime_daemon_live_postgres_validation_slice_env_matrix_contract_
     assert_eq!(url_fallback.as_deref(), Some(fallback));
 }
 
-#[test]

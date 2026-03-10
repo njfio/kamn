@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_live_postgres_validation_slice_load_profile_matrix_contract_is_canonical(
 ) {
     let profiles = project_live_postgres_load_profiles();
@@ -83,4 +84,3 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_load_profile
     }
 }
 
-#[test]

@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_contract_is_canonical(
 ) {
     let rows = project_live_postgres_matrix_rows();
@@ -65,4 +66,3 @@ fn functional_runtime_daemon_live_postgres_validation_slice_matrix_taxonomy_brid
     );
 }
 
-#[test]

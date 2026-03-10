@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_live_postgres_validation_slice_asymmetric_parallel_lane_contract_is_canonical(
 ) {
     let lanes = project_live_postgres_asymmetric_parallel_lanes();
@@ -112,4 +113,3 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_asymmetric_p
     }
 }
 
-#[test]

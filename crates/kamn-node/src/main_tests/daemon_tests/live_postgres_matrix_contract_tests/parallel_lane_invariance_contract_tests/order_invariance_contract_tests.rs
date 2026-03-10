@@ -1,3 +1,4 @@
+#[test]
 fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_order_invariance_contract_is_canonical(
 ) {
     let lane_sets_csv = ["symmetric_parallel", "asymmetric_parallel"].join(",");
@@ -96,4 +97,3 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
     );
 }
 
-#[test]
