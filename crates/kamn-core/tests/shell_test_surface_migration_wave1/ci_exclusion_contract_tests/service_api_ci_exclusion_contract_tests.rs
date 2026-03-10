@@ -1,5 +1,5 @@
 use crate::ci_exclusion_contract_tests::support::{
-    assert_ci_tools_and_doc, assert_workflow_and_fast_mode_exclusion, load_ci_exclusion_context,
+    assert_ci_tools_surface_and_doc, assert_fast_gate_exclusion, load_ci_exclusion_context,
 };
 
 #[test]
@@ -56,13 +56,8 @@ fn assert_service_api_ci_exclusion(
     lane_label: &str,
 ) {
     let context = load_ci_exclusion_context();
-    assert_workflow_and_fast_mode_exclusion(
-        &context,
-        workflow_marker,
-        fast_mode_marker,
-        lane_label,
-    );
-    assert_ci_tools_and_doc(
+    assert_fast_gate_exclusion(&context, workflow_marker, fast_mode_marker, lane_label);
+    assert_ci_tools_surface_and_doc(
         &context,
         ci_tools_markers,
         ci_tools_label,

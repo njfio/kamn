@@ -21,7 +21,7 @@ pub fn assert_excluded(haystack: &str, marker: &str, message: &str) {
     assert!(!haystack.contains(marker), "{message}");
 }
 
-pub fn assert_workflow_and_fast_mode_exclusion(
+pub fn assert_fast_gate_exclusion(
     context: &CiExclusionContext,
     workflow_marker: &str,
     fast_mode_marker: &str,
@@ -39,7 +39,7 @@ pub fn assert_workflow_and_fast_mode_exclusion(
     );
 }
 
-pub fn assert_ci_tools_and_doc(
+pub fn assert_ci_tools_surface_and_doc(
     context: &CiExclusionContext,
     ci_tools_markers: &[&str],
     ci_tools_label: &str,
