@@ -20,12 +20,12 @@ Split `crates/kamn-node/tests/node_runtime_cli_docs.rs` into a thin root shell p
 - Extraction contract markers drift from the real root layout
 
 ## Acceptance criteria
-- [ ] `crates/kamn-node/tests/node_runtime_cli_docs.rs` is reduced to a thin root shell at or below 180 LOC
-- [ ] Root shell wires bounded sibling modules for the current CLI docs contract concerns and any shared support
-- [ ] All extracted files touched by the split remain at or below 200 LOC
-- [ ] `cargo test -p kamn-node --test node_runtime_cli_docs -- --nocapture` passes
-- [ ] `cargo test -p kamn-node --test node_runtime_cli_docs_extraction_contract -- --nocapture` passes
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/node-runtime-cli-docs-size.json` returns `policy_decision=GO`
+- [x] `crates/kamn-node/tests/node_runtime_cli_docs.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for the current CLI docs contract concerns and any shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-node --test node_runtime_cli_docs -- --nocapture` passes
+- [x] `cargo test -p kamn-node --test node_runtime_cli_docs_extraction_contract -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/node-runtime-cli-docs-size.json` returns `policy_decision=GO`
 
 ## Files to touch
 - `specs/6824-split-node-runtime-cli-docs.md`
@@ -44,3 +44,13 @@ Split `crates/kamn-node/tests/node_runtime_cli_docs.rs` into a thin root shell p
 3. Run the extraction contract target
 4. Run the real `node_runtime_cli_docs` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- `cargo test -p kamn-node --test node_runtime_cli_docs_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node --test node_runtime_cli_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/node-runtime-cli-docs-size.json`
+- Result: `policy_decision=GO`
+- Integration note: the extracted layout is exercised through the real `node_runtime_cli_docs` test target with all 30 docs assertions still wired and passing
+
+## Deviations
+- None
