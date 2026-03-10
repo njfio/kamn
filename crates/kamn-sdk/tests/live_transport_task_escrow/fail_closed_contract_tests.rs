@@ -1,10 +1,9 @@
 use crate::support::{
     assert_balance_route_fails_closed, assert_unknown_escrow_alias,
-    assert_unknown_task_aliases, ensure_live_test_env, live_artifact, live_client, live_task,
-    create_task_request, reserve_loopback_addr, run_contract_server, wait_for_server_ready,
+    assert_unknown_task_aliases, create_task_request, ensure_live_test_env, live_artifact,
+    live_client, live_task, reserve_loopback_addr, spawn_expected_server, wait_for_server_ready,
 };
 use kamn_sdk::{KamnAgent, SdkError};
-use std::thread;
 
 #[test]
 fn regression_live_transport_unknown_task_and_escrow_aliases_fail_closed() {
@@ -19,7 +18,7 @@ fn regression_live_transport_unknown_task_and_escrow_aliases_fail_closed() {
 fn regression_live_transport_submit_artifact_requires_accepted_task() {
     ensure_live_test_env();
     let bind_addr = reserve_loopback_addr();
-    let server = spawn_server(bind_addr.clone(), vec![create_task_request()]);
+    let server = spawn_expected_server(bind_addr.clone(), vec![create_task_request()]);
     wait_for_server_ready();
 
     let mut client = live_client(bind_addr.as_str());
@@ -33,9 +32,3 @@ fn regression_live_transport_submit_artifact_requires_accepted_task() {
     assert!(server_result.is_ok(), "unaccepted task artifact submission should not emit an extra network request");
 }
 
-fn spawn_server(
-    bind_addr: String,
-    expected_requests: Vec<crate::support::ExpectedRequest>,
-) -> thread::JoinHandle<Result<(), String>> {
-    thread::spawn(move || run_contract_server(bind_addr, expected_requests))
-}

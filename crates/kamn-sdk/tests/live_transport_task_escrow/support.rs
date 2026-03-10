@@ -6,6 +6,8 @@ mod client_fixtures;
 mod request_fixtures;
 #[path = "support/task_flow.rs"]
 mod task_flow;
+#[path = "support/server_runtime.rs"]
+mod server_runtime;
 
 pub(crate) use base::{
     did, ensure_live_test_env, expected_request, reserve_loopback_addr, run_contract_server,
@@ -22,3 +24,4 @@ pub(crate) use task_flow::{
     assert_balance_route_fails_closed, assert_escrow_flow, assert_task_flow,
     assert_unknown_escrow_alias, assert_unknown_task_aliases,
 };
+pub(crate) use server_runtime::spawn_expected_server;

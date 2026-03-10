@@ -9,7 +9,7 @@ use std::thread;
 fn spec_c06_live_transport_task_and_escrow_routes_execute_network_contract() {
     ensure_live_test_env();
     let bind_addr = reserve_loopback_addr();
-    let server = spawn_contract_server(bind_addr.clone());
+    let server = spawn_expected_server(bind_addr.clone(), task_and_escrow_requests());
     wait_for_server_ready();
 
     let mut client = live_client(bind_addr.as_str());
@@ -21,6 +21,3 @@ fn spec_c06_live_transport_task_and_escrow_routes_execute_network_contract() {
     assert!(server_result.is_ok(), "task/escrow route server should satisfy request budget");
 }
 
-fn spawn_contract_server(bind_addr: String) -> thread::JoinHandle<Result<(), String>> {
-    thread::spawn(move || run_contract_server(bind_addr, task_and_escrow_requests()))
-}

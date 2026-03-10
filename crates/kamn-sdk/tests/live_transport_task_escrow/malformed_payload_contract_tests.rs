@@ -1,10 +1,9 @@
 use crate::support::{
     accept_task_request, create_task_request, did, ensure_live_test_env,
     expire_artifact_request, live_artifact, live_client, live_task, reserve_loopback_addr,
-    run_contract_server, submit_artifact_request, wait_for_server_ready, ExpectedRequest,
+    spawn_expected_server, submit_artifact_request, wait_for_server_ready, ExpectedRequest,
 };
 use kamn_sdk::{KamnAgent, SdkError};
-use std::thread;
 
 #[test]
 fn regression_live_transport_artifact_status_rejects_malformed_service_payload() {
@@ -18,7 +17,7 @@ fn regression_live_transport_artifact_status_rejects_malformed_service_payload()
 fn regression_live_transport_task_status_rejects_malformed_service_payload() {
     ensure_live_test_env();
     let bind_addr = reserve_loopback_addr();
-    let server = spawn_server(bind_addr.clone(), vec![create_task_request(), malformed_task_status_request()]);
+    let server = spawn_expected_server(bind_addr.clone(), vec![create_task_request(), malformed_task_status_request()]);
     wait_for_server_ready();
 
     let mut client = live_client(bind_addr.as_str());
@@ -54,7 +53,7 @@ where
 {
     ensure_live_test_env();
     let bind_addr = reserve_loopback_addr();
-    let server = spawn_server(bind_addr.clone(), content_setup_requests(response));
+    let server = spawn_expected_server(bind_addr.clone(), content_setup_requests(response));
     wait_for_server_ready();
 
     let mut client = live_client(bind_addr.as_str());
@@ -113,9 +112,3 @@ fn malformed_tombstone_request() -> ExpectedRequest {
     }
 }
 
-fn spawn_server(
-    bind_addr: String,
-    expected_requests: Vec<ExpectedRequest>,
-) -> thread::JoinHandle<Result<(), String>> {
-    thread::spawn(move || run_contract_server(bind_addr, expected_requests))
-}
