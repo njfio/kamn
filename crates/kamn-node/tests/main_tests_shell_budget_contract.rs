@@ -1,6 +1,21 @@
 use std::fs;
 use std::path::PathBuf;
 
+const EXTRACTED_ROOT_MARKERS: [&str; 12] = [
+    "struct EnvVarGuard",
+    "struct MockHttpReply",
+    "fn signer_env_lock()",
+    "fn lock_signer_env_guard()",
+    "fn log_env_lock()",
+    "fn managed_signer_public_key_hex(",
+    "fn read_http_request(",
+    "fn request_body(",
+    "fn project_json_value_to_string(",
+    "fn find_json_field_value(",
+    "fn extract_json_string_field(",
+    "fn spawn_kolme_live_mock_server(",
+];
+
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
@@ -11,30 +26,23 @@ fn read_repo_file(relative: &str) -> String {
     })
 }
 
+fn support_file() -> PathBuf {
+    repo_root().join("src/main_tests/support.rs")
+}
+
 #[test]
 fn regression_main_tests_root_extracts_shared_support_surface() {
     let root = read_repo_file("src/main_tests.rs");
-    let support = repo_root().join("src/main_tests/support.rs");
 
-    assert!(support.exists(), "src/main_tests/support.rs should exist");
+    assert!(
+        support_file().exists(),
+        "src/main_tests/support.rs should exist"
+    );
     assert!(
         root.contains("mod support;"),
         "main_tests.rs should declare the extracted support module"
     );
-    for marker in [
-        "struct EnvVarGuard",
-        "struct MockHttpReply",
-        "fn signer_env_lock()",
-        "fn lock_signer_env_guard()",
-        "fn log_env_lock()",
-        "fn managed_signer_public_key_hex(",
-        "fn read_http_request(",
-        "fn request_body(",
-        "fn project_json_value_to_string(",
-        "fn find_json_field_value(",
-        "fn extract_json_string_field(",
-        "fn spawn_kolme_live_mock_server(",
-    ] {
+    for marker in EXTRACTED_ROOT_MARKERS {
         assert!(
             !root.contains(marker),
             "main_tests.rs should not retain shared helper marker: {marker}"
