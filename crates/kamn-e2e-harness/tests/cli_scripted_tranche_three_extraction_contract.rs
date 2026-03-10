@@ -2,7 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const CLI_SCRIPTED_ROOT_SOURCE: &str = include_str!("../src/drivers/cli_scripted.rs");
-const CLI_SCRIPTED_TRANCHE_MODULE_FILE: &str = "src/drivers/cli_scripted/live_probe_tranche_three.rs";
+const CLI_SCRIPTED_TRANCHE_MODULE_FILE: &str =
+    "src/drivers/cli_scripted/live_probe_tranche_three.rs";
 const CLI_SCRIPTED_TRANCHE_DIR: &str = "src/drivers/cli_scripted/live_probe_tranche_three";
 const ROOT_STAGED_MAX_LINES: usize = 400;
 const EXTRACTED_MAX_LINES: usize = 200;
@@ -110,7 +111,9 @@ fn collected_rs_files(base_dir: &Path) -> Vec<PathBuf> {
 }
 
 fn collect_rs_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
-    for entry in fs::read_dir(dir).expect("extracted cli_scripted tranche-three dir should be readable") {
+    for entry in
+        fs::read_dir(dir).expect("extracted cli_scripted tranche-three dir should be readable")
+    {
         let entry = entry.expect("extracted cli_scripted tranche-three entry should be readable");
         let path = entry.path();
         if path.is_dir() {
