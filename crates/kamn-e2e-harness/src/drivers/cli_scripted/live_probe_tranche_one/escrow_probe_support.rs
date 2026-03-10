@@ -3,10 +3,10 @@ use super::super::{
     validate_live_s05_release_escrow_response, DEFAULT_S05_AGENT_NAME,
     DEFAULT_S05_FUND_ESCROW_PAYLOAD,
 };
-use super::{cli_binary, endpoint, env_payload, validate_non_empty};
+use super::{agent_name, cli_binary, endpoint, env_payload, validate_non_empty};
 
 pub(super) fn run_live_s05_cli_escrow_settlement_probe() -> Result<(), String> {
-    let agent_name = super::super::env_var_or_default("KAMN_AGENT_NAME", DEFAULT_S05_AGENT_NAME);
+    let agent_name = agent_name(DEFAULT_S05_AGENT_NAME);
     let escrow_id = fund_escrow(agent_name.as_str())?;
     release_escrow(agent_name.as_str(), escrow_id.as_str())
 }

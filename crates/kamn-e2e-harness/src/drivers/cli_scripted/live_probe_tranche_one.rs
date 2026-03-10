@@ -20,6 +20,10 @@ pub(super) fn env_payload(name: &str, default: &str) -> String {
     env::var(name).unwrap_or_else(|_| default.to_owned())
 }
 
+pub(super) fn agent_name(default: &str) -> String {
+    super::env_var_or_default("KAMN_AGENT_NAME", default)
+}
+
 pub(super) fn validate_non_empty(value: &str, error: &str) -> Result<(), String> {
     if value.trim().is_empty() {
         return Err(error.to_owned());

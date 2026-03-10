@@ -2,11 +2,10 @@ use super::super::super::{
     parse_text_output_field, run_cli_command_capture_stdout_with_agent_name,
     DEFAULT_S03_AGENT_NAME, DEFAULT_S03_CHANNEL_PAYLOAD, DEFAULT_S03_MESSAGE_PAYLOAD,
 };
-use super::super::{cli_binary, endpoint, env_payload, validate_non_empty};
+use super::super::{agent_name, cli_binary, endpoint, env_payload, validate_non_empty};
 
 pub(super) fn run_live_s03_cli_group_channel_probe() -> Result<(), String> {
-    let agent_name =
-        super::super::super::env_var_or_default("KAMN_AGENT_NAME", DEFAULT_S03_AGENT_NAME);
+    let agent_name = agent_name(DEFAULT_S03_AGENT_NAME);
     let channel_id = create_channel(agent_name.as_str())?;
     let message_id = send_message(agent_name.as_str())?;
     query_message(agent_name.as_str(), message_id.as_str())?;

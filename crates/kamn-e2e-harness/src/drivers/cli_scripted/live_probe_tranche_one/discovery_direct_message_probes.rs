@@ -3,7 +3,7 @@ use super::super::{
     AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_ENV, AGENT_LIB_DETERMINISTIC_IDENTITY_OPT_IN_VALUE,
     DEFAULT_S02_AGENT_NAME, DEFAULT_S02_MESSAGE_PAYLOAD, DEFAULT_S02_REPLY_PAYLOAD,
 };
-use super::{cli_binary, endpoint, env_payload, validate_non_empty};
+use super::{agent_name, cli_binary, endpoint, env_payload, validate_non_empty};
 use std::process::{Command, ExitStatus, Stdio};
 
 pub(super) fn run_live_s01_cli_health_probe() -> Result<(), String> {
@@ -18,7 +18,7 @@ pub(super) fn run_live_s01_cli_health_probe() -> Result<(), String> {
 }
 
 pub(super) fn run_live_s02_cli_direct_message_probe() -> Result<(), String> {
-    let agent_name = super::super::env_var_or_default("KAMN_AGENT_NAME", DEFAULT_S02_AGENT_NAME);
+    let agent_name = agent_name(DEFAULT_S02_AGENT_NAME);
     let message_payload = env_payload("KAMN_E2E_S02_MESSAGE_PAYLOAD", DEFAULT_S02_MESSAGE_PAYLOAD);
     let reply_payload = env_payload("KAMN_E2E_S02_REPLY_PAYLOAD", DEFAULT_S02_REPLY_PAYLOAD);
     run_message_roundtrip(agent_name.as_str(), "send", message_payload.as_str())?;
