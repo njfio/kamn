@@ -20,12 +20,12 @@ Split `crates/kamn-core/tests/data_layer_postgres_repository_bridge.rs` into a t
 - Extraction contract markers drift from the real root layout
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/tests/data_layer_postgres_repository_bridge.rs` is reduced to a thin root shell at or below 180 LOC
-- [ ] Root shell wires bounded sibling modules for M0, M5, M6, and M7 bridge concerns plus shared support
-- [ ] All extracted files touched by the split remain at or below 200 LOC
-- [ ] `cargo test -p kamn-core --test data_layer_postgres_repository_bridge_extraction_contract -- --nocapture` passes
-- [ ] `cargo test -p kamn-core --test data_layer_postgres_repository_bridge -- --nocapture` passes
-- [ ] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-postgres-repository-bridge-size.json` returns `policy_decision=GO`
+- [x] `crates/kamn-core/tests/data_layer_postgres_repository_bridge.rs` is reduced to a thin root shell at or below 180 LOC
+- [x] Root shell wires bounded sibling modules for M0, M5, M6, and M7 bridge concerns plus shared support
+- [x] All extracted files touched by the split remain at or below 200 LOC
+- [x] `cargo test -p kamn-core --test data_layer_postgres_repository_bridge_extraction_contract -- --nocapture` passes
+- [x] `cargo test -p kamn-core --test data_layer_postgres_repository_bridge -- --nocapture` passes
+- [x] `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-postgres-repository-bridge-size.json` returns `policy_decision=GO`
 
 ## Files to touch
 - `specs/6818-split-data-layer-postgres-repository-bridge.md`
@@ -44,3 +44,13 @@ Split `crates/kamn-core/tests/data_layer_postgres_repository_bridge.rs` into a t
 3. Run the extraction contract target
 4. Run the real `data_layer_postgres_repository_bridge` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- Root shell reduced to `10` LOC and now only wires extracted sibling modules plus shared support
+- `cargo test -p kamn-core --test data_layer_postgres_repository_bridge_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_postgres_repository_bridge -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/data-layer-postgres-repository-bridge-size.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None
