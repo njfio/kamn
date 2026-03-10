@@ -113,6 +113,16 @@ if ! grep -Fq "Check touched shell strict mode" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
+if ! grep -Fq "Enforce workflow runtime ceiling policy" "$FAST_WORKFLOW"; then
+  echo "expected workflow runtime ceiling policy step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/test_workflow_runtime_ceiling_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected workflow runtime ceiling policy step to run the policy test script in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/ci/check_touched_shell_strict_mode.sh" "$FAST_WORKFLOW"; then
   echo "expected touched shell strict-mode gate to run checker wrapper in ci-fast-gate.yml" >&2
   exit 1
@@ -125,6 +135,11 @@ fi
 
 if ! grep -Fq "ci-touched-shell-strict-mode-report.json" "$FAST_WORKFLOW"; then
   echo "expected touched shell strict-mode report artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash "$ROOT_DIR/scripts/ci/test_workflow_runtime_ceiling_policy.sh"' "$ROOT_DIR/scripts/ci/test_ci_tools.sh"; then
+  echo "expected ci tools fast-mode entrypoint to run workflow runtime ceiling policy tests" >&2
   exit 1
 fi
 

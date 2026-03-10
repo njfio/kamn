@@ -9,12 +9,17 @@ on:
     - cron: "23 6 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: ci-supply-chain-advisory-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   supply-chain-advisory:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout

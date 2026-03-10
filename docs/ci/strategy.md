@@ -8,11 +8,15 @@ Detailed policy and script-surface budget rules live in `docs/ci/ci-cost-and-lan
 ## Lane Split
 - `ci-fast-gate` (PR required): minimal critical path for merge decisions.
 - `ci-deep-validate` (nightly/manual): heavier suites outside PR hot path.
+- `workflow_runtime_ceiling_minutes=60`
+- `workflow_pr_concurrency_cancel_in_progress=true`
+- Every workflow job must declare explicit `timeout-minutes`.
+- Every workflow with a `pull_request` trigger must define top-level `concurrency` with `cancel-in-progress: true`.
 
 ## Stage-1 Budget Targets
 - Fast gate runtime: <= 8 minutes p50, <= 12 minutes p95.
 - PR runner consumption: <= 25 total runner-minutes.
-- Nightly deep validate: <= 120 minutes.
+- Nightly deep validate: <= 60 minutes.
 
 Versioned thresholds are defined in `.ci/ci-budget.env`.
 
