@@ -62,14 +62,6 @@ fn capture_daemon_json_with_chain(
     (rendered, captured_logs, execution_id)
 }
 
-fn capture_daemon_json_and_logs(extra_args: &[&str]) -> (String, Vec<String>) {
-    let parsed = parse_daemon(extra_args);
-    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
-    let report = report_result.expect("daemon execution should succeed");
-    let rendered = render_bootstrap_report(&report, OutputMode::json());
-    (rendered, captured_logs)
-}
-
 fn capture_daemon_renderings_and_logs(extra_args: &[&str]) -> (String, String, Vec<String>) {
     let parsed = parse_daemon(extra_args);
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
@@ -96,6 +88,17 @@ fn find_first_daemon_log<'a>(captured_logs: &'a [String], event: &str) -> &'a st
         .find(|line| line.contains(event))
         .map(|line| line.as_str())
         .expect("daemon execution should emit structured log marker")
+}
+
+fn find_daemon_complete_log_for_execution<'a>(
+    captured_logs: &'a [String],
+    execution_id: &str,
+) -> &'a str {
+    find_daemon_log(
+        captured_logs,
+        "\"event\":\"node.runtime.daemon.execute.complete\"",
+        execution_id,
+    )
 }
 
 fn assert_json_log_field(log_line: &str, field: &str, expected: &str) {
