@@ -50,3 +50,13 @@ Reduce `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_topology_cont
 - lane-count mapping rows
 - host-mode mapping rows
 - host-cardinality mapping rows
+
+## Phase 6 evidence
+- Real entrypoint preserved: `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_topology_contract_tests.rs` still includes `topology_mapping_contract_tests.rs`
+- Extraction contract: `cargo test -p kamn-node --test topology_mapping_contract_tests_extraction_contract -- --nocapture`
+- Real suite path: `cargo test -p kamn-node daemon_tests -- --nocapture`
+- Touched-Rust ratchet: `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6742-final/repo --base-ref origin/main --output-json /tmp/6742-touched-size-final.json`
+- Ratchet result: `policy_decision=GO`
+
+## Deviations
+- The root shell keeps contract-expected `include!(...)` markers as comments while the compiled module wiring uses `#[path = ...] mod ...;` so the extracted tests compile as bounded sibling modules without changing the extraction contract expectations.
