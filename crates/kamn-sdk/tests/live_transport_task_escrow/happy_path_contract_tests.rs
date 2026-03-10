@@ -1,9 +1,9 @@
 use crate::support::{
-    assert_escrow_flow, assert_task_flow, ensure_live_test_env, live_client, reserve_loopback_addr,
-    run_contract_server, task_and_escrow_requests, wait_for_server_ready,
+    assert_escrow_flow, assert_task_flow, ensure_live_test_env, live_client,
+    reserve_loopback_addr, spawn_expected_server, task_and_escrow_requests,
+    wait_for_server_ready,
 };
 use kamn_sdk::KamnAgent;
-use std::thread;
 
 #[test]
 fn spec_c06_live_transport_task_and_escrow_routes_execute_network_contract() {
@@ -20,4 +20,3 @@ fn spec_c06_live_transport_task_and_escrow_routes_execute_network_contract() {
     let server_result = server.join().expect("server thread should join");
     assert!(server_result.is_ok(), "task/escrow route server should satisfy request budget");
 }
-
