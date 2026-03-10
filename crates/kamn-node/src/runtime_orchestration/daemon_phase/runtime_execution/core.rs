@@ -4,8 +4,7 @@ use super::completion_logging::log_daemon_execution_complete;
 use super::execution_builder::{build_daemon_execution, DaemonPeerLifecycle, ExecutedDaemonRun};
 use super::lifecycle::build_peer_lifecycle_summary;
 use super::options::{parse_daemon_runtime_options, ParsedDaemonRuntimeOptions};
-use super::reporting::{build_daemon_report_snapshot, DaemonReportSnapshot};
-use super::shutdown_fields::daemon_shutdown_drain_status;
+use super::reporting::build_daemon_report_snapshot;
 use crate::daemon_shutdown::DaemonCompletion;
 
 pub(super) fn execute_daemon_runtime(
@@ -13,28 +12,16 @@ pub(super) fn execute_daemon_runtime(
     execution_id: &str,
     options: DaemonRuntimeOptions,
 ) -> Result<DaemonExecution, ConfigError> {
-    let options = parse_daemon_runtime_options(options)?;
-    log_daemon_execution_start(
-        runtime_mode,
-        execution_id,
-        options.max_ticks,
-        options.tick_interval_ms,
-    )?;
+    let options = parse_and_log_daemon_options(runtime_mode, execution_id, options)?;
     let peer_lifecycle = build_daemon_peer_lifecycle(&options)?;
     let daemon_run = execute_daemon_run(runtime_mode, &options)?;
-    log_daemon_execution_complete(
+    finalize_daemon_execution(
         runtime_mode,
         execution_id,
-        &daemon_run.daemon_completion,
-        &daemon_run.runtime_processing,
-        &daemon_run.report,
-    )?;
-    Ok(build_daemon_execution(
-        options.max_ticks,
-        options.tick_interval_ms,
+        options,
         peer_lifecycle,
         daemon_run,
-    ))
+    )
 }
 
 fn build_daemon_peer_lifecycle(
@@ -63,13 +50,7 @@ fn execute_daemon_run(
         &runtime_processing,
     )?;
     validate_shutdown_observability(&daemon_completion, &daemon_observability)?;
-    let report = build_daemon_report_snapshot(
-        options.max_ticks,
-        options.tick_interval_ms,
-        options.daemon_shutdown_signal_ticks.as_slice(),
-        &daemon_completion,
-        daemon_observability.reason_code.as_str(),
-    )?;
+    let report = build_daemon_run_report(options, &daemon_completion, &daemon_observability)?;
     Ok(ExecutedDaemonRun {
         daemon_completion,
         runtime_processing,
@@ -88,6 +69,57 @@ fn execute_relay_tick_loop(
         options.service_api_state_file.as_deref(),
         options.service_api_relay_spool_file.as_deref(),
         options.service_api_signature_state_hash.as_str(),
+    )
+}
+
+fn parse_and_log_daemon_options(
+    runtime_mode: RuntimeMode,
+    execution_id: &str,
+    options: DaemonRuntimeOptions,
+) -> Result<ParsedDaemonRuntimeOptions, ConfigError> {
+    let options = parse_daemon_runtime_options(options)?;
+    log_daemon_execution_start(
+        runtime_mode,
+        execution_id,
+        options.max_ticks,
+        options.tick_interval_ms,
+    )?;
+    Ok(options)
+}
+
+fn finalize_daemon_execution(
+    runtime_mode: RuntimeMode,
+    execution_id: &str,
+    options: ParsedDaemonRuntimeOptions,
+    peer_lifecycle: DaemonPeerLifecycle,
+    daemon_run: ExecutedDaemonRun,
+) -> Result<DaemonExecution, ConfigError> {
+    log_daemon_execution_complete(
+        runtime_mode,
+        execution_id,
+        &daemon_run.daemon_completion,
+        &daemon_run.runtime_processing,
+        &daemon_run.report,
+    )?;
+    Ok(build_daemon_execution(
+        options.max_ticks,
+        options.tick_interval_ms,
+        peer_lifecycle,
+        daemon_run,
+    ))
+}
+
+fn build_daemon_run_report(
+    options: &ParsedDaemonRuntimeOptions,
+    daemon_completion: &DaemonCompletion,
+    daemon_observability: &crate::daemon_observability::DaemonObservabilityTelemetry,
+) -> Result<super::reporting::DaemonReportSnapshot, ConfigError> {
+    build_daemon_report_snapshot(
+        options.max_ticks,
+        options.tick_interval_ms,
+        options.daemon_shutdown_signal_ticks.as_slice(),
+        daemon_completion,
+        daemon_observability.reason_code.as_str(),
     )
 }
 

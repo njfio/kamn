@@ -57,34 +57,28 @@ fn select_convergence_decision(input: &DaemonConvergenceInput) -> (&'static str,
 }
 
 fn first_failed_reason(input: &DaemonConvergenceInput) -> Option<&'static str> {
-    failed_reason(
-        input.schema_gate_passed,
-        DAEMON_CONVERGENCE_REASON_SCHEMA_DRIFT,
-    )
-    .or_else(|| {
+    find_failed_reason([
+        failed_reason(
+            input.schema_gate_passed,
+            DAEMON_CONVERGENCE_REASON_SCHEMA_DRIFT,
+        ),
         failed_reason(
             input.error_path_gate_passed,
             DAEMON_CONVERGENCE_REASON_ERROR_PATH_DRIFT,
-        )
-    })
-    .or_else(|| {
+        ),
         failed_reason(
             input.concurrency_gate_passed,
             DAEMON_CONVERGENCE_REASON_CONCURRENCY_DRIFT,
-        )
-    })
-    .or_else(|| {
+        ),
         failed_reason(
             input.performance_budget_gate_passed,
             DAEMON_CONVERGENCE_REASON_PERFORMANCE_BUDGET,
-        )
-    })
-    .or_else(|| {
+        ),
         failed_reason(
             input.cost_budget_gate_passed,
             DAEMON_CONVERGENCE_REASON_COST_BUDGET,
-        )
-    })
+        ),
+    ])
 }
 
 fn failed_reason(passed: bool, reason_code: &'static str) -> Option<&'static str> {
@@ -92,4 +86,8 @@ fn failed_reason(passed: bool, reason_code: &'static str) -> Option<&'static str
         return None;
     }
     Some(reason_code)
+}
+
+fn find_failed_reason(reasons: [Option<&'static str>; 5]) -> Option<&'static str> {
+    reasons.into_iter().find_map(|reason| reason)
 }

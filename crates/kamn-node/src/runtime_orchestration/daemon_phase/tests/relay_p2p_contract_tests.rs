@@ -45,29 +45,16 @@ fn integration_daemon_relay_p2p_forward_and_ingest_updates_recipient_state() {
     let _log_lock = crate::logging::lock_log_config_for_tests();
     let recipient_paths = relay_fixture_paths("kamn-node-daemon-phase-p2p-recipient");
     write_empty_state_fixture(recipient_paths.state_file.as_path());
-    let (sender_relay_context, recipient_relay_context) = in_memory_p2p_context_pair();
-    let relay_entry = relay_entry_fixture(
-        "msg-p2p-forward-unit-1",
-        r#"{"message":"hello-p2p"}"#,
-        1_700_001_000,
+    let ingested = forward_and_ingest_in_memory_relay(
+        &recipient_paths,
+        relay_entry_fixture(
+            "msg-p2p-forward-unit-1",
+            r#"{"message":"hello-p2p"}"#,
+            1_700_001_000,
+        ),
     );
-    forward_service_api_relay_entry_via_p2p_for_test(&sender_relay_context, &relay_entry)
-        .expect("p2p relay send should succeed with deterministic in-memory transport");
-    let ingested = drain_daemon_service_api_relay_p2p_inbox_for_test(
-        &recipient_relay_context,
-        Some(recipient_paths.state_file.to_string_lossy().as_ref()),
-    )
-    .expect("recipient inbox drain should succeed");
     assert_eq!(ingested, 1);
-    let recipient_state_payload = fs::read_to_string(recipient_paths.state_file.as_path())
-        .expect("recipient state file should remain readable");
-    let recipient_state_json: serde_json::Value =
-        serde_json::from_str(recipient_state_payload.as_str())
-            .expect("recipient state payload should parse");
-    assert_eq!(
-        recipient_state_json["messages"]["msg-p2p-forward-unit-1"]["status"],
-        "relayed"
-    );
+    assert_message_relayed(&recipient_paths, "msg-p2p-forward-unit-1");
     remove_relay_fixture(&recipient_paths);
 }
 
@@ -76,32 +63,71 @@ fn regression_daemon_relay_tick_loop_p2p_unknown_recipient_requeues_with_error_c
     let _test_lock = lock_daemon_phase_test_guard();
     let _log_lock = crate::logging::lock_log_config_for_tests();
     let paths = relay_fixture_paths("kamn-node-daemon-phase-p2p-unknown-recipient");
+    seed_unknown_recipient_fixture(&paths);
+    let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV_FOR_TEST, None);
+    let _p2p_guard = set_daemon_service_api_relay_p2p_config_override_for_test(Some(
+        unknown_recipient_config_json().as_str(),
+    ));
+    let runtime_processing = run_unknown_recipient_tick_loop(&paths);
+    assert_eq!(runtime_processing.relay_drained_count, 1);
+    assert_eq!(runtime_processing.relay_projected_state_count, 0);
+    assert_eq!(runtime_processing.processing_error_count, 1);
+    assert_spool_contains_unknown_recipient(&paths);
+    remove_relay_fixture(&paths);
+}
+
+fn forward_and_ingest_in_memory_relay(
+    recipient_paths: &super::support::RelayFixturePaths,
+    relay_entry: crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+) -> usize {
+    let (sender_relay_context, recipient_relay_context) = in_memory_p2p_context_pair();
+    forward_service_api_relay_entry_via_p2p_for_test(&sender_relay_context, &relay_entry)
+        .expect("p2p relay send should succeed with deterministic in-memory transport");
+    drain_daemon_service_api_relay_p2p_inbox_for_test(
+        &recipient_relay_context,
+        Some(recipient_paths.state_file.to_string_lossy().as_ref()),
+    )
+    .expect("recipient inbox drain should succeed")
+}
+
+fn assert_message_relayed(paths: &super::support::RelayFixturePaths, message_id: &str) {
+    let recipient_state_payload = fs::read_to_string(paths.state_file.as_path())
+        .expect("recipient state file should remain readable");
+    let recipient_state_json: serde_json::Value =
+        serde_json::from_str(recipient_state_payload.as_str())
+            .expect("recipient state payload should parse");
+    assert_eq!(
+        recipient_state_json["messages"][message_id]["status"],
+        "relayed"
+    );
+}
+
+fn seed_unknown_recipient_fixture(paths: &super::support::RelayFixturePaths) {
     write_relay_fixture(
-        &paths,
+        paths,
         "msg-p2p-unknown-recipient-unit-1",
         r#"{"message":"p2p-unknown-recipient"}"#,
         1_700_001_100,
     );
-    let p2p_config_json = unknown_recipient_config_json();
-    let _route_guard = TestEnvGuard::set(SERVICE_API_RELAY_RECIPIENT_ROUTE_MAP_ENV_FOR_TEST, None);
-    let _p2p_guard =
-        set_daemon_service_api_relay_p2p_config_override_for_test(Some(p2p_config_json.as_str()));
+}
 
-    let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+fn run_unknown_recipient_tick_loop(
+    paths: &super::support::RelayFixturePaths,
+) -> crate::daemon_observability::DaemonRuntimeProcessingTelemetry {
+    execute_daemon_service_api_relay_tick_loop(
         1,
         1,
         Some(paths.state_file.to_string_lossy().as_ref()),
         Some(paths.relay_spool_file.to_string_lossy().as_ref()),
         "service-api:kamn-devnet:v0.1.0",
     )
-    .expect("daemon relay tick loop should complete");
-    assert_eq!(runtime_processing.relay_drained_count, 1);
-    assert_eq!(runtime_processing.relay_projected_state_count, 0);
-    assert_eq!(runtime_processing.processing_error_count, 1);
+    .expect("daemon relay tick loop should complete")
+}
+
+fn assert_spool_contains_unknown_recipient(paths: &super::support::RelayFixturePaths) {
     let relay_payload = fs::read_to_string(paths.relay_spool_file.as_path())
         .expect("relay spool file should remain readable");
     assert!(relay_payload.contains("msg-p2p-unknown-recipient-unit-1"));
-    remove_relay_fixture(&paths);
 }
 
 fn in_memory_p2p_context_pair() -> (

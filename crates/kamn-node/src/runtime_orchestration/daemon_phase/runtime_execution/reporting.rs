@@ -1,3 +1,5 @@
+mod snapshot_parts;
+
 use super::super::super::*;
 use super::super::live_postgres_bundle::{
     daemon_live_postgres_multi_host_execution_bundle_row_count,
@@ -14,6 +16,7 @@ use super::shutdown_fields::{
     daemon_shutdown_snapshot_flush_status,
 };
 use crate::daemon_shutdown::DaemonCompletion;
+use snapshot_parts::{build_selector_snapshot, build_shutdown_snapshot, report_snapshot};
 
 pub(super) struct DaemonReportSnapshot {
     pub(super) phase6: DaemonPhase6RuntimeProjection,
@@ -39,34 +42,15 @@ pub(super) fn build_daemon_report_snapshot(
 ) -> Result<DaemonReportSnapshot, ConfigError> {
     let phase6 =
         build_phase6_runtime_snapshot(max_ticks, tick_interval_ms, daemon_shutdown_signal_ticks)?;
-    let (selector_rows, row_count) = validated_selector_rows()?;
-    let convergence = execute_daemon_convergence_projection(build_convergence_input(
-        &phase6,
+    let selector_snapshot = build_selector_snapshot()?;
+    Ok(report_snapshot(
+        phase6,
+        selector_snapshot,
+        build_shutdown_snapshot(daemon_completion),
         daemon_reason_code,
         max_ticks,
         tick_interval_ms,
-    ));
-    Ok(DaemonReportSnapshot {
-        phase6,
-        convergence,
-        shutdown_signal_tick: shutdown_signal_tick_value(daemon_completion),
-        shutdown_drain_ticks: shutdown_reason_value(daemon_completion, "drain_ticks", "0"),
-        shutdown_timeout_ticks: shutdown_reason_value(daemon_completion, "timeout_ticks", "0"),
-        shutdown_ignored_signals: shutdown_reason_value(daemon_completion, "ignored_signals", "0"),
-        shutdown_drain_status: daemon_shutdown_drain_status(
-            daemon_completion.completion_reason.as_str(),
-        ),
-        shutdown_snapshot_flush_status: daemon_shutdown_snapshot_flush_status(
-            daemon_completion.completion_reason.as_str(),
-        ),
-        selector_rows_fingerprint:
-            project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(
-                selector_rows.as_slice(),
-            ),
-        row_count,
-        row_count_label: row_count.to_string(),
-        selector_rows_csv: selector_rows.join(","),
-    })
+    ))
 }
 
 fn build_phase6_runtime_snapshot(

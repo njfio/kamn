@@ -1,3 +1,5 @@
+mod tick_iteration;
+
 use super::super::super::*;
 use super::super::service_api_relay_p2p::{
     drain_daemon_service_api_relay_p2p_inbox, resolve_daemon_service_api_relay_p2p_context,
@@ -7,7 +9,8 @@ use super::env_support::{
     resolve_daemon_service_api_relay_recipient_route_map,
 };
 use super::forwarding::process_relay_spool;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use tick_iteration::execute_tick;
 
 pub(super) fn execute_daemon_service_api_relay_tick_loop(
     executed_ticks: u64,
@@ -25,32 +28,13 @@ pub(super) fn execute_daemon_service_api_relay_tick_loop(
     if tick_context.executed_ticks_is_zero() {
         return Ok(runtime_processing);
     }
-    for tick in 0..executed_ticks {
-        let tick_started_at = Instant::now();
-        if let Some(relay_p2p_context) = tick_context.relay_p2p_context.as_ref() {
-            ingest_p2p_inbox(relay_p2p_context, service_api_state_file)?;
-        }
-        if tick_context.relay_enabled {
-            process_relay_spool(
-                &mut runtime_processing,
-                tick_context.relay_p2p_context.as_ref(),
-                &tick_context.relay_route_map,
-                tick_context.relay_signing_private_key_hex.as_deref(),
-                &mut tick_context.relay_nonce_counter,
-                service_api_state_file,
-                service_api_relay_spool_file,
-                service_api_signature_state_hash,
-            )?;
-        }
-        record_tick_sample(&mut runtime_processing, tick_started_at.elapsed());
-        sleep_remaining_tick_budget(
-            &mut runtime_processing,
-            tick,
-            executed_ticks,
-            tick_context.tick_duration,
-            tick_started_at.elapsed(),
-        );
-    }
+    run_tick_loop(
+        &mut runtime_processing,
+        &mut tick_context,
+        service_api_state_file,
+        service_api_relay_spool_file,
+        service_api_signature_state_hash,
+    )?;
     Ok(runtime_processing)
 }
 
@@ -96,6 +80,26 @@ fn build_tick_context(
     })
 }
 
+fn run_tick_loop(
+    runtime_processing: &mut crate::daemon_observability::DaemonRuntimeProcessingTelemetry,
+    tick_context: &mut TickContext,
+    service_api_state_file: Option<&str>,
+    service_api_relay_spool_file: Option<&str>,
+    service_api_signature_state_hash: &str,
+) -> Result<(), ConfigError> {
+    for tick in 0..tick_context.executed_ticks {
+        execute_tick(
+            runtime_processing,
+            tick_context,
+            tick,
+            service_api_state_file,
+            service_api_relay_spool_file,
+            service_api_signature_state_hash,
+        )?;
+    }
+    Ok(())
+}
+
 pub(super) fn daemon_tick_remaining_sleep_duration(
     tick: u64,
     executed_ticks: u64,
@@ -121,7 +125,7 @@ fn resolve_optional_relay_signing_key(
     resolve_daemon_service_api_auth_private_key_hex().map(Some)
 }
 
-fn ingest_p2p_inbox(
+pub(super) fn ingest_p2p_inbox(
     relay_p2p_context: &super::super::service_api_relay_p2p::DaemonServiceApiRelayP2pContext,
     service_api_state_file: Option<&str>,
 ) -> Result<(), ConfigError> {
@@ -136,7 +140,7 @@ fn ingest_p2p_inbox(
     .map_err(|logging_error| ConfigError::RuntimeDaemonLifecycle(logging_error.to_string()))
 }
 
-fn record_tick_sample(
+pub(super) fn record_tick_sample(
     runtime_processing: &mut crate::daemon_observability::DaemonRuntimeProcessingTelemetry,
     elapsed: Duration,
 ) {
@@ -146,7 +150,7 @@ fn record_tick_sample(
         .push((elapsed_ms.min(u128::from(u64::MAX)) as u64).max(1));
 }
 
-fn sleep_remaining_tick_budget(
+pub(super) fn sleep_remaining_tick_budget(
     runtime_processing: &mut crate::daemon_observability::DaemonRuntimeProcessingTelemetry,
     tick: u64,
     executed_ticks: u64,

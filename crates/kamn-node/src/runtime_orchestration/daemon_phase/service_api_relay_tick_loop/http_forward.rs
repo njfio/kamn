@@ -9,8 +9,14 @@ use std::collections::BTreeMap;
 const SERVICE_API_RELAY_FORWARD_PATH: &str = "/v1/messages/relay";
 const SERVICE_API_RELAY_FORWARD_SCOPE: &str = "messages:write";
 const SERVICE_API_RELAY_FORWARD_DEFAULT_SENDER_DID: &str = "kamn:did:agent:relay-daemon";
-const SERVICE_API_RELAY_FORWARD_CONNECT_TIMEOUT_MS: u64 = 500;
-const SERVICE_API_RELAY_FORWARD_IO_TIMEOUT_MS: u64 = 500;
+
+struct RelayRequestSignatureInput {
+    sender_did: String,
+    relay_nonce: u64,
+    signature: String,
+    signer_public_key_hex: String,
+    relay_payload_body: String,
+}
 
 pub(super) fn forward_service_api_relay_entry(
     relay_route_map: &BTreeMap<String, String>,
@@ -20,26 +26,62 @@ pub(super) fn forward_service_api_relay_entry(
     relay_nonce_counter: &mut u64,
 ) -> Result<(), String> {
     let relay_addr = relay_recipient_address(relay_route_map, relay_entry)?;
+    let request = build_signed_relay_request(
+        relay_addr,
+        relay_entry,
+        service_api_signature_state_hash,
+        signing_private_key_hex,
+        relay_nonce_counter,
+    )?;
+    send_relay_request(relay_addr, &request)
+}
+
+fn build_signed_relay_request(
+    relay_addr: &str,
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+    service_api_signature_state_hash: &str,
+    signing_private_key_hex: &str,
+    relay_nonce_counter: &mut u64,
+) -> Result<String, String> {
+    let signed_input = build_relay_request_signature_input(
+        relay_entry,
+        service_api_signature_state_hash,
+        signing_private_key_hex,
+        relay_nonce_counter,
+    )?;
+    Ok(build_relay_request(
+        relay_addr,
+        signed_input.sender_did.as_str(),
+        signed_input.signer_public_key_hex.as_str(),
+        signed_input.relay_nonce,
+        signed_input.signature.as_str(),
+        signed_input.relay_payload_body.as_str(),
+    ))
+}
+
+fn build_relay_request_signature_input(
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+    service_api_signature_state_hash: &str,
+    signing_private_key_hex: &str,
+    relay_nonce_counter: &mut u64,
+) -> Result<RelayRequestSignatureInput, String> {
     let relay_payload_body = serialize_relay_payload(relay_entry)?;
-    let sender_did = resolve_sender_did(relay_entry);
+    let sender_did = resolve_sender_did(relay_entry).to_owned();
     let relay_nonce = next_relay_nonce(relay_nonce_counter);
     let signature = relay_request_signature(
-        sender_did,
+        sender_did.as_str(),
         relay_nonce,
         service_api_signature_state_hash,
         relay_payload_body.as_str(),
         signing_private_key_hex,
     )?;
-    let signer_public_key_hex = signer_public_key_hex(signing_private_key_hex)?;
-    let request = build_relay_request(
-        relay_addr,
+    Ok(RelayRequestSignatureInput {
         sender_did,
-        &signer_public_key_hex,
         relay_nonce,
-        &signature,
-        &relay_payload_body,
-    );
-    send_relay_request(relay_addr, &request)
+        signature,
+        signer_public_key_hex: signer_public_key_hex(signing_private_key_hex)?,
+        relay_payload_body,
+    })
 }
 
 fn relay_recipient_address<'a>(

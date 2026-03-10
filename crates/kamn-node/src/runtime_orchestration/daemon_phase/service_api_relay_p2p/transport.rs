@@ -2,33 +2,26 @@ mod context_build;
 
 use super::super::super::*;
 use super::config::{
-    normalize_daemon_service_api_relay_p2p_config, DaemonServiceApiRelayP2pConfig,
-    DaemonServiceApiRelayP2pConfigInput, DaemonServiceApiRelayP2pContext,
+    DaemonServiceApiRelayP2pConfig, DaemonServiceApiRelayP2pContext,
     DaemonServiceApiRelayP2pTransport, SERVICE_API_RELAY_P2P_CONFIG_ENV,
-    SERVICE_API_RELAY_P2P_HARNESS_TICK_BUDGET,
 };
 use context_build::{
     advertise_local_peer, build_live_transport, build_swarm_config, non_empty_p2p_config_json,
-    parse_daemon_service_api_relay_p2p_config, resolve_override_p2p_context,
+    parse_daemon_service_api_relay_p2p_config,
 };
 use kamn_core::PeerGossipFrame;
 use std::env;
 
 #[cfg(test)]
-static TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE: std::sync::Mutex<Option<String>> =
-    std::sync::Mutex::new(None);
-
-#[cfg(test)]
-#[derive(Debug)]
-pub(crate) struct DaemonServiceApiRelayP2pConfigOverrideGuard {
-    previous: Option<String>,
-}
+pub(crate) use context_build::DaemonServiceApiRelayP2pConfigOverrideGuard;
 
 pub(super) fn resolve_daemon_service_api_relay_p2p_context(
 ) -> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
     #[cfg(test)]
-    if let Some(override_json) = daemon_service_api_relay_p2p_config_override_json_for_tests() {
-        return resolve_override_p2p_context(override_json.as_str());
+    if let Some(override_json) =
+        context_build::daemon_service_api_relay_p2p_config_override_json_for_tests()
+    {
+        return context_build::resolve_override_p2p_context(override_json.as_str());
     }
     resolve_env_p2p_context()
 }
@@ -85,12 +78,6 @@ pub(super) fn build_daemon_service_api_relay_p2p_context(
     })
 }
 
-fn resolve_override_p2p_context(
-    override_json: &str,
-) -> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
-    resolve_daemon_service_api_relay_p2p_context_from_json(override_json).map(Some)
-}
-
 fn resolve_env_p2p_context() -> Result<Option<DaemonServiceApiRelayP2pContext>, ConfigError> {
     let raw = match env::var(SERVICE_API_RELAY_P2P_CONFIG_ENV) {
         Ok(value) => value,
@@ -103,16 +90,6 @@ fn resolve_env_p2p_context() -> Result<Option<DaemonServiceApiRelayP2pContext>, 
     };
     let normalized = non_empty_p2p_config_json(raw.as_str())?;
     resolve_daemon_service_api_relay_p2p_context_from_json(normalized).map(Some)
-}
-
-fn non_empty_p2p_config_json(raw: &str) -> Result<&str, ConfigError> {
-    let normalized = raw.trim();
-    if normalized.is_empty() {
-        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
-            "{SERVICE_API_RELAY_P2P_CONFIG_ENV} must not be empty when present"
-        )));
-    }
-    Ok(normalized)
 }
 
 fn recipient_peer_id_for_entry<'a>(
@@ -195,31 +172,8 @@ fn parse_relay_entry(
 }
 
 #[cfg(test)]
-pub(super) fn daemon_service_api_relay_p2p_config_override_json_for_tests() -> Option<String> {
-    TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE
-        .lock()
-        .unwrap_or_else(|error| error.into_inner())
-        .clone()
-}
-
-#[cfg(test)]
 pub(super) fn set_daemon_service_api_relay_p2p_config_override_for_tests(
     raw_json: Option<&str>,
 ) -> DaemonServiceApiRelayP2pConfigOverrideGuard {
-    let mut guard = TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let previous = guard.clone();
-    *guard = raw_json.map(str::to_owned);
-    DaemonServiceApiRelayP2pConfigOverrideGuard { previous }
-}
-
-#[cfg(test)]
-impl Drop for DaemonServiceApiRelayP2pConfigOverrideGuard {
-    fn drop(&mut self) {
-        let mut guard = TEST_DAEMON_SERVICE_API_RELAY_P2P_CONFIG_JSON_OVERRIDE
-            .lock()
-            .unwrap_or_else(|error| error.into_inner());
-        *guard = self.previous.clone();
-    }
+    context_build::set_daemon_service_api_relay_p2p_config_override_for_tests(raw_json)
 }

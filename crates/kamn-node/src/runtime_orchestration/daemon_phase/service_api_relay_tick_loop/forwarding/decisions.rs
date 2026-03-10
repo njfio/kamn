@@ -1,6 +1,6 @@
 use super::super::super::super::*;
 use super::super::super::service_api_relay_p2p::forward_service_api_relay_entry_via_p2p;
-use super::super::{forward_via_http, RelayForwardDecision};
+use super::{forward_via_http, RelayForwardDecision};
 
 pub(super) fn forward_single_entry(
     relay_p2p_context: Option<
@@ -13,18 +13,16 @@ pub(super) fn forward_single_entry(
     relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
 ) -> Result<RelayForwardDecision, ConfigError> {
     let p2p_error = try_p2p_forward(relay_p2p_context, relay_entry);
-    if p2p_forward_succeeded(relay_p2p_context, relay_entry, p2p_error.as_ref()) {
-        return Ok(RelayForwardDecision::Forwarded);
-    }
-    if let Some(decision) = retain_pending_or_failed(relay_route_map, p2p_error.clone()) {
+    if let Some(decision) =
+        resolve_non_http_decision(relay_p2p_context, relay_route_map, relay_entry, &p2p_error)
+    {
         return Ok(decision);
     }
-    let signing_key_hex = relay_signing_private_key_hex.ok_or_else(missing_signing_key_error)?;
-    forward_via_http(
+    forward_after_signing_key_check(
         relay_route_map,
         relay_entry,
         service_api_signature_state_hash,
-        signing_key_hex,
+        relay_signing_private_key_hex,
         relay_nonce_counter,
         p2p_error,
     )
@@ -86,4 +84,37 @@ pub(super) fn combine_forward_errors(p2p_error: Option<String>, http_error: Stri
         Some(existing) => format!("{existing}; http relay forward failed: {http_error}"),
         None => http_error,
     }
+}
+
+fn resolve_non_http_decision(
+    relay_p2p_context: Option<
+        &super::super::super::service_api_relay_p2p::DaemonServiceApiRelayP2pContext,
+    >,
+    relay_route_map: &std::collections::BTreeMap<String, String>,
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+    p2p_error: &Option<String>,
+) -> Option<RelayForwardDecision> {
+    if p2p_forward_succeeded(relay_p2p_context, relay_entry, p2p_error.as_ref()) {
+        return Some(RelayForwardDecision::Forwarded);
+    }
+    retain_pending_or_failed(relay_route_map, p2p_error.clone())
+}
+
+fn forward_after_signing_key_check(
+    relay_route_map: &std::collections::BTreeMap<String, String>,
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+    service_api_signature_state_hash: &str,
+    relay_signing_private_key_hex: Option<&str>,
+    relay_nonce_counter: &mut u64,
+    p2p_error: Option<String>,
+) -> Result<RelayForwardDecision, ConfigError> {
+    let signing_key_hex = relay_signing_private_key_hex.ok_or_else(missing_signing_key_error)?;
+    forward_via_http(
+        relay_route_map,
+        relay_entry,
+        service_api_signature_state_hash,
+        signing_key_hex,
+        relay_nonce_counter,
+        p2p_error,
+    )
 }

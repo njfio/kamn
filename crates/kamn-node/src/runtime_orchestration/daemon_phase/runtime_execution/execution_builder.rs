@@ -1,7 +1,12 @@
+mod defaults;
+mod seed_fields;
+
 use super::super::super::*;
 use super::reporting::DaemonReportSnapshot;
 use super::shutdown_fields::daemon_shutdown_drain_status;
 use crate::daemon_shutdown::DaemonCompletion;
+use defaults::{empty_observability_fields, empty_projection_fields};
+use seed_fields::{populate_base_fields, populate_empty_fields, populate_peer_lifecycle_fields};
 
 pub(super) struct DaemonPeerLifecycle {
     pub(super) peer_id: Option<String>,
@@ -48,48 +53,19 @@ fn base_daemon_execution(
     daemon_completion: DaemonCompletion,
     runtime_processing: crate::daemon_observability::DaemonRuntimeProcessingTelemetry,
 ) -> DaemonExecution {
-    DaemonExecution {
+    let observability = empty_observability_fields();
+    let projections = empty_projection_fields();
+    let mut execution = DaemonExecution::default();
+    populate_base_fields(
+        &mut execution,
         max_ticks,
         tick_interval_ms,
-        executed_ticks: daemon_completion.executed_ticks,
-        completion_reason: daemon_completion.completion_reason,
-        service_api_relay_drained_count: runtime_processing.relay_drained_count,
-        service_api_relay_projected_state_count: runtime_processing.relay_projected_state_count,
-        observability_latency_p50_ms: 0,
-        observability_latency_p99_ms: 0,
-        observability_throughput_tps: 0,
-        observability_error_rate_bps: 0,
-        observability_availability_bps: 0,
-        observability_health: String::new(),
-        observability_alert_count: 0,
-        observability_reason_code: String::new(),
-        observability_transport_checkpoint_failures: 0,
-        observability_signer_checkpoint_failures: 0,
-        observability_commit_checkpoint_failures: 0,
-        peer_id: peer_lifecycle.peer_id.clone(),
-        peer_lifecycle_final_state: peer_lifecycle.final_state.clone(),
-        peer_lifecycle_applied_events: peer_lifecycle.applied_events.clone(),
-        phase6_runtime_reason_taxonomy_version: String::new(),
-        phase6_runtime_reason_codes_csv: String::new(),
-        phase6_runtime_reason_code: String::new(),
-        phase6_runtime_total_cycles: 0,
-        phase6_runtime_executed_cycles: 0,
-        phase6_runtime_deferred_cycles: 0,
-        phase6_runtime_fail_closed_cycles: 0,
-        convergence_reason_taxonomy_version: String::new(),
-        convergence_reason_codes_csv: String::new(),
-        convergence_decision: String::new(),
-        convergence_reason_code: String::new(),
-        convergence_schema_gate_passed: false,
-        convergence_error_path_gate_passed: false,
-        convergence_concurrency_gate_passed: false,
-        convergence_performance_budget_gate_passed: false,
-        convergence_cost_budget_gate_passed: false,
-        live_postgres_multi_host_execution_bundle_schema_version: String::new(),
-        live_postgres_multi_host_execution_bundle_selector_prefix: String::new(),
-        live_postgres_multi_host_execution_bundle_row_count: 0,
-        live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: String::new(),
-    }
+        daemon_completion,
+        runtime_processing,
+    );
+    populate_empty_fields(&mut execution, observability, projections);
+    populate_peer_lifecycle_fields(&mut execution, peer_lifecycle);
+    execution
 }
 
 fn populate_observability_fields(

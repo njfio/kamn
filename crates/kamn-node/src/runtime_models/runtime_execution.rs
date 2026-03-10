@@ -15,7 +15,7 @@ pub(crate) struct RecoveryExecution {
     pub(crate) decisions: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct DaemonExecution {
     pub(crate) max_ticks: u64,
     pub(crate) tick_interval_ms: u64,
