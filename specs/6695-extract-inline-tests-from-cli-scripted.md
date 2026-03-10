@@ -61,3 +61,21 @@ Extract the inline `#[cfg(test)] mod tests` block from `crates/kamn-e2e-harness/
 2. Extract the inline tests into bounded sibling files until the contract passes.
 3. Run focused `kamn-e2e-harness` tests covering extracted CLI scripted driver behavior.
 4. Run touched-Rust size policy on the full issue write set.
+
+# Outcome
+
+- `cli_scripted.rs` no longer contains the inline `#[cfg(test)] mod tests` block.
+- `cli_scripted.rs` now wires the extracted test surface through `#[path = "cli_scripted_tests.rs"] mod cli_scripted_tests;`.
+- `cli_scripted.rs` is now 2,116 LOC, down from 3,478 LOC.
+- All extracted leaf/support files are within the 200 LOC touched-code limit.
+
+# Evidence
+
+- `cargo test -p kamn-e2e-harness cli_scripted -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test cli_scripted_inline_test_extraction_contract -- --nocapture`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6695-touched-size-refactor.json`
+
+# Deviations
+
+- No behavior deviations from the issue scope.
+- The staged root-file budget remains above the repo-wide 200 LOC target because this issue only extracts the inline test surface; the residual production file is 2,116 LOC and should be reduced further in follow-up issues.
