@@ -1,140 +1,89 @@
+use super::support::*;
 use super::*;
+
 #[test]
 fn integration_kolme_fork_signed_envelope_submit_maps_txhash_response() {
-    let request = KolmeRuntimeCommitRequest::deterministic(
-        "op-1506-http-a",
-        "state:1506",
-        "kamn:did:agent:http-1506-a",
-        21,
-        "payload:1506-http-a",
-    )
-    .expect("request should build");
-    let signed_envelope = request
-        .translate_to_signed_broadcast_envelope(
-            "kamn:key:signer:http-1",
-            request.to_wire_payload().as_str(),
-            "sig-1506-http-a",
-            1,
-        )
-        .expect("signed envelope should build");
-    let wire_payload = signed_envelope.to_wire_payload();
+    let (wire_payload, idempotency_key) = signed_envelope_fixture();
+    let base_url = fork_txhash_server("ab12cd34", assert_signed_envelope_request);
 
-    let base_url = spawn_single_request_server(
-        "{\"txhash\":\"ab12cd34\"}".to_owned(),
-        "HTTP/1.1 200 OK",
-        move |raw_request| {
-            assert!(raw_request.contains("PUT /broadcast HTTP/1.1"));
-            assert!(raw_request.contains("Content-Type: application/json"));
-            assert!(raw_request.contains("\"message\":\"operation_id=op-1506-http-a"));
-            assert!(raw_request.contains("\"signature\":\"sig-1506-http-a\""));
-            assert!(raw_request.contains("\"recovery_id\":1"));
-        },
-    );
-
-    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
-        base_url.as_str(),
-        "kolme-fork-local",
-        transport,
-    )
-    .expect("provider should build");
-
-    let outcome = provider
-        .submit_runtime_commit(wire_payload.as_str(), request.idempotency_key())
+    let outcome = fork_provider(base_url.as_str(), "kolme-fork-local")
+        .submit_runtime_commit(wire_payload.as_str(), idempotency_key.as_str())
         .expect("signed submit should succeed");
-    match outcome {
-        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
-            assert_eq!(receipt.provider, "kolme-fork-local");
-            assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34");
-            assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Pending);
-        }
-        other => panic!("unexpected provider outcome: {other:?}"),
-    }
+    assert_pending_fork_receipt(outcome, "kolme-fork-local", "ab12cd34");
 }
 
 #[test]
 fn integration_kolme_fork_direct_signed_payload_submit_maps_txhash_response() {
-    let wire_payload = "{\"message\":\"{\\\"pubkey\\\":\\\"pk-direct\\\",\\\"nonce\\\":1,\\\"created\\\":\\\"2026-02-11T00:00:00Z\\\",\\\"messages\\\":[],\\\"max_height\\\":null}\",\"signature\":\"sig-direct\",\"recovery_id\":1}";
-    let idempotency_key = "kolme-runtime-commit:direct-signed:1";
+    let base_url = fork_txhash_server("ab12cd34", |raw_request| {
+        assert!(raw_request.contains("Content-Type: application/json"));
+        assert!(raw_request.contains("\"signature\":\"sig-direct\""));
+        assert!(raw_request.contains("\"recovery_id\":1"));
+        assert!(raw_request.contains("\\\"pubkey\\\":\\\"pk-direct\\\""));
+    });
 
-    let base_url = spawn_single_request_server(
-        "{\"txhash\":\"ab12cd34\"}".to_owned(),
-        "HTTP/1.1 200 OK",
-        move |raw_request| {
-            assert!(raw_request.contains("PUT /broadcast HTTP/1.1"));
-            assert!(raw_request.contains("Content-Type: application/json"));
-            assert!(raw_request.contains("\"signature\":\"sig-direct\""));
-            assert!(raw_request.contains("\"recovery_id\":1"));
-            assert!(raw_request.contains("\\\"pubkey\\\":\\\"pk-direct\\\""));
-        },
-    );
-
-    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
-        base_url.as_str(),
-        "kolme-fork-local",
-        transport,
-    )
-    .expect("provider should build");
-
-    let outcome = provider
-        .submit_runtime_commit(wire_payload, idempotency_key)
+    let outcome = fork_provider(base_url.as_str(), "kolme-fork-local")
+        .submit_runtime_commit(
+            "{\"message\":\"{\\\"pubkey\\\":\\\"pk-direct\\\",\\\"nonce\\\":1,\\\"created\\\":\\\"2026-02-11T00:00:00Z\\\",\\\"messages\\\":[],\\\"max_height\\\":null}\",\"signature\":\"sig-direct\",\"recovery_id\":1}",
+            "kolme-runtime-commit:direct-signed:1",
+        )
         .expect("direct signed submit should succeed");
-    match outcome {
-        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
-            assert_eq!(receipt.provider, "kolme-fork-local");
-            assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34");
-            assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Pending);
-        }
-        other => panic!("unexpected provider outcome: {other:?}"),
-    }
+    assert_pending_fork_receipt(outcome, "kolme-fork-local", "ab12cd34");
 }
 
 #[test]
 fn regression_kolme_fork_signed_envelope_requires_signer_key_id() {
-    // Regression: #1506
-    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
-        "http://127.0.0.1:3030",
-        "kolme-fork-local",
-        transport,
-    )
-    .expect("provider should build");
-
-    let malformed_envelope = "{\"signer_key_id\":\"\",\"message\":\"operation_id=op\\nidempotency_key=abc\\n\",\"signature\":\"sig\",\"recovery_id\":1}";
+    let error = fork_provider("http://127.0.0.1:3030", "kolme-fork-local")
+        .submit_runtime_commit(
+            "{\"signer_key_id\":\"\",\"message\":\"operation_id=op\\nidempotency_key=abc\\n\",\"signature\":\"sig\",\"recovery_id\":1}",
+            "abc",
+        )
+        .expect_err("missing signer key id must fail");
     assert_eq!(
-        provider.submit_runtime_commit(malformed_envelope, "abc"),
-        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+        error,
+        KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: "field must not be empty: signer_key_id".to_owned(),
-        })
+        }
     );
 }
 
 #[test]
 fn regression_kolme_fork_direct_signed_payload_requires_json_message_shape() {
-    // Regression: #1516
-    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
-        "http://127.0.0.1:3030",
-        "kolme-fork-local",
-        transport,
-    )
-    .expect("provider should build");
-
-    let malformed_direct_payload =
-        "{\"message\":\"operation_id=op\\nidempotency_key=abc\\n\",\"signature\":\"sig\",\"recovery_id\":1}";
+    let error = fork_provider("http://127.0.0.1:3030", "kolme-fork-local")
+        .submit_runtime_commit(
+            "{\"message\":\"operation_id=op\\nidempotency_key=abc\\n\",\"signature\":\"sig\",\"recovery_id\":1}",
+            "abc",
+        )
+        .expect_err("non-json direct message must fail");
     assert_eq!(
-        provider.submit_runtime_commit(malformed_direct_payload, "abc"),
-        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+        error,
+        KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: "direct signed payload message must be a JSON object string".to_owned(),
-        })
+        }
     );
 }
 
 #[test]
 fn regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys() {
-    // Regression: #1519
-    let missing_key_cases = [
+    for (missing_field, message_json) in required_field_cases() {
+        let wire_payload = format!(
+            "{{\"message\":\"{}\",\"signature\":\"sig-direct\",\"recovery_id\":1}}",
+            message_json.replace('\\', "\\\\").replace('"', "\\\"")
+        );
+        let base_url = fork_txhash_server("ab12cd34", |_raw_request| {});
+        let error = fork_provider(base_url.as_str(), "kolme-fork-local")
+            .submit_runtime_commit(wire_payload.as_str(), "kolme-runtime-commit:direct-required-fields:1")
+            .expect_err("missing core field must fail");
+        assert_eq!(
+            error,
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("direct signed payload message missing required field: {missing_field}"),
+            }
+        );
+    }
+}
+
+fn required_field_cases() -> [(&'static str, &'static str); 4] {
+    [
         (
             "pubkey",
             "{\"nonce\":1,\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}",
@@ -151,38 +100,32 @@ fn regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys() 
             "messages",
             "{\"pubkey\":\"pk-direct\",\"nonce\":1,\"created\":\"2026-02-11T00:00:00Z\",\"max_height\":null}",
         ),
-    ];
-
-    for (missing_field, message_json) in missing_key_cases {
-        let wire_payload = format!(
-            "{{\"message\":\"{}\",\"signature\":\"sig-direct\",\"recovery_id\":1}}",
-            message_json.replace('\\', "\\\\").replace('\"', "\\\"")
-        );
-        let base_url = spawn_single_request_server(
-            "{\"txhash\":\"ab12cd34\"}".to_owned(),
-            "HTTP/1.1 200 OK",
-            |_raw_request| {},
-        );
-
-        let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-        let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
-            base_url.as_str(),
-            "kolme-fork-local",
-            transport,
-        )
-        .expect("provider should build");
-
-        assert_eq!(
-            provider.submit_runtime_commit(
-                wire_payload.as_str(),
-                "kolme-runtime-commit:direct-required-fields:1"
-            ),
-            Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!(
-                    "direct signed payload message missing required field: {missing_field}"
-                ),
-            })
-        );
-    }
+    ]
 }
 
+fn signed_envelope_fixture() -> (String, String) {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-1506-http-a",
+        "state:1506",
+        "kamn:did:agent:http-1506-a",
+        21,
+        "payload:1506-http-a",
+    )
+    .expect("request should build");
+    let envelope = request
+        .translate_to_signed_broadcast_envelope(
+            "kamn:key:signer:http-1",
+            request.to_wire_payload().as_str(),
+            "sig-1506-http-a",
+            1,
+        )
+        .expect("signed envelope should build");
+    (envelope.to_wire_payload(), request.idempotency_key().to_owned())
+}
+
+fn assert_signed_envelope_request(raw_request: String) {
+    assert!(raw_request.contains("Content-Type: application/json"));
+    assert!(raw_request.contains("\"message\":\"operation_id=op-1506-http-a"));
+    assert!(raw_request.contains("\"signature\":\"sig-1506-http-a\""));
+    assert!(raw_request.contains("\"recovery_id\":1"));
+}
