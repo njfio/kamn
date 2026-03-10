@@ -8,9 +8,7 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_unsupported_m
         harness.bind_addr.as_str(),
         "kamn:did:agent:ws-presence-client-unsupported",
         37,
-        &[
-            ("X-KAMN-Events-Mode", "presence-v2"),
-        ],
+        &[("X-KAMN-Events-Mode", "presence-v2")],
     );
     assert_websocket_bad_request(response, "service_api_ws_events_mode_invalid", None);
     assert_server_ok(

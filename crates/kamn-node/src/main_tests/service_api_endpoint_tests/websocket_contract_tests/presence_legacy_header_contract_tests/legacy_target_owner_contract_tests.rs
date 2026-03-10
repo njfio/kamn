@@ -1,7 +1,8 @@
 use super::super::support::*;
 
 #[test]
-fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target_owner_did_header() {
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_legacy_target_owner_did_header()
+{
     let harness = build_websocket_harness("127.0.0.1:34063", 1);
     let response = legacy_target_owner_response(&harness);
     assert_websocket_bad_request(

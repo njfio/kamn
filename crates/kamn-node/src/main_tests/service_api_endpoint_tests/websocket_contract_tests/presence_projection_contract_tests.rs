@@ -38,22 +38,65 @@ fn assert_presence_projection_response(response: &[u8], sender_did: &str) {
 }
 
 fn assert_presence_identity_fields(payload_json: &Value, sender_did: &str) {
-    assert_eq!(payload_json.get("event").and_then(Value::as_str), Some("m9.presence.snapshot"));
-    assert_eq!(payload_json.get("transport_profile").and_then(Value::as_str), Some("websocket"));
-    assert_eq!(payload_json.get("requester_owner_did").and_then(Value::as_str), Some("kamn:did:owner:alpha"));
-    assert_eq!(payload_json.get("requester_agent_did").and_then(Value::as_str), Some(sender_did));
-    assert_eq!(payload_json.get("target_owner_did").and_then(Value::as_str), Some("kamn:did:owner:alpha"));
-    assert_eq!(payload_json.get("target_agent_did").and_then(Value::as_str), Some(sender_did));
+    assert_eq!(
+        payload_json.get("event").and_then(Value::as_str),
+        Some("m9.presence.snapshot")
+    );
+    assert_eq!(
+        payload_json
+            .get("transport_profile")
+            .and_then(Value::as_str),
+        Some("websocket")
+    );
+    assert_eq!(
+        payload_json
+            .get("requester_owner_did")
+            .and_then(Value::as_str),
+        Some("kamn:did:owner:alpha")
+    );
+    assert_presence_actor_fields(payload_json, sender_did);
+    assert_presence_target_fields(payload_json, sender_did);
+}
+
+fn assert_presence_actor_fields(payload_json: &Value, sender_did: &str) {
+    assert_eq!(
+        payload_json
+            .get("requester_agent_did")
+            .and_then(Value::as_str),
+        Some(sender_did)
+    );
+}
+
+fn assert_presence_target_fields(payload_json: &Value, sender_did: &str) {
+    assert_eq!(
+        payload_json.get("target_owner_did").and_then(Value::as_str),
+        Some("kamn:did:owner:alpha")
+    );
+    assert_eq!(
+        payload_json.get("target_agent_did").and_then(Value::as_str),
+        Some(sender_did)
+    );
 }
 
 fn assert_presence_visibility_fields(payload_json: &Value) {
-    assert_eq!(payload_json.get("visible").and_then(Value::as_bool), Some(true));
-    assert_eq!(payload_json.get("target_gateway_node").and_then(Value::as_str), Some("gateway-alpha"));
+    assert_eq!(
+        payload_json.get("visible").and_then(Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        payload_json
+            .get("target_gateway_node")
+            .and_then(Value::as_str),
+        Some("gateway-alpha")
+    );
     assert_eq!(
         payload_json
             .get("target_last_heartbeat_epoch_seconds")
             .and_then(Value::as_u64),
         Some(1_709_000_005),
     );
-    assert_eq!(payload_json.get("reason_code").and_then(Value::as_str), Some("m9_gateway_presence_visible"));
+    assert_eq!(
+        payload_json.get("reason_code").and_then(Value::as_str),
+        Some("m9_gateway_presence_visible")
+    );
 }

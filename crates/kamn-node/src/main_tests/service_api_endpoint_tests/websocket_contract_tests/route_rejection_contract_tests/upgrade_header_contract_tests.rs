@@ -1,5 +1,5 @@
-use super::super::support::*;
 use super::super::super::*;
+use super::super::support::*;
 
 #[test]
 fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_headers() {
@@ -28,5 +28,7 @@ fn assert_upgrade_header_missing_response(response: &str) {
     let payload = parse_error_envelope_from_http_response(response);
     assert_eq!(payload.error, "bad-request");
     assert_eq!(payload.reason_code, "service_api_ws_upgrade_header_missing");
-    assert!(payload.message.contains("missing required websocket upgrade header"));
+    assert!(payload
+        .message
+        .contains("missing required websocket upgrade header"));
 }

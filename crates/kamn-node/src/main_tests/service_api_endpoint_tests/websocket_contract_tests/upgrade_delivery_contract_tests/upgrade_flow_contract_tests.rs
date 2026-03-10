@@ -1,5 +1,5 @@
-use super::super::support::*;
 use super::super::super::*;
+use super::super::support::*;
 
 #[test]
 fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event() {
@@ -50,10 +50,16 @@ fn assert_upgrade_state_transition_response(response: &[u8]) {
 
 fn assert_initial_state_transition_frame(response: &[u8]) {
     let (_header, frames) = parse_websocket_response_frames(response);
-    assert!(!frames.is_empty(), "websocket stream should emit an initial state-transition event frame");
+    assert!(
+        !frames.is_empty(),
+        "websocket stream should emit an initial state-transition event frame"
+    );
     let first: Value = serde_json::from_str(frames[0].as_str())
         .expect("initial websocket state-transition frame should be json");
-    assert_eq!(first.get("event").and_then(Value::as_str), Some("state-transition"));
+    assert_eq!(
+        first.get("event").and_then(Value::as_str),
+        Some("state-transition")
+    );
     assert_eq!(first.get("sequence").and_then(Value::as_u64), Some(1));
 }
 

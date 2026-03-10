@@ -47,7 +47,11 @@ fn next_websocket_frame(frame_bytes: &[u8], frame_index: usize) -> Option<(usize
     }
     let first = frame_bytes[frame_index];
     let second = frame_bytes[frame_index + 1];
-    assert_eq!(first & 0x80, 0x80, "fragmented websocket frames are not supported by test parser");
+    assert_eq!(
+        first & 0x80,
+        0x80,
+        "fragmented websocket frames are not supported by test parser"
+    );
     assert_eq!(second & 0x80, 0, "server websocket frame must be unmasked");
     let opcode = first & 0x0f;
     let (payload_index, payload_len) = websocket_payload_bounds(frame_bytes, frame_index, second);
@@ -67,18 +71,28 @@ fn websocket_payload_bounds(frame_bytes: &[u8], frame_index: usize, second: u8) 
         127 => websocket_u64_payload_bounds(frame_bytes, frame_index),
         _ => unreachable!("websocket payload marker is constrained to 7 bits"),
     };
-    assert!(frame_bytes.len() >= payload_index + payload_len, "websocket frame payload length must be available");
+    assert!(
+        frame_bytes.len() >= payload_index + payload_len,
+        "websocket frame payload length must be available"
+    );
     (payload_index, payload_len)
 }
 
 fn websocket_u16_payload_bounds(frame_bytes: &[u8], frame_index: usize) -> (usize, usize) {
-    assert!(frame_bytes.len() >= frame_index + 4, "websocket frame extended payload length must be available");
-    let payload_len = u16::from_be_bytes([frame_bytes[frame_index + 2], frame_bytes[frame_index + 3]]) as usize;
+    assert!(
+        frame_bytes.len() >= frame_index + 4,
+        "websocket frame extended payload length must be available"
+    );
+    let payload_len =
+        u16::from_be_bytes([frame_bytes[frame_index + 2], frame_bytes[frame_index + 3]]) as usize;
     (frame_index + 4, payload_len)
 }
 
 fn websocket_u64_payload_bounds(frame_bytes: &[u8], frame_index: usize) -> (usize, usize) {
-    assert!(frame_bytes.len() >= frame_index + 10, "websocket frame 64-bit payload length must be available");
+    assert!(
+        frame_bytes.len() >= frame_index + 10,
+        "websocket frame 64-bit payload length must be available"
+    );
     let payload_len = u64::from_be_bytes([
         frame_bytes[frame_index + 2],
         frame_bytes[frame_index + 3],

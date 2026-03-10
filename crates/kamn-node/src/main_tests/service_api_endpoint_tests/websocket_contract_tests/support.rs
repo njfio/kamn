@@ -1,10 +1,10 @@
 use super::super::*;
 use crate::service_api_endpoint::ServiceApiSnapshot;
 
-#[path = "support/request_support.rs"]
-mod request_support;
 #[path = "support/frame_support.rs"]
 mod frame_support;
+#[path = "support/request_support.rs"]
+mod request_support;
 
 pub(super) use frame_support::*;
 pub(super) use request_support::*;
@@ -54,7 +54,8 @@ fn spawn_websocket_server(
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     };
     let server_snapshot = snapshot.clone();
-    let server = thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
     (bind_addr, server)
 }
@@ -99,7 +100,12 @@ pub(super) fn send_signed_websocket_request(
 ) -> Vec<u8> {
     let signature = websocket_signature(snapshot, sender_did, nonce);
     let nonce_text = nonce.to_string();
-    let headers = signed_websocket_headers(sender_did, nonce_text.as_str(), signature.as_str(), extra_headers);
+    let headers = signed_websocket_headers(
+        sender_did,
+        nonce_text.as_str(),
+        signature.as_str(),
+        extra_headers,
+    );
     send_websocket_upgrade_request(bind_addr, WEBSOCKET_EVENTS_PATH, headers.as_slice())
 }
 
@@ -113,8 +119,18 @@ pub(super) fn send_signed_websocket_request_with_version(
 ) -> Vec<u8> {
     let signature = websocket_signature(snapshot, sender_did, nonce);
     let nonce_text = nonce.to_string();
-    let headers = signed_websocket_headers(sender_did, nonce_text.as_str(), signature.as_str(), extra_headers);
-    send_websocket_upgrade_request_with_version(bind_addr, WEBSOCKET_EVENTS_PATH, version, headers.as_slice())
+    let headers = signed_websocket_headers(
+        sender_did,
+        nonce_text.as_str(),
+        signature.as_str(),
+        extra_headers,
+    );
+    send_websocket_upgrade_request_with_version(
+        bind_addr,
+        WEBSOCKET_EVENTS_PATH,
+        version,
+        headers.as_slice(),
+    )
 }
 
 pub(super) fn send_signed_websocket_request_with_close_observation(
@@ -126,7 +142,12 @@ pub(super) fn send_signed_websocket_request_with_close_observation(
 ) -> (Vec<u8>, bool) {
     let signature = websocket_signature(snapshot, sender_did, nonce);
     let nonce_text = nonce.to_string();
-    let headers = signed_websocket_headers(sender_did, nonce_text.as_str(), signature.as_str(), extra_headers);
+    let headers = signed_websocket_headers(
+        sender_did,
+        nonce_text.as_str(),
+        signature.as_str(),
+        extra_headers,
+    );
     send_websocket_upgrade_request_with_version_close_observation(
         bind_addr,
         WEBSOCKET_EVENTS_PATH,

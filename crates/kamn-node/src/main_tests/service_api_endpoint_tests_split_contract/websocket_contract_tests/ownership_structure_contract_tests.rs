@@ -124,7 +124,10 @@ fn assert_route_rejection_structure() {
     let route_rejection = read_repo_file(ROUTE_REJECTION_ROOT_FILE);
     assert_contains_markers(
         route_rejection.as_str(),
-        &["mod upgrade_header_contract_tests;", "mod version_header_contract_tests;"],
+        &[
+            "mod upgrade_header_contract_tests;",
+            "mod version_header_contract_tests;",
+        ],
         "websocket route rejection root",
     );
 }

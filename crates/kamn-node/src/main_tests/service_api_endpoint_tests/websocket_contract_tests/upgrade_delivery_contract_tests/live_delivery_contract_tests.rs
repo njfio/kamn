@@ -1,11 +1,12 @@
-use super::super::support::*;
 use super::super::super::*;
+use super::super::support::*;
 use crate::service_api_endpoint::ServiceApiSnapshot;
 
 #[test]
 fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_after_upgrade() {
     let harness = build_websocket_harness("127.0.0.1:34071", 6);
-    let post_thread = spawn_live_message_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
+    let post_thread =
+        spawn_live_message_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
     let websocket_response = send_signed_websocket_request(
         &harness.snapshot,
         harness.bind_addr.as_str(),
@@ -13,8 +14,9 @@ fn regression_service_api_endpoint_websocket_stream_delivers_live_message_event_
         601,
         &[],
     );
-    let (first_post_response, second_post_response) =
-        post_thread.join().expect("post request thread should complete");
+    let (first_post_response, second_post_response) = post_thread
+        .join()
+        .expect("post request thread should complete");
     assert_publisher_requests_accepted(first_post_response.as_str(), second_post_response.as_str());
     assert_live_delivery_frames(websocket_response.as_slice());
     assert_server_ok_or_timeout(
@@ -30,9 +32,19 @@ fn spawn_live_message_publish_thread(
     thread::spawn(move || {
         thread::sleep(Duration::from_millis(75));
         let hash = state_hash(&snapshot);
-        let first = send_live_message(bind_addr.as_str(), hash.as_str(), 602, "{\"message\":\"websocket-live-event-1\"}");
+        let first = send_live_message(
+            bind_addr.as_str(),
+            hash.as_str(),
+            602,
+            "{\"message\":\"websocket-live-event-1\"}",
+        );
         thread::sleep(Duration::from_millis(25));
-        let second = send_live_message(bind_addr.as_str(), hash.as_str(), 603, "{\"message\":\"websocket-live-event-2\"}");
+        let second = send_live_message(
+            bind_addr.as_str(),
+            hash.as_str(),
+            603,
+            "{\"message\":\"websocket-live-event-2\"}",
+        );
         (first, second)
     })
 }
