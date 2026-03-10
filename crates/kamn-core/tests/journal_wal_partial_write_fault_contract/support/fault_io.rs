@@ -4,6 +4,11 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+pub(crate) struct StorePaths {
+    pub(crate) snapshot_path: PathBuf,
+    pub(crate) journal_path: PathBuf,
+}
+
 pub(crate) fn journal_path_for(snapshot_path: &Path) -> PathBuf {
     let mut journal: OsString = snapshot_path.as_os_str().to_os_string();
     journal.push(".journal");
@@ -33,4 +38,18 @@ pub(crate) fn write_partial_snapshot(snapshot_path: &Path) {
 pub(crate) fn clear_store_files(snapshot_path: &Path, journal_path: &Path) {
     let _ = fs::remove_file(snapshot_path);
     let _ = fs::remove_file(journal_path);
+}
+
+pub(crate) fn prepare_store_paths(
+    temp_dir: &crate::support::TempDir,
+    prefix: &str,
+    case_id: &str,
+) -> StorePaths {
+    let snapshot_path = temp_dir.path().join(format!("{prefix}-{case_id}.snapshot"));
+    let journal_path = journal_path_for(&snapshot_path);
+    clear_store_files(&snapshot_path, &journal_path);
+    StorePaths {
+        snapshot_path,
+        journal_path,
+    }
 }
