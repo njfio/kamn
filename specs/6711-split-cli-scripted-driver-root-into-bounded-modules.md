@@ -60,3 +60,26 @@ Reduce `crates/kamn-e2e-harness/src/drivers/cli_scripted.rs` to a thin public wi
 2. Extract the driver-core and/or command-support seams until the contract passes.
 3. Run focused `kamn-e2e-harness` CLI-scripted tests and command contracts.
 4. Run touched-Rust size policy on the issue write set.
+
+# Phase 6 Evidence
+
+- Clean detached verification worktree: `/tmp/kamn-6711-final-fzUGau`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6711-touched-size-clean-final.json`
+  - `status=pass`
+  - `policy_decision=GO`
+  - `offending_files=none`
+  - `offending_functions=none`
+- `cargo test -p kamn-e2e-harness --test cli_scripted_root_extraction_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness cli_scripted -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+
+# Outcomes
+
+- `crates/kamn-e2e-harness/src/drivers/cli_scripted.rs` reduced to `81` LOC
+- `crates/kamn-e2e-harness/src/drivers/cli_scripted/driver_core.rs` reduced to `129` LOC
+- `crates/kamn-e2e-harness/src/drivers/cli_scripted/runner_registry.rs` is `37` LOC
+- Real CLI-scripted driver wiring remains exercised through the existing `cli_scripted` and `command_contract` suites
+
+# Deviations
+
+- Final touched-size verification was recorded from a clean detached worktree because the primary issue worktree inherited unrelated tracked edits outside `#6711`; those foreign edits were left untouched.
