@@ -52,3 +52,9 @@ Reduce `crates/kamn-core/tests/data_layer_m5_vector_integration.rs` from a monol
 3. Run `cargo test -p kamn-core --test data_layer_m5_vector_integration_extraction_contract -- --nocapture`.
 4. Run `cargo test -p kamn-core --test data_layer_m5_vector_integration -- --nocapture`.
 5. Run the touched-Rust size ratchet against the issue write set and require `policy_decision=GO`.
+
+## Phase 6 Evidence
+- Root shell wiring verified through `cargo test -p kamn-core --test data_layer_m5_vector_integration -- --nocapture`
+- Extraction contract verified through `cargo test -p kamn-core --test data_layer_m5_vector_integration_extraction_contract -- --nocapture`
+- Touched-Rust policy verified through `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6832-touched-size.json`
+- Result: `policy_decision=GO`
