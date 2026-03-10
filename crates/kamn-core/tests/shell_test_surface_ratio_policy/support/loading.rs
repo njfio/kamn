@@ -8,7 +8,10 @@ use crate::support::fixtures::{
 };
 use crate::support::models::{Baseline, Thresholds, Waiver};
 use crate::support::paths::{fail, read_file, repo_path};
+use std::collections::BTreeMap;
 use std::path::Path;
+
+type FixtureMap = BTreeMap<String, String>;
 
 pub(crate) fn load_baseline(path: &Path) -> Baseline {
     if !path.is_file() {
@@ -79,11 +82,11 @@ pub(crate) fn load_waiver(path: &Path) -> Waiver {
     waiver
 }
 
-fn load_fixture_map(path: &Path, reason_code: &str) -> std::collections::BTreeMap<String, String> {
+fn load_fixture_map(path: &Path, reason_code: &str) -> FixtureMap {
     parse_key_value_fixture(&read_file(path, reason_code), reason_code)
 }
 
-fn parse_baseline(map: &std::collections::BTreeMap<String, String>) -> Baseline {
+fn parse_baseline(map: &FixtureMap) -> Baseline {
     Baseline {
         shell_test_file_count: required_i64(map, "shell_test_file_count", "baseline_value_invalid"),
         rust_test_file_count: required_i64(map, "rust_test_file_count", "baseline_value_invalid"),
@@ -97,7 +100,7 @@ fn parse_baseline(map: &std::collections::BTreeMap<String, String>) -> Baseline 
     }
 }
 
-fn parse_thresholds(map: &std::collections::BTreeMap<String, String>) -> Thresholds {
+fn parse_thresholds(map: &FixtureMap) -> Thresholds {
     Thresholds {
         allowed_shell_test_file_delta_max: required_i64(
             map,
@@ -113,12 +116,7 @@ fn parse_thresholds(map: &std::collections::BTreeMap<String, String>) -> Thresho
     }
 }
 
-fn assert_schema_marker(
-    map: &std::collections::BTreeMap<String, String>,
-    expected: &str,
-    reason_code: &str,
-    path: &Path,
-) {
+fn assert_schema_marker(map: &FixtureMap, expected: &str, reason_code: &str, path: &Path) {
     let value = required_value(map, "schema_version", reason_code);
     if value != expected {
         fail(
@@ -128,7 +126,7 @@ fn assert_schema_marker(
     }
 }
 
-fn assert_threshold_markers(map: &std::collections::BTreeMap<String, String>) {
+fn assert_threshold_markers(map: &FixtureMap) {
     assert_text_marker(
         required_value(map, "reason_taxonomy_version", "threshold_schema_invalid"),
         REASON_TAXONOMY_VERSION,

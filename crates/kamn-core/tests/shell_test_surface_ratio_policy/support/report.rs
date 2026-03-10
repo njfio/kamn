@@ -40,7 +40,7 @@ fn render_report(
         "{{\n  \"schema_version\": \"{REPORT_SCHEMA_VERSION}\",\n  \"reason_taxonomy_version\": \"{REASON_TAXONOMY_VERSION}\",\n  \"reason_codes_csv\": \"{REASON_CODES_CSV}\",\n  \"policy_status\": \"{}\",\n  \"final_decision\": \"{}\",\n  \"reason_codes\": \"{}\",\n  \"baseline\": {baseline_block},\n  \"current\": {current_block},\n  \"delta\": {delta_block},\n  \"thresholds\": {thresholds_block}\n}}\n",
         evaluation.policy_status,
         evaluation.final_decision,
-        evaluation.reason_codes.join(","),
+        report_reason_codes(evaluation),
     )
 }
 
@@ -97,4 +97,8 @@ fn thresholds_block(thresholds: &Thresholds) -> String {
         thresholds.allowed_ratio_delta_max,
         waiver_path(thresholds),
     )
+}
+
+fn report_reason_codes(evaluation: &Evaluation) -> String {
+    evaluation.reason_codes.join(",")
 }
