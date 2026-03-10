@@ -14,7 +14,7 @@ use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
 use std::sync::Arc;
 
-pub(crate) trait CliRunner: Fn() -> Result<(), String> + Send + Sync + 'static {}
+pub trait CliRunner: Fn() -> Result<(), String> + Send + Sync + 'static {}
 impl<T> CliRunner for T where T: Fn() -> Result<(), String> + Send + Sync + 'static {}
 
 /// CLI-scripted driver with optional live execution for S-01 through S-15.
