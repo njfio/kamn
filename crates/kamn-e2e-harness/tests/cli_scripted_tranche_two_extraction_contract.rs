@@ -110,7 +110,9 @@ fn collected_rs_files(base_dir: &Path) -> Vec<PathBuf> {
 }
 
 fn collect_rs_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
-    for entry in fs::read_dir(dir).expect("extracted cli_scripted tranche-two dir should be readable") {
+    for entry in
+        fs::read_dir(dir).expect("extracted cli_scripted tranche-two dir should be readable")
+    {
         let entry = entry.expect("extracted cli_scripted tranche-two entry should be readable");
         let path = entry.path();
         if path.is_dir() {

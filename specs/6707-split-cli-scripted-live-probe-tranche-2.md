@@ -60,3 +60,14 @@ Extract the S-06 through S-10 live probe implementations out of `crates/kamn-e2e
 2. Extract the second production tranche into bounded sibling modules until the contract passes.
 3. Run focused `kamn-e2e-harness` tests covering CLI-scripted driver behavior and runtime contracts.
 4. Run touched-Rust size policy on the full issue write set.
+
+# Integration evidence
+
+- `crates/kamn-e2e-harness/src/drivers/cli_scripted.rs` now delegates S-06 through S-10 into `src/drivers/cli_scripted/live_probe_tranche_two.rs`
+- Root driver file size after extraction: `1132` LOC, below the staged tranche-2 contract cap of `1200`
+- Extracted tranche-two files are all within the `<= 200` LOC touched-file limit
+- Verified on branch head `433b74cbe912b48acc4e35b6c2d08623ebc086b5`:
+  - `cargo test -p kamn-e2e-harness --test cli_scripted_tranche_two_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-e2e-harness cli_scripted -- --nocapture`
+  - `cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+  - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6707-touched-size-post-refactor.json`
