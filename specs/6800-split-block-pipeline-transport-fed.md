@@ -45,3 +45,12 @@ Split `crates/kamn-core/tests/block_pipeline_transport_fed.rs` into a thin root 
 3. Run the extraction contract target
 4. Run the real `block_pipeline_transport_fed` target
 5. Run the touched-Rust size checker against `origin/main`
+
+## Phase 6 evidence
+- `cargo test -p kamn-core --test block_pipeline_transport_fed_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test block_pipeline_transport_fed -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6784-remote --base-ref origin/main --output-json /tmp/6800-touched-size.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- The clean clone initially lacked the `specs/6800-split-block-pipeline-transport-fed.md` file and had a partially materialized split tree without commits. The branch history was repaired locally before push so the final branch preserves the required `docs -> test -> feat -> refactor -> integrate` sequence.
