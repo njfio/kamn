@@ -1,5 +1,5 @@
 use crate::support::evaluation::evaluate_contract;
-use crate::support::fixtures::{read_file_if_exists, repo_root};
+use crate::support::fixtures::{strategy_fixture, workflow_fixture};
 
 #[test]
 fn regression_e2e_live_workflow_lane_rejects_missing_push_trigger() {
@@ -17,11 +17,8 @@ fn regression_e2e_live_workflow_lane_rejects_missing_pull_request_trigger() {
 }
 
 fn assert_scope_failure(target: &str, replacement: &str, reason: &str) {
-    let root = repo_root();
-    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
-        .expect("workflow fixture should exist");
-    let strategy =
-        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let workflow = workflow_fixture();
+    let strategy = strategy_fixture();
     let mutated = workflow.replacen(target, replacement, 1);
     let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
     assert_eq!(decision.status, "fail");
