@@ -61,3 +61,14 @@ Outputs:
    - `cargo test -p kamn-core --test service_api_ops_configuration_docs_extraction_contract -- --nocapture`
    - `cargo test -p kamn-core --test service_api_ops_configuration_docs -- --nocapture`
    - `bash scripts/ci/check_touched_rust_size_policy.sh --output-json <path>`
+
+# Phase 6 Evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test service_api_ops_configuration_docs_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test service_api_ops_configuration_docs -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /tmp/kamn-6748 --base-ref origin/main --output-json /tmp/6748-touched-size.json`
+
+Result:
+- extraction contract: pass
+- real `service_api_ops_configuration_docs` target: `80 passed, 0 failed`
+- touched-Rust size policy: `policy_decision=GO`
