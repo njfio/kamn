@@ -43,8 +43,12 @@ pub(super) fn env_payload(name: &str, default: &str) -> String {
     env::var(name).unwrap_or_else(|_| default.to_owned())
 }
 
-pub(super) fn agent_name(name: &str, default: &str) -> String {
+pub(super) fn env_value(name: &str, default: &str) -> String {
     super::env_var_or_default(name, default)
+}
+
+pub(super) fn agent_name(name: &str, default: &str) -> String {
+    env_value(name, default)
 }
 
 pub(super) fn validate_non_empty(value: &str, error: &str) -> Result<(), String> {

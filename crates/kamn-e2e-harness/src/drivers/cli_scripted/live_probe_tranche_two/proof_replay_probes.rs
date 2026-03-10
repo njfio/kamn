@@ -5,9 +5,10 @@ use super::super::{
     run_cli_command_expect_failure_with_agent_name,
 };
 use super::{
-    agent_name, cli_binary, default_endpoint, env_payload, validate_non_empty,
-    DEFAULT_S06_BLOCK_HEIGHT, DEFAULT_S06_FINALITY, DEFAULT_S06_MESSAGE_ID, DEFAULT_S06_TX_HASH,
-    DEFAULT_S07_AGENT_NAME, DEFAULT_S07_MESSAGE_PAYLOAD,
+    agent_name, cli_binary, default_endpoint, env_payload, env_value,
+    validate_s08_message_receipt_fields, DEFAULT_S06_BLOCK_HEIGHT, DEFAULT_S06_FINALITY,
+    DEFAULT_S06_MESSAGE_ID, DEFAULT_S06_TX_HASH, DEFAULT_S07_AGENT_NAME,
+    DEFAULT_S07_MESSAGE_PAYLOAD,
 };
 use crate::drivers::shared_helpers::validate_s07_replay_reason_marker;
 
@@ -41,9 +42,9 @@ fn s06_settings() -> Result<S06Settings, String> {
     Ok(S06Settings {
         endpoint: default_endpoint(),
         message_id: env_payload("KAMN_E2E_S06_PROOF_MESSAGE_ID", DEFAULT_S06_MESSAGE_ID),
-        tx_hash: agent_name("KAMN_E2E_S06_PROOF_TX_HASH", DEFAULT_S06_TX_HASH),
+        tx_hash: env_value("KAMN_E2E_S06_PROOF_TX_HASH", DEFAULT_S06_TX_HASH),
         block_height: s06_block_height()?.to_string(),
-        finality: agent_name("KAMN_E2E_S06_PROOF_FINALITY", DEFAULT_S06_FINALITY),
+        finality: env_value("KAMN_E2E_S06_PROOF_FINALITY", DEFAULT_S06_FINALITY),
     })
 }
 
@@ -129,23 +130,8 @@ fn require_s06_block_height(output: &str) -> Result<(), String> {
 fn send_s07_initial_message(settings: &S07Settings) -> Result<(), String> {
     let output =
         run_cli_command_capture_stdout_with_agent(settings, "cli live s07 initial send-message")?;
-    let message_id = require_field(
-        output.as_str(),
-        "message_id",
-        "cli live s07 initial send-message",
-    )?;
-    validate_non_empty(
-        message_id,
-        "cli live s07 initial send-message returned empty message_id",
-    )?;
-    validate_non_empty(
-        require_field(
-            output.as_str(),
-            "status",
-            "cli live s07 initial send-message",
-        )?,
-        "cli live s07 initial send-message returned empty status",
-    )
+    validate_s08_message_receipt_fields(output.as_str(), "cli live s07 initial send-message")
+        .map(|_| ())
 }
 
 fn reject_s07_replay(settings: &S07Settings) -> Result<(), String> {
