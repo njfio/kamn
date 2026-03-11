@@ -40,6 +40,14 @@ pub(crate) struct ServiceApiPersistedMessageRecord {
 pub(crate) struct ServiceApiPersistedTaskRecord {
     pub(crate) task_id: String,
     pub(crate) state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) creator_did: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) task_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) assignee: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -66,6 +66,14 @@ async fn task_query(state: &Arc<ServiceApiRuntimeState>, task_id: &str) -> Respo
     match result {
         Ok(Some(payload)) => contract_json(200, &payload),
         Ok(None) => not_found(),
+        Err(error) if is_task_dispatch_prerequisite_error(error.as_str()) => {
+            super::payload::json_error_response(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "service-unavailable",
+                REASON_CODE_TASK_DISPATCH_PREREQUISITES_MISSING,
+                error.as_str(),
+            )
+        }
         Err(error) => persistence_error("service api task query failed", error),
     }
 }
@@ -162,4 +170,8 @@ fn persistence_error(error_prefix: &str, error: impl std::fmt::Display) -> Respo
         REASON_CODE_STATE_PERSISTENCE_FAILED,
         format!("{error_prefix}: {error}").as_str(),
     )
+}
+
+fn is_task_dispatch_prerequisite_error(error: &str) -> bool {
+    error.contains("task dispatch prerequisites missing")
 }
