@@ -12,3 +12,5 @@ mod threshold_success_contract_tests;
 mod empty_subjects_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/unknown_subject_contract_tests.rs"]
 mod unknown_subject_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/window_cap_contract_tests.rs"]
+mod window_cap_contract_tests;
