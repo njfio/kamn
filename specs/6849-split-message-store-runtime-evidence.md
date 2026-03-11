@@ -24,11 +24,11 @@ Split `build_data_layer_runtime_evidence()` in `crates/kamn-node/src/service_api
 - The persisted runtime evidence payload changes semantics under the existing integration path.
 
 ## Acceptance criteria
-- [ ] `build_data_layer_runtime_evidence()` is reduced below the 25-line function limit via coordinator/helper extraction.
-- [ ] Evidence-building behavior remains equivalent under regression coverage for the real send-path integration.
-- [ ] Success and failure-path tests cover the extracted seams.
-- [ ] No newly introduced helper exceeds the function-size limit.
-- [ ] Error semantics remain fail-closed and observable with deterministic stage markers.
+- [x] `build_data_layer_runtime_evidence()` is reduced below the 25-line function limit via coordinator/helper extraction.
+- [x] Evidence-building behavior remains equivalent under regression coverage for the real send-path integration.
+- [x] Success and failure-path tests cover the extracted seams.
+- [x] No newly introduced helper exceeds the function-size limit.
+- [x] Error semantics remain fail-closed and observable with deterministic stage markers.
 
 ## Files to touch
 - `specs/6849-split-message-store-runtime-evidence.md`
@@ -48,3 +48,11 @@ Split `build_data_layer_runtime_evidence()` in `crates/kamn-node/src/service_api
 3. Refactor the evidence builder into bounded helpers.
 4. Re-run the extraction contract and targeted `kamn-node` evidence tests until green.
 5. Run the touched-Rust size ratchet on the final write set.
+
+## Final evidence
+- `cargo test -p kamn-node --test message_store_runtime_evidence_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11 -- --nocapture`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6849-touched-size.json`
+
+## Deviations
+- None.
