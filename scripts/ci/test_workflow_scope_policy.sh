@@ -177,6 +177,11 @@ if ! grep -Fq 'bash "$ROOT_DIR/scripts/ci/test_supply_chain_advisory_toolchain_p
   exit 1
 fi
 
+if ! grep -Fq 'bash "$ROOT_DIR/scripts/ci/test_supply_chain_advisory_artifact_contract.sh"' "$ROOT_DIR/scripts/ci/test_ci_tools.sh"; then
+  echo "expected ci tools fast-mode entrypoint to run advisory artifact contract tests" >&2
+  exit 1
+fi
+
 if ! grep -Fq "Production-target expect() gate" "$FAST_WORKFLOW"; then
   echo "expected production-target expect gate step in ci-fast-gate.yml" >&2
   exit 1
