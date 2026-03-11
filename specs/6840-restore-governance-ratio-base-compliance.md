@@ -42,10 +42,10 @@ Restore `main` branch compliance for the governance/feature commit-ratio gate wi
 
 ## Final evidence
 - Command: `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha HEAD --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6840-final.json`
-- status: `violation`
-- governance_commit_count: `11`
-- feature_commit_count: `39`
+- status: `ok`
+- governance_commit_count: `10`
+- feature_commit_count: `40`
 - unknown_commit_count: `0`
-- governance_ratio: `0.22`
-- feature_ratio: `0.78`
+- governance_ratio: `0.2`
+- feature_ratio: `0.8`
 
