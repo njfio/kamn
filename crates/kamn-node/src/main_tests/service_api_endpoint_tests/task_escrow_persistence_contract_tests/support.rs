@@ -33,9 +33,24 @@ pub(super) fn read_state_json(path: &Path) -> Value {
     serde_json::from_str(payload.as_str()).expect("state payload should parse")
 }
 
+pub(super) fn read_audit_export_json(path: &Path) -> Value {
+    let payload = fs::read_to_string(path).expect("audit export file should remain readable");
+    serde_json::from_str(payload.as_str()).expect("audit export payload should parse")
+}
+
+pub(super) fn default_audit_export_file(state_file: &Path) -> PathBuf {
+    PathBuf::from(format!("{}.audit-export.json", state_file.to_string_lossy()))
+}
+
 pub(super) fn set_state_file_env(path: &Path) -> (String, EnvVarGuard) {
     let path_text = path.to_string_lossy().to_string();
     let guard = EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(path_text.as_str()));
+    (path_text, guard)
+}
+
+pub(super) fn set_audit_export_file_env(path: &Path) -> (String, EnvVarGuard) {
+    let path_text = path.to_string_lossy().to_string();
+    let guard = EnvVarGuard::set("KAMN_SERVICE_API_AUDIT_EXPORT_FILE", Some(path_text.as_str()));
     (path_text, guard)
 }
 
@@ -46,10 +61,29 @@ pub(super) fn create_task(
     nonce: u64,
     payload: &str,
 ) -> ServiceApiTaskCreateBody {
-    let response = signed_request(snapshot, bind_addr, 1, "POST", "/v1/tasks/create", caller_did, nonce, payload);
+    let response = raw_create_task_response(snapshot, bind_addr, caller_did, nonce, payload);
     assert!(response.contains("HTTP/1.1 201 Created"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("task create payload should deserialize")
+}
+
+pub(super) fn raw_create_task_response(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    payload: &str,
+) -> String {
+    signed_request(
+        snapshot,
+        bind_addr,
+        1,
+        "POST",
+        "/v1/tasks/create",
+        caller_did,
+        nonce,
+        payload,
+    )
 }
 
 pub(super) fn accept_task(
