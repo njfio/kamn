@@ -62,6 +62,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_ignored_test_inventory_parser_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_supply_chain_advisory_toolchain_policy.sh"
+  bash "$ROOT_DIR/scripts/ci/test_supply_chain_advisory_artifact_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"
   bash "$ROOT_DIR/scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"
