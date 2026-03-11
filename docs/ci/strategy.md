@@ -2277,7 +2277,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `ci-supply-chain-advisory-license.json`
 - False-positive / waiver handling:
   - advisory Trivy suppressions live in `.trivyignore` and must stay temporary
-  - workflow scan steps remain advisory via `continue-on-error: true`, but a follow-up report-existence step fails the job if a tool does not produce its report
+  - workflow scan steps remain advisory via `continue-on-error: true`; missing Trivy or SBOM outputs are normalized into explicit placeholder artifacts so the upload contract remains deterministic and observable
   - `.dockerignore` must re-include `fixtures/runtime/service_api_scope_policy_fixture_matrix.txt` so the advisory image can compile `kamn-node`
 - Promotion path:
   - after three clean advisory cycles on `main`, open a follow-up issue to decide which findings graduate into required gates and which remain documented waivers
