@@ -5,28 +5,28 @@ const ROOT: &str = "src/p2p_transport/p2p_transport_live.rs";
 const ROOT_CAP: usize = 180;
 const MODULE_CAP: usize = 200;
 const MODULE_FILES: &[&str] = &[
-    "src/p2p_transport/p2p_transport_live/runtime_backend.rs",
+    "src/p2p_transport/p2p_transport_live/runtime_inbox.rs",
     "src/p2p_transport/p2p_transport_live/peer_lifecycle_transport.rs",
     "src/p2p_transport/p2p_transport_live/native_runtime_loop.rs",
+    "src/p2p_transport/p2p_transport_live/swarm_runtime.rs",
     "src/p2p_transport/p2p_transport_live/deterministic_config.rs",
-    "src/p2p_transport/p2p_transport_live/lifecycle_regression.rs",
-    "src/p2p_transport/p2p_transport_live/harness.rs",
+    "src/p2p_transport/p2p_transport_live/regression_harness.rs",
 ];
 const REQUIRED_MARKERS: &[&str] = &[
-    "mod runtime_backend;",
+    "mod runtime_inbox;",
     "mod peer_lifecycle_transport;",
     "mod native_runtime_loop;",
+    "mod swarm_runtime;",
     "mod deterministic_config;",
-    "mod lifecycle_regression;",
-    "mod harness;",
+    "mod regression_harness;",
 ];
 const MOVED_MARKERS: &[&str] = &[
-    "fn enqueue_live_runtime_inbox_frame(",
-    "pub struct Libp2pLivePeerLifecycleTransport",
-    "fn run_libp2p_native_runtime_adapter_loop(",
+    "fn build_live_runtime_inbox_backpressure_controller(",
+    "pub struct Libp2pLivePeerLifecycleTransport {",
+    "struct Libp2pLiveDataPlane {",
+    "enum Libp2pNativeRuntimeAdapterLoopCommand {",
     "pub struct P2pSwarmDeterministicConfig",
     "pub fn build_libp2p_lifecycle_regression_corpus()",
-    "pub struct P2pSwarmHarnessTask",
 ];
 
 #[test]

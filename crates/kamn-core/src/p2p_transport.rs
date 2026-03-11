@@ -1,21 +1,11 @@
 //! Deterministic peer discovery and gossip transport adapters for runtime integration.
 
-use crate::config::NodeConfig;
-use crate::runtime::{
-    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError,
-    RuntimeTransportProfile,
-};
+use crate::runtime::RuntimeTransportProfile;
 #[cfg(feature = "libp2p-live-transport")]
 use libp2p::{gossipsub, identify};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::collections::{BTreeMap, VecDeque};
 
-use validation::{
-    validate_peer_id, validate_swarm_bootstrap_peer_address, validate_swarm_listen_address,
-    validate_topic,
-};
+use validation::{validate_peer_id, validate_topic};
 
 const LIBP2P_SWARM_BEHAVIOR_COMPONENTS: [&str; 6] =
     ["tcp", "noise", "yamux", "identify", "kad", "gossipsub"];
@@ -32,6 +22,7 @@ struct Libp2pDeterministicRuntimeBehaviour {
 mod adapter;
 mod coordinator;
 mod error;
+mod lifecycle_regression;
 #[allow(dead_code)]
 mod native_runtime;
 mod p2p_transport_live;
