@@ -29,6 +29,14 @@ pub(super) fn query_message_status(
     step: &str,
 ) -> Result<(), String> {
     let handle = connect_agent(endpoint, kolme_endpoint, agent_name, connect_context)?;
+    query_message_status_with_handle(&handle, expected_message_id, step)
+}
+
+pub(super) fn query_message_status_with_handle(
+    handle: &super::KamnAgentHandle,
+    expected_message_id: &str,
+    step: &str,
+) -> Result<(), String> {
     let queried = handle
         .query_message(expected_message_id)
         .map_err(|error| format!("{step} failed: {error}"))?;
