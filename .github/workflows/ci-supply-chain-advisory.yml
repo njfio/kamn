@@ -42,20 +42,11 @@ jobs:
 
       - name: Ensure advisory filesystem report exists
         run: |
-          if [ -f ci-supply-chain-advisory-trivy-fs.json ]; then
-            echo "trivy_fs_report_status=generated_by_scan" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          cat > ci-supply-chain-advisory-trivy-fs.json <<'EOF'
-          {
-            "status": "placeholder_due_to_missing_output",
-            "report": "trivy-fs",
-            "generator": "ci-supply-chain-advisory",
-            "reason": "scan_step_did_not_emit_output"
-          }
-          EOF
-          echo "trivy_fs_report_status=placeholder_due_to_missing_output" >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/ci/ensure_advisory_report.py \
+            trivy_fs \
+            ci-supply-chain-advisory-trivy-fs.json \
+            trivy-fs \
+            "$GITHUB_STEP_SUMMARY"
 
       - name: Trivy image advisory scan
         continue-on-error: true
@@ -70,20 +61,11 @@ jobs:
 
       - name: Ensure advisory image report exists
         run: |
-          if [ -f ci-supply-chain-advisory-trivy-image.json ]; then
-            echo "trivy_image_report_status=generated_by_scan" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          cat > ci-supply-chain-advisory-trivy-image.json <<'EOF'
-          {
-            "status": "placeholder_due_to_missing_output",
-            "report": "trivy-image",
-            "generator": "ci-supply-chain-advisory",
-            "reason": "scan_step_did_not_emit_output"
-          }
-          EOF
-          echo "trivy_image_report_status=placeholder_due_to_missing_output" >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/ci/ensure_advisory_report.py \
+            trivy_image \
+            ci-supply-chain-advisory-trivy-image.json \
+            trivy-image \
+            "$GITHUB_STEP_SUMMARY"
 
       - name: Trivy image SBOM generation
         continue-on-error: true
@@ -96,39 +78,11 @@ jobs:
 
       - name: Ensure advisory SBOM report exists
         run: |
-          if [ -f ci-supply-chain-advisory-sbom.cdx.json ]; then
-            echo "advisory_sbom_report_status=generated_by_scan" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          cat > ci-supply-chain-advisory-sbom.cdx.json <<'EOF'
-          {
-            "bomFormat": "CycloneDX",
-            "specVersion": "1.6",
-            "version": 1,
-            "metadata": {
-              "component": {
-                "name": "kamn-supply-chain-advisory",
-                "type": "application"
-              }
-            },
-            "properties": [
-              {
-                "name": "kamn:status",
-                "value": "placeholder_due_to_missing_output"
-              },
-              {
-                "name": "kamn:report",
-                "value": "sbom"
-              },
-              {
-                "name": "kamn:reason",
-                "value": "scan_step_did_not_emit_output"
-              }
-            ]
-          }
-          EOF
-          echo "advisory_sbom_report_status=placeholder_due_to_missing_output" >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/ci/ensure_advisory_report.py \
+            advisory_sbom \
+            ci-supply-chain-advisory-sbom.cdx.json \
+            sbom \
+            "$GITHUB_STEP_SUMMARY"
 
       - name: Advisory workspace license inventory
         run: |
