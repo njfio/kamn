@@ -36,3 +36,5 @@ mod plain_commit_type_contract_tests;
 mod unknown_commit_type_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/input_total_contract_tests.rs"]
 mod input_total_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/non_merge_total_contract_tests.rs"]
+mod non_merge_total_contract_tests;
