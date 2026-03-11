@@ -32,13 +32,13 @@ Remove the `kamn-types -> kamn-core` dependency inversion by moving the first-wa
 - Extracted files or functions violate the active size policy during the inversion.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-types/Cargo.toml` no longer declares `kamn-core` as a dependency.
-- [ ] The first-wave DID/value surface (`AgentDid`, `KamnDid`, `DidDocument`, `DidService`, `DidVerificationMethod`, `AgentDidError`, `KamnDidError`, `AgentDidKeyBindingError`, `AgentDidMetadata`, canonical parse helpers) is owned by `kamn-types`.
-- [ ] `kamn-core` consumes the moved surface from `kamn-types` and preserves temporary compatibility re-exports for existing downstream users.
-- [ ] `cargo tree -p kamn-types` no longer shows `kamn-core` in the dependency tree.
-- [ ] Existing downstream users in `kamn-core`, `kamn-sdk`, `kamn-node`, and `kamn-governance` compile and their relevant test targets stay green.
-- [ ] Architecture/docs contracts are updated from `temporary-kamn-core-reexport` current-state markers to the new post-inversion state where appropriate.
-- [ ] No new circular dependency is introduced.
+- [x] `crates/kamn-types/Cargo.toml` no longer declares `kamn-core` as a dependency.
+- [x] The first-wave DID/value surface (`AgentDid`, `KamnDid`, `DidDocument`, `DidService`, `DidVerificationMethod`, `AgentDidError`, `KamnDidError`, `AgentDidKeyBindingError`, `AgentDidMetadata`, canonical parse helpers) is owned by `kamn-types`.
+- [x] `kamn-core` consumes the moved surface from `kamn-types` and preserves temporary compatibility re-exports for existing downstream users.
+- [x] `cargo tree -p kamn-types` no longer shows `kamn-core` in the dependency tree.
+- [x] Existing downstream users in `kamn-core`, `kamn-sdk`, `kamn-node`, and `kamn-governance` compile and their relevant test targets stay green.
+- [x] Architecture/docs contracts are updated from `temporary-kamn-core-reexport` current-state markers to the new post-inversion state where appropriate.
+- [x] No new circular dependency is introduced.
 
 ## Files to touch
 - `specs/6855-kamn-types-layering-fix.md`
@@ -62,3 +62,34 @@ Remove the `kamn-types -> kamn-core` dependency inversion by moving the first-wa
 4. Re-run `cargo tree -p kamn-types` and the new extraction/dependency contracts until green.
 5. Re-run targeted downstream test targets from `kamn-types`, `kamn-core`, `kamn-sdk`, `kamn-node`, and `kamn-governance` that exercise DID parsing/import boundaries.
 6. Run the touched-Rust size ratchet on the final write set.
+
+## Final evidence
+- Dependency inversion:
+  - `crates/kamn-types/Cargo.toml` no longer depends on `kamn-core`
+  - `crates/kamn-core/Cargo.toml` now depends on `kamn-types`
+- Owned DID/value surface:
+  - `crates/kamn-types/src/did.rs`
+  - `crates/kamn-types/src/did/document.rs`
+  - `crates/kamn-types/src/did/errors.rs`
+  - `crates/kamn-types/src/did/ids.rs`
+  - `crates/kamn-types/src/did/key_binding.rs`
+- Compatibility shim:
+  - `crates/kamn-core/src/did.rs` re-exports the moved DID/value surface and keeps document/federated helpers in `kamn-core`
+- Contracts and docs:
+  - `cargo test -p kamn-types --test kamn_types_layering_fix_contract -- --nocapture`
+  - `cargo test -p kamn-core --test kamn_core_target_crate_graph_docs -- --nocapture`
+- Real path validation:
+  - `cargo test -p kamn-types -- --nocapture`
+  - `cargo test -p kamn-core did::tests:: -- --nocapture`
+  - `cargo test -p kamn-sdk --no-run`
+  - `cargo test -p kamn-node --no-run`
+  - `cargo test -p kamn-governance --no-run`
+- Dependency-tree validation:
+  - `cargo tree -p kamn-types | rg "kamn-core" -n`
+  - expected/observed result: no matches
+- Size ratchet:
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6855-clean --base-ref origin/main --output-json /tmp/6855-touched-size-refactor3.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+- Temporary `kamn-core` compatibility re-exports remain intentionally in place in `crates/kamn-core/src/did.rs`; removing those shims is a follow-up migration step, not part of this inversion issue.
