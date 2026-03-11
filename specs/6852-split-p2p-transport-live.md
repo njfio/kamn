@@ -24,11 +24,11 @@ Split `crates/kamn-core/src/p2p_transport/p2p_transport_live.rs` into bounded, c
 - Extracted files or functions still exceed active size limits.
 
 ## Acceptance criteria
-- [ ] The root file is reduced to a thin shell under the active file-size budget.
-- [ ] Runtime inbox / peer lifecycle / native runtime resolution / deterministic config / regression seams are extracted into bounded modules.
-- [ ] Existing live transport and native adapter tests remain green.
-- [ ] No extracted file exceeds the active file-size limit.
-- [ ] No extracted function exceeds the active function-size limit.
+- [x] The root file is reduced to a thin shell under the active file-size budget.
+- [x] Runtime inbox / peer lifecycle / native runtime resolution / deterministic config / regression seams are extracted into bounded modules.
+- [x] Existing live transport and native adapter tests remain green.
+- [x] No extracted file exceeds the active file-size limit.
+- [x] No extracted function exceeds the active function-size limit.
 
 ## Files to touch
 - `specs/6852-split-p2p-transport-live.md`
@@ -47,3 +47,23 @@ Split `crates/kamn-core/src/p2p_transport/p2p_transport_live.rs` into bounded, c
 3. Extract the file into bounded concern-based modules.
 4. Re-run the extraction contract and live transport targets until green.
 5. Run the clean-clone touched-Rust size ratchet on the final write set.
+
+## Final evidence
+- Root shell reduced to `35` LOC at `crates/kamn-core/src/p2p_transport/p2p_transport_live.rs`
+- Extracted modules:
+  - `runtime_inbox.rs`
+  - `peer_lifecycle_transport.rs`
+  - `peer_lifecycle_transport/contract_data_plane.rs`
+  - `native_runtime_loop.rs`
+  - `swarm_runtime.rs`
+  - `deterministic_config.rs`
+  - `regression_harness.rs`
+- Verification:
+  - `cargo test -p kamn-core --test p2p_transport_live_module_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture`
+  - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6850-remote-clean4 --base-ref origin/main --output-json /tmp/6852-touched-size-refactor.json`
+- Touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- Clean-clone validation used the Python touched-Rust entrypoint directly instead of the shell wrapper so the repo root stayed pinned to `/home/n/Code/kamn-6850-remote-clean4`.
