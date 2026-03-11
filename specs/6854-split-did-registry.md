@@ -25,11 +25,11 @@ Split `crates/kamn-core/src/did_registry.rs` into bounded, concern-based modules
 - Error codes or fail-closed behavior change.
 
 ## Acceptance criteria
-- [ ] The root file is reduced to a thin shell under the active file-size budget.
-- [ ] Validation, persistence, chain-submission, lifecycle-mutation, and test seams are extracted into bounded modules.
-- [ ] Existing DID registry tests remain green.
-- [ ] No extracted file exceeds the active file-size limit.
-- [ ] No extracted function exceeds the active function-size limit.
+- [x] The root file is reduced to a thin shell under the active file-size budget.
+- [x] Validation, persistence, chain-submission, lifecycle-mutation, and test seams are extracted into bounded modules.
+- [x] Existing DID registry tests remain green.
+- [x] No extracted file exceeds the active file-size limit.
+- [x] No extracted function exceeds the active function-size limit.
 
 ## Files to touch
 - `specs/6854-split-did-registry.md`
@@ -48,3 +48,26 @@ Split `crates/kamn-core/src/did_registry.rs` into bounded, concern-based modules
 3. Extract the file into bounded concern-based modules.
 4. Re-run the extraction contract and real DID registry targets until green.
 5. Run the touched-Rust size ratchet on the final write set.
+
+## Final evidence
+- Root shell:
+  - `crates/kamn-core/src/did_registry.rs`
+- Extracted module tree:
+  - `crates/kamn-core/src/did_registry/models.rs`
+  - `crates/kamn-core/src/did_registry/validation.rs`
+  - `crates/kamn-core/src/did_registry/store.rs`
+  - `crates/kamn-core/src/did_registry/chain_submission.rs`
+  - `crates/kamn-core/src/did_registry/lifecycle.rs`
+  - `crates/kamn-core/src/did_registry/tests.rs`
+- Extraction contract:
+  - `cargo test -p kamn-core --test did_registry_module_extraction_contract -- --nocapture`
+- Real integration paths:
+  - `cargo test -p kamn-core --test did_registry_transactions -- --nocapture`
+  - `cargo test -p kamn-core did_registry::tests:: -- --nocapture`
+  - `cargo test -p kamn-core --test did_registry_file_chain_adapter -- --nocapture`
+- Size ratchet:
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6851-origin-clean-3 --base-ref origin/main --output-json /tmp/6854-touched-size-final.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+- Clean-clone touched-Rust verification used the Python entrypoint directly instead of the shell wrapper because the wrapper resolved the wrong repo root outside this issue worktree.
