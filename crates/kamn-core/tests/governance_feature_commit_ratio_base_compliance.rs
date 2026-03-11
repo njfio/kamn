@@ -28,3 +28,5 @@ mod feature_only_subjects_contract_tests;
 mod governance_only_subjects_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/mixed_subject_ratio_contract_tests.rs"]
 mod mixed_subject_ratio_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/scoped_commit_type_contract_tests.rs"]
+mod scoped_commit_type_contract_tests;
