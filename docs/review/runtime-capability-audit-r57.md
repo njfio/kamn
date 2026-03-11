@@ -10,10 +10,11 @@
 status: gated_or_partial
 
 evidence:
-- `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires message creation via `message_store.create_message(...)`
-- `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires requester retrieval via `message_store.get_message_for_requester(...)`
-- `crates/kamn-sdk/src/service_client_message_task_routes.rs` exposes `get_message_delivery(...)`
-- `crates/kamn-sdk/src/live/agent.rs` consumes service message delivery records
+- code: `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires message creation via `message_store.create_message(...)`
+- code: `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires requester retrieval via `message_store.get_message_for_requester(...)`
+- code: `crates/kamn-sdk/src/service_client_message_task_routes.rs` exposes `get_message_delivery(...)`
+- code: `crates/kamn-sdk/src/live/agent.rs` consumes service message delivery records
+- executable: `cargo test -p kamn-sdk --test live_transport_receive -- --nocapture`
 
 assessment:
 - The service API supports authenticated message creation, storage, and requester retrieval.
@@ -27,9 +28,10 @@ follow_on_issues:
 status: gated_or_partial
 
 evidence:
-- `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires task creation via `message_store.create_task(...)`
-- `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires manual transitions via `transition_task(task_id, "accepted")` and `transition_task(task_id, "completed")`
-- `crates/kamn-core/src/task_operations.rs` is the core task-operation surface on current main
+- code: `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires task creation via `message_store.create_task(...)`
+- code: `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` wires manual transitions via `transition_task(task_id, "accepted")` and `transition_task(task_id, "completed")`
+- code: `crates/kamn-core/src/task_operations.rs` is the core task-operation surface on current main
+- executable: `cargo test -p kamn-core --test task_operations -- --nocapture`
 
 assessment:
 - Task creation and manual state progression are wired.
@@ -42,10 +44,11 @@ follow_on_issues:
 status: gated_or_partial
 
 evidence:
-- `crates/kamn-core/src/data_layer_m2_gateway_access.rs` contains append-only audit-ledger construction and verification
-- `crates/kamn-core/src/upgrade_orchestration.rs` exposes `audit_view()`
-- `crates/kamn-core/src/redaction_compliance.rs` defines concrete audit-event surfaces
-- `crates/kamn-core/README.md` references `audit_exports`
+- code: `crates/kamn-core/src/data_layer_m2_gateway_access.rs` contains append-only audit-ledger construction and verification
+- code: `crates/kamn-core/src/upgrade_orchestration.rs` exposes `audit_view()`
+- code: `crates/kamn-core/src/redaction_compliance.rs` defines concrete audit-event surfaces
+- code: `crates/kamn-core/README.md` references `audit_exports`
+- executable: `cargo test -p kamn-core upgrade_orchestration::tests:: --lib -- --nocapture`
 
 assessment:
 - Concrete audit record and audit view surfaces exist.
@@ -58,11 +61,11 @@ follow_on_issues:
 status: gated_or_partial
 
 evidence:
-- `crates/kamn-core/src/p2p_transport/p2p_transport_live.rs` contains live transport runtime logic
-- `crates/kamn-core/src/p2p_transport/native_runtime.rs` contains feature-gated libp2p native runtime support
-- `crates/kamn-core/src/p2p_transport/swarm_stack.rs` contains swarm wiring
-- `crates/kamn-core/tests/p2p_libp2p_native_adapter_runtime.rs` exercises libp2p native adapter runtime under `libp2p-live-transport`
-- `crates/kamn-core/tests/p2p_live_transport_runtime.rs` covers live transport runtime behavior
+- code: `crates/kamn-core/src/p2p_transport/p2p_transport_live.rs` contains live transport runtime logic
+- code: `crates/kamn-core/src/p2p_transport/native_runtime.rs` contains feature-gated libp2p native runtime support
+- code: `crates/kamn-core/src/p2p_transport/swarm_stack.rs` contains swarm wiring
+- code: `crates/kamn-core/tests/p2p_libp2p_native_adapter_runtime.rs` exercises libp2p native adapter runtime under `libp2p-live-transport`
+- executable: `cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture`
 
 assessment:
 - Live transport is not missing; it exists behind the `libp2p-live-transport` feature and has executable test coverage.
