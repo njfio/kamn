@@ -93,6 +93,19 @@ fn spec_c14_live_s14_driver_path_fails_closed_when_batch_merkle_probe_errors() {
 }
 
 #[test]
+fn spec_c14a_live_s14_driver_path_preserves_batch_merkle_probe_error_detail() {
+    let driver = SdkDirectDriver::with_probe(true, || {
+        Err("sdk-direct live s14 batch-a verify-proof returned block_height=0".to_owned())
+    });
+    let result = crate::drivers::HarnessDriver::execute(&driver, "S-14");
+    assert_eq!(result.status, "fail");
+    assert_eq!(
+        result.detail.as_deref(),
+        Some("sdk-direct live s14 batch-a verify-proof returned block_height=0")
+    );
+}
+
+#[test]
 fn spec_c15_live_s15_driver_path_fails_closed_when_performance_smoke_probe_errors() {
     assert_driver_scenario_fails_closed(
         "S-15",

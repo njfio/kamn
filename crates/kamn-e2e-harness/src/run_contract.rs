@@ -18,6 +18,7 @@ pub use orchestration::execute_run_contract;
 struct ScenarioExecutionResult {
     id: String,
     status: PhaseResultStatus,
+    detail: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

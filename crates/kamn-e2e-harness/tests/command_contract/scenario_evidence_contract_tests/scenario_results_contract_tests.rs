@@ -18,6 +18,64 @@ fn spec_c72_run_output_contains_scenario_results_in_selected_order() {
 }
 
 #[test]
+fn spec_c72a_run_output_preserves_sdk_direct_s14_failure_detail() {
+    let output = run_sdk_direct_s14_failure_output();
+    assert_s14_failure_detail_present(output.as_str());
+}
+
+fn run_sdk_direct_s14_failure_output() -> String {
+    let kolme_binary = temp_path("kolme-node-s14-detail");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
+    let config = s14_failure_config(kolme_binary.display().to_string());
+    let output = with_s14_failure_env(|| {
+        with_external_component_binaries(|| {
+            execute_run_contract(&config).expect("run output should render")
+        })
+    });
+    let _ = std::fs::remove_file(kolme_binary);
+    output
+}
+
+fn s14_failure_config(kolme_binary: String) -> RunCommandConfig {
+    RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary,
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-14".to_owned()],
+    }
+}
+
+fn assert_s14_failure_detail_present(output: &str) {
+    assert!(
+        output.contains("\"scenario_results\":[{\"id\":\"S-14\",\"status\":\"FAIL\",\"detail\":\"sdk-direct live s14"),
+        "scenario_results payload should retain failing S-14 detail: {output}"
+    );
+}
+
+fn with_s14_failure_env<T>(f: impl FnOnce() -> T) -> T {
+    let previous_block_height = std::env::var("KAMN_E2E_S14_BLOCK_HEIGHT").ok();
+    let previous_live_toggle = std::env::var("KAMN_E2E_SDK_DIRECT_LIVE").ok();
+    std::env::set_var("KAMN_E2E_SDK_DIRECT_LIVE", "1");
+    std::env::set_var("KAMN_E2E_S14_BLOCK_HEIGHT", "0");
+    let result = f();
+    restore_env_var("KAMN_E2E_S14_BLOCK_HEIGHT", previous_block_height);
+    restore_env_var("KAMN_E2E_SDK_DIRECT_LIVE", previous_live_toggle);
+    result
+}
+
+fn restore_env_var(key: &str, value: Option<String>) {
+    if let Some(value) = value {
+        std::env::set_var(key, value);
+    } else {
+        std::env::remove_var(key);
+    }
+}
+
+#[test]
 fn spec_c73_scenario_run_phase_is_pass_when_all_selected_scenarios_pass() {
     let config = RunCommandConfig {
         mode: "cli-scripted".to_owned(),

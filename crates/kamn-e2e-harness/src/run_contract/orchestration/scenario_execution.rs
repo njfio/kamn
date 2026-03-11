@@ -47,6 +47,7 @@ pub(super) fn execute_selected_scenarios_contract_only(
             } else {
                 PhaseResultStatus::Pass
             },
+            detail: None,
         })
         .collect()
 }
@@ -66,6 +67,7 @@ fn run_scenario(
     Ok(ScenarioExecutionResult {
         id: scenario.id.to_owned(),
         status,
+        detail: driver_result.detail,
     })
 }
 

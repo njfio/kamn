@@ -10,7 +10,7 @@ use super::{
     runner_registry::{explicit_runner_map, shared_runner_map, LiveRunnerMap},
     shared_live_execution_enabled_from_env, CLI_SCRIPTED_LIVE_ENV,
 };
-use crate::drivers::{DriverExecutionResult, HarnessDriver};
+use crate::drivers::{live_probe_driver_result, DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
 use std::sync::Arc;
 
@@ -97,17 +97,13 @@ impl CliScriptedDriver {
             .map(|runner| runner.as_ref()())
     }
 
-    fn status_for_scenario(&self, scenario_id: &'static str) -> &'static str {
-        if !is_live_bound_scenario_id(scenario_id) {
-            return "pass";
-        }
-        if !self.live_execution_enabled {
-            return "fail";
-        }
-        match self.live_runner_for_scenario(scenario_id) {
-            Some(result) if result.is_ok() => "pass",
-            Some(_) | None => "fail",
-        }
+    fn execution_result_for_scenario(&self, scenario_id: &'static str) -> DriverExecutionResult {
+        live_probe_driver_result(
+            scenario_id,
+            is_live_bound_scenario_id(scenario_id),
+            self.live_execution_enabled,
+            || self.live_runner_for_scenario(scenario_id),
+        )
     }
 }
 
@@ -117,10 +113,7 @@ impl HarnessDriver for CliScriptedDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        DriverExecutionResult {
-            scenario_id,
-            status: self.status_for_scenario(scenario_id),
-        }
+        self.execution_result_for_scenario(scenario_id)
     }
 }
 
