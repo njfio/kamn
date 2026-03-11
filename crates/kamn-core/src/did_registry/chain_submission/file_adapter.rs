@@ -51,13 +51,8 @@ impl FileDidRegistrationChainAdapter {
         idempotency_key: &str,
         transaction_id: String,
     ) -> Result<DidChainSubmissionOutcome, DidRegistryError> {
-        if let Some(reason) = self.rejected_reasons_by_key.get(idempotency_key) {
-            return Ok(DidChainSubmissionOutcome::Rejected {
-                reason: reason.clone(),
-            });
-        }
-        if let Some(existing) = self.receipts_by_key.get(idempotency_key) {
-            return Ok(DidChainSubmissionOutcome::Duplicate(existing.clone()));
+        if let Some(outcome) = self.existing_outcome(idempotency_key) {
+            return Ok(outcome);
         }
         let receipt = DidChainSubmissionReceipt {
             provider: self.provider.clone(),
@@ -65,12 +60,28 @@ impl FileDidRegistrationChainAdapter {
         };
         self.receipts_by_key
             .insert(idempotency_key.to_owned(), receipt.clone());
+        self.persist_state()?;
+        Ok(DidChainSubmissionOutcome::Submitted(receipt))
+    }
+
+    fn existing_outcome(&self, idempotency_key: &str) -> Option<DidChainSubmissionOutcome> {
+        if let Some(reason) = self.rejected_reasons_by_key.get(idempotency_key) {
+            return Some(DidChainSubmissionOutcome::Rejected {
+                reason: reason.clone(),
+            });
+        }
+        self.receipts_by_key
+            .get(idempotency_key)
+            .cloned()
+            .map(DidChainSubmissionOutcome::Duplicate)
+    }
+
+    fn persist_state(&self) -> Result<(), DidRegistryError> {
         persist_did_chain_adapter_file(
             &self.path,
             &self.receipts_by_key,
             &self.rejected_reasons_by_key,
-        )?;
-        Ok(DidChainSubmissionOutcome::Submitted(receipt))
+        )
     }
 }
 

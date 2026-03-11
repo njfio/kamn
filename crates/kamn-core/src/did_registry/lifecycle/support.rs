@@ -33,37 +33,7 @@ pub(crate) fn lifecycle_action_fingerprint(
         DidLifecycleMutationAction::Rotate { document }
         | DidLifecycleMutationAction::Recover { document } => {
             super::super::store::support::validate_document_did(did, document)?;
-            let capability_fingerprint = document.metadata.capabilities.join(",");
-            let verification_fingerprint = document
-                .verification_method
-                .iter()
-                .map(|verification| {
-                    format!(
-                        "{}:{}:{}",
-                        verification.id, verification.type_name, verification.public_key_multibase
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("|");
-            let service_fingerprint = document
-                .service
-                .iter()
-                .map(|service| {
-                    format!(
-                        "{}:{}:{}",
-                        service.id, service.type_name, service.service_endpoint
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("|");
-            Ok(format!(
-                "{}:{}:{}:{}:{}",
-                document.metadata.agent_type,
-                document.metadata.model_family,
-                capability_fingerprint,
-                verification_fingerprint,
-                service_fingerprint
-            ))
+            Ok(super::super::store::support::document_fingerprint(document))
         }
         DidLifecycleMutationAction::Revoke => Ok("revoke".to_owned()),
     }

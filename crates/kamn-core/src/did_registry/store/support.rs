@@ -46,3 +46,42 @@ pub(crate) fn validate_document_did(
     }
     Ok(())
 }
+
+pub(crate) fn document_fingerprint(document: &DidDocument) -> String {
+    format!(
+        "{}:{}:{}:{}:{}",
+        document.metadata.agent_type,
+        document.metadata.model_family,
+        document.metadata.capabilities.join(","),
+        verification_fingerprint(document),
+        service_fingerprint(document),
+    )
+}
+
+fn verification_fingerprint(document: &DidDocument) -> String {
+    document
+        .verification_method
+        .iter()
+        .map(|verification| {
+            format!(
+                "{}:{}:{}",
+                verification.id, verification.type_name, verification.public_key_multibase
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("|")
+}
+
+fn service_fingerprint(document: &DidDocument) -> String {
+    document
+        .service
+        .iter()
+        .map(|service| {
+            format!(
+                "{}:{}:{}",
+                service.id, service.type_name, service.service_endpoint
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("|")
+}

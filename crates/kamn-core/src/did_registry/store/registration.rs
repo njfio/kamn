@@ -11,37 +11,10 @@ impl DidRegistry {
         document: &DidDocument,
     ) -> Result<String, DidRegistryError> {
         support::validate_document_did(did, document)?;
-        let capability_fingerprint = document.metadata.capabilities.join(",");
-        let verification_fingerprint = document
-            .verification_method
-            .iter()
-            .map(|verification| {
-                format!(
-                    "{}:{}:{}",
-                    verification.id, verification.type_name, verification.public_key_multibase
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("|");
-        let service_fingerprint = document
-            .service
-            .iter()
-            .map(|service| {
-                format!(
-                    "{}:{}:{}",
-                    service.id, service.type_name, service.service_endpoint
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("|");
         Ok(format!(
-            "did-register:{}:{}:{}:{}:{}:{}",
+            "did-register:{}:{}",
             did.as_str(),
-            document.metadata.agent_type,
-            document.metadata.model_family,
-            capability_fingerprint,
-            verification_fingerprint,
-            service_fingerprint
+            support::document_fingerprint(document),
         ))
     }
 
@@ -62,7 +35,8 @@ impl DidRegistry {
         document: DidDocument,
     ) -> Result<DidSubmissionRetryClass, DidRegistryError> {
         let idempotency_key = self.idempotency_key_for_register(&did, &document)?;
-        match support::classify_retry_by_key(self, &did, &idempotency_key) {
+        let retry_class = support::classify_retry_by_key(self, &did, &idempotency_key);
+        match retry_class {
             DidSubmissionRetryClass::NewSubmission => {
                 self.register(did.clone(), document)?;
                 self.submission_keys_by_did.insert(did, idempotency_key);
@@ -75,16 +49,7 @@ impl DidRegistry {
                 Ok(DidSubmissionRetryClass::FinalizedNoRetry)
             }
             DidSubmissionRetryClass::ConflictNoRetry => {
-                let existing_key = self
-                    .submission_keys_by_did
-                    .get(&did)
-                    .cloned()
-                    .unwrap_or_default();
-                Err(DidRegistryError::ConflictingSubmissionIdempotencyKey {
-                    did: did.as_str().to_owned(),
-                    existing_key,
-                    provided_key: idempotency_key,
-                })
+                Err(conflicting_submission_key(self, &did, idempotency_key))
             }
         }
     }
@@ -114,5 +79,21 @@ impl DidRegistry {
             retry_class,
             outcome,
         })
+    }
+}
+
+fn conflicting_submission_key(
+    registry: &DidRegistry,
+    did: &AgentDid,
+    provided_key: String,
+) -> DidRegistryError {
+    DidRegistryError::ConflictingSubmissionIdempotencyKey {
+        did: did.as_str().to_owned(),
+        existing_key: registry
+            .submission_keys_by_did
+            .get(did)
+            .cloned()
+            .unwrap_or_default(),
+        provided_key,
     }
 }

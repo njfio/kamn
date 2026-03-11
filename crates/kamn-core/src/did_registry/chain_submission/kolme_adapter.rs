@@ -69,22 +69,29 @@ impl<C: KolmeRuntimeCommitClient> DidLifecycleChainAdapter for KolmeDidLifecycle
             .client
             .submit_commit(&runtime_request)
             .map_err(Self::map_runtime_commit_error)?;
-        match outcome {
-            KolmeRuntimeCommitOutcome::Submitted(receipt) => Ok(
-                DidChainSubmissionOutcome::Submitted(DidChainSubmissionReceipt {
-                    provider: receipt.provider,
-                    transaction_id: receipt.commit_id,
-                }),
-            ),
-            KolmeRuntimeCommitOutcome::Duplicate(receipt) => Ok(
-                DidChainSubmissionOutcome::Duplicate(DidChainSubmissionReceipt {
-                    provider: receipt.provider,
-                    transaction_id: receipt.commit_id,
-                }),
-            ),
-            KolmeRuntimeCommitOutcome::Rejected { reason } => {
-                Ok(DidChainSubmissionOutcome::Rejected { reason })
-            }
+        Ok(map_commit_outcome(outcome))
+    }
+}
+
+fn map_commit_outcome(outcome: KolmeRuntimeCommitOutcome) -> DidChainSubmissionOutcome {
+    match outcome {
+        KolmeRuntimeCommitOutcome::Submitted(receipt) => {
+            DidChainSubmissionOutcome::Submitted(map_commit_receipt(receipt))
         }
+        KolmeRuntimeCommitOutcome::Duplicate(receipt) => {
+            DidChainSubmissionOutcome::Duplicate(map_commit_receipt(receipt))
+        }
+        KolmeRuntimeCommitOutcome::Rejected { reason } => {
+            DidChainSubmissionOutcome::Rejected { reason }
+        }
+    }
+}
+
+fn map_commit_receipt(
+    receipt: crate::kolme_runtime_commit::KolmeRuntimeCommitReceipt,
+) -> DidChainSubmissionReceipt {
+    DidChainSubmissionReceipt {
+        provider: receipt.provider,
+        transaction_id: receipt.commit_id,
     }
 }
