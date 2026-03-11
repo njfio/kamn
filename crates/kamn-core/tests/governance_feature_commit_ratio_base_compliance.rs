@@ -18,3 +18,5 @@ mod window_cap_contract_tests;
 mod governance_ratio_rounding_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/feature_ratio_rounding_contract_tests.rs"]
 mod feature_ratio_rounding_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/success_reason_codes_contract_tests.rs"]
+mod success_reason_codes_contract_tests;
