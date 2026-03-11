@@ -52,3 +52,11 @@ Restore mergeability of PRs blocked by the `supply-chain-advisory` workflow by a
    - `bash scripts/ci/test_workflow_scope_policy.sh`
    - `docker build -t kamn-supply-chain-advisory:local .`
 5. Record the outcome and any scope deviation in the spec.
+
+## Outcome / deviations
+- The initial red contract targeted `1.88.1`, but the concrete Rust release required here is `1.88.0`; the implementation and policy were corrected to the real published toolchain.
+- The advisory image had a second independent failure after the Rust mismatch was fixed: `.dockerignore` excluded `fixtures/runtime/service_api_scope_policy_fixture_matrix.txt`, which `kamn-node` compiles via `include_str!`. The issue scope was expanded to re-include that runtime fixture for advisory builds.
+- Evidence captured:
+  - `bash scripts/ci/test_supply_chain_advisory_toolchain_policy.sh`
+  - `bash scripts/ci/test_workflow_scope_policy.sh`
+  - `docker build -t kamn-supply-chain-advisory:local .`
