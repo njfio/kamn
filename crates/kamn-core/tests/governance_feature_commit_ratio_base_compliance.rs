@@ -32,3 +32,5 @@ mod mixed_subject_ratio_contract_tests;
 mod scoped_commit_type_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/plain_commit_type_contract_tests.rs"]
 mod plain_commit_type_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/unknown_commit_type_contract_tests.rs"]
+mod unknown_commit_type_contract_tests;
