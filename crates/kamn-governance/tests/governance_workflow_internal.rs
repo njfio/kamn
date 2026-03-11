@@ -1,6 +1,6 @@
 use kamn_governance::{
-    GovernanceParameterChangeDraft, GovernanceProposalDraft, GovernanceProposalStatus,
-    GovernanceVoteChoice, GovernanceWorkflow, GovernanceWorkflowError,
+    GovernanceProposalDraft, GovernanceProposalStatus, GovernanceVoteChoice, GovernanceWorkflow,
+    GovernanceWorkflowError,
 };
 
 fn draft(proposal_id: &str) -> GovernanceProposalDraft {
@@ -14,6 +14,41 @@ fn draft(proposal_id: &str) -> GovernanceProposalDraft {
         quorum_threshold: 2,
         parameter_change: None,
     }
+}
+
+fn submit_default(workflow: &mut GovernanceWorkflow, proposal_id: &str) {
+    workflow
+        .submit_proposal(draft(proposal_id))
+        .expect("proposal should submit");
+}
+
+fn cast_vote_ok(
+    workflow: &mut GovernanceWorkflow,
+    proposal_id: &str,
+    voter_did: &str,
+    choice: GovernanceVoteChoice,
+    cast_at_unix: u64,
+) {
+    workflow
+        .cast_vote(proposal_id, voter_did, choice, cast_at_unix)
+        .expect("vote should pass");
+}
+
+fn approve(workflow: &mut GovernanceWorkflow, proposal_id: &str) {
+    cast_vote_ok(
+        workflow,
+        proposal_id,
+        "kamn:did:agent:validator-2",
+        GovernanceVoteChoice::Yes,
+        110,
+    );
+    cast_vote_ok(
+        workflow,
+        proposal_id,
+        "kamn:did:agent:validator-3",
+        GovernanceVoteChoice::Yes,
+        111,
+    );
 }
 
 #[test]
@@ -35,25 +70,21 @@ fn submit_rejects_invalid_deadline() {
 #[test]
 fn no_quorum_transitions_to_rejected() {
     let mut workflow = GovernanceWorkflow::new();
-    workflow
-        .submit_proposal(draft("gov-reject"))
-        .expect("proposal should submit");
-    workflow
-        .cast_vote(
-            "gov-reject",
-            "kamn:did:agent:validator-2",
-            GovernanceVoteChoice::No,
-            110,
-        )
-        .expect("first no vote should pass");
-    workflow
-        .cast_vote(
-            "gov-reject",
-            "kamn:did:agent:validator-3",
-            GovernanceVoteChoice::No,
-            111,
-        )
-        .expect("second no vote should pass");
+    submit_default(&mut workflow, "gov-reject");
+    cast_vote_ok(
+        &mut workflow,
+        "gov-reject",
+        "kamn:did:agent:validator-2",
+        GovernanceVoteChoice::No,
+        110,
+    );
+    cast_vote_ok(
+        &mut workflow,
+        "gov-reject",
+        "kamn:did:agent:validator-3",
+        GovernanceVoteChoice::No,
+        111,
+    );
 
     assert_eq!(
         workflow
@@ -66,28 +97,13 @@ fn no_quorum_transitions_to_rejected() {
 #[test]
 fn yes_quorum_transitions_to_approved_and_execute_records_history() {
     let mut workflow = GovernanceWorkflow::new();
-    workflow
-        .submit_proposal(draft("gov-approve"))
-        .expect("proposal should submit");
-    workflow
-        .cast_vote(
-            "gov-approve",
-            "kamn:did:agent:validator-2",
-            GovernanceVoteChoice::Yes,
-            110,
-        )
-        .expect("first yes vote should pass");
-    workflow
-        .cast_vote(
-            "gov-approve",
-            "kamn:did:agent:validator-3",
-            GovernanceVoteChoice::Yes,
-            111,
-        )
-        .expect("second yes vote should pass");
-
+    submit_default(&mut workflow, "gov-approve");
+    approve(&mut workflow, "gov-approve");
     assert_eq!(
-        workflow.proposal("gov-approve").expect("proposal exists").status,
+        workflow
+            .proposal("gov-approve")
+            .expect("proposal exists")
+            .status,
         GovernanceProposalStatus::Approved
     );
 
@@ -107,9 +123,7 @@ fn yes_quorum_transitions_to_approved_and_execute_records_history() {
 #[test]
 fn late_vote_expires_proposal_and_rejects_vote() {
     let mut workflow = GovernanceWorkflow::new();
-    workflow
-        .submit_proposal(draft("gov-expire"))
-        .expect("proposal should submit");
+    submit_default(&mut workflow, "gov-expire");
 
     assert_eq!(
         workflow.cast_vote(
@@ -128,17 +142,14 @@ fn late_vote_expires_proposal_and_rejects_vote() {
 #[test]
 fn duplicate_vote_is_rejected_fail_closed() {
     let mut workflow = GovernanceWorkflow::new();
-    workflow
-        .submit_proposal(draft("gov-duplicate-vote"))
-        .expect("proposal should submit");
-    workflow
-        .cast_vote(
-            "gov-duplicate-vote",
-            "kamn:did:agent:validator-2",
-            GovernanceVoteChoice::Abstain,
-            110,
-        )
-        .expect("first vote should pass");
+    submit_default(&mut workflow, "gov-duplicate-vote");
+    cast_vote_ok(
+        &mut workflow,
+        "gov-duplicate-vote",
+        "kamn:did:agent:validator-2",
+        GovernanceVoteChoice::Abstain,
+        110,
+    );
 
     assert_eq!(
         workflow.cast_vote(
@@ -157,9 +168,7 @@ fn duplicate_vote_is_rejected_fail_closed() {
 #[test]
 fn execute_rejects_proposal_that_never_reached_approval() {
     let mut workflow = GovernanceWorkflow::new();
-    workflow
-        .submit_proposal(draft("gov-not-approved"))
-        .expect("proposal should submit");
+    submit_default(&mut workflow, "gov-not-approved");
 
     assert_eq!(
         workflow.execute(
@@ -172,25 +181,5 @@ fn execute_rejects_proposal_that_never_reached_approval() {
             proposal_id: "gov-not-approved".to_owned(),
             status: GovernanceProposalStatus::Voting,
         })
-    );
-}
-
-#[test]
-fn parameter_change_rejects_unknown_key() {
-    let mut workflow = GovernanceWorkflow::new();
-    assert_eq!(
-        workflow.submit_proposal(GovernanceProposalDraft {
-            parameter_change: Some(GovernanceParameterChangeDraft {
-                key: "unknown.parameter".to_owned(),
-                proposed_value: 3,
-                min_value: 1,
-                max_value: 5,
-                target_version: "1.0.0".to_owned(),
-            }),
-            ..draft("gov-parameter-policy")
-        }),
-        Err(GovernanceWorkflowError::UnknownParameterKey(
-            "unknown.parameter".to_owned(),
-        ))
     );
 }

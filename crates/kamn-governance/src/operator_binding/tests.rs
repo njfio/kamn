@@ -16,6 +16,43 @@ fn permissions(values: &[OperatorBindingAction]) -> BTreeSet<OperatorBindingActi
     values.iter().copied().collect()
 }
 
+fn register_binding(
+    engine: &mut OperatorBindingEngine,
+    agent_did: &str,
+    operator_did: &str,
+    permissions: &[OperatorBindingAction],
+) {
+    engine
+        .register_binding(
+            agent_did,
+            operator_did,
+            Some(proof_for(operator_did)),
+            crate_permissions(permissions),
+        )
+        .expect("binding should register");
+}
+
+fn revoked_engine() -> OperatorBindingEngine {
+    let mut engine = OperatorBindingEngine::new();
+    register_binding(
+        &mut engine,
+        "kamn:did:agent:agent-11",
+        "kamn:did:human:operator-11",
+        &[
+            OperatorBindingAction::Configure,
+            OperatorBindingAction::Revoke,
+        ],
+    );
+    engine
+        .revoke_binding("kamn:did:agent:agent-11", "kamn:did:human:operator-11")
+        .expect("revoke should succeed");
+    engine
+}
+
+fn crate_permissions(values: &[OperatorBindingAction]) -> BTreeSet<OperatorBindingAction> {
+    permissions(values)
+}
+
 #[test]
 fn register_rejects_invalid_operator_did() {
     let mut engine = OperatorBindingEngine::new();
@@ -59,14 +96,12 @@ fn register_rejects_invalid_proof_verification_method() {
 #[test]
 fn revoke_requires_revoke_permission() {
     let mut engine = OperatorBindingEngine::new();
-    engine
-        .register_binding(
-            "kamn:did:agent:agent-3",
-            "kamn:did:human:operator-3",
-            Some(proof_for("kamn:did:human:operator-3")),
-            permissions(&[OperatorBindingAction::ReadHistory]),
-        )
-        .expect("binding should register");
+    register_binding(
+        &mut engine,
+        "kamn:did:agent:agent-3",
+        "kamn:did:human:operator-3",
+        &[OperatorBindingAction::ReadHistory],
+    );
 
     assert_eq!(
         engine.revoke_binding("kamn:did:agent:agent-3", "kamn:did:human:operator-3"),
@@ -80,18 +115,16 @@ fn revoke_requires_revoke_permission() {
 #[test]
 fn authorize_allows_granted_action() {
     let mut engine = OperatorBindingEngine::new();
-    engine
-        .register_binding(
-            "kamn:did:agent:agent-4",
-            "kamn:did:human:operator-4",
-            Some(proof_for("kamn:did:human:operator-4")),
-            permissions(&[
-                OperatorBindingAction::Configure,
-                OperatorBindingAction::ReadHistory,
-                OperatorBindingAction::Revoke,
-            ]),
-        )
-        .expect("binding should register");
+    register_binding(
+        &mut engine,
+        "kamn:did:agent:agent-4",
+        "kamn:did:human:operator-4",
+        &[
+            OperatorBindingAction::Configure,
+            OperatorBindingAction::ReadHistory,
+            OperatorBindingAction::Revoke,
+        ],
+    );
 
     engine
         .authorize(
@@ -121,14 +154,12 @@ fn authorize_rejects_missing_binding() {
 #[test]
 fn register_rejects_duplicate_binding() {
     let mut engine = OperatorBindingEngine::new();
-    engine
-        .register_binding(
-            "kamn:did:agent:agent-10",
-            "kamn:did:human:operator-10",
-            Some(proof_for("kamn:did:human:operator-10")),
-            permissions(&[OperatorBindingAction::Configure]),
-        )
-        .expect("first binding should register");
+    register_binding(
+        &mut engine,
+        "kamn:did:agent:agent-10",
+        "kamn:did:human:operator-10",
+        &[OperatorBindingAction::Configure],
+    );
 
     assert_eq!(
         engine.register_binding(
@@ -146,22 +177,7 @@ fn register_rejects_duplicate_binding() {
 
 #[test]
 fn authorize_rejects_revoked_binding_fail_closed() {
-    let mut engine = OperatorBindingEngine::new();
-    engine
-        .register_binding(
-            "kamn:did:agent:agent-11",
-            "kamn:did:human:operator-11",
-            Some(proof_for("kamn:did:human:operator-11")),
-            permissions(&[
-                OperatorBindingAction::Configure,
-                OperatorBindingAction::Revoke,
-            ]),
-        )
-        .expect("binding should register");
-    engine
-        .revoke_binding("kamn:did:agent:agent-11", "kamn:did:human:operator-11")
-        .expect("revoke should succeed");
-
+    let engine = revoked_engine();
     assert_eq!(
         engine.authorize(
             "kamn:did:agent:agent-11",
