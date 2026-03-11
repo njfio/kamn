@@ -54,3 +54,5 @@ mod head_precedes_base_activation_contract_tests;
 mod governance_path_classification_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/mixed_path_classification_contract_tests.rs"]
 mod mixed_path_classification_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/exact_governance_path_contract_tests.rs"]
+mod exact_governance_path_contract_tests;
