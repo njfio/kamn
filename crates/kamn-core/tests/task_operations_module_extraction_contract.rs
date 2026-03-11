@@ -26,7 +26,6 @@ const MOVED_MARKERS: &[&str] = &[
     "pub struct SqliteTaskOperationSnapshotStore {",
     "fn serialize_task_operation_snapshot(",
     "fn parse_task_operation_snapshot_payload(",
-    "#[cfg(test)]",
     "mod tests {",
 ];
 
