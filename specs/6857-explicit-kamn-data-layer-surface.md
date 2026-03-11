@@ -35,11 +35,11 @@ Boundaries:
 
 ## Acceptance Criteria
 
-- [ ] `crates/kamn-data-layer/src/lib.rs` contains no `pub use ...::*;` re-exports
-- [ ] The crate root exposes explicit reviewed `pub use` lists for the intended public surface
-- [ ] A contract test fails if glob re-exports return
-- [ ] `cargo test -p kamn-data-layer -- --nocapture` passes
-- [ ] Relevant downstream compile/test checks pass without unrelated behavior changes
+- [x] `crates/kamn-data-layer/src/lib.rs` contains no `pub use ...::*;` re-exports
+- [x] The crate root exposes explicit reviewed `pub use` lists for the intended public surface
+- [x] A contract test fails if glob re-exports return
+- [x] `cargo test -p kamn-data-layer -- --nocapture` passes
+- [x] Relevant downstream compile/test checks pass without unrelated behavior changes
 
 ## Files To Touch
 
@@ -68,3 +68,14 @@ Refactor/Integration:
 - Keep `lib.rs` and the new contract under the active size limits
 - Run `cargo test -p kamn-data-layer -- --nocapture`
 - Run narrow downstream checks for `kamn-core` paths that import from `kamn_data_layer`
+
+## Phase 6 Evidence
+
+- `cargo test -p kamn-data-layer -- --nocapture`
+- `cargo test -p kamn-data-layer --test data_layer_public_surface_contract -- --nocapture`
+- `cargo test -p kamn-core --no-run`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6857-origin-clean-1773204886 --base-ref origin/main --output-json /tmp/6857-touched-size-clean2.json`
+
+## Deviations
+
+- The shell wrapper `scripts/ci/check_touched_rust_size_policy.sh` was not used for final clean-clone validation because it resolved the wrong repo root. The direct Python entrypoint was used instead against the clean clone path.
