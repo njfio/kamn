@@ -53,3 +53,19 @@ Restore the `Supply-Chain Advisory` workflow so it always emits the expected adv
 - Run the new contract test directly
 - Run `scripts/ci/test_workflow_scope_policy.sh`
 - Run `scripts/ci/test_ci_tools.sh` in fast mode only if needed for integration evidence
+
+## Phase 6 Evidence
+- `bash scripts/ci/test_supply_chain_advisory_artifact_contract.sh`
+- `bash scripts/ci/test_workflow_scope_policy.sh`
+- `python3 -m py_compile scripts/ci/ensure_advisory_report.py`
+- `docker build -t kamn-supply-chain-advisory:local .`
+- `docker image inspect kamn-supply-chain-advisory:local`
+
+## Deviations
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` still exits on the unrelated governance/feature commit-ratio gate on `main`; this issue used the targeted workflow contract and policy entrypoints instead.
+
+## Shell-Surface Closure Metrics
+- `shell_loc_delta_actual: 126`
+- `rust_loc_delta_actual: 0`
+- `shell_to_rust_ratio_delta_actual: 0.0`
+- `shell_surface_ratio_target_status: regressed_with_waiver`
