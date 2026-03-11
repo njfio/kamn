@@ -34,6 +34,7 @@ pub mod data_layer_prd_critical_scenario_conformance;
 /// Shell-neutral orchestration and ratio-budget policy contracts extracted from core.
 pub mod data_layer_shell_neutral_policy;
 
+// M10 archival and compliance projection surface.
 pub use data_layer_m10_archival_retry::{
     DataLayerM10ArchivalFailureClass, DataLayerM10ArchivalRecoveryAction,
     DataLayerM10ArchivalRetryDecision, DataLayerM10ArchivalRetryError,
@@ -110,6 +111,8 @@ pub use data_layer_m10_phase6_policy_evaluator::{
     data_layer_m10_validate_phase6_scheduler_runtime_clock_signal,
     data_layer_m10_validate_phase6_scheduler_trigger_policy_config,
 };
+
+// M11 closure and hardening readiness surface.
 pub use data_layer_m11_closure_evidence::{
     DataLayerM11ClosureAcceptanceDecision, DataLayerM11ClosureEvidenceError,
     DataLayerM11ClosureEvidenceInput, DataLayerM11ClosureEvidenceReport,
@@ -128,6 +131,8 @@ pub use data_layer_m11_hardening_readiness::{
     DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
     DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
 };
+
+// M1/M7 operational batch and observability surface.
 pub use data_layer_m1_batch_scheduler::{
     DataLayerM1BatchSchedulerError, DataLayerM1BatchSchedulerPolicy,
     DataLayerM1BatchTriggerDecision, DataLayerM1PendingBatchMessage,
@@ -147,6 +152,8 @@ pub use data_layer_m7_observability_projection::{
     DataLayerM7ObservabilityProjection, DataLayerM7ObservabilityProjectionInput,
     project_data_layer_m7_observability_sample,
 };
+
+// PRD conformance and shell-neutral governance surface.
 pub use data_layer_prd_critical_scenario_conformance::{
     DataLayerPrdCriticalScenarioConformanceDecision,
     DataLayerPrdCriticalScenarioConformanceError,
