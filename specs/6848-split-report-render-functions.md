@@ -23,11 +23,11 @@ Split the oversized rendering functions in `crates/kamn-node/src/report_render.r
 - Refactor introduces duplicated formatting logic or hidden fallback behavior.
 
 ## Acceptance criteria
-- [ ] `render_text_report()` is reduced below the 25-line function limit.
-- [ ] `render_json_report()` is reduced below the 25-line function limit.
-- [ ] Output remains behaviorally equivalent for both text and JSON modes under regression tests.
-- [ ] No extracted helper exceeds the 25-line function limit.
-- [ ] `report_render.rs` remains within active file-size policy, or is further split if required.
+- [x] `render_text_report()` is reduced below the 25-line function limit.
+- [x] `render_json_report()` is reduced below the 25-line function limit.
+- [x] Output remains behaviorally equivalent for both text and JSON modes under regression tests.
+- [x] No extracted helper exceeds the 25-line function limit.
+- [x] `report_render.rs` remains within active file-size policy, or is further split if required.
 
 ## Files to touch
 - `specs/6848-split-report-render-functions.md`
@@ -46,3 +46,13 @@ Split the oversized rendering functions in `crates/kamn-node/src/report_render.r
 3. Refactor the renderers into bounded helpers.
 4. Re-run the extraction contract and regression tests until green.
 5. Re-run targeted `kamn-node` tests touching report rendering.
+
+## Final evidence
+- `cargo test -p kamn-node --test report_render_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node report_tests -- --nocapture`
+- `cargo test -p kamn-node main_tests::report_tests::integration_parse_bootstrap_and_render_json -- --nocapture`
+- `cargo test -p kamn-node main_tests::report_tests::integration_profile_bootstrap_and_render_json -- --nocapture`
+- `bash scripts/ci/check_touched_rust_size_policy.sh --output-json /tmp/6848-touched-size.json`
+
+## Deviations
+- None.
