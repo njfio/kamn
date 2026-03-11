@@ -4,6 +4,13 @@ use super::super::runtime_inbox::{
 use super::*;
 use crate::runtime::PeerLifecycleState;
 
+struct DeliveryEventFields {
+    sender_peer_id: String,
+    recipient_peer_id: String,
+    topic: String,
+    payload: String,
+}
+
 pub(super) fn advertise(
     transport: &Libp2pLivePeerLifecycleTransport,
     record: PeerDiscoveryRecord,
@@ -125,30 +132,30 @@ fn ensure_known_peer(
     Err(error)
 }
 
-fn clone_event_fields(frame: &PeerGossipFrame) -> (String, String, String, String) {
-    (
-        frame.sender_peer_id.clone(),
-        frame.recipient_peer_id.clone(),
-        frame.topic.clone(),
-        frame.payload.clone(),
-    )
+fn clone_event_fields(frame: &PeerGossipFrame) -> DeliveryEventFields {
+    DeliveryEventFields {
+        sender_peer_id: frame.sender_peer_id.clone(),
+        recipient_peer_id: frame.recipient_peer_id.clone(),
+        topic: frame.topic.clone(),
+        payload: frame.payload.clone(),
+    }
 }
 
 fn enqueue_known_frame(
     state: &mut Libp2pLiveDataPlaneState,
-    event_fields: &(String, String, String, String),
+    event_fields: &DeliveryEventFields,
     frame: PeerGossipFrame,
 ) -> Result<(), P2pTransportError> {
     if let Err(error) = enqueue_live_runtime_inbox_frame(
         state,
-        event_fields.1.as_str(),
+        event_fields.recipient_peer_id.as_str(),
         PeerLifecycleState::Active,
         frame,
     ) {
         emit_backpressure_runtime_event(
             state,
-            event_fields.1.as_str(),
-            event_fields.2.as_str(),
+            event_fields.recipient_peer_id.as_str(),
+            event_fields.topic.as_str(),
             &error,
         );
         return Err(error);
@@ -158,17 +165,17 @@ fn enqueue_known_frame(
 
 fn record_delivery_events(
     state: &mut Libp2pLiveDataPlaneState,
-    event_fields: &(String, String, String, String),
+    event_fields: &DeliveryEventFields,
 ) -> Result<(), P2pTransportError> {
     let published = Libp2pRuntimeEvent::gossip_published(
-        event_fields.0.as_str(),
-        event_fields.2.as_str(),
-        event_fields.3.as_str(),
+        event_fields.sender_peer_id.as_str(),
+        event_fields.topic.as_str(),
+        event_fields.payload.as_str(),
     )?;
     let received = Libp2pRuntimeEvent::gossip_received(
-        event_fields.1.as_str(),
-        event_fields.2.as_str(),
-        event_fields.3.as_str(),
+        event_fields.recipient_peer_id.as_str(),
+        event_fields.topic.as_str(),
+        event_fields.payload.as_str(),
     )?;
     state.runtime_events.push_back(published);
     state.runtime_events.push_back(received);
