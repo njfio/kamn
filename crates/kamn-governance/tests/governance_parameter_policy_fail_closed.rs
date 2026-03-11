@@ -3,16 +3,34 @@ use kamn_governance::{
     GovernanceWorkflowError,
 };
 
+const VALIDATOR_DID: &str = "kamn:did:agent:validator-1";
+
 fn draft(proposal_id: &str) -> GovernanceProposalDraft {
     GovernanceProposalDraft {
         proposal_id: proposal_id.to_owned(),
         title: format!("proposal {proposal_id}"),
         description: format!("description {proposal_id}"),
-        proposer_did: "kamn:did:agent:validator-1".to_owned(),
+        proposer_did: VALIDATOR_DID.to_owned(),
         created_at_unix: 100,
         voting_deadline_unix: 200,
         quorum_threshold: 2,
         parameter_change: None,
+    }
+}
+
+fn parameter_change(
+    key: &str,
+    proposed_value: u64,
+    min_value: u64,
+    max_value: u64,
+    target_version: &str,
+) -> GovernanceParameterChangeDraft {
+    GovernanceParameterChangeDraft {
+        key: key.to_owned(),
+        proposed_value,
+        min_value,
+        max_value,
+        target_version: target_version.to_owned(),
     }
 }
 
@@ -21,13 +39,13 @@ fn parameter_change_rejects_unsupported_target_version_fail_closed() {
     let mut workflow = GovernanceWorkflow::new();
     assert_eq!(
         workflow.submit_proposal(GovernanceProposalDraft {
-            parameter_change: Some(GovernanceParameterChangeDraft {
-                key: "watchdog.delivery_ratio_bps".to_owned(),
-                proposed_value: 9500,
-                min_value: 9000,
-                max_value: 9999,
-                target_version: "1.0.0".to_owned(),
-            }),
+            parameter_change: Some(parameter_change(
+                "watchdog.delivery_ratio_bps",
+                9500,
+                9000,
+                9999,
+                "1.0.0",
+            )),
             ..draft("gov-unsupported-version")
         }),
         Err(GovernanceWorkflowError::ParameterUnsupportedForVersion {
@@ -43,13 +61,7 @@ fn parameter_change_rejects_value_outside_declared_bounds_fail_closed() {
     let mut workflow = GovernanceWorkflow::new();
     assert_eq!(
         workflow.submit_proposal(GovernanceProposalDraft {
-            parameter_change: Some(GovernanceParameterChangeDraft {
-                key: "listener.quorum".to_owned(),
-                proposed_value: 8,
-                min_value: 1,
-                max_value: 7,
-                target_version: "1.0.0".to_owned(),
-            }),
+            parameter_change: Some(parameter_change("listener.quorum", 8, 1, 7, "1.0.0")),
             ..draft("gov-out-of-bounds")
         }),
         Err(GovernanceWorkflowError::ParameterOutOfBounds {
