@@ -29,13 +29,13 @@ Verify the exact current-main state of `crates/kamn-core/src/zk_message_proofs.r
 - The current baseline differs from prior assumptions and the spec fails to record that mismatch
 
 ## Acceptance criteria
-- [ ] Verified current `origin/main` state of `crates/kamn-core/src/zk_message_proofs.rs` is recorded in this spec
-- [ ] If still oversized, `crates/kamn-core/src/zk_message_proofs.rs` is reduced to a thin root shell under the active staged budget
-- [ ] Concern-based extracted modules exist for planning/evaluation, processor admission, validator consensus, watchdog projection, witness building, errors, and tests
-- [ ] A hard-fail extraction contract enforces root/module layout and staged file budgets
-- [ ] Existing `zk_message_proofs` tests pass unchanged in meaning
-- [ ] Touched-Rust size policy returns `policy_decision=GO`
-- [ ] Any mismatch between prior assumptions and the current verified baseline is documented in this spec
+- [x] Verified current `origin/main` state of `crates/kamn-core/src/zk_message_proofs.rs` is recorded in this spec
+- [x] If still oversized, `crates/kamn-core/src/zk_message_proofs.rs` is reduced to a thin root shell under the active staged budget
+- [x] Concern-based extracted modules exist for planning/evaluation, processor admission, validator consensus, watchdog projection, witness building, errors, and tests
+- [x] A hard-fail extraction contract enforces root/module layout and staged file budgets
+- [x] Existing `zk_message_proofs` tests pass unchanged in meaning
+- [x] Touched-Rust size policy returns `policy_decision=GO`
+- [x] Any mismatch between prior assumptions and the current verified baseline is documented in this spec
 
 ## Files to touch
 - `specs/6892-verify-and-complete-zk-message-proofs-decomposition.md`
@@ -63,3 +63,26 @@ Verify the exact current-main state of `crates/kamn-core/src/zk_message_proofs.r
 - No extracted `crates/kamn-core/src/zk_message_proofs/` module tree exists on the verified baseline
 - Inline `mod tests` remains embedded in the root file
 - Current split seams are visible in the live source around planning/evaluation, processor admission, validator consensus, watchdog projection, witness building, and error formatting
+
+## Phase 5 Refactor Evidence
+- Refactor preserved the extracted root shell and split the planning internals further into:
+  - `planning/recommendation.rs`
+  - `planning/scoring.rs`
+  - `planning/validation.rs`
+- Remaining oversized touched functions were reduced below the 25-line cap by:
+  - splitting `build_phase_milestones()` into dedicated milestone builders
+  - extracting helper builders for witness and validator/watchdog test fixtures
+  - reducing `ZkDesignError` display formatting into smaller helper functions
+- Verified after refactor:
+  - `cargo test -p kamn-core --test zk_message_proofs_module_extraction_contract -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core zk_message_proofs::tests:: --lib -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6892-origin-clean-final-1773264615 --base-ref origin/main --output-json /home/n/Code/kamn/tmp/6892-refactor-size-fixed4.json`
+- Final touched-Rust result: `policy_decision=GO`
+
+## Phase 6 Integration Evidence
+- The extracted `zk_message_proofs` surface remains wired through the real crate root at `crates/kamn-core/src/zk_message_proofs.rs`
+- Existing unit test paths continue to compile and execute against the extracted modules without mock-only rewiring
+- No public proof-planning, processor-admission, validator-consensus, watchdog-projection, or witness-building entrypoints were removed
+
+## Deviations
+- Clean-clone touched-Rust verification used the Python entrypoint directly instead of the shell wrapper because the wrapper resolved the wrong repository root in this environment.
