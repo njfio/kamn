@@ -40,3 +40,5 @@ mod input_total_contract_tests;
 mod non_merge_total_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/max_ratio_echo_contract_tests.rs"]
 mod max_ratio_echo_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/window_size_echo_contract_tests.rs"]
+mod window_size_echo_contract_tests;
