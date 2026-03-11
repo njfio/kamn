@@ -117,3 +117,60 @@ fn authorize_rejects_missing_binding() {
         })
     );
 }
+
+#[test]
+fn register_rejects_duplicate_binding() {
+    let mut engine = OperatorBindingEngine::new();
+    engine
+        .register_binding(
+            "kamn:did:agent:agent-10",
+            "kamn:did:human:operator-10",
+            Some(proof_for("kamn:did:human:operator-10")),
+            permissions(&[OperatorBindingAction::Configure]),
+        )
+        .expect("first binding should register");
+
+    assert_eq!(
+        engine.register_binding(
+            "kamn:did:agent:agent-10",
+            "kamn:did:human:operator-10",
+            Some(proof_for("kamn:did:human:operator-10")),
+            permissions(&[OperatorBindingAction::Configure]),
+        ),
+        Err(OperatorBindingError::DuplicateBinding {
+            agent_did: "kamn:did:agent:agent-10".to_owned(),
+            operator_did: "kamn:did:human:operator-10".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn authorize_rejects_revoked_binding_fail_closed() {
+    let mut engine = OperatorBindingEngine::new();
+    engine
+        .register_binding(
+            "kamn:did:agent:agent-11",
+            "kamn:did:human:operator-11",
+            Some(proof_for("kamn:did:human:operator-11")),
+            permissions(&[
+                OperatorBindingAction::Configure,
+                OperatorBindingAction::Revoke,
+            ]),
+        )
+        .expect("binding should register");
+    engine
+        .revoke_binding("kamn:did:agent:agent-11", "kamn:did:human:operator-11")
+        .expect("revoke should succeed");
+
+    assert_eq!(
+        engine.authorize(
+            "kamn:did:agent:agent-11",
+            "kamn:did:human:operator-11",
+            OperatorBindingAction::Configure,
+        ),
+        Err(OperatorBindingError::RevokedBinding {
+            agent_did: "kamn:did:agent:agent-11".to_owned(),
+            operator_did: "kamn:did:human:operator-11".to_owned(),
+        })
+    );
+}
