@@ -39,3 +39,13 @@ Restore `main` branch compliance for the governance/feature commit-ratio gate wi
 - Add a red crate test that shells out to `scripts/ci/check_governance_feature_commit_ratio.py` against the current branch head and asserts `status=ok`; it must fail before the repair train is complete.
 - Add focused regression tests for historical activation-base behavior and report schema invariants under `crates/kamn-core/tests/governance_feature_commit_ratio_base_compliance/`.
 - Re-run the exact checker command from the issue against the repair branch head and record the passing output in this spec.
+
+## Final evidence
+- Command: `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha HEAD --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/6840-final.json`
+- status: `violation`
+- governance_commit_count: `11`
+- feature_commit_count: `39`
+- unknown_commit_count: `0`
+- governance_ratio: `0.22`
+- feature_ratio: `0.78`
+
