@@ -1642,6 +1642,7 @@ dependencies = [
  "kamn-live-probe-matrix",
  "kamn-runtime-guards",
  "kamn-snapshot-journal",
+ "kamn-types",
  "libp2p",
  "proptest",
  "rusqlite",
@@ -1756,7 +1757,7 @@ dependencies = [
 name = "kamn-types"
 version = "0.1.0"
 dependencies = [
- "kamn-core",
+ "sha2",
 ]
 
 [[package]]

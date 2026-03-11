@@ -7,7 +7,7 @@ Defines the architecture contract for `kamn-types` in the KAMN workspace and doc
 - `kamn_types_identity_boundary=did-helpers`
 - `kamn_types_primary_module=kamn_types::did`
 - `kamn_types_import_ownership=explicit`
-- `kamn_types_current_dependency_status=temporary-kamn-core-reexport`
+- `kamn_types_current_dependency_status=owned-did-surface`
 - `kamn_types_target_dependency_policy=no-kamn-core`
 - `kamn_types_inversion_first_wave_csv=AgentDid,KamnDid,DidDocument,DidService,DidVerificationMethod`
 
@@ -18,14 +18,14 @@ Defines the architecture contract for `kamn-types` in the KAMN workspace and doc
 
 ## Boundaries
 - Owns crate-local behavior and contracts for `kamn-types`.
-- Current state: depends on `kamn-core` through explicit Rust interfaces only.
-- Target state: owns the DID value surface directly and does not depend on `kamn-core`.
+- Current state: owns the DID value surface directly and does not depend on `kamn-core`.
+- Target state: preserve this leaf boundary and keep non-DID runtime behavior out of `kamn-types`.
 - Exposes stable DID surfaces expected by higher-level crates/workflows.
 - Non-DID runtime behavior stays outside this crate.
 
 ## Inversion Plan
-- First wave moves reusable DID value types, parse errors, and canonical parse helpers from `kamn-core::did` into `kamn-types`.
-- `kamn-core` becomes a consumer of `kamn-types` and preserves temporary re-export shims during migration.
+- First wave moved reusable DID value types, parse errors, and canonical parse helpers from `kamn-core::did` into `kamn-types`.
+- `kamn-core` consumes `kamn-types` and preserves temporary compatibility re-export shims during migration.
 - Runtime registry/orchestration flows remain in `kamn-core` until follow-up extraction issues land.
 
 ## Operational Notes

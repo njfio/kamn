@@ -45,7 +45,7 @@ fn architecture_index_links_target_graph_doc() {
 #[test]
 fn kamn_types_doc_declares_inversion_target() {
     for marker in [
-        "kamn_types_current_dependency_status=temporary-kamn-core-reexport",
+        "kamn_types_current_dependency_status=owned-did-surface",
         "kamn_types_target_dependency_policy=no-kamn-core",
         "kamn_types_inversion_first_wave_csv=AgentDid,KamnDid,DidDocument,DidService,DidVerificationMethod",
     ] {
