@@ -131,6 +131,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiMessageStore {
     pub(crate) state_file: Option<String>,
+    pub(crate) audit_export_file: Option<String>,
     pub(crate) snapshot: ServiceApiPersistedMessageStoreSnapshot,
 }
 

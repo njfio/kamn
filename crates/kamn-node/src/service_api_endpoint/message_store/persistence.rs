@@ -16,8 +16,10 @@ impl ServiceApiMessageStore {
             }
             None => ServiceApiPersistedMessageStoreSnapshot::default(),
         };
+        let audit_export_file = resolve_service_api_audit_export_file(state_file.as_deref())?;
         Ok(Self {
             state_file,
+            audit_export_file,
             snapshot,
         })
     }

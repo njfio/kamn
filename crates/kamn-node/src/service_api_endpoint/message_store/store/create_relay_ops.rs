@@ -35,6 +35,7 @@ impl ServiceApiMessageStore {
             data_layer_runtime_evidence,
         )?;
         self.persist()?;
+        persist_message_created_audit_export(self, message_id.as_str(), sender_did)?;
         Ok(message_create_body(message_id, runtime_mode))
     }
 
@@ -68,6 +69,11 @@ impl ServiceApiMessageStore {
         mutated |= ensure_relay_mailbox_membership(self, &request);
         if mutated {
             self.persist()?;
+            persist_message_relayed_audit_export(
+                self,
+                request.message_id,
+                request.sender_did,
+            )?;
         }
         Ok(relay_message_body(self, request.message_id))
     }
@@ -101,4 +107,22 @@ fn persist_created_message(
         data_layer_runtime_evidence,
     );
     Ok(())
+}
+
+fn persist_message_created_audit_export(
+    store: &ServiceApiMessageStore,
+    message_id: &str,
+    sender_did: Option<&str>,
+) -> Result<(), String> {
+    let event = service_api_message_created_audit_event(message_id, sender_did);
+    persist_service_api_audit_export_event(store.audit_export_file.as_deref(), event)
+}
+
+fn persist_message_relayed_audit_export(
+    store: &ServiceApiMessageStore,
+    message_id: &str,
+    sender_did: Option<&str>,
+) -> Result<(), String> {
+    let event = service_api_message_relayed_audit_event(message_id, sender_did);
+    persist_service_api_audit_export_event(store.audit_export_file.as_deref(), event)
 }

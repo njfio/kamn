@@ -62,15 +62,7 @@ fn integration_service_api_endpoint_task_create_populates_audit_export_bundle() 
     );
     let audit_export = read_audit_export_json(audit_export_file.as_path());
 
-    assert_eq!(created_task.state, "submitted");
-    assert_eq!(audit_export["manifest"]["record_count"], 1);
-    assert_eq!(audit_export["records"][0]["domain"], "Tasks");
-    assert_eq!(audit_export["records"][0]["actor"], caller_did);
-    assert_eq!(audit_export["records"][0]["event_id"], created_task.task_id);
-    assert_eq!(
-        audit_export["records"][0]["action"],
-        "service_api_task_created"
-    );
+    assert_task_create_audit_export(&created_task, &audit_export);
     let _ = fs::remove_file(audit_export_file);
     let _ = fs::remove_file(state_file);
 }
@@ -100,4 +92,19 @@ fn integration_service_api_endpoint_task_create_fails_loud_when_audit_export_wri
     assert!(response.contains("HTTP/1.1 500 Internal Server Error"));
     assert!(response.contains("audit export"));
     let _ = fs::remove_file(state_file);
+}
+
+fn assert_task_create_audit_export(created_task: &ServiceApiTaskCreateBody, audit_export: &Value) {
+    assert_eq!(created_task.state, "submitted");
+    assert_eq!(audit_export["manifest"]["record_count"], 1);
+    assert_eq!(audit_export["records"][0]["domain"], "Tasks");
+    assert_eq!(
+        audit_export["records"][0]["actor"],
+        "kamn:did:agent:service-api-runtime"
+    );
+    assert_eq!(audit_export["records"][0]["event_id"], created_task.task_id);
+    assert_eq!(
+        audit_export["records"][0]["action"],
+        "service_api_task_created"
+    );
 }
