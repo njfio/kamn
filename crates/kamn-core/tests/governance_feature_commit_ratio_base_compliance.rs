@@ -22,3 +22,5 @@ mod feature_ratio_rounding_contract_tests;
 mod success_reason_codes_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/violation_reason_codes_contract_tests.rs"]
 mod violation_reason_codes_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/feature_only_subjects_contract_tests.rs"]
+mod feature_only_subjects_contract_tests;
