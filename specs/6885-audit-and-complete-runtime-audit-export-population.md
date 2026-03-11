@@ -39,22 +39,25 @@ Boundaries:
 
 ## Acceptance criteria
 
-- [ ] Service API runtime derives a deterministic audit export sidecar path from the state file
-- [ ] Selected real message/task mutation routes append audit export records into a persisted bundle
-- [ ] Audit export persistence reuses `AuditExportEngine` instead of inventing a parallel format
-- [ ] At least one integration test proves a real service API request creates or updates the audit export bundle
-- [ ] Runtime returns a loud error when audit export persistence cannot be produced for the selected flows
-- [ ] `cargo test -p kamn-node` targeted audit-export runtime coverage passes
+- [x] Service API runtime derives a deterministic audit export sidecar path from the state file
+- [x] Selected real message/task mutation routes append audit export records into a persisted bundle
+- [x] Audit export persistence reuses `AuditExportEngine` instead of inventing a parallel format
+- [x] At least one integration test proves a real service API request creates or updates the audit export bundle
+- [x] Runtime returns a loud error when audit export persistence cannot be produced for the selected flows
+- [x] `cargo test -p kamn-node` targeted audit-export runtime coverage passes
 
 ## Files to touch
 
-- `crates/kamn-node/src/service_api_endpoint.rs`
-- `crates/kamn-node/src/service_api_endpoint/server.rs`
-- `crates/kamn-node/src/service_api_endpoint/state_io.rs`
-- `crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/mutations/create_routes.rs`
-- `crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/mutations/update_routes/message_routes.rs`
-- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/**`
-- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/message_persistence_contract_tests/**` or an equivalent real service API integration test target
+- `crates/kamn-node/src/service_api_endpoint/message_store.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/models.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/persistence.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/store/create_relay_ops.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/store/task_escrow_ops.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/audit_export.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/task_escrow_routes_contract_tests.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/support.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/support/env_support.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/support/request_support.rs`
 
 ## Error semantics
 
@@ -78,3 +81,21 @@ Refactor/Integration:
 - Keep helper files and functions within active size policy
 - Reuse existing service API state-file helpers and integration harnesses
 - Re-run targeted service API integration coverage and touched-Rust policy
+
+## Phase 6 Evidence
+
+- Deterministic audit-export sidecar resolution now derives `{state_file}.audit-export.json` by default and honors `KAMN_SERVICE_API_AUDIT_EXPORT_FILE` when explicitly set.
+- Real service API runtime flows now persist audit export events on:
+  - task create
+  - message create
+  - message relay
+- Verified runtime-path coverage:
+  - `cargo test -p kamn-node integration_service_api_endpoint_task_create_populates_audit_export_bundle -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_task_create_fails_loud_when_audit_export_write_fails -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_persists_task_and_escrow_state_across_routes -- --nocapture`
+  - `cargo test -p kamn-node integration_service_api_endpoint_cross_node_relay_delivery_contract -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6885-clean-1773253971 --base-ref origin/main --output-json /tmp/6885-touched-size.json`
+
+## Deviations
+
+- The task-create audit record actor is the runtime actor DID `kamn:did:agent:service-api-runtime`, not the request DID. This preserves the current `create_task()` store boundary and keeps the issue scoped to export population rather than actor provenance redesign.
