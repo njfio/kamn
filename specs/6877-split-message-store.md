@@ -76,3 +76,15 @@ Refactor/Integration:
 - Run the existing runtime-evidence extraction contract
 - Run the real message-store/service API tests exercising persistence and runtime evidence
 - Run touched-Rust size policy on the full write set
+
+## Phase 6 evidence
+
+- `cargo test -p kamn-node --test message_store_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node --test message_store_runtime_evidence_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11 -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6877-remote-clean-1773246311 --base-ref origin/main --output-json /tmp/6877-remote-clean-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+
+- Clean-clone verification used the Python touched-Rust entrypoint directly to keep repo-root resolution exact for the standalone clone.
