@@ -44,3 +44,5 @@ mod max_ratio_echo_contract_tests;
 mod window_size_echo_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/activation_scope_subject_window_contract_tests.rs"]
 mod activation_scope_subject_window_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/range_mode_support.rs"]
+mod range_mode_support;
