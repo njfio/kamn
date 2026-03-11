@@ -50,3 +50,5 @@ mod range_mode_support;
 mod head_at_base_activation_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/head_precedes_base_activation_contract_tests.rs"]
 mod head_precedes_base_activation_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/governance_path_classification_contract_tests.rs"]
+mod governance_path_classification_contract_tests;
