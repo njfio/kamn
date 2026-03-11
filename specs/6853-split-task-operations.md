@@ -24,11 +24,11 @@ Split `crates/kamn-core/src/task_operations.rs` into bounded, concern-based modu
 - Extracted files or functions still exceed active size limits.
 
 ## Acceptance criteria
-- [ ] The root file is reduced to a thin shell under the active file-size budget.
-- [ ] Task transition / validation / persistence seams are extracted into bounded modules.
-- [ ] Existing task-operation tests remain green.
-- [ ] No extracted file exceeds the active file-size limit.
-- [ ] No extracted function exceeds the active function-size limit.
+- [x] The root file is reduced to a thin shell under the active file-size budget.
+- [x] Task transition / validation / persistence seams are extracted into bounded modules.
+- [x] Existing task-operation tests remain green.
+- [x] No extracted file exceeds the active file-size limit.
+- [x] No extracted function exceeds the active function-size limit.
 
 ## Files to touch
 - `specs/6853-split-task-operations.md`
@@ -47,3 +47,13 @@ Split `crates/kamn-core/src/task_operations.rs` into bounded, concern-based modu
 3. Extract the file into bounded concern-based modules.
 4. Re-run the extraction contract and task-operation targets until green.
 5. Run the clean-clone touched-Rust size ratchet on the final write set.
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test task_operations_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test task_operations -- --nocapture`
+- `cargo test -p kamn-core task_operations::tests:: -- --nocapture`
+- `cargo test -p kamn-core --test task_operation_snapshot -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6853-clean-QjFONC --base-ref origin/main --output-json /tmp/6853-touched-size-post-refactor.json`
+
+## Deviations
+- The shell wrapper `scripts/ci/check_touched_rust_size_policy.sh` was not used for final clean-clone validation because it resolved the primary checkout rather than the clean-clone repo root. The Python entrypoint was used directly so the full extracted `task_operations/**` write set was evaluated.
