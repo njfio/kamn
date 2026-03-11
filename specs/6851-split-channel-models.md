@@ -24,11 +24,11 @@ Split `crates/kamn-core/src/channel_models.rs` into bounded, concern-based modul
 - Extracted files or functions still exceed active size limits.
 
 ## Acceptance criteria
-- [ ] The root file is reduced to a thin shell under the active file-size budget.
-- [ ] Channel store, snapshot store, snapshot codec, error, and test seams are extracted into bounded modules.
-- [ ] Existing `channel_models` tests remain green.
-- [ ] No extracted file exceeds the active file-size limit.
-- [ ] No extracted function exceeds the active function-size limit.
+- [x] The root file is reduced to a thin shell under the active file-size budget.
+- [x] Channel store, snapshot store, snapshot codec, error, and test seams are extracted into bounded modules.
+- [x] Existing `channel_models` tests remain green.
+- [x] No extracted file exceeds the active file-size limit.
+- [x] No extracted function exceeds the active function-size limit.
 
 ## Files to touch
 - `specs/6851-split-channel-models.md`
@@ -47,3 +47,9 @@ Split `crates/kamn-core/src/channel_models.rs` into bounded, concern-based modul
 3. Extract the file into bounded concern-based modules.
 4. Re-run the extraction contract and real `channel_models` targets until green.
 5. Run the clean-clone touched-Rust size ratchet on the final write set.
+
+## Integration evidence
+- `cargo test -p kamn-core --test channel_models_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test channel_models -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6851-origin-clean-3 --base-ref origin/main --output-json /tmp/6851-origin-clean-size-refactor.json`
+- Result: `policy_decision=GO`
