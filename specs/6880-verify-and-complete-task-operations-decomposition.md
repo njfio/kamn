@@ -64,3 +64,18 @@ Verify the actual `origin/main` state of `crates/kamn-core/src/task_operations.r
 - On `origin/main` at issue start, `crates/kamn-core/src/task_operations.rs` is still `1685` LOC
 - No extracted `crates/kamn-core/src/task_operations/` module tree exists on the verified baseline
 - This means prior decomposition work did not land on the current verified baseline and this issue must complete the split from the live state rather than assuming earlier issue history is authoritative
+
+## Phase 6 evidence
+- Extracted module tree landed under `crates/kamn-core/src/task_operations/` with bounded roots for `models`, `engine`, `snapshot_store`, `snapshot_codec`, and `tests`
+- `crates/kamn-core/src/task_operations.rs` is now a thin root shell
+- Verified commands:
+  - `cargo test -p kamn-core --test task_operations_module_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core --test task_operations -- --nocapture`
+  - `cargo test -p kamn-core --test task_operation_snapshot -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --lib task_operations::tests:: -- --nocapture`
+  - `TMPDIR=/home/n/Code/kamn/tmp python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6880-clean-1773263083 --base-ref origin/main --output-json /home/n/Code/kamn/tmp/6880-touched-size.json`
+- Touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- The shell wrapper for touched-Rust validation was not used for clean-clone verification because it resolved the wrong repository root in this environment. The Python entrypoint was used directly with `--repo-root` against the clean issue clone.
+- `/tmp` was space-constrained during test execution, so `TMPDIR` and `CARGO_TARGET_DIR` were redirected to `/home/n/Code/kamn/tmp` and `/home/n/Code/kamn/target` for stable verification.
