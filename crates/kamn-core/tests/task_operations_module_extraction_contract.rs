@@ -1,9 +1,9 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-const ROOT_FILE: &str = "src/task_operations.rs";
-const ROOT_BUDGET_LINES: usize = 180;
-const MODULE_BUDGET_LINES: usize = 200;
+const ROOT: &str = "src/task_operations.rs";
+const ROOT_CAP: usize = 180;
+const MODULE_CAP: usize = 200;
 const MODULE_FILES: &[&str] = &[
     "src/task_operations/models.rs",
     "src/task_operations/engine.rs",
@@ -11,75 +11,79 @@ const MODULE_FILES: &[&str] = &[
     "src/task_operations/snapshot_codec.rs",
     "src/task_operations/tests.rs",
 ];
-const ROOT_MARKERS: &[&str] = &[
+const REQUIRED_MARKERS: &[&str] = &[
     "mod models;",
     "mod engine;",
     "mod snapshot_store;",
     "mod snapshot_codec;",
-    "#[cfg(test)] mod tests;",
+    "#[cfg(test)]",
+    "mod tests;",
 ];
-const ROOT_INLINE_MARKERS: &[&str] = &[
-    "pub struct TaskOperationRecord {",
+const MOVED_MARKERS: &[&str] = &[
     "pub struct TaskOperationEngine {",
+    "pub trait TaskOperationSnapshotStore {",
     "pub struct FileTaskOperationSnapshotStore {",
+    "pub struct SqliteTaskOperationSnapshotStore {",
+    "fn serialize_task_operation_snapshot(",
     "fn parse_task_operation_snapshot_payload(",
     "mod tests {",
 ];
 
-fn repo_file(path: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path)
-}
-
-fn read_repo_file(path: &str) -> String {
-    fs::read_to_string(repo_file(path)).unwrap_or_else(|error| {
-        panic!("failed to read {path}: {error}");
-    })
-}
-
 #[test]
-fn regression_task_operations_root_respects_staged_line_budget() {
-    let root = read_repo_file(ROOT_FILE);
-    let line_count = root.lines().count();
+fn task_operations_root_is_extracted() {
+    let root = fs::read_to_string(repo_path(ROOT)).expect("read root");
+    assert_root_shell_budget(&root);
+    assert_required_markers(&root);
+    assert_moved_markers_removed(&root);
+    assert_module_files_exist_and_fit_budget();
+}
+
+fn repo_path(path: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
+}
+
+fn assert_root_shell_budget(root: &str) {
+    let lines = root.lines().count();
     assert!(
-        line_count <= ROOT_BUDGET_LINES,
-        "expected {ROOT_FILE} to stay within {ROOT_BUDGET_LINES} lines, found {line_count}"
+        lines <= ROOT_CAP,
+        "expected {ROOT} <= {ROOT_CAP} lines after extraction, found {lines}"
     );
 }
 
-#[test]
-fn regression_task_operations_root_declares_extracted_modules() {
-    let root = read_repo_file(ROOT_FILE);
-    for marker in ROOT_MARKERS {
-        assert!(root.contains(marker), "missing root module marker: {marker}");
-    }
-}
-
-#[test]
-fn regression_task_operations_module_files_exist() {
-    for path in MODULE_FILES {
-        assert!(repo_file(path).is_file(), "expected extracted module file to exist: {path}");
-    }
-}
-
-#[test]
-fn regression_task_operations_module_files_stay_within_budget() {
-    for path in MODULE_FILES {
-        let source = read_repo_file(path);
-        let line_count = source.lines().count();
+fn assert_required_markers(root: &str) {
+    for marker in REQUIRED_MARKERS {
         assert!(
-            line_count <= MODULE_BUDGET_LINES,
-            "expected {path} to stay within {MODULE_BUDGET_LINES} lines, found {line_count}"
+            root.contains(marker),
+            "missing root module marker: {marker}"
         );
     }
 }
 
-#[test]
-fn regression_task_operations_root_removes_inline_monolith_sections() {
-    let root = read_repo_file(ROOT_FILE);
-    for marker in ROOT_INLINE_MARKERS {
+fn assert_moved_markers_removed(root: &str) {
+    for marker in MOVED_MARKERS {
         assert!(
             !root.contains(marker),
-            "root should not retain inline task-operations section: {marker}"
+            "moved marker still present in root: {marker}"
+        );
+    }
+}
+
+fn assert_module_files_exist_and_fit_budget() {
+    for path in MODULE_FILES {
+        let full = repo_path(path);
+        assert!(
+            full.exists(),
+            "missing extracted module: {}",
+            full.display()
+        );
+        let lines = fs::read_to_string(&full)
+            .expect("read module")
+            .lines()
+            .count();
+        assert!(
+            lines <= MODULE_CAP,
+            "extracted module exceeds {MODULE_CAP} lines: {}",
+            full.display()
         );
     }
 }
