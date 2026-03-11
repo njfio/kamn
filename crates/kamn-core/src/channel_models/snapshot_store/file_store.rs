@@ -1,6 +1,7 @@
 #![allow(missing_docs)]
 
 use super::*;
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileChannelSnapshotStore {
@@ -105,7 +106,7 @@ fn verify_snapshot(snapshot: &ChannelSnapshot) -> Result<(), ChannelSnapshotStor
         .map_err(ChannelSnapshotStoreError::Snapshot)
 }
 
-fn write_snapshot_file(path: &PathBuf, payload: &str) -> Result<(), ChannelSnapshotStoreError> {
+fn write_snapshot_file(path: &Path, payload: &str) -> Result<(), ChannelSnapshotStoreError> {
     let mut file = OpenOptions::new()
         .create(true)
         .truncate(true)
@@ -116,7 +117,7 @@ fn write_snapshot_file(path: &PathBuf, payload: &str) -> Result<(), ChannelSnaps
         .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))
 }
 
-fn clear_recovery_path(path: &PathBuf) -> Result<(), ChannelSnapshotStoreError> {
+fn clear_recovery_path(path: &Path) -> Result<(), ChannelSnapshotStoreError> {
     fs::write(path, "").map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))
 }
 
