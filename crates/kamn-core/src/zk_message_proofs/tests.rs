@@ -1,0 +1,5 @@
+mod planning_contract_tests;
+mod processor_admission_contract_tests;
+mod validator_consensus_contract_tests;
+mod watchdog_projection_contract_tests;
+mod witness_contract_tests;
