@@ -13,3 +13,6 @@ packages
 revenue-strategy-draft.md
 blog-post-draft.md
 blog-post-tau-kamn-draft.md
+!fixtures/
+!fixtures/runtime/
+!fixtures/runtime/service_api_scope_policy_fixture_matrix.txt
