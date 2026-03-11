@@ -45,3 +45,12 @@ Reduce `crates/kamn-e2e-harness/src/run_contract.rs` to a bounded root shell by 
 - add a red extraction contract for `run_contract.rs`
 - run targeted `kamn-e2e-harness` tests covering run-contract behavior
 - run touched-Rust size policy on the write set
+
+## Final Evidence
+- `cargo test -p kamn-e2e-harness --test run_contract_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness run_contract::tests:: -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test command_contract -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6872-remote-origin-clean2 --base-ref origin/main --output-json /tmp/6872-remote-origin-clean2-size.json`
+
+## Deviations
+- Final touched-Rust verification used the Python entrypoint directly against a remote-origin clean clone to avoid shell-wrapper repo-root drift and local worktree contamination.
