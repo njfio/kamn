@@ -1208,31 +1208,49 @@ fn build_runtime_evidence_envelope(
     context: &RuntimeEvidenceContext<'_>,
     identities: &RuntimeEvidenceIdentities,
 ) -> CanonicalMessageEnvelope {
+    CanonicalMessageEnvelope {
+        envelope: build_runtime_evidence_metadata(context, identities),
+        header: build_runtime_evidence_header(),
+        body: build_runtime_evidence_body(context),
+        attachments: Vec::new(),
+        proof: build_runtime_evidence_proof(context, identities),
+    }
+}
+
+fn build_runtime_evidence_metadata(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> EnvelopeMetadata {
+    EnvelopeMetadata {
+        id: context.message_id.to_owned(),
+        type_name: CANONICAL_MESSAGE_ENVELOPE_TYPE.to_owned(),
+        from: identities.sender_agent_did.clone(),
+        to: vec![identities.recipient_agent_did.clone()],
+        created: "2026-02-24T00:00:00Z".to_owned(),
+        expires: "2026-02-24T01:00:00Z".to_owned(),
+        thread_id: Some(format!("thread:{}", context.message_id)),
+        parent_id: None,
+        nonce: (context.payload_tag % 1024).saturating_add(1),
+    }
+}
+
+fn build_runtime_evidence_body(context: &RuntimeEvidenceContext<'_>) -> BTreeMap<String, String> {
     let mut envelope_body = BTreeMap::new();
     envelope_body.insert("payload".to_owned(), context.payload.to_owned());
     envelope_body.insert("runtime_message_id".to_owned(), context.message_id.to_owned());
-    CanonicalMessageEnvelope {
-        envelope: EnvelopeMetadata {
-            id: context.message_id.to_owned(),
-            type_name: CANONICAL_MESSAGE_ENVELOPE_TYPE.to_owned(),
-            from: identities.sender_agent_did.clone(),
-            to: vec![identities.recipient_agent_did.clone()],
-            created: "2026-02-24T00:00:00Z".to_owned(),
-            expires: "2026-02-24T01:00:00Z".to_owned(),
-            thread_id: Some(format!("thread:{}", context.message_id)),
-            parent_id: None,
-            nonce: (context.payload_tag % 1024).saturating_add(1),
-        },
-        header: build_runtime_evidence_header(),
-        body: envelope_body,
-        attachments: Vec::new(),
-        proof: EnvelopeProof {
-            type_name: "DataIntegrityProof".to_owned(),
-            created: "2026-02-24T00:00:00Z".to_owned(),
-            verification_method: format!("{}#key-1", identities.sender_agent_did),
-            proof_purpose: CANONICAL_PROOF_PURPOSE.to_owned(),
-            proof_value: format!("sig:{}", context.message_id),
-        },
+    envelope_body
+}
+
+fn build_runtime_evidence_proof(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> EnvelopeProof {
+    EnvelopeProof {
+        type_name: "DataIntegrityProof".to_owned(),
+        created: "2026-02-24T00:00:00Z".to_owned(),
+        verification_method: format!("{}#key-1", identities.sender_agent_did),
+        proof_purpose: CANONICAL_PROOF_PURPOSE.to_owned(),
+        proof_value: format!("sig:{}", context.message_id),
     }
 }
 
@@ -1385,9 +1403,27 @@ fn build_runtime_evidence_m3(
     )
     .map_err(|error| format!("m3 blind-index compute failed: {error}"))?;
     let mut m3_catalog = DataLayerM3SearchCatalog::new();
+    register_runtime_evidence_m3_record(
+        &mut m3_catalog,
+        context,
+        identities,
+        session_id,
+        &m3_blind_index_token,
+    )?;
+    let matches = search_runtime_evidence_m3_matches(&m3_catalog, identities, &m3_blind_index_token)?;
+    Ok((m3_blind_index_token, matches.len()))
+}
+
+fn register_runtime_evidence_m3_record(
+    catalog: &mut DataLayerM3SearchCatalog,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+    session_id: String,
+    blind_index_token: &str,
+) -> Result<(), String> {
     let mut blind_indexes = BTreeMap::new();
-    blind_indexes.insert("message".to_owned(), m3_blind_index_token.clone());
-    m3_catalog
+    blind_indexes.insert("message".to_owned(), blind_index_token.to_owned());
+    catalog
         .register_record(DataLayerM3MessageMetadataRecord {
             message_id: context.message_id.to_owned(),
             owner_did: identities.owner_did.to_owned(),
@@ -1399,17 +1435,24 @@ fn build_runtime_evidence_m3(
             created_at_epoch_seconds: context.event_epoch_seconds.saturating_add(2),
             blind_indexes,
         })
-        .map_err(|error| format!("m3 catalog registration failed: {error}"))?;
-    let matches = m3_catalog
+        .map(|_| ())
+        .map_err(|error| format!("m3 catalog registration failed: {error}"))
+}
+
+fn search_runtime_evidence_m3_matches(
+    catalog: &DataLayerM3SearchCatalog,
+    identities: &RuntimeEvidenceIdentities,
+    blind_index_token: &str,
+) -> Result<Vec<DataLayerM3MessageMetadataRecord>, String> {
+    catalog
         .search_blind_index(DataLayerM3BlindIndexQuery {
             owner_did: identities.owner_did.to_owned(),
             field_name: "message".to_owned(),
-            token: m3_blind_index_token.clone(),
+            token: blind_index_token.to_owned(),
             mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
             limit: Some(10),
         })
-        .map_err(|error| format!("m3 search failed: {error}"))?;
-    Ok((m3_blind_index_token, matches.len()))
+        .map_err(|error| format!("m3 search failed: {error}"))
 }
 
 fn build_runtime_evidence_m4(
@@ -1419,19 +1462,35 @@ fn build_runtime_evidence_m4(
     let mut m4_escrow = DataLayerM4EscrowTransitionEngine::new();
     let m4_escrow_id = format!("escrow:{}", context.message_id);
     m4_escrow
-        .create_escrow(DataLayerM4EscrowDraftInput {
-            escrow_id: m4_escrow_id.clone(),
-            initiator_did: identities.sender_agent_did.clone(),
-            counterparty_did: identities.recipient_agent_did.clone(),
-            auditor_did: Some("kamn:did:auditor:service-api-runtime".to_owned()),
-            auditor_threshold: Some(1),
-            auditor_share_holders: vec!["kamn:did:holder:service-api-runtime".to_owned()],
-            expires_at_epoch_seconds: Some(context.event_epoch_seconds.saturating_add(3_600)),
-        })
+        .create_escrow(build_runtime_evidence_m4_draft(context, identities, &m4_escrow_id))
         .map_err(|error| format!("m4 escrow draft failed: {error}"))?;
-    let transition = m4_escrow
+    apply_runtime_evidence_m4_transition(&mut m4_escrow, context, &m4_escrow_id)
+}
+
+fn build_runtime_evidence_m4_draft(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+    escrow_id: &str,
+) -> DataLayerM4EscrowDraftInput {
+    DataLayerM4EscrowDraftInput {
+        escrow_id: escrow_id.to_owned(),
+        initiator_did: identities.sender_agent_did.clone(),
+        counterparty_did: identities.recipient_agent_did.clone(),
+        auditor_did: Some("kamn:did:auditor:service-api-runtime".to_owned()),
+        auditor_threshold: Some(1),
+        auditor_share_holders: vec!["kamn:did:holder:service-api-runtime".to_owned()],
+        expires_at_epoch_seconds: Some(context.event_epoch_seconds.saturating_add(3_600)),
+    }
+}
+
+fn apply_runtime_evidence_m4_transition(
+    escrow: &mut DataLayerM4EscrowTransitionEngine,
+    context: &RuntimeEvidenceContext<'_>,
+    escrow_id: &str,
+) -> Result<String, String> {
+    let transition = escrow
         .apply_transition(
-            m4_escrow_id.as_str(),
+            escrow_id,
             DataLayerM4EscrowTransitionAction::Fund {
                 funded_at_epoch_seconds: context.event_epoch_seconds.saturating_add(3),
             },
@@ -1492,23 +1551,58 @@ fn build_runtime_evidence_m6(
     identities: &RuntimeEvidenceIdentities,
 ) -> Result<usize, String> {
     let mut m6_registry = DataLayerM6GraphRegistry::new();
-    let sender_node_id = format!("node:{}", identities.sender_agent_did);
-    let recipient_node_id = format!("node:{}", identities.recipient_agent_did);
-    register_runtime_evidence_m6_node(
+    let (sender_node_id, recipient_node_id) = runtime_evidence_m6_node_ids(identities);
+    register_runtime_evidence_m6_node_pair(&mut m6_registry, identities, &sender_node_id, &recipient_node_id)?;
+    register_runtime_evidence_m6_edge(
         &mut m6_registry,
+        context,
+        identities,
+        sender_node_id,
+        recipient_node_id,
+    )?;
+    let projection = m6_registry
+        .export_portable_edge_projection(identities.owner_did)
+        .map_err(|error| format!("m6 projection failed: {error}"))?;
+    Ok(projection.len())
+}
+
+fn runtime_evidence_m6_node_ids(identities: &RuntimeEvidenceIdentities) -> (String, String) {
+    (
+        format!("node:{}", identities.sender_agent_did),
+        format!("node:{}", identities.recipient_agent_did),
+    )
+}
+
+fn register_runtime_evidence_m6_node_pair(
+    registry: &mut DataLayerM6GraphRegistry,
+    identities: &RuntimeEvidenceIdentities,
+    sender_node_id: &str,
+    recipient_node_id: &str,
+) -> Result<(), String> {
+    register_runtime_evidence_m6_node(
+        registry,
         identities.owner_did,
-        sender_node_id.as_str(),
+        sender_node_id,
         identities.sender_agent_did.as_str(),
         "sender",
     )?;
     register_runtime_evidence_m6_node(
-        &mut m6_registry,
+        registry,
         identities.owner_did,
-        recipient_node_id.as_str(),
+        recipient_node_id,
         identities.recipient_agent_did.as_str(),
         "recipient",
-    )?;
-    m6_registry
+    )
+}
+
+fn register_runtime_evidence_m6_edge(
+    registry: &mut DataLayerM6GraphRegistry,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+    sender_node_id: String,
+    recipient_node_id: String,
+) -> Result<(), String> {
+    registry
         .register_edge(DataLayerM6GraphEdgeInput {
             owner_did: identities.owner_did.to_owned(),
             edge_id: format!("edge:{}", context.message_id),
@@ -1518,11 +1612,8 @@ fn build_runtime_evidence_m6(
             weight: 1.0,
             observed_at_epoch_seconds: context.event_epoch_seconds.saturating_add(5),
         })
-        .map_err(|error| format!("m6 edge registration failed: {error}"))?;
-    let projection = m6_registry
-        .export_portable_edge_projection(identities.owner_did)
-        .map_err(|error| format!("m6 projection failed: {error}"))?;
-    Ok(projection.len())
+        .map(|_| ())
+        .map_err(|error| format!("m6 edge registration failed: {error}"))
 }
 
 fn register_runtime_evidence_m6_node(
@@ -1548,7 +1639,17 @@ fn build_runtime_evidence_m7(
     identities: &RuntimeEvidenceIdentities,
 ) -> Result<String, String> {
     let mut m7_registry = DataLayerM7TelemetryRegistry::new();
-    m7_registry
+    ingest_runtime_evidence_m7_point(&mut m7_registry, context, identities)?;
+    let observability = project_runtime_evidence_m7_observability(&m7_registry, identities)?;
+    Ok(observability_health_label(observability.snapshot.latest_health).to_owned())
+}
+
+fn ingest_runtime_evidence_m7_point(
+    registry: &mut DataLayerM7TelemetryRegistry,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<(), String> {
+    registry
         .ingest_point(DataLayerM7TelemetryPointInput {
             owner_did: identities.owner_did.to_owned(),
             agent_did: identities.sender_agent_did.clone(),
@@ -1562,8 +1663,15 @@ fn build_runtime_evidence_m7(
             egress_latency_ms_p95: 140,
             active_sessions: 1,
         })
-        .map_err(|error| format!("m7 telemetry ingest failed: {error}"))?;
-    let observability = m7_registry
+        .map(|_| ())
+        .map_err(|error| format!("m7 telemetry ingest failed: {error}"))
+}
+
+fn project_runtime_evidence_m7_observability(
+    registry: &DataLayerM7TelemetryRegistry,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<kamn_core::DataLayerM7OwnerObservabilityReport, String> {
+    registry
         .evaluate_owner_observability(
             DataLayerM7BillingQuery {
                 requester_owner_did: identities.owner_did.to_owned(),
@@ -1571,8 +1679,7 @@ fn build_runtime_evidence_m7(
             },
             ObservabilitySloProfile::baseline(),
         )
-        .map_err(|error| format!("m7 observability projection failed: {error}"))?;
-    Ok(observability_health_label(observability.snapshot.latest_health).to_owned())
+        .map_err(|error| format!("m7 observability projection failed: {error}"))
 }
 
 fn build_runtime_evidence_m8(
@@ -1580,7 +1687,16 @@ fn build_runtime_evidence_m8(
     identities: &RuntimeEvidenceIdentities,
 ) -> Result<usize, String> {
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
-    m8_registry
+    register_runtime_evidence_m8_message(&mut m8_registry, context, identities)?;
+    project_runtime_evidence_m8_retention_due(&m8_registry, context, identities)
+}
+
+fn register_runtime_evidence_m8_message(
+    registry: &mut DataLayerM8ComplianceRegistry,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<(), String> {
+    registry
         .register_message(DataLayerM8MessageRecordInput {
             owner_did: identities.owner_did.to_owned(),
             message_id: context.message_id.to_owned(),
@@ -1594,8 +1710,16 @@ fn build_runtime_evidence_m8(
                 wrapped_cek: format!("wrapped:{}", context.message_id),
             }],
         })
-        .map_err(|error| format!("m8 message registration failed: {error}"))?;
-    let retention_due = m8_registry
+        .map(|_| ())
+        .map_err(|error| format!("m8 message registration failed: {error}"))
+}
+
+fn project_runtime_evidence_m8_retention_due(
+    registry: &DataLayerM8ComplianceRegistry,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<usize, String> {
+    let retention_due = registry
         .retention_due_for_owner(
             DataLayerM8OwnerScopeQuery {
                 requester_owner_did: identities.owner_did.to_owned(),
@@ -1612,7 +1736,20 @@ fn build_runtime_evidence_m9(
     identities: &RuntimeEvidenceIdentities,
 ) -> Result<(String, String), String> {
     let mut m9_registry = DataLayerM9RealtimeDeliveryRegistry::new();
-    m9_registry
+    connect_runtime_evidence_m9_presence(&mut m9_registry, context, identities)?;
+    let outcome = dispatch_runtime_evidence_m9_message(&mut m9_registry, context, identities)?;
+    Ok((
+        data_layer_m9_ack_status_label(outcome.ack_status).to_owned(),
+        outcome.reason_code.to_owned(),
+    ))
+}
+
+fn connect_runtime_evidence_m9_presence(
+    registry: &mut DataLayerM9RealtimeDeliveryRegistry,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<(), String> {
+    registry
         .connect_presence(DataLayerM9PresenceConnectRequest {
             requester_owner_did: identities.owner_did.to_owned(),
             owner_did: identities.owner_did.to_owned(),
@@ -1622,8 +1759,16 @@ fn build_runtime_evidence_m9(
             gateway_node: "gateway-service-api-runtime".to_owned(),
             capabilities_active: vec!["ws".to_owned()],
         })
-        .map_err(|error| format!("m9 presence connect failed: {error}"))?;
-    let outcome = m9_registry
+        .map(|_| ())
+        .map_err(|error| format!("m9 presence connect failed: {error}"))
+}
+
+fn dispatch_runtime_evidence_m9_message(
+    registry: &mut DataLayerM9RealtimeDeliveryRegistry,
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<kamn_core::DataLayerM9DispatchOutcome, String> {
+    registry
         .dispatch_message(DataLayerM9DispatchRequest {
             requester_owner_did: identities.owner_did.to_owned(),
             owner_did: identities.owner_did.to_owned(),
@@ -1632,11 +1777,7 @@ fn build_runtime_evidence_m9(
             message_id: context.message_id.to_owned(),
             dispatched_at_epoch_seconds: context.event_epoch_seconds.saturating_add(8),
         })
-        .map_err(|error| format!("m9 dispatch failed: {error}"))?;
-    Ok((
-        data_layer_m9_ack_status_label(outcome.ack_status).to_owned(),
-        outcome.reason_code.to_owned(),
-    ))
+        .map_err(|error| format!("m9 dispatch failed: {error}"))
 }
 
 fn build_runtime_evidence_m10() -> Result<usize, String> {
@@ -1660,34 +1801,49 @@ fn build_runtime_evidence_m10() -> Result<usize, String> {
 fn build_runtime_evidence_m11(
     context: &RuntimeEvidenceContext<'_>,
 ) -> Result<(String, String), String> {
-    let closure = data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
-        release_marker: format!("service-api-runtime:{}", context.message_id),
-        hardening_report: DataLayerM11OperatorReadinessReport {
-            decision: DataLayerM11OperatorReadinessDecision::Go,
-            reason_codes: vec!["m11_operator_readiness_go"],
-            missing_required_scenario_ids: Vec::new(),
-            failing_critical_scenario_ids: Vec::new(),
-            total_required_scenarios: 1,
-            passed_required_scenarios: 1,
-        },
-        critical_scenario_report: DataLayerPrdCriticalScenarioConformanceReport {
-            decision: DataLayerPrdCriticalScenarioConformanceDecision::Conformant,
-            reason_codes: vec!["prd_critical_scenario_matrix_conformant"],
-            missing_scenario_ids: Vec::new(),
-            failed_scenario_ids: Vec::new(),
-            shell_policy_violation_scenario_ids: Vec::new(),
-            total_required_scenarios: 1,
-            passed_required_scenarios: 1,
-        },
-        performance_budget_met: true,
-        security_signoff_complete: true,
-        chaos_signoff_complete: true,
-    })
+    let closure = data_layer_m11_evaluate_closure_evidence(build_runtime_evidence_m11_input(context))
     .map_err(|error| format!("m11 closure evaluation failed: {error}"))?;
     Ok((
         m11_decision_label(closure.decision).to_owned(),
         closure.reason_codes.join(","),
     ))
+}
+
+fn build_runtime_evidence_m11_input(
+    context: &RuntimeEvidenceContext<'_>,
+) -> DataLayerM11ClosureEvidenceInput {
+    DataLayerM11ClosureEvidenceInput {
+        release_marker: format!("service-api-runtime:{}", context.message_id),
+        hardening_report: build_runtime_evidence_m11_hardening_report(),
+        critical_scenario_report: build_runtime_evidence_m11_critical_scenario_report(),
+        performance_budget_met: true,
+        security_signoff_complete: true,
+        chaos_signoff_complete: true,
+    }
+}
+
+fn build_runtime_evidence_m11_hardening_report() -> DataLayerM11OperatorReadinessReport {
+    DataLayerM11OperatorReadinessReport {
+        decision: DataLayerM11OperatorReadinessDecision::Go,
+        reason_codes: vec!["m11_operator_readiness_go"],
+        missing_required_scenario_ids: Vec::new(),
+        failing_critical_scenario_ids: Vec::new(),
+        total_required_scenarios: 1,
+        passed_required_scenarios: 1,
+    }
+}
+
+fn build_runtime_evidence_m11_critical_scenario_report(
+) -> DataLayerPrdCriticalScenarioConformanceReport {
+    DataLayerPrdCriticalScenarioConformanceReport {
+        decision: DataLayerPrdCriticalScenarioConformanceDecision::Conformant,
+        reason_codes: vec!["prd_critical_scenario_matrix_conformant"],
+        missing_scenario_ids: Vec::new(),
+        failed_scenario_ids: Vec::new(),
+        shell_policy_violation_scenario_ids: Vec::new(),
+        total_required_scenarios: 1,
+        passed_required_scenarios: 1,
+    }
 }
 
 fn assemble_runtime_evidence_record(
