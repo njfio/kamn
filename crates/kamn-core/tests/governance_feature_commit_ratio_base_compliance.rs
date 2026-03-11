@@ -24,3 +24,5 @@ mod success_reason_codes_contract_tests;
 mod violation_reason_codes_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/feature_only_subjects_contract_tests.rs"]
 mod feature_only_subjects_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/governance_only_subjects_contract_tests.rs"]
+mod governance_only_subjects_contract_tests;
