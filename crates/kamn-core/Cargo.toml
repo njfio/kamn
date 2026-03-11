@@ -18,6 +18,7 @@ kamn-crypto = { path = "../kamn-crypto" }
 kamn-data-layer = { path = "../kamn-data-layer" }
 kamn-governance = { path = "../kamn-governance" }
 kamn-kolme = { path = "../kamn-kolme" }
+kamn-types = { path = "../kamn-types" }
 kamn-live-probe-matrix = { path = "../kamn-live-probe-matrix" }
 kamn-runtime-guards = { path = "../kamn-runtime-guards" }
 kamn-snapshot-journal = { path = "../kamn-snapshot-journal" }

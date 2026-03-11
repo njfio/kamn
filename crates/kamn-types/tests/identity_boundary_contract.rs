@@ -12,7 +12,7 @@ fn docs_contain_identity_boundary_and_migration_markers() {
     assert!(README.contains("kamn_types_migration_import=use kamn_types::did::AgentDid"));
     assert!(ARCH_DOC.contains("kamn_types_identity_boundary=did-helpers"));
     assert!(ARCH_DOC.contains("kamn_types_import_ownership=explicit"));
-    assert!(ARCH_DOC.contains("kamn_types_current_dependency_status=temporary-kamn-core-reexport"));
+    assert!(ARCH_DOC.contains("kamn_types_current_dependency_status=owned-did-surface"));
     assert!(ARCH_DOC.contains("kamn_types_target_dependency_policy=no-kamn-core"));
     assert!(DID_FORMAT_DOC.contains("did_format_current_canonical=kamn:did:{role}:{id}"));
     assert!(DID_FORMAT_DOC.contains("did_format_divergent_shape=did:kamn:{role}:{id}"));

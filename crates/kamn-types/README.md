@@ -8,8 +8,10 @@ Shared canonical type surface for cross-crate KAMN DID identifiers and parse hel
 - `kamn_types_primary_module=kamn_types::did`
 - `kamn_types_import_ownership=explicit`
 
-`kamn-types` owns canonical DID-facing helper behavior and typed parse errors.
+`kamn-types` owns canonical DID-facing helper behavior, DID value types, and typed parse errors.
 Core runtime/storage behavior remains in `kamn-core`.
+
+- `kamn_types_dependency_status=owned-did-surface`
 
 ## Key Surfaces
 - Primary imports:
