@@ -12,9 +12,9 @@ for required in \
   'name: Ensure advisory SBOM report exists' \
   'placeholder_due_to_missing_output' \
   'generated_by_scan' \
-  '"report":"trivy-fs"' \
-  '"report":"trivy-image"' \
-  '"report":"sbom"'; do
+  '"report": "trivy-fs"' \
+  '"report": "trivy-image"' \
+  '"value": "sbom"'; do
   if ! grep -Fq "$required" "$WORKFLOW_FILE"; then
     echo "expected supply-chain advisory artifact contract marker in workflow: $required" >&2
     exit 1
