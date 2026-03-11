@@ -1,5 +1,12 @@
 use super::super::*;
 
+mod dispatch;
+
+use dispatch::{
+    dispatch_prerequisite_missing_error, dispatch_request_from_record,
+    parse_dispatchable_task_payload, select_dispatch_assignee, DispatchableTaskPayload,
+};
+
 impl ServiceApiMessageStore {
     pub(crate) fn create_task(
         &mut self,
@@ -7,9 +14,11 @@ impl ServiceApiMessageStore {
     ) -> Result<ServiceApiTaskCreateBody, String> {
         self.refresh_from_disk()?;
         let task_id = next_task_id(self, payload);
-        self.snapshot
-            .tasks
-            .insert(task_id.clone(), build_task_record(task_id.as_str()));
+        let dispatch_metadata = parse_dispatchable_task_payload(payload)?;
+        self.snapshot.tasks.insert(
+            task_id.clone(),
+            build_task_record(task_id.as_str(), dispatch_metadata),
+        );
         self.persist()?;
         persist_task_created_audit_export(self, task_id.as_str())?;
         Ok(ServiceApiTaskCreateBody {
@@ -23,6 +32,7 @@ impl ServiceApiMessageStore {
         task_id: &str,
     ) -> Result<Option<ServiceApiTaskGetBody>, String> {
         self.refresh_from_disk()?;
+        self.dispatch_task_if_ready(task_id)?;
         let Some(record) = self.snapshot.tasks.get(task_id) else {
             return Ok(None);
         };
@@ -80,6 +90,28 @@ impl ServiceApiMessageStore {
             state: "released".to_owned(),
         }))
     }
+
+    fn dispatch_task_if_ready(&mut self, task_id: &str) -> Result<(), String> {
+        let Some(record) = self.snapshot.tasks.get(task_id).cloned() else {
+            return Ok(());
+        };
+        if record.state != "submitted" {
+            return Ok(());
+        }
+        let Some(dispatch_request) = dispatch_request_from_record(&record)? else {
+            return Ok(());
+        };
+        let assignee = select_dispatch_assignee(&self.snapshot.agents, &dispatch_request)
+            .ok_or_else(|| {
+                dispatch_prerequisite_missing_error(dispatch_request.task_type.as_str())
+            })?;
+        let Some(record) = self.snapshot.tasks.get_mut(task_id) else {
+            return Ok(());
+        };
+        record.assignee = Some(assignee);
+        record.state = "completed".to_owned();
+        self.persist()
+    }
 }
 
 fn next_task_id(store: &ServiceApiMessageStore, payload: &str) -> String {
@@ -111,10 +143,21 @@ where
     candidate
 }
 
-fn build_task_record(task_id: &str) -> ServiceApiPersistedTaskRecord {
+fn build_task_record(
+    task_id: &str,
+    dispatch_metadata: Option<DispatchableTaskPayload>,
+) -> ServiceApiPersistedTaskRecord {
     ServiceApiPersistedTaskRecord {
         task_id: task_id.to_owned(),
         state: "submitted".to_owned(),
+        creator_did: dispatch_metadata
+            .as_ref()
+            .map(|metadata| metadata.creator_did.clone()),
+        task_type: dispatch_metadata
+            .as_ref()
+            .map(|metadata| metadata.task_type.clone()),
+        description: dispatch_metadata.map(|metadata| metadata.description),
+        assignee: None,
     }
 }
 
