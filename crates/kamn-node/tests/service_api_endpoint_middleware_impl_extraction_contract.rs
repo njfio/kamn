@@ -33,7 +33,13 @@ fn middleware_impl_root_declares_required_submodules() {
 #[test]
 fn middleware_impl_extracted_files_exist_and_stay_bounded() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    for path in [
+    for path in extracted_file_paths() {
+        assert_extracted_file_is_bounded(manifest_dir, path);
+    }
+}
+
+fn extracted_file_paths() -> [&'static str; 7] {
+    [
         "src/service_api_endpoint/middleware_impl/auth_flow.rs",
         "src/service_api_endpoint/middleware_impl/request_parsing.rs",
         "src/service_api_endpoint/middleware_impl/error_response.rs",
@@ -41,17 +47,23 @@ fn middleware_impl_extracted_files_exist_and_stay_bounded() {
         "src/service_api_endpoint/middleware_impl/websocket_routes.rs",
         "src/service_api_endpoint/middleware_impl/payload_parsing.rs",
         "src/service_api_endpoint/middleware_impl/lifecycle_policy.rs",
-    ] {
-        let full = manifest_dir.join(path);
-        assert!(full.exists(), "expected extracted middleware file missing: {}", full.display());
-        let source = std::fs::read_to_string(&full)
-            .unwrap_or_else(|error| panic!("failed to read {}: {error}", full.display()));
-        let lines = source.lines().count();
-        assert!(
-            lines <= 200,
-            "extracted middleware file should stay within 200 lines: {path} has {lines}"
-        );
-    }
+    ]
+}
+
+fn assert_extracted_file_is_bounded(manifest_dir: &Path, path: &str) {
+    let full = manifest_dir.join(path);
+    assert!(
+        full.exists(),
+        "expected extracted middleware file missing: {}",
+        full.display()
+    );
+    let source = std::fs::read_to_string(&full)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", full.display()));
+    let lines = source.lines().count();
+    assert!(
+        lines <= 200,
+        "extracted middleware file should stay within 200 lines: {path} has {lines}"
+    );
 }
 
 #[test]
