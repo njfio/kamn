@@ -121,8 +121,9 @@ pub(super) fn build_runtime_evidence_m10() -> Result<usize, String> {
 pub(super) fn build_runtime_evidence_m11(
     context: &RuntimeEvidenceContext<'_>,
 ) -> Result<(String, String), String> {
-    let closure = data_layer_m11_evaluate_closure_evidence(build_runtime_evidence_m11_input(context))
-    .map_err(|error| format!("m11 closure evaluation failed: {error}"))?;
+    let closure =
+        data_layer_m11_evaluate_closure_evidence(build_runtime_evidence_m11_input(context))
+            .map_err(|error| format!("m11 closure evaluation failed: {error}"))?;
     Ok((
         m11_decision_label(closure.decision).to_owned(),
         closure.reason_codes.join(","),

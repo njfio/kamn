@@ -6,12 +6,12 @@ mod m6_m7;
 mod m8_m11;
 mod support;
 
-use super::*;
-use context::*;
-use m0_to_m1::*;
-use m2_m3::*;
-use m6_m7::*;
-use support::*;
+use super::ServiceApiDataLayerRuntimeEvidenceRecord;
+use context::{build_runtime_evidence_context, build_runtime_evidence_identities};
+use m0_to_m1::build_runtime_evidence_m0_to_m1;
+use m2_m3::build_runtime_evidence_m2_to_m5;
+use m6_m7::build_runtime_evidence_m6_to_m11;
+use support::assemble_runtime_evidence_record;
 
 pub(super) fn build_data_layer_runtime_evidence(
     message_id: &str,
@@ -24,5 +24,7 @@ pub(super) fn build_data_layer_runtime_evidence(
     let m0_to_m1 = build_runtime_evidence_m0_to_m1(&context, &identities)?;
     let m2_to_m5 = build_runtime_evidence_m2_to_m5(&context, &identities)?;
     let m6_to_m11 = build_runtime_evidence_m6_to_m11(&context, &identities)?;
-    Ok(assemble_runtime_evidence_record(m0_to_m1, m2_to_m5, m6_to_m11))
+    Ok(assemble_runtime_evidence_record(
+        m0_to_m1, m2_to_m5, m6_to_m11,
+    ))
 }

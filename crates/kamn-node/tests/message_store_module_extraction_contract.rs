@@ -8,7 +8,8 @@ const REQUIRED_ROOT_MARKERS: &[&str] = &[
     "mod persistence;",
     "mod store;",
     "mod runtime_evidence;",
-    "#[cfg(test)] mod tests;",
+    "#[cfg(test)]",
+    "mod tests;",
 ];
 const REQUIRED_FILES: &[&str] = &[
     "src/service_api_endpoint/message_store/models.rs",

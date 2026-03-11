@@ -1,7 +1,7 @@
 use super::super::*;
 use super::context::{RuntimeEvidenceContext, RuntimeEvidenceIdentities, RuntimeEvidenceM2ToM5};
-use super::support::m2_authorization_reason_code;
 use super::m4_m5::{build_runtime_evidence_m4, build_runtime_evidence_m5};
+use super::support::m2_authorization_reason_code;
 
 pub(super) fn build_runtime_evidence_m2_to_m5(
     context: &RuntimeEvidenceContext<'_>,
@@ -27,25 +27,45 @@ fn build_runtime_evidence_m2(
     context: &RuntimeEvidenceContext<'_>,
     identities: &RuntimeEvidenceIdentities,
 ) -> Result<(String, String, String), String> {
-    let auth_challenge = format!("nonce-{}", context.payload_tag);
-    let m2_session_service =
-        DataLayerM2DidSessionService::new(900).map_err(|error| format!("m2 init failed: {error}"))?;
-    let m2_session_token = m2_session_service
-        .authenticate(DataLayerM2DidAuthRequest {
-            requester_did: identities.sender_agent_did.clone(),
-            challenge: auth_challenge.clone(),
-            credential: format!("sig:{}:{auth_challenge}", identities.sender_agent_did),
-            issued_at_epoch_seconds: context.event_epoch_seconds,
-            ttl_seconds: 300,
-        })
-        .map_err(|error| format!("m2 did authentication failed: {error}"))?;
+    let (requester_did, token_id) = authenticate_runtime_evidence_m2(context, identities)?;
     let authorization_reason_code = build_runtime_evidence_m2_authorization(context, identities)?;
     let audit_record_hash = build_runtime_evidence_m2_audit_hash(
         context,
-        m2_session_token.requester_did,
+        requester_did,
         authorization_reason_code.as_str(),
     )?;
-    Ok((authorization_reason_code, audit_record_hash, m2_session_token.token_id))
+    Ok((authorization_reason_code, audit_record_hash, token_id))
+}
+
+fn authenticate_runtime_evidence_m2(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<(String, String), String> {
+    let auth_challenge = format!("nonce-{}", context.payload_tag);
+    let m2_session_service = DataLayerM2DidSessionService::new(900)
+        .map_err(|error| format!("m2 init failed: {error}"))?;
+    let session_token = m2_session_service
+        .authenticate(build_runtime_evidence_m2_auth_request(
+            identities,
+            context.event_epoch_seconds,
+            auth_challenge,
+        ))
+        .map_err(|error| format!("m2 did authentication failed: {error}"))?;
+    Ok((session_token.requester_did, session_token.token_id))
+}
+
+fn build_runtime_evidence_m2_auth_request(
+    identities: &RuntimeEvidenceIdentities,
+    event_epoch_seconds: u64,
+    auth_challenge: String,
+) -> DataLayerM2DidAuthRequest {
+    DataLayerM2DidAuthRequest {
+        requester_did: identities.sender_agent_did.clone(),
+        challenge: auth_challenge.clone(),
+        credential: format!("sig:{}:{auth_challenge}", identities.sender_agent_did),
+        issued_at_epoch_seconds: event_epoch_seconds,
+        ttl_seconds: 300,
+    }
 }
 
 fn build_runtime_evidence_m2_authorization(
@@ -110,7 +130,8 @@ fn build_runtime_evidence_m3(
         session_id,
         &m3_blind_index_token,
     )?;
-    let matches = search_runtime_evidence_m3_matches(&m3_catalog, identities, &m3_blind_index_token)?;
+    let matches =
+        search_runtime_evidence_m3_matches(&m3_catalog, identities, &m3_blind_index_token)?;
     Ok((m3_blind_index_token, matches.len()))
 }
 

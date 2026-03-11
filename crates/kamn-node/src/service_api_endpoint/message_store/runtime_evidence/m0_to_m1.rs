@@ -78,7 +78,10 @@ fn build_runtime_evidence_metadata(
 fn build_runtime_evidence_body(context: &RuntimeEvidenceContext<'_>) -> BTreeMap<String, String> {
     let mut envelope_body = BTreeMap::new();
     envelope_body.insert("payload".to_owned(), context.payload.to_owned());
-    envelope_body.insert("runtime_message_id".to_owned(), context.message_id.to_owned());
+    envelope_body.insert(
+        "runtime_message_id".to_owned(),
+        context.message_id.to_owned(),
+    );
     envelope_body
 }
 
@@ -107,7 +110,9 @@ fn build_runtime_evidence_header() -> EnvelopeHeader {
     }
 }
 
-fn build_runtime_evidence_ciphertext(context: &RuntimeEvidenceContext<'_>) -> DirectMessageCiphertext {
+fn build_runtime_evidence_ciphertext(
+    context: &RuntimeEvidenceContext<'_>,
+) -> DirectMessageCiphertext {
     DirectMessageCiphertext {
         key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
         cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),

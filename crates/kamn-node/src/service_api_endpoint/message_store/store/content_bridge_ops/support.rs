@@ -1,0 +1,101 @@
+use super::super::super::*;
+
+pub(super) fn bridge_source_message_id_from_payload(
+    payload: &str,
+    bridge_tag: u64,
+    bridge_id: &str,
+) -> String {
+    let default_value = format!("msg-bridge-source-{bridge_tag:016x}");
+    let parsed = match serde_json::from_str::<serde_json::Value>(payload) {
+        Ok(value) => value,
+        Err(_) => return default_value,
+    };
+    let Some(source_message_id) = parsed
+        .get("source_message_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return default_value;
+    };
+    if source_message_id == bridge_id {
+        return default_value;
+    }
+    source_message_id.to_owned()
+}
+
+pub(super) fn next_content_id(store: &ServiceApiMessageStore, payload: &str) -> String {
+    next_local_content_bridge_id("content-local", payload, |candidate| {
+        store.snapshot.contents.contains_key(candidate)
+    })
+}
+
+pub(super) fn next_bridge_id(store: &ServiceApiMessageStore, bridge_tag: u64) -> String {
+    let base = format!("bridge-local-{bridge_tag:016x}");
+    let mut candidate = base.clone();
+    let mut suffix = 1_u64;
+    while store.snapshot.bridges.contains_key(candidate.as_str()) {
+        candidate = format!("{base}-{suffix}");
+        suffix = suffix.saturating_add(1);
+    }
+    candidate
+}
+
+fn next_local_content_bridge_id<F>(prefix: &str, payload: &str, exists: F) -> String
+where
+    F: Fn(&str) -> bool,
+{
+    let base = format!(
+        "{prefix}-{:016x}",
+        deterministic_body_tag(payload.as_bytes())
+    );
+    let mut candidate = base.clone();
+    let mut suffix = 1_u64;
+    while exists(candidate.as_str()) {
+        candidate = format!("{base}-{suffix}");
+        suffix = suffix.saturating_add(1);
+    }
+    candidate
+}
+
+pub(super) fn build_content_record(content_id: &str) -> ServiceApiPersistedContentRecord {
+    ServiceApiPersistedContentRecord {
+        content_id: content_id.to_owned(),
+        retention_class: "standard".to_owned(),
+        lifecycle_state: "retained".to_owned(),
+        redaction_status: "none".to_owned(),
+    }
+}
+
+pub(super) fn content_register_body(content_id: String) -> ServiceApiContentRegisterBody {
+    ServiceApiContentRegisterBody {
+        content_id,
+        retention_class: "standard".to_owned(),
+        lifecycle_state: "retained".to_owned(),
+        redaction_status: "none".to_owned(),
+    }
+}
+
+pub(super) fn build_bridge_record(
+    bridge_id: &str,
+    source_message_id: &str,
+) -> ServiceApiPersistedBridgeRecord {
+    ServiceApiPersistedBridgeRecord {
+        bridge_id: bridge_id.to_owned(),
+        source_message_id: source_message_id.to_owned(),
+        bridge_status: "submitted".to_owned(),
+        target_message_id: format!("msg-bridge-target-{bridge_id}"),
+        forward_tx_hash: String::new(),
+    }
+}
+
+pub(super) fn bridge_submit_body(
+    bridge_id: String,
+    source_message_id: String,
+) -> ServiceApiBridgeSubmitBody {
+    ServiceApiBridgeSubmitBody {
+        bridge_id,
+        source_message_id,
+        bridge_status: "submitted".to_owned(),
+    }
+}

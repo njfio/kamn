@@ -1,37 +1,25 @@
 use super::super::*;
 
+mod support;
+
+use support::{
+    bridge_source_message_id_from_payload, bridge_submit_body, build_bridge_record,
+    build_content_record, content_register_body, next_bridge_id, next_content_id,
+};
+
 impl ServiceApiMessageStore {
     pub(crate) fn register_content(
         &mut self,
         payload: &str,
     ) -> Result<ServiceApiContentRegisterBody, String> {
         self.refresh_from_disk()?;
-        let base = format!(
-            "content-local-{:016x}",
-            deterministic_body_tag(payload.as_bytes())
-        );
-        let mut content_id = base.clone();
-        let mut suffix = 1_u64;
-        while self.snapshot.contents.contains_key(content_id.as_str()) {
-            content_id = format!("{base}-{suffix}");
-            suffix = suffix.saturating_add(1);
-        }
+        let content_id = next_content_id(self, payload);
         self.snapshot.contents.insert(
             content_id.clone(),
-            ServiceApiPersistedContentRecord {
-                content_id: content_id.clone(),
-                retention_class: "standard".to_owned(),
-                lifecycle_state: "retained".to_owned(),
-                redaction_status: "none".to_owned(),
-            },
+            build_content_record(content_id.as_str()),
         );
         self.persist()?;
-        Ok(ServiceApiContentRegisterBody {
-            content_id,
-            retention_class: "standard".to_owned(),
-            lifecycle_state: "retained".to_owned(),
-            redaction_status: "none".to_owned(),
-        })
+        Ok(content_register_body(content_id))
     }
 
     pub(crate) fn get_content(
@@ -97,32 +85,15 @@ impl ServiceApiMessageStore {
     ) -> Result<ServiceApiBridgeSubmitBody, String> {
         self.refresh_from_disk()?;
         let bridge_tag = deterministic_body_tag(payload.as_bytes());
-        let base = format!("bridge-local-{bridge_tag:016x}");
-        let mut bridge_id = base.clone();
-        let mut suffix = 1_u64;
-        while self.snapshot.bridges.contains_key(bridge_id.as_str()) {
-            bridge_id = format!("{base}-{suffix}");
-            suffix = suffix.saturating_add(1);
-        }
+        let bridge_id = next_bridge_id(self, bridge_tag);
         let source_message_id =
             bridge_source_message_id_from_payload(payload, bridge_tag, bridge_id.as_str());
-        let target_message_id = format!("msg-bridge-target-{bridge_id}");
         self.snapshot.bridges.insert(
             bridge_id.clone(),
-            ServiceApiPersistedBridgeRecord {
-                bridge_id: bridge_id.clone(),
-                source_message_id: source_message_id.clone(),
-                bridge_status: "submitted".to_owned(),
-                target_message_id,
-                forward_tx_hash: String::new(),
-            },
+            build_bridge_record(bridge_id.as_str(), source_message_id.as_str()),
         );
         self.persist()?;
-        Ok(ServiceApiBridgeSubmitBody {
-            bridge_id,
-            source_message_id,
-            bridge_status: "submitted".to_owned(),
-        })
+        Ok(bridge_submit_body(bridge_id, source_message_id))
     }
 
     pub(crate) fn forward_bridge(
@@ -165,29 +136,4 @@ impl ServiceApiMessageStore {
             forward_tx_hash: record.forward_tx_hash.clone(),
         }))
     }
-
-}
-
-pub(super) fn bridge_source_message_id_from_payload(
-    payload: &str,
-    bridge_tag: u64,
-    bridge_id: &str,
-) -> String {
-    let default_value = format!("msg-bridge-source-{bridge_tag:016x}");
-    let parsed = match serde_json::from_str::<serde_json::Value>(payload) {
-        Ok(value) => value,
-        Err(_) => return default_value,
-    };
-    let Some(source_message_id) = parsed
-        .get("source_message_id")
-        .and_then(serde_json::Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    else {
-        return default_value;
-    };
-    if source_message_id == bridge_id {
-        return default_value;
-    }
-    source_message_id.to_owned()
 }

@@ -1,10 +1,10 @@
 use super::super::*;
 use super::context::{RuntimeEvidenceContext, RuntimeEvidenceIdentities, RuntimeEvidenceM6ToM11};
-use super::support::observability_health_label;
 use super::m8_m11::{
     build_runtime_evidence_m10, build_runtime_evidence_m11, build_runtime_evidence_m8,
     build_runtime_evidence_m9,
 };
+use super::support::observability_health_label;
 
 pub(super) fn build_runtime_evidence_m6_to_m11(
     context: &RuntimeEvidenceContext<'_>,
@@ -13,7 +13,8 @@ pub(super) fn build_runtime_evidence_m6_to_m11(
     let m6_projection_edge_count = build_runtime_evidence_m6(context, identities)?;
     let m7_observability_health = build_runtime_evidence_m7(context, identities)?;
     let m8_retention_due_count = build_runtime_evidence_m8(context, identities)?;
-    let (m9_dispatch_ack_status, m9_dispatch_reason_code) = build_runtime_evidence_m9(context, identities)?;
+    let (m9_dispatch_ack_status, m9_dispatch_reason_code) =
+        build_runtime_evidence_m9(context, identities)?;
     let m10_archived_partition_count = build_runtime_evidence_m10()?;
     let (m11_decision, m11_reason_codes_csv) = build_runtime_evidence_m11(context)?;
     Ok(RuntimeEvidenceM6ToM11 {
@@ -34,7 +35,12 @@ fn build_runtime_evidence_m6(
 ) -> Result<usize, String> {
     let mut m6_registry = DataLayerM6GraphRegistry::new();
     let (sender_node_id, recipient_node_id) = runtime_evidence_m6_node_ids(identities);
-    register_runtime_evidence_m6_node_pair(&mut m6_registry, identities, &sender_node_id, &recipient_node_id)?;
+    register_runtime_evidence_m6_node_pair(
+        &mut m6_registry,
+        identities,
+        &sender_node_id,
+        &recipient_node_id,
+    )?;
     register_runtime_evidence_m6_edge(
         &mut m6_registry,
         context,

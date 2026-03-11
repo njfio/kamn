@@ -6,23 +6,10 @@ impl ServiceApiMessageStore {
         payload: &str,
     ) -> Result<ServiceApiTaskCreateBody, String> {
         self.refresh_from_disk()?;
-        let base = format!(
-            "task-local-{:016x}",
-            deterministic_body_tag(payload.as_bytes())
-        );
-        let mut task_id = base.clone();
-        let mut suffix = 1_u64;
-        while self.snapshot.tasks.contains_key(task_id.as_str()) {
-            task_id = format!("{base}-{suffix}");
-            suffix = suffix.saturating_add(1);
-        }
-        self.snapshot.tasks.insert(
-            task_id.clone(),
-            ServiceApiPersistedTaskRecord {
-                task_id: task_id.clone(),
-                state: "submitted".to_owned(),
-            },
-        );
+        let task_id = next_task_id(self, payload);
+        self.snapshot
+            .tasks
+            .insert(task_id.clone(), build_task_record(task_id.as_str()));
         self.persist()?;
         Ok(ServiceApiTaskCreateBody {
             task_id,
@@ -66,23 +53,10 @@ impl ServiceApiMessageStore {
         payload: &str,
     ) -> Result<ServiceApiEscrowStatusBody, String> {
         self.refresh_from_disk()?;
-        let base = format!(
-            "escrow-local-{:016x}",
-            deterministic_body_tag(payload.as_bytes())
-        );
-        let mut escrow_id = base.clone();
-        let mut suffix = 1_u64;
-        while self.snapshot.escrows.contains_key(escrow_id.as_str()) {
-            escrow_id = format!("{base}-{suffix}");
-            suffix = suffix.saturating_add(1);
-        }
-        self.snapshot.escrows.insert(
-            escrow_id.clone(),
-            ServiceApiPersistedEscrowRecord {
-                escrow_id: escrow_id.clone(),
-                state: "funded".to_owned(),
-            },
-        );
+        let escrow_id = next_escrow_id(self, payload);
+        self.snapshot
+            .escrows
+            .insert(escrow_id.clone(), build_escrow_record(escrow_id.as_str()));
         self.persist()?;
         Ok(ServiceApiEscrowStatusBody {
             escrow_id,
@@ -105,5 +79,47 @@ impl ServiceApiMessageStore {
             state: "released".to_owned(),
         }))
     }
+}
 
+fn next_task_id(store: &ServiceApiMessageStore, payload: &str) -> String {
+    next_local_task_escrow_id("task-local", payload, |candidate| {
+        store.snapshot.tasks.contains_key(candidate)
+    })
+}
+
+fn next_escrow_id(store: &ServiceApiMessageStore, payload: &str) -> String {
+    next_local_task_escrow_id("escrow-local", payload, |candidate| {
+        store.snapshot.escrows.contains_key(candidate)
+    })
+}
+
+fn next_local_task_escrow_id<F>(prefix: &str, payload: &str, exists: F) -> String
+where
+    F: Fn(&str) -> bool,
+{
+    let base = format!(
+        "{prefix}-{:016x}",
+        deterministic_body_tag(payload.as_bytes())
+    );
+    let mut candidate = base.clone();
+    let mut suffix = 1_u64;
+    while exists(candidate.as_str()) {
+        candidate = format!("{base}-{suffix}");
+        suffix = suffix.saturating_add(1);
+    }
+    candidate
+}
+
+fn build_task_record(task_id: &str) -> ServiceApiPersistedTaskRecord {
+    ServiceApiPersistedTaskRecord {
+        task_id: task_id.to_owned(),
+        state: "submitted".to_owned(),
+    }
+}
+
+fn build_escrow_record(escrow_id: &str) -> ServiceApiPersistedEscrowRecord {
+    ServiceApiPersistedEscrowRecord {
+        escrow_id: escrow_id.to_owned(),
+        state: "funded".to_owned(),
+    }
 }

@@ -8,7 +8,11 @@ pub(super) fn build_runtime_evidence_m4(
     let mut m4_escrow = DataLayerM4EscrowTransitionEngine::new();
     let m4_escrow_id = format!("escrow:{}", context.message_id);
     m4_escrow
-        .create_escrow(build_runtime_evidence_m4_draft(context, identities, &m4_escrow_id))
+        .create_escrow(build_runtime_evidence_m4_draft(
+            context,
+            identities,
+            &m4_escrow_id,
+        ))
         .map_err(|error| format!("m4 escrow draft failed: {error}"))?;
     apply_runtime_evidence_m4_transition(&mut m4_escrow, context, &m4_escrow_id)
 }
@@ -49,8 +53,9 @@ pub(super) fn build_runtime_evidence_m5(
     context: &RuntimeEvidenceContext<'_>,
     identities: &RuntimeEvidenceIdentities,
 ) -> Result<String, String> {
-    let mut m5_registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut m5_registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     let m5_record = m5_registry
         .append(DataLayerM5EmbeddingRecordInput {
             embedding_id: format!("embed:{}", context.message_id),

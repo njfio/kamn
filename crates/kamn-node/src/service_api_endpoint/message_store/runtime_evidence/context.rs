@@ -64,7 +64,8 @@ pub(super) fn build_runtime_evidence_identities(
 ) -> RuntimeEvidenceIdentities {
     let sender_agent_did =
         normalize_agent_did(sender_did, "kamn:did:agent:service-api-runtime-sender");
-    let recipient_agent_did = build_runtime_evidence_recipient(sender_agent_did.as_str(), recipient_did);
+    let recipient_agent_did =
+        build_runtime_evidence_recipient(sender_agent_did.as_str(), recipient_did);
     RuntimeEvidenceIdentities {
         sender_agent_did,
         recipient_agent_did,
@@ -74,8 +75,10 @@ pub(super) fn build_runtime_evidence_identities(
 }
 
 fn build_runtime_evidence_recipient(sender_agent_did: &str, recipient_did: Option<&str>) -> String {
-    let recipient_agent_did =
-        normalize_agent_did(recipient_did, "kamn:did:agent:service-api-runtime-recipient");
+    let recipient_agent_did = normalize_agent_did(
+        recipient_did,
+        "kamn:did:agent:service-api-runtime-recipient",
+    );
     if sender_agent_did == recipient_agent_did {
         "kamn:did:agent:service-api-runtime-recipient-alt".to_owned()
     } else {
