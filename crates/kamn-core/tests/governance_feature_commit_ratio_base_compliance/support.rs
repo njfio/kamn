@@ -1,6 +1,6 @@
 use serde_json::Value;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const BASE_SHA: &str = "d2c2fe1b901a1d53ea419f31778e1d836f2b1323";
@@ -16,15 +16,27 @@ pub fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-pub fn output_json(name: &str) -> PathBuf {
+pub fn temp_path(name: &str, extension: &str) -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system time before unix epoch")
         .as_nanos();
-    std::env::temp_dir().join(format!("{name}-{stamp}.json"))
+    std::env::temp_dir().join(format!("{name}-{stamp}.{extension}"))
 }
 
-pub fn run_checker(head_sha: &str, output_json: &PathBuf) -> std::process::Output {
+pub fn output_json(name: &str) -> PathBuf {
+    temp_path(name, "json")
+}
+
+pub fn subjects_file(name: &str, subjects: &[&str]) -> PathBuf {
+    let path = temp_path(name, "txt");
+    let mut body = subjects.join("\n");
+    body.push('\n');
+    std::fs::write(&path, body).expect("subjects file should be written");
+    path
+}
+
+pub fn run_checker(head_sha: &str, output_json: &PathBuf) -> Output {
     Command::new("python3")
         .arg("scripts/ci/check_governance_feature_commit_ratio.py")
         .arg("--repo-root")
@@ -44,6 +56,25 @@ pub fn run_checker(head_sha: &str, output_json: &PathBuf) -> std::process::Outpu
         .expect("checker should launch")
 }
 
+pub fn run_subject_checker(name: &str, subjects: &[&str], window_size: &str, max_ratio: &str) -> (Output, Value) {
+    let subject_path = subjects_file(name, subjects);
+    let report_path = output_json(name);
+    let output = Command::new("python3")
+        .arg("scripts/ci/check_governance_feature_commit_ratio.py")
+        .arg("--commit-subjects-file")
+        .arg(&subject_path)
+        .arg("--window-size")
+        .arg(window_size)
+        .arg("--max-governance-ratio")
+        .arg(max_ratio)
+        .arg("--output-json")
+        .arg(&report_path)
+        .current_dir(repo_root())
+        .output()
+        .expect("subject checker should launch");
+    (output, read_report(&report_path))
+}
+
 pub fn read_report(path: &PathBuf) -> Value {
     let raw = std::fs::read_to_string(path).expect("report should exist");
     serde_json::from_str(&raw).expect("report should be valid json")
@@ -51,4 +82,23 @@ pub fn read_report(path: &PathBuf) -> Value {
 
 pub fn status(report: &Value) -> &str {
     report["status"].as_str().expect("status should be string")
+}
+
+pub fn string_field(report: &Value, field: &str) -> String {
+    report[field]
+        .as_str()
+        .unwrap_or_else(|| panic!("{field} should be string"))
+        .to_owned()
+}
+
+pub fn u64_field(report: &Value, field: &str) -> u64 {
+    report[field]
+        .as_u64()
+        .unwrap_or_else(|| panic!("{field} should be u64"))
+}
+
+pub fn f64_field(report: &Value, field: &str) -> f64 {
+    report[field]
+        .as_f64()
+        .unwrap_or_else(|| panic!("{field} should be f64"))
 }
