@@ -14,3 +14,5 @@ mod empty_subjects_contract_tests;
 mod unknown_subject_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/window_cap_contract_tests.rs"]
 mod window_cap_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/governance_ratio_rounding_contract_tests.rs"]
+mod governance_ratio_rounding_contract_tests;
