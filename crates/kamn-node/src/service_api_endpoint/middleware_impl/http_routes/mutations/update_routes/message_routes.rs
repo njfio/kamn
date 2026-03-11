@@ -44,7 +44,7 @@ async fn send_message(
     };
     let sender_did = sender_did_from_context(context);
     let result =
-        create_message_for_context(state, context, sender_did, &recipient_did, &channel_id).await;
+        create_message_from_request(state, context, sender_did, &recipient_did, &channel_id).await;
     match result {
         Ok(payload) => publish_message_side_effects(
             state,
@@ -92,7 +92,7 @@ async fn create_message_result(
     )
 }
 
-async fn create_message_for_context(
+async fn create_message_from_request(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
     sender_did: Option<&str>,

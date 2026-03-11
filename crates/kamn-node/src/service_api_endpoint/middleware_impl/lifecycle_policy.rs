@@ -35,7 +35,7 @@ pub(super) fn service_api_lifecycle_rejection_policy(
 ) -> Option<ServiceApiLifecycleRejectionPolicy> {
     limiter_rejection_policy(reason_code)
         .or_else(|| sender_rejection_policy(reason_code))
-        .or_else(|| engine_rejection_policy(reason_code))
+        .or_else(|| anti_spam_engine_rejection_policy(reason_code))
 }
 
 fn limiter_rejection_policy(reason_code: &str) -> Option<ServiceApiLifecycleRejectionPolicy> {
@@ -76,7 +76,9 @@ fn sender_rejection_policy(reason_code: &str) -> Option<ServiceApiLifecycleRejec
     })
 }
 
-fn engine_rejection_policy(reason_code: &str) -> Option<ServiceApiLifecycleRejectionPolicy> {
+fn anti_spam_engine_rejection_policy(
+    reason_code: &str,
+) -> Option<ServiceApiLifecycleRejectionPolicy> {
     (reason_code == REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID).then_some(
         ServiceApiLifecycleRejectionPolicy {
             rejection_class: LIFECYCLE_REJECTION_CLASS_ASYNC_ENGINE,
