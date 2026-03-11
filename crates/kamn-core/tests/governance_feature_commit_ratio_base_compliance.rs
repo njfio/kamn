@@ -48,3 +48,5 @@ mod activation_scope_subject_window_contract_tests;
 mod range_mode_support;
 #[path = "governance_feature_commit_ratio_base_compliance/head_at_base_activation_contract_tests.rs"]
 mod head_at_base_activation_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/head_precedes_base_activation_contract_tests.rs"]
+mod head_precedes_base_activation_contract_tests;
