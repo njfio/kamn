@@ -27,15 +27,18 @@ pub(super) fn remove_snapshot_artifacts(path: &PathBuf, journal_path: &PathBuf) 
     let _ = fs::remove_file(journal_path);
 }
 
-pub(super) fn accepted_snapshot(task_id: &str, description: &str) -> TaskOperationSnapshot {
-    let mut engine = submitted_engine(task_id, description);
+pub(super) fn accepted_task_snapshot(task_id: &str, description: &str) -> TaskOperationSnapshot {
+    let mut engine = engine_with_submitted_task(task_id, description);
     engine
         .accept(task_id, "kamn:did:agent:worker-1")
         .expect("accept should succeed");
     engine.export_snapshot()
 }
 
-pub(super) fn submitted_engine(task_id: &str, description: &str) -> TaskOperationEngine {
+pub(super) fn engine_with_submitted_task(
+    task_id: &str,
+    description: &str,
+) -> TaskOperationEngine {
     let mut engine = TaskOperationEngine::new();
     engine
         .submit(task_id, "kamn:did:agent:requester-1", description)
@@ -59,7 +62,7 @@ pub(super) fn write_corrupt_journal_tail(journal_path: &PathBuf) {
     assert!(journal.write_all(b"entry|1|deadbeefz\n").is_ok());
 }
 
-pub(super) fn write_and_read_snapshot(
+pub(super) fn roundtrip_snapshot_store(
     store: &mut FileTaskOperationSnapshotStore,
     snapshot: TaskOperationSnapshot,
 ) -> Option<TaskOperationSnapshot> {

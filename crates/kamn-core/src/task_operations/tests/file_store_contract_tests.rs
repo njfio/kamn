@@ -3,9 +3,10 @@ use super::super::{
     TaskOperationSnapshotStoreError,
 };
 use super::support::{
-    accepted_snapshot, remove_snapshot_artifacts, submit_benchmark_tasks, submitted_engine,
-    temp_task_operation_snapshot_journal_path, temp_task_operation_snapshot_path,
-    write_and_read_snapshot, write_corrupt_journal_tail, write_stale_snapshot_payload,
+    accepted_task_snapshot, engine_with_submitted_task, remove_snapshot_artifacts,
+    roundtrip_snapshot_store, submit_benchmark_tasks, temp_task_operation_snapshot_journal_path,
+    temp_task_operation_snapshot_path, write_corrupt_journal_tail,
+    write_stale_snapshot_payload,
 };
 use std::fs;
 
@@ -14,10 +15,10 @@ fn integration_file_task_operation_snapshot_store_roundtrips_snapshot() {
     let path = temp_task_operation_snapshot_path("roundtrip");
     let journal_path = temp_task_operation_snapshot_journal_path(&path);
     remove_snapshot_artifacts(&path, &journal_path);
-    let snapshot = accepted_snapshot("task-store-1", "Store snapshot flow");
+    let snapshot = accepted_task_snapshot("task-store-1", "Store snapshot flow");
     let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
     assert_eq!(
-        write_and_read_snapshot(&mut file_store, snapshot.clone()),
+        roundtrip_snapshot_store(&mut file_store, snapshot.clone()),
         Some(snapshot)
     );
     remove_snapshot_artifacts(&path, &journal_path);
@@ -28,7 +29,7 @@ fn integration_file_task_operation_snapshot_store_replays_journal_when_snapshot_
     let path = temp_task_operation_snapshot_path("journal-replay");
     let journal_path = temp_task_operation_snapshot_journal_path(&path);
     remove_snapshot_artifacts(&path, &journal_path);
-    let mut engine = submitted_engine("task-journal-1", "first snapshot");
+    let mut engine = engine_with_submitted_task("task-journal-1", "first snapshot");
     let first_snapshot = engine.export_snapshot();
     let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
     file_store.write(first_snapshot.clone()).unwrap();
@@ -86,7 +87,7 @@ fn regression_file_task_operation_snapshot_store_rejects_corrupt_journal_tail() 
     let path = temp_task_operation_snapshot_path("corrupt-journal-tail");
     let journal_path = temp_task_operation_snapshot_journal_path(&path);
     remove_snapshot_artifacts(&path, &journal_path);
-    let snapshot = submitted_engine("task-tail", "tail payload").export_snapshot();
+    let snapshot = engine_with_submitted_task("task-tail", "tail payload").export_snapshot();
     let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
     file_store.write(snapshot).unwrap();
     write_corrupt_journal_tail(&journal_path);
