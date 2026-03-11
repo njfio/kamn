@@ -11,6 +11,7 @@ impl ServiceApiMessageStore {
             .tasks
             .insert(task_id.clone(), build_task_record(task_id.as_str()));
         self.persist()?;
+        persist_task_created_audit_export(self, task_id.as_str())?;
         Ok(ServiceApiTaskCreateBody {
             task_id,
             state: "submitted".to_owned(),
@@ -122,4 +123,12 @@ fn build_escrow_record(escrow_id: &str) -> ServiceApiPersistedEscrowRecord {
         escrow_id: escrow_id.to_owned(),
         state: "funded".to_owned(),
     }
+}
+
+fn persist_task_created_audit_export(
+    store: &ServiceApiMessageStore,
+    task_id: &str,
+) -> Result<(), String> {
+    let event = service_api_task_created_audit_event(task_id);
+    persist_service_api_audit_export_event(store.audit_export_file.as_deref(), event)
 }
