@@ -47,3 +47,17 @@ Split `crates/kamn-node/src/service_api_endpoint/middleware_impl.rs` into bounde
   - bounded extracted files
 - Green verification with targeted real tests covering service API endpoint middleware behavior.
 - Run touched-Rust size policy against the issue branch once extraction is complete.
+
+## Outcome
+- `middleware_impl.rs` is now a thin root shell that delegates to bounded sibling modules for auth flow, request parsing, error response handling, HTTP routes, WebSocket routes, payload parsing, and lifecycle rejection policy.
+- The extracted write set stays within the active file and function budgets enforced by the touched-Rust policy.
+- Real service API middleware entrypoints remain wired through the existing `service_api_endpoint.rs` path.
+
+## Integration evidence
+- `cargo test -p kamn-node --test service_api_endpoint_middleware_impl_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node unit_service_api_endpoint_lifecycle_rejection_projection_is_deterministic -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_supports_keep_alive_requests_on_single_connection -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6872-remote-origin-clean2 --base-ref origin/main --output-json /tmp/6873-touched-size-tracked.json`
+
+## Deviations
+- Clean-clone validation was not required for this issue; the touched-Rust check ran directly against the issue worktree with the full tracked write set staged.
