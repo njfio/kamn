@@ -37,19 +37,11 @@ impl FileTaskOperationSnapshotStore {
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<TaskOperationRecoveryResult, TaskOperationSnapshotStoreError> {
-        if !self.path.exists() && !self.journal_path.exists() {
-            return Ok(recovery_result(
-                None,
-                false,
-                "task_operation_snapshot_recovery_empty",
-            ));
+        if self.is_empty_store() {
+            return Ok(empty_recovery_result());
         }
         match self.read_latest() {
-            Ok(snapshot) => Ok(recovery_result(
-                snapshot,
-                false,
-                "task_operation_snapshot_recovery_clean",
-            )),
+            Ok(snapshot) => Ok(clean_recovery_result(snapshot)),
             Err(TaskOperationSnapshotStoreError::InvalidPayload(value))
                 if value.starts_with(task_operation_snapshot_journal_recovery_error()) =>
             {
@@ -71,6 +63,10 @@ impl FileTaskOperationSnapshotStore {
             true,
             "task_operation_snapshot_recovery_repaired_corrupt_payload",
         ))
+    }
+
+    fn is_empty_store(&self) -> bool {
+        !self.path.exists() && !self.journal_path.exists()
     }
 }
 
@@ -120,4 +116,12 @@ fn recovery_result(
         repaired,
         reason_code,
     }
+}
+
+fn empty_recovery_result() -> TaskOperationRecoveryResult {
+    recovery_result(None, false, "task_operation_snapshot_recovery_empty")
+}
+
+fn clean_recovery_result(latest: Option<TaskOperationSnapshot>) -> TaskOperationRecoveryResult {
+    recovery_result(latest, false, "task_operation_snapshot_recovery_clean")
 }

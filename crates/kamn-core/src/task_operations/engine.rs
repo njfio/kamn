@@ -9,6 +9,7 @@ use super::models::{
 
 mod restore_support;
 mod snapshot_projection;
+mod snapshot_restore_validation;
 mod submission;
 mod support;
 mod transition_support;

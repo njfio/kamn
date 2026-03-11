@@ -97,28 +97,16 @@ pub(crate) fn lifecycle_error(error: TaskLifecycleError) -> TaskOperationError {
 
 fn write_dependency_error(error: &TaskOperationError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
-        TaskOperationError::DuplicateDependency {
-            task_id,
-            dependency_id,
-        } => {
-            write!(f, "duplicate dependency {dependency_id} for task {task_id}")
+        TaskOperationError::DuplicateDependency { task_id, dependency_id } => {
+            write_duplicate_dependency(task_id, dependency_id, f)
         }
-        TaskOperationError::UnknownDependency {
-            task_id,
-            dependency_id,
-        } => {
-            write!(f, "unknown dependency {dependency_id} for task {task_id}")
+        TaskOperationError::UnknownDependency { task_id, dependency_id } => {
+            write_unknown_dependency(task_id, dependency_id, f)
         }
-        TaskOperationError::CyclicDependency { task_id } => {
-            write!(f, "cyclic task dependency detected at task {task_id}")
+        TaskOperationError::CyclicDependency { task_id } => write_cyclic_dependency(task_id, f),
+        TaskOperationError::DependencyNotSatisfied { task_id, dependency_id } => {
+            write_unsatisfied_dependency(task_id, dependency_id, f)
         }
-        TaskOperationError::DependencyNotSatisfied {
-            task_id,
-            dependency_id,
-        } => write!(
-            f,
-            "task {task_id} cannot start before dependency {dependency_id} is completed"
-        ),
         _ => unreachable!("dependency formatter only handles dependency variants"),
     }
 }
@@ -146,4 +134,35 @@ fn write_actor_error(
     f: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
     write!(f, "unauthorized actor {actor}, requires {required}")
+}
+
+fn write_duplicate_dependency(
+    task_id: &str,
+    dependency_id: &str,
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    write!(f, "duplicate dependency {dependency_id} for task {task_id}")
+}
+
+fn write_unknown_dependency(
+    task_id: &str,
+    dependency_id: &str,
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    write!(f, "unknown dependency {dependency_id} for task {task_id}")
+}
+
+fn write_cyclic_dependency(task_id: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "cyclic task dependency detected at task {task_id}")
+}
+
+fn write_unsatisfied_dependency(
+    task_id: &str,
+    dependency_id: &str,
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    write!(
+        f,
+        "task {task_id} cannot start before dependency {dependency_id} is completed"
+    )
 }
