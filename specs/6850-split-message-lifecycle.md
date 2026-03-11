@@ -46,3 +46,14 @@ Split `crates/kamn-core/src/message_lifecycle.rs` into bounded, concern-based mo
 3. Extract the file into bounded concern-based modules.
 4. Re-run the extraction contract and the real `message_lifecycle` test target until green.
 5. Run the touched-Rust size ratchet on the final write set.
+
+## Phase 6 Evidence
+- `TMPDIR=/home/n/Code/kamn/.tmp-home CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test message_lifecycle_module_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/.tmp-home CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core message_lifecycle::tests:: -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/.tmp-home CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test message_lifecycle_queries -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/.tmp-home CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test message_lifecycle_proof_admission -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/.tmp-home CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test sqlite_snapshot_store_adapters -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6850-remote-clean4 --base-ref origin/main --output-json /tmp/6850-clean4-python-size.json`
+
+## Deviations
+- The shell wrapper `scripts/ci/check_touched_rust_size_policy.sh` resolved the primary checkout instead of the clean clone during validation. Final ratchet evidence therefore used the Python entrypoint with explicit `--repo-root /home/n/Code/kamn-6850-remote-clean4`.
