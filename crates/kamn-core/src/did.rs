@@ -7,6 +7,7 @@ pub use kamn_types::did::{
     DidVerificationMethod, KamnDid, KamnDidError,
 };
 
+/// Trust-store abstraction used by federated DID handshake evaluation.
 pub trait FederatedDidTrustStore {
     /// Returns true when `subject_did` is trusted for `network`.
     fn is_trusted(&self, network: &str, subject_did: &str) -> bool;
@@ -219,44 +220,61 @@ impl FederatedDidHandshakeError {
     }
 }
 
+impl FederatedDidHandshakeError {
+    fn display_message(&self) -> String {
+        match self {
+            Self::EmptyField(field) => Self::empty_field_message(field),
+            Self::InvalidRequiredQuorum { required } => Self::invalid_quorum_message(*required),
+            Self::ResolverVersionMissing { handshake_id } => Self::resolver_missing_message(handshake_id),
+            Self::TrustStoreMiss { subject_did, network } => Self::trust_store_miss_message(subject_did, network),
+            Self::SignaturePolicyFailed { handshake_id } => Self::signature_policy_message(handshake_id),
+            Self::QuorumShortfall { required, received } => Self::quorum_shortfall_message(*required, *received),
+            Self::NonceReplayDetected { handshake_id } => Self::nonce_replay_message(handshake_id),
+            Self::PartitionSequenceReplayDetected { handshake_id } => Self::partition_replay_message(handshake_id),
+            Self::DowngradeDetected { handshake_id } => Self::downgrade_message(handshake_id),
+        }
+    }
+
+    fn empty_field_message(field: &str) -> String {
+        format!("federated did handshake field is empty: {field}")
+    }
+
+    fn invalid_quorum_message(required: u16) -> String {
+        format!("invalid required quorum for federated did handshake: {required}")
+    }
+
+    fn resolver_missing_message(handshake_id: &str) -> String {
+        format!("resolver version missing for federated did handshake: {handshake_id}")
+    }
+
+    fn trust_store_miss_message(subject_did: &str, network: &str) -> String {
+        format!("federated did handshake trust-store miss for did {subject_did} on network {network}")
+    }
+
+    fn signature_policy_message(handshake_id: &str) -> String {
+        format!("federated did handshake signature policy failed: {handshake_id}")
+    }
+
+    fn quorum_shortfall_message(required: u16, received: u16) -> String {
+        format!("federated did handshake quorum shortfall: required {required}, received {received}")
+    }
+
+    fn nonce_replay_message(handshake_id: &str) -> String {
+        format!("federated did handshake nonce replay detected: {handshake_id}")
+    }
+
+    fn partition_replay_message(handshake_id: &str) -> String {
+        format!("federated did handshake partition sequence replay detected: {handshake_id}")
+    }
+
+    fn downgrade_message(handshake_id: &str) -> String {
+        format!("federated did handshake downgrade detected: {handshake_id}")
+    }
+}
+
 impl fmt::Display for FederatedDidHandshakeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::EmptyField(field) => write!(f, "federated did handshake field is empty: {field}"),
-            Self::InvalidRequiredQuorum { required } => {
-                write!(f, "invalid required quorum for federated did handshake: {required}")
-            }
-            Self::ResolverVersionMissing { handshake_id } => write!(
-                f,
-                "resolver version missing for federated did handshake: {handshake_id}"
-            ),
-            Self::TrustStoreMiss {
-                subject_did,
-                network,
-            } => write!(
-                f,
-                "federated did handshake trust-store miss for did {subject_did} on network {network}"
-            ),
-            Self::SignaturePolicyFailed { handshake_id } => write!(
-                f,
-                "federated did handshake signature policy failed: {handshake_id}"
-            ),
-            Self::QuorumShortfall { required, received } => write!(
-                f,
-                "federated did handshake quorum shortfall: required {required}, received {received}"
-            ),
-            Self::NonceReplayDetected { handshake_id } => {
-                write!(f, "federated did handshake nonce replay detected: {handshake_id}")
-            }
-            Self::PartitionSequenceReplayDetected { handshake_id } => write!(
-                f,
-                "federated did handshake partition sequence replay detected: {handshake_id}"
-            ),
-            Self::DowngradeDetected { handshake_id } => write!(
-                f,
-                "federated did handshake downgrade detected: {handshake_id}"
-            ),
-        }
+        write!(f, "{}", self.display_message())
     }
 }
 
@@ -527,7 +545,7 @@ mod tests {
         validate_did_verification_method_algorithms, AgentDid, AgentDidError,
         AgentDidKeyBindingError, AgentDidMetadata, DidDocumentError, KamnDid, KamnDidError,
     };
-    const SOURCE: &str = include_str!("../../kamn-types/src/did.rs");
+    const SOURCE: &str = include_str!("../../kamn-types/src/did/ids.rs");
 
     fn ensure_public_key_hex_binding_source() -> &'static str {
         let function_start = SOURCE
