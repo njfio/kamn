@@ -1067,265 +1067,494 @@ fn recipient_mailbox_channel_id(recipient_did: &str) -> String {
     format!("recipient:{recipient_did}")
 }
 
+struct RuntimeEvidenceContext<'a> {
+    message_id: &'a str,
+    payload: &'a str,
+    payload_tag: u64,
+    event_epoch_seconds: u64,
+    content_size_bytes: usize,
+    compressed_size_bytes: usize,
+}
+
+struct RuntimeEvidenceIdentities {
+    sender_agent_did: String,
+    recipient_agent_did: String,
+    owner_did: &'static str,
+    owner_counterparty_did: &'static str,
+}
+
+struct RuntimeEvidenceM0ToM1 {
+    m0_content_hash: String,
+    m1_merkle_root: String,
+}
+
+struct RuntimeEvidenceM2ToM5 {
+    m2_authorization_reason_code: String,
+    m2_audit_record_hash: String,
+    m3_blind_index_token: String,
+    m3_match_count: usize,
+    m4_transition_reason_code: String,
+    m5_record_hash: String,
+}
+
+struct RuntimeEvidenceM6ToM11 {
+    m6_projection_edge_count: usize,
+    m7_observability_health: String,
+    m8_retention_due_count: usize,
+    m9_dispatch_ack_status: String,
+    m9_dispatch_reason_code: String,
+    m10_archived_partition_count: usize,
+    m11_decision: String,
+    m11_reason_codes_csv: String,
+}
+
 fn build_data_layer_runtime_evidence(
     message_id: &str,
     payload: &str,
     sender_did: Option<&str>,
     recipient_did: Option<&str>,
 ) -> Result<ServiceApiDataLayerRuntimeEvidenceRecord, String> {
+    let context = build_runtime_evidence_context(message_id, payload);
+    let identities = build_runtime_evidence_identities(sender_did, recipient_did);
+    let m0_to_m1 = build_runtime_evidence_m0_to_m1(&context, &identities)?;
+    let m2_to_m5 = build_runtime_evidence_m2_to_m5(&context, &identities)?;
+    let m6_to_m11 = build_runtime_evidence_m6_to_m11(&context, &identities)?;
+    Ok(assemble_runtime_evidence_record(m0_to_m1, m2_to_m5, m6_to_m11))
+}
+
+fn build_runtime_evidence_context<'a>(message_id: &'a str, payload: &'a str) -> RuntimeEvidenceContext<'a> {
+    let payload_tag = deterministic_body_tag(payload.as_bytes());
+    let content_size_bytes = payload.len().max(1);
+    RuntimeEvidenceContext {
+        message_id,
+        payload,
+        payload_tag,
+        event_epoch_seconds: 1_708_560_000_u64.saturating_add(payload_tag % 10_000),
+        content_size_bytes,
+        compressed_size_bytes: (content_size_bytes / 2).max(1),
+    }
+}
+
+fn build_runtime_evidence_identities(
+    sender_did: Option<&str>,
+    recipient_did: Option<&str>,
+) -> RuntimeEvidenceIdentities {
     let sender_agent_did =
         normalize_agent_did(sender_did, "kamn:did:agent:service-api-runtime-sender");
-    let mut recipient_agent_did = normalize_agent_did(
-        recipient_did,
-        "kamn:did:agent:service-api-runtime-recipient",
-    );
-    if sender_agent_did == recipient_agent_did {
-        recipient_agent_did = "kamn:did:agent:service-api-runtime-recipient-alt".to_owned();
+    let recipient_agent_did = build_runtime_evidence_recipient(sender_agent_did.as_str(), recipient_did);
+    RuntimeEvidenceIdentities {
+        sender_agent_did,
+        recipient_agent_did,
+        owner_did: "kamn:did:owner:service-api-runtime",
+        owner_counterparty_did: "kamn:did:owner:service-api-runtime-recipient",
     }
+}
 
-    let owner_did = "kamn:did:owner:service-api-runtime";
-    let owner_counterparty_did = "kamn:did:owner:service-api-runtime-recipient";
-    let payload_tag = deterministic_body_tag(payload.as_bytes());
-    let event_epoch_seconds = 1_708_560_000_u64.saturating_add(payload_tag % 10_000);
-    let content_size_bytes = payload.len().max(1);
-    let compressed_size_bytes = (content_size_bytes / 2).max(1);
+fn build_runtime_evidence_recipient(sender_agent_did: &str, recipient_did: Option<&str>) -> String {
+    let recipient_agent_did =
+        normalize_agent_did(recipient_did, "kamn:did:agent:service-api-runtime-recipient");
+    if sender_agent_did == recipient_agent_did {
+        "kamn:did:agent:service-api-runtime-recipient-alt".to_owned()
+    } else {
+        recipient_agent_did
+    }
+}
 
+fn build_runtime_evidence_m0_to_m1(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<RuntimeEvidenceM0ToM1, String> {
+    let m0_content_hash = build_runtime_evidence_m0_content_hash(context, identities)?;
+    let m1_merkle_root = build_runtime_evidence_m1_merkle_root(context, &m0_content_hash)?;
+    Ok(RuntimeEvidenceM0ToM1 {
+        m0_content_hash,
+        m1_merkle_root,
+    })
+}
+
+fn build_runtime_evidence_m0_content_hash(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<String, String> {
+    let mut m0_ledger = DataLayerM0AppendOnlyLedger::new();
+    let m0_record = m0_ledger
+        .append(build_runtime_evidence_m0_input(context, identities))
+        .map_err(|error| format!("m0 runtime evidence failed: {error}"))?;
+    m0_ledger
+        .verify_hash_chain()
+        .map_err(|error| format!("m0 hash-chain verification failed: {error}"))?;
+    Ok(m0_record.content_hash)
+}
+
+fn build_runtime_evidence_m0_input(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> DataLayerM0RecordInput {
+    DataLayerM0RecordInput {
+        envelope: build_runtime_evidence_envelope(context, identities),
+        ciphertext: build_runtime_evidence_ciphertext(context),
+        wrapped_keys: vec![DataLayerM0WrappedKey {
+            did: identities.recipient_agent_did.clone(),
+            wrapped_cek: format!("wrapped:{}", context.message_id),
+        }],
+        compression_codec: DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD.to_owned(),
+        compression_dict_id: Some(1),
+        content_size_bytes: context.content_size_bytes,
+        compressed_size_bytes: context.compressed_size_bytes,
+    }
+}
+
+fn build_runtime_evidence_envelope(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> CanonicalMessageEnvelope {
     let mut envelope_body = BTreeMap::new();
-    envelope_body.insert("payload".to_owned(), payload.to_owned());
-    envelope_body.insert("runtime_message_id".to_owned(), message_id.to_owned());
-    let envelope = CanonicalMessageEnvelope {
+    envelope_body.insert("payload".to_owned(), context.payload.to_owned());
+    envelope_body.insert("runtime_message_id".to_owned(), context.message_id.to_owned());
+    CanonicalMessageEnvelope {
         envelope: EnvelopeMetadata {
-            id: message_id.to_owned(),
+            id: context.message_id.to_owned(),
             type_name: CANONICAL_MESSAGE_ENVELOPE_TYPE.to_owned(),
-            from: sender_agent_did.clone(),
-            to: vec![recipient_agent_did.clone()],
+            from: identities.sender_agent_did.clone(),
+            to: vec![identities.recipient_agent_did.clone()],
             created: "2026-02-24T00:00:00Z".to_owned(),
             expires: "2026-02-24T01:00:00Z".to_owned(),
-            thread_id: Some(format!("thread:{message_id}")),
+            thread_id: Some(format!("thread:{}", context.message_id)),
             parent_id: None,
-            nonce: (payload_tag % 1024).saturating_add(1),
+            nonce: (context.payload_tag % 1024).saturating_add(1),
         },
-        header: EnvelopeHeader {
-            message_type: "Request".to_owned(),
-            priority: "normal".to_owned(),
-            content_type: "application/json".to_owned(),
-            encryption: EnvelopeEncryption {
-                algorithm: CANONICAL_ENCRYPTION_ALGORITHM.to_owned(),
-                recipient_keys: vec!["did:key:z6Mkrecipient#key-agreement-1".to_owned()],
-            },
-        },
+        header: build_runtime_evidence_header(),
         body: envelope_body,
         attachments: Vec::new(),
         proof: EnvelopeProof {
             type_name: "DataIntegrityProof".to_owned(),
             created: "2026-02-24T00:00:00Z".to_owned(),
-            verification_method: format!("{sender_agent_did}#key-1"),
+            verification_method: format!("{}#key-1", identities.sender_agent_did),
             proof_purpose: CANONICAL_PROOF_PURPOSE.to_owned(),
-            proof_value: format!("sig:{message_id}"),
+            proof_value: format!("sig:{}", context.message_id),
         },
-    };
-    let ciphertext = DirectMessageCiphertext {
+    }
+}
+
+fn build_runtime_evidence_header() -> EnvelopeHeader {
+    EnvelopeHeader {
+        message_type: "Request".to_owned(),
+        priority: "normal".to_owned(),
+        content_type: "application/json".to_owned(),
+        encryption: EnvelopeEncryption {
+            algorithm: CANONICAL_ENCRYPTION_ALGORITHM.to_owned(),
+            recipient_keys: vec!["did:key:z6Mkrecipient#key-agreement-1".to_owned()],
+        },
+    }
+}
+
+fn build_runtime_evidence_ciphertext(context: &RuntimeEvidenceContext<'_>) -> DirectMessageCiphertext {
+    DirectMessageCiphertext {
         key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
         cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
         sender_key_ref: "did:key:z6Mksender#key-agreement-1".to_owned(),
         recipient_key_ref: "did:key:z6Mkrecipient#key-agreement-1".to_owned(),
-        nonce: (payload_tag % 2048).saturating_add(1),
-        ciphertext: format!("{payload_tag:016x}"),
-        auth_tag: format!("{:032x}", payload_tag.saturating_add(1)),
-    };
-    let mut m0_ledger = DataLayerM0AppendOnlyLedger::new();
-    let m0_record = m0_ledger
-        .append(DataLayerM0RecordInput {
-            envelope,
-            ciphertext,
-            wrapped_keys: vec![DataLayerM0WrappedKey {
-                did: recipient_agent_did.clone(),
-                wrapped_cek: format!("wrapped:{message_id}"),
-            }],
-            compression_codec: DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD.to_owned(),
-            compression_dict_id: Some(1),
-            content_size_bytes,
-            compressed_size_bytes,
-        })
-        .map_err(|error| format!("m0 runtime evidence failed: {error}"))?;
-    m0_ledger
-        .verify_hash_chain()
-        .map_err(|error| format!("m0 hash-chain verification failed: {error}"))?;
+        nonce: (context.payload_tag % 2048).saturating_add(1),
+        ciphertext: format!("{:016x}", context.payload_tag),
+        auth_tag: format!("{:032x}", context.payload_tag.saturating_add(1)),
+    }
+}
 
+fn build_runtime_evidence_m1_merkle_root(
+    context: &RuntimeEvidenceContext<'_>,
+    m0_content_hash: &str,
+) -> Result<String, String> {
     let m1_batch = DataLayerM1MerkleBatch::assemble(vec![
         DataLayerM1MerkleLeaf {
-            message_id: message_id.to_owned(),
+            message_id: context.message_id.to_owned(),
             leaf_index: 0,
-            content_hash: m0_record.content_hash.clone(),
+            content_hash: m0_content_hash.to_owned(),
         },
         DataLayerM1MerkleLeaf {
-            message_id: format!("{message_id}:projection"),
+            message_id: format!("{}:projection", context.message_id),
             leaf_index: 1,
-            content_hash: format!("sha256:{payload_tag:016x}"),
+            content_hash: format!("sha256:{:016x}", context.payload_tag),
         },
     ])
     .map_err(|error| format!("m1 merkle assembly failed: {error}"))?;
     let m1_proof = m1_batch
-        .inclusion_proof(message_id)
+        .inclusion_proof(context.message_id)
         .map_err(|error| format!("m1 inclusion proof failed: {error}"))?;
     verify_data_layer_m1_inclusion_proof(&m1_proof)
         .map_err(|error| format!("m1 inclusion verification failed: {error}"))?;
+    Ok(m1_batch.merkle_root)
+}
 
-    let m2_session_service = DataLayerM2DidSessionService::new(900)
-        .map_err(|error| format!("m2 init failed: {error}"))?;
-    let auth_challenge = format!("nonce-{payload_tag}");
+fn build_runtime_evidence_m2_to_m5(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<RuntimeEvidenceM2ToM5, String> {
+    let (m2_authorization_reason_code, m2_audit_record_hash, session_id) =
+        build_runtime_evidence_m2(context, identities)?;
+    let (m3_blind_index_token, m3_match_count) =
+        build_runtime_evidence_m3(context, identities, session_id)?;
+    let m4_transition_reason_code = build_runtime_evidence_m4(context, identities)?;
+    let m5_record_hash = build_runtime_evidence_m5(context, identities)?;
+    Ok(RuntimeEvidenceM2ToM5 {
+        m2_authorization_reason_code,
+        m2_audit_record_hash,
+        m3_blind_index_token,
+        m3_match_count,
+        m4_transition_reason_code,
+        m5_record_hash,
+    })
+}
+
+fn build_runtime_evidence_m2(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<(String, String, String), String> {
+    let auth_challenge = format!("nonce-{}", context.payload_tag);
+    let m2_session_service =
+        DataLayerM2DidSessionService::new(900).map_err(|error| format!("m2 init failed: {error}"))?;
     let m2_session_token = m2_session_service
         .authenticate(DataLayerM2DidAuthRequest {
-            requester_did: sender_agent_did.clone(),
+            requester_did: identities.sender_agent_did.clone(),
             challenge: auth_challenge.clone(),
-            credential: format!("sig:{sender_agent_did}:{auth_challenge}"),
-            issued_at_epoch_seconds: event_epoch_seconds,
+            credential: format!("sig:{}:{auth_challenge}", identities.sender_agent_did),
+            issued_at_epoch_seconds: context.event_epoch_seconds,
             ttl_seconds: 300,
         })
         .map_err(|error| format!("m2 did authentication failed: {error}"))?;
-    let m2_abac = DataLayerM2AbacEngine::new();
-    let m2_authorization = m2_abac
+    let authorization_reason_code = build_runtime_evidence_m2_authorization(context, identities)?;
+    let audit_record_hash = build_runtime_evidence_m2_audit_hash(
+        context,
+        m2_session_token.requester_did,
+        authorization_reason_code.as_str(),
+    )?;
+    Ok((authorization_reason_code, audit_record_hash, m2_session_token.token_id))
+}
+
+fn build_runtime_evidence_m2_authorization(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<String, String> {
+    let scope = DataLayerM2MessageScope {
+        message_id: context.message_id.to_owned(),
+        sender_did: identities.sender_agent_did.clone(),
+        recipient_did: identities.recipient_agent_did.clone(),
+        owner_sender_did: identities.owner_did.to_owned(),
+        owner_recipient_did: identities.owner_counterparty_did.to_owned(),
+        escrow_id: None,
+    };
+    let decision = DataLayerM2AbacEngine::new()
         .authorize_message_visibility(
-            sender_agent_did.as_str(),
+            identities.sender_agent_did.as_str(),
             DataLayerM2ActorRole::Agent,
-            &DataLayerM2MessageScope {
-                message_id: message_id.to_owned(),
-                sender_did: sender_agent_did.clone(),
-                recipient_did: recipient_agent_did.clone(),
-                owner_sender_did: owner_did.to_owned(),
-                owner_recipient_did: owner_counterparty_did.to_owned(),
-                escrow_id: None,
-            },
+            &scope,
         )
         .map_err(|error| format!("m2 authorization failed: {error}"))?;
-    let m2_authorization_reason_code = m2_authorization_reason_code(&m2_authorization);
+    Ok(m2_authorization_reason_code(&decision))
+}
+
+fn build_runtime_evidence_m2_audit_hash(
+    context: &RuntimeEvidenceContext<'_>,
+    requester_did: String,
+    reason_code: &str,
+) -> Result<String, String> {
     let mut m2_audit_ledger = DataLayerM2AccessAuditLedger::new();
     let m2_audit_record = m2_audit_ledger
         .append(DataLayerM2AccessAuditInput {
-            requester_did: m2_session_token.requester_did.clone(),
+            requester_did,
             action: "create_message".to_owned(),
-            resource_id: message_id.to_owned(),
-            reason_code: m2_authorization_reason_code.clone(),
-            event_epoch_seconds: event_epoch_seconds.saturating_add(1),
+            resource_id: context.message_id.to_owned(),
+            reason_code: reason_code.to_owned(),
+            event_epoch_seconds: context.event_epoch_seconds.saturating_add(1),
         })
         .map_err(|error| format!("m2 access audit append failed: {error}"))?;
     m2_audit_ledger
         .verify_hash_chain()
         .map_err(|error| format!("m2 access audit verification failed: {error}"))?;
+    Ok(m2_audit_record.record_hash)
+}
 
-    let m3_blind_index_token =
-        data_layer_m3_compute_blind_index("service-api-runtime-owner-key", "message", payload)
-            .map_err(|error| format!("m3 blind-index compute failed: {error}"))?;
+fn build_runtime_evidence_m3(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+    session_id: String,
+) -> Result<(String, usize), String> {
+    let m3_blind_index_token = data_layer_m3_compute_blind_index(
+        "service-api-runtime-owner-key",
+        "message",
+        context.payload,
+    )
+    .map_err(|error| format!("m3 blind-index compute failed: {error}"))?;
     let mut m3_catalog = DataLayerM3SearchCatalog::new();
-    let mut m3_blind_indexes = BTreeMap::new();
-    m3_blind_indexes.insert("message".to_owned(), m3_blind_index_token.clone());
+    let mut blind_indexes = BTreeMap::new();
+    blind_indexes.insert("message".to_owned(), m3_blind_index_token.clone());
     m3_catalog
         .register_record(DataLayerM3MessageMetadataRecord {
-            message_id: message_id.to_owned(),
-            owner_did: owner_did.to_owned(),
-            sender_did: sender_agent_did.clone(),
-            recipient_did: recipient_agent_did.clone(),
-            session_id: Some(m2_session_token.token_id),
+            message_id: context.message_id.to_owned(),
+            owner_did: identities.owner_did.to_owned(),
+            sender_did: identities.sender_agent_did.clone(),
+            recipient_did: identities.recipient_agent_did.clone(),
+            session_id: Some(session_id),
             escrow_id: None,
             message_type: "text".to_owned(),
-            created_at_epoch_seconds: event_epoch_seconds.saturating_add(2),
-            blind_indexes: m3_blind_indexes,
+            created_at_epoch_seconds: context.event_epoch_seconds.saturating_add(2),
+            blind_indexes,
         })
         .map_err(|error| format!("m3 catalog registration failed: {error}"))?;
-    let m3_matches = m3_catalog
+    let matches = m3_catalog
         .search_blind_index(DataLayerM3BlindIndexQuery {
-            owner_did: owner_did.to_owned(),
+            owner_did: identities.owner_did.to_owned(),
             field_name: "message".to_owned(),
             token: m3_blind_index_token.clone(),
             mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
             limit: Some(10),
         })
         .map_err(|error| format!("m3 search failed: {error}"))?;
+    Ok((m3_blind_index_token, matches.len()))
+}
 
+fn build_runtime_evidence_m4(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<String, String> {
     let mut m4_escrow = DataLayerM4EscrowTransitionEngine::new();
-    let m4_escrow_id = format!("escrow:{message_id}");
+    let m4_escrow_id = format!("escrow:{}", context.message_id);
     m4_escrow
         .create_escrow(DataLayerM4EscrowDraftInput {
             escrow_id: m4_escrow_id.clone(),
-            initiator_did: sender_agent_did.clone(),
-            counterparty_did: recipient_agent_did.clone(),
+            initiator_did: identities.sender_agent_did.clone(),
+            counterparty_did: identities.recipient_agent_did.clone(),
             auditor_did: Some("kamn:did:auditor:service-api-runtime".to_owned()),
             auditor_threshold: Some(1),
             auditor_share_holders: vec!["kamn:did:holder:service-api-runtime".to_owned()],
-            expires_at_epoch_seconds: Some(event_epoch_seconds.saturating_add(3_600)),
+            expires_at_epoch_seconds: Some(context.event_epoch_seconds.saturating_add(3_600)),
         })
         .map_err(|error| format!("m4 escrow draft failed: {error}"))?;
-    let m4_transition = m4_escrow
+    let transition = m4_escrow
         .apply_transition(
             m4_escrow_id.as_str(),
             DataLayerM4EscrowTransitionAction::Fund {
-                funded_at_epoch_seconds: event_epoch_seconds.saturating_add(3),
+                funded_at_epoch_seconds: context.event_epoch_seconds.saturating_add(3),
             },
         )
         .map_err(|error| format!("m4 transition failed: {error}"))?;
+    Ok(transition.reason_code.to_owned())
+}
 
-    let mut m5_registry = DataLayerM5EmbeddingRegistry::new(
-        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
-    );
+fn build_runtime_evidence_m5(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<String, String> {
+    let mut m5_registry =
+        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
     let m5_record = m5_registry
         .append(DataLayerM5EmbeddingRecordInput {
-            embedding_id: format!("embed:{message_id}"),
-            message_id: message_id.to_owned(),
-            owner_did: owner_did.to_owned(),
-            agent_did: sender_agent_did.clone(),
+            embedding_id: format!("embed:{}", context.message_id),
+            message_id: context.message_id.to_owned(),
+            owner_did: identities.owner_did.to_owned(),
+            agent_did: identities.sender_agent_did.clone(),
             retention_class: ContentRetentionClass::Standard,
             model_id: "text-embedding-3-large".to_owned(),
             vector_encrypted: vec![0xde, 0xad, 0xbe, 0xef],
             vector_plaintext: Some(vec![1.0, 0.0, 0.0]),
-            created_at_epoch_seconds: event_epoch_seconds.saturating_add(4),
+            created_at_epoch_seconds: context.event_epoch_seconds.saturating_add(4),
         })
         .map_err(|error| format!("m5 embedding append failed: {error}"))?;
     m5_registry
-        .verify_owner_integrity(owner_did)
+        .verify_owner_integrity(identities.owner_did)
         .map_err(|error| format!("m5 owner integrity failed: {error}"))?;
+    Ok(m5_record.record_hash)
+}
 
+fn build_runtime_evidence_m6_to_m11(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<RuntimeEvidenceM6ToM11, String> {
+    let m6_projection_edge_count = build_runtime_evidence_m6(context, identities)?;
+    let m7_observability_health = build_runtime_evidence_m7(context, identities)?;
+    let m8_retention_due_count = build_runtime_evidence_m8(context, identities)?;
+    let (m9_dispatch_ack_status, m9_dispatch_reason_code) = build_runtime_evidence_m9(context, identities)?;
+    let m10_archived_partition_count = build_runtime_evidence_m10()?;
+    let (m11_decision, m11_reason_codes_csv) = build_runtime_evidence_m11(context)?;
+    Ok(RuntimeEvidenceM6ToM11 {
+        m6_projection_edge_count,
+        m7_observability_health,
+        m8_retention_due_count,
+        m9_dispatch_ack_status,
+        m9_dispatch_reason_code,
+        m10_archived_partition_count,
+        m11_decision,
+        m11_reason_codes_csv,
+    })
+}
+
+fn build_runtime_evidence_m6(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<usize, String> {
     let mut m6_registry = DataLayerM6GraphRegistry::new();
-    let sender_node_id = format!("node:{sender_agent_did}");
-    let recipient_node_id = format!("node:{recipient_agent_did}");
-    m6_registry
-        .register_node(DataLayerM6GraphNodeInput {
-            owner_did: owner_did.to_owned(),
-            node_id: sender_node_id.clone(),
-            kind: DataLayerM6GraphNodeKind::Agent,
-            label: sender_agent_did.clone(),
-        })
-        .map_err(|error| format!("m6 sender node registration failed: {error}"))?;
-    m6_registry
-        .register_node(DataLayerM6GraphNodeInput {
-            owner_did: owner_did.to_owned(),
-            node_id: recipient_node_id.clone(),
-            kind: DataLayerM6GraphNodeKind::Agent,
-            label: recipient_agent_did.clone(),
-        })
-        .map_err(|error| format!("m6 recipient node registration failed: {error}"))?;
+    let sender_node_id = format!("node:{}", identities.sender_agent_did);
+    let recipient_node_id = format!("node:{}", identities.recipient_agent_did);
+    register_runtime_evidence_m6_node(
+        &mut m6_registry,
+        identities.owner_did,
+        sender_node_id.as_str(),
+        identities.sender_agent_did.as_str(),
+        "sender",
+    )?;
+    register_runtime_evidence_m6_node(
+        &mut m6_registry,
+        identities.owner_did,
+        recipient_node_id.as_str(),
+        identities.recipient_agent_did.as_str(),
+        "recipient",
+    )?;
     m6_registry
         .register_edge(DataLayerM6GraphEdgeInput {
-            owner_did: owner_did.to_owned(),
-            edge_id: format!("edge:{message_id}"),
+            owner_did: identities.owner_did.to_owned(),
+            edge_id: format!("edge:{}", context.message_id),
             relation: DataLayerM6GraphEdgeRelation::Messaged,
             from_node_id: sender_node_id,
             to_node_id: recipient_node_id,
             weight: 1.0,
-            observed_at_epoch_seconds: event_epoch_seconds.saturating_add(5),
+            observed_at_epoch_seconds: context.event_epoch_seconds.saturating_add(5),
         })
         .map_err(|error| format!("m6 edge registration failed: {error}"))?;
-    let m6_projection = m6_registry
-        .export_portable_edge_projection(owner_did)
+    let projection = m6_registry
+        .export_portable_edge_projection(identities.owner_did)
         .map_err(|error| format!("m6 projection failed: {error}"))?;
+    Ok(projection.len())
+}
 
+fn register_runtime_evidence_m6_node(
+    registry: &mut DataLayerM6GraphRegistry,
+    owner_did: &str,
+    node_id: &str,
+    label: &str,
+    actor_label: &str,
+) -> Result<(), String> {
+    registry
+        .register_node(DataLayerM6GraphNodeInput {
+            owner_did: owner_did.to_owned(),
+            node_id: node_id.to_owned(),
+            kind: DataLayerM6GraphNodeKind::Agent,
+            label: label.to_owned(),
+        })
+        .map(|_| ())
+        .map_err(|error| format!("m6 {actor_label} node registration failed: {error}"))
+}
+
+fn build_runtime_evidence_m7(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<String, String> {
     let mut m7_registry = DataLayerM7TelemetryRegistry::new();
     m7_registry
         .ingest_point(DataLayerM7TelemetryPointInput {
-            owner_did: owner_did.to_owned(),
-            agent_did: sender_agent_did.clone(),
-            timestamp_epoch_seconds: event_epoch_seconds.saturating_add(6),
+            owner_did: identities.owner_did.to_owned(),
+            agent_did: identities.sender_agent_did.clone(),
+            timestamp_epoch_seconds: context.event_epoch_seconds.saturating_add(6),
             message_count: 1,
-            bytes_stored: content_size_bytes as u64,
+            bytes_stored: context.content_size_bytes as u64,
             query_count: 1,
             embedding_count: 1,
             embedding_anomaly_count: 0,
@@ -1334,65 +1563,83 @@ fn build_data_layer_runtime_evidence(
             active_sessions: 1,
         })
         .map_err(|error| format!("m7 telemetry ingest failed: {error}"))?;
-    let m7_observability = m7_registry
+    let observability = m7_registry
         .evaluate_owner_observability(
             DataLayerM7BillingQuery {
-                requester_owner_did: owner_did.to_owned(),
-                owner_did: owner_did.to_owned(),
+                requester_owner_did: identities.owner_did.to_owned(),
+                owner_did: identities.owner_did.to_owned(),
             },
             ObservabilitySloProfile::baseline(),
         )
         .map_err(|error| format!("m7 observability projection failed: {error}"))?;
+    Ok(observability_health_label(observability.snapshot.latest_health).to_owned())
+}
 
+fn build_runtime_evidence_m8(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<usize, String> {
     let mut m8_registry = DataLayerM8ComplianceRegistry::new();
     m8_registry
         .register_message(DataLayerM8MessageRecordInput {
-            owner_did: owner_did.to_owned(),
-            message_id: message_id.to_owned(),
-            created_at_epoch_seconds: event_epoch_seconds,
-            content_hash: format!("sha256:{message_id}:content"),
-            hash_chain_prev: format!("sha256:{message_id}:prev"),
+            owner_did: identities.owner_did.to_owned(),
+            message_id: context.message_id.to_owned(),
+            created_at_epoch_seconds: context.event_epoch_seconds,
+            content_hash: format!("sha256:{}:content", context.message_id),
+            hash_chain_prev: format!("sha256:{}:prev", context.message_id),
             retention_class: DataLayerM8RetentionClass::Standard,
             retention_extension_seconds: 0,
             wrapped_keys: vec![DataLayerM8WrappedCekInput {
-                recipient_did: recipient_agent_did.clone(),
-                wrapped_cek: format!("wrapped:{message_id}"),
+                recipient_did: identities.recipient_agent_did.clone(),
+                wrapped_cek: format!("wrapped:{}", context.message_id),
             }],
         })
         .map_err(|error| format!("m8 message registration failed: {error}"))?;
-    let m8_retention_due = m8_registry
+    let retention_due = m8_registry
         .retention_due_for_owner(
             DataLayerM8OwnerScopeQuery {
-                requester_owner_did: owner_did.to_owned(),
-                owner_did: owner_did.to_owned(),
+                requester_owner_did: identities.owner_did.to_owned(),
+                owner_did: identities.owner_did.to_owned(),
             },
-            event_epoch_seconds.saturating_add(100_000_000),
+            context.event_epoch_seconds.saturating_add(100_000_000),
         )
         .map_err(|error| format!("m8 retention projection failed: {error}"))?;
+    Ok(retention_due.len())
+}
 
+fn build_runtime_evidence_m9(
+    context: &RuntimeEvidenceContext<'_>,
+    identities: &RuntimeEvidenceIdentities,
+) -> Result<(String, String), String> {
     let mut m9_registry = DataLayerM9RealtimeDeliveryRegistry::new();
     m9_registry
         .connect_presence(DataLayerM9PresenceConnectRequest {
-            requester_owner_did: owner_did.to_owned(),
-            owner_did: owner_did.to_owned(),
-            agent_did: recipient_agent_did.clone(),
-            connected_since_epoch_seconds: event_epoch_seconds.saturating_add(7),
-            last_heartbeat_epoch_seconds: event_epoch_seconds.saturating_add(7),
+            requester_owner_did: identities.owner_did.to_owned(),
+            owner_did: identities.owner_did.to_owned(),
+            agent_did: identities.recipient_agent_did.clone(),
+            connected_since_epoch_seconds: context.event_epoch_seconds.saturating_add(7),
+            last_heartbeat_epoch_seconds: context.event_epoch_seconds.saturating_add(7),
             gateway_node: "gateway-service-api-runtime".to_owned(),
             capabilities_active: vec!["ws".to_owned()],
         })
         .map_err(|error| format!("m9 presence connect failed: {error}"))?;
-    let m9_dispatch_outcome = m9_registry
+    let outcome = m9_registry
         .dispatch_message(DataLayerM9DispatchRequest {
-            requester_owner_did: owner_did.to_owned(),
-            owner_did: owner_did.to_owned(),
-            sender_agent_did: sender_agent_did.clone(),
-            recipient_agent_did: recipient_agent_did.clone(),
-            message_id: message_id.to_owned(),
-            dispatched_at_epoch_seconds: event_epoch_seconds.saturating_add(8),
+            requester_owner_did: identities.owner_did.to_owned(),
+            owner_did: identities.owner_did.to_owned(),
+            sender_agent_did: identities.sender_agent_did.clone(),
+            recipient_agent_did: identities.recipient_agent_did.clone(),
+            message_id: context.message_id.to_owned(),
+            dispatched_at_epoch_seconds: context.event_epoch_seconds.saturating_add(8),
         })
         .map_err(|error| format!("m9 dispatch failed: {error}"))?;
+    Ok((
+        data_layer_m9_ack_status_label(outcome.ack_status).to_owned(),
+        outcome.reason_code.to_owned(),
+    ))
+}
 
+fn build_runtime_evidence_m10() -> Result<usize, String> {
     let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
     m10_registry
         .register_partition(DataLayerM10PartitionRecordInput {
@@ -1400,16 +1647,21 @@ fn build_data_layer_runtime_evidence(
             all_messages_shredded: true,
         })
         .map_err(|error| format!("m10 partition registration failed: {error}"))?;
-    let m10_archived_partitions = m10_registry
+    let archived = m10_registry
         .archive_due_partitions(DataLayerM10ArchiveDueRequest {
             now_month_id: 202602,
             active_retention_months: 2,
             object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
         })
         .map_err(|error| format!("m10 archival projection failed: {error}"))?;
+    Ok(archived.len())
+}
 
-    let m11_closure = data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
-        release_marker: format!("service-api-runtime:{message_id}"),
+fn build_runtime_evidence_m11(
+    context: &RuntimeEvidenceContext<'_>,
+) -> Result<(String, String), String> {
+    let closure = data_layer_m11_evaluate_closure_evidence(DataLayerM11ClosureEvidenceInput {
+        release_marker: format!("service-api-runtime:{}", context.message_id),
         hardening_report: DataLayerM11OperatorReadinessReport {
             decision: DataLayerM11OperatorReadinessDecision::Go,
             reason_codes: vec!["m11_operator_readiness_go"],
@@ -1420,44 +1672,49 @@ fn build_data_layer_runtime_evidence(
         },
         critical_scenario_report: DataLayerPrdCriticalScenarioConformanceReport {
             decision: DataLayerPrdCriticalScenarioConformanceDecision::Conformant,
-            reason_codes: vec!["prd_critical_scenarios_conformant"],
+            reason_codes: vec!["prd_critical_scenario_matrix_conformant"],
             missing_scenario_ids: Vec::new(),
             failed_scenario_ids: Vec::new(),
             shell_policy_violation_scenario_ids: Vec::new(),
-            total_required_scenarios: 10,
-            passed_required_scenarios: 10,
+            total_required_scenarios: 1,
+            passed_required_scenarios: 1,
         },
         performance_budget_met: true,
         security_signoff_complete: true,
         chaos_signoff_complete: true,
     })
     .map_err(|error| format!("m11 closure evaluation failed: {error}"))?;
-
-    Ok(ServiceApiDataLayerRuntimeEvidenceRecord {
-        schema_version: SERVICE_API_DATA_LAYER_RUNTIME_EVIDENCE_SCHEMA_VERSION.to_owned(),
-        m0_content_hash: m0_record.content_hash,
-        m1_merkle_root: m1_batch.merkle_root,
-        m2_authorization_reason_code,
-        m2_audit_record_hash: m2_audit_record.record_hash,
-        m3_blind_index_token,
-        m3_match_count: m3_matches.len(),
-        m4_transition_reason_code: m4_transition.reason_code.to_owned(),
-        m5_record_hash: m5_record.record_hash,
-        m6_projection_edge_count: m6_projection.len(),
-        m7_observability_health: observability_health_label(
-            m7_observability.snapshot.latest_health,
-        )
-        .to_owned(),
-        m8_retention_due_count: m8_retention_due.len(),
-        m9_dispatch_ack_status: data_layer_m9_ack_status_label(m9_dispatch_outcome.ack_status)
-            .to_owned(),
-        m9_dispatch_reason_code: m9_dispatch_outcome.reason_code.to_owned(),
-        m10_archived_partition_count: m10_archived_partitions.len(),
-        m11_decision: m11_decision_label(m11_closure.decision).to_owned(),
-        m11_reason_codes_csv: m11_closure.reason_codes.join(","),
-    })
+    Ok((
+        m11_decision_label(closure.decision).to_owned(),
+        closure.reason_codes.join(","),
+    ))
 }
 
+fn assemble_runtime_evidence_record(
+    m0_to_m1: RuntimeEvidenceM0ToM1,
+    m2_to_m5: RuntimeEvidenceM2ToM5,
+    m6_to_m11: RuntimeEvidenceM6ToM11,
+) -> ServiceApiDataLayerRuntimeEvidenceRecord {
+    ServiceApiDataLayerRuntimeEvidenceRecord {
+        schema_version: SERVICE_API_DATA_LAYER_RUNTIME_EVIDENCE_SCHEMA_VERSION.to_owned(),
+        m0_content_hash: m0_to_m1.m0_content_hash,
+        m1_merkle_root: m0_to_m1.m1_merkle_root,
+        m2_authorization_reason_code: m2_to_m5.m2_authorization_reason_code,
+        m2_audit_record_hash: m2_to_m5.m2_audit_record_hash,
+        m3_blind_index_token: m2_to_m5.m3_blind_index_token,
+        m3_match_count: m2_to_m5.m3_match_count,
+        m4_transition_reason_code: m2_to_m5.m4_transition_reason_code,
+        m5_record_hash: m2_to_m5.m5_record_hash,
+        m6_projection_edge_count: m6_to_m11.m6_projection_edge_count,
+        m7_observability_health: m6_to_m11.m7_observability_health,
+        m8_retention_due_count: m6_to_m11.m8_retention_due_count,
+        m9_dispatch_ack_status: m6_to_m11.m9_dispatch_ack_status,
+        m9_dispatch_reason_code: m6_to_m11.m9_dispatch_reason_code,
+        m10_archived_partition_count: m6_to_m11.m10_archived_partition_count,
+        m11_decision: m6_to_m11.m11_decision,
+        m11_reason_codes_csv: m6_to_m11.m11_reason_codes_csv,
+    }
+}
 fn normalize_agent_did(candidate: Option<&str>, fallback: &str) -> String {
     match candidate {
         Some(value) if AgentDid::parse(value).is_ok() => value.to_owned(),
