@@ -73,3 +73,14 @@ Green:
 Refactor/Integration:
 - Keep each test file under the active size limits
 - Run `cargo test -p kamn-governance -- --nocapture`
+
+## Integration Evidence
+
+- `crates/kamn-governance/README.md` now exists as the crate-local onboarding entrypoint
+- The new governance coverage is exercised through the real `cargo test -p kamn-governance -- --nocapture` crate target
+- The README contract is enforced by `crates/kamn-governance/tests/governance_readme_contract.rs`
+- The touched-Rust size policy passes on the governance coverage write set via `check_touched_rust_size_policy.py`
+
+## Deviations
+
+- No production entrypoint wiring changed because this issue only expands crate-local coverage and documentation
