@@ -2259,9 +2259,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `supply_chain_advisory_lane_status=advisory_only`
   - `supply_chain_advisory_tools_csv=trivy_fs,trivy_image,workspace_license_policy`
   - `supply_chain_advisory_sbom_format=cyclonedx`
+  - `supply_chain_advisory_repo_toolchain_file=rust-toolchain.toml`
+  - `supply_chain_advisory_repo_toolchain_channel=1.88.0`
+  - `supply_chain_advisory_builder_image=rust:1.88-bookworm`
   - `supply_chain_advisory_false_positive_controls=.trivyignore + workflow continue-on-error`
   - `supply_chain_advisory_promotion_follow_up_issue=to_be_opened_after_three_clean_advisory_cycles`
 - Advisory commands:
+  - `bash scripts/ci/test_supply_chain_advisory_toolchain_policy.sh`
   - Trivy filesystem advisory scan with `scanners: vuln,secret,license`
   - Trivy image advisory scan against `kamn-supply-chain-advisory:${sha}`
   - Trivy image SBOM generation with `format: cyclonedx`
@@ -2274,6 +2278,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - False-positive / waiver handling:
   - advisory Trivy suppressions live in `.trivyignore` and must stay temporary
   - workflow scan steps remain advisory via `continue-on-error: true`, but a follow-up report-existence step fails the job if a tool does not produce its report
+  - `.dockerignore` must re-include `fixtures/runtime/service_api_scope_policy_fixture_matrix.txt` so the advisory image can compile `kamn-node`
 - Promotion path:
   - after three clean advisory cycles on `main`, open a follow-up issue to decide which findings graduate into required gates and which remain documented waivers
 

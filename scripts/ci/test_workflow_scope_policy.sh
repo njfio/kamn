@@ -4,13 +4,42 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 SUPPLY_CHAIN_WORKFLOW="$ROOT_DIR/.github/workflows/ci-supply-chain-advisory.yml"
+RUST_TOOLCHAIN_FILE="$ROOT_DIR/rust-toolchain.toml"
+DOCKERIGNORE_FILE="$ROOT_DIR/.dockerignore"
 EXPECTED_GOVERNANCE_RATIO_ACTIVATION_BASE_SHA="d2c2fe1b901a1d53ea419f31778e1d836f2b1323"
 DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
+EXPECTED_ADVISORY_TOOLCHAIN_MARKER='channel = "1.88.0"'
+EXPECTED_ADVISORY_DOCKERFILE_BUILDER='FROM rust:1.88-bookworm AS builder'
 
 if [ ! -f "$SUPPLY_CHAIN_WORKFLOW" ]; then
   echo "expected advisory supply-chain workflow file to exist" >&2
   exit 1
 fi
+
+if [ ! -f "$RUST_TOOLCHAIN_FILE" ]; then
+  echo "expected rust-toolchain.toml to exist for advisory toolchain alignment" >&2
+  exit 1
+fi
+
+if ! grep -Fq "$EXPECTED_ADVISORY_TOOLCHAIN_MARKER" "$RUST_TOOLCHAIN_FILE"; then
+  echo "expected advisory Rust toolchain marker in rust-toolchain.toml: $EXPECTED_ADVISORY_TOOLCHAIN_MARKER" >&2
+  exit 1
+fi
+
+if ! grep -Fq "$EXPECTED_ADVISORY_DOCKERFILE_BUILDER" "$ROOT_DIR/Dockerfile"; then
+  echo "expected advisory Docker builder marker in Dockerfile: $EXPECTED_ADVISORY_DOCKERFILE_BUILDER" >&2
+  exit 1
+fi
+
+for dockerignore_marker in \
+  "!fixtures/" \
+  "!fixtures/runtime/" \
+  "!fixtures/runtime/service_api_scope_policy_fixture_matrix.txt"; do
+  if ! grep -Fq "$dockerignore_marker" "$DOCKERIGNORE_FILE"; then
+    echo "expected advisory Docker context marker in .dockerignore: $dockerignore_marker" >&2
+    exit 1
+  fi
+done
 
 for marker in \
   "name: Supply-Chain Advisory" \
@@ -140,6 +169,11 @@ fi
 
 if ! grep -Fq 'bash "$ROOT_DIR/scripts/ci/test_workflow_runtime_ceiling_policy.sh"' "$ROOT_DIR/scripts/ci/test_ci_tools.sh"; then
   echo "expected ci tools fast-mode entrypoint to run workflow runtime ceiling policy tests" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'bash "$ROOT_DIR/scripts/ci/test_supply_chain_advisory_toolchain_policy.sh"' "$ROOT_DIR/scripts/ci/test_ci_tools.sh"; then
+  echo "expected ci tools fast-mode entrypoint to run advisory toolchain policy tests" >&2
   exit 1
 fi
 
