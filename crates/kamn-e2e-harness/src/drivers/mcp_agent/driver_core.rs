@@ -9,7 +9,7 @@ use super::{
     run_live_s15_mcp_performance_smoke_probe,
     runner_registry::{explicit_runner_map, shared_runner_map, LiveRunnerMap},
 };
-use crate::drivers::{DriverExecutionResult, HarnessDriver};
+use crate::drivers::{live_probe_driver_result, DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
 use std::sync::Arc;
 
@@ -118,10 +118,7 @@ impl HarnessDriver for McpAgentDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        DriverExecutionResult {
-            scenario_id,
-            status: status_for_scenario(self, scenario_id),
-        }
+        execution_result_for_scenario(self, scenario_id)
     }
 }
 
@@ -136,15 +133,14 @@ fn validate_mode(mode: ExecutionMode) -> Result<(), String> {
     Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned())
 }
 
-fn status_for_scenario(driver: &McpAgentDriver, scenario_id: &'static str) -> &'static str {
-    if !is_live_bound_scenario_id(scenario_id) {
-        return "pass";
-    }
-    if !driver.live_execution_enabled {
-        return "fail";
-    }
-    match driver.live_probe_for_scenario(scenario_id) {
-        Some(result) if result.is_ok() => "pass",
-        Some(_) | None => "fail",
-    }
+fn execution_result_for_scenario(
+    driver: &McpAgentDriver,
+    scenario_id: &'static str,
+) -> DriverExecutionResult {
+    live_probe_driver_result(
+        scenario_id,
+        is_live_bound_scenario_id(scenario_id),
+        driver.live_execution_enabled,
+        || driver.live_probe_for_scenario(scenario_id),
+    )
 }

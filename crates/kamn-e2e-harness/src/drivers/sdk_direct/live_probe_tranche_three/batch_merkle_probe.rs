@@ -6,7 +6,7 @@ use super::{
     DEFAULT_S14_BLOCK_HEIGHT, DEFAULT_S14_FINALITY,
 };
 use crate::drivers::sdk_direct::live_probe_tranche_three::live_probe_support::{
-    query_message_status, send_message_with_validated_receipt,
+    query_message_status_with_handle, send_message_with_validated_receipt,
 };
 
 pub(super) fn run_live_s14_batch_merkle_probe() -> Result<(), String> {
@@ -109,20 +109,20 @@ fn send_named_batch_message(
 }
 
 fn query_batch_messages(settings: &S14Settings, batch_ids: &S14BatchIds) -> Result<(), String> {
-    query_message_status(
+    let query_handle = super::connect_agent(
         settings.endpoint.as_str(),
         settings.kolme_endpoint.as_str(),
         format!("{}-query", settings.base_agent_name).as_str(),
-        batch_ids.batch_a_message_id.as_str(),
         "sdk-direct live s14 query connect failed",
+    )?;
+    query_message_status_with_handle(
+        &query_handle,
+        batch_ids.batch_a_message_id.as_str(),
         "sdk-direct live s14 batch-a query-message",
     )?;
-    query_message_status(
-        settings.endpoint.as_str(),
-        settings.kolme_endpoint.as_str(),
-        format!("{}-query", settings.base_agent_name).as_str(),
+    query_message_status_with_handle(
+        &query_handle,
         batch_ids.batch_b_message_id.as_str(),
-        "sdk-direct live s14 query connect failed",
         "sdk-direct live s14 batch-b query-message",
     )
 }

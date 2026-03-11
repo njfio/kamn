@@ -16,6 +16,49 @@ pub struct DriverExecutionResult {
     pub scenario_id: &'static str,
     /// Deterministic status marker.
     pub status: &'static str,
+    /// Optional failure detail preserved from the underlying probe.
+    pub detail: Option<String>,
+}
+
+pub(crate) fn passing_driver_result(scenario_id: &'static str) -> DriverExecutionResult {
+    DriverExecutionResult {
+        scenario_id,
+        status: "pass",
+        detail: None,
+    }
+}
+
+pub(crate) fn failing_driver_result(
+    scenario_id: &'static str,
+    detail: Option<String>,
+) -> DriverExecutionResult {
+    DriverExecutionResult {
+        scenario_id,
+        status: "fail",
+        detail,
+    }
+}
+
+pub(crate) fn live_probe_driver_result<F>(
+    scenario_id: &'static str,
+    live_bound: bool,
+    live_execution_enabled: bool,
+    probe_result: F,
+) -> DriverExecutionResult
+where
+    F: FnOnce() -> Option<Result<(), String>>,
+{
+    if !live_bound {
+        return passing_driver_result(scenario_id);
+    }
+    if !live_execution_enabled {
+        return failing_driver_result(scenario_id, None);
+    }
+    match probe_result() {
+        Some(Ok(())) => passing_driver_result(scenario_id),
+        Some(Err(error)) => failing_driver_result(scenario_id, Some(error)),
+        None => failing_driver_result(scenario_id, None),
+    }
 }
 
 /// Common driver trait.

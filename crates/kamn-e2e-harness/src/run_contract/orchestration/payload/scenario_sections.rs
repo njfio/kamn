@@ -31,11 +31,19 @@ pub(super) fn scenario_contracts_json(
 }
 
 fn render_scenario_result(result: &ScenarioExecutionResult) -> String {
-    format!(
-        "{{\"id\":\"{}\",\"status\":\"{}\"}}",
-        escape_json(result.id.as_str()),
-        result.status.as_str()
-    )
+    match result.detail.as_deref() {
+        Some(detail) => format!(
+            "{{\"id\":\"{}\",\"status\":\"{}\",\"detail\":\"{}\"}}",
+            escape_json(result.id.as_str()),
+            result.status.as_str(),
+            escape_json(detail),
+        ),
+        None => format!(
+            "{{\"id\":\"{}\",\"status\":\"{}\"}}",
+            escape_json(result.id.as_str()),
+            result.status.as_str()
+        ),
+    }
 }
 
 fn render_scenario_contract(
