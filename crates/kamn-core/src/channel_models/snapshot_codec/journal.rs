@@ -1,0 +1,84 @@
+use super::*;
+use std::path::PathBuf;
+
+const CHANNEL_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX: &str = "channel_snapshot_journal_corrupt_tail";
+
+pub(crate) fn channel_snapshot_journal_path(path: &Path) -> PathBuf {
+    default_snapshot_journal_path(path)
+}
+
+pub(crate) fn append_channel_snapshot_journal_record(
+    journal_path: &Path,
+    payload: &str,
+) -> Result<(), ChannelSnapshotStoreError> {
+    append_snapshot_journal_record(journal_path, payload)
+        .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))?;
+    Ok(())
+}
+
+pub(crate) fn replay_channel_snapshot_journal(
+    journal_path: &Path,
+) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError> {
+    if !journal_path.exists() {
+        return Ok(None);
+    }
+    let payload = read_journal_payload(journal_path)?;
+    let mut latest = None;
+    for (index, line) in payload.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        latest = Some(replay_snapshot_line(line, index + 1)?);
+    }
+    Ok(latest)
+}
+
+pub(crate) fn parse_channel_snapshot_journal_record(
+    line: &str,
+    index: usize,
+) -> Result<String, ChannelSnapshotStoreError> {
+    parse_snapshot_journal_record(line).ok_or_else(|| channel_snapshot_journal_corrupt_tail(index))
+}
+
+pub(crate) fn channel_snapshot_journal_corrupt_tail(index: usize) -> ChannelSnapshotStoreError {
+    ChannelSnapshotStoreError::InvalidPayload(format!(
+        "{CHANNEL_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX}:{index}"
+    ))
+}
+
+pub(crate) fn channel_snapshot_journal_recovery_error() -> &'static str {
+    CHANNEL_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX
+}
+
+fn read_journal_payload(journal_path: &Path) -> Result<String, ChannelSnapshotStoreError> {
+    fs::read_to_string(journal_path)
+        .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))
+}
+
+fn replay_snapshot_line(
+    line: &str,
+    index: usize,
+) -> Result<ChannelSnapshot, ChannelSnapshotStoreError> {
+    let payload = decode_journal_line(line.trim(), index)?;
+    let snapshot = parse_channel_snapshot_payload(&payload)
+        .map_err(|_| channel_snapshot_journal_corrupt_tail(index))?;
+    verify_replayed_snapshot(&snapshot, index)?;
+    Ok(snapshot)
+}
+
+fn decode_journal_line(line: &str, index: usize) -> Result<String, ChannelSnapshotStoreError> {
+    let payload_hex = parse_channel_snapshot_journal_record(line, index)?;
+    let payload_bytes = decode_snapshot_journal_hex(&payload_hex)
+        .ok_or_else(|| channel_snapshot_journal_corrupt_tail(index))?;
+    String::from_utf8(payload_bytes).map_err(|_| channel_snapshot_journal_corrupt_tail(index))
+}
+
+fn verify_replayed_snapshot(
+    snapshot: &ChannelSnapshot,
+    index: usize,
+) -> Result<(), ChannelSnapshotStoreError> {
+    let mut verifier = ChannelStore::new();
+    verifier
+        .restore_snapshot(snapshot.clone())
+        .map_err(|_| channel_snapshot_journal_corrupt_tail(index))
+}
