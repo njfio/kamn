@@ -1,7 +1,12 @@
 mod evaluation;
+mod recommendation;
+mod scoring;
+mod validation;
 
-pub use evaluation::{evaluate_zk_option, phase4_baseline_options, recommend_phase4_plan};
+pub use evaluation::{evaluate_zk_option, phase4_baseline_options};
+pub use recommendation::recommend_phase4_plan;
 
+/// Supported proof-system families considered by the phase-4 planner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZkProofSystem {
     Groth16,
@@ -9,6 +14,7 @@ pub enum ZkProofSystem {
     Stark,
 }
 
+/// Deployment topology used to verify a proof once produced.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZkVerificationTopology {
     ProcessorOnly,
@@ -16,6 +22,7 @@ pub enum ZkVerificationTopology {
     WatchdogSampling,
 }
 
+/// Relative severity for evaluation risks attached to an option.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ZkRiskSeverity {
     Low,
@@ -23,6 +30,7 @@ pub enum ZkRiskSeverity {
     High,
 }
 
+/// A concrete risk emitted during option assessment.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkRisk {
     pub code: String,
@@ -30,6 +38,7 @@ pub struct ZkRisk {
     pub detail: String,
 }
 
+/// A candidate architecture option scored by the planner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkArchitectureOption {
     pub name: String,
@@ -44,6 +53,7 @@ pub struct ZkArchitectureOption {
     pub estimated_engineering_weeks: u16,
 }
 
+/// Constraints applied while ranking architecture options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ZkEvaluationPolicy {
     pub max_verifier_latency_ms: u64,
@@ -63,6 +73,7 @@ impl Default for ZkEvaluationPolicy {
     }
 }
 
+/// The scored result for one architecture option.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkOptionAssessment {
     pub option_name: String,
@@ -72,6 +83,7 @@ pub struct ZkOptionAssessment {
     pub risks: Vec<ZkRisk>,
 }
 
+/// One staged milestone in the recommended rollout plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkPhaseMilestone {
     pub phase: String,
@@ -80,6 +92,7 @@ pub struct ZkPhaseMilestone {
     pub exit_criteria: Vec<String>,
 }
 
+/// The selected plan and supporting assessments returned by the planner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkPhasePlan {
     pub recommended_option: String,

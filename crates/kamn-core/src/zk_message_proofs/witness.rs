@@ -2,6 +2,7 @@ use super::errors::ZkDesignError;
 use crate::CanonicalMessageEnvelope;
 use std::collections::BTreeSet;
 
+/// Reduced witness summary emitted from a canonical message envelope.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkMessageWitness {
     pub public_commitment: String,

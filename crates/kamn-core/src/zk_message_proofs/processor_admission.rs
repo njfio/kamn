@@ -1,5 +1,6 @@
 use super::errors::{require_non_empty_artifact_field, ZkDesignError};
 
+/// Processor-side proof artifact accepted for admission checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofArtifact {
     pub artifact_id: String,
@@ -30,6 +31,7 @@ impl ProcessorProofArtifact {
     }
 }
 
+/// Processor admission input combining the message and its proof artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofAdmissionInput {
     pub message_id: String,
@@ -56,6 +58,7 @@ impl ProcessorProofAdmissionInput {
     }
 }
 
+/// Stable processor admission result returned after validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofAdmissionDecision {
     pub message_id: String,
@@ -63,6 +66,7 @@ pub struct ProcessorProofAdmissionDecision {
     pub payload_commitment: String,
 }
 
+/// Stateful evaluator that rejects replayed processor proof artifacts.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ProcessorProofAdmissionEvaluator {
     accepted_artifact_ids: std::collections::BTreeSet<String>,

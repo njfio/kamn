@@ -6,6 +6,7 @@ use std::fmt;
 
 pub use evaluator::ValidatorProofConsensusEvaluator;
 
+/// Per-validator verdict on one processor proof artifact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValidatorProofVerdict {
     Valid,
@@ -13,6 +14,7 @@ pub enum ValidatorProofVerdict {
     Replay,
 }
 
+/// One validator attestation participating in proof consensus.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofAttestation {
     pub attestation_id: String,
@@ -47,6 +49,7 @@ impl ValidatorProofAttestation {
     }
 }
 
+/// Consensus input for a single message and artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusInput {
     pub message_id: String,
@@ -73,6 +76,7 @@ impl ValidatorProofConsensusInput {
     }
 }
 
+/// Aggregate consensus status after tallying validator attestations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidatorProofConsensusStatus {
     ConsensusValid,
@@ -81,6 +85,7 @@ pub enum ValidatorProofConsensusStatus {
     ValidatorMismatch,
 }
 
+/// Final consensus decision emitted by the validator evaluator.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusDecision {
     pub message_id: String,
@@ -94,6 +99,7 @@ pub struct ValidatorProofConsensusDecision {
     pub status: ValidatorProofConsensusStatus,
 }
 
+/// Validation and quorum errors returned while building consensus.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidatorProofConsensusError {
     InvalidRequiredQuorum(usize),
@@ -137,7 +143,7 @@ pub(super) fn require_non_empty_consensus_field(
     Ok(())
 }
 
-pub(super) fn distinct_bucket_count(valid: usize, invalid: usize, replay: usize) -> usize {
+pub(super) fn consensus_bucket_count(valid: usize, invalid: usize, replay: usize) -> usize {
     [valid, invalid, replay]
         .into_iter()
         .filter(|count| *count > 0)
@@ -149,7 +155,7 @@ pub(super) fn consensus_status(
     invalid: usize,
     replay: usize,
 ) -> ValidatorProofConsensusStatus {
-    if distinct_bucket_count(valid, invalid, replay) > 1 {
+    if consensus_bucket_count(valid, invalid, replay) > 1 {
         ValidatorProofConsensusStatus::ValidatorMismatch
     } else if valid > 0 {
         ValidatorProofConsensusStatus::ConsensusValid

@@ -1,5 +1,6 @@
 use super::validator_consensus::{ValidatorProofConsensusDecision, ValidatorProofConsensusStatus};
 
+/// Watchdog incident class derived from validator proof consensus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProofWatchdogProjectionKind {
     ConsensusAligned,
@@ -8,6 +9,7 @@ pub enum ProofWatchdogProjectionKind {
     ValidatorMismatch,
 }
 
+/// Operational severity attached to the projected watchdog incident.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProofWatchdogSeverity {
     Info,
@@ -15,6 +17,7 @@ pub enum ProofWatchdogSeverity {
     Critical,
 }
 
+/// Deterministic watchdog projection emitted from proof consensus state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProofWatchdogProjection {
     pub incident_fingerprint: String,
@@ -29,6 +32,7 @@ pub struct ProofWatchdogProjection {
     pub replay_attestation_count: usize,
 }
 
+/// Stateless projector from consensus decision to watchdog incident.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ProofWatchdogProjector;
 
