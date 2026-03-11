@@ -2,17 +2,31 @@ use std::fs;
 use std::path::Path;
 
 const ROOT: &str = "src/report_render.rs";
+const TEXT_RENDER: &str = "src/report_render/text_render.rs";
+const JSON_RENDER: &str = "src/report_render/json_render.rs";
 const FUNCTION_LINE_MAX: usize = 25;
-const TARGETS: &[&str] = &["fn render_text_report(", "fn render_json_report("];
+const ROOT_MARKERS: &[&str] = &["mod json_render;", "mod text_render;"];
+const TARGETS: &[(&str, &str)] = &[
+    (TEXT_RENDER, "pub(super) fn render_text_report("),
+    (JSON_RENDER, "pub(super) fn render_json_report("),
+];
+
+#[test]
+fn report_render_root_declares_extracted_modules() {
+    let source = fs::read_to_string(repo_path(ROOT)).expect("report_render.rs should be readable");
+    for marker in ROOT_MARKERS {
+        assert!(source.contains(marker), "missing root marker: {marker}");
+    }
+}
 
 #[test]
 fn report_render_functions_stay_within_active_budget() {
-    let source = fs::read_to_string(repo_path(ROOT)).expect("report_render.rs should be readable");
-    for marker in TARGETS {
+    for (path, marker) in TARGETS {
+        let source = fs::read_to_string(repo_path(path)).expect("render module should be readable");
         let line_count = function_line_count(&source, marker);
         assert!(
             line_count <= FUNCTION_LINE_MAX,
-            "{marker} should stay within {FUNCTION_LINE_MAX} lines, found {line_count}"
+            "{marker} in {path} should stay within {FUNCTION_LINE_MAX} lines, found {line_count}"
         );
     }
 }
