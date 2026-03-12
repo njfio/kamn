@@ -22,12 +22,12 @@ Split `crates/kamn-core/src/runtime_peer_coordination.rs` into bounded concern-b
 - Final branch still fails touched-Rust size policy
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/runtime_peer_coordination.rs` becomes a thin root shell under the active file-size policy
-- [ ] bounded sibling modules exist for lifecycle/queue, peer-frame auth/signing, proposal planning, runtime wiring/transport profile, and tests
-- [ ] the runtime and lib re-export surface remains wired and downstream compilation continues to succeed
-- [ ] a hard-fail extraction contract exists and passes
-- [ ] real runtime and integration coverage for the touched domains still passes after the split
-- [ ] touched-Rust size policy returns `GO` on the final branch
+- [x] `crates/kamn-core/src/runtime_peer_coordination.rs` becomes a thin root shell under the active file-size policy
+- [x] bounded sibling modules exist for lifecycle/queue, peer-frame auth/signing, proposal planning, runtime wiring/transport profile, and tests
+- [x] the runtime and lib re-export surface remains wired and downstream compilation continues to succeed
+- [x] a hard-fail extraction contract exists and passes
+- [x] real runtime and integration coverage for the touched domains still passes after the split
+- [x] touched-Rust size policy returns `GO` on the final branch
 
 ## Files to touch
 - `crates/kamn-core/src/runtime_peer_coordination.rs`
@@ -45,3 +45,13 @@ Split `crates/kamn-core/src/runtime_peer_coordination.rs` into bounded concern-b
 - Run the extraction contract target
 - Run the runtime peer lifecycle/integration targets that cover the touched domains after the split
 - Run touched-Rust size policy on the final branch
+
+## Final evidence
+- `cargo test -p kamn-core --test runtime_peer_coordination_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test authenticated_peer_frame_integration -- --nocapture`
+- `cargo test -p kamn-core --test runtime_wiring_transport_profile_integration -- --nocapture`
+- `cargo test -p kamn-core --test peer_lifecycle_proptest_invariants -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6901-touched-size-final.json`
+
+## Deviations
+- Clean-clone verification was not required for this issue because the working checkout remained isolated to the issue write set and the direct Python touched-Rust entrypoint returned `policy_decision=GO`.
