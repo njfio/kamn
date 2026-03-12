@@ -58,17 +58,19 @@ fn assert_root_markers(root_source: &str) {
 }
 
 fn assert_budgets(signer_root: &Path, paths: &[PathBuf; 5]) {
+    let signer_root_lines = count_lines(signer_root);
     assert!(
-        count_lines(signer_root) <= 180,
+        signer_root_lines <= 180,
         "signer root shell too large: {}",
-        count_lines(signer_root)
+        signer_root_lines
     );
     for path in paths {
+        let path_lines = count_lines(path);
         assert!(
-            count_lines(path) <= 200,
+            path_lines <= 200,
             "{} exceeds file budget with {} lines",
             path.display(),
-            count_lines(path)
+            path_lines
         );
     }
 }
