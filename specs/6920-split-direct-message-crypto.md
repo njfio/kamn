@@ -44,3 +44,11 @@ Split `crates/kamn-crypto/src/direct_message_crypto.rs` into bounded concern-bas
 - Run the extraction contract target and confirm red.
 - Run the real direct-message crypto target after extraction.
 - Run touched-Rust size policy on the final branch.
+
+## Evidence
+- `cargo test -p kamn-crypto --test direct_message_crypto_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-crypto direct_message_crypto --lib -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6920-touched-size-post-refactor.json`
+
+## Deviations
+- None.
