@@ -29,12 +29,12 @@ Split `crates/kamn-core/src/data_layer_m7_timeseries_telemetry.rs` into bounded,
 - extraction contract fails if the root shell or module layout regress
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m7_timeseries_telemetry.rs` becomes a thin root shell under the active file-size budget
-- [ ] bounded sibling modules separate models/constants, registry logic, billing projection/reconciliation, observability projection, support/error helpers, and tests
-- [ ] a hard-fail extraction contract enforces the root shell and module layout
-- [ ] existing M7 time-series telemetry tests remain green without semantic drift
-- [ ] touched-Rust size policy returns `policy_decision=GO`
-- [ ] final spec records test evidence and any deviations
+- [x] `crates/kamn-core/src/data_layer_m7_timeseries_telemetry.rs` becomes a thin root shell under the active file-size budget
+- [x] bounded sibling modules separate models/constants, registry logic, billing projection/reconciliation, observability projection, support/error helpers, and tests
+- [x] a hard-fail extraction contract enforces the root shell and module layout
+- [x] existing M7 time-series telemetry tests remain green without semantic drift
+- [x] touched-Rust size policy returns `policy_decision=GO`
+- [x] final spec records test evidence and any deviations
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m7_timeseries_telemetry.rs`
@@ -52,3 +52,11 @@ Split `crates/kamn-core/src/data_layer_m7_timeseries_telemetry.rs` into bounded,
 - Run the extraction contract green once the split is in place
 - Run the real M7 time-series telemetry tests after extraction
 - Run touched-Rust size policy against the staged write set
+
+## Final evidence
+- `cargo test -p kamn-core --test data_layer_m7_timeseries_telemetry_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_m7_timeseries_telemetry -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-162504-pgbridge2 --base-ref github/main --output-json /tmp/6944-touched-size-refactor.json`
+
+## Deviations
+- None
