@@ -45,3 +45,12 @@ Split `crates/kamn-core/src/block_pipeline/block_pipeline_support.rs` into bound
 - Run the extraction contract target
 - Run the transport-fed block-pipeline coverage that exercises the touched domains after the split
 - Run touched-Rust size policy on the final branch
+
+## Phase 6 evidence
+- `cargo test -p kamn-core --test block_pipeline_support_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test block_pipeline_transport_fed -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6903-touched-size-refactor.json`
+- Result: `policy_decision=GO`
+
+## Deviations
+- `codec.rs` remains a bounded extraction seam with module-level documentation only. Serialization and parsing behavior continue to be exercised through the extracted commit-store and transport-feed paths, and no behavior was left unwired.
