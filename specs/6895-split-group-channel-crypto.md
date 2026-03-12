@@ -21,12 +21,12 @@ Split `crates/kamn-core/src/group_channel_crypto.rs` into bounded concern-based 
 - Final branch still fails touched-Rust size policy
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/group_channel_crypto.rs` becomes a thin root shell under the active file-size policy
-- [ ] concern-based sibling modules are introduced for the real seams in the file
-- [ ] no touched extracted file exceeds the active touched-Rust size policy
-- [ ] a hard-fail extraction contract exists and passes
-- [ ] existing `group_channel_crypto` tests still pass
-- [ ] touched-Rust size policy returns `GO` on the final branch
+- [x] `crates/kamn-core/src/group_channel_crypto.rs` becomes a thin root shell under the active file-size policy
+- [x] concern-based sibling modules are introduced for the real seams in the file
+- [x] no touched extracted file exceeds the active touched-Rust size policy
+- [x] a hard-fail extraction contract exists and passes
+- [x] existing `group_channel_crypto` tests still pass
+- [x] touched-Rust size policy returns `GO` on the final branch
 
 ## Files to touch
 - `crates/kamn-core/src/group_channel_crypto.rs`
@@ -44,3 +44,12 @@ Split `crates/kamn-core/src/group_channel_crypto.rs` into bounded concern-based 
 - Run the extraction contract target
 - Run the existing `group_channel_crypto` tests after the split
 - Run touched-Rust size policy on the final branch
+
+## Final evidence
+- `cargo test -p kamn-core --test group_channel_crypto_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core group_channel_crypto::tests:: --lib -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6895-touched-size-refactor.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- Clean-clone verification was not needed because `/home/n/Code/kamn` is now on a clean current `main` baseline.
