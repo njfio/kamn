@@ -22,12 +22,12 @@ Split `crates/kamn-core/src/data_layer_m5_vector_integration.rs` into bounded co
 - Any touched extracted file or function fails the touched-Rust size policy
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m5_vector_integration.rs` becomes a thin root shell under the active file-size policy
-- [ ] bounded sibling modules exist for models/constants, registry operations, semantic query/retrieval flow, anomaly/recall-drift flow, retention/projection helpers, and tests
-- [ ] existing `data_layer_m5_vector_integration` behavior remains unchanged after the split
-- [ ] a hard-fail extraction contract exists and passes
-- [ ] the real `data_layer_m5_vector_integration` behavior target still passes after the split
-- [ ] touched-Rust size policy returns `GO` on the final branch
+- [x] `crates/kamn-core/src/data_layer_m5_vector_integration.rs` becomes a thin root shell under the active file-size policy
+- [x] bounded sibling modules exist for models/constants, registry operations, semantic query/retrieval flow, anomaly/recall-drift flow, retention/projection helpers, and tests
+- [x] existing `data_layer_m5_vector_integration` behavior remains unchanged after the split
+- [x] a hard-fail extraction contract exists and passes
+- [x] the real `data_layer_m5_vector_integration` behavior target still passes after the split
+- [x] touched-Rust size policy returns `GO` on the final branch
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m5_vector_integration.rs`
@@ -45,3 +45,17 @@ Split `crates/kamn-core/src/data_layer_m5_vector_integration.rs` into bounded co
 - Run the extraction contract target
 - Run the M5 vector integration behavior target after extraction
 - Run touched-Rust size policy on the final branch
+
+## Final evidence
+- Root shell: `crates/kamn-core/src/data_layer_m5_vector_integration.rs`
+- Extracted module tree: `crates/kamn-core/src/data_layer_m5_vector_integration/`
+- Extraction contract:
+  - `cargo test -p kamn-core --test data_layer_m5_vector_integration_module_extraction_contract -- --nocapture`
+- Real behavior:
+  - `cargo test -p kamn-core --test data_layer_m5_vector_integration -- --nocapture`
+- Touched-Rust:
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6909-touched-size.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+- The red extraction contract initially resolved the root path incorrectly at runtime. The final green implementation switched it to workspace-root resolution before Phase 4 completion.
