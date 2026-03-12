@@ -8,29 +8,22 @@ use super::validation::{authorize_owner_scope, normalize_pair};
 
 #[test]
 fn unit_queue_escalation_thresholds_are_monotonic() {
-    assert_eq!(queue_escalation(None, 10_000), (false, false));
-
+    assert_queue_escalation(None, 10_000, (false, false));
     let first_full_at = Some(1_000);
-    assert_eq!(
-        queue_escalation(
-            first_full_at,
-            1_000 + DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS
-        ),
-        (false, false)
+    assert_queue_escalation(
+        first_full_at,
+        1_000 + DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS,
+        (false, false),
     );
-    assert_eq!(
-        queue_escalation(
-            first_full_at,
-            1_000 + DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS + 1
-        ),
-        (true, false)
+    assert_queue_escalation(
+        first_full_at,
+        1_000 + DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS + 1,
+        (true, false),
     );
-    assert_eq!(
-        queue_escalation(
-            first_full_at,
-            1_000 + DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS + 1
-        ),
-        (true, true)
+    assert_queue_escalation(
+        first_full_at,
+        1_000 + DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS + 1,
+        (true, true),
     );
 }
 
@@ -59,4 +52,12 @@ fn unit_authorize_owner_scope_rejects_non_matching_owner_dids() {
         authorize_owner_scope("kamn:did:owner:alpha", "kamn:did:owner:beta"),
         Err(DataLayerM9RealtimeDeliveryError::OwnerScopeViolation { .. })
     ));
+}
+
+fn assert_queue_escalation(
+    first_full_at: Option<u64>,
+    now_epoch_seconds: u64,
+    expected: (bool, bool),
+) {
+    assert_eq!(queue_escalation(first_full_at, now_epoch_seconds), expected);
 }
