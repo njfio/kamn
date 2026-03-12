@@ -1,4 +1,5 @@
 use super::*;
+use super::runtime_wiring::LIBP2P_LIVE_TRANSPORT_FEATURE_NAME;
 
 #[test]
 fn runtime_transport_profile_markers_remain_stable() {
