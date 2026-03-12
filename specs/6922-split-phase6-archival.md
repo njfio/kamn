@@ -80,3 +80,15 @@ Refactor/Integration:
 - `scheduler.rs` for cycle report, overflow projection, validation, and preflight evaluation helpers
 - `models.rs` for scheduler/runtime constructors and associated impl blocks if needed
 - `tests.rs` for any inline test extraction if present or required later
+
+## Phase 6 Evidence
+
+- `cargo test -p kamn-core --test data_layer_m10_phase6_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6922-touched-size.json`
+- Result: extraction contract `PASS`, real phase-6 archival target `PASS (38 passed)`, touched-Rust `policy_decision=GO`
+
+## Deviations
+
+- The dedicated integration target for this issue is `--test data_layer_m10_partition_archival`, not `cargo test -p kamn-core phase6 --lib`, because the broader library path currently hits an unrelated compile problem in `runtime_peer_coordination/tests.rs`.
+- Clean-clone touched-Rust validation was not required for this issue because the primary checkout was already back on a clean `main`; the direct Python entrypoint was used for deterministic repo-root resolution.
