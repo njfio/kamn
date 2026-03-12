@@ -1,75 +1,89 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(2)
-        .expect("workspace root")
-        .to_path_buf()
-}
-
-fn module_path(relative: &str) -> PathBuf {
-    workspace_root().join(relative)
-}
-
-fn file_text(relative: &str) -> String {
-    fs::read_to_string(module_path(relative)).unwrap_or_else(|err| {
-        panic!("failed to read {relative}: {err}")
-    })
-}
-
-fn file_lines(relative: &str) -> usize {
-    file_text(relative).lines().count()
-}
+const ROOT: &str = "src/data_layer_m8_compliance_lifecycle.rs";
+const ROOT_CAP: usize = 180;
+const MODULE_CAP: usize = 200;
+const MODULE_FILES: &[&str] = &[
+    "src/data_layer_m8_compliance_lifecycle/models.rs",
+    "src/data_layer_m8_compliance_lifecycle/policy.rs",
+    "src/data_layer_m8_compliance_lifecycle/registry.rs",
+    "src/data_layer_m8_compliance_lifecycle/lifecycle.rs",
+    "src/data_layer_m8_compliance_lifecycle/errors.rs",
+    "src/data_layer_m8_compliance_lifecycle/tests.rs",
+];
+const REQUIRED_MARKERS: &[&str] = &[
+    "mod errors;",
+    "mod lifecycle;",
+    "mod models;",
+    "mod policy;",
+    "mod registry;",
+    "mod tests;",
+];
+const MOVED_MARKERS: &[&str] = &[
+    "pub enum DataLayerM8RetentionClass {",
+    "pub struct DataLayerM8ComplianceRegistry {",
+    "pub enum DataLayerM8ComplianceError {",
+    "pub fn data_layer_m8_retention_window_seconds(",
+    "#[cfg(test)]",
+    "mod tests {",
+];
 
 #[test]
 fn data_layer_m8_compliance_lifecycle_root_is_extracted() {
-    let root = "crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs";
-    let root_text = file_text(root);
+    let root = fs::read_to_string(repo_path(ROOT)).expect("read root");
+    assert_root_shell_budget(&root);
+    assert_required_markers(&root);
+    assert_moved_markers_removed(&root);
+    assert_module_files_exist_and_fit_budget();
+}
 
-    let expected_modules = [
-        "models.rs",
-        "policy.rs",
-        "registry.rs",
-        "lifecycle.rs",
-        "errors.rs",
-        "tests.rs",
-    ];
+fn repo_path(path: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
+}
 
-    for module in expected_modules {
-        let module_rel = format!(
-            "crates/kamn-core/src/data_layer_m8_compliance_lifecycle/{module}"
-        );
-        assert!(module_path(&module_rel).exists(), "missing extracted module {module_rel}");
-        assert!(
-            file_lines(&module_rel) <= 200,
-            "extracted module {module_rel} exceeds 200 lines"
-        );
-        let marker = format!("mod {}", module.trim_end_matches(".rs"));
-        assert!(
-            root_text.contains(&marker),
-            "root shell missing module marker {marker}"
-        );
-    }
-
-    for legacy_marker in [
-        "pub enum DataLayerM8RetentionClass",
-        "pub struct DataLayerM8ComplianceRegistry",
-        "pub enum DataLayerM8ComplianceError",
-        "pub fn data_layer_m8_retention_window_seconds",
-        "#[cfg(test)]",
-        "mod tests",
-    ] {
-        assert!(
-            !root_text.contains(legacy_marker),
-            "root shell still contains legacy marker {legacy_marker}"
-        );
-    }
-
+fn assert_root_shell_budget(root: &str) {
+    let lines = root.lines().count();
     assert!(
-        file_lines(root) <= 180,
-        "root shell should be <= 180 lines, got {}",
-        file_lines(root)
+        lines <= ROOT_CAP,
+        "expected {ROOT} <= {ROOT_CAP} lines after extraction, found {lines}"
     );
+}
+
+fn assert_required_markers(root: &str) {
+    for marker in REQUIRED_MARKERS {
+        assert!(
+            root.contains(marker),
+            "missing root module marker: {marker}"
+        );
+    }
+}
+
+fn assert_moved_markers_removed(root: &str) {
+    for marker in MOVED_MARKERS {
+        assert!(
+            !root.contains(marker),
+            "moved marker still present in root: {marker}"
+        );
+    }
+}
+
+fn assert_module_files_exist_and_fit_budget() {
+    for path in MODULE_FILES {
+        let full = repo_path(path);
+        assert!(
+            full.exists(),
+            "missing extracted module: {}",
+            full.display()
+        );
+        let lines = fs::read_to_string(&full)
+            .expect("read module")
+            .lines()
+            .count();
+        assert!(
+            lines <= MODULE_CAP,
+            "extracted module exceeds {MODULE_CAP} lines: {}",
+            full.display()
+        );
+    }
 }
