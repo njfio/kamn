@@ -8,18 +8,7 @@ pub(crate) fn resolve_signer_public_key_for_request<'a>(
     fallback_public_key_hex: Option<&'a str>,
     allow_legacy_sender_binding: bool,
 ) -> Result<&'a str, RequestAuthFailure> {
-    if let Some(public_key_hex) = header_value(headers, REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER) {
-        let normalized = public_key_hex.trim();
-        if normalized.is_empty() {
-            return Err(RequestAuthFailure::Unauthorized(
-                ServiceApiReasonedError::new(
-                    REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
-                    format!(
-                        "invalid signer public key header: {REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER}"
-                    ),
-                ),
-            ));
-        }
+    if let Some(public_key_hex) = signer_public_key_header(headers)? {
         return Ok(public_key_hex);
     }
     if allow_legacy_sender_binding {
@@ -49,6 +38,18 @@ pub(crate) fn sender_did_matches_signer_public_key(
     allow_legacy_sender_binding
 }
 
+fn signer_public_key_header<'a>(
+    headers: &'a BTreeMap<String, String>,
+) -> Result<Option<&'a str>, RequestAuthFailure> {
+    let Some(public_key_hex) = header_value(headers, REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER) else {
+        return Ok(None);
+    };
+    if public_key_hex.trim().is_empty() {
+        return Err(invalid_signer_public_key_failure());
+    }
+    Ok(Some(public_key_hex))
+}
+
 fn agent_did_matches_public_key(sender_did: &str, signer_public_key_hex: &str) -> bool {
     let Ok(parsed_did) = AgentDid::parse(sender_did) else {
         return false;
@@ -64,4 +65,11 @@ fn self_certifying_did_matches_public_key(sender_did: &str, signer_public_key_he
         return false;
     };
     normalized_public_key_hexes_match(bound_public_key_hex.trim(), signer_public_key_hex.trim())
+}
+
+fn invalid_signer_public_key_failure() -> RequestAuthFailure {
+    RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+        REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
+        format!("invalid signer public key header: {REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER}"),
+    ))
 }

@@ -3,91 +3,30 @@ use super::super::*;
 use kamn_kolme::ServiceApiScope;
 
 #[test]
-fn unit_required_scope_for_route_maps_known_route_contracts() {
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_MESSAGES_SEND),
-        Some(ServiceApiScope::MessagesWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_MESSAGES_RELAY),
-        Some(ServiceApiScope::MessagesWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_CHANNELS_CREATE),
-        Some(ServiceApiScope::ChannelsWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_TASKS_CREATE),
-        Some(ServiceApiScope::TasksWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", "/v1/tasks/task-1/accept"),
-        Some(ServiceApiScope::TasksWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", "/v1/tasks/task-1/complete"),
-        Some(ServiceApiScope::TasksWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_ESCROW_FUND),
-        Some(ServiceApiScope::EscrowWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", "/v1/escrow/escrow-1/release"),
-        Some(ServiceApiScope::EscrowWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_CONTENT_REGISTER),
-        Some(ServiceApiScope::ContentWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", "/v1/content/content-1/expire"),
-        Some(ServiceApiScope::ContentWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", "/v1/content/content-1/tombstone"),
-        Some(ServiceApiScope::ContentWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", ROUTE_BRIDGE_SUBMIT),
-        Some(ServiceApiScope::BridgeWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("POST", "/v1/bridge/bridge-1/forward"),
-        Some(ServiceApiScope::BridgeWrite)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", ROUTE_EVENTS_WS),
-        Some(ServiceApiScope::EventsRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/content/content-1"),
-        Some(ServiceApiScope::ContentRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/bridge/bridge-1"),
-        Some(ServiceApiScope::BridgeRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/messages/message-1"),
-        Some(ServiceApiScope::MessagesRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/channels/channel-1/messages"),
-        Some(ServiceApiScope::ChannelsRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/tasks/task-1"),
-        Some(ServiceApiScope::TasksRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/agents/kamn:did:agent:alice"),
-        Some(ServiceApiScope::AgentsRead)
-    );
-    assert_eq!(
-        required_scope_for_route("GET", "/v1/agents/kamn:did:agent:alice/balance"),
-        Some(ServiceApiScope::AgentsRead)
-    );
+fn unit_required_scope_for_route_maps_post_write_contracts() {
+    for (path, expected) in [
+        (ROUTE_MESSAGES_SEND, ServiceApiScope::MessagesWrite),
+        (ROUTE_MESSAGES_RELAY, ServiceApiScope::MessagesWrite),
+        (ROUTE_CHANNELS_CREATE, ServiceApiScope::ChannelsWrite),
+        (ROUTE_TASKS_CREATE, ServiceApiScope::TasksWrite),
+        ("/v1/tasks/task-1/accept", ServiceApiScope::TasksWrite),
+        ("/v1/tasks/task-1/complete", ServiceApiScope::TasksWrite),
+        (ROUTE_ESCROW_FUND, ServiceApiScope::EscrowWrite),
+        ("/v1/escrow/escrow-1/release", ServiceApiScope::EscrowWrite),
+        (ROUTE_CONTENT_REGISTER, ServiceApiScope::ContentWrite),
+        (
+            "/v1/content/content-1/expire",
+            ServiceApiScope::ContentWrite,
+        ),
+        (
+            "/v1/content/content-1/tombstone",
+            ServiceApiScope::ContentWrite,
+        ),
+        (ROUTE_BRIDGE_SUBMIT, ServiceApiScope::BridgeWrite),
+        ("/v1/bridge/bridge-1/forward", ServiceApiScope::BridgeWrite),
+    ] {
+        assert_required_scope("POST", path, expected);
+    }
 }
 
 #[test]
@@ -109,35 +48,28 @@ fn regression_required_scope_for_route_preserves_public_and_unknown_contracts() 
 }
 
 #[test]
-fn unit_parse_scope_accepts_trimmed_canonical_values() {
-    assert_eq!(
-        parse_scope(" messages:write ").expect("scope"),
-        ServiceApiScope::MessagesWrite
-    );
-    assert_eq!(
-        parse_scope("tasks:read").expect("scope"),
-        ServiceApiScope::TasksRead
-    );
-    assert_eq!(
-        parse_scope(" content:write ").expect("scope"),
-        ServiceApiScope::ContentWrite
-    );
-    assert_eq!(
-        parse_scope(" bridge:write ").expect("scope"),
-        ServiceApiScope::BridgeWrite
-    );
-    assert_eq!(
-        parse_scope("bridge:read").expect("scope"),
-        ServiceApiScope::BridgeRead
-    );
-    assert_eq!(
-        parse_scope(" agents:write ").expect("scope").as_str(),
-        "agents:write"
-    );
-    assert_eq!(
-        parse_scope("protected:unknown").expect("scope"),
-        ServiceApiScope::ProtectedUnknown
-    );
+fn unit_required_scope_for_route_maps_get_read_contracts() {
+    for (path, expected) in [
+        (ROUTE_EVENTS_WS, ServiceApiScope::EventsRead),
+        ("/v1/content/content-1", ServiceApiScope::ContentRead),
+        ("/v1/bridge/bridge-1", ServiceApiScope::BridgeRead),
+        ("/v1/messages/message-1", ServiceApiScope::MessagesRead),
+        (
+            "/v1/channels/channel-1/messages",
+            ServiceApiScope::ChannelsRead,
+        ),
+        ("/v1/tasks/task-1", ServiceApiScope::TasksRead),
+        (
+            "/v1/agents/kamn:did:agent:alice",
+            ServiceApiScope::AgentsRead,
+        ),
+        (
+            "/v1/agents/kamn:did:agent:alice/balance",
+            ServiceApiScope::AgentsRead,
+        ),
+    ] {
+        assert_required_scope("GET", path, expected);
+    }
 }
 
 #[test]
@@ -157,6 +89,24 @@ fn regression_required_scope_for_route_maps_agent_search_to_agents_read() {
 }
 
 #[test]
+fn unit_parse_scope_accepts_trimmed_write_values() {
+    assert_parsed_scope(" messages:write ", ServiceApiScope::MessagesWrite);
+    assert_parsed_scope(" content:write ", ServiceApiScope::ContentWrite);
+    assert_parsed_scope(" bridge:write ", ServiceApiScope::BridgeWrite);
+    assert_eq!(
+        parse_scope(" agents:write ").expect("scope").as_str(),
+        "agents:write"
+    );
+}
+
+#[test]
+fn unit_parse_scope_accepts_trimmed_read_and_unknown_values() {
+    assert_parsed_scope("tasks:read", ServiceApiScope::TasksRead);
+    assert_parsed_scope("bridge:read", ServiceApiScope::BridgeRead);
+    assert_parsed_scope("protected:unknown", ServiceApiScope::ProtectedUnknown);
+}
+
+#[test]
 fn unit_parse_scope_rejects_empty_and_unknown_values() {
     let empty_error = parse_scope("  ").expect_err("empty scope should fail");
     assert_eq!(empty_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
@@ -165,4 +115,12 @@ fn unit_parse_scope_rejects_empty_and_unknown_values() {
     let unknown_error = parse_scope("content:admin").expect_err("unknown scope should fail");
     assert_eq!(unknown_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
     assert!(unknown_error.message.contains("value is invalid"));
+}
+
+fn assert_required_scope(method: &str, path: &str, expected: ServiceApiScope) {
+    assert_eq!(required_scope_for_route(method, path), Some(expected));
+}
+
+fn assert_parsed_scope(scope: &str, expected: ServiceApiScope) {
+    assert_eq!(parse_scope(scope).expect("scope"), expected);
 }

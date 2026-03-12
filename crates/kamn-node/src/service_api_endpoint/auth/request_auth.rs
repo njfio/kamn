@@ -1,11 +1,17 @@
-use super::support::{header_value, service_api_signature_state_hash};
+use super::support::header_value;
 use super::*;
 
+mod failures;
+mod nonce;
 mod sender_binding;
+mod signature;
 
+use failures::{invalid_nonce_failure, missing_nonce_failure, missing_signature_failure};
+use nonce::{record_fresh_nonce, require_request_nonce, verify_positive_nonce};
 pub(super) use sender_binding::{
     resolve_signer_public_key_for_request, sender_did_matches_signer_public_key,
 };
+use signature::{request_signature_matches, signature_verification_failure};
 
 pub(crate) fn authorize_service_api_request(
     state: &ServiceApiRuntimeState,
@@ -44,18 +50,7 @@ pub(super) fn authorize_service_api_request_with_legacy_policy(
         return Ok(());
     }
     let sender_did = require_valid_sender_did_header(request)?;
-    let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
-        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
-            REASON_CODE_AUTH_NONCE_HEADER_MISSING,
-            format!("missing required header: {REQUEST_AUTH_NONCE_HEADER}"),
-        ))
-    })?;
-    let nonce = nonce_raw.parse::<u64>().map_err(|_| {
-        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
-            REASON_CODE_AUTH_NONCE_INVALID,
-            format!("invalid request nonce header: {REQUEST_AUTH_NONCE_HEADER}"),
-        ))
-    })?;
+    let nonce = require_request_nonce(request)?;
     verify_request_auth_envelope(
         state,
         request,
@@ -75,14 +70,43 @@ fn verify_request_auth_envelope(
     allow_legacy_sender_binding: bool,
 ) -> Result<(), RequestAuthFailure> {
     verify_positive_nonce(nonce)?;
-    let signature =
-        header_value(&request.headers, REQUEST_AUTH_SIGNATURE_HEADER).ok_or_else(|| {
-            RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
-                REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING,
-                format!("missing required header: {REQUEST_AUTH_SIGNATURE_HEADER}"),
-            ))
-        })?;
-    let signer_public_key_hex = resolve_signer_public_key_for_request(
+    verify_binding_and_signature(
+        state,
+        request,
+        sender_did,
+        nonce,
+        allow_legacy_sender_binding,
+    )?;
+    record_fresh_nonce(replay_guard, sender_did, nonce)
+}
+
+fn verify_binding_and_signature(
+    state: &ServiceApiRuntimeState,
+    request: &ParsedRequest,
+    sender_did: &str,
+    nonce: u64,
+    allow_legacy_sender_binding: bool,
+) -> Result<(), RequestAuthFailure> {
+    let signature = require_signature(request)?;
+    let signer_public_key_hex =
+        verified_signer_public_key_hex(request, state, sender_did, allow_legacy_sender_binding)?;
+    verify_request_signature(
+        state,
+        request,
+        sender_did,
+        nonce,
+        signature,
+        signer_public_key_hex,
+    )
+}
+
+fn verified_signer_public_key_hex<'a>(
+    request: &'a ParsedRequest,
+    state: &'a ServiceApiRuntimeState,
+    sender_did: &str,
+    allow_legacy_sender_binding: bool,
+) -> Result<&'a str, RequestAuthFailure> {
+    let signer_public_key_hex = resolve_request_signer_public_key(
         &request.headers,
         state.auth_public_key_hex.as_deref(),
         allow_legacy_sender_binding,
@@ -92,27 +116,24 @@ fn verify_request_auth_envelope(
         signer_public_key_hex,
         allow_legacy_sender_binding,
     )?;
-    verify_request_signature(
-        state,
-        request,
-        sender_did,
-        nonce,
-        signature,
-        signer_public_key_hex,
-    )?;
-    record_fresh_nonce(replay_guard, sender_did, nonce)
+    Ok(signer_public_key_hex)
 }
 
-fn verify_positive_nonce(nonce: u64) -> Result<(), RequestAuthFailure> {
-    if nonce == 0 {
-        return Err(RequestAuthFailure::Unauthorized(
-            ServiceApiReasonedError::new(
-                REASON_CODE_AUTH_NONCE_NON_POSITIVE,
-                format!("request nonce must be positive: {REQUEST_AUTH_NONCE_HEADER}"),
-            ),
-        ));
-    }
-    Ok(())
+fn require_signature(request: &ParsedRequest) -> Result<&str, RequestAuthFailure> {
+    header_value(&request.headers, REQUEST_AUTH_SIGNATURE_HEADER)
+        .ok_or_else(missing_signature_failure)
+}
+
+fn resolve_request_signer_public_key<'a>(
+    headers: &'a BTreeMap<String, String>,
+    fallback_public_key_hex: Option<&'a str>,
+    allow_legacy_sender_binding: bool,
+) -> Result<&'a str, RequestAuthFailure> {
+    resolve_signer_public_key_for_request(
+        headers,
+        fallback_public_key_hex,
+        allow_legacy_sender_binding,
+    )
 }
 
 fn verify_sender_binding(
@@ -143,37 +164,15 @@ fn verify_request_signature(
     signature: &str,
     signer_public_key_hex: &str,
 ) -> Result<(), RequestAuthFailure> {
-    let state_hash = service_api_signature_state_hash(&state.snapshot);
-    let crypto_verified = service_auth_verify_with_public_key_hex(
-        signature,
+    if request_signature_matches(
+        state,
+        request,
         sender_did,
         nonce,
-        state_hash.as_str(),
-        request.body.as_str(),
+        signature,
         signer_public_key_hex,
-    )
-    .is_ok();
-    if crypto_verified {
+    ) {
         return Ok(());
     }
-    Err(RequestAuthFailure::Unauthorized(
-        ServiceApiReasonedError::new(
-            REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
-            "signature verification failed for request envelope",
-        ),
-    ))
-}
-
-fn record_fresh_nonce(
-    replay_guard: &mut ServiceApiReplayGuard,
-    sender_did: &str,
-    nonce: u64,
-) -> Result<(), RequestAuthFailure> {
-    if replay_guard.record_nonce_if_fresh(sender_did, nonce, Instant::now()) {
-        return Ok(());
-    }
-    Err(RequestAuthFailure::Replay(ServiceApiReasonedError::new(
-        REASON_CODE_AUTH_REPLAY_NONCE_DETECTED,
-        "request nonce replay detected for sender",
-    )))
+    Err(signature_verification_failure())
 }
