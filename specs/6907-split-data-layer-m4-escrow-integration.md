@@ -22,12 +22,12 @@ Split `crates/kamn-core/src/data_layer_m4_escrow_integration.rs` into bounded co
 - Any touched extracted file or function fails the touched-Rust size policy
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m4_escrow_integration.rs` becomes a thin root shell under the active file-size policy
-- [ ] bounded sibling modules exist for escrow state/transition models, visibility decisions, settlement evidence registry/reconciliation, validation/hash helpers, and tests
-- [ ] existing escrow lifecycle, visibility, and settlement evidence behavior remains unchanged after the split
-- [ ] a hard-fail extraction contract exists and passes
-- [ ] the real `data_layer_m4_escrow_integration` behavior target still passes after the split
-- [ ] touched-Rust size policy returns `GO` on the final branch
+- [x] `crates/kamn-core/src/data_layer_m4_escrow_integration.rs` becomes a thin root shell under the active file-size policy
+- [x] bounded sibling modules exist for escrow state/transition models, visibility decisions, settlement evidence registry/reconciliation, validation/hash helpers, and tests
+- [x] existing escrow lifecycle, visibility, and settlement evidence behavior remains unchanged after the split
+- [x] a hard-fail extraction contract exists and passes
+- [x] the real `data_layer_m4_escrow_integration` behavior target still passes after the split
+- [x] touched-Rust size policy returns `GO` on the final branch
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m4_escrow_integration.rs`
@@ -45,3 +45,12 @@ Split `crates/kamn-core/src/data_layer_m4_escrow_integration.rs` into bounded co
 - Run the extraction contract target
 - Run the escrow integration behavior target after extraction
 - Run touched-Rust size policy on the final branch
+
+## Final evidence
+- `cargo test -p kamn-core --test data_layer_m4_escrow_integration_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_m4_escrow_integration -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6907-touched-size-green.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None
