@@ -1,3 +1,5 @@
+//! Shared validation helpers for repository bridge projections.
+
 use super::DataLayerPgRepositoryBridgeError;
 
 pub(crate) fn validate_non_empty(

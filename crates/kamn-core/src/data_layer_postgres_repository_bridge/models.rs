@@ -1,3 +1,5 @@
+//! Shared postgres repository bridge types, constants, and validation rules.
+
 mod config_types;
 mod constants;
 mod core_types;

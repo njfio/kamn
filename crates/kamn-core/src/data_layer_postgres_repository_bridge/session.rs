@@ -1,3 +1,5 @@
+//! Requester/session projections and message query descriptors.
+
 mod message_queries;
 mod requester;
 mod rls;
