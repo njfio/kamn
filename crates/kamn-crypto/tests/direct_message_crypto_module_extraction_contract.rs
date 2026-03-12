@@ -5,6 +5,7 @@ const MAX_ROOT_LINES: usize = 180;
 const REQUIRED_FILES: &[&str] = &[
     "src/direct_message_crypto/models.rs",
     "src/direct_message_crypto/errors.rs",
+    "src/direct_message_crypto/engine.rs",
     "src/direct_message_crypto/key_agreement.rs",
     "src/direct_message_crypto/cipher.rs",
     "src/direct_message_crypto/validation.rs",
@@ -14,6 +15,7 @@ const REQUIRED_FILES: &[&str] = &[
 const REQUIRED_ROOT_MARKERS: &[&str] = &[
     "mod models;",
     "mod errors;",
+    "mod engine;",
     "mod key_agreement;",
     "mod cipher;",
     "mod validation;",
@@ -38,6 +40,34 @@ fn read_repo_file(path: &str) -> String {
     fs::read_to_string(&full_path).unwrap_or_else(|error| panic!("failed to read {path}: {error}"))
 }
 
+fn assert_required_files_exist() {
+    for path in REQUIRED_FILES {
+        let file = read_repo_file(path);
+        assert!(
+            !file.trim().is_empty(),
+            "expected extracted module file {path} to exist and be non-empty"
+        );
+    }
+}
+
+fn assert_root_markers(root: &str) {
+    for marker in REQUIRED_ROOT_MARKERS {
+        assert!(
+            root.contains(marker),
+            "expected root shell to contain marker `{marker}`"
+        );
+    }
+}
+
+fn assert_moved_markers_absent(root: &str) {
+    for marker in MOVED_MARKERS {
+        assert!(
+            !root.contains(marker),
+            "expected root shell to move marker `{marker}` into extracted modules"
+        );
+    }
+}
+
 #[test]
 fn direct_message_crypto_root_is_extracted() {
     let root = read_repo_file(ROOT);
@@ -46,26 +76,7 @@ fn direct_message_crypto_root_is_extracted() {
         line_count <= MAX_ROOT_LINES,
         "{ROOT} should be <= {MAX_ROOT_LINES} lines after extraction, found {line_count}"
     );
-
-    for path in REQUIRED_FILES {
-        let file = read_repo_file(path);
-        assert!(
-            !file.trim().is_empty(),
-            "expected extracted module file {path} to exist and be non-empty"
-        );
-    }
-
-    for marker in REQUIRED_ROOT_MARKERS {
-        assert!(
-            root.contains(marker),
-            "expected root shell to contain marker `{marker}`"
-        );
-    }
-
-    for marker in MOVED_MARKERS {
-        assert!(
-            !root.contains(marker),
-            "expected root shell to move marker `{marker}` into extracted modules"
-        );
-    }
+    assert_required_files_exist();
+    assert_root_markers(&root);
+    assert_moved_markers_absent(&root);
 }
