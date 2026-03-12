@@ -62,38 +62,10 @@ impl DirectMessageCryptoEngine {
         nonce: u64,
     ) -> Result<DirectMessageCiphertext, DirectMessageCryptoError> {
         validate_encrypt_request(&mut self.used_nonces, plaintext, nonce)?;
-
-        let cipher = XChaCha20Poly1305::new((&self.aead_key).into());
-        let nonce_bytes = direct_message_nonce_bytes(
-            self.sender_key_ref.as_str(),
-            self.recipient_key_ref.as_str(),
-            nonce,
-        );
-        let xnonce = XNonce::from(nonce_bytes);
-        let aad = canonical_direct_message_aad(
-            self.sender_key_ref.as_str(),
-            self.recipient_key_ref.as_str(),
-            nonce,
-        );
-        let payload = Payload {
-            msg: plaintext.as_bytes(),
-            aad: aad.as_bytes(),
-        };
-
-        let mut sealed = cipher
-            .encrypt(&xnonce, payload)
-            .map_err(|_| DirectMessageCryptoError::EncryptionFailed)?;
-        let auth_tag = sealed.split_off(sealed.len() - 16);
-
-        Ok(DirectMessageCiphertext {
-            key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
-            cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
-            sender_key_ref: self.sender_key_ref.clone(),
-            recipient_key_ref: self.recipient_key_ref.clone(),
-            nonce,
-            ciphertext: super::hex_encode(&sealed),
-            auth_tag: super::hex_encode(&auth_tag),
-        })
+        let nonce_bytes = engine_nonce_bytes(self, nonce);
+        let aad = engine_aad(self, nonce);
+        let (ciphertext, auth_tag) = encrypt_payload(&self.aead_key, nonce_bytes, &aad, plaintext)?;
+        Ok(build_ciphertext_record(self, nonce, ciphertext, auth_tag))
     }
 
     /// Decrypts ciphertext after algorithm and integrity validation.
@@ -101,28 +73,9 @@ impl DirectMessageCryptoEngine {
         &self,
         sealed: &DirectMessageCiphertext,
     ) -> Result<String, DirectMessageCryptoError> {
-        validate_ciphertext_context(
-            self.sender_key_ref.as_str(),
-            self.recipient_key_ref.as_str(),
-            sealed,
-        )?;
-        let combined = decode_combined_ciphertext(sealed)?;
-        let aad = canonical_direct_message_aad(
-            sealed.sender_key_ref.as_str(),
-            sealed.recipient_key_ref.as_str(),
-            sealed.nonce,
-        );
-        let plaintext = decrypt_with_compatibility_candidates(
-            &self.aead_key,
-            &self.legacy_aead_key,
-            sealed.sender_key_ref.as_str(),
-            sealed.recipient_key_ref.as_str(),
-            sealed.nonce,
-            &combined,
-            aad.as_str(),
-        )?;
-        String::from_utf8(plaintext)
-            .map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
+        validate_ciphertext_context(self.sender_key_ref.as_str(), self.recipient_key_ref.as_str(), sealed)?;
+        let plaintext = decrypt_payload_bytes(self, sealed)?;
+        decode_plaintext_utf8(plaintext)
     }
 }
 
@@ -132,4 +85,80 @@ impl Drop for DirectMessageCryptoEngine {
         self.legacy_aead_key.zeroize();
         self.used_nonces.clear();
     }
+}
+
+fn engine_nonce_bytes(engine: &DirectMessageCryptoEngine, nonce: u64) -> [u8; 24] {
+    direct_message_nonce_bytes(
+        engine.sender_key_ref.as_str(),
+        engine.recipient_key_ref.as_str(),
+        nonce,
+    )
+}
+
+fn engine_aad(engine: &DirectMessageCryptoEngine, nonce: u64) -> String {
+    canonical_direct_message_aad(
+        engine.sender_key_ref.as_str(),
+        engine.recipient_key_ref.as_str(),
+        nonce,
+    )
+}
+
+fn encrypt_payload(
+    aead_key: &[u8; 32],
+    nonce_bytes: [u8; 24],
+    aad: &str,
+    plaintext: &str,
+) -> Result<(Vec<u8>, Vec<u8>), DirectMessageCryptoError> {
+    let cipher = XChaCha20Poly1305::new(aead_key.into());
+    let payload = Payload {
+        msg: plaintext.as_bytes(),
+        aad: aad.as_bytes(),
+    };
+    let mut sealed = cipher
+        .encrypt(&XNonce::from(nonce_bytes), payload)
+        .map_err(|_| DirectMessageCryptoError::EncryptionFailed)?;
+    let auth_tag = sealed.split_off(sealed.len() - 16);
+    Ok((sealed, auth_tag))
+}
+
+fn build_ciphertext_record(
+    engine: &DirectMessageCryptoEngine,
+    nonce: u64,
+    ciphertext: Vec<u8>,
+    auth_tag: Vec<u8>,
+) -> DirectMessageCiphertext {
+    DirectMessageCiphertext {
+        key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
+        cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
+        sender_key_ref: engine.sender_key_ref.clone(),
+        recipient_key_ref: engine.recipient_key_ref.clone(),
+        nonce,
+        ciphertext: super::hex_encode(&ciphertext),
+        auth_tag: super::hex_encode(&auth_tag),
+    }
+}
+
+fn decrypt_payload_bytes(
+    engine: &DirectMessageCryptoEngine,
+    sealed: &DirectMessageCiphertext,
+) -> Result<Vec<u8>, DirectMessageCryptoError> {
+    let combined = decode_combined_ciphertext(sealed)?;
+    let aad = canonical_direct_message_aad(
+        sealed.sender_key_ref.as_str(),
+        sealed.recipient_key_ref.as_str(),
+        sealed.nonce,
+    );
+    decrypt_with_compatibility_candidates(
+        &engine.aead_key,
+        &engine.legacy_aead_key,
+        sealed.sender_key_ref.as_str(),
+        sealed.recipient_key_ref.as_str(),
+        sealed.nonce,
+        &combined,
+        aad.as_str(),
+    )
+}
+
+fn decode_plaintext_utf8(plaintext: Vec<u8>) -> Result<String, DirectMessageCryptoError> {
+    String::from_utf8(plaintext).map_err(|_| DirectMessageCryptoError::InvalidCiphertextEncoding)
 }

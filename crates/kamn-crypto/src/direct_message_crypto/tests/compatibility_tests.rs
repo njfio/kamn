@@ -82,6 +82,10 @@ fn direct_message_nonce_bytes_do_not_expose_raw_counter_prefix() {
 
 #[test]
 fn encrypt_output_does_not_authenticate_under_legacy_raw_prefix_nonce_layout() {
+    assert_new_encryptions_reject_legacy_raw_prefix_nonce_layout();
+}
+
+fn assert_new_encryptions_reject_legacy_raw_prefix_nonce_layout() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
         let sender_key_ref = "kamn:did:agent:alice#key-agreement-1";
         let recipient_key_ref = "kamn:did:agent:bob#key-agreement-1";
@@ -89,23 +93,34 @@ fn encrypt_output_does_not_authenticate_under_legacy_raw_prefix_nonce_layout() {
         let mut engine = DirectMessageCryptoEngine::new(sender_key_ref, recipient_key_ref)
             .expect("engine init should succeed");
         let sealed = engine.encrypt("payload", nonce).expect("encrypt should succeed");
-
-        let ciphertext = hex_decode(sealed.ciphertext.as_str()).expect("ciphertext hex");
-        let auth_tag = hex_decode(sealed.auth_tag.as_str()).expect("auth tag hex");
-        let mut combined = ciphertext;
-        combined.extend_from_slice(&auth_tag);
-
+        let combined = combined_ciphertext(&sealed);
         let aad = canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
-        let legacy_nonce_bytes = legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce);
-        let xnonce = XNonce::from(legacy_nonce_bytes);
-        let legacy_result = XChaCha20Poly1305::new((&engine.aead_key).into()).decrypt(
-            &xnonce,
-            Payload {
-                msg: &combined,
-                aad: aad.as_bytes(),
-            },
-        );
+        let legacy_result = decrypt_with_legacy_raw_prefix_nonce(&engine, nonce, &combined, &aad);
 
         assert!(legacy_result.is_err());
     });
+}
+
+fn combined_ciphertext(sealed: &DirectMessageCiphertext) -> Vec<u8> {
+    let ciphertext = hex_decode(sealed.ciphertext.as_str()).expect("ciphertext hex");
+    let auth_tag = hex_decode(sealed.auth_tag.as_str()).expect("auth tag hex");
+    let mut combined = ciphertext;
+    combined.extend_from_slice(&auth_tag);
+    combined
+}
+
+fn decrypt_with_legacy_raw_prefix_nonce(
+    engine: &DirectMessageCryptoEngine,
+    nonce: u64,
+    combined: &[u8],
+    aad: &str,
+) -> Result<Vec<u8>, chacha20poly1305::aead::Error> {
+    let xnonce = XNonce::from(legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce));
+    XChaCha20Poly1305::new((&engine.aead_key).into()).decrypt(
+        &xnonce,
+        Payload {
+            msg: combined,
+            aad: aad.as_bytes(),
+        },
+    )
 }

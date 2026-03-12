@@ -48,27 +48,14 @@ fn legacy_v1_ciphertext(
     plaintext: &str,
     nonce: u64,
 ) -> DirectMessageCiphertext {
-    let master_seed = load_key_agreement_master_seed().expect("master seed should be available");
-    let shared_secret = derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
-    let legacy_key = derive_direct_message_aead_key_legacy(&shared_secret);
-
-    let cipher = XChaCha20Poly1305::new((&legacy_key).into());
-    let nonce_bytes = legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce);
-    let xnonce = XNonce::from(nonce_bytes);
-    let aad = canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
-    let payload = Payload { msg: plaintext.as_bytes(), aad: aad.as_bytes() };
-    let mut sealed = cipher.encrypt(&xnonce, payload).expect("legacy encryption should succeed");
-    let auth_tag = sealed.split_off(sealed.len() - 16);
-
-    DirectMessageCiphertext {
-        key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
-        cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
-        sender_key_ref: sender_key_ref.to_owned(),
-        recipient_key_ref: recipient_key_ref.to_owned(),
+    build_legacy_ciphertext(
+        sender_key_ref,
+        recipient_key_ref,
+        plaintext,
         nonce,
-        ciphertext: hex_encode(&sealed),
-        auth_tag: hex_encode(&auth_tag),
-    }
+        derive_direct_message_aead_key_legacy,
+        legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce),
+    )
 }
 
 fn legacy_v2_raw_prefix_ciphertext(
@@ -77,25 +64,55 @@ fn legacy_v2_raw_prefix_ciphertext(
     plaintext: &str,
     nonce: u64,
 ) -> DirectMessageCiphertext {
+    build_legacy_ciphertext(
+        sender_key_ref,
+        recipient_key_ref,
+        plaintext,
+        nonce,
+        |shared_secret| {
+            derive_direct_message_aead_key(shared_secret).expect("hkdf derive should work")
+        },
+        legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce),
+    )
+}
+
+fn build_legacy_ciphertext(
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    plaintext: &str,
+    nonce: u64,
+    derive_key: impl FnOnce(&[u8; 32]) -> [u8; 32],
+    nonce_bytes: [u8; 24],
+) -> DirectMessageCiphertext {
     let master_seed = load_key_agreement_master_seed().expect("master seed should be available");
     let shared_secret = derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
-    let aead_key = derive_direct_message_aead_key(&shared_secret).expect("hkdf derive should work");
-
-    let cipher = XChaCha20Poly1305::new((&aead_key).into());
-    let nonce_bytes = legacy_direct_message_nonce_bytes_raw_prefix_v1(nonce);
-    let xnonce = XNonce::from(nonce_bytes);
+    let aead_key = derive_key(&shared_secret);
     let aad = canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
-    let payload = Payload { msg: plaintext.as_bytes(), aad: aad.as_bytes() };
-    let mut sealed = cipher.encrypt(&xnonce, payload).expect("legacy raw-prefix encryption should succeed");
+    let payload = Payload {
+        msg: plaintext.as_bytes(),
+        aad: aad.as_bytes(),
+    };
+    let mut sealed = XChaCha20Poly1305::new((&aead_key).into())
+        .encrypt(&XNonce::from(nonce_bytes), payload)
+        .expect("legacy encryption should succeed");
     let auth_tag = sealed.split_off(sealed.len() - 16);
+    build_ciphertext(sender_key_ref, recipient_key_ref, nonce, sealed, auth_tag)
+}
 
+fn build_ciphertext(
+    sender_key_ref: &str,
+    recipient_key_ref: &str,
+    nonce: u64,
+    ciphertext: Vec<u8>,
+    auth_tag: Vec<u8>,
+) -> DirectMessageCiphertext {
     DirectMessageCiphertext {
         key_agreement_algorithm: DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM.to_owned(),
         cipher_algorithm: DIRECT_MESSAGE_CIPHER_ALGORITHM.to_owned(),
         sender_key_ref: sender_key_ref.to_owned(),
         recipient_key_ref: recipient_key_ref.to_owned(),
         nonce,
-        ciphertext: hex_encode(&sealed),
+        ciphertext: hex_encode(&ciphertext),
         auth_tag: hex_encode(&auth_tag),
     }
 }

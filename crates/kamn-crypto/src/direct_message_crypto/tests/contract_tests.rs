@@ -22,29 +22,8 @@ fn direct_message_derivation_backend_markers_and_manual_helper_removal_contract(
 #[test]
 fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize() {
     let engine_source = include_str!("../engine.rs");
-    let struct_marker = "pub struct DirectMessageCryptoEngine";
-    let struct_index = engine_source
-        .find(struct_marker)
-        .expect("engine struct declaration should exist");
-    let derive_window_start = struct_index.saturating_sub(160);
-    let derive_window = &engine_source[derive_window_start..struct_index];
-    assert!(!derive_window.contains("Clone"), "direct-message engine must not derive Clone");
-    assert!(
-        engine_source.contains("impl fmt::Debug for DirectMessageCryptoEngine"),
-        "direct-message engine must define custom Debug"
-    );
-    assert!(
-        engine_source.contains("impl Drop for DirectMessageCryptoEngine"),
-        "direct-message engine must define Drop"
-    );
-    assert!(
-        engine_source.contains("self.aead_key.zeroize();"),
-        "direct-message engine Drop must zeroize aead_key"
-    );
-    assert!(
-        engine_source.contains("self.legacy_aead_key.zeroize();"),
-        "direct-message engine Drop must zeroize legacy_aead_key"
-    );
+    assert_engine_shape_contract(engine_source);
+    assert_engine_impl_contract(engine_source);
     assert!(
         include_str!("../key_agreement.rs").contains("seed_hex.zeroize();"),
         "direct-message master seed loader must zeroize env-loaded hex buffer"
@@ -65,4 +44,36 @@ fn spec_c10_direct_message_engine_debug_output_redacts_sensitive_key_material() 
         assert!(!debug_output.contains("aead_key"));
         assert!(!debug_output.contains("legacy_aead_key"));
     });
+}
+
+fn assert_engine_shape_contract(engine_source: &str) {
+    let struct_marker = "pub struct DirectMessageCryptoEngine";
+    let struct_index = engine_source
+        .find(struct_marker)
+        .expect("engine struct declaration should exist");
+    let derive_window_start = struct_index.saturating_sub(160);
+    let derive_window = &engine_source[derive_window_start..struct_index];
+    assert!(
+        !derive_window.contains("Clone"),
+        "direct-message engine must not derive Clone"
+    );
+}
+
+fn assert_engine_impl_contract(engine_source: &str) {
+    assert!(
+        engine_source.contains("impl fmt::Debug for DirectMessageCryptoEngine"),
+        "direct-message engine must define custom Debug"
+    );
+    assert!(
+        engine_source.contains("impl Drop for DirectMessageCryptoEngine"),
+        "direct-message engine must define Drop"
+    );
+    assert!(
+        engine_source.contains("self.aead_key.zeroize();"),
+        "direct-message engine Drop must zeroize aead_key"
+    );
+    assert!(
+        engine_source.contains("self.legacy_aead_key.zeroize();"),
+        "direct-message engine Drop must zeroize legacy_aead_key"
+    );
 }
