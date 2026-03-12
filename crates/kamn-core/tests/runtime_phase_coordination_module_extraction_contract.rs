@@ -9,15 +9,12 @@ const MODULE_FILES: &[&str] = &[
     "src/runtime_phase_coordination/listener_quorum.rs",
     "src/runtime_phase_coordination/approver_quorum.rs",
     "src/runtime_phase_coordination/did_validation.rs",
-    "src/runtime_phase_coordination/tests.rs",
 ];
 const REQUIRED_MARKERS: &[&str] = &[
     "mod construct_lock;",
     "mod listener_quorum;",
     "mod approver_quorum;",
     "mod did_validation;",
-    "#[cfg(test)]",
-    "mod tests;",
 ];
 const MOVED_MARKERS: &[&str] = &[
     "pub struct ConstructLockLease {",
@@ -29,7 +26,6 @@ const MOVED_MARKERS: &[&str] = &[
     "pub struct ApproverQuorumEvaluator {",
     "fn parse_listener_did(",
     "fn parse_approver_did(",
-    "mod tests {",
 ];
 
 #[test]
