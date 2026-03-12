@@ -45,3 +45,17 @@ Split `crates/kamn-core/src/data_layer_m9_realtime_delivery.rs` into bounded con
 - Run the extraction contract target and confirm red.
 - Run the realtime-delivery behavior target after extraction.
 - Run touched-Rust size policy on the final branch.
+
+## Final evidence
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_m9_realtime_delivery -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6912-touched-size-refactor4.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Integration verification
+- The root shell remains the real `kamn-core` production entrypoint for M9 realtime delivery.
+- Presence, dispatch, queue projection, anti-spam, and runtime backpressure behavior remain exercised through the existing `data_layer_m9_realtime_delivery` integration-style target.
+- No public API surface or reason-code contract changed during extraction.
+
+## Deviations
+- None.
