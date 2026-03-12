@@ -80,3 +80,14 @@ Refactor/Integration:
 - `audit.rs` for append-only audit logging and hash-chain verification
 - `models.rs` for shared request/response structs and enums if needed
 - `tests.rs` for inline test extraction if required later
+
+## Final evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test data_layer_m2_gateway_access_module_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core data_layer_m2_gateway_access::tests:: --lib -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-6924-home-clean-1773320683 --base-ref origin/main --output-json /tmp/6924-home-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+
+- Current `main` required a compile-fix import in `crates/kamn-core/src/runtime_peer_coordination/tests.rs` so the targeted `kamn-core` lib test path could resolve `LIBP2P_LIVE_TRANSPORT_FEATURE_NAME` during verification. This was treated as part of the issue write set because the clean baseline otherwise failed the targeted verification path.
