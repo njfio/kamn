@@ -13,12 +13,11 @@ fn read(path: &Path) -> String {
     fs::read_to_string(path).unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
 }
 
-#[test]
-fn data_layer_m2_gateway_access_root_is_extracted() {
-    let root = repo_root();
-    let source = root.join("crates/kamn-core/src/data_layer_m2_gateway_access.rs");
-    let source_text = read(&source);
+fn source_path(root: &Path) -> PathBuf {
+    root.join("crates/kamn-core/src/data_layer_m2_gateway_access.rs")
+}
 
+fn assert_root_shell_markers(source: &Path, source_text: &str) {
     let expected_root_markers = [
         "mod auth;",
         "mod authorization;",
@@ -35,7 +34,9 @@ fn data_layer_m2_gateway_access_root_is_extracted() {
             source.display()
         );
     }
+}
 
+fn assert_root_shell_excludes_inline_markers(source: &Path, source_text: &str) {
     let forbidden_root_markers = [
         "pub struct DataLayerM2DidAuthRequest",
         "pub struct DataLayerM2DidSessionService",
@@ -51,13 +52,17 @@ fn data_layer_m2_gateway_access_root_is_extracted() {
             source.display()
         );
     }
+}
 
+fn assert_root_shell_budget(source_text: &str) {
     assert!(
         source_text.lines().count() <= 180,
         "root shell must stay within staged cap: {} lines",
         source_text.lines().count()
     );
+}
 
+fn assert_expected_modules(root: &Path) {
     let expected_modules = [
         "crates/kamn-core/src/data_layer_m2_gateway_access/auth.rs",
         "crates/kamn-core/src/data_layer_m2_gateway_access/authorization.rs",
@@ -78,4 +83,16 @@ fn data_layer_m2_gateway_access_root_is_extracted() {
             module_text.lines().count()
         );
     }
+}
+
+#[test]
+fn data_layer_m2_gateway_access_root_is_extracted() {
+    let root = repo_root();
+    let source = source_path(root.as_path());
+    let source_text = read(&source);
+
+    assert_root_shell_markers(source.as_path(), source_text.as_str());
+    assert_root_shell_excludes_inline_markers(source.as_path(), source_text.as_str());
+    assert_root_shell_budget(source_text.as_str());
+    assert_expected_modules(root.as_path());
 }
