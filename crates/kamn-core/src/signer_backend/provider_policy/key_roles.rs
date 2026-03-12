@@ -58,20 +58,30 @@ pub(super) fn parse_provider_key_role(
     provider_key_id: &str,
     key_id: &str,
 ) -> Result<SignerKeyRole, SignerBackendError> {
-    let Some(role_suffix) = provider_key_id.strip_prefix("role-") else {
+    let Some(role_label) = parse_role_label(provider_key_id, key_id)? else {
         return Ok(SignerKeyRole::Operator);
     };
+    map_role_label(&role_label, key_id)
+}
+
+fn parse_role_label(
+    provider_key_id: &str,
+    key_id: &str,
+) -> Result<Option<String>, SignerBackendError> {
+    let Some(role_suffix) = provider_key_id.strip_prefix("role-") else {
+        return Ok(None);
+    };
     let Some((role_label, role_key_id)) = role_suffix.split_once('/') else {
-        return Err(SignerBackendError::MalformedSecureKeyReference {
-            key_id: key_id.to_owned(),
-        });
+        return Err(malformed_key_reference(key_id));
     };
     if role_label.trim().is_empty() || role_key_id.trim().is_empty() {
-        return Err(SignerBackendError::MalformedSecureKeyReference {
-            key_id: key_id.to_owned(),
-        });
+        return Err(malformed_key_reference(key_id));
     }
-    match role_label.trim().to_ascii_lowercase().as_str() {
+    Ok(Some(role_label.trim().to_ascii_lowercase()))
+}
+
+fn map_role_label(role_label: &str, key_id: &str) -> Result<SignerKeyRole, SignerBackendError> {
+    match role_label {
         "operator" => Ok(SignerKeyRole::Operator),
         "admin" => Ok(SignerKeyRole::Admin),
         "treasury" => Ok(SignerKeyRole::Treasury),
@@ -80,5 +90,11 @@ pub(super) fn parse_provider_key_role(
             role: role.to_owned(),
             key_id: key_id.to_owned(),
         }),
+    }
+}
+
+fn malformed_key_reference(key_id: &str) -> SignerBackendError {
+    SignerBackendError::MalformedSecureKeyReference {
+        key_id: key_id.to_owned(),
     }
 }

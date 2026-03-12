@@ -8,54 +8,8 @@ use crate::signer_backend::provider_policy::{
 };
 use crate::signer_backend::request::SigningRequest;
 use crate::signer_backend::router::SignerBackendRouter;
+use crate::signer_backend::tests::support::with_default_signer_key_env;
 use crate::signer_backend::SignerBackendError;
-use std::sync::Mutex;
-
-const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
-    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
-
-fn signer_env_lock() -> &'static Mutex<()> {
-    crate::signer_test_env_lock()
-}
-
-struct EnvVarGuard {
-    key: &'static str,
-    previous: Option<String>,
-}
-
-impl EnvVarGuard {
-    fn set(key: &'static str, value: Option<&str>) -> Self {
-        let previous = std::env::var(key).ok();
-        match value {
-            Some(value) => std::env::set_var(key, value),
-            None => std::env::remove_var(key),
-        }
-        Self { key, previous }
-    }
-}
-
-impl Drop for EnvVarGuard {
-    fn drop(&mut self) {
-        if let Some(previous) = self.previous.as_deref() {
-            std::env::set_var(self.key, previous);
-            return;
-        }
-        std::env::remove_var(self.key);
-    }
-}
-
-fn with_default_signer_key_env<T>(run: impl FnOnce() -> T) -> T {
-    let _lock = signer_env_lock()
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let _generic_key_guard =
-        EnvVarGuard::set("KAMN_SIGNER_PRIVATE_KEY_HEX", Some(TEST_SIGNER_PRIVATE_KEY_A_HEX));
-    let _service_key_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
-        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
-    );
-    run()
-}
 
 #[test]
 fn regression_legacy_baseline_compat_helper_fails_closed_for_non_debug_policy() {
@@ -92,38 +46,11 @@ fn handshake_matrix_maps_provider_statuses() {
 #[test]
 fn router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes() {
     with_default_signer_key_env(|| {
-        let request = SigningRequest::new(
-            "secure:aws-kms:key-ops-1",
-            "agent-a",
-            1,
-            "payload-1",
-            "state:genesis",
-        )
-        .expect("request should be valid");
-
-        let unavailable_router = SignerBackendRouter::with_provider_handshake_matrix(
-            SignerProviderHandshakeMatrix::with_statuses(
-                SignerProviderHandshakeStatus::Available,
-                SignerProviderHandshakeStatus::Unavailable,
-            ),
-        );
-        let signed = unavailable_router
-            .sign_with_secure_fallback(&request)
-            .expect("unavailable provider should allow operator fallback");
-        assert_eq!(signed.backend, "local-software");
-
-        let policy_blocked_router = SignerBackendRouter::with_provider_handshake_matrix(
-            SignerProviderHandshakeMatrix::with_statuses(
-                SignerProviderHandshakeStatus::Available,
-                SignerProviderHandshakeStatus::PolicyBlocked,
-            ),
-        );
+        let request = secure_operator_request();
+        assert_eq!(sign_with_unavailable_provider(&request).backend, "local-software");
         assert_eq!(
-            policy_blocked_router.sign_with_secure_fallback(&request),
-            Err(SignerBackendError::ProviderHandshakeRejected {
-                backend: "secure-aws-kms-emulator".to_owned(),
-                failure_class: "policy-blocked".to_owned(),
-            })
+            sign_with_policy_blocked_provider(&request),
+            expected_policy_blocked_error()
         );
     });
 }
@@ -172,4 +99,52 @@ fn provider_client_maps_backend_from_canonical_reference() {
             .expect("deterministic provider client should sign");
         assert_eq!(signed.backend, "secure-aws-kms-emulator");
     });
+}
+
+fn secure_operator_request() -> SigningRequest {
+    SigningRequest::new(
+        "secure:aws-kms:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        "state:genesis",
+    )
+    .expect("request should be valid")
+}
+
+fn sign_with_unavailable_provider(request: &SigningRequest) -> crate::signer_backend::provider_policy::BackendSignature {
+    unavailable_router()
+        .sign_with_secure_fallback(request)
+        .expect("unavailable provider should allow operator fallback")
+}
+
+fn sign_with_policy_blocked_provider(
+    request: &SigningRequest,
+) -> Result<crate::signer_backend::provider_policy::BackendSignature, SignerBackendError> {
+    policy_blocked_router().sign_with_secure_fallback(request)
+}
+
+fn unavailable_router() -> SignerBackendRouter {
+    SignerBackendRouter::with_provider_handshake_matrix(
+        SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            SignerProviderHandshakeStatus::Unavailable,
+        ),
+    )
+}
+
+fn policy_blocked_router() -> SignerBackendRouter {
+    SignerBackendRouter::with_provider_handshake_matrix(
+        SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            SignerProviderHandshakeStatus::PolicyBlocked,
+        ),
+    )
+}
+
+fn expected_policy_blocked_error() -> Result<crate::signer_backend::provider_policy::BackendSignature, SignerBackendError> {
+    Err(SignerBackendError::ProviderHandshakeRejected {
+        backend: "secure-aws-kms-emulator".to_owned(),
+        failure_class: "policy-blocked".to_owned(),
+    })
 }

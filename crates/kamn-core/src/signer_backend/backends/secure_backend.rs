@@ -2,12 +2,8 @@ use super::provider_client::{
     deterministic_secure_provider_client_sign, SecureSignerProviderClientSignFn,
 };
 use super::traits::SignerBackend;
-use crate::signature_profile::{
-    service_auth_public_key_hex_from_private_key_hex, service_auth_verify_with_public_key_hex,
-    signature_matches_supported_profile_for_fields,
-};
+use super::verification::{matches_legacy_signature, verify_with_expected_public_key};
 use crate::signer_backend::env::{
-    signer_legacy_baseline_v1_compat_enabled, resolve_signer_private_key_hex,
     SECURE_MOCK_BACKEND_NAME,
 };
 use crate::signer_backend::errors::SignerBackendError;
@@ -137,47 +133,22 @@ impl SignerBackend for SecureSignerBackend {
     }
 
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError> {
-        let secure_key = CanonicalSecureKeyReference::parse(&request.key_id)?;
-        self.enforce_key_role_segregation(request, &secure_key)?;
-        self.enforce_provider_handshake(secure_key.provider)?;
-        if signer_legacy_baseline_v1_compat_enabled()
-            && signature_matches_supported_profile_for_fields(
-                signature,
-                &request.sender,
-                request.nonce,
-                &request.state_hash,
-                &request.payload,
-            )
-        {
+        let secure_key = self.prepare_verification(request)?;
+        if matches_legacy_signature(request, signature) {
             return Ok(());
         }
-        let expected = request.expected_signature()?;
-        let expected_public_key_hex = expected_public_key_hex(request)?;
-        if service_auth_verify_with_public_key_hex(
-            signature,
-            &request.sender,
-            request.nonce,
-            &request.state_hash,
-            &request.payload,
-            expected_public_key_hex.as_str(),
-        )
-        .is_err()
-        {
-            return Err(SignerBackendError::SignatureMismatch {
-                backend: secure_key.provider.backend_name().to_owned(),
-                expected,
-                found: signature.to_owned(),
-            });
-        }
-        Ok(())
+        verify_with_expected_public_key(secure_key.provider.backend_name(), request, signature)
     }
 }
 
-fn expected_public_key_hex(request: &SigningRequest) -> Result<String, SignerBackendError> {
-    let private_key_hex = resolve_signer_private_key_hex(request.key_id.as_str())?;
-    service_auth_public_key_hex_from_private_key_hex(private_key_hex.as_str()).map_err(|_| {
-        SignerBackendError::InvalidSigningKeyMaterial {
-            key_id: request.key_id.clone(),
-        }
-    })
+impl SecureSignerBackend {
+    fn prepare_verification(
+        &self,
+        request: &SigningRequest,
+    ) -> Result<CanonicalSecureKeyReference, SignerBackendError> {
+        let secure_key = CanonicalSecureKeyReference::parse(&request.key_id)?;
+        self.enforce_key_role_segregation(request, &secure_key)?;
+        self.enforce_provider_handshake(secure_key.provider)?;
+        Ok(secure_key)
+    }
 }

@@ -2,6 +2,7 @@ mod local_backend;
 mod provider_client;
 mod secure_backend;
 mod traits;
+mod verification;
 
 pub use local_backend::LocalSignerBackend;
 pub use provider_client::{
