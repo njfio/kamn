@@ -34,12 +34,12 @@ Split `crates/kamn-core/src/data_layer_postgres_repository_bridge.rs` into bound
 - extraction contract fails if the root shell or module layout regress
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_postgres_repository_bridge.rs` becomes a thin root shell under the active file-size budget
-- [ ] bounded sibling modules separate operation models, requester/session projection, M5 pgvector helpers, M6 AGE helpers, M7 Timescale helpers, and tests/support where appropriate
-- [ ] a hard-fail extraction contract enforces the root shell and module layout
-- [ ] existing postgres repository bridge tests remain green without semantic drift
-- [ ] touched-Rust size policy returns `policy_decision=GO`
-- [ ] final spec records test evidence and any deviations
+- [x] `crates/kamn-core/src/data_layer_postgres_repository_bridge.rs` becomes a thin root shell under the active file-size budget
+- [x] bounded sibling modules separate operation models, requester/session projection, M5 pgvector helpers, M6 AGE helpers, M7 Timescale helpers, and tests/support where appropriate
+- [x] a hard-fail extraction contract enforces the root shell and module layout
+- [x] existing postgres repository bridge tests remain green without semantic drift
+- [x] touched-Rust size policy returns `policy_decision=GO`
+- [x] final spec records test evidence and any deviations
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_postgres_repository_bridge.rs`
@@ -57,3 +57,13 @@ Split `crates/kamn-core/src/data_layer_postgres_repository_bridge.rs` into bound
 - Run the extraction contract green once the split is in place
 - Run the real repository bridge tests after extraction
 - Run touched-Rust size policy against the staged write set
+
+## Final evidence
+- `cargo test -p kamn-core --test data_layer_postgres_repository_bridge_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_postgres_repository_bridge -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-162504-pgbridge2 --base-ref github/main --output-json /tmp/6942-refactor-size6.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- The green split from the earlier rebuild was restored from an isolated issue-only snapshot because previous clones became contaminated by unrelated tracked edits.
+- The refactor phase required an additional helper split pass inside the M5/M6/M7 projection builders and the repository bridge error formatter before the touched-Rust function-size gate returned `GO`.
