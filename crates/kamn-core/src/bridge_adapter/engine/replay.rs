@@ -2,8 +2,7 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 
 use super::{
-    BridgeAdapterError, BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest,
-    NormalizedInboundMessage,
+    BridgeAdapterError, BridgeOutboundEnvelope, BridgeOutboundRequest, NormalizedInboundMessage,
 };
 use crate::bridge_adapter::support::validate_non_empty;
 

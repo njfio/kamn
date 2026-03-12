@@ -21,6 +21,14 @@ pub(crate) fn validate_inbound_envelope(
 pub(crate) fn validate_normalized_inbound(
     normalized: &NormalizedInboundMessage,
 ) -> Result<(), BridgeAdapterError> {
+    validate_normalized_required_fields(normalized)?;
+    validate_normalized_target(normalized)?;
+    validate_normalized_platform(normalized)
+}
+
+fn validate_normalized_required_fields(
+    normalized: &NormalizedInboundMessage,
+) -> Result<(), BridgeAdapterError> {
     validate_non_empty(
         "normalized_inbound_message.bridge_message_id",
         &normalized.bridge_message_id,
@@ -33,11 +41,6 @@ pub(crate) fn validate_normalized_inbound(
         "normalized_inbound_message.source_channel",
         &normalized.source_channel,
     )?;
-    parse_agent_did(
-        normalized.target_agent_did.as_str(),
-        "normalized_inbound_message.target_agent_did",
-        BRIDGE_ADAPTER_INVALID_NORMALIZED_TARGET_AGENT_DID_REASON_CODE,
-    )?;
     validate_non_empty("normalized_inbound_message.body", &normalized.body)?;
     validate_non_empty(
         "normalized_inbound_message.received_at",
@@ -46,7 +49,23 @@ pub(crate) fn validate_normalized_inbound(
     validate_timestamp(
         "normalized_inbound_message.received_at_unix",
         normalized.received_at_unix,
+    )
+}
+
+fn validate_normalized_target(
+    normalized: &NormalizedInboundMessage,
+) -> Result<(), BridgeAdapterError> {
+    parse_agent_did(
+        normalized.target_agent_did.as_str(),
+        "normalized_inbound_message.target_agent_did",
+        BRIDGE_ADAPTER_INVALID_NORMALIZED_TARGET_AGENT_DID_REASON_CODE,
     )?;
+    Ok(())
+}
+
+fn validate_normalized_platform(
+    normalized: &NormalizedInboundMessage,
+) -> Result<(), BridgeAdapterError> {
     if normalized.platform.label().is_empty() {
         return Err(BridgeAdapterError::EmptyField(
             "normalized_inbound_message.platform",

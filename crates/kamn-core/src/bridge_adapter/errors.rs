@@ -55,39 +55,69 @@ pub enum BridgeAdapterError {
 
 impl fmt::Display for BridgeAdapterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::DuplicateInboundMessageId(message_id) => {
-                write!(f, "duplicate inbound message id: {message_id}")
-            }
-            Self::DuplicateOutboundRequestId(request_id) => {
-                write!(f, "duplicate outbound request id: {request_id}")
-            }
-            Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid {
-                field,
-                reason_code,
-                detail,
-            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
-            Self::InvalidTimestamp(field) => write!(f, "timestamp must be > 0: {field}"),
-            Self::InvalidNonce(value) => write!(f, "nonce must be greater than zero: {value}"),
-            Self::StaleInboundMessage {
-                bridge_message_id,
-                received_at_unix,
-                observed_at_unix,
-                max_age_secs,
-            } => write!(
-                f,
-                "stale inbound message: id={bridge_message_id}, received_at_unix={received_at_unix}, observed_at_unix={observed_at_unix}, max_age_secs={max_age_secs}"
-            ),
-            Self::PolicyDenied { direction, reason } => {
-                write!(f, "policy denied {direction:?} traffic: {reason}")
-            }
-            Self::OutboundRequestIdMismatch { expected, actual } => write!(
-                f,
-                "outbound request id mismatch: expected {expected}, got {actual}"
-            ),
-            Self::Envelope(value) => write!(f, "invalid canonical envelope: {value}"),
+        let text = display_text(self);
+        f.write_str(text.as_str())
+    }
+}
+
+fn display_text(error: &BridgeAdapterError) -> String {
+    match error {
+        BridgeAdapterError::DuplicateInboundMessageId(_)
+        | BridgeAdapterError::DuplicateOutboundRequestId(_)
+        | BridgeAdapterError::PolicyDenied { .. }
+        | BridgeAdapterError::OutboundRequestIdMismatch { .. }
+        | BridgeAdapterError::Envelope(_) => operation_text(error),
+        _ => validation_text(error),
+    }
+}
+
+fn stale_message_text(error: &BridgeAdapterError) -> String {
+    match error {
+        BridgeAdapterError::StaleInboundMessage {
+            bridge_message_id,
+            received_at_unix,
+            observed_at_unix,
+            max_age_secs,
+        } => format!(
+            "stale inbound message: id={bridge_message_id}, received_at_unix={received_at_unix}, observed_at_unix={observed_at_unix}, max_age_secs={max_age_secs}"
+        ),
+        _ => unreachable!("stale_message_text only supports stale inbound messages"),
+    }
+}
+
+fn operation_text(error: &BridgeAdapterError) -> String {
+    match error {
+        BridgeAdapterError::DuplicateInboundMessageId(message_id) => {
+            format!("duplicate inbound message id: {message_id}")
         }
+        BridgeAdapterError::DuplicateOutboundRequestId(request_id) => {
+            format!("duplicate outbound request id: {request_id}")
+        }
+        BridgeAdapterError::PolicyDenied { direction, reason } => {
+            format!("policy denied {direction:?} traffic: {reason}")
+        }
+        BridgeAdapterError::OutboundRequestIdMismatch { expected, actual } => {
+            format!("outbound request id mismatch: expected {expected}, got {actual}")
+        }
+        BridgeAdapterError::Envelope(value) => format!("invalid canonical envelope: {value}"),
+        _ => unreachable!("operation_text only supports operation errors"),
+    }
+}
+
+fn validation_text(error: &BridgeAdapterError) -> String {
+    match error {
+        BridgeAdapterError::EmptyField(field) => format!("field must not be empty: {field}"),
+        BridgeAdapterError::InvalidDid {
+            field,
+            reason_code,
+            detail,
+        } => format!("invalid did field {field}: {reason_code} ({detail})"),
+        BridgeAdapterError::InvalidTimestamp(field) => format!("timestamp must be > 0: {field}"),
+        BridgeAdapterError::InvalidNonce(value) => {
+            format!("nonce must be greater than zero: {value}")
+        }
+        BridgeAdapterError::StaleInboundMessage { .. } => stale_message_text(error),
+        _ => unreachable!("validation_text only supports validation errors"),
     }
 }
 
