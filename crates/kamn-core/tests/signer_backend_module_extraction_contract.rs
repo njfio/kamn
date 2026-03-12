@@ -17,13 +17,26 @@ const MODULES: &[&str] = &[
 fn signer_backend_root_is_extracted() {
     let root_path = manifest_path(ROOT);
     let root = fs::read_to_string(&root_path).expect("root module should exist");
+    assert_root_budget(&root_path, &root);
+    assert_modules_exist();
+    assert_root_markers_present(&root);
+    assert_legacy_markers_removed(&root);
+}
+
+fn manifest_path(relative: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(relative)
+}
+
+fn assert_root_budget(root_path: &Path, root: &str) {
     let root_lines = root.lines().count();
     assert!(
         root_lines <= ROOT_BUDGET,
         "{} should be a thin shell after extraction; found {root_lines} lines",
         root_path.display()
     );
+}
 
+fn assert_modules_exist() {
     for module in MODULES {
         let module_path = manifest_path(module);
         assert!(
@@ -32,8 +45,28 @@ fn signer_backend_root_is_extracted() {
             module_path.display()
         );
     }
+}
 
-    for marker in [
+fn assert_root_markers_present(root: &str) {
+    for marker in marker_list() {
+        assert!(
+            root.contains(marker),
+            "root module missing extraction marker `{marker}`"
+        );
+    }
+}
+
+fn assert_legacy_markers_removed(root: &str) {
+    for legacy_marker in legacy_marker_list() {
+        assert!(
+            !root.contains(legacy_marker),
+            "root module still contains legacy inline content marker `{legacy_marker}`"
+        );
+    }
+}
+
+fn marker_list() -> [&'static str; 8] {
+    [
         "mod request;",
         "mod env;",
         "mod provider_policy;",
@@ -42,14 +75,11 @@ fn signer_backend_root_is_extracted() {
         "mod errors;",
         "#[cfg(test)]",
         "mod tests;",
-    ] {
-        assert!(
-            root.contains(marker),
-            "root module missing extraction marker `{marker}`"
-        );
-    }
+    ]
+}
 
-    for legacy_marker in [
+fn legacy_marker_list() -> [&'static str; 7] {
+    [
         "pub struct SigningRequest",
         "pub enum SecureSignerProvider",
         "pub struct LocalSignerBackend",
@@ -57,14 +87,5 @@ fn signer_backend_root_is_extracted() {
         "pub struct SignerBackendRouter",
         "pub enum SignerBackendError",
         "mod tests {",
-    ] {
-        assert!(
-            !root.contains(legacy_marker),
-            "root module still contains legacy inline content marker `{legacy_marker}`"
-        );
-    }
-}
-
-fn manifest_path(relative: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join(relative)
+    ]
 }
