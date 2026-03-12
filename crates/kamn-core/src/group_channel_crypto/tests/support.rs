@@ -10,6 +10,9 @@ use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 pub(super) const SOURCE: &str = include_str!("../../group_channel_crypto.rs");
 pub(super) const PRODUCTION_SOURCE: &str = concat!(
     include_str!("../../group_channel_crypto.rs"),
+    include_str!("../models.rs"),
+    include_str!("../errors.rs"),
+    include_str!("../errors/display.rs"),
     include_str!("../engine.rs"),
     include_str!("../engine/lifecycle.rs"),
     include_str!("../engine/sealing.rs"),

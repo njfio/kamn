@@ -1,9 +1,9 @@
 use super::super::GroupChannelCryptoEngine;
+use super::encrypt_support::{build_ciphertext, EncryptionMaterial};
 use crate::group_channel_crypto::{
-    compute_signature, derive_group_aead_key, derive_group_shared_secret, group_nonce_bytes,
-    validate_did, GroupChannelCryptoError, GroupMessageCiphertext,
-    GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE, GROUP_MESSAGE_CIPHER_ALGORITHM,
-    GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
+    derive_group_aead_key, derive_group_shared_secret, group_nonce_bytes, validate_did,
+    GroupChannelCryptoError, GroupMessageCiphertext,
+    GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE,
 };
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
@@ -29,12 +29,6 @@ impl GroupChannelCryptoEngine {
             self, sender_did, nonce, encryption, sealed,
         ))
     }
-}
-
-struct EncryptionMaterial {
-    key_generation: u64,
-    shared_secret: [u8; 32],
-    aead_key: [u8; 32],
 }
 
 fn prepare_encryption(
@@ -71,74 +65,6 @@ fn derive_shared_secret(
         record.key_generation,
         &master_seed,
     ))
-}
-
-fn build_ciphertext(
-    engine: &GroupChannelCryptoEngine,
-    sender_did: &str,
-    nonce: u64,
-    encryption: EncryptionMaterial,
-    sealed: (String, String),
-) -> GroupMessageCiphertext {
-    let (ciphertext, auth_tag) = sealed;
-    let signature = ciphertext_signature(
-        engine,
-        sender_did,
-        nonce,
-        &encryption,
-        &ciphertext,
-        &auth_tag,
-    );
-    ciphertext_message(
-        engine,
-        sender_did,
-        nonce,
-        encryption.key_generation,
-        ciphertext,
-        auth_tag,
-        signature,
-    )
-}
-
-fn ciphertext_signature(
-    engine: &GroupChannelCryptoEngine,
-    sender_did: &str,
-    nonce: u64,
-    encryption: &EncryptionMaterial,
-    ciphertext: &str,
-    auth_tag: &str,
-) -> String {
-    compute_signature(
-        &encryption.shared_secret,
-        &engine.channel_id,
-        sender_did,
-        encryption.key_generation,
-        nonce,
-        ciphertext,
-        auth_tag,
-    )
-}
-
-fn ciphertext_message(
-    engine: &GroupChannelCryptoEngine,
-    sender_did: &str,
-    nonce: u64,
-    key_generation: u64,
-    ciphertext: String,
-    auth_tag: String,
-    signature: String,
-) -> GroupMessageCiphertext {
-    GroupMessageCiphertext {
-        key_derivation_algorithm: GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM.to_owned(),
-        cipher_algorithm: GROUP_MESSAGE_CIPHER_ALGORITHM.to_owned(),
-        channel_id: engine.channel_id.clone(),
-        sender_did: sender_did.to_owned(),
-        key_generation,
-        nonce,
-        ciphertext,
-        auth_tag,
-        signature,
-    }
 }
 
 fn validate_encrypt_request(

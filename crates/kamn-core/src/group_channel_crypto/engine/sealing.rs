@@ -1,5 +1,6 @@
 mod decrypt;
 mod encrypt;
+mod encrypt_support;
 
 use super::GroupChannelCryptoEngine;
 use crate::group_channel_crypto::{load_key_agreement_master_seed, GroupChannelCryptoError};
