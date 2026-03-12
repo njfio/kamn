@@ -20,6 +20,35 @@ fn managed_signer_public_key_env_for_profile(profile: &str) -> Result<&'static s
     }
 }
 
+fn decode_managed_signer_public_key_bytes(
+    value: &str,
+    env_name: &str,
+) -> Result<Vec<u8>, ConfigError> {
+    let key_bytes = decode_kolme_hex_bytes(value, env_name).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "{env_name} is invalid: {error} (managed_signer_public_key_marker_invalid)"
+        ))
+    })?;
+    if key_bytes.len() == 33 {
+        return Ok(key_bytes);
+    }
+    Err(ConfigError::RuntimeKolmeLive(format!(
+        "{env_name} must decode to 33 bytes compressed secp256k1 key material, found {} (managed_signer_public_key_marker_invalid)",
+        key_bytes.len()
+    )))
+}
+
+fn parse_managed_signer_verifying_key(
+    key_bytes: &[u8],
+    env_name: &str,
+) -> Result<VerifyingKey, ConfigError> {
+    VerifyingKey::from_sec1_bytes(key_bytes).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "{env_name} is not valid secp256k1 key material: {error} (managed_signer_public_key_marker_invalid)"
+        ))
+    })
+}
+
 fn normalize_managed_signer_public_key_hex(
     value: &str,
     env_name: &str,
@@ -30,22 +59,8 @@ fn normalize_managed_signer_public_key_hex(
             "{env_name} must not be empty (managed_signer_public_key_marker_invalid)"
         )));
     }
-    let key_bytes = decode_kolme_hex_bytes(trimmed, env_name).map_err(|error| {
-        ConfigError::RuntimeKolmeLive(format!(
-            "{env_name} is invalid: {error} (managed_signer_public_key_marker_invalid)"
-        ))
-    })?;
-    if key_bytes.len() != 33 {
-        return Err(ConfigError::RuntimeKolmeLive(format!(
-            "{env_name} must decode to 33 bytes compressed secp256k1 key material, found {} (managed_signer_public_key_marker_invalid)",
-            key_bytes.len()
-        )));
-    }
-    let verifying_key = VerifyingKey::from_sec1_bytes(key_bytes.as_slice()).map_err(|error| {
-        ConfigError::RuntimeKolmeLive(format!(
-            "{env_name} is not valid secp256k1 key material: {error} (managed_signer_public_key_marker_invalid)"
-        ))
-    })?;
+    let key_bytes = decode_managed_signer_public_key_bytes(trimmed, env_name)?;
+    let verifying_key = parse_managed_signer_verifying_key(key_bytes.as_slice(), env_name)?;
     Ok(encode_kolme_hex_lower(
         verifying_key.to_encoded_point(true).as_bytes(),
     ))
