@@ -57,3 +57,13 @@ Split `crates/kamn-node/src/service_api_endpoint/auth.rs` into bounded, concern-
 - Run the extraction contract green once the split is in place
 - Run auth-focused real tests covering signature verification, scope enforcement, replay protection, and anti-spam paths
 - Run touched-Rust size policy against the staged write set
+
+## Final evidence
+- `cargo test -p kamn-node --test service_api_endpoint_auth_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::auth_scope_contract_tests::route_scope_policy_contract_tests::route_authz_contract_tests::integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::ingress_guard_lifecycle_contract_tests::replay_guard_contract_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender -- --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-101857-auth --base-ref origin/main --output-json /tmp/6928-touched-size-refactor4.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- Clean-clone validation used the Python touched-Rust entrypoint directly instead of the shell wrapper so the repo root stayed pinned to this disposable clone.
