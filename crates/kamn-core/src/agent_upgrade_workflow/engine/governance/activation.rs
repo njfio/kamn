@@ -21,7 +21,7 @@ impl AgentDrivenUpgradeWorkflow {
         executed_at_unix: u64,
         operation_hash: &str,
     ) -> Result<(), AgentUpgradeWorkflowError> {
-        let mut proposal = prepare_activation(
+        let proposal = prepare_activation(
             self,
             proposal_id,
             executed_by,
@@ -30,7 +30,7 @@ impl AgentDrivenUpgradeWorkflow {
         )?;
         complete_activation(
             self,
-            &mut proposal,
+            proposal,
             proposal_id,
             executed_by,
             executed_at_unix,
@@ -41,7 +41,7 @@ impl AgentDrivenUpgradeWorkflow {
 
 fn complete_activation(
     workflow: &mut AgentDrivenUpgradeWorkflow,
-    proposal: &mut AgentUpgradeProposalRecord,
+    mut proposal: AgentUpgradeProposalRecord,
     proposal_id: &str,
     executed_by: &str,
     executed_at_unix: u64,
@@ -55,10 +55,8 @@ fn complete_activation(
         operation_hash,
     )?;
     apply_activation_to_orchestrator(workflow, proposal_id, executed_by, executed_at_unix)?;
-    record_activation(proposal, executed_at_unix, operation_hash);
-    workflow
-        .proposals
-        .insert(proposal_id.to_owned(), proposal.clone());
+    record_activation(&mut proposal, executed_at_unix, operation_hash);
+    workflow.proposals.insert(proposal_id.to_owned(), proposal);
     push_execution_events(workflow, proposal_id, executed_by, executed_at_unix);
     Ok(())
 }
