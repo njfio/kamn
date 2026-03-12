@@ -31,12 +31,12 @@ Split `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs` into bounded,
 - extraction contract fails if the root shell or module layout regress
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs` becomes a thin root shell under the active file-size budget
-- [ ] bounded modules separate retention policy, models, registry/store logic, lifecycle mutations/query surface, and tests
-- [ ] a hard-fail extraction contract enforces the root shell and module layout
-- [ ] existing M8 compliance lifecycle tests remain green without semantic drift
-- [ ] touched-Rust size policy returns `policy_decision=GO`
-- [ ] final spec records test evidence and any deviations
+- [x] `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs` becomes a thin root shell under the active file-size budget
+- [x] bounded modules separate retention policy, models, registry/store logic, lifecycle mutations/query surface, and tests
+- [x] a hard-fail extraction contract enforces the root shell and module layout
+- [x] existing M8 compliance lifecycle tests remain green without semantic drift
+- [x] touched-Rust size policy returns `policy_decision=GO`
+- [x] final spec records test evidence and any deviations
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs`
@@ -54,3 +54,16 @@ Split `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs` into bounded,
 - Run the extraction contract green once the split is in place
 - Run the real M8 compliance lifecycle tests after extraction
 - Run touched-Rust size policy against the staged write set
+
+## Final evidence
+- `cargo test -p kamn-core --test data_layer_m8_compliance_lifecycle_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core data_layer_m8_compliance_lifecycle::tests:: --lib -- --nocapture`
+- `cargo test -p kamn-core --test data_layer_m8_compliance_lifecycle -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-101857-auth --base-ref github/main --output-json /tmp/6936-touched-size-final.json`
+- Touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- Current `main` had a pre-existing M6 compile regression that blocked the M8 verification path:
+  - `crates/kamn-core/src/data_layer_m6_graph_integration.rs`
+  - `crates/kamn-core/src/data_layer_m6_graph_integration/support.rs`
+- I fixed that baseline issue narrowly by restoring the required helper re-exports/visibilities so the crate could compile and the M8 tests could run. No M6 behavior was changed beyond re-exposing the already-used helpers.
