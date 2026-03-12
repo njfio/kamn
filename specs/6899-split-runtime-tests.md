@@ -45,3 +45,12 @@ Split `crates/kamn-core/src/runtime_tests.rs` into bounded concern-based modules
 - Run the extraction contract target
 - Run runtime test coverage after the split
 - Run touched-Rust size policy on the final branch
+
+## Integration evidence
+- `cargo test -p kamn-core --test runtime_tests_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core 'runtime::tests' --lib -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6899-touched-size-after-refactor3.json`
+- Result: extraction contract passed, `runtime::tests` passed (`98 passed, 0 failed, 2 ignored`), touched-Rust returned `policy_decision=GO`
+
+## Deviations
+- None
