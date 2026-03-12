@@ -58,7 +58,7 @@ Split `crates/kamn-core/src/bridge_adapter.rs` into bounded, concern-based modul
 ## Final evidence
 - `cargo test -p kamn-core --test bridge_adapter_module_extraction_contract -- --nocapture`
 - `cargo test -p kamn-core bridge_adapter::tests:: --lib -- --nocapture`
-- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-101857-auth --base-ref github/main --output-json /tmp/6939-touched-size.json`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-101857-auth --base-ref github/main --output-json /tmp/6939-touched-size-final.json`
 - Touched-Rust result: `policy_decision=GO`
 
 ## Deviations
