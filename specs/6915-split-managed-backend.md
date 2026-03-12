@@ -22,12 +22,12 @@ Split `crates/kamn-node/src/signer/managed_backend.rs` into bounded concern-base
 - Any touched extracted file or function fails the touched-Rust size policy.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-node/src/signer/managed_backend.rs` becomes a thin root shell under the active file-size policy.
-- [ ] Bounded sibling modules exist for command/env resolution, response parsing/provenance verification, child-process execution, key-marker normalization, adapter/signing entrypoints, and tests.
-- [ ] Existing managed-backend behavior remains unchanged after the split.
-- [ ] A hard-fail extraction contract exists and passes.
-- [ ] The real managed-backend target(s) still pass after the split.
-- [ ] Touched-Rust size policy returns `GO` on the final branch.
+- [x] `crates/kamn-node/src/signer/managed_backend.rs` becomes a thin root shell under the active file-size policy.
+- [x] Bounded sibling modules exist for command/env resolution, response parsing/provenance verification, child-process execution, key-marker normalization, adapter/signing entrypoints, and tests.
+- [x] Existing managed-backend behavior remains unchanged after the split.
+- [x] A hard-fail extraction contract exists and passes.
+- [x] The real managed-backend target(s) still pass after the split.
+- [x] Touched-Rust size policy returns `GO` on the final branch.
 
 ## Files to touch
 - `crates/kamn-node/src/signer/managed_backend.rs`
@@ -45,3 +45,19 @@ Split `crates/kamn-node/src/signer/managed_backend.rs` into bounded concern-base
 - Run the extraction contract target and confirm red.
 - Run the real managed-backend target after extraction.
 - Run touched-Rust size policy on the final branch.
+
+## Phase 6/7 evidence
+- Extraction contract:
+  - `cargo test -p kamn-node --test managed_backend_module_extraction_contract -- --nocapture`
+- Real managed-backend regressions:
+  - `cargo test -p kamn-node regression_managed_external_backend_scrubs_signer_secret_env_for_child_process -- --nocapture`
+  - `cargo test -p kamn-node regression_managed_external_backend_rejects_unterminated_quote_in_command_spec -- --nocapture`
+- Real signer boundary wiring:
+  - `cargo test -p kamn-node --test signer_adapter_boundary_contract -- --nocapture`
+- Touched-Rust gate:
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6915-touched-size-refactor-pass4.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+- The command submodule needed a second refactor pass after the initial green extraction because `command.rs` remained over the active file-size budget.
+- The final split introduced `command/env_resolution.rs` and `command/parsing.rs`, then widened two helper visibilities from `pub(super)` to `pub(crate)` so sibling integration through `execution.rs` remained explicit and compile-safe.
