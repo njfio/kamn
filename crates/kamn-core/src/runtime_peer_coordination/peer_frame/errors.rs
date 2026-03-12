@@ -1,6 +1,7 @@
 use super::super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Authenticated peer frame error.
 pub enum AuthenticatedPeerFrameError {
     /// Invalid frame id.
     InvalidFrameId,
