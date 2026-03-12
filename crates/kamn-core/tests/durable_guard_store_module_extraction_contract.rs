@@ -16,12 +16,20 @@ const MODULES: &[(&str, &str)] = &[
 fn durable_guard_store_root_is_extracted() {
     let root_path = manifest_path(ROOT);
     let root = fs::read_to_string(&root_path).expect("read durable guard store root");
+    assert_root_budget(&root);
+    assert_module_layout(&root);
+    assert_root_delegates(&root);
+}
+
+fn assert_root_budget(root: &str) {
     let line_count = root.lines().count();
     assert!(
         line_count <= ROOT_MAX_LINES,
         "expected {ROOT} <= {ROOT_MAX_LINES} lines after extraction, found {line_count}"
     );
+}
 
+fn assert_module_layout(root: &str) {
     for (marker, module_path) in MODULES {
         assert!(
             root.contains(marker),
@@ -32,7 +40,9 @@ fn durable_guard_store_root_is_extracted() {
             "expected extracted module {module_path} to exist"
         );
     }
+}
 
+fn assert_root_delegates(root: &str) {
     assert!(
         !root.contains("fn serialize_bundle(") &&
         !root.contains("fn deserialize_bundle(") &&
