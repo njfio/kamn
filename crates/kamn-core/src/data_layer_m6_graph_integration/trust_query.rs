@@ -7,6 +7,8 @@ use super::{
 };
 use std::collections::BTreeMap;
 
+type TrustScoreMap = BTreeMap<String, (f32, u8)>;
+
 impl DataLayerM6GraphRegistry {
     /// Runs bounded trust propagation scoring for one owner graph.
     pub fn query_trust_propagation(
@@ -107,9 +109,9 @@ fn propagate_trust_scores(
     source_node_id: &str,
     max_depth: u8,
     attenuation_factor: f32,
-) -> BTreeMap<String, (f32, u8)> {
+) -> TrustScoreMap {
     let mut frontier = vec![(source_node_id.to_owned(), 1.0_f32, 0_u8)];
-    let mut best_scores: BTreeMap<String, (f32, u8)> = BTreeMap::new();
+    let mut best_scores: TrustScoreMap = BTreeMap::new();
     for depth in 1..=max_depth {
         let mut next_frontier = Vec::new();
         for (current_node_id, current_score, _) in frontier {
@@ -146,7 +148,7 @@ fn trust_edges_from<'a>(
 }
 
 fn update_best_scores(
-    best_scores: &mut BTreeMap<String, (f32, u8)>,
+    best_scores: &mut TrustScoreMap,
     next_frontier: &mut Vec<(String, f32, u8)>,
     edge: &DataLayerM6GraphEdgeRecord,
     current_score: f32,
@@ -165,7 +167,7 @@ fn update_best_scores(
 }
 
 fn sorted_results(
-    best_scores: BTreeMap<String, (f32, u8)>,
+    best_scores: TrustScoreMap,
     limit: usize,
 ) -> Vec<DataLayerM6TrustPropagationResult> {
     let mut results = best_scores
