@@ -8,6 +8,17 @@ fn read_repo_file(path: &str) -> String {
     })
 }
 
+fn assert_file_contains(path: &str, marker: &str, message: &str) {
+    let contents = read_repo_file(path);
+    assert!(contents.contains(marker), "{message}");
+}
+
+fn assert_markers(markers: &[(&str, &str, &str)]) {
+    for (path, marker, message) in markers {
+        assert_file_contains(path, marker, message);
+    }
+}
+
 #[test]
 fn runtime_module_extraction_contract_declares_runtime_backpressure_module() {
     let runtime_rs = read_repo_file("runtime.rs");
@@ -122,40 +133,14 @@ fn runtime_module_extraction_contract_moves_phase_coordination_types_out_of_runt
 
 #[test]
 fn runtime_module_extraction_contract_keeps_phase_coordination_impls_in_new_module() {
-    let runtime_phase_coordination_rs = read_repo_file("runtime_phase_coordination.rs");
-    assert!(
-        runtime_phase_coordination_rs.contains("mod construct_lock;"),
-        "runtime_phase_coordination module should declare extracted construct_lock module"
-    );
-    assert!(
-        runtime_phase_coordination_rs.contains("mod listener_quorum;"),
-        "runtime_phase_coordination module should declare extracted listener_quorum module"
-    );
-    assert!(
-        runtime_phase_coordination_rs.contains("mod approver_quorum;"),
-        "runtime_phase_coordination module should declare extracted approver_quorum module"
-    );
-
-    let construct_lock_rs =
-        read_repo_file("runtime_phase_coordination/construct_lock/guard.rs");
-    assert!(
-        construct_lock_rs.contains("pub struct ConstructLockGuard {"),
-        "construct_lock guard module should own ConstructLockGuard"
-    );
-
-    let listener_quorum_rs =
-        read_repo_file("runtime_phase_coordination/listener_quorum/evaluator.rs");
-    assert!(
-        listener_quorum_rs.contains("pub struct ListenerQuorumEvaluator {"),
-        "listener_quorum evaluator module should own ListenerQuorumEvaluator"
-    );
-
-    let approver_quorum_rs =
-        read_repo_file("runtime_phase_coordination/approver_quorum/evaluator.rs");
-    assert!(
-        approver_quorum_rs.contains("pub struct ApproverQuorumEvaluator {"),
-        "approver_quorum evaluator module should own ApproverQuorumEvaluator"
-    );
+    assert_markers(&[
+        ("runtime_phase_coordination.rs", "mod construct_lock;", "runtime_phase_coordination module should declare extracted construct_lock module"),
+        ("runtime_phase_coordination.rs", "mod listener_quorum;", "runtime_phase_coordination module should declare extracted listener_quorum module"),
+        ("runtime_phase_coordination.rs", "mod approver_quorum;", "runtime_phase_coordination module should declare extracted approver_quorum module"),
+        ("runtime_phase_coordination/construct_lock/guard.rs", "pub struct ConstructLockGuard {", "construct_lock guard module should own ConstructLockGuard"),
+        ("runtime_phase_coordination/listener_quorum/evaluator.rs", "pub struct ListenerQuorumEvaluator {", "listener_quorum evaluator module should own ListenerQuorumEvaluator"),
+        ("runtime_phase_coordination/approver_quorum/evaluator.rs", "pub struct ApproverQuorumEvaluator {", "approver_quorum evaluator module should own ApproverQuorumEvaluator"),
+    ]);
 }
 
 #[test]
