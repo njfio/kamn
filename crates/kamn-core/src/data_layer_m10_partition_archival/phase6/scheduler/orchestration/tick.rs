@@ -16,6 +16,7 @@ use super::projection::{
 use super::super::super::adapters::bridge::M8Phase6CompliancePortAdapter;
 use super::super::super::adapters::error_mapping::map_phase6_port_error_to_m10;
 
+/// Executes one Phase-6 archival tick against the concrete M8 compliance registry.
 pub fn data_layer_m10_execute_phase6_orchestration_tick(
     compliance_registry: &mut DataLayerM8ComplianceRegistry,
     partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
@@ -29,6 +30,7 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
     )
 }
 
+/// Executes one Phase-6 archival tick through an abstracted Phase-6 compliance port.
 pub fn data_layer_m10_execute_phase6_orchestration_tick_with_port(
     compliance_port: &mut impl DataLayerM10Phase6CompliancePort,
     partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,

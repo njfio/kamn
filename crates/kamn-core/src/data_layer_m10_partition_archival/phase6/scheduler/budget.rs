@@ -25,6 +25,7 @@ pub(crate) fn validate_phase6_execution_tick_budget(
     .map_err(map_data_layer_policy_error_to_m10)
 }
 
+/// Projects deterministic Phase-6 execution budget usage from one orchestration tick.
 pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
     report: &crate::DataLayerM10Phase6ExecutionTickReport,
     budget: DataLayerM10Phase6ExecutionTickBudget,

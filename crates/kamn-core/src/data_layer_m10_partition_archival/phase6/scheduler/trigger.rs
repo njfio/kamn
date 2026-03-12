@@ -33,6 +33,7 @@ pub(crate) fn validate_phase6_scheduler_runtime_clock(
     .map_err(map_data_layer_policy_error_to_m10)
 }
 
+/// Evaluates whether one Phase-6 scheduler signal should execute or defer a cycle.
 pub fn data_layer_m10_evaluate_phase6_scheduler_trigger(
     policy: DataLayerM10Phase6SchedulerPolicy,
     signal: DataLayerM10Phase6SchedulerSignal,
