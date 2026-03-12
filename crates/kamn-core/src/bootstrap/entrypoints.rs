@@ -7,10 +7,12 @@ use crate::runtime::{build_runtime_wiring, build_runtime_wiring_with_transport_p
 use crate::state::{AppStateSchema, StateVersion, APP_STATE_VERSION};
 use crate::token::default_token_config;
 
+/// Builds a bootstrap plan for the current application state version.
 pub fn bootstrap(config: NodeConfig) -> Result<BootstrapPlan, ConfigError> {
     bootstrap_from_state_version(config, APP_STATE_VERSION)
 }
 
+/// Builds a bootstrap plan with explicit runtime transport profile selection.
 pub fn bootstrap_with_transport_profile(
     config: NodeConfig,
     transport_profile: RuntimeTransportProfile,
@@ -18,6 +20,7 @@ pub fn bootstrap_with_transport_profile(
     bootstrap_from_state_version_with_transport_profile(config, APP_STATE_VERSION, Some(transport_profile))
 }
 
+/// Builds a bootstrap plan from an explicit persisted state version.
 pub fn bootstrap_from_state_version(
     config: NodeConfig,
     persisted_state_version: StateVersion,
