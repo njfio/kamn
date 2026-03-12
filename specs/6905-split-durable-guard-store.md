@@ -22,12 +22,12 @@ Split `crates/kamn-core/src/durable_guard_store.rs` into bounded concern-based m
 - Final branch still fails touched-Rust size policy
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/durable_guard_store.rs` becomes a thin root shell under the active file-size policy
-- [ ] bounded sibling modules exist for bundle models/errors, store backends, serialization/legacy decoding, codec helpers, and tests
-- [ ] public durable guard snapshot store behavior remains unchanged for in-memory, file, and sqlite lanes
-- [ ] a hard-fail extraction contract exists and passes
-- [ ] real durable-guard behavior coverage still passes after the split
-- [ ] touched-Rust size policy returns `GO` on the final branch
+- [x] `crates/kamn-core/src/durable_guard_store.rs` becomes a thin root shell under the active file-size policy
+- [x] bounded sibling modules exist for bundle models/errors, store backends, serialization/legacy decoding, codec helpers, and tests
+- [x] public durable guard snapshot store behavior remains unchanged for in-memory, file, and sqlite lanes
+- [x] a hard-fail extraction contract exists and passes
+- [x] real durable-guard behavior coverage still passes after the split
+- [x] touched-Rust size policy returns `GO` on the final branch
 
 ## Files to touch
 - `crates/kamn-core/src/durable_guard_store.rs`
@@ -45,3 +45,13 @@ Split `crates/kamn-core/src/durable_guard_store.rs` into bounded concern-based m
 - Run the extraction contract target
 - Run the durable guard behavior target after the split
 - Run touched-Rust size policy on the final branch
+
+## Final evidence
+- `cargo test -p kamn-core --test durable_guard_store_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core --test durable_guard_snapshot_store -- --nocapture`
+- `cargo test -p kamn-core --test durable_guard_store_integration -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6905-touched-size-green-staged.json`
+- touched-Rust final result: `policy_decision=GO`
+
+## Deviations
+- Used the Python touched-Rust entrypoint directly for final verification because it operates on the current repo root without the shell-wrapper path ambiguity seen in earlier clean-clone work.
