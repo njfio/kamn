@@ -44,3 +44,12 @@ Split `crates/kamn-core/src/runtime_phase_coordination.rs` into bounded concern-
 - Run the extraction contract target and confirm red.
 - Run the real runtime phase coordination target after extraction.
 - Run touched-Rust size policy on the final branch.
+
+## Evidence
+- `cargo test -p kamn-core --test runtime_phase_coordination_module_extraction_contract -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6917-touched-size.json`
+
+## Deviations
+- `cargo test -p kamn-core runtime_phase_coordination --lib -- --nocapture` is blocked by an unrelated existing compile failure in `crates/kamn-core/src/runtime_peer_coordination/tests.rs`, where `LIBP2P_LIVE_TRANSPORT_FEATURE_NAME` is referenced without import.
+- I updated `crates/kamn-core/tests/runtime_module_extraction_contract.rs` so the broader runtime extraction suite recognizes the new `runtime_phase_coordination` module ownership shape.
+- After that update, the only remaining failure in `runtime_module_extraction_contract` is the unrelated pre-existing `runtime_peer_coordination` ownership assertion.
