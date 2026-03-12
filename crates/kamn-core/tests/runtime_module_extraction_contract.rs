@@ -124,16 +124,37 @@ fn runtime_module_extraction_contract_moves_phase_coordination_types_out_of_runt
 fn runtime_module_extraction_contract_keeps_phase_coordination_impls_in_new_module() {
     let runtime_phase_coordination_rs = read_repo_file("runtime_phase_coordination.rs");
     assert!(
-        runtime_phase_coordination_rs.contains("pub struct ConstructLockGuard {"),
-        "runtime_phase_coordination module should own ConstructLockGuard"
+        runtime_phase_coordination_rs.contains("mod construct_lock;"),
+        "runtime_phase_coordination module should declare extracted construct_lock module"
     );
     assert!(
-        runtime_phase_coordination_rs.contains("pub struct ListenerQuorumEvaluator {"),
-        "runtime_phase_coordination module should own ListenerQuorumEvaluator"
+        runtime_phase_coordination_rs.contains("mod listener_quorum;"),
+        "runtime_phase_coordination module should declare extracted listener_quorum module"
     );
     assert!(
-        runtime_phase_coordination_rs.contains("pub struct ApproverQuorumEvaluator {"),
-        "runtime_phase_coordination module should own ApproverQuorumEvaluator"
+        runtime_phase_coordination_rs.contains("mod approver_quorum;"),
+        "runtime_phase_coordination module should declare extracted approver_quorum module"
+    );
+
+    let construct_lock_rs =
+        read_repo_file("runtime_phase_coordination/construct_lock/guard.rs");
+    assert!(
+        construct_lock_rs.contains("pub struct ConstructLockGuard {"),
+        "construct_lock guard module should own ConstructLockGuard"
+    );
+
+    let listener_quorum_rs =
+        read_repo_file("runtime_phase_coordination/listener_quorum/evaluator.rs");
+    assert!(
+        listener_quorum_rs.contains("pub struct ListenerQuorumEvaluator {"),
+        "listener_quorum evaluator module should own ListenerQuorumEvaluator"
+    );
+
+    let approver_quorum_rs =
+        read_repo_file("runtime_phase_coordination/approver_quorum/evaluator.rs");
+    assert!(
+        approver_quorum_rs.contains("pub struct ApproverQuorumEvaluator {"),
+        "approver_quorum evaluator module should own ApproverQuorumEvaluator"
     );
 }
 
