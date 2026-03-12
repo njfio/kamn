@@ -31,12 +31,12 @@ Split `crates/kamn-core/src/bridge_adapter.rs` into bounded, concern-based modul
 - extraction contract fails if the root shell or module layout regress
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/bridge_adapter.rs` becomes a thin root shell under the active file-size budget
-- [ ] bounded modules separate models, engine behavior, typed errors, validation/support helpers, and tests
-- [ ] a hard-fail extraction contract enforces the root shell and module layout
-- [ ] existing bridge adapter tests remain green without semantic drift
-- [ ] touched-Rust size policy returns `policy_decision=GO`
-- [ ] final spec records test evidence and any deviations
+- [x] `crates/kamn-core/src/bridge_adapter.rs` becomes a thin root shell under the active file-size budget
+- [x] bounded modules separate models, engine behavior, typed errors, validation/support helpers, and tests
+- [x] a hard-fail extraction contract enforces the root shell and module layout
+- [x] existing bridge adapter tests remain green without semantic drift
+- [x] touched-Rust size policy returns `policy_decision=GO`
+- [x] final spec records test evidence and any deviations
 
 ## Files to touch
 - `crates/kamn-core/src/bridge_adapter.rs`
@@ -54,3 +54,12 @@ Split `crates/kamn-core/src/bridge_adapter.rs` into bounded, concern-based modul
 - Run the extraction contract green once the split is in place
 - Run the real bridge adapter tests after extraction
 - Run touched-Rust size policy against the staged write set
+
+## Final evidence
+- `cargo test -p kamn-core --test bridge_adapter_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core bridge_adapter::tests:: --lib -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-101857-auth --base-ref github/main --output-json /tmp/6939-touched-size.json`
+- Touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None.
