@@ -13,12 +13,7 @@ pub(crate) fn aggregate_agent_hourly(
     owner_points: &[DataLayerM7TelemetryPointRecord],
     query: &DataLayerM7TelemetryScopeQuery,
 ) -> Result<Vec<DataLayerM7AgentHourlyAggregate>, DataLayerM7TimeseriesError> {
-    authorize_owner_scope(
-        query.requester_owner_did.as_str(),
-        query.owner_did.as_str(),
-        DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
-    )?;
-    validate_kamn_did(query.agent_did.as_str())?;
+    validate_agent_scope(query)?;
     Ok(group_agent_points(owner_points, query, |point| point.bucket_hour_epoch_seconds)
         .into_iter()
         .map(|(bucket_hour_epoch_seconds, totals)| build_agent_hourly(query, bucket_hour_epoch_seconds, totals))
@@ -29,12 +24,7 @@ pub(crate) fn aggregate_agent_daily(
     owner_points: &[DataLayerM7TelemetryPointRecord],
     query: &DataLayerM7TelemetryScopeQuery,
 ) -> Result<Vec<DataLayerM7AgentDailyAggregate>, DataLayerM7TimeseriesError> {
-    authorize_owner_scope(
-        query.requester_owner_did.as_str(),
-        query.owner_did.as_str(),
-        DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
-    )?;
-    validate_kamn_did(query.agent_did.as_str())?;
+    validate_agent_scope(query)?;
     Ok(group_agent_points(owner_points, query, |point| point.bucket_day_epoch_seconds)
         .into_iter()
         .map(|(bucket_day_epoch_seconds, totals)| build_agent_daily(query, bucket_day_epoch_seconds, totals))
@@ -60,6 +50,17 @@ fn group_agent_points(
         accumulate_agent_totals(grouped.entry(bucket_of(point)).or_insert((0, 0, 0, 0, 0)), point);
     }
     grouped
+}
+
+fn validate_agent_scope(
+    query: &DataLayerM7TelemetryScopeQuery,
+) -> Result<(), DataLayerM7TimeseriesError> {
+    authorize_owner_scope(
+        query.requester_owner_did.as_str(),
+        query.owner_did.as_str(),
+        DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
+    )?;
+    validate_kamn_did(query.agent_did.as_str())
 }
 
 fn accumulate_agent_totals(
