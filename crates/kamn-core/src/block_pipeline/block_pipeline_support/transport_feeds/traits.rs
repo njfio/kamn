@@ -1,4 +1,7 @@
-use super::super::*;
+use crate::transaction::BaselineTransaction;
+use crate::BlockPipelineError;
+
+use super::super::CanonicalCommitRecord;
 
 /// Transport feed abstraction for draining pending mempool candidates.
 pub trait TransportMempoolFeed {

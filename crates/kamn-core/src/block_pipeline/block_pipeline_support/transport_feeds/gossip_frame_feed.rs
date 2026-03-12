@@ -1,4 +1,8 @@
-use super::super::*;
+use crate::p2p_transport::PeerGossipFrame;
+use crate::transaction::BaselineTransaction;
+use crate::BlockPipelineError;
+
+use super::super::{CanonicalCommitRecord, GossipIngressAdapter};
 use super::traits::{TransportCanonicalCandidateFeed, TransportMempoolFeed};
 
 /// Transport feed adapter that decodes gossip frames into mempool candidates.

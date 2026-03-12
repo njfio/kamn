@@ -1,4 +1,9 @@
-use super::super::*;
+use crate::p2p_transport::{PeerGossipFrame, PeerLifecycleTransport};
+use crate::transaction::BaselineTransaction;
+use crate::BlockPipelineError;
+use std::collections::BTreeSet;
+
+use super::super::{CanonicalCommitRecord, GossipIngressAdapter};
 use super::traits::{TransportCanonicalCandidateFeed, TransportMempoolFeed};
 
 /// Transport-backed feed that drains one peer inbox and decodes transport ingress records.
@@ -82,10 +87,7 @@ fn normalize_required_topics(
                 .to_owned(),
         ));
     }
-    match required_topics {
-        Some(topics) => normalize_topic_set(topics).map(Some),
-        None => Ok(None),
-    }
+    required_topics.map(normalize_topic_set).transpose()
 }
 
 fn normalize_topic_set(topics: Vec<String>) -> Result<BTreeSet<String>, BlockPipelineError> {

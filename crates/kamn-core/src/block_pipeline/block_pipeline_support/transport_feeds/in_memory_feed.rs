@@ -1,4 +1,7 @@
-use super::super::*;
+use crate::transaction::BaselineTransaction;
+use crate::BlockPipelineError;
+
+use super::super::CanonicalCommitRecord;
 use super::traits::{TransportCanonicalCandidateFeed, TransportMempoolFeed};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

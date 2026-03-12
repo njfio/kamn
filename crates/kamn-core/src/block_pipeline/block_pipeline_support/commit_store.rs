@@ -1,4 +1,6 @@
-use super::*;
+use crate::config::NodeRole;
+
+use super::super::BlockPipelineCommitReport;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Canonical commit record persisted after fork-choice acceptance.
