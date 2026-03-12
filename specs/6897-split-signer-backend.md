@@ -44,3 +44,14 @@ Split `crates/kamn-core/src/signer_backend.rs` into bounded concern-based module
 - Run the extraction contract target
 - Run the existing signer backend tests after the split
 - Run touched-Rust size policy on the final branch
+
+## Phase 6 evidence
+- `cargo test -p kamn-core --test signer_backend_module_extraction_contract -- --nocapture`
+- `cargo test -p kamn-core signer_backend::tests:: --lib -- --nocapture`
+- `cargo test -p kamn-node --no-run`
+- `cargo test -p kamn-sdk --no-run`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6897-touched-size-post-refactor.json`
+- Result: `policy_decision=GO`
+
+## Deviations
+- Phase 6 integration proof used downstream `kamn-node` and `kamn-sdk` compile verification with `--no-run` rather than a new behavior test because this change is an internal `kamn-core` module split with no new runtime entrypoint.
