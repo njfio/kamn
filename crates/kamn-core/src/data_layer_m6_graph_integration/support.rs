@@ -82,7 +82,7 @@ pub(super) fn parse_kamn_did(value: &str) -> Result<KamnDid, DataLayerM6GraphInt
         .map_err(|_| DataLayerM6GraphIntegrationError::InvalidDid(value.to_owned()))
 }
 
-pub(super) fn validate_non_empty(
+pub(crate) fn validate_non_empty(
     value: &str,
     field_name: &'static str,
 ) -> Result<(), DataLayerM6GraphIntegrationError> {
@@ -92,14 +92,14 @@ pub(super) fn validate_non_empty(
     Ok(())
 }
 
-pub(super) fn validate_weight(weight: f32) -> Result<(), DataLayerM6GraphIntegrationError> {
+pub(crate) fn validate_weight(weight: f32) -> Result<(), DataLayerM6GraphIntegrationError> {
     if !weight.is_finite() || weight <= 0.0 || weight > 1.0 {
         return Err(DataLayerM6GraphIntegrationError::InvalidWeight(weight));
     }
     Ok(())
 }
 
-pub(super) fn resolve_limit(
+pub(crate) fn resolve_limit(
     limit: Option<usize>,
 ) -> Result<usize, DataLayerM6GraphIntegrationError> {
     let resolved = limit.unwrap_or(20);
