@@ -79,3 +79,14 @@ Refactor/Integration:
 - `validation.rs` for store-path validation helpers
 - `error_mapping.rs` for storage-to-config error translation
 - `tests.rs` for inline test extraction if required
+
+## Final evidence
+
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core --test bootstrap_module_extraction_contract -- --nocapture`
+- `TMPDIR=/home/n/Code/kamn/tmp CARGO_TARGET_DIR=/home/n/Code/kamn/target cargo test -p kamn-core bootstrap::tests:: --lib -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-clean-20260312-091752 --base-ref origin/main --output-json /tmp/6926-touched-size-staged.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+
+- None.
