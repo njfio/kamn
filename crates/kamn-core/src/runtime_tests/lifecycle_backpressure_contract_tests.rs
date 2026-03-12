@@ -4,3 +4,5 @@ mod lifecycle_contract_tests;
 mod backpressure_contract_tests;
 #[path = "lifecycle_backpressure_contract_tests/backpressure_budget_contract_tests.rs"]
 mod backpressure_budget_contract_tests;
+#[path = "lifecycle_backpressure_contract_tests/support.rs"]
+mod support;

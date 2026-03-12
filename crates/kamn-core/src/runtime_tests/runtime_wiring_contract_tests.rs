@@ -21,11 +21,7 @@ fn approver_wiring_contains_quorum_approver() {
 #[test]
 fn regression_runtime_source_routes_network_fault_domain_via_dedicated_module() {
     let runtime_source = include_str!("../runtime.rs");
-    let declaration = [
-        "#[path = \"runtime_network_fault.rs\"]",
-        "mod runtime_network_fault;",
-    ]
-    .join("\n");
+    let declaration = runtime_network_fault_module_declaration();
     assert!(
         runtime_source.contains(&declaration),
         "expected runtime module declaration for network fault extraction"
@@ -34,22 +30,38 @@ fn regression_runtime_source_routes_network_fault_domain_via_dedicated_module() 
         runtime_source.contains("pub use runtime_network_fault::{"),
         "expected runtime re-export surface for extracted network fault APIs"
     );
-    for symbol in [
-        "simulate_daemon_network_fault",
-        "DeterministicNetworkFaultSimulator",
-        "NetworkFaultSimulationError",
-        "NetworkFaultSimulationInput",
-        "NetworkFaultSimulationReport",
-    ] {
+    assert_runtime_network_fault_reexports(runtime_source);
+    assert!(
+        runtime_source.contains("};"),
+        "expected re-export block terminator to remain present"
+    );
+}
+
+fn runtime_network_fault_module_declaration() -> String {
+    [
+        "#[path = \"runtime_network_fault.rs\"]",
+        "mod runtime_network_fault;",
+    ]
+    .join("\n")
+}
+
+fn assert_runtime_network_fault_reexports(runtime_source: &str) {
+    for symbol in runtime_network_fault_reexport_symbols() {
         assert!(
             runtime_source.contains(symbol),
             "expected runtime network fault re-export to include `{symbol}`"
         );
     }
-    assert!(
-        runtime_source.contains("};"),
-        "expected re-export block terminator to remain present"
-    );
+}
+
+fn runtime_network_fault_reexport_symbols() -> [&'static str; 5] {
+    [
+        "simulate_daemon_network_fault",
+        "DeterministicNetworkFaultSimulator",
+        "NetworkFaultSimulationError",
+        "NetworkFaultSimulationInput",
+        "NetworkFaultSimulationReport",
+    ]
 }
 
 #[test]

@@ -1,4 +1,5 @@
 use super::super::*;
+use super::support::{peer_authenticator, signed_peer_frame};
 
 #[test]
 fn unit_authenticated_peer_frame_rejects_invalid_wire_format() {
@@ -70,60 +71,23 @@ fn regression_authenticated_peer_frame_rejects_legacy_deterministic_signature_fi
 
 #[test]
 fn integration_peer_frame_authenticator_accepts_monotonic_nonce_flow() {
-    let mut authenticator = PeerFrameAuthenticator::new(
-        "kamn:did:agent:peer-b",
-        vec!["kamn:did:agent:peer-a".to_owned()],
-    )
-    .expect("authenticator should build");
-    let frame_1 = AuthenticatedPeerFrame::signed(
-        "frame-1",
-        "kamn:did:agent:peer-a",
-        "kamn:did:agent:peer-b",
-        1,
-        "payload-1",
-    )
-    .expect("frame 1 should build");
-    let frame_2 = AuthenticatedPeerFrame::signed(
-        "frame-2",
-        "kamn:did:agent:peer-a",
-        "kamn:did:agent:peer-b",
-        2,
-        "payload-2",
-    )
-    .expect("frame 2 should build");
+    let mut authenticator = peer_authenticator();
+    let frame_1 = signed_peer_frame("frame-1", 1, "payload-1");
+    let frame_2 = signed_peer_frame("frame-2", 2, "payload-2");
     assert!(authenticator.validate_inbound(&frame_1).is_ok());
     assert!(authenticator.validate_inbound(&frame_2).is_ok());
 }
 
 #[test]
 fn regression_forged_or_unauthorized_peer_frame_is_rejected() {
-    let mut authenticator = PeerFrameAuthenticator::new(
-        "kamn:did:agent:peer-b",
-        vec!["kamn:did:agent:peer-a".to_owned()],
-    )
-    .expect("authenticator should build");
-    let forged = AuthenticatedPeerFrame::new(
-        "frame-1",
-        "kamn:did:agent:peer-a",
-        "kamn:did:agent:peer-b",
-        1,
-        "payload-1",
-        "tampered-signature",
-    )
-    .expect("frame should build");
+    let mut authenticator = peer_authenticator();
+    let forged = tampered_peer_frame();
     assert!(matches!(
         authenticator.validate_inbound(&forged),
         Err(AuthenticatedPeerFrameError::SignatureMismatch { .. })
     ));
 
-    let unauthorized = AuthenticatedPeerFrame::signed(
-        "frame-2",
-        "kamn:did:agent:peer-z",
-        "kamn:did:agent:peer-b",
-        1,
-        "payload-2",
-    )
-    .expect("frame should build");
+    let unauthorized = unauthorized_peer_frame();
     assert_eq!(
         authenticator.validate_inbound(&unauthorized),
         Err(AuthenticatedPeerFrameError::UnauthorizedSender(
@@ -132,21 +96,33 @@ fn regression_forged_or_unauthorized_peer_frame_is_rejected() {
     );
 }
 
-#[test]
-fn regression_replayed_peer_frame_nonce_is_rejected() {
-    let mut authenticator = PeerFrameAuthenticator::new(
-        "kamn:did:agent:peer-b",
-        vec!["kamn:did:agent:peer-a".to_owned()],
-    )
-    .expect("authenticator should build");
-    let frame = AuthenticatedPeerFrame::signed(
+fn tampered_peer_frame() -> AuthenticatedPeerFrame {
+    AuthenticatedPeerFrame::new(
         "frame-1",
         "kamn:did:agent:peer-a",
         "kamn:did:agent:peer-b",
         1,
         "payload-1",
+        "tampered-signature",
     )
-    .expect("frame should build");
+    .expect("frame should build")
+}
+
+fn unauthorized_peer_frame() -> AuthenticatedPeerFrame {
+    AuthenticatedPeerFrame::signed(
+        "frame-2",
+        "kamn:did:agent:peer-z",
+        "kamn:did:agent:peer-b",
+        1,
+        "payload-2",
+    )
+    .expect("frame should build")
+}
+
+#[test]
+fn regression_replayed_peer_frame_nonce_is_rejected() {
+    let mut authenticator = peer_authenticator();
+    let frame = signed_peer_frame("frame-1", 1, "payload-1");
     authenticator
         .validate_inbound(&frame)
         .expect("first frame should be accepted");

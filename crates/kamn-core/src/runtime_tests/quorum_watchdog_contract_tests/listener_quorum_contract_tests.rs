@@ -1,17 +1,17 @@
 use super::super::*;
+use super::support::{listener_attestation, listener_input, listener_quorum_evaluator};
 
 #[test]
 fn functional_listener_quorum_accepts_canonical_sufficient_attestations() {
-    let mut evaluator = ListenerQuorumEvaluator::new(2).expect("listener quorum evaluator should build");
-    let input = ListenerQuorumInput::new(
+    let mut evaluator = listener_quorum_evaluator(2);
+    let input = listener_input(
         "bridge-event-1",
         1,
         vec![
-            ListenerAttestation::new("kamn:did:agent:listener-b", "att-2").expect("valid attestation"),
-            ListenerAttestation::new("kamn:did:agent:listener-a", "att-1").expect("valid attestation"),
+            listener_attestation("kamn:did:agent:listener-b", "att-2"),
+            listener_attestation("kamn:did:agent:listener-a", "att-1"),
         ],
-    )
-    .expect("valid listener quorum input");
+    );
     let decision = evaluator
         .evaluate(input)
         .expect("quorum should accept canonical listener attestations");
@@ -38,21 +38,19 @@ fn unit_listener_quorum_rejects_zero_required_confirmations() {
 
 #[test]
 fn integration_daemon_listener_quorum_rejects_replayed_event_sequence() {
-    let mut evaluator = ListenerQuorumEvaluator::new(1).expect("listener quorum evaluator should build");
-    let first = ListenerQuorumInput::new(
+    let mut evaluator = listener_quorum_evaluator(1);
+    let first = listener_input(
         "bridge-event-1",
         3,
-        vec![ListenerAttestation::new("kamn:did:agent:listener-a", "att-1").expect("valid attestation")],
-    )
-    .expect("valid listener quorum input");
+        vec![listener_attestation("kamn:did:agent:listener-a", "att-1")],
+    );
     assert!(super::super::evaluate_daemon_listener_quorum(&mut evaluator, first).is_ok());
 
-    let replay = ListenerQuorumInput::new(
+    let replay = listener_input(
         "bridge-event-1",
         3,
-        vec![ListenerAttestation::new("kamn:did:agent:listener-a", "att-2").expect("valid attestation")],
-    )
-    .expect("valid listener quorum input");
+        vec![listener_attestation("kamn:did:agent:listener-a", "att-2")],
+    );
     let error = super::super::evaluate_daemon_listener_quorum(&mut evaluator, replay)
         .expect_err("replayed sequence should be rejected");
     assert_eq!(
@@ -67,16 +65,15 @@ fn integration_daemon_listener_quorum_rejects_replayed_event_sequence() {
 
 #[test]
 fn regression_duplicate_listener_attestation_replay_is_rejected() {
-    let mut evaluator = ListenerQuorumEvaluator::new(2).expect("listener quorum evaluator should build");
-    let input = ListenerQuorumInput::new(
+    let mut evaluator = listener_quorum_evaluator(2);
+    let input = listener_input(
         "bridge-event-dup",
         1,
         vec![
-            ListenerAttestation::new("kamn:did:agent:listener-a", "att-1").expect("valid attestation"),
-            ListenerAttestation::new("kamn:did:agent:listener-a", "att-2").expect("valid attestation"),
+            listener_attestation("kamn:did:agent:listener-a", "att-1"),
+            listener_attestation("kamn:did:agent:listener-a", "att-2"),
         ],
-    )
-    .expect("valid listener quorum input");
+    );
     let error = evaluator
         .evaluate(input)
         .expect_err("duplicate listener attestations must be rejected");
@@ -90,30 +87,33 @@ fn regression_duplicate_listener_attestation_replay_is_rejected() {
 
 #[test]
 fn regression_replayed_listener_event_sequence_is_rejected() {
-    let mut evaluator = ListenerQuorumEvaluator::new(1).expect("listener quorum evaluator should build");
-    let first = ListenerQuorumInput::new(
+    let mut evaluator = listener_quorum_evaluator(1);
+    let first = listener_input(
         "bridge-event-regression",
         7,
-        vec![ListenerAttestation::new("kamn:did:agent:listener-a", "att-1").expect("valid attestation")],
-    )
-    .expect("valid listener quorum input");
+        vec![listener_attestation("kamn:did:agent:listener-a", "att-1")],
+    );
     assert!(evaluator.evaluate(first).is_ok());
 
-    let replay = ListenerQuorumInput::new(
+    let replay = listener_input(
         "bridge-event-regression",
         6,
-        vec![ListenerAttestation::new("kamn:did:agent:listener-a", "att-2").expect("valid attestation")],
-    )
-    .expect("valid listener quorum input");
+        vec![listener_attestation("kamn:did:agent:listener-a", "att-2")],
+    );
     let error = evaluator
         .evaluate(replay)
         .expect_err("stale/replayed sequence must be rejected");
-    assert_eq!(
-        error,
-        ListenerQuorumError::ReplayedEventSequence {
-            event_id: "bridge-event-regression".to_owned(),
-            previous_sequence: 7,
-            received_sequence: 6
-        }
-    );
+    assert_eq!(error, replayed_listener_sequence_error("bridge-event-regression", 7, 6));
+}
+
+fn replayed_listener_sequence_error(
+    event_id: &str,
+    previous_sequence: u64,
+    received_sequence: u64,
+) -> ListenerQuorumError {
+    ListenerQuorumError::ReplayedEventSequence {
+        event_id: event_id.to_owned(),
+        previous_sequence,
+        received_sequence,
+    }
 }
