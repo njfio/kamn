@@ -57,7 +57,17 @@ fn verify_record_link(
     if record.hash_chain_prev != expected_prev {
         return invalid_hash_chain(owner_did_key, position, "hash_chain_prev mismatch");
     }
-    let hash_material = DataLayerM5RecordHashMaterial {
+    let hash_material = record_hash_material(record);
+    let expected_hash =
+        compute_embedding_record_hash(record.sequence, &hash_material, record.hash_chain_prev.as_str());
+    if record.record_hash != expected_hash {
+        return invalid_hash_chain(owner_did_key, position, "record_hash mismatch");
+    }
+    Ok(())
+}
+
+fn record_hash_material(record: &DataLayerM5EmbeddingRecord) -> DataLayerM5RecordHashMaterial<'_> {
+    DataLayerM5RecordHashMaterial {
         embedding_id: record.embedding_id.as_str(),
         message_id: record.message_id.as_str(),
         owner_did: record.owner_did.as_str(),
@@ -69,12 +79,7 @@ fn verify_record_link(
         vector_dimensions: record.vector_dimensions,
         created_at_epoch_seconds: record.created_at_epoch_seconds,
         privacy_mode: record.privacy_mode,
-    };
-    let expected_hash = compute_embedding_record_hash(record.sequence, &hash_material, record.hash_chain_prev.as_str());
-    if record.record_hash != expected_hash {
-        return invalid_hash_chain(owner_did_key, position, "record_hash mismatch");
     }
-    Ok(())
 }
 
 fn invalid_hash_chain(

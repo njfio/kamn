@@ -12,7 +12,7 @@ impl DataLayerM5EmbeddingRegistry {
         let candidate_vector = validate_vector(input.candidate_vector, "candidate_vector")?;
         validate_anomaly_threshold(input.anomaly_distance_threshold)?;
         let lookback_window = resolve_lookback_window(input.lookback_window)?;
-        require_anomaly_mode(self.privacy_mode)?;
+        require_anomaly_mode(self.privacy_mode())?;
         let mut agent_vectors = owner_agent_vectors(self, owner_did.as_str(), parsed_agent_did.as_str())?;
         trim_lookback(&mut agent_vectors, lookback_window);
         validate_candidate_dimensions(&agent_vectors, candidate_vector.len())?;

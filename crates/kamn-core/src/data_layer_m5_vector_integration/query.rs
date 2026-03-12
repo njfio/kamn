@@ -10,7 +10,7 @@ impl DataLayerM5EmbeddingRegistry {
         let owner_did = parse_kamn_did(query.owner_did.as_str())?;
         let query_vector = validate_vector(query.query_vector, "query_vector")?;
         let limit = resolve_limit(query.limit)?;
-        require_query_mode(self.privacy_mode)?;
+        require_query_mode(self.privacy_mode())?;
         let owner_records = owner_records(self, owner_did.as_str())?;
         validate_query_dimensions(owner_records, query_vector.len())?;
         let mut rows = score_rows(owner_records, query_vector.as_slice())?;

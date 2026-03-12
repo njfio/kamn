@@ -1,5 +1,8 @@
 use super::super::models::*;
-use super::super::support::*;
+use super::super::support::{
+    compute_embedding_record_hash, owner_vector_dimensions, parse_kamn_did,
+    validate_agent_did, validate_non_empty, validate_vector, DataLayerM5RecordHashMaterial,
+};
 use crate::ContentRetentionClass;
 
 impl DataLayerM5EmbeddingRegistry {
@@ -8,49 +11,60 @@ impl DataLayerM5EmbeddingRegistry {
         &mut self,
         input: DataLayerM5EmbeddingRecordInput,
     ) -> Result<DataLayerM5EmbeddingRecord, DataLayerM5VectorIntegrationError> {
-        validate_ingest_input(&input)?;
-        let DataLayerM5EmbeddingRecordInput {
-            embedding_id,
-            message_id,
-            owner_did,
-            agent_did,
-            retention_class,
-            model_id,
-            vector_encrypted,
-            vector_plaintext,
-            created_at_epoch_seconds,
-        } = input;
-        let parsed_owner_did = parse_kamn_did(owner_did.as_str())?;
-        let owner_did_key = parsed_owner_did.as_str().to_owned();
-        let parsed_agent_did = validate_agent_did(agent_did.as_str())?;
-        reject_duplicate_embedding(&self.seen_embedding_ids, embedding_id.as_str())?;
-
-        let vector_plaintext = resolve_plaintext_vector(self.privacy_mode, vector_plaintext)?;
-        let vector_dimensions = vector_plaintext.as_ref().map_or(0, Vec::len);
-        let owner_records = self.records_by_owner.entry(owner_did_key.clone()).or_default();
+        let privacy_mode = self.privacy_mode();
+        let append_input = prepare_append_input(input, &self.seen_embedding_ids, privacy_mode)?;
+        let vector_dimensions = append_input.vector_plaintext.as_ref().map_or(0, Vec::len);
+        let owner_records = self.records_by_owner.entry(append_input.owner_did_key.clone()).or_default();
         validate_owner_dimensions(owner_records, vector_dimensions)?;
 
         let sequence = owner_records.len() as u64 + 1;
         let hash_chain_prev = previous_hash(owner_records);
         let record = build_record(
-            embedding_id,
-            message_id,
-            &owner_did_key,
-            parsed_agent_did.as_str(),
-            retention_class,
-            model_id,
-            vector_encrypted,
-            vector_plaintext,
+            append_input,
             vector_dimensions,
-            self.privacy_mode,
             sequence,
-            created_at_epoch_seconds,
             hash_chain_prev,
         );
         owner_records.push(record.clone());
         self.seen_embedding_ids.insert(record.embedding_id.clone());
         Ok(record)
     }
+}
+
+struct PreparedAppendInput {
+    embedding_id: String,
+    message_id: String,
+    owner_did_key: String,
+    agent_did: String,
+    retention_class: ContentRetentionClass,
+    model_id: String,
+    vector_encrypted: Vec<u8>,
+    vector_plaintext: Option<Vec<f32>>,
+    created_at_epoch_seconds: u64,
+    privacy_mode: DataLayerM5EmbeddingPrivacyMode,
+}
+
+fn prepare_append_input(
+    input: DataLayerM5EmbeddingRecordInput,
+    seen_embedding_ids: &std::collections::BTreeSet<String>,
+    privacy_mode: DataLayerM5EmbeddingPrivacyMode,
+) -> Result<PreparedAppendInput, DataLayerM5VectorIntegrationError> {
+    validate_ingest_input(&input)?;
+    let parsed_owner_did = parse_kamn_did(input.owner_did.as_str())?;
+    let parsed_agent_did = validate_agent_did(input.agent_did.as_str())?;
+    reject_duplicate_embedding(seen_embedding_ids, input.embedding_id.as_str())?;
+    Ok(PreparedAppendInput {
+        embedding_id: input.embedding_id,
+        message_id: input.message_id,
+        owner_did_key: parsed_owner_did.as_str().to_owned(),
+        agent_did: parsed_agent_did.as_str().to_owned(),
+        retention_class: input.retention_class,
+        model_id: input.model_id,
+        vector_encrypted: input.vector_encrypted,
+        vector_plaintext: resolve_plaintext_vector(privacy_mode, input.vector_plaintext)?,
+        created_at_epoch_seconds: input.created_at_epoch_seconds,
+        privacy_mode,
+    })
 }
 
 fn validate_ingest_input(
@@ -127,47 +141,48 @@ fn previous_hash(owner_records: &[DataLayerM5EmbeddingRecord]) -> String {
 }
 
 fn build_record(
-    embedding_id: String,
-    message_id: String,
-    owner_did_key: &str,
-    agent_did: &str,
-    retention_class: ContentRetentionClass,
-    model_id: String,
-    vector_encrypted: Vec<u8>,
-    vector_plaintext: Option<Vec<f32>>,
+    append_input: PreparedAppendInput,
     vector_dimensions: usize,
-    privacy_mode: DataLayerM5EmbeddingPrivacyMode,
     sequence: u64,
-    created_at_epoch_seconds: u64,
     hash_chain_prev: String,
 ) -> DataLayerM5EmbeddingRecord {
     let material = DataLayerM5RecordHashMaterial {
-        embedding_id: embedding_id.as_str(),
-        message_id: message_id.as_str(),
-        owner_did: owner_did_key,
-        agent_did,
-        retention_class,
-        model_id: model_id.as_str(),
-        vector_encrypted: vector_encrypted.as_slice(),
-        vector_plaintext: vector_plaintext.as_deref(),
+        embedding_id: append_input.embedding_id.as_str(),
+        message_id: append_input.message_id.as_str(),
+        owner_did: append_input.owner_did_key.as_str(),
+        agent_did: append_input.agent_did.as_str(),
+        retention_class: append_input.retention_class,
+        model_id: append_input.model_id.as_str(),
+        vector_encrypted: append_input.vector_encrypted.as_slice(),
+        vector_plaintext: append_input.vector_plaintext.as_deref(),
         vector_dimensions,
-        created_at_epoch_seconds,
-        privacy_mode,
+        created_at_epoch_seconds: append_input.created_at_epoch_seconds,
+        privacy_mode: append_input.privacy_mode,
     };
     let record_hash = compute_embedding_record_hash(sequence, &material, hash_chain_prev.as_str());
+    record_from_append_input(append_input, vector_dimensions, sequence, hash_chain_prev, record_hash)
+}
+
+fn record_from_append_input(
+    append_input: PreparedAppendInput,
+    vector_dimensions: usize,
+    sequence: u64,
+    hash_chain_prev: String,
+    record_hash: String,
+) -> DataLayerM5EmbeddingRecord {
     DataLayerM5EmbeddingRecord {
-        embedding_id,
-        message_id,
-        owner_did: owner_did_key.to_owned(),
-        agent_did: agent_did.to_owned(),
-        retention_class,
-        model_id,
-        vector_encrypted,
-        privacy_mode,
-        vector_plaintext,
+        embedding_id: append_input.embedding_id,
+        message_id: append_input.message_id,
+        owner_did: append_input.owner_did_key,
+        agent_did: append_input.agent_did,
+        retention_class: append_input.retention_class,
+        model_id: append_input.model_id,
+        vector_encrypted: append_input.vector_encrypted,
+        privacy_mode: append_input.privacy_mode,
+        vector_plaintext: append_input.vector_plaintext,
         vector_dimensions,
         sequence,
-        created_at_epoch_seconds,
+        created_at_epoch_seconds: append_input.created_at_epoch_seconds,
         hash_chain_prev,
         record_hash,
     }

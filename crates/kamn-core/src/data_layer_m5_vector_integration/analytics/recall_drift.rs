@@ -61,6 +61,64 @@ fn build_recall_report(
     min_recall_at_k: f32,
     max_allowed_rank_shift: usize,
 ) -> DataLayerM5RecallDriftReport {
+    let metrics = recall_metrics(baseline_top_k_embedding_ids, current_top_k_embedding_ids);
+    let (decision, reason_code) = recall_decision(
+        &metrics.missing_embedding_ids,
+        metrics.recall_at_k,
+        min_recall_at_k,
+        metrics.max_observed_rank_shift,
+        max_allowed_rank_shift,
+    );
+    report_from_metrics(metrics, decision, reason_code, current_top_k_embedding_ids)
+}
+
+struct RecallDriftMetrics {
+    matched_embedding_ids: Vec<String>,
+    missing_embedding_ids: Vec<String>,
+    max_observed_rank_shift: usize,
+    recall_at_k: f32,
+    evaluated_k: usize,
+}
+
+fn recall_metrics(
+    baseline_top_k_embedding_ids: &[String],
+    current_top_k_embedding_ids: &[String],
+) -> RecallDriftMetrics {
+    let (matched_embedding_ids, missing_embedding_ids, max_observed_rank_shift) =
+        evaluate_rank_drift(baseline_top_k_embedding_ids, current_top_k_embedding_ids);
+    let evaluated_k = baseline_top_k_embedding_ids.len();
+    let recall_at_k = matched_embedding_ids.len() as f32 / evaluated_k as f32;
+    RecallDriftMetrics {
+        matched_embedding_ids,
+        missing_embedding_ids,
+        max_observed_rank_shift,
+        recall_at_k,
+        evaluated_k,
+    }
+}
+
+fn report_from_metrics(
+    metrics: RecallDriftMetrics,
+    decision: DataLayerM5RecallDriftDecision,
+    reason_code: &'static str,
+    current_top_k_embedding_ids: &[String],
+) -> DataLayerM5RecallDriftReport {
+    DataLayerM5RecallDriftReport {
+        decision,
+        reason_code,
+        evaluated_k: metrics.evaluated_k,
+        recall_at_k: metrics.recall_at_k,
+        max_observed_rank_shift: metrics.max_observed_rank_shift,
+        matched_embedding_ids: metrics.matched_embedding_ids,
+        missing_embedding_ids: metrics.missing_embedding_ids,
+        current_top_k_embedding_ids: current_top_k_embedding_ids.to_vec(),
+    }
+}
+
+fn evaluate_rank_drift(
+    baseline_top_k_embedding_ids: &[String],
+    current_top_k_embedding_ids: &[String],
+) -> (Vec<String>, Vec<String>, usize) {
     let current_rank_by_embedding_id = current_top_k_embedding_ids
         .iter()
         .enumerate()
@@ -77,24 +135,27 @@ fn build_recall_report(
             missing_embedding_ids.push(baseline_embedding_id.clone());
         }
     }
-    let evaluated_k = baseline_top_k_embedding_ids.len();
-    let recall_at_k = matched_embedding_ids.len() as f32 / evaluated_k as f32;
+    (matched_embedding_ids, missing_embedding_ids, max_observed_rank_shift)
+}
+
+fn recall_decision(
+    missing_embedding_ids: &[String],
+    recall_at_k: f32,
+    min_recall_at_k: f32,
+    max_observed_rank_shift: usize,
+    max_allowed_rank_shift: usize,
+) -> (DataLayerM5RecallDriftDecision, &'static str) {
     let degraded = !missing_embedding_ids.is_empty()
         || recall_at_k < min_recall_at_k
         || max_observed_rank_shift > max_allowed_rank_shift;
-    let (decision, reason_code) = if degraded {
-        (DataLayerM5RecallDriftDecision::Degraded, DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE)
-    } else {
-        (DataLayerM5RecallDriftDecision::Stable, DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE)
-    };
-    DataLayerM5RecallDriftReport {
-        decision,
-        reason_code,
-        evaluated_k,
-        recall_at_k,
-        max_observed_rank_shift,
-        matched_embedding_ids,
-        missing_embedding_ids,
-        current_top_k_embedding_ids: current_top_k_embedding_ids.to_vec(),
+    if degraded {
+        return (
+            DataLayerM5RecallDriftDecision::Degraded,
+            DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE,
+        );
     }
+    (
+        DataLayerM5RecallDriftDecision::Stable,
+        DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE,
+    )
 }
