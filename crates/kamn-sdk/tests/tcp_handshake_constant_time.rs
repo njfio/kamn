@@ -10,12 +10,12 @@ use support::{
     TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT,
 };
 
-const SOURCE: &str = include_str!("../src/tcp.rs");
+const SOURCE: &str = include_str!("../src/tcp/handshake.rs");
 
 #[test]
 fn regression_requires_constant_time_tcp_handshake_compares() {
     let function_start = SOURCE
-        .find("fn verify_matches_envelope(&self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {")
+        .find("verify_matches_envelope(")
         .unwrap_or_else(|| panic!("verify_matches_envelope function must exist"));
     let function_source = &SOURCE[function_start..];
 
