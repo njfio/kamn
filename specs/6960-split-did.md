@@ -28,11 +28,11 @@ Reduce `crates/kamn-core/src/did.rs` to a thin root shell by extracting bounded 
 - Touched-Rust size policy returns `NO-GO`.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/did.rs` is reduced to a thin root shell within the active file-size budget.
-- [ ] DID concerns are split into bounded submodules with clear responsibilities.
-- [ ] Existing federated handshake, DID document, and service-endpoint behavior remains unchanged under real tests.
-- [ ] A hard-fail extraction contract covers the module boundary.
-- [ ] Touched-Rust size policy returns `GO`.
+- [x] `crates/kamn-core/src/did.rs` is reduced to a thin root shell within the active file-size budget.
+- [x] DID concerns are split into bounded submodules with clear responsibilities.
+- [x] Existing federated handshake, DID document, and service-endpoint behavior remains unchanged under real tests.
+- [x] A hard-fail extraction contract covers the module boundary.
+- [x] Touched-Rust size policy returns `GO`.
 
 ## Files to touch
 - `crates/kamn-core/src/did.rs`
@@ -55,3 +55,12 @@ Reduce `crates/kamn-core/src/did.rs` to a thin root shell by extracting bounded 
 - Focused `kamn-core` test selection for DID behavior where current `main` permits it.
 - Touched-Rust size policy run against the issue branch.
 - If an unrelated current-main failure blocks a focused DID test target, record it explicitly in the spec as a deviation.
+
+## Evidence
+- `cargo test -p kamn-core --test did_module_extraction_contract -- --nocapture`
+- `cargo check -p kamn-core --lib`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6960-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- `cargo test -p kamn-core did::tests:: --lib -- --nocapture` is still blocked by the unrelated current-main parse error in `crates/kamn-core/src/data_layer_m7_timeseries_telemetry/tests.rs:84`.
