@@ -20,7 +20,7 @@ impl DataLayerM1MerkleBatch {
     pub fn assemble(mut leaves: Vec<DataLayerM1MerkleLeaf>) -> Result<Self, DataLayerM1Error> {
         sort_leaves(&mut leaves)?;
         let levels = build_levels(&leaves);
-        Ok(build_batch(leaves, levels))
+        build_batch(leaves, levels)
     }
 
     pub fn leaves(&self) -> &[DataLayerM1MerkleLeaf] {
@@ -47,8 +47,8 @@ fn sort_leaves(leaves: &mut Vec<DataLayerM1MerkleLeaf>) -> Result<(), DataLayerM
 
 fn build_levels(leaves: &[DataLayerM1MerkleLeaf]) -> Vec<Vec<String>> {
     let mut levels = vec![leaves.iter().map(leaf_digest).collect::<Vec<_>>()];
-    while levels.last().is_some_and(|level| level.len() > 1) {
-        let next = build_next_level(levels.len() - 1, levels.last().unwrap());
+    while let Some(current) = levels.last().filter(|level| level.len() > 1) {
+        let next = build_next_level(levels.len() - 1, current);
         levels.push(next);
     }
     levels
@@ -65,12 +65,15 @@ fn build_next_level(level_index: usize, current: &[String]) -> Vec<String> {
         .collect()
 }
 
-fn build_batch(leaves: Vec<DataLayerM1MerkleLeaf>, levels: Vec<Vec<String>>) -> DataLayerM1MerkleBatch {
+fn build_batch(
+    leaves: Vec<DataLayerM1MerkleLeaf>,
+    levels: Vec<Vec<String>>,
+) -> Result<DataLayerM1MerkleBatch, DataLayerM1Error> {
     let first_message_id = leaves[0].message_id.clone();
     let last_message_id = leaves[leaves.len() - 1].message_id.clone();
-    let merkle_root = levels.last().unwrap()[0].clone();
+    let merkle_root = resolve_merkle_root(&levels)?;
     let batch_id = batch_digest(&merkle_root, leaves.len(), &first_message_id, &last_message_id);
-    DataLayerM1MerkleBatch {
+    Ok(DataLayerM1MerkleBatch {
         batch_id,
         merkle_root,
         message_count: leaves.len(),
@@ -79,7 +82,15 @@ fn build_batch(leaves: Vec<DataLayerM1MerkleLeaf>, levels: Vec<Vec<String>>) -> 
         tree_height: levels.len() as u16,
         leaves,
         levels,
-    }
+    })
+}
+
+fn resolve_merkle_root(levels: &[Vec<String>]) -> Result<String, DataLayerM1Error> {
+    levels
+        .last()
+        .and_then(|level| level.first())
+        .cloned()
+        .ok_or(DataLayerM1Error::EmptyBatch)
 }
 
 fn find_leaf_position(leaves: &[DataLayerM1MerkleLeaf], message_id: &str) -> Result<usize, DataLayerM1Error> {
