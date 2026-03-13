@@ -1,19 +1,27 @@
 use super::envelope::TcpSignedEnvelope;
 use super::handshake::TcpHandshakeFrame;
 use super::support::{
-    is_benign_tcp_shutdown_error, split_transport_payload, DEFAULT_CONNECT_RETRIES,
-    DEFAULT_MAX_WIRE_BYTES, DEFAULT_RETRY_DELAY_MILLIS,
+    is_benign_tcp_shutdown_error, DEFAULT_CONNECT_RETRIES, DEFAULT_MAX_WIRE_BYTES,
+    DEFAULT_RETRY_DELAY_MILLIS,
 };
 use crate::SdkError;
 use std::collections::HashMap;
-use std::io::{Read, Write};
-use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::io::Write;
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+#[path = "transport/config.rs"]
+mod config;
+#[path = "transport/read.rs"]
+mod read;
 #[path = "transport/support.rs"]
 mod support;
+use config::{
+    parse_socket_addr, validate_positive_u32, validate_positive_u64, validate_positive_usize,
+};
+use read::read_envelope;
 use support::serialize_transport_payload;
 
 #[derive(Debug, Default)]
@@ -36,6 +44,7 @@ impl TcpReplayGuardState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// TCP transport configuration for local relay flows.
 pub struct TcpTransportConfig {
     addr: String,
     connect_retries: u32,
@@ -44,12 +53,10 @@ pub struct TcpTransportConfig {
 }
 
 impl TcpTransportConfig {
+    /// Creates a validated TCP transport config.
     pub fn new(addr: &str) -> Result<Self, SdkError> {
         let normalized = addr.trim();
-        let _parsed: SocketAddr = normalized.parse().map_err(|_| SdkError::InvalidInput {
-            field: "transport.addr",
-            reason: "must be a valid host:port socket address",
-        })?;
+        parse_socket_addr(normalized)?;
         Ok(Self {
             addr: normalized.to_owned(),
             connect_retries: DEFAULT_CONNECT_RETRIES,
@@ -58,57 +65,51 @@ impl TcpTransportConfig {
         })
     }
 
+    /// Sets deterministic connect retry count.
     pub fn with_connect_retries(mut self, retries: u32) -> Result<Self, SdkError> {
-        if retries == 0 {
-            return Err(SdkError::InvalidInput {
-                field: "transport.connect_retries",
-                reason: "must be greater than zero",
-            });
-        }
+        validate_positive_u32(retries, "transport.connect_retries")?;
         self.connect_retries = retries;
         Ok(self)
     }
 
+    /// Sets deterministic retry delay in milliseconds.
     pub fn with_retry_delay_millis(mut self, delay_millis: u64) -> Result<Self, SdkError> {
-        if delay_millis == 0 {
-            return Err(SdkError::InvalidInput {
-                field: "transport.retry_delay_millis",
-                reason: "must be greater than zero",
-            });
-        }
+        validate_positive_u64(delay_millis, "transport.retry_delay_millis")?;
         self.retry_delay_millis = delay_millis;
         Ok(self)
     }
 
+    /// Sets maximum wire payload size in bytes.
     pub fn with_max_wire_bytes(mut self, max_wire_bytes: usize) -> Result<Self, SdkError> {
-        if max_wire_bytes == 0 {
-            return Err(SdkError::InvalidInput {
-                field: "transport.max_wire_bytes",
-                reason: "must be greater than zero",
-            });
-        }
+        validate_positive_usize(max_wire_bytes, "transport.max_wire_bytes")?;
         self.max_wire_bytes = max_wire_bytes;
         Ok(self)
     }
 
+    /// Returns configured socket address.
     pub fn addr(&self) -> &str {
         &self.addr
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Result of receiving one envelope over TCP.
 pub struct TcpReceivedEnvelope {
+    /// Parsed and verified envelope payload.
     pub envelope: TcpSignedEnvelope,
+    /// Remote peer socket address.
     pub peer_addr: String,
 }
 
 #[derive(Debug, Clone)]
+/// Minimal TCP relay adapter for deterministic local transport harnesses.
 pub struct TcpTransportAdapter {
     config: TcpTransportConfig,
     replay_guard_state: Arc<Mutex<TcpReplayGuardState>>,
 }
 
 impl TcpTransportAdapter {
+    /// Creates a new adapter for the provided transport config.
     pub fn new(config: TcpTransportConfig) -> Self {
         Self {
             config,
@@ -116,6 +117,7 @@ impl TcpTransportAdapter {
         }
     }
 
+    /// Sends a deterministic envelope to the configured TCP endpoint.
     pub fn send(&self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {
         envelope.verify_integrity()?;
         let handshake = TcpHandshakeFrame::from_envelope(envelope);
@@ -135,13 +137,19 @@ impl TcpTransportAdapter {
         Ok(())
     }
 
+    /// Binds, accepts one inbound message, and parses/verifies envelope payload.
     pub fn listen_once(&self) -> Result<TcpReceivedEnvelope, SdkError> {
         let listener = TcpListener::bind(self.config.addr.as_str())
             .map_err(|_| SdkError::TransportFailure("tcp bind failed"))?;
         let (stream, peer_addr) = listener
             .accept()
             .map_err(|_| SdkError::TransportFailure("tcp accept failed"))?;
-        let envelope = self.read_envelope(stream)?;
+        let envelope = read_envelope(
+            stream,
+            self.config.max_wire_bytes,
+            &self.replay_guard_state,
+            Self::verify_and_record_guard,
+        )?;
         Ok(TcpReceivedEnvelope {
             envelope,
             peer_addr: peer_addr.to_string(),
@@ -163,29 +171,11 @@ impl TcpTransportAdapter {
         Err(SdkError::TransportFailure("tcp connect failed"))
     }
 
-    fn read_envelope(&self, stream: TcpStream) -> Result<TcpSignedEnvelope, SdkError> {
-        let mut payload = String::new();
-        let mut limited_reader = stream.take((self.config.max_wire_bytes + 1) as u64);
-        limited_reader
-            .read_to_string(&mut payload)
-            .map_err(|_| SdkError::TransportFailure("tcp read failed"))?;
-        if payload.len() > self.config.max_wire_bytes {
-            return Err(SdkError::InvalidInput {
-                field: "wire_payload",
-                reason: "exceeds max wire bytes",
-            });
-        }
-        let (handshake_payload, envelope_payload) = split_transport_payload(payload.as_str())?;
-        let handshake = TcpHandshakeFrame::parse_wire_payload(handshake_payload)?;
-        let envelope = TcpSignedEnvelope::parse_wire_payload(envelope_payload)?;
-        handshake.verify_matches_envelope(&envelope)?;
-        self.verify_and_record_replay_guard(&envelope)?;
-        Ok(envelope)
-    }
-
-    fn verify_and_record_replay_guard(&self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {
-        let mut guard = self
-            .replay_guard_state
+    fn verify_and_record_guard(
+        replay_guard_state: &Arc<Mutex<TcpReplayGuardState>>,
+        envelope: &TcpSignedEnvelope,
+    ) -> Result<(), SdkError> {
+        let mut guard = replay_guard_state
             .lock()
             .map_err(|_| SdkError::TransportFailure("tcp replay guard lock poisoned"))?;
         guard.verify_and_record(envelope)

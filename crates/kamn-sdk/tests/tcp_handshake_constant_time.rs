@@ -10,25 +10,30 @@ use support::{
     TEST_TCP_SIGNING_PRIVATE_KEY_HEX_ALT,
 };
 
-const SOURCE: &str = include_str!("../src/tcp/handshake.rs");
+const ROOT_SOURCE: &str = include_str!("../src/tcp/handshake.rs");
+const VERIFY_SOURCE: &str = include_str!("../src/tcp/handshake/verify.rs");
 
 #[test]
 fn regression_requires_constant_time_tcp_handshake_compares() {
-    let function_start = SOURCE
+    let function_start = ROOT_SOURCE
         .find("verify_matches_envelope(")
         .unwrap_or_else(|| panic!("verify_matches_envelope function must exist"));
-    let function_source = &SOURCE[function_start..];
+    let function_source = &ROOT_SOURCE[function_start..];
 
     assert!(
-        function_source.contains("constant_time_eq_bytes("),
+        function_source.contains("verify_envelope_match("),
+        "tcp handshake root shell must delegate envelope verification to the extracted helper"
+    );
+    assert!(
+        VERIFY_SOURCE.contains("constant_time_eq_bytes("),
         "tcp handshake verification must use a constant-time compare helper for signer key and signature"
     );
     assert!(
-        !function_source.contains("if self.signer_public_key != envelope.signer_public_key"),
+        !VERIFY_SOURCE.contains("if self.signer_public_key != envelope.signer_public_key"),
         "plain signer public key inequality must not remain in verify_matches_envelope"
     );
     assert!(
-        !function_source.contains("if self.signature != envelope.signature"),
+        !VERIFY_SOURCE.contains("if self.signature != envelope.signature"),
         "plain signature inequality must not remain in verify_matches_envelope"
     );
 }
