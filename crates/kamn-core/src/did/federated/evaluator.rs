@@ -17,7 +17,9 @@ impl<T: FederatedDidTrustStore> FederatedDidHandshakeEvaluator<T> {
         &mut self,
         input: FederatedDidHandshakeInput,
     ) -> Result<FederatedDidHandshakeDecision, FederatedDidHandshakeError> {
-        validate_trust(&self.trust_store, &input)?;
+        ensure_trusted(&self.trust_store, &input)?;
+        ensure_resolver_and_signature(&input)?;
+        ensure_quorum(&input)?;
         validate_runtime_guards(&input)?;
         Ok(FederatedDidHandshakeDecision {
             handshake_id: input.handshake_id,
@@ -28,52 +30,52 @@ impl<T: FederatedDidTrustStore> FederatedDidHandshakeEvaluator<T> {
     }
 }
 
-fn validate_trust<T: FederatedDidTrustStore>(
+fn ensure_trusted<T: FederatedDidTrustStore>(
     trust_store: &T,
     input: &FederatedDidHandshakeInput,
 ) -> Result<(), FederatedDidHandshakeError> {
-    if !trust_store.is_trusted(&input.remote_network, &input.subject_did) {
-        return Err(FederatedDidHandshakeError::TrustStoreMiss {
-            subject_did: input.subject_did.clone(),
-            network: input.remote_network.clone(),
-        });
+    if trust_store.is_trusted(&input.remote_network, &input.subject_did) {
+        return Ok(());
     }
+    Err(FederatedDidHandshakeError::TrustStoreMiss {
+        subject_did: input.subject_did.clone(),
+        network: input.remote_network.clone(),
+    })
+}
+
+fn ensure_resolver_and_signature(
+    input: &FederatedDidHandshakeInput,
+) -> Result<(), FederatedDidHandshakeError> {
     if input.resolver_version.trim().is_empty() {
-        return Err(FederatedDidHandshakeError::ResolverVersionMissing {
-            handshake_id: input.handshake_id.clone(),
-        });
+        return Err(FederatedDidHandshakeError::ResolverVersionMissing { handshake_id: input.handshake_id.clone() });
     }
-    if !input.signature_policy_passed {
-        return Err(FederatedDidHandshakeError::SignaturePolicyFailed {
-            handshake_id: input.handshake_id.clone(),
-        });
+    if input.signature_policy_passed {
+        return Ok(());
     }
-    if input.received_quorum < input.required_quorum {
-        return Err(FederatedDidHandshakeError::QuorumShortfall {
-            required: input.required_quorum,
-            received: input.received_quorum,
-        });
+    Err(FederatedDidHandshakeError::SignaturePolicyFailed { handshake_id: input.handshake_id.clone() })
+}
+
+fn ensure_quorum(input: &FederatedDidHandshakeInput) -> Result<(), FederatedDidHandshakeError> {
+    if input.received_quorum >= input.required_quorum {
+        return Ok(());
     }
-    Ok(())
+    Err(FederatedDidHandshakeError::QuorumShortfall {
+        required: input.required_quorum,
+        received: input.received_quorum,
+    })
 }
 
 fn validate_runtime_guards(
     input: &FederatedDidHandshakeInput,
 ) -> Result<(), FederatedDidHandshakeError> {
     if !input.nonce_monotonic {
-        return Err(FederatedDidHandshakeError::NonceReplayDetected {
-            handshake_id: input.handshake_id.clone(),
-        });
+        return Err(FederatedDidHandshakeError::NonceReplayDetected { handshake_id: input.handshake_id.clone() });
     }
     if !input.partition_sequence_monotonic {
-        return Err(FederatedDidHandshakeError::PartitionSequenceReplayDetected {
-            handshake_id: input.handshake_id.clone(),
-        });
+        return Err(FederatedDidHandshakeError::PartitionSequenceReplayDetected { handshake_id: input.handshake_id.clone() });
     }
     if input.downgrade_detected {
-        return Err(FederatedDidHandshakeError::DowngradeDetected {
-            handshake_id: input.handshake_id.clone(),
-        });
+        return Err(FederatedDidHandshakeError::DowngradeDetected { handshake_id: input.handshake_id.clone() });
     }
     Ok(())
 }
