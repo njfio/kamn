@@ -25,11 +25,11 @@ Reduce `crates/kamn-core/src/data_layer_m1.rs` from its monolithic form into a b
 - Split introduces touched-Rust size regressions in new files or functions
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m1.rs` is reduced to a bounded root shell
-- [ ] Extracted modules under `crates/kamn-core/src/data_layer_m1/` stay within the active size policy
-- [ ] Existing M1 behavior remains green under real tests/checks
-- [ ] `crates/kamn-core/tests/data_layer_m1_module_extraction_contract.rs` hard-fails on layout regressions
-- [ ] Touched-Rust size policy returns `policy_decision=GO`
+- [x] `crates/kamn-core/src/data_layer_m1.rs` is reduced to a bounded root shell
+- [x] Extracted modules under `crates/kamn-core/src/data_layer_m1/` stay within the active size policy
+- [x] Existing M1 behavior remains green under real tests/checks
+- [x] `crates/kamn-core/tests/data_layer_m1_module_extraction_contract.rs` hard-fails on layout regressions
+- [x] Touched-Rust size policy returns `policy_decision=GO`
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m1.rs`
@@ -47,3 +47,12 @@ Reduce `crates/kamn-core/src/data_layer_m1.rs` from its monolithic form into a b
 2. Extract the module tree and re-run the extraction contract to green
 3. Run issue-local behavior checks for M1 proof/anchoring compilation and tests
 4. Run touched-Rust size policy against the issue write set
+
+## Verification
+- `cargo test -p kamn-core --test data_layer_m1_module_extraction_contract -- --nocapture`
+- `cargo check -p kamn-core --lib`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-active-20260313-093857 --base-ref origin/main --output-json /tmp/6955-touched-size-final.json`
+
+## Deviations
+- `cargo test -p kamn-core data_layer_m1::tests:: --lib -- --nocapture` is still blocked on the unrelated current-main parse error in `crates/kamn-core/src/data_layer_m7_timeseries_telemetry/tests.rs:84`.
+- The issue was still integrated because the extraction contract, full `kamn-core` lib check, and touched-Rust policy all passed for the M1 split itself.
