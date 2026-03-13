@@ -48,3 +48,16 @@ Reduce `crates/kamn-core/src/signature_profile.rs` from its current monolithic f
 2. Extract the module tree and re-run the extraction contract to green
 3. Run issue-local behavior checks for signature-profile compilation and tests
 4. Run touched-Rust size policy against the issue write set
+
+
+## Final evidence
+- `cargo test -p kamn-core --test signature_profile_module_extraction_contract -- --nocapture`
+- `cargo check -p kamn-core --lib`
+- `cargo test -p kamn-core signature_profile::tests:: --lib -- --nocapture`
+- `cargo test -p kamn-node --no-run`
+- `cargo test -p kamn-sdk --no-run`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn-active-20260313-093857 --base-ref origin/main --output-json /tmp/6952-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- `cargo test -p kamn-core signature_profile::tests:: --lib -- --nocapture` is currently blocked on an unrelated current-main parse error in `crates/kamn-core/src/data_layer_m7_timeseries_telemetry/tests.rs` (`unexpected closing delimiter`). The split was verified with the extraction contract, `cargo check -p kamn-core --lib`, and downstream `--no-run` checks instead.
