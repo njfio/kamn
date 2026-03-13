@@ -9,73 +9,20 @@ use super::{
     DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE,
 };
 
-/// Deterministic proof-verification decision wrapper with stable reason markers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM1ProofVerificationDecision {
-    /// Proof verified successfully.
-    Valid {
-        /// Stable reason code.
-        reason_code: &'static str,
-    },
-    /// Proof verification failed.
-    Invalid {
-        /// Stable reason code.
-        reason_code: &'static str,
-        /// Original fail-closed verification error.
-        error: DataLayerM1Error,
-    },
+    Valid { reason_code: &'static str },
+    Invalid { reason_code: &'static str, error: DataLayerM1Error },
 }
 
-/// Verifies an inclusion proof fail-closed.
 pub fn verify_data_layer_m1_inclusion_proof(
     proof: &DataLayerM1MerkleInclusionProof,
 ) -> Result<(), DataLayerM1Error> {
-    if proof.batch_id.trim().is_empty() {
-        return Err(DataLayerM1Error::EmptyField("batch_id"));
-    }
-    if proof.merkle_root.trim().is_empty() {
-        return Err(DataLayerM1Error::EmptyField("merkle_root"));
-    }
-    if proof.message_id.trim().is_empty() {
-        return Err(DataLayerM1Error::EmptyField("message_id"));
-    }
-    if !is_valid_content_hash(proof.content_hash.as_str()) {
-        return Err(DataLayerM1Error::InvalidContentHash(proof.content_hash.clone()));
-    }
-
-    let expected_leaf = leaf_digest(&DataLayerM1MerkleLeaf {
-        message_id: proof.message_id.clone(),
-        leaf_index: proof.leaf_index,
-        content_hash: proof.content_hash.clone(),
-    });
-    if expected_leaf != proof.leaf_hash {
-        return Err(DataLayerM1Error::InvalidMerkleProof("leaf hash mismatch"));
-    }
-
-    let mut current = proof.leaf_hash.clone();
-    for (level_index, step) in proof.steps.iter().enumerate() {
-        if step.sibling_hash.trim().is_empty() {
-            return Err(DataLayerM1Error::InvalidMerkleProof(
-                "proof sibling hash must not be empty",
-            ));
-        }
-        current = match step.sibling_side {
-            DataLayerM1ProofSiblingSide::Left => {
-                node_digest(level_index, step.sibling_hash.as_str(), current.as_str())
-            }
-            DataLayerM1ProofSiblingSide::Right => {
-                node_digest(level_index, current.as_str(), step.sibling_hash.as_str())
-            }
-        };
-    }
-
-    if current != proof.merkle_root {
-        return Err(DataLayerM1Error::InvalidMerkleProof("proof root mismatch"));
-    }
-    Ok(())
+    validate_proof_metadata(proof)?;
+    validate_leaf_hash(proof)?;
+    validate_root_hash(proof)
 }
 
-/// Evaluates proof verification and projects a deterministic reason-coded decision.
 pub fn evaluate_data_layer_m1_inclusion_proof(
     proof: &DataLayerM1MerkleInclusionProof,
 ) -> DataLayerM1ProofVerificationDecision {
@@ -90,36 +37,100 @@ pub fn evaluate_data_layer_m1_inclusion_proof(
     }
 }
 
-/// Evaluates deterministic anchoring failure-matrix expectations.
 pub fn evaluate_data_layer_m1_anchor_failure_matrix(
     cases: &[DataLayerM1AnchorFailureMatrixCase],
 ) -> Result<DataLayerM1AnchorFailureMatrixReport, DataLayerM1Error> {
     if cases.is_empty() {
         return Err(DataLayerM1Error::InvalidFailureMatrixInput("cases"));
     }
+    let evidence = collect_failure_matrix_evidence(cases)?;
+    Ok(DataLayerM1AnchorFailureMatrixReport {
+        decision: failure_matrix_decision(&evidence),
+        evidence,
+    })
+}
 
-    let mut evidence = Vec::with_capacity(cases.len());
-    for case in cases {
-        if case.case_id.trim().is_empty() {
-            return Err(DataLayerM1Error::InvalidFailureMatrixInput("case_id"));
-        }
-        let observed_outcome_kind = anchor_outcome_kind(&case.result.outcome);
-        let observed_retry_class = case.result.retry_class;
-        let mismatch = observed_retry_class != case.expected_retry_class
-            || observed_outcome_kind != case.expected_outcome_kind;
-        evidence.push(DataLayerM1AnchorFailureMatrixEvidence {
-            case_id: case.case_id.clone(),
-            batch_id: case.result.batch_id.clone(),
-            idempotency_key: case.result.idempotency_key.clone(),
-            expected_retry_class: case.expected_retry_class,
-            observed_retry_class,
-            expected_outcome_kind: case.expected_outcome_kind,
-            observed_outcome_kind,
-            mismatch,
-        });
+fn validate_proof_metadata(proof: &DataLayerM1MerkleInclusionProof) -> Result<(), DataLayerM1Error> {
+    require_non_empty(proof.batch_id.as_str(), "batch_id")?;
+    require_non_empty(proof.merkle_root.as_str(), "merkle_root")?;
+    require_non_empty(proof.message_id.as_str(), "message_id")?;
+    if !is_valid_content_hash(proof.content_hash.as_str()) {
+        return Err(DataLayerM1Error::InvalidContentHash(proof.content_hash.clone()));
     }
+    Ok(())
+}
 
-    let decision = if evidence.iter().all(|entry| !entry.mismatch) {
+fn require_non_empty(value: &str, field: &'static str) -> Result<(), DataLayerM1Error> {
+    if value.trim().is_empty() {
+        return Err(DataLayerM1Error::EmptyField(field));
+    }
+    Ok(())
+}
+
+fn validate_leaf_hash(proof: &DataLayerM1MerkleInclusionProof) -> Result<(), DataLayerM1Error> {
+    let expected_leaf = leaf_digest(&DataLayerM1MerkleLeaf {
+        message_id: proof.message_id.clone(),
+        leaf_index: proof.leaf_index,
+        content_hash: proof.content_hash.clone(),
+    });
+    if expected_leaf != proof.leaf_hash {
+        return Err(DataLayerM1Error::InvalidMerkleProof("leaf hash mismatch"));
+    }
+    Ok(())
+}
+
+fn validate_root_hash(proof: &DataLayerM1MerkleInclusionProof) -> Result<(), DataLayerM1Error> {
+    let current = proof.steps.iter().enumerate().try_fold(proof.leaf_hash.clone(), |hash, step| {
+        fold_proof_step(step.0, step.1, &hash)
+    })?;
+    if current != proof.merkle_root {
+        return Err(DataLayerM1Error::InvalidMerkleProof("proof root mismatch"));
+    }
+    Ok(())
+}
+
+fn fold_proof_step(
+    level_index: usize,
+    step: &super::DataLayerM1MerkleProofStep,
+    current: &str,
+) -> Result<String, DataLayerM1Error> {
+    require_non_empty(step.sibling_hash.as_str(), "sibling_hash")
+        .map_err(|_| DataLayerM1Error::InvalidMerkleProof("proof sibling hash must not be empty"))?;
+    Ok(match step.sibling_side {
+        DataLayerM1ProofSiblingSide::Left => node_digest(level_index, step.sibling_hash.as_str(), current),
+        DataLayerM1ProofSiblingSide::Right => node_digest(level_index, current, step.sibling_hash.as_str()),
+    })
+}
+
+fn collect_failure_matrix_evidence(
+    cases: &[DataLayerM1AnchorFailureMatrixCase],
+) -> Result<Vec<DataLayerM1AnchorFailureMatrixEvidence>, DataLayerM1Error> {
+    cases.iter().map(build_failure_matrix_entry).collect()
+}
+
+fn build_failure_matrix_entry(
+    case: &DataLayerM1AnchorFailureMatrixCase,
+) -> Result<DataLayerM1AnchorFailureMatrixEvidence, DataLayerM1Error> {
+    require_non_empty(case.case_id.as_str(), "case_id")?;
+    let observed_outcome_kind = anchor_outcome_kind(&case.result.outcome);
+    let observed_retry_class = case.result.retry_class;
+    Ok(DataLayerM1AnchorFailureMatrixEvidence {
+        case_id: case.case_id.clone(),
+        batch_id: case.result.batch_id.clone(),
+        idempotency_key: case.result.idempotency_key.clone(),
+        expected_retry_class: case.expected_retry_class,
+        observed_retry_class,
+        expected_outcome_kind: case.expected_outcome_kind,
+        observed_outcome_kind,
+        mismatch: observed_retry_class != case.expected_retry_class
+            || observed_outcome_kind != case.expected_outcome_kind,
+    })
+}
+
+fn failure_matrix_decision(
+    evidence: &[DataLayerM1AnchorFailureMatrixEvidence],
+) -> DataLayerM1AnchorFailureMatrixDecision {
+    if evidence.iter().all(|entry| !entry.mismatch) {
         DataLayerM1AnchorFailureMatrixDecision::Stable {
             reason_code: DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE,
         }
@@ -127,7 +138,5 @@ pub fn evaluate_data_layer_m1_anchor_failure_matrix(
         DataLayerM1AnchorFailureMatrixDecision::DriftDetected {
             reason_code: DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
         }
-    };
-
-    Ok(DataLayerM1AnchorFailureMatrixReport { decision, evidence })
+    }
 }

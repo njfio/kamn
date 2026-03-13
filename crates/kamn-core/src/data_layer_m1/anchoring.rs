@@ -10,7 +10,6 @@ use crate::kolme_runtime_commit::{
 use crate::AgentDid;
 use std::collections::BTreeMap;
 
-/// Kolme anchoring worker for deterministic M1 merkle-root submissions.
 #[derive(Debug, Clone)]
 pub struct DataLayerM1KolmeAnchoringWorker<C> {
     pub(crate) client: C,
@@ -23,14 +22,12 @@ pub struct DataLayerM1KolmeAnchoringWorker<C> {
 }
 
 impl<C> DataLayerM1KolmeAnchoringWorker<C> {
-    /// Creates a new anchoring worker.
     pub fn new(client: C, actor_did: &str, state_root_prefix: &str) -> Result<Self, DataLayerM1Error> {
         if state_root_prefix.trim().is_empty() {
             return Err(DataLayerM1Error::EmptyField("state_root_prefix"));
         }
         let actor_did = AgentDid::parse(actor_did)
             .map_err(|_| DataLayerM1Error::InvalidActorDid(actor_did.to_owned()))?;
-
         Ok(Self {
             client,
             actor_did,
@@ -47,55 +44,53 @@ impl<C> DataLayerM1KolmeAnchoringWorker<C>
 where
     C: KolmeRuntimeCommitClient,
 {
-    /// Anchors one merkle batch via Kolme runtime-commit submission.
     pub fn anchor_batch(&mut self, batch: &DataLayerM1MerkleBatch) -> Result<DataLayerM1AnchorResult, DataLayerM1Error> {
-        if let Some(receipt) = self.receipt_by_batch_id.get(&batch.batch_id) {
-            let idempotency_key = self
-                .idempotency_by_batch_id
-                .get(&batch.batch_id)
-                .cloned()
-                .ok_or(DataLayerM1Error::InvalidAnchoringState(
-                    "missing idempotency key for accepted receipt",
-                ))?;
-            return Ok(DataLayerM1AnchorResult {
-                batch_id: batch.batch_id.clone(),
-                idempotency_key,
-                retry_class: DataLayerM1AnchorRetryClass::FinalizedNoRetry,
-                outcome: DataLayerM1AnchorOutcome::Duplicate(receipt.clone()),
-            });
+        if let Some(result) = self.existing_receipt_result(batch)? {
+            return Ok(result);
         }
-
         let nonce = self.assign_or_resolve_nonce(batch.batch_id.as_str());
         let request = self.build_request(batch, nonce)?;
         let idempotency_key = request.idempotency_key().to_owned();
         self.upsert_idempotency(batch.batch_id.as_str(), idempotency_key.as_str())?;
-
         let outcome = self.client.submit_commit(&request)?;
+        self.map_submit_outcome(batch, idempotency_key, outcome)
+    }
+
+    fn existing_receipt_result(
+        &self,
+        batch: &DataLayerM1MerkleBatch,
+    ) -> Result<Option<DataLayerM1AnchorResult>, DataLayerM1Error> {
+        let Some(receipt) = self.receipt_by_batch_id.get(&batch.batch_id) else {
+            return Ok(None);
+        };
+        let idempotency_key = self
+            .idempotency_by_batch_id
+            .get(&batch.batch_id)
+            .cloned()
+            .ok_or(DataLayerM1Error::InvalidAnchoringState(
+                "missing idempotency key for accepted receipt",
+            ))?;
+        Ok(Some(DataLayerM1AnchorResult {
+            batch_id: batch.batch_id.clone(),
+            idempotency_key,
+            retry_class: DataLayerM1AnchorRetryClass::FinalizedNoRetry,
+            outcome: DataLayerM1AnchorOutcome::Duplicate(receipt.clone()),
+        }))
+    }
+
+    fn map_submit_outcome(
+        &mut self,
+        batch: &DataLayerM1MerkleBatch,
+        idempotency_key: String,
+        outcome: KolmeRuntimeCommitOutcome,
+    ) -> Result<DataLayerM1AnchorResult, DataLayerM1Error> {
         match outcome {
             KolmeRuntimeCommitOutcome::Submitted(receipt) => {
-                let mapped = map_receipt(receipt);
-                self.receipt_by_batch_id.insert(batch.batch_id.clone(), mapped.clone());
-                Ok(DataLayerM1AnchorResult {
-                    batch_id: batch.batch_id.clone(),
-                    idempotency_key,
-                    retry_class: DataLayerM1AnchorRetryClass::NewSubmission,
-                    outcome: DataLayerM1AnchorOutcome::Submitted(mapped),
-                })
+                Ok(self.accepted_result(batch, idempotency_key, receipt, DataLayerM1AnchorRetryClass::NewSubmission))
             }
             KolmeRuntimeCommitOutcome::Duplicate(receipt) => {
-                let mapped = map_receipt(receipt);
-                self.receipt_by_batch_id.insert(batch.batch_id.clone(), mapped.clone());
-                let retry_class = if mapped.finality == KolmeCommitReceiptFinality::Pending {
-                    DataLayerM1AnchorRetryClass::RetryableInFlight
-                } else {
-                    DataLayerM1AnchorRetryClass::FinalizedNoRetry
-                };
-                Ok(DataLayerM1AnchorResult {
-                    batch_id: batch.batch_id.clone(),
-                    idempotency_key,
-                    retry_class,
-                    outcome: DataLayerM1AnchorOutcome::Duplicate(mapped),
-                })
+                let retry_class = retry_class_from_receipt(&receipt);
+                Ok(self.accepted_result(batch, idempotency_key, receipt, retry_class))
             }
             KolmeRuntimeCommitOutcome::Rejected { reason } => Ok(DataLayerM1AnchorResult {
                 batch_id: batch.batch_id.clone(),
@@ -103,6 +98,23 @@ where
                 retry_class: DataLayerM1AnchorRetryClass::ConflictNoRetry,
                 outcome: DataLayerM1AnchorOutcome::Rejected { reason },
             }),
+        }
+    }
+
+    fn accepted_result(
+        &mut self,
+        batch: &DataLayerM1MerkleBatch,
+        idempotency_key: String,
+        receipt: crate::kolme_runtime_commit::KolmeRuntimeCommitReceipt,
+        retry_class: DataLayerM1AnchorRetryClass,
+    ) -> DataLayerM1AnchorResult {
+        let mapped = map_receipt(receipt);
+        self.receipt_by_batch_id.insert(batch.batch_id.clone(), mapped.clone());
+        DataLayerM1AnchorResult {
+            batch_id: batch.batch_id.clone(),
+            idempotency_key,
+            retry_class,
+            outcome: build_outcome(mapped, retry_class),
         }
     }
 
@@ -134,17 +146,7 @@ where
     fn build_request(&self, batch: &DataLayerM1MerkleBatch, nonce: u64) -> Result<KolmeRuntimeCommitRequest, DataLayerM1Error> {
         let operation_id = format!("data-layer-m1-anchor-{}", batch.batch_id);
         let state_root = format!("{}:{}", self.state_root_prefix, batch.merkle_root);
-        let payload_hash = tagged_digest(
-            format!(
-                "anchor-payload|batch:{}|root:{}|count:{}|first:{}|last:{}",
-                batch.batch_id,
-                batch.merkle_root,
-                batch.message_count,
-                batch.first_message_id,
-                batch.last_message_id
-            )
-            .as_str(),
-        );
+        let payload_hash = tagged_digest(anchor_payload(batch).as_str());
         Ok(KolmeRuntimeCommitRequest::deterministic(
             operation_id.as_str(),
             state_root.as_str(),
@@ -152,5 +154,35 @@ where
             nonce,
             payload_hash.as_str(),
         )?)
+    }
+}
+
+fn retry_class_from_receipt(receipt: &crate::kolme_runtime_commit::KolmeRuntimeCommitReceipt) -> DataLayerM1AnchorRetryClass {
+    if receipt.finality == KolmeCommitReceiptFinality::Pending {
+        DataLayerM1AnchorRetryClass::RetryableInFlight
+    } else {
+        DataLayerM1AnchorRetryClass::FinalizedNoRetry
+    }
+}
+
+fn anchor_payload(batch: &DataLayerM1MerkleBatch) -> String {
+    format!(
+        "anchor-payload|batch:{}|root:{}|count:{}|first:{}|last:{}",
+        batch.batch_id,
+        batch.merkle_root,
+        batch.message_count,
+        batch.first_message_id,
+        batch.last_message_id
+    )
+}
+
+fn build_outcome(
+    receipt: DataLayerM1AnchorReceipt,
+    retry_class: DataLayerM1AnchorRetryClass,
+) -> DataLayerM1AnchorOutcome {
+    if retry_class == DataLayerM1AnchorRetryClass::NewSubmission {
+        DataLayerM1AnchorOutcome::Submitted(receipt)
+    } else {
+        DataLayerM1AnchorOutcome::Duplicate(receipt)
     }
 }
