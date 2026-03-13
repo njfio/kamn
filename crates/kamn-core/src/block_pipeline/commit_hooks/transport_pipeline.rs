@@ -26,6 +26,7 @@ where
     TStore: CanonicalCommitStore,
     THook: ForkChoiceHook,
 {
+    /// Builds a transport-fed pipeline with canonical commit persistence.
     pub fn new(
         gossip_enabled: bool,
         listener_required_confirmations: usize,
@@ -46,6 +47,7 @@ where
         })
     }
 
+    /// Reconciles canonical candidates from the transport feed through fork choice.
     pub fn reconcile_transport_candidates(
         &mut self,
     ) -> Result<Vec<CanonicalCandidateOutcome>, BlockPipelineError> {
@@ -53,29 +55,12 @@ where
         sort_canonical_candidates_for_reconciliation(&mut candidates);
         let mut outcomes = Vec::with_capacity(candidates.len());
         for candidate in candidates {
-            let block_height = candidate.block_height;
-            let payload_digest = candidate.payload_digest.clone();
-            match self.fork_choice_hook.evaluate_candidate(&candidate)? {
-                ForkChoiceDecision::Accept => {
-                    self.commit_store.persist_canonical_commit(candidate)?;
-                    outcomes.push(CanonicalCandidateOutcome {
-                        block_height,
-                        payload_digest,
-                        decision: CanonicalCandidateDecision::Accepted,
-                    });
-                }
-                ForkChoiceDecision::Reject { reason_code } => {
-                    outcomes.push(CanonicalCandidateOutcome {
-                        block_height,
-                        payload_digest,
-                        decision: CanonicalCandidateDecision::Rejected { reason_code },
-                    });
-                }
-            }
+            outcomes.push(self.reconcile_transport_candidate(candidate)?);
         }
         Ok(outcomes)
     }
 
+    /// Runs one transport-fed consensus round and persists the accepted commit.
     pub fn run_transport_consensus_round(
         &mut self,
         input: BlockConsensusRoundInput,
@@ -101,7 +86,31 @@ where
         Ok(report)
     }
 
+    /// Lists the currently persisted canonical commits.
     pub fn list_canonical_commits(&self) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
         self.commit_store.list_canonical_commits()
+    }
+
+    fn reconcile_transport_candidate(
+        &mut self,
+        candidate: CanonicalCommitRecord,
+    ) -> Result<CanonicalCandidateOutcome, BlockPipelineError> {
+        let block_height = candidate.block_height;
+        let payload_digest = candidate.payload_digest.clone();
+        match self.fork_choice_hook.evaluate_candidate(&candidate)? {
+            ForkChoiceDecision::Accept => {
+                self.commit_store.persist_canonical_commit(candidate)?;
+                Ok(CanonicalCandidateOutcome {
+                    block_height,
+                    payload_digest,
+                    decision: CanonicalCandidateDecision::Accepted,
+                })
+            }
+            ForkChoiceDecision::Reject { reason_code } => Ok(CanonicalCandidateOutcome {
+                block_height,
+                payload_digest,
+                decision: CanonicalCandidateDecision::Rejected { reason_code },
+            }),
+        }
     }
 }

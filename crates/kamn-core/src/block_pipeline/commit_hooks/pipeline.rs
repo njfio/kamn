@@ -1,9 +1,4 @@
-use crate::block_pipeline::block_pipeline_support::{
-    CanonicalCommitRecord, ForkChoiceDecision, TransportMempoolFeed,
-};
-use crate::block_pipeline::commit_hooks::sorting::{
-    payload_digest_for_transactions, sort_candidates_for_ingress,
-};
+use crate::block_pipeline::commit_hooks::sorting::payload_digest_for_transactions;
 use crate::block_pipeline::models::{
     BlockConsensusRoundInput, BlockPipelineCommitReport, BlockPipelineError,
 };
@@ -23,6 +18,7 @@ pub struct MempoolBlockPipeline {
 }
 
 impl MempoolBlockPipeline {
+    /// Builds a deterministic mempool pipeline with quorum thresholds.
     pub fn new(
         gossip_enabled: bool,
         listener_required_confirmations: usize,
@@ -37,13 +33,17 @@ impl MempoolBlockPipeline {
         })
     }
 
+    /// Returns the expected state hash for the current smoke-network state.
     pub fn expected_state_hash(&self) -> &str {
         self.network.expected_state_hash()
     }
+
+    /// Returns the number of queued processor mempool entries.
     pub fn processor_mempool_len(&self) -> usize {
         self.network.processor.mempool_len()
     }
 
+    /// Enqueues a new baseline transaction into the processor mempool.
     pub fn submit_transaction(
         &mut self,
         tx: BaselineTransaction,
@@ -52,6 +52,7 @@ impl MempoolBlockPipeline {
         Ok(())
     }
 
+    /// Runs one deterministic consensus round and emits the commit report.
     pub fn run_consensus_round(
         &mut self,
         input: BlockConsensusRoundInput,
@@ -61,44 +62,10 @@ impl MempoolBlockPipeline {
             return Err(BlockPipelineError::EmptyMempool);
         }
         let payload_digest = payload_digest_for_transactions(&pending);
-        for (_, _, override_digest) in &input.approver_votes {
-            if let Some(found) = override_digest {
-                if found != &payload_digest {
-                    return Err(BlockPipelineError::ConsensusPayloadDigestMismatch {
-                        expected: payload_digest.clone(),
-                        found: found.clone(),
-                    });
-                }
-            }
-        }
-        let listener_attestations = input
-            .listener_votes
-            .into_iter()
-            .map(|(listener_did, attestation_id)| {
-                ListenerAttestation::new(&listener_did, &attestation_id)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let listener_input = ListenerQuorumInput::new(
-            &input.listener_event_id,
-            input.listener_event_sequence,
-            listener_attestations,
-        )?;
-        let listener_decision = self.listener_evaluator.evaluate(listener_input)?;
-        let approver_attestations = input
-            .approver_votes
-            .into_iter()
-            .map(|(approver_did, attestation_id, override_digest)| {
-                let digest = override_digest.unwrap_or_else(|| payload_digest.clone());
-                ApproverAttestation::new(&approver_did, &digest, &attestation_id)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let approver_input = ApproverQuorumInput::new(
-            &input.outbound_action_id,
-            &payload_digest,
-            approver_attestations,
-        )?;
-        let approver_evaluator = ApproverQuorumEvaluator::new(self.approver_required_approvals)?;
-        let approver_decision = approver_evaluator.authorize(approver_input)?;
+        validate_approver_payload_overrides(&input, &payload_digest)?;
+        let listener_decision = build_listener_decision(&mut self.listener_evaluator, &input)?;
+        let approver_decision =
+            build_approver_decision(self.approver_required_approvals, &input, &payload_digest)?;
         let block = self.network.produce_block()?;
         Ok(BlockPipelineCommitReport {
             block,
@@ -107,4 +74,61 @@ impl MempoolBlockPipeline {
             payload_digest,
         })
     }
+}
+
+fn validate_approver_payload_overrides(
+    input: &BlockConsensusRoundInput,
+    payload_digest: &str,
+) -> Result<(), BlockPipelineError> {
+    for (_, _, override_digest) in &input.approver_votes {
+        if let Some(found) = override_digest {
+            if found != payload_digest {
+                return Err(BlockPipelineError::ConsensusPayloadDigestMismatch {
+                    expected: payload_digest.to_owned(),
+                    found: found.clone(),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+fn build_listener_decision(
+    evaluator: &mut ListenerQuorumEvaluator,
+    input: &BlockConsensusRoundInput,
+) -> Result<crate::runtime::ListenerQuorumDecision, BlockPipelineError> {
+    let attestations = input
+        .listener_votes
+        .iter()
+        .map(|(listener_did, attestation_id)| {
+            ListenerAttestation::new(listener_did, attestation_id)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let quorum_input = ListenerQuorumInput::new(
+        &input.listener_event_id,
+        input.listener_event_sequence,
+        attestations,
+    )?;
+    Ok(evaluator.evaluate(quorum_input)?)
+}
+
+fn build_approver_decision(
+    required_approvals: usize,
+    input: &BlockConsensusRoundInput,
+    payload_digest: &str,
+) -> Result<crate::runtime::ApproverQuorumDecision, BlockPipelineError> {
+    let attestations = input
+        .approver_votes
+        .iter()
+        .map(|(approver_did, attestation_id, override_digest)| {
+            let digest = override_digest
+                .clone()
+                .unwrap_or_else(|| payload_digest.to_owned());
+            ApproverAttestation::new(approver_did, &digest, attestation_id)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let quorum_input =
+        ApproverQuorumInput::new(&input.outbound_action_id, payload_digest, attestations)?;
+    let evaluator = ApproverQuorumEvaluator::new(required_approvals)?;
+    Ok(evaluator.authorize(quorum_input)?)
 }

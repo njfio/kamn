@@ -34,24 +34,30 @@ impl DurableCommitCheckerReasonProjection {
         }
     }
 
+    /// Returns the deterministic reason code emitted for the pipeline error.
     pub fn reason_code(&self) -> &str {
         self.reason_code.as_str()
     }
+    /// Returns the classified durable-commit-checker reason bucket.
     pub fn reason_class(&self) -> DurableCommitCheckerReasonClass {
         self.reason_class
     }
+    /// Returns the fixed source marker for this projection.
     pub fn source_marker(&self) -> &'static str {
         self.source_marker
     }
+    /// Returns the current durable-commit-checker reason taxonomy version.
     pub fn reason_taxonomy_version(&self) -> &'static str {
         durable_commit_checker_reason_taxonomy_version()
     }
 }
 
+/// Returns the durable-commit-checker reason taxonomy version marker.
 pub fn durable_commit_checker_reason_taxonomy_version() -> &'static str {
     DURABLE_COMMIT_CHECKER_REASON_TAXONOMY_VERSION
 }
 
+/// Projects a block-pipeline error into a deterministic durable-commit-checker reason payload.
 pub fn project_durable_commit_checker_reason(
     error: &BlockPipelineError,
 ) -> DurableCommitCheckerReasonProjection {

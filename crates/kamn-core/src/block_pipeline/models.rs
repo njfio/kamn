@@ -46,15 +46,28 @@ pub enum BlockPipelineError {
     /// Pipeline attempted a consensus round with an empty mempool.
     EmptyMempool,
     /// Approver payload digest override mismatched deterministic block digest.
-    ConsensusPayloadDigestMismatch { expected: String, found: String },
+    ConsensusPayloadDigestMismatch {
+        /// Deterministic digest produced from the pending transactions.
+        expected: String,
+        /// Override digest supplied by approver votes.
+        found: String,
+    },
     /// Transport feed returned an error while draining mempool candidates.
     TransportFeed(String),
     /// Canonical commit store returned an error while persisting/listing records.
     CommitStore(String),
     /// Fork-choice hook rejected canonical candidate block.
-    ForkChoiceRejected { reason_code: String },
+    ForkChoiceRejected {
+        /// Deterministic fork-choice rejection reason code.
+        reason_code: String,
+    },
     /// Restart/replay lineage drift detected for canonical commit persistence.
-    ReplayDrift { reason_code: String, detail: String },
+    ReplayDrift {
+        /// Deterministic replay-drift reason code.
+        reason_code: String,
+        /// Human-readable continuity drift detail.
+        detail: String,
+    },
 }
 
 impl From<ListenerQuorumError> for BlockPipelineError {

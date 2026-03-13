@@ -6,6 +6,27 @@ use super::{
 use crate::config::NodeRole;
 use crate::transaction::BaselineTransaction;
 
+fn canonical_commit(
+    block_height: u64,
+    payload_digest: &str,
+    transaction_id: &str,
+) -> CanonicalCommitRecord {
+    CanonicalCommitRecord {
+        block_height,
+        producer_role: NodeRole::Processor,
+        payload_digest: payload_digest.to_owned(),
+        transaction_ids: vec![transaction_id.to_owned()],
+    }
+}
+
+fn assert_hook_decision(
+    hook: &mut DeterministicCompetingBranchForkChoiceHook,
+    candidate: &CanonicalCommitRecord,
+) -> ForkChoiceDecision {
+    hook.evaluate_candidate(candidate)
+        .expect("fork-choice hook should evaluate candidate")
+}
+
 #[test]
 fn constructor_rejects_zero_listener_quorum_threshold() {
     let result = MempoolBlockPipeline::new(true, 0, 1);
@@ -47,68 +68,36 @@ fn payload_digest_is_deterministic_across_orderings() {
 
 #[test]
 fn deterministic_competing_branch_hook_rejects_stale_candidate_height() {
-    let seeded_head = CanonicalCommitRecord {
-        block_height: 8,
-        producer_role: NodeRole::Processor,
-        payload_digest: "digest-z".to_owned(),
-        transaction_ids: vec!["tx-z".to_owned()],
-    };
+    let seeded_head = canonical_commit(8, "digest-z", "tx-z");
     let mut hook = DeterministicCompetingBranchForkChoiceHook::with_canonical_head(seeded_head);
-    let stale_candidate = CanonicalCommitRecord {
-        block_height: 7,
-        producer_role: NodeRole::Processor,
-        payload_digest: "digest-a".to_owned(),
-        transaction_ids: vec!["tx-a".to_owned()],
-    };
-
-    let decision = hook
-        .evaluate_candidate(&stale_candidate)
-        .expect("hook should evaluate stale candidate");
+    let stale_candidate = canonical_commit(7, "digest-a", "tx-a");
+    let decision = assert_hook_decision(&mut hook, &stale_candidate);
     assert_eq!(
         decision,
         ForkChoiceDecision::Reject {
             reason_code: "fork_choice_stale_block_height".to_owned(),
         }
     );
-    assert_eq!(
-        hook.canonical_head()
-            .expect("seeded canonical head should remain set")
-            .payload_digest,
-        "digest-z"
-    );
+    let head = hook
+        .canonical_head()
+        .expect("seeded canonical head should remain set");
+    assert_eq!(head.payload_digest, "digest-z");
 }
 
 #[test]
 fn deterministic_competing_branch_hook_prefers_lexicographically_lower_digest_on_tie() {
     let mut hook = DeterministicCompetingBranchForkChoiceHook::new();
-    let branch_high = CanonicalCommitRecord {
-        block_height: 5,
-        producer_role: NodeRole::Processor,
-        payload_digest: "digest-b".to_owned(),
-        transaction_ids: vec!["tx-b".to_owned()],
-    };
-    let branch_low = CanonicalCommitRecord {
-        block_height: 5,
-        producer_role: NodeRole::Processor,
-        payload_digest: "digest-a".to_owned(),
-        transaction_ids: vec!["tx-a".to_owned()],
-    };
-
-    let first = hook
-        .evaluate_candidate(&branch_high)
-        .expect("first branch should evaluate");
-    let second = hook
-        .evaluate_candidate(&branch_low)
-        .expect("second branch should evaluate");
+    let branch_high = canonical_commit(5, "digest-b", "tx-b");
+    let branch_low = canonical_commit(5, "digest-a", "tx-a");
+    let first = assert_hook_decision(&mut hook, &branch_high);
+    let second = assert_hook_decision(&mut hook, &branch_low);
 
     assert_eq!(first, ForkChoiceDecision::Accept);
     assert_eq!(second, ForkChoiceDecision::Accept);
-    assert_eq!(
-        hook.canonical_head()
-            .expect("head should be selected after tie break")
-            .payload_digest,
-        "digest-a"
-    );
+    let head = hook
+        .canonical_head()
+        .expect("head should be selected after tie break");
+    assert_eq!(head.payload_digest, "digest-a");
 }
 
 #[test]
