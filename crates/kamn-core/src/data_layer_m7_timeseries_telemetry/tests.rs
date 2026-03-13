@@ -1,8 +1,10 @@
-use super::{
-    daily_bucket, hourly_bucket, project_m7_observability_projection, validate_kamn_did,
-    DataLayerM7TelemetryPointRecord, DataLayerM7TimeseriesError,
-    DATA_LAYER_M7_DAILY_BUCKET_SECONDS, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
-};
+#[cfg(test)]
+mod tests {
+    use super::super::{
+        daily_bucket, hourly_bucket, project_m7_observability_projection, validate_kamn_did,
+        DataLayerM7TelemetryPointRecord, DataLayerM7TimeseriesError,
+        DATA_LAYER_M7_DAILY_BUCKET_SECONDS, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+    };
 
     fn telemetry_point(
         message_count: u64,
