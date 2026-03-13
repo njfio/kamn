@@ -11,7 +11,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn read(path: &Path) -> String {
-    fs::read_to_string(path).unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
+    fs::read_to_string(path)
+        .unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
 }
 
 fn count_lines(path: &Path) -> usize {
@@ -40,35 +41,41 @@ fn assert_required_modules(paths: &[PathBuf; 5]) {
 }
 
 fn assert_root_markers(root_source: &str) {
-    assert!(root_source.contains("mod models;"), "root missing models module marker");
-    assert!(
-        root_source.contains("mod reason_projection;"),
-        "root missing reason_projection module marker"
-    );
-    assert!(
-        root_source.contains("mod lane_boundary;"),
-        "root missing lane_boundary module marker"
-    );
-    assert!(
-        root_source.contains("mod commit_hooks;"),
-        "root missing commit_hooks module marker"
-    );
-    assert!(root_source.contains("#[cfg(test)]"), "root missing test module marker");
-    assert!(root_source.contains("mod tests;"), "root missing tests module marker");
+    for (marker, message) in [
+        ("mod models;", "root missing models module marker"),
+        (
+            "mod reason_projection;",
+            "root missing reason_projection module marker",
+        ),
+        (
+            "mod lane_boundary;",
+            "root missing lane_boundary module marker",
+        ),
+        (
+            "mod commit_hooks;",
+            "root missing commit_hooks module marker",
+        ),
+        ("#[cfg(test)]", "root missing test module marker"),
+        ("mod tests;", "root missing tests module marker"),
+    ] {
+        assert!(root_source.contains(marker), "{message}");
+    }
 }
 
 fn assert_budgets(block_pipeline_root: &Path, paths: &[PathBuf; 5]) {
+    let block_pipeline_root_lines = count_lines(block_pipeline_root);
     assert!(
-        count_lines(block_pipeline_root) <= 180,
+        block_pipeline_root_lines <= 180,
         "block pipeline root shell too large: {}",
-        count_lines(block_pipeline_root)
+        block_pipeline_root_lines
     );
     for path in paths {
+        let path_lines = count_lines(path);
         assert!(
-            count_lines(path) <= 200,
+            path_lines <= 200,
             "{} exceeds file budget with {} lines",
             path.display(),
-            count_lines(path)
+            path_lines
         );
     }
 }
