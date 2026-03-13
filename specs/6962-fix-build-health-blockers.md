@@ -28,11 +28,11 @@ Repair the current `kamn-core` build-health blockers by fixing the malformed M7 
 - `cargo clippy` still flags production unwrap usage in `data_layer_m1/batch.rs`.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m7_timeseries_telemetry/tests.rs` parses correctly.
-- [ ] `crates/kamn-core/src/data_layer_m1/batch.rs` contains no production `.unwrap()` calls.
-- [ ] M1 batch assembly still returns the same Merkle root/proof behavior under focused tests.
-- [ ] `cargo test --no-run` succeeds for the repaired scope or any unrelated blocker is recorded explicitly.
-- [ ] `cargo clippy` no longer fails on the M1 batch unwrap usage.
+- [x] `crates/kamn-core/src/data_layer_m7_timeseries_telemetry/tests.rs` parses correctly.
+- [x] `crates/kamn-core/src/data_layer_m1/batch.rs` contains no production `.unwrap()` calls.
+- [x] M1 batch assembly still returns the same Merkle root/proof behavior under focused tests.
+- [x] `cargo test --no-run` succeeds for the repaired scope or any unrelated blocker is recorded explicitly.
+- [x] `cargo clippy` no longer fails on the M1 batch unwrap usage.
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m1/batch.rs`
@@ -51,3 +51,13 @@ Repair the current `kamn-core` build-health blockers by fixing the malformed M7 
 - `cargo test -p kamn-core --test build_health_blockers_contract -- --nocapture`.
 - `cargo test --no-run` for the affected crate/workspace scope.
 - `cargo clippy` or equivalent targeted check proving the unwrap usage is gone.
+
+## Phase 6 Evidence
+- `cargo test -p kamn-core --test build_health_blockers_contract -- --nocapture`
+- `cargo test -p kamn-core data_layer_m1::tests:: --lib -- --nocapture`
+- `cargo test -p kamn-core --no-run`
+- `cargo clippy -p kamn-core --lib -- -D clippy::unwrap_used`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6962-touched-size.json`
+
+## Deviations
+- `cargo clippy -p kamn-core --lib -- -D clippy::unwrap_used` still emits unrelated workspace warnings, but it no longer fails on the M1 batch unwrap usage that this issue targets.
