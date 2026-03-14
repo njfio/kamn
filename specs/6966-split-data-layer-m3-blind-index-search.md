@@ -29,11 +29,11 @@ Reduce `crates/kamn-core/src/data_layer_m3_blind_index_search.rs` to a thin root
 - Inline tests are lost or no longer compile.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-core/src/data_layer_m3_blind_index_search.rs` is reduced to a thin root shell within the active file budget.
-- [ ] Concern-based modules are extracted under `crates/kamn-core/src/data_layer_m3_blind_index_search/`.
-- [ ] A hard-fail extraction contract fails closed if root markers, extracted files, or file budgets regress.
-- [ ] Existing M3 blind-index tests remain green on current `main`.
-- [ ] Touched-Rust size policy returns `policy_decision=GO`.
+- [x] `crates/kamn-core/src/data_layer_m3_blind_index_search.rs` is reduced to a thin root shell within the active file budget.
+- [x] Concern-based modules are extracted under `crates/kamn-core/src/data_layer_m3_blind_index_search/`.
+- [x] A hard-fail extraction contract fails closed if root markers, extracted files, or file budgets regress.
+- [x] Existing M3 blind-index tests remain green on current `main`.
+- [x] Touched-Rust size policy returns `policy_decision=GO`.
 
 ## Files to touch
 - `crates/kamn-core/src/data_layer_m3_blind_index_search.rs`
@@ -52,3 +52,24 @@ Reduce `crates/kamn-core/src/data_layer_m3_blind_index_search.rs` to a thin root
 - `cargo test -p kamn-core --test data_layer_m3_blind_index_search_module_extraction_contract -- --nocapture`.
 - `cargo test -p kamn-core data_layer_m3_blind_index_search::tests:: --lib -- --nocapture`.
 - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6966-touched-size.json`.
+
+## Final evidence
+- Root shell size: `29` LOC in `crates/kamn-core/src/data_layer_m3_blind_index_search.rs`.
+- Extracted module tree:
+  - `models.rs`
+  - `catalog.rs`
+  - `catalog/{register,search,projection,determinism,metadata}.rs`
+  - `hashing.rs`
+  - `validation.rs`
+  - `errors.rs`
+  - `tests.rs`
+- Verified commands:
+  - `cargo test -p kamn-core --test data_layer_m3_blind_index_search_module_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core data_layer_m3_blind_index_search::tests:: --lib -- --nocapture`
+  - `cargo test -p kamn-core --test data_layer_m3_blind_index_search -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6966-touched-size.json`
+- Touched-Rust result: `policy_decision=GO`.
+
+## Deviations
+- None in runtime behavior.
+- The Phase 6 `integrate(6966)` commit is intentionally empty because this issue is an internal extraction. The verified integration path is the preserved `kamn-core` root shell plus the existing `data_layer_m3_blind_index_search` contract test target on current `main`.
