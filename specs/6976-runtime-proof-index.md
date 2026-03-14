@@ -53,3 +53,17 @@ Publish one operator-facing index on current `main` that summarizes the currentl
 
 ## Execution notes
 This issue exists to give operators and reviewers one current-main entrypoint for runtime substance. It should reduce repetitive repo-wide argument and point directly at the three proofs already established on `main`.
+
+## Final implementation
+- Validation index: [docs/validation/current-proven-runtime-slices.md](/home/n/Code/kamn/docs/validation/current-proven-runtime-slices.md)
+- Hard-fail docs contract: [runtime_proof_index_contract.rs](/home/n/Code/kamn/crates/kamn-node/tests/runtime_proof_index_contract.rs)
+- Discoverability wiring: [live-environment.md](/home/n/Code/kamn/docs/validation/live-environment.md)
+- Review-doc link: [corrected-audit-response-2026-03-14.md](/home/n/Code/kamn/docs/review/corrected-audit-response-2026-03-14.md)
+
+## Final evidence
+- `cargo test -p kamn-node --test runtime_proof_index_contract -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6976-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None. The index remained docs-plus-contract work only.
