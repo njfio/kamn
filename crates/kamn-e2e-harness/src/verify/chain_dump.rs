@@ -28,29 +28,45 @@ fn push_block_pair(
     Ok(())
 }
 
-fn extract_chain_block_hash_pairs(chain_dump_json: &str) -> Result<Vec<(String, String)>, String> {
-    let blocks_payload = extract_blocks_payload(chain_dump_json)?;
+fn start_block(block_start: &mut Option<usize>, depth: &mut usize, index: usize) {
+    if *depth == 0 {
+        *block_start = Some(index);
+    }
+    *depth += 1;
+}
+
+fn finish_block(
+    pairs: &mut Vec<(String, String)>,
+    block_start: &mut Option<usize>,
+    depth: &mut usize,
+    index: usize,
+    blocks_payload: &str,
+) -> Result<(), String> {
+    if *depth == 0 {
+        return Err("chain dump blocks payload malformed".to_owned());
+    }
+    *depth -= 1;
+    if *depth == 0 {
+        push_block_pair(pairs, *block_start, index, blocks_payload)?;
+        *block_start = None;
+    }
+    Ok(())
+}
+
+fn parse_block_pairs(blocks_payload: &str) -> Result<Vec<(String, String)>, String> {
     let mut pairs = Vec::new();
     let mut depth = 0usize;
     let mut block_start = None;
-    for (index, character) in blocks_payload.as_str().char_indices() {
+    for (index, character) in blocks_payload.char_indices() {
         match character {
-            '{' => {
-                if depth == 0 {
-                    block_start = Some(index);
-                }
-                depth += 1;
-            }
-            '}' => {
-                if depth == 0 {
-                    return Err("chain dump blocks payload malformed".to_owned());
-                }
-                depth -= 1;
-                if depth == 0 {
-                    push_block_pair(&mut pairs, block_start, index, blocks_payload.as_str())?;
-                    block_start = None;
-                }
-            }
+            '{' => start_block(&mut block_start, &mut depth, index),
+            '}' => finish_block(
+                &mut pairs,
+                &mut block_start,
+                &mut depth,
+                index,
+                blocks_payload,
+            )?,
             _ => {}
         }
     }
@@ -58,6 +74,11 @@ fn extract_chain_block_hash_pairs(chain_dump_json: &str) -> Result<Vec<(String, 
         return Err("chain dump blocks payload malformed".to_owned());
     }
     Ok(pairs)
+}
+
+fn extract_chain_block_hash_pairs(chain_dump_json: &str) -> Result<Vec<(String, String)>, String> {
+    let blocks_payload = extract_blocks_payload(chain_dump_json)?;
+    parse_block_pairs(&blocks_payload)
 }
 
 fn read_block_pair(block_fragment: &str) -> Result<(String, String), String> {
