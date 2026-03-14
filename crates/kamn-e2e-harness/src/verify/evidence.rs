@@ -61,20 +61,25 @@ fn extract_required_value(value: Option<String>, error: String) -> Result<String
     value.filter(|candidate| !candidate.is_empty()).ok_or(error)
 }
 
+fn missing_field(path: &Path, field: &str) -> String {
+    format!("evidence artifact missing {field}: {}", path.display())
+}
+
+fn invalid_field(path: &Path, field: &str) -> String {
+    format!(
+        "evidence artifact invalid {field} format: {}",
+        path.display()
+    )
+}
+
 fn validate_evidence_hash(artifact_json: &str, artifact_path: &Path) -> Result<(), String> {
     let normalized = strip_json_whitespace(artifact_json);
     let evidence_hash = extract_required_value(
         extract_json_string_marker(&normalized, "\"evidence_hash\":\""),
-        format!(
-            "evidence artifact missing _verification.evidence_hash: {}",
-            artifact_path.display()
-        ),
+        missing_field(artifact_path, "_verification.evidence_hash"),
     )?;
     if !is_sha256_value(&evidence_hash) {
-        return Err(format!(
-            "evidence artifact invalid _verification.evidence_hash format: {}",
-            artifact_path.display()
-        ));
+        return Err(invalid_field(artifact_path, "_verification.evidence_hash"));
     }
     Ok(())
 }
@@ -83,16 +88,10 @@ fn validate_captured_at(artifact_json: &str, artifact_path: &Path) -> Result<(),
     let normalized = strip_json_whitespace(artifact_json);
     let captured_at = extract_required_value(
         extract_json_string_marker(&normalized, "\"captured_at\":\""),
-        format!(
-            "evidence artifact missing _verification.captured_at: {}",
-            artifact_path.display()
-        ),
+        missing_field(artifact_path, "_verification.captured_at"),
     )?;
     if !is_rfc3339_utc_z_timestamp(&captured_at) {
-        return Err(format!(
-            "evidence artifact invalid _verification.captured_at format: {}",
-            artifact_path.display()
-        ));
+        return Err(invalid_field(artifact_path, "_verification.captured_at"));
     }
     Ok(())
 }
@@ -100,15 +99,12 @@ fn validate_captured_at(artifact_json: &str, artifact_path: &Path) -> Result<(),
 fn validate_anchor_tx_hash(artifact_json: &str, artifact_path: &Path) -> Result<(), String> {
     let tx_hash = extract_required_value(
         extract_anchor_string(artifact_json, "\"tx_hash\":\""),
-        format!(
-            "evidence artifact missing _verification.kolme_anchor.tx_hash: {}",
-            artifact_path.display()
-        ),
+        missing_field(artifact_path, "_verification.kolme_anchor.tx_hash"),
     )?;
     if !is_sha256_value(&tx_hash) {
-        return Err(format!(
-            "evidence artifact invalid _verification.kolme_anchor.tx_hash format: {}",
-            artifact_path.display()
+        return Err(invalid_field(
+            artifact_path,
+            "_verification.kolme_anchor.tx_hash",
         ));
     }
     Ok(())
@@ -116,9 +112,9 @@ fn validate_anchor_tx_hash(artifact_json: &str, artifact_path: &Path) -> Result<
 
 fn validate_anchor_block_height(artifact_json: &str, artifact_path: &Path) -> Result<(), String> {
     if extract_anchor_block_height(artifact_json).is_none() {
-        return Err(format!(
-            "evidence artifact invalid _verification.kolme_anchor.block_height format: {}",
-            artifact_path.display()
+        return Err(invalid_field(
+            artifact_path,
+            "_verification.kolme_anchor.block_height",
         ));
     }
     Ok(())
@@ -127,10 +123,7 @@ fn validate_anchor_block_height(artifact_json: &str, artifact_path: &Path) -> Re
 fn validate_anchor_finality(artifact_json: &str, artifact_path: &Path) -> Result<(), String> {
     let finality = extract_required_value(
         extract_anchor_string(artifact_json, "\"finality\":\""),
-        format!(
-            "evidence artifact missing _verification.kolme_anchor.finality: {}",
-            artifact_path.display()
-        ),
+        missing_field(artifact_path, "_verification.kolme_anchor.finality"),
     )?;
     if finality != "FINAL" {
         return Err(format!(
