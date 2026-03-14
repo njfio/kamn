@@ -18,25 +18,25 @@ const REQUIRED_INDEX_MARKERS: &[&str] = &[
 
 #[test]
 fn escrow_settlement_validation_doc_exists_and_stays_bounded() {
-    let doc = read_workspace_file(DOC);
-
-    for marker in REQUIRED_DOC_MARKERS {
-        assert!(
-            doc.contains(marker),
-            "escrow settlement validation doc missing marker: {marker}"
-        );
-    }
+    assert_contains_all(
+        read_workspace_file(DOC).as_str(),
+        REQUIRED_DOC_MARKERS,
+        "escrow settlement validation doc",
+    );
 }
 
 #[test]
 fn runtime_proof_index_includes_escrow_settlement_slice() {
-    let index = read_workspace_file(INDEX);
+    assert_contains_all(
+        read_workspace_file(INDEX).as_str(),
+        REQUIRED_INDEX_MARKERS,
+        "runtime proof index",
+    );
+}
 
-    for marker in REQUIRED_INDEX_MARKERS {
-        assert!(
-            index.contains(marker),
-            "runtime proof index missing escrow settlement marker: {marker}"
-        );
+fn assert_contains_all(doc: &str, markers: &[&str], label: &str) {
+    for marker in markers {
+        assert!(doc.contains(marker), "{label} missing marker: {marker}");
     }
 }
 
