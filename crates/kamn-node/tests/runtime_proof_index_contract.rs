@@ -17,10 +17,7 @@ const INDEX_MARKERS: &[&str] = &[
 
 #[test]
 fn runtime_proof_index_exists_with_required_markers() {
-    let doc = read_workspace_file(INDEX_DOC_PATH);
-    for marker in INDEX_MARKERS {
-        assert!(doc.contains(marker), "runtime proof index missing marker: {}", marker);
-    }
+    assert_contains_all(read_workspace_file(INDEX_DOC_PATH).as_str(), INDEX_MARKERS);
 }
 
 #[test]
@@ -30,6 +27,12 @@ fn corrected_audit_response_links_runtime_proof_index() {
         doc.contains("docs/validation/current-proven-runtime-slices.md"),
         "corrected audit response must link the runtime proof index"
     );
+}
+
+fn assert_contains_all(doc: &str, markers: &[&str]) {
+    for marker in markers {
+        assert!(doc.contains(marker), "runtime proof index missing marker: {}", marker);
+    }
 }
 
 fn read_workspace_file(relative_path: &str) -> String {
