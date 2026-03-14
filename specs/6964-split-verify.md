@@ -28,11 +28,11 @@ Reduce `crates/kamn-e2e-harness/src/verify.rs` to a thin root shell by extractin
 - Inline tests are lost or no longer compile.
 
 ## Acceptance criteria
-- [ ] `crates/kamn-e2e-harness/src/verify.rs` is reduced to a thin root shell within the active file budget.
-- [ ] Extraction contract fails closed if root markers or module files regress.
-- [ ] `verify_manifest`, `verify_chain_dump`, `validate_evidence_verification_blocks`, `generate_verification_report`, and `generate_verification_report_json` remain callable from the root.
-- [ ] Existing verification unit tests still pass.
-- [ ] Touched-Rust size policy returns `policy_decision=GO`.
+- [x] `crates/kamn-e2e-harness/src/verify.rs` is reduced to a thin root shell within the active file budget.
+- [x] Extraction contract fails closed if root markers or module files regress.
+- [x] `verify_manifest`, `verify_chain_dump`, `validate_evidence_verification_blocks`, `generate_verification_report`, and `generate_verification_report_json` remain callable from the root.
+- [x] Existing verification unit tests still pass.
+- [x] Touched-Rust size policy returns `policy_decision=GO`.
 
 ## Files to touch
 - `crates/kamn-e2e-harness/src/verify.rs`
@@ -51,3 +51,21 @@ Reduce `crates/kamn-e2e-harness/src/verify.rs` to a thin root shell by extractin
 - `cargo test -p kamn-e2e-harness --test verify_module_extraction_contract -- --nocapture`.
 - `cargo test -p kamn-e2e-harness verify::tests:: --lib -- --nocapture`.
 - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6964-touched-size.json`.
+
+## Final evidence
+- Extracted modules landed under `crates/kamn-e2e-harness/src/verify/`:
+  - `manifest.rs`
+  - `chain_dump.rs`
+  - `evidence.rs`
+  - `report.rs`
+  - `support.rs`
+  - `tests.rs`
+- Root shell reduced to `19` LOC in `crates/kamn-e2e-harness/src/verify.rs`.
+- Verified:
+  - `cargo test -p kamn-e2e-harness --test verify_module_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-e2e-harness verify::tests:: --lib -- --nocapture`
+  - `cargo test -p kamn-e2e-harness --test command_contract parser_verify_contract_tests:: -- --nocapture`
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6964-touched-size.json`
+
+## Deviations
+- None.
