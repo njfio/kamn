@@ -62,3 +62,25 @@ Publish one corrected audit response on current `main` that evaluates the recent
 
 ## Execution notes
 This issue is not a marketing rebuttal. It exists to make the repo's current state defensible: what the critique gets right, what is now stale, what remains unproven, and what two concrete runtime proofs now exist on `main`.
+
+## Final implementation
+- Review response: [docs/review/corrected-audit-response-2026-03-14.md](/home/n/Code/kamn/docs/review/corrected-audit-response-2026-03-14.md)
+- Hard-fail docs contract: [corrected_audit_response_docs.rs](/home/n/Code/kamn/crates/kamn-core/tests/corrected_audit_response_docs.rs)
+- Review index wiring: [README.md](/home/n/Code/kamn/docs/review/README.md)
+
+## Final evidence
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `cargo check -q`
+- `cargo test --no-run -q`
+- `cargo clippy -q -p kamn-core --lib -- -D clippy::unwrap_used`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6972-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Final conclusions captured by the response
+- The earlier external audit is directionally useful on strategy and size debt.
+- Its build-health section is stale on current `main` after `#6963`.
+- Its `~23K LOC Rust` and `8,536 tests` telemetry is stale against the current checkout.
+- Current `main` now has two concrete proof anchors: the node service-API vertical slice and the SDK TCP signed-relay vertical slice.
+
+## Deviations
+- None. The issue remained docs-plus-contract work only and did not require runtime changes.
