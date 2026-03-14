@@ -36,6 +36,9 @@ This document defines how recipient-targeted messages move from `POST /v1/messag
 - Once recipient endpoint is available, a subsequent daemon run forwards pending entries and projects sender state.
 - Recipient delivered state persists across service API restart via the same durable state file.
 
+## Operator Validation
+- Durable proof runbook: `docs/validation/durable-cross-node-relay-slice.md`
+
 ## Verification Coverage
 Primary integration and regression coverage:
 - `integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract`
