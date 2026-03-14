@@ -15,6 +15,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves service-api escrow lifecycle persistence through fund, release, and restart-visible released state
 - bridge finality slice: `docs/validation/bridge-finality-slice.md`
   - proves deterministic receipt-finality normalization and persisted forwarded bridge state
+- solana receipt finality slice: `docs/validation/solana-receipt-finality-slice.md`
+  - proves bounded Solana receipt-finality normalization on the public core surface
 
 ## What Remains Unproven
 - broad production readiness
