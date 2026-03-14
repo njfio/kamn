@@ -27,8 +27,8 @@ fn corrected_audit_response_doc_exists_with_required_proof_anchors_and_conclusio
         "Stale Or Incorrect Claims",
         "Unproven Claims",
         "build-health blockers from the earlier audit are fixed on current main",
-        "Rust LOC under crates/: 104944",
-        "direct #[test] count under crates/: 5047",
+        "Rust LOC under crates/: 93370",
+        "direct #[test] count under crates/: 5058",
         "AGENTS size debt remains real",
     ] {
         assert!(doc.contains(marker), "missing marker: {marker}");
