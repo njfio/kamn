@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const DOC: &str = "docs/validation/bridge-finality-slice.md";
-const INDEX: &str = "docs/validation/current-proven-runtime-slices.md";
+const DOC_PATH: &str = "docs/validation/bridge-finality-slice.md";
+const INDEX_DOC_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
 const REQUIRED_DOC_MARKERS: &[&str] = &[
     "# Bridge Finality Slice",
     "ethereum_finalized_receipt_normalizes_to_final",
@@ -20,13 +20,13 @@ const REQUIRED_INDEX_MARKERS: &[&str] = &[
 
 #[test]
 fn bridge_finality_validation_doc_exists_and_stays_bounded() {
-    let doc = read_workspace_file(DOC);
+    let doc = read_workspace_file(DOC_PATH);
     assert_contains_all(doc.as_str(), REQUIRED_DOC_MARKERS, "bridge finality validation doc");
 }
 
 #[test]
 fn runtime_proof_index_includes_bridge_finality_slice() {
-    let index = read_workspace_file(INDEX);
+    let index = read_workspace_file(INDEX_DOC_PATH);
     assert_contains_all(index.as_str(), REQUIRED_INDEX_MARKERS, "runtime proof index");
 }
 
