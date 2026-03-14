@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::{Path, PathBuf};
 
 const DOC: &str = "docs/validation/escrow-settlement-slice.md";
 const INDEX: &str = "docs/validation/current-proven-runtime-slices.md";
@@ -17,7 +18,7 @@ const REQUIRED_INDEX_MARKERS: &[&str] = &[
 
 #[test]
 fn escrow_settlement_validation_doc_exists_and_stays_bounded() {
-    let doc = fs::read_to_string(DOC).expect("escrow settlement validation doc should exist");
+    let doc = read_workspace_file(DOC);
 
     for marker in REQUIRED_DOC_MARKERS {
         assert!(
@@ -29,7 +30,7 @@ fn escrow_settlement_validation_doc_exists_and_stays_bounded() {
 
 #[test]
 fn runtime_proof_index_includes_escrow_settlement_slice() {
-    let index = fs::read_to_string(INDEX).expect("runtime proof index should exist");
+    let index = read_workspace_file(INDEX);
 
     for marker in REQUIRED_INDEX_MARKERS {
         assert!(
@@ -37,4 +38,18 @@ fn runtime_proof_index_includes_escrow_settlement_slice() {
             "runtime proof index missing escrow settlement marker: {marker}"
         );
     }
+}
+
+fn read_workspace_file(relative_path: &str) -> String {
+    let path = workspace_root().join(relative_path);
+    assert!(path.exists(), "expected path to exist: {}", path.display());
+    fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("failed to read {}: {}", path.display(), error))
+}
+
+fn workspace_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .expect("workspace root should resolve")
 }
