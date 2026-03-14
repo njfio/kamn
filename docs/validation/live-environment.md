@@ -4,6 +4,8 @@ This document defines the first implementation slice for Story #2975 and Task #2
 
 ## Objective
 
+For the current proven runtime slices on `main`, start with `docs/validation/current-proven-runtime-slices.md`.
+
 Provide a repeatable local live-validation environment that verifies:
 
 - multi-process deployment topology contracts, and
