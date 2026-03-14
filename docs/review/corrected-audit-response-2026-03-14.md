@@ -12,8 +12,9 @@ The current proof anchors on `main` include:
 - `docs/validation/durable-cross-node-relay-slice.md`
 - `docs/validation/restart-persistence-slice.md`
 - `docs/validation/escrow-settlement-slice.md`
+- `docs/validation/bridge-finality-slice.md`
 
-Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, and escrow proofs make the bounded persistence and settlement claims easier to inspect from one place.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, and bridge-finality proofs make the bounded persistence and finality claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -72,6 +73,9 @@ Current build-health status for the specific blockers that audit called out:
 `docs/validation/restart-persistence-slice.md` proves restart persistence across message state, task and escrow state, directory state, and relayed or delivered continuity.
 
 `docs/validation/escrow-settlement-slice.md` proves bounded service-api escrow lifecycle persistence through fund, release, and restart-visible released state.
+
+### Bounded Bridge Finality Slice
+`docs/validation/bridge-finality-slice.md` proves deterministic receipt-finality normalization on the public core surface and persisted `forwarded` bridge state across restart on the service-api path.
 
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
