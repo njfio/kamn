@@ -9,44 +9,16 @@ use crate::data_layer_m3_blind_index_search::{
 use std::collections::{BTreeMap, BTreeSet};
 
 impl DataLayerM3SearchCatalog {
+    /// Evaluates blind-index exact-match output determinism against a baseline ordering.
     pub fn evaluate_blind_index_determinism(
         &self,
         input: DataLayerM3BlindIndexDeterminismInput,
     ) -> Result<DataLayerM3BlindIndexDeterminismReport, DataLayerM3SearchError> {
-        validate_determinism_input(&input)?;
-        let field_name = canonical_field_name(input.field_name.as_str())?;
-        let limit = resolve_limit(input.limit)?;
-        let expected_message_ids = input.baseline_ordered_message_ids.clone();
-        let observed_message_ids = self.observed_message_ids(input, field_name, limit)?;
-        let missing_message_ids = missing_ids(&expected_message_ids, &observed_message_ids);
-        let unexpected_message_ids = missing_ids(&observed_message_ids, &expected_message_ids);
-        let out_of_order_message_ids =
-            out_of_order_ids(&expected_message_ids, &observed_message_ids);
-        let drifted = !missing_message_ids.is_empty()
-            || !unexpected_message_ids.is_empty()
-            || !out_of_order_message_ids.is_empty();
-        let (decision, reason_code) = if drifted {
-            (
-                DataLayerM3BlindIndexDeterminismDecision::Drifted,
-                DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
-            )
-        } else {
-            (
-                DataLayerM3BlindIndexDeterminismDecision::Stable,
-                DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
-            )
-        };
-        Ok(DataLayerM3BlindIndexDeterminismReport {
-            decision,
-            reason_code,
-            expected_message_ids,
-            observed_message_ids,
-            missing_message_ids,
-            unexpected_message_ids,
-            out_of_order_message_ids,
-        })
+        let report = validated_determinism_report(self, input)?;
+        Ok(finalize_report(report))
     }
 
+    /// Executes the observed exact-match query used by the determinism comparison.
     fn observed_message_ids(
         &self,
         input: DataLayerM3BlindIndexDeterminismInput,
@@ -69,6 +41,58 @@ impl DataLayerM3SearchCatalog {
     }
 }
 
+struct ReportParts {
+    expected_message_ids: Vec<String>,
+    observed_message_ids: Vec<String>,
+    missing_message_ids: Vec<String>,
+    unexpected_message_ids: Vec<String>,
+    out_of_order_message_ids: Vec<String>,
+}
+
+fn validated_determinism_report(
+    catalog: &DataLayerM3SearchCatalog,
+    input: DataLayerM3BlindIndexDeterminismInput,
+) -> Result<ReportParts, DataLayerM3SearchError> {
+    validate_determinism_input(&input)?;
+    let field_name = canonical_field_name(input.field_name.as_str())?;
+    let limit = resolve_limit(input.limit)?;
+    let expected_message_ids = input.baseline_ordered_message_ids.clone();
+    let observed_message_ids = catalog.observed_message_ids(input, field_name, limit)?;
+    Ok(ReportParts {
+        missing_message_ids: missing_ids(&expected_message_ids, &observed_message_ids),
+        unexpected_message_ids: missing_ids(&observed_message_ids, &expected_message_ids),
+        out_of_order_message_ids: out_of_order_ids(&expected_message_ids, &observed_message_ids),
+        expected_message_ids,
+        observed_message_ids,
+    })
+}
+
+fn finalize_report(parts: ReportParts) -> DataLayerM3BlindIndexDeterminismReport {
+    let drifted = !parts.missing_message_ids.is_empty()
+        || !parts.unexpected_message_ids.is_empty()
+        || !parts.out_of_order_message_ids.is_empty();
+    let (decision, reason_code) = if drifted {
+        (
+            DataLayerM3BlindIndexDeterminismDecision::Drifted,
+            DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
+        )
+    } else {
+        (
+            DataLayerM3BlindIndexDeterminismDecision::Stable,
+            DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
+        )
+    };
+    DataLayerM3BlindIndexDeterminismReport {
+        decision,
+        reason_code,
+        expected_message_ids: parts.expected_message_ids,
+        observed_message_ids: parts.observed_message_ids,
+        missing_message_ids: parts.missing_message_ids,
+        unexpected_message_ids: parts.unexpected_message_ids,
+        out_of_order_message_ids: parts.out_of_order_message_ids,
+    }
+}
+
 fn validate_determinism_input(
     input: &DataLayerM3BlindIndexDeterminismInput,
 ) -> Result<(), DataLayerM3SearchError> {
@@ -80,8 +104,12 @@ fn validate_determinism_input(
             "baseline_ordered_message_ids",
         ));
     }
+    validate_baseline_message_ids(input.baseline_ordered_message_ids.as_slice())
+}
+
+fn validate_baseline_message_ids(message_ids: &[String]) -> Result<(), DataLayerM3SearchError> {
     let mut seen = BTreeSet::new();
-    for message_id in &input.baseline_ordered_message_ids {
+    for message_id in message_ids {
         validate_non_empty(message_id.as_str(), "baseline_ordered_message_id")?;
         if !seen.insert(message_id.clone()) {
             return Err(DataLayerM3SearchError::DuplicateMessageId(

@@ -4,6 +4,7 @@ use crate::data_layer_m3_blind_index_search::{
     DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
 };
 
+/// Derives one deterministic owner-scoped blind-index token.
 pub fn data_layer_m3_compute_blind_index(
     blind_index_key_material: &str,
     field_name: &str,
@@ -24,6 +25,7 @@ pub fn data_layer_m3_compute_blind_index(
     ))
 }
 
+/// Normalizes one value for M3 blind-index derivation.
 pub fn data_layer_m3_normalize_blind_index_value(
     value: &str,
 ) -> Result<String, DataLayerM3SearchError> {
