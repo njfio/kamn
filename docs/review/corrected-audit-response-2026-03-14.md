@@ -4,6 +4,7 @@
 This response evaluates one recent external KAMN audit against current `main` as of 2026-03-14. It is not a release review and it does not rewrite the historical `gaps-and-issues-r*.md` artifacts.
 
 The two current proof anchors on `main` are:
+- `docs/validation/current-proven-runtime-slices.md`
 - `docs/validation/working-vertical-slice.md`
 - `docs/validation/sdk-tcp-vertical-slice.md`
 
