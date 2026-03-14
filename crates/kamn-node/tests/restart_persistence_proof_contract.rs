@@ -18,9 +18,16 @@ const DOC_MARKERS: &[&str] = &[
 
 #[test]
 fn restart_persistence_doc_exists_with_required_markers() {
-    let doc = read_workspace_file(DOC_PATH);
-    for marker in DOC_MARKERS {
-        assert!(doc.contains(marker), "restart persistence proof doc missing marker: {}", marker);
+    assert_contains_all(read_workspace_file(DOC_PATH).as_str(), DOC_MARKERS);
+}
+
+fn assert_contains_all(doc: &str, markers: &[&str]) {
+    for marker in markers {
+        assert!(
+            doc.contains(marker),
+            "restart persistence proof doc missing marker: {}",
+            marker
+        );
     }
 }
 
