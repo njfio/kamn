@@ -80,6 +80,9 @@ Security guard behavior now fails closed across reconnect cycles:
 `Regression: #822` ensures deterministic envelope parsing rejects malformed payloads and preserves signed relay markers.
 `Regression: #823` ensures forged handshake frames and replayed nonces are rejected across reconnect.
 
+Dedicated validation runbook:
+- `docs/validation/sdk-tcp-vertical-slice.md`
+
 ## TCP Failover/Reconnect Integration Matrix (Issue #824)
 Deterministic failover matrix coverage is available as a bounded fast lane with optional scheduled deep expansion:
 
