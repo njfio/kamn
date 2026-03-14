@@ -1,5 +1,9 @@
 # Review Artifact Marker Contract
 
+## Current Review Responses
+
+- `corrected-audit-response-2026-03-14.md` anchors the recent external KAMN critique to current `main`, including `docs/validation/working-vertical-slice.md` and `docs/validation/sdk-tcp-vertical-slice.md`.
+
 R43+ `gaps-and-issues` review artifacts must carry deterministic governance-vs-feature activity markers using key/value lines.
 
 Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 43`:
