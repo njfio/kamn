@@ -54,6 +54,8 @@ mod route_render_contract_tests;
 mod task_escrow_persistence_contract_tests;
 #[path = "service_api_endpoint_tests/transport_surface_observability_contract_tests.rs"]
 mod transport_surface_observability_contract_tests;
+#[path = "service_api_endpoint_tests/vertical_slice_contract_tests.rs"]
+mod vertical_slice_contract_tests;
 #[path = "service_api_endpoint_tests/websocket_contract_tests.rs"]
 mod websocket_contract_tests;
 
