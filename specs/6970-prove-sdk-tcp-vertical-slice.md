@@ -29,11 +29,11 @@ Prove one current, operator-comprehensible KAMN SDK TCP signed-relay vertical sl
 - The proof overclaims scope beyond signed handshake, relay, and explicit rejection signals.
 
 ## Acceptance criteria
-- [ ] A dedicated SDK TCP vertical-slice proof doc exists on current `main`.
-- [ ] The doc is runnable from a clean checkout with explicit commands and prerequisites.
-- [ ] The doc demonstrates two identities, signed handshake acceptance, one successful relay, and at least one replay or tamper rejection outcome.
-- [ ] At least one hard-fail regression contract ties the doc to the exact executable proof path.
-- [ ] The spec records exactly what this transport proof demonstrates and what remains out of scope.
+- [x] A dedicated SDK TCP vertical-slice proof doc exists on current `main`.
+- [x] The doc is runnable from a clean checkout with explicit commands and prerequisites.
+- [x] The doc demonstrates two identities, signed handshake acceptance, one successful relay, and at least one replay or tamper rejection outcome.
+- [x] At least one hard-fail regression contract ties the doc to the exact executable proof path.
+- [x] The spec records exactly what this transport proof demonstrates and what remains out of scope.
 
 ## Files to touch
 - `specs/6970-prove-sdk-tcp-vertical-slice.md`
@@ -57,3 +57,26 @@ Prove one current, operator-comprehensible KAMN SDK TCP signed-relay vertical sl
 
 ## Execution notes
 This issue exists to make one current transport-backed slice defensible when evaluating whether KAMN has real runtime substance. If the existing TCP relay path cannot be documented honestly with explicit failure evidence, the issue must record the exact blocker instead of inflating claims.
+
+
+## Final implementation
+- Dedicated proof doc: [docs/validation/sdk-tcp-vertical-slice.md](/home/n/Code/kamn/docs/validation/sdk-tcp-vertical-slice.md)
+- Hard-fail regression contract: [sdk_tcp_vertical_slice_contract.rs](/home/n/Code/kamn/crates/kamn-sdk/tests/sdk_tcp_vertical_slice_contract.rs)
+- Existing SDK docs now link the proof from [rust-sdk-alpha.md](/home/n/Code/kamn/docs/foundation/rust-sdk-alpha.md)
+
+## Final evidence
+- `cargo test -p kamn-sdk --test sdk_tcp_vertical_slice_contract -- --nocapture`
+- `bash scripts/sdk/test_run_tcp_signed_relay_demo.sh`
+- `cargo test -p kamn-sdk --test tcp_transport_adapter replay_nonce_is_rejected_across_reconnect -- --nocapture`
+- `cargo test -p kamn-sdk --test tcp_transport_adapter forged_handshake_frame_is_rejected -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6970-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- The current SDK TCP path proves one successful signed relay between a sender DID and listener DID.
+- The listener emits `verified=true` and `status=ok` markers through the real demo script path.
+- Replay across reconnect is rejected with `tcp handshake replay detected`.
+- Forged handshake frames are rejected with `handshake.signature` classification.
+
+## Deviations
+- None. The current TCP transport surface was already sufficient; this issue formalized it as one operator-readable proof.
