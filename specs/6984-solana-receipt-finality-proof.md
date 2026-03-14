@@ -53,3 +53,26 @@ Add Solana receipt-finality normalization to the public cross-chain receipt surf
 - Phase 3 red tests that fail because Solana is not yet supported on the public receipt-normalization surface and the validation doc/contract do not exist.
 - Green by implementing minimal Solana normalization rules and publishing the bounded proof.
 - Re-run the Solana receipt-finality tests, the new docs contract, and touched-Rust policy before publish.
+
+## Final implementation
+- Added Solana support to the public receipt-normalization surface in `crates/kamn-bridges/src/cross_chain_receipt.rs` with the extracted module tree under `crates/kamn-bridges/src/cross_chain_receipt/`.
+- Published the bounded validation runbook at `docs/validation/solana-receipt-finality-slice.md`.
+- Wired the proof into `docs/validation/current-proven-runtime-slices.md`.
+- Wired the proof into `docs/review/corrected-audit-response-2026-03-14.md` and hardened the review docs contract.
+
+## Final evidence
+- `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`
+- `cargo test -p kamn-node --test solana_receipt_finality_slice_contract -- --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6984-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- Solana `finalized` receipts normalize to `Final`.
+- Solana `confirmed` and `processed` receipts normalize to `Pending`.
+- Solana failed receipts remain fail-closed as `Failed`.
+- Unknown Solana finality labels return typed `UnsupportedFinalityLabel` errors.
+- The proof is explicitly bounded to normalization on current `main`, not live devnet or live settlement.
+
+## Deviations
+- None.
