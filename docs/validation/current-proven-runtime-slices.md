@@ -9,6 +9,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves one SDK TCP signed-relay vertical slice with signed handshake acceptance, one successful relay, and fail-closed replay or forged-handshake rejection
 - durable cross-node relay slice: `docs/validation/durable-cross-node-relay-slice.md`
   - proves durable sender spool enqueue, fail-closed pending spool preservation, later successful relay projection, and recipient-visible delivered state across fresh boot
+- restart persistence slice: `docs/validation/restart-persistence-slice.md`
+  - proves restart persistence across message state, task and escrow state, directory state, and relayed or delivered status continuity
 
 ## What Remains Unproven
 - broad production readiness
