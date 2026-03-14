@@ -41,8 +41,8 @@ fn normalize_success_finality(
         CrossChainReceiptNetwork::Ethereum => {
             normalize_ethereum(label.as_str(), confirmation_count)
         }
-        CrossChainReceiptNetwork::Solana => normalize_solana(label.as_str(), network),
-        CrossChainReceiptNetwork::Near => normalize_near(label.as_str(), network),
+        CrossChainReceiptNetwork::Solana => normalize_solana(label.as_str()),
+        CrossChainReceiptNetwork::Near => normalize_near(label.as_str()),
     }
 }
 
@@ -61,23 +61,21 @@ fn normalize_ethereum(
 
 fn normalize_solana(
     label: &str,
-    network: CrossChainReceiptNetwork,
 ) -> Result<CrossChainReceiptFinality, CrossChainReceiptNormalizationError> {
     match label {
         "finalized" => Ok(CrossChainReceiptFinality::Final),
         "confirmed" | "processed" => Ok(CrossChainReceiptFinality::Pending),
-        _ => unsupported_label(network, label),
+        _ => unsupported_label(CrossChainReceiptNetwork::Solana, label),
     }
 }
 
 fn normalize_near(
     label: &str,
-    network: CrossChainReceiptNetwork,
 ) -> Result<CrossChainReceiptFinality, CrossChainReceiptNormalizationError> {
     match label {
         "final" => Ok(CrossChainReceiptFinality::Final),
         "optimistic" | "none" => Ok(CrossChainReceiptFinality::Pending),
-        _ => unsupported_label(network, label),
+        _ => unsupported_label(CrossChainReceiptNetwork::Near, label),
     }
 }
 
