@@ -40,12 +40,12 @@ Preferred slice unless implementation evidence shows a better current path:
 - The added integration/e2e test passes without exercising the same runtime path described in the doc.
 
 ## Acceptance criteria
-- [ ] A single documented vertical slice is identified and implemented against current `main`.
-- [ ] The slice is runnable from a clean checkout with explicit commands and prerequisites.
-- [ ] The slice uses real application entrypoints and real wiring, not mock-only test seams.
-- [ ] The slice proves two identities, encrypted delivery, one task transition, and persisted/auditable evidence in one coherent flow.
-- [ ] At least one integration or e2e test covers the exact slice and fails closed on regressions.
-- [ ] Operator-facing documentation explains what the demo proves, what evidence to inspect, and what is still out of scope.
+- [x] A single documented vertical slice is identified and implemented against current `main`.
+- [x] The slice is runnable from a clean checkout with explicit commands and prerequisites.
+- [x] The slice uses real application entrypoints and real wiring, not mock-only test seams.
+- [x] The slice proves two identities, encrypted delivery, one task transition, and persisted/auditable evidence in one coherent flow.
+- [x] At least one integration or e2e test covers the exact slice and fails closed on regressions.
+- [x] Operator-facing documentation explains what the demo proves, what evidence to inspect, and what is still out of scope.
 
 ## Files to touch
 - likely docs/spec/runbook paths under `docs/` and `specs/`
@@ -68,3 +68,24 @@ Preferred slice unless implementation evidence shows a better current path:
 
 ## Execution notes
 This issue exists to force a product proof point. If the preferred slice cannot be wired honestly on current `main`, the issue must record the exact blocker and either narrow the slice or open concrete follow-on issues for the missing runtime capability.
+
+## Final implementation
+- Chosen vertical slice: `kamn-node` service API running in processor/api mode, with daemon relay projection used to deliver one message from a sender DID to a recipient DID, followed by worker registration, task creation, task query-driven dispatch/completion, and audit export verification from the same sender state.
+- Operator doc: [docs/validation/working-vertical-slice.md](/home/n/Code/kamn/docs/validation/working-vertical-slice.md)
+- Integration contract: [vertical_slice_contract_tests.rs](/home/n/Code/kamn/crates/kamn-node/src/main_tests/service_api_endpoint_tests/vertical_slice_contract_tests.rs)
+- Regression contract: [working_vertical_slice_contract.rs](/home/n/Code/kamn/crates/kamn-node/tests/working_vertical_slice_contract.rs)
+
+## Final evidence
+- `cargo test -p kamn-node --test working_vertical_slice_contract -- --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::vertical_slice_contract_tests::integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence' -- --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6968-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- Two identities participate in one coherent runtime path: `kamn:did:agent:vertical-slice-sender` and one generated recipient/worker DID.
+- The message path proves delivery through the real service API plus daemon relay projection and persists `data_layer_runtime_evidence` on the sender-side message record.
+- The task path proves one real lifecycle transition to `completed` through task query-driven dispatch after worker registration.
+- The audit path proves operator-verifiable persistence by locating a `service_api_task_created` record in the audit export bundle for the created task.
+
+## Deviations
+- None. The preferred slice was honest on current `main` without introducing demo-only adapters or bypass paths.
