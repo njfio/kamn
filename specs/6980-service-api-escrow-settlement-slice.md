@@ -48,3 +48,27 @@ Prove one current, operator-comprehensible KAMN service-API escrow settlement sl
 - Phase 3 red test that fails because the escrow-settlement validation doc and contract do not yet exist.
 - One hard-fail docs contract asserting required escrow proof links and bounded-language markers.
 - Re-run the referenced service-api task/escrow route and restart targets and touched-Rust policy before publish.
+
+## Final implementation
+- Validation runbook: [docs/validation/escrow-settlement-slice.md](/home/n/Code/kamn/docs/validation/escrow-settlement-slice.md)
+- Hard-fail docs contract: [escrow_settlement_slice_contract.rs](/home/n/Code/kamn/crates/kamn-node/tests/escrow_settlement_slice_contract.rs)
+- Runtime proof index wiring: [current-proven-runtime-slices.md](/home/n/Code/kamn/docs/validation/current-proven-runtime-slices.md)
+- Review-surface wiring: [corrected-audit-response-2026-03-14.md](/home/n/Code/kamn/docs/review/corrected-audit-response-2026-03-14.md)
+
+## Final evidence
+- `cargo test -p kamn-node --test escrow_settlement_slice_contract -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_task_and_escrow_state_across_routes -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_task_and_escrow_state_across_restart -- --exact --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6980-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- the service API can create and accept a task before funding escrow on the current persisted state path
+- the service API can fund escrow and return `state=funded`
+- the service API can release escrow and return `state=released`
+- released escrow state remains persisted and queryable across restart on the current service-api storage path
+- the proof is explicitly bounded to service-api escrow lifecycle persistence rather than external chain settlement semantics
+
+## Deviations
+- None. Current `main` already contained the necessary route and restart coverage; this issue formalized it as one operator-readable escrow proof and linked it from the existing proof surfaces.
