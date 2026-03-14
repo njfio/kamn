@@ -1,4 +1,7 @@
 use super::bootstrap_support::{assert_server_ok, spawn_api_server};
+use super::response_support::{
+    parse_created_message, parse_created_payload, parse_ok_payload, state_hash,
+};
 use super::super::super::super::*;
 use crate::service_api_endpoint::{
     ServiceApiAgentGetBody, ServiceApiChannelMessagesBody, ServiceApiMessageCreateBody,
@@ -143,49 +146,33 @@ fn signed_request_without_server(
     body: &str,
 ) -> String {
     let nonce_text = nonce.to_string();
-    let signature = service_api_request_signature_for_fields(
-        caller_did,
-        nonce,
-        state_hash(snapshot).as_str(),
-        body,
-    );
+    let signature = request_signature(snapshot, caller_did, nonce, body);
     send_http_request_with_headers(
         bind_addr,
         method,
         path,
         body,
-        &[
-            ("X-KAMN-Sender-DID", caller_did),
-            ("X-KAMN-Request-Nonce", nonce_text.as_str()),
-            ("X-KAMN-Request-Signature", signature.as_str()),
-        ],
+        &signed_headers(caller_did, nonce_text.as_str(), signature.as_str()),
     )
 }
 
-fn parse_created_message(response: &str) -> ServiceApiMessageCreateBody {
-    assert!(response.contains("HTTP/1.1 202 Accepted"));
-    parse_service_api_payload(extract_http_response_body(response))
-        .expect("send payload should deserialize")
+fn request_signature(
+    snapshot: &ServiceApiSnapshot,
+    caller_did: &str,
+    nonce: u64,
+    body: &str,
+) -> String {
+    service_api_request_signature_for_fields(caller_did, nonce, state_hash(snapshot).as_str(), body)
 }
 
-fn parse_created_payload<T>(response: &str) -> T
-where
-    T: serde::de::DeserializeOwned,
-{
-    assert!(response.contains("HTTP/1.1 201 Created"));
-    parse_service_api_payload(extract_http_response_body(response))
-        .expect("created payload should deserialize")
-}
-
-fn parse_ok_payload<T>(response: &str) -> T
-where
-    T: serde::de::DeserializeOwned,
-{
-    assert!(response.contains("HTTP/1.1 200 OK"));
-    parse_service_api_payload(extract_http_response_body(response))
-        .expect("ok payload should deserialize")
-}
-
-fn state_hash(snapshot: &ServiceApiSnapshot) -> String {
-    format!("service-api:{}:{}", snapshot.chain_id.as_str(), snapshot.chain_version.as_str())
+fn signed_headers<'a>(
+    caller_did: &'a str,
+    nonce_text: &'a str,
+    signature: &'a str,
+) -> [(&'a str, &'a str); 3] {
+    [
+        ("X-KAMN-Sender-DID", caller_did),
+        ("X-KAMN-Request-Nonce", nonce_text),
+        ("X-KAMN-Request-Signature", signature),
+    ]
 }
