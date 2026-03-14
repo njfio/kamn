@@ -54,3 +54,28 @@ Prove one current, operator-comprehensible KAMN service-API restart persistence 
 
 ## Execution notes
 This issue exists to make current restart persistence claims defensible. If current `main` cannot support a coherent restart-persistence proof, the issue must record the exact gap rather than overstating recovery maturity.
+
+## Final implementation
+- Validation runbook: [docs/validation/restart-persistence-slice.md](/home/n/Code/kamn/docs/validation/restart-persistence-slice.md)
+- Hard-fail docs contract: [restart_persistence_proof_contract.rs](/home/n/Code/kamn/crates/kamn-node/tests/restart_persistence_proof_contract.rs)
+- Runtime index wiring: [current-proven-runtime-slices.md](/home/n/Code/kamn/docs/validation/current-proven-runtime-slices.md)
+
+## Final evidence
+- `cargo test -p kamn-node --test restart_persistence_proof_contract -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_message_state_across_restart -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_task_and_escrow_state_across_restart -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_channel_creation_state_across_restart -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_agent_profile_query_state_across_restart -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract -- --exact --nocapture`
+- `cargo test -p kamn-node regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart -- --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6978-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- Message state remains queryable after restart on the current service-api storage path.
+- Task and escrow state remain queryable after restart on the current service-api storage path.
+- Channel and agent-profile directory state remain queryable after restart.
+- Recipient-visible `delivered` and non-recipient `relayed` state continuity both remain observable across restart or fresh boot.
+
+## Deviations
+- None. Current `main` already contained the required restart-persistence runtime coverage; this issue formalized it as one operator-readable proof.
