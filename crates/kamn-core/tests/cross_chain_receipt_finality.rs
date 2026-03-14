@@ -29,6 +29,17 @@ fn near_proof(finality_label: &str, status: CrossChainReceiptStatus) -> CrossCha
     }
 }
 
+fn solana_proof(finality_label: &str, status: CrossChainReceiptStatus) -> CrossChainReceiptProof {
+    CrossChainReceiptProof {
+        network: CrossChainReceiptNetwork::Solana,
+        receipt_id: "solana:signature:991".to_owned(),
+        block_reference: "solana:slot:2201".to_owned(),
+        finality_label: finality_label.to_owned(),
+        confirmation_count: 0,
+        status,
+    }
+}
+
 #[test]
 fn ethereum_finalized_receipt_normalizes_to_final() {
     let normalized = normalize_cross_chain_receipt(&ethereum_proof(
@@ -92,6 +103,43 @@ fn regression_rejects_unknown_near_finality_label() {
             CrossChainReceiptNormalizationError::UnsupportedFinalityLabel {
                 network: CrossChainReceiptNetwork::Near,
                 label: "unsafe".to_owned(),
+            }
+        )
+    );
+}
+
+#[test]
+fn solana_finalized_receipt_normalizes_to_final() {
+    let normalized =
+        normalize_cross_chain_receipt(&solana_proof("finalized", CrossChainReceiptStatus::Success))
+            .expect("solana finalized receipt should normalize");
+    assert_eq!(normalized.finality, CrossChainReceiptFinality::Final);
+}
+
+#[test]
+fn solana_processed_receipt_normalizes_to_pending() {
+    let normalized =
+        normalize_cross_chain_receipt(&solana_proof("processed", CrossChainReceiptStatus::Success))
+            .expect("solana processed receipt should normalize");
+    assert_eq!(normalized.finality, CrossChainReceiptFinality::Pending);
+}
+
+#[test]
+fn solana_failed_receipt_normalizes_to_failed() {
+    let normalized =
+        normalize_cross_chain_receipt(&solana_proof("finalized", CrossChainReceiptStatus::Failed))
+            .expect("failed solana receipt should normalize");
+    assert_eq!(normalized.finality, CrossChainReceiptFinality::Failed);
+}
+
+#[test]
+fn regression_rejects_unknown_solana_finality_label() {
+    assert_eq!(
+        normalize_cross_chain_receipt(&solana_proof("rooted", CrossChainReceiptStatus::Success)),
+        Err(
+            CrossChainReceiptNormalizationError::UnsupportedFinalityLabel {
+                network: CrossChainReceiptNetwork::Solana,
+                label: "rooted".to_owned(),
             }
         )
     );
