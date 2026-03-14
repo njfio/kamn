@@ -13,11 +13,13 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves restart persistence across message state, task and escrow state, directory state, and relayed or delivered status continuity
 - escrow settlement slice: `docs/validation/escrow-settlement-slice.md`
   - proves service-api escrow lifecycle persistence through fund, release, and restart-visible released state
+- bridge finality slice: `docs/validation/bridge-finality-slice.md`
+  - proves deterministic receipt-finality normalization and persisted forwarded bridge state
 
 ## What Remains Unproven
 - broad production readiness
 - consensus or multi-node finality
-- bridge finality or external chain settlement
+- live chain-backed bridge finality or external settlement
 - global fault tolerance under arbitrary partitions
 
 ## How To Use This Index
