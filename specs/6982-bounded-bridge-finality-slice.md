@@ -49,3 +49,27 @@ Prove one current, operator-comprehensible KAMN bounded bridge finality slice on
 - Phase 3 red test that fails because the bridge-finality validation doc and contract do not yet exist.
 - One hard-fail docs contract asserting required bridge proof links and bounded-language markers.
 - Re-run the referenced receipt-finality and bridge restart targets and touched-Rust policy before publish.
+
+## Final implementation
+- Validation runbook: [docs/validation/bridge-finality-slice.md](/home/n/Code/kamn/docs/validation/bridge-finality-slice.md)
+- Hard-fail docs contract: [bridge_finality_slice_contract.rs](/home/n/Code/kamn/crates/kamn-node/tests/bridge_finality_slice_contract.rs)
+- Runtime proof index wiring: [current-proven-runtime-slices.md](/home/n/Code/kamn/docs/validation/current-proven-runtime-slices.md)
+- Review-surface wiring: [corrected-audit-response-2026-03-14.md](/home/n/Code/kamn/docs/review/corrected-audit-response-2026-03-14.md)
+
+## Final evidence
+- `cargo test -p kamn-node --test bridge_finality_slice_contract -- --nocapture`
+- `cargo test -p kamn-core --test cross_chain_receipt_finality -- --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_persists_bridge_state_across_restart -- --exact --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6982-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- Ethereum `finalized` and Near `final` receipts normalize to `Final` on the public core surface
+- pending and failed receipt states remain fail-closed on the public core surface
+- unknown Near finality labels are rejected rather than normalized loosely
+- service-api bridge state reaches and retains `forwarded` state with stable target-message and forward-hash evidence across restart
+- the proof is explicitly bounded to deterministic receipt-finality normalization and persisted forwarded bridge state rather than live chain-backed finality
+
+## Deviations
+- None. Current `main` already contained the necessary receipt-normalization and bridge-persistence coverage; this issue formalized it as one operator-readable bounded bridge-finality proof.
