@@ -58,3 +58,26 @@ Prove one current, operator-comprehensible KAMN durable cross-node relay slice o
 
 ## Execution notes
 This issue exists to deepen the runtime proof surface beyond happy-path vertical slices. If the current service-API delivery path cannot honestly prove durable retry and restart semantics, the issue must record the exact blocker instead of inflating claims.
+
+## Final implementation
+- Validation runbook: [docs/validation/durable-cross-node-relay-slice.md](/home/n/Code/kamn/docs/validation/durable-cross-node-relay-slice.md)
+- Hard-fail proof contract: [durable_cross_node_relay_slice_contract.rs](/home/n/Code/kamn/crates/kamn-node/tests/durable_cross_node_relay_slice_contract.rs)
+- Delivery-flow wiring: [service-api-delivery-flow.md](/home/n/Code/kamn/docs/architecture/service-api-delivery-flow.md)
+
+## Final evidence
+- `cargo test -p kamn-node --test durable_cross_node_relay_slice_contract -- --nocapture`
+- `cargo test -p kamn-node integration_runtime_daemon_without_route_map_preserves_relay_spool_entries -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_cross_node_relay_delivery_contract -- --exact --nocapture`
+- `cargo test -p kamn-node integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract -- --exact --nocapture`
+- `cargo test -p kamn-node regression_service_api_endpoint_non_recipient_query_keeps_relayed_status_across_restart -- --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6974-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- Pending relay spool entries are preserved fail-closed when routing is unavailable.
+- A later daemon relay projection drains the sender relay spool and advances sender state.
+- The recipient side exposes durable `delivered` state from the persisted state file after a fresh reader boot.
+- Non-recipient restart reads keep `relayed` stable instead of incorrectly promoting delivery.
+
+## Deviations
+- None. Current `main` already contained the required runtime coverage; this issue formalized it as one operator-readable proof.
