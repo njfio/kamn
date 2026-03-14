@@ -3,12 +3,17 @@
 ## Scope
 This response evaluates one recent external KAMN audit against current `main` as of 2026-03-14. It is not a release review and it does not rewrite the historical `gaps-and-issues-r*.md` artifacts.
 
-The two current proof anchors on `main` are:
+The current proof entrypoint on `main` is:
 - `docs/validation/current-proven-runtime-slices.md`
+
+The current proof anchors on `main` include:
 - `docs/validation/working-vertical-slice.md`
 - `docs/validation/sdk-tcp-vertical-slice.md`
+- `docs/validation/durable-cross-node-relay-slice.md`
+- `docs/validation/restart-persistence-slice.md`
+- `docs/validation/escrow-settlement-slice.md`
 
-Those two proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, and escrow proofs make the bounded persistence and settlement claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -61,6 +66,13 @@ Current build-health status for the specific blockers that audit called out:
 - explicit replay rejection
 - explicit forged-handshake rejection
 
+### Durable Relay, Restart, And Escrow Slices
+`docs/validation/durable-cross-node-relay-slice.md` proves durable spool preservation, later relay projection, and recipient-visible delivery continuity.
+
+`docs/validation/restart-persistence-slice.md` proves restart persistence across message state, task and escrow state, directory state, and relayed or delivered continuity.
+
+`docs/validation/escrow-settlement-slice.md` proves bounded service-api escrow lifecycle persistence through fund, release, and restart-visible released state.
+
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
 
@@ -69,4 +81,4 @@ The critique is right that KAMN has too much protocol and process surface relati
 The correct current reading is:
 - KAMN is larger and more implemented than the audit claims.
 - KAMN still needs more runtime-proof depth than the repo currently demonstrates.
-- There are now at least two real proof anchors on `main`, so the repo can no longer be described honestly as only paper architecture.
+- There are now multiple real proof anchors on `main`, so the repo can no longer be described honestly as only paper architecture.
