@@ -18,6 +18,21 @@ const DOC_MARKERS: &[&str] = &[
     "relay spool",
 ];
 
+#[test]
+fn regression_durable_cross_node_relay_doc_exists_with_required_markers() {
+    assert_contains_all(read_workspace_file(DOC_PATH).as_str(), DOC_MARKERS);
+}
+
+fn assert_contains_all(doc: &str, markers: &[&str]) {
+    for marker in markers {
+        assert!(
+            doc.contains(marker),
+            "durable cross-node relay doc missing required marker: {}",
+            marker
+        );
+    }
+}
+
 fn read_workspace_file(relative_path: &str) -> String {
     let path = workspace_root().join(relative_path);
     assert!(path.exists(), "expected path to exist: {}", path.display());
@@ -30,16 +45,4 @@ fn workspace_root() -> PathBuf {
         .join("../..")
         .canonicalize()
         .expect("workspace root should resolve")
-}
-
-#[test]
-fn regression_durable_cross_node_relay_doc_exists_with_required_markers() {
-    let doc = read_workspace_file(DOC_PATH);
-    for marker in DOC_MARKERS {
-        assert!(
-            doc.contains(marker),
-            "durable cross-node relay doc missing required marker: {}",
-            marker
-        );
-    }
 }
