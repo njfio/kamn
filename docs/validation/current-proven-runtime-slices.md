@@ -11,11 +11,13 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves durable sender spool enqueue, fail-closed pending spool preservation, later successful relay projection, and recipient-visible delivered state across fresh boot
 - restart persistence slice: `docs/validation/restart-persistence-slice.md`
   - proves restart persistence across message state, task and escrow state, directory state, and relayed or delivered status continuity
+- escrow settlement slice: `docs/validation/escrow-settlement-slice.md`
+  - proves service-api escrow lifecycle persistence through fund, release, and restart-visible released state
 
 ## What Remains Unproven
 - broad production readiness
 - consensus or multi-node finality
-- bridge finality or escrow settlement
+- bridge finality or external chain settlement
 - global fault tolerance under arbitrary partitions
 
 ## How To Use This Index
