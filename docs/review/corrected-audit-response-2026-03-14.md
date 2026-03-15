@@ -14,8 +14,9 @@ The current proof anchors on `main` include:
 - `docs/validation/escrow-settlement-slice.md`
 - `docs/validation/bridge-finality-slice.md`
 - `docs/validation/solana-receipt-finality-slice.md`
+- `docs/validation/solana-devnet-bridge-smoke-slice.md`
 
-Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, and Solana-finality proofs make the bounded persistence and finality claims easier to inspect from one place.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, Solana-finality, and Solana bridge-smoke proofs make the bounded persistence and finality claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -80,6 +81,9 @@ Current build-health status for the specific blockers that audit called out:
 
 ### Bounded Solana Receipt Finality Slice
 `docs/validation/solana-receipt-finality-slice.md` proves bounded Solana receipt-finality normalization on the public core surface, including deterministic handling for finalized, pending, failed, and invalid-label receipt states.
+
+### Bounded Solana Devnet-Addressed Bridge Smoke Slice
+`docs/validation/solana-devnet-bridge-smoke-slice.md` proves a bounded Solana devnet-addressed bridge smoke path on the public bridge surface, including outbound quorum dispatch, inbound projection, and fail-closed replay or approval rejection behavior without claiming live Solana RPC/devnet backing.
 
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
