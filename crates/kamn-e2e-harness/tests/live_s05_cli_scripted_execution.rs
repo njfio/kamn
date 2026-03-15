@@ -1,13 +1,17 @@
 use kamn_e2e_harness::drivers::cli_scripted::CliScriptedDriver;
 use kamn_e2e_harness::drivers::HarnessDriver;
 
+const REQUIRED_ENV_KEYS: &[&str] = &[
+    "KAMN_E2E_CLI_SCRIPTED_LIVE",
+    "KAMN_E2E_CLI_BINARY",
+    "KAMN_ENDPOINT",
+    "KAMN_AGENT_NAME",
+];
+
 #[test]
 #[ignore = "requires local Kolme + KAMN runtime with explicit live env"]
 fn integration_live_s05_cli_scripted_escrow_settlement_probe_against_local_runtime() {
-    require_env("KAMN_E2E_CLI_SCRIPTED_LIVE");
-    require_env("KAMN_E2E_CLI_BINARY");
-    require_env("KAMN_ENDPOINT");
-    require_env("KAMN_AGENT_NAME");
+    require_envs(REQUIRED_ENV_KEYS);
 
     let driver = CliScriptedDriver::from_env();
     let result = driver.execute("S-05");
@@ -18,6 +22,12 @@ fn integration_live_s05_cli_scripted_escrow_settlement_probe_against_local_runti
         "live cli-scripted S-05 failed: {:?}",
         result.detail
     );
+}
+
+fn require_envs(keys: &[&str]) {
+    for key in keys {
+        require_env(key);
+    }
 }
 
 fn require_env(key: &str) {
