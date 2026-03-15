@@ -15,6 +15,47 @@ fn integration_service_api_endpoint_persists_bridge_state_across_restart() {
     let _ = fs::remove_file(state_file);
 }
 
+#[test]
+fn integration_service_api_endpoint_live_bridge_forward_path_rejects_placeholder_evidence() {
+    let _env = acquire_service_api_test_env();
+    let state_file = unique_named_state_file("kamn-node-service-api-bridge-live-evidence");
+    let _state_file_guard = set_state_file_env(state_file.as_path());
+    let caller_did = "kamn:did:agent:test-client-bridge-live-evidence";
+    let snapshot = build_bridge_snapshot("127.0.0.1:34117");
+    let bind_addr = reserve_loopback_addr();
+    let submitted = submit_bridge(
+        &snapshot,
+        bind_addr.as_str(),
+        caller_did,
+        201,
+        r#"{"source_message_id":"msg-bridge-live-source"}"#,
+    );
+    let bridge_id = submitted["bridge_id"]
+        .as_str()
+        .expect("bridge id should be string");
+
+    let forwarded = forward_bridge(&snapshot, bind_addr.as_str(), caller_did, 202, bridge_id);
+    let target_message_id = forwarded["target_message_id"]
+        .as_str()
+        .expect("target message id should be string");
+    let forward_tx_hash = forwarded["forward_tx_hash"]
+        .as_str()
+        .expect("forward tx hash should be string");
+
+    assert_ne!(
+        target_message_id,
+        format!("msg-bridge-target-{bridge_id}"),
+        "live bridge path must not persist placeholder target ids"
+    );
+    assert_ne!(
+        forward_tx_hash,
+        format!("sha256:bridge-forwarded-{bridge_id}"),
+        "live bridge path must not persist placeholder forward hashes"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
 fn assert_bridge_submit_phase(caller_did: &str) -> String {
     let first_snapshot = build_bridge_snapshot("127.0.0.1:34115");
     let bind_addr = reserve_loopback_addr();
