@@ -52,3 +52,29 @@ Prove one bounded operator-facing Solana devnet-addressed bridge smoke slice on 
 - Green by publishing the bounded runbook and linking it from the proof index.
 - Re-run the existing Solana bridge tests named by the runbook plus the new docs contract.
 - Run touched-Rust policy before publish.
+
+## Final implementation
+- Published the bounded validation runbook at `docs/validation/solana-devnet-bridge-smoke-slice.md`.
+- Added the hard-fail docs contract at `crates/kamn-node/tests/solana_devnet_bridge_smoke_slice_contract.rs`.
+- Wired the new slice into `docs/validation/current-proven-runtime-slices.md`.
+- Wired the proof into `docs/review/corrected-audit-response-2026-03-14.md` and the corrected audit docs contract.
+
+## Final evidence
+- `cargo test -p kamn-node --test solana_devnet_bridge_smoke_slice_contract -- --nocapture`
+- `cargo test -p kamn-core --test cross_chain_bridge solana_quorum_dispatches_outbound -- --exact --nocapture`
+- `cargo test -p kamn-core --test cross_chain_bridge integration_projects_solana_inbound_to_envelope -- --exact --nocapture`
+- `cargo test -p kamn-core --test cross_chain_bridge regression_rejects_replayed_solana_inbound_projection_event -- --exact --nocapture`
+- `cargo test -p kamn-core --test bridge_outbound_quorum_execution integration_outbound_quorum_rejections_are_explicit_and_fail_closed -- --exact --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6986-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Observed proof
+- the Solana devnet-addressed route id `solana:devnet:program:task-v1` is executable on the public bridge surface
+- outbound quorum success produces a `BridgePlatform::Custom("solana")` dispatch
+- inbound Solana projection reaches a canonical message envelope for the configured target DID
+- under-quorum, unauthorized-approver, and replay paths fail closed
+- the proof is explicitly bounded to devnet-addressed bridge behavior on current `main`, not live Solana RPC/devnet backing or settlement
+
+## Deviations
+- The issue was narrowed during Phase 1 via issue comment because current `main` does not expose an obvious checked-in live Solana RPC/devnet smoke lane. This issue therefore proves a bounded devnet-addressed bridge smoke slice and leaves live devnet-backed proof for a follow-on issue.
