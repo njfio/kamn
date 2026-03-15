@@ -27,6 +27,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves the live Solana-backed bridge evidence lane reaches the websocket event stream
 - live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`
   - proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05
+- live escrow CLI parity slice: `docs/validation/live-escrow-cli-parity-slice.md`
+  - proves one bounded live escrow settlement execution lane through CLI-scripted S-05 parity
 
 ## What Remains Unproven
 - broad production readiness
