@@ -28,11 +28,11 @@ Prove that the existing live Solana-backed service-api bridge forward lane reach
 - The runbook overstates the slice as settlement or finality proof.
 
 ## Acceptance criteria (testable booleans)
-- [ ] A websocket integration test proves a live Solana-backed bridge forward emits a `service-api.bridge.forwarded` event.
-- [ ] The forwarded websocket event carries non-placeholder `target_message_id` and `forward_tx_hash` values.
-- [ ] The integration test uses the real websocket upgrade plus the real bridge submit/forward routes on current `main`.
-- [ ] A bounded validation runbook documents what this slice proves and what it does not prove.
-- [ ] The runtime proof index links the websocket slice.
+- [x] A websocket integration test proves a live Solana-backed bridge forward emits a `service-api.bridge.forwarded` event.
+- [x] The forwarded websocket event carries non-placeholder `target_message_id` and `forward_tx_hash` values.
+- [x] The integration test uses the real websocket upgrade plus the real bridge submit/forward routes on current `main`.
+- [x] A bounded validation runbook documents what this slice proves and what it does not prove.
+- [x] The runtime proof index links the websocket slice.
 
 ## Files to touch
 - `specs/6993-live-solana-bridge-websocket-slice.md`
@@ -50,3 +50,12 @@ Prove that the existing live Solana-backed service-api bridge forward lane reach
 - Phase 3 red tests: add a docs contract for the missing runbook and add one websocket integration test covering upgrade plus live bridge forward.
 - Green by wiring any missing websocket test support and publishing the bounded runbook.
 - Re-run the new websocket slice test, the docs contract, and the touched-Rust size policy before publish.
+
+## Deviations
+- The runtime path itself already published bridge-forwarded websocket events; the missing behavior was proof coverage for the live Solana-backed lane. The only runtime-support change was a scoped websocket read-timeout helper so the test could observe the live proof runner completing without broadening unrelated websocket tests.
+
+## Final evidence
+- `cargo test -p kamn-node --test live_solana_bridge_websocket_slice_contract -- --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::websocket_contract_tests::upgrade_delivery_contract_tests::live_bridge_delivery_contract_tests::integration_service_api_endpoint_websocket_streams_live_bridge_forwarded_event_after_upgrade' -- --exact --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6993-touched-size.json`
