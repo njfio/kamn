@@ -6,14 +6,9 @@ const LIVE_SOLANA_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
 
 #[test]
 fn integration_service_api_endpoint_websocket_streams_live_bridge_forwarded_event_after_upgrade() {
-    let _env = acquire_service_api_test_env();
-    let _live_rpc_guard = EnvVarGuard::set(
-        "KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL",
-        Some(LIVE_SOLANA_DEVNET_RPC_URL),
-    );
-    let harness = build_websocket_harness("127.0.0.1:34072", 3);
+    let (_env, _live_rpc_guard, harness) = build_live_bridge_websocket_harness();
     let publisher = spawn_live_bridge_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
-    let websocket_response = send_signed_websocket_request_with_read_timeout(
+    let websocket_response = send_signed_websocket_request_with_timeout(
         &harness.snapshot,
         harness.bind_addr.as_str(),
         "kamn:did:agent:ws-live-bridge-client",
@@ -30,6 +25,42 @@ fn integration_service_api_endpoint_websocket_streams_live_bridge_forwarded_even
         harness.server,
         "service api endpoint should end via request budget completion or idle-timeout fail-close after websocket live bridge test",
     );
+}
+
+fn build_live_bridge_websocket_harness(
+) -> (ServiceApiTestEnvGuards, EnvVarGuard, WebsocketHarness) {
+    let env = acquire_service_api_test_env();
+    let live_rpc_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL",
+        Some(LIVE_SOLANA_DEVNET_RPC_URL),
+    );
+    let harness = build_websocket_harness("127.0.0.1:34072", 3);
+    (env, live_rpc_guard, harness)
+}
+
+fn send_signed_websocket_request_with_timeout(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    sender_did: &str,
+    nonce: u64,
+    read_timeout: Duration,
+    extra_headers: &[(&str, &str)],
+) -> Vec<u8> {
+    let signature = websocket_signature(snapshot, sender_did, nonce);
+    let nonce_text = nonce.to_string();
+    let mut headers = vec![
+        ("X-KAMN-Sender-DID", sender_did),
+        ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+        ("X-KAMN-Request-Signature", signature.as_str()),
+    ];
+    headers.extend_from_slice(extra_headers);
+    send_websocket_upgrade_request_with_timeout(
+        bind_addr,
+        WEBSOCKET_EVENTS_PATH,
+        "13",
+        read_timeout,
+        headers.as_slice(),
+    )
 }
 
 fn spawn_live_bridge_publish_thread(
@@ -108,18 +139,30 @@ fn submitted_bridge_id(submit_response: &str) -> String {
 fn assert_live_bridge_forwarded_frame(response: &[u8]) {
     let (_header, frames) = parse_websocket_response_frames(response);
     let forwarded = bridge_forwarded_frames(frames.as_slice());
-    assert!(
-        !forwarded.is_empty(),
-        "websocket stream should include a bridge forwarded event after live bridge forward: {frames:?}",
-    );
+    assert_forwarded_event_present(frames.as_slice(), forwarded.as_slice());
     let payload = &forwarded[0];
     let bridge_id = payload["bridge_id"]
         .as_str()
         .expect("bridge forwarded frame must include bridge id");
+    assert_forwarded_event_identity(payload);
+    assert_forwarded_event_is_live(payload, bridge_id);
+}
+
+fn assert_forwarded_event_present(frames: &[String], forwarded: &[Value]) {
+    assert!(
+        !forwarded.is_empty(),
+        "websocket stream should include a bridge forwarded event after live bridge forward: {frames:?}",
+    );
+}
+
+fn assert_forwarded_event_identity(payload: &Value) {
     assert_eq!(
         payload["event"].as_str(),
         Some("service-api.bridge.forwarded")
     );
+}
+
+fn assert_forwarded_event_is_live(payload: &Value, bridge_id: &str) {
     assert_ne!(
         payload["target_message_id"],
         Value::String(format!("msg-bridge-target-{bridge_id}")),
