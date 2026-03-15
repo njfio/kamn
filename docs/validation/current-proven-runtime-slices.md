@@ -17,6 +17,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves deterministic receipt-finality normalization and persisted forwarded bridge state
 - solana receipt finality slice: `docs/validation/solana-receipt-finality-slice.md`
   - proves bounded Solana receipt-finality normalization on the public core surface
+- solana devnet bridge smoke slice: `docs/validation/solana-devnet-bridge-smoke-slice.md`
+  - proves a bounded Solana devnet-addressed bridge smoke path on the public bridge surface
 
 ## What Remains Unproven
 - broad production readiness
