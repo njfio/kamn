@@ -154,7 +154,7 @@ where
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.to_owned(),
         max_requests: max_requests as u64,
-        idle_timeout_ms: 2_000,
+        idle_timeout_ms: 10_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,

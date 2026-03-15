@@ -113,6 +113,7 @@ pub(crate) fn test_service_api_runtime_state() -> ServiceApiRuntimeState {
         auth_public_key_hex: Some(auth_public_key_hex),
         message_store: message_store(),
         relay_spool_file: None,
+        live_solana_bridge_dispatch: None,
     }
 }
 

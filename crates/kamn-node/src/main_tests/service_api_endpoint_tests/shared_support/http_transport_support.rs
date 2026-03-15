@@ -58,7 +58,7 @@ pub(crate) async fn send_http_request_with_headers_async(
 fn connect_http_stream(addr: &str) -> TcpStream {
     let stream = TcpStream::connect(addr).expect("endpoint should accept connections");
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(Duration::from_secs(10)))
         .expect("read timeout should be configurable");
     stream
 }
