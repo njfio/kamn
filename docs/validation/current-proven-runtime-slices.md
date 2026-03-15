@@ -23,6 +23,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves bounded live Solana devnet JSON-RPC evidence normalized through the public receipt surface
 - live solana bridge dispatch slice: `docs/validation/live-solana-bridge-dispatch-slice.md`
   - proves a bounded live Solana-backed bridge evidence lane on the service-api path
+- live solana bridge websocket slice: `docs/validation/live-solana-bridge-websocket-slice.md`
+  - proves the live Solana-backed bridge evidence lane reaches the websocket event stream
 
 ## What Remains Unproven
 - broad production readiness

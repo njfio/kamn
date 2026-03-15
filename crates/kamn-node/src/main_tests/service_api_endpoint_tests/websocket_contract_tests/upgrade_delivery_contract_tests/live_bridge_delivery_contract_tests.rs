@@ -13,11 +13,12 @@ fn integration_service_api_endpoint_websocket_streams_live_bridge_forwarded_even
     );
     let harness = build_websocket_harness("127.0.0.1:34072", 3);
     let publisher = spawn_live_bridge_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
-    let websocket_response = send_signed_websocket_request(
+    let websocket_response = send_signed_websocket_request_with_read_timeout(
         &harness.snapshot,
         harness.bind_addr.as_str(),
         "kamn:did:agent:ws-live-bridge-client",
         701,
+        Duration::from_secs(4),
         &[],
     );
     let (submit_response, forward_response) = publisher

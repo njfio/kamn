@@ -109,6 +109,31 @@ pub(super) fn send_signed_websocket_request(
     send_websocket_upgrade_request(bind_addr, WEBSOCKET_EVENTS_PATH, headers.as_slice())
 }
 
+pub(super) fn send_signed_websocket_request_with_read_timeout(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    sender_did: &str,
+    nonce: u64,
+    read_timeout: Duration,
+    extra_headers: &[(&str, &str)],
+) -> Vec<u8> {
+    let signature = websocket_signature(snapshot, sender_did, nonce);
+    let nonce_text = nonce.to_string();
+    let headers = signed_websocket_headers(
+        sender_did,
+        nonce_text.as_str(),
+        signature.as_str(),
+        extra_headers,
+    );
+    send_websocket_upgrade_request_with_timeout(
+        bind_addr,
+        WEBSOCKET_EVENTS_PATH,
+        "13",
+        read_timeout,
+        headers.as_slice(),
+    )
+}
+
 pub(super) fn send_signed_websocket_request_with_version(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,

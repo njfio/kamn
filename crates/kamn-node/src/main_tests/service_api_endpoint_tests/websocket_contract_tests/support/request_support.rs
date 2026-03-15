@@ -13,7 +13,7 @@ pub(crate) fn send_websocket_upgrade_request(
     path: &str,
     headers: &[(&str, &str)],
 ) -> Vec<u8> {
-    send_websocket_upgrade_request_with_version(addr, path, "13", headers)
+    send_websocket_upgrade_request_with_timeout(addr, path, "13", Duration::from_secs(2), headers)
 }
 
 pub(crate) fn send_websocket_upgrade_request_with_version(
@@ -22,10 +22,27 @@ pub(crate) fn send_websocket_upgrade_request_with_version(
     websocket_version: &str,
     headers: &[(&str, &str)],
 ) -> Vec<u8> {
-    send_websocket_upgrade_request_with_version_close_observation(
+    send_websocket_upgrade_request_with_timeout(
         addr,
         path,
         websocket_version,
+        Duration::from_secs(2),
+        headers,
+    )
+}
+
+pub(crate) fn send_websocket_upgrade_request_with_timeout(
+    addr: &str,
+    path: &str,
+    websocket_version: &str,
+    read_timeout: Duration,
+    headers: &[(&str, &str)],
+) -> Vec<u8> {
+    send_websocket_upgrade_request_with_version_close_observation_and_timeout(
+        addr,
+        path,
+        websocket_version,
+        read_timeout,
         headers,
     )
     .0
@@ -37,7 +54,23 @@ pub(crate) fn send_websocket_upgrade_request_with_version_close_observation(
     websocket_version: &str,
     headers: &[(&str, &str)],
 ) -> (Vec<u8>, bool) {
-    let mut stream = websocket_stream(addr);
+    send_websocket_upgrade_request_with_version_close_observation_and_timeout(
+        addr,
+        path,
+        websocket_version,
+        Duration::from_secs(2),
+        headers,
+    )
+}
+
+pub(crate) fn send_websocket_upgrade_request_with_version_close_observation_and_timeout(
+    addr: &str,
+    path: &str,
+    websocket_version: &str,
+    read_timeout: Duration,
+    headers: &[(&str, &str)],
+) -> (Vec<u8>, bool) {
+    let mut stream = websocket_stream(addr, read_timeout);
     let enriched_headers = enrich_signed_headers_with_scope("GET", path, headers);
     let header_lines = websocket_header_lines(&enriched_headers);
     let request = websocket_upgrade_request(addr, path, websocket_version, header_lines.as_str());
@@ -47,10 +80,10 @@ pub(crate) fn send_websocket_upgrade_request_with_version_close_observation(
     read_websocket_response(&mut stream)
 }
 
-fn websocket_stream(addr: &str) -> TcpStream {
+fn websocket_stream(addr: &str, read_timeout: Duration) -> TcpStream {
     let stream = TcpStream::connect(addr).expect("endpoint should accept websocket connection");
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(read_timeout))
         .expect("websocket read timeout should be configurable");
     stream
 }
