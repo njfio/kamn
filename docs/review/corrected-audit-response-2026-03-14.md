@@ -97,6 +97,8 @@ Current build-health status for the specific blockers that audit called out:
 ### Live Solana Bridge Websocket Slice
 `docs/validation/live-solana-bridge-websocket-slice.md` proves that the same live Solana-backed bridge evidence lane reaches the real websocket event stream as a `service-api.bridge.forwarded` event carrying non-placeholder `target_message_id` and `forward_tx_hash` values, without claiming settlement or finality.
 
+`docs/validation/live-escrow-settlement-slice.md` proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05 on current `main`, while staying explicit that the claim is not Solana-backed settlement, bridge settlement, or external-chain settlement.
+
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
 

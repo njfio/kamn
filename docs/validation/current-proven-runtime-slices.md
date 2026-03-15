@@ -25,12 +25,15 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves a bounded live Solana-backed bridge evidence lane on the service-api path
 - live solana bridge websocket slice: `docs/validation/live-solana-bridge-websocket-slice.md`
   - proves the live Solana-backed bridge evidence lane reaches the websocket event stream
+- live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`
+  - proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05
 
 ## What Remains Unproven
 - broad production readiness
 - consensus or multi-node finality
 - live chain-backed bridge finality or external settlement
 - live Solana settlement over the KAMN bridge path
+- broad multi-driver live economic-settlement parity
 - global fault tolerance under arbitrary partitions
 
 ## How To Use This Index
