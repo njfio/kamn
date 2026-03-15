@@ -15,8 +15,9 @@ The current proof anchors on `main` include:
 - `docs/validation/bridge-finality-slice.md`
 - `docs/validation/solana-receipt-finality-slice.md`
 - `docs/validation/solana-devnet-bridge-smoke-slice.md`
+- `docs/validation/live-solana-devnet-proof-slice.md`
 
-Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, Solana-finality, and Solana bridge-smoke proofs make the bounded persistence and finality claims easier to inspect from one place.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, Solana-finality, Solana bridge-smoke, and live Solana devnet proofs make the bounded persistence and finality claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -84,6 +85,9 @@ Current build-health status for the specific blockers that audit called out:
 
 ### Bounded Solana Devnet-Addressed Bridge Smoke Slice
 `docs/validation/solana-devnet-bridge-smoke-slice.md` proves a bounded Solana devnet-addressed bridge smoke path on the public bridge surface, including outbound quorum dispatch, inbound projection, and fail-closed replay or approval rejection behavior without claiming live Solana RPC/devnet backing.
+
+### Live Solana Devnet Proof Slice
+`docs/validation/live-solana-devnet-proof-slice.md` proves bounded live Solana devnet JSON-RPC commitment evidence and drives those observed labels through the public `normalize_cross_chain_receipt(...)` surface without claiming live bridge settlement, live message relay, or external economic finality.
 
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
