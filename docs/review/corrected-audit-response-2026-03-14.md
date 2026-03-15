@@ -17,8 +17,9 @@ The current proof anchors on `main` include:
 - `docs/validation/solana-devnet-bridge-smoke-slice.md`
 - `docs/validation/live-solana-devnet-proof-slice.md`
 - `docs/validation/live-solana-bridge-dispatch-slice.md`
+- `docs/validation/live-solana-bridge-websocket-slice.md`
 
-Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, Solana-finality, Solana bridge-smoke, live Solana devnet, and live Solana bridge-dispatch proofs make the bounded persistence and finality claims easier to inspect from one place.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, Solana-finality, Solana bridge-smoke, live Solana devnet, live Solana bridge-dispatch, and live Solana bridge-websocket proofs make the bounded persistence and finality claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -92,6 +93,9 @@ Current build-health status for the specific blockers that audit called out:
 
 ### Live Solana Bridge Dispatch Slice
 `docs/validation/live-solana-bridge-dispatch-slice.md` proves a bounded live Solana-backed bridge evidence lane on the service-api path, including startup validation for the live RPC env, non-placeholder persisted bridge evidence, and restart-visible continuity without claiming on-chain submission, bridge finality, or settlement.
+
+### Live Solana Bridge Websocket Slice
+`docs/validation/live-solana-bridge-websocket-slice.md` proves that the same live Solana-backed bridge evidence lane reaches the real websocket event stream as a `service-api.bridge.forwarded` event carrying non-placeholder `target_message_id` and `forward_tx_hash` values, without claiming settlement or finality.
 
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
