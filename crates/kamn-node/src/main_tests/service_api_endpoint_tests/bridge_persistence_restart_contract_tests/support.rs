@@ -33,6 +33,10 @@ pub(super) fn set_state_file_env(path: &Path) -> EnvVarGuard {
     EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(path_text.as_str()))
 }
 
+pub(super) fn set_live_solana_bridge_rpc_url_env(value: Option<&str>) -> EnvVarGuard {
+    EnvVarGuard::set("KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL", value)
+}
+
 pub(super) fn read_state_json(path: &Path) -> Value {
     let payload = fs::read_to_string(path).expect("bridge state file should remain readable");
     serde_json::from_str(payload.as_str()).expect("state payload should parse")
