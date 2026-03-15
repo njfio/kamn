@@ -61,3 +61,16 @@ Prove one bounded live Solana RPC/devnet-backed proof lane on current `main` by 
 - Add a live-gated Rust integration test that consumes the runner's report and normalizes live Solana commitment labels through `normalize_cross_chain_receipt(...)`.
 - Run the runner, validator, policy checker, docs contract, and live-gated Rust test before publish.
 - Run touched-Rust policy before publish.
+
+## Final evidence
+- `cargo test -p kamn-node --test live_solana_devnet_proof_slice_contract -- --nocapture`
+- `python3 scripts/runtime/run_live_solana_devnet_proof.py --rpc-url https://api.devnet.solana.com --output-json /tmp/live-solana-devnet-report.json`
+- `python3 scripts/runtime/validate_live_solana_devnet_proof.py --report-file /tmp/live-solana-devnet-report.json --output-json /tmp/live-solana-devnet-validation.json`
+- `KAMN_SOLANA_DEVNET_REPORT_FILE=/tmp/live-solana-devnet-report.json KAMN_SOLANA_DEVNET_NORMALIZATION_REPORT=/tmp/live-solana-devnet-normalization.json cargo test -p kamn-core --test live_solana_devnet_receipt_normalization -- --nocapture`
+- `python3 scripts/runtime/check_live_solana_devnet_proof_policy.py --validation-report-file /tmp/live-solana-devnet-validation.json --normalization-report-file /tmp/live-solana-devnet-normalization.json --expected-final-decision GO --output-json /tmp/live-solana-devnet-policy.json`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6989-touched-size-final.json`
+
+## Deviations
+- No Solana SDK dependency was added. The live proof uses direct JSON-RPC over HTTPS plus normalization through the existing public receipt surface.
+- The proof is intentionally bounded to live Solana devnet commitment observation and receipt-surface normalization. It does not prove live bridge dispatch, live relay, or external settlement.
