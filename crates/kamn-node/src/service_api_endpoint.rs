@@ -1,4 +1,5 @@
 mod auth;
+mod live_bridge_dispatch;
 mod message_store;
 mod middleware_impl;
 mod models;
@@ -53,6 +54,7 @@ use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
 use message_store::ServiceApiMessageStore;
+use live_bridge_dispatch::LiveSolanaBridgeDispatchConfig;
 pub(crate) use models::{
     ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiAgentSearchRequestBody,
     ServiceApiBridgeStatusBody, ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody,
@@ -141,6 +143,8 @@ const REASON_CODE_MESSAGE_RECIPIENT_DID_INVALID: &str = "service_api_message_rec
 const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
 const REASON_CODE_TASK_DISPATCH_PREREQUISITES_MISSING: &str =
     "service_api_task_dispatch_prerequisites_missing";
+const REASON_CODE_LIVE_BRIDGE_DISPATCH_FAILED: &str =
+    "service_api_live_bridge_dispatch_failed";
 const REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING: &str =
     "service_api_auth_sender_did_header_missing";
 const REASON_CODE_AUTH_SENDER_DID_INVALID: &str = "service_api_auth_sender_did_invalid";
@@ -332,6 +336,7 @@ struct ServiceApiRuntimeState {
     auth_public_key_hex: Option<String>,
     message_store: Arc<Mutex<ServiceApiMessageStore>>,
     relay_spool_file: Option<String>,
+    live_solana_bridge_dispatch: Option<LiveSolanaBridgeDispatchConfig>,
 }
 
 #[derive(Debug)]

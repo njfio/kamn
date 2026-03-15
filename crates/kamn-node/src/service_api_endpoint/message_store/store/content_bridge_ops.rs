@@ -100,16 +100,27 @@ impl ServiceApiMessageStore {
         &mut self,
         bridge_id: &str,
     ) -> Result<Option<ServiceApiBridgeStatusBody>, String> {
+        self.forward_bridge_with_evidence(
+            bridge_id,
+            format!("msg-bridge-target-{bridge_id}").as_str(),
+            format!("sha256:bridge-forwarded-{bridge_id}").as_str(),
+        )
+    }
+
+    pub(crate) fn forward_bridge_with_evidence(
+        &mut self,
+        bridge_id: &str,
+        target_message_id: &str,
+        forward_tx_hash: &str,
+    ) -> Result<Option<ServiceApiBridgeStatusBody>, String> {
         self.refresh_from_disk()?;
         let payload = {
             let Some(record) = self.snapshot.bridges.get_mut(bridge_id) else {
                 return Ok(None);
             };
             record.bridge_status = "forwarded".to_owned();
-            if record.target_message_id.is_empty() {
-                record.target_message_id = format!("msg-bridge-target-{}", record.bridge_id);
-            }
-            record.forward_tx_hash = format!("sha256:bridge-forwarded-{}", record.bridge_id);
+            record.target_message_id = target_message_id.to_owned();
+            record.forward_tx_hash = forward_tx_hash.to_owned();
             ServiceApiBridgeStatusBody {
                 bridge_id: record.bridge_id.clone(),
                 bridge_status: record.bridge_status.clone(),

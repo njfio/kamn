@@ -2,6 +2,8 @@ use super::super::*;
 use crate::service_api_endpoint::ServiceApiSnapshot;
 use std::path::{Path, PathBuf};
 
+const LIVE_SOLANA_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
+
 pub(super) fn build_bridge_snapshot(api_bind: &str) -> ServiceApiSnapshot {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -31,6 +33,14 @@ pub(super) fn unique_named_state_file(prefix: &str) -> PathBuf {
 pub(super) fn set_state_file_env(path: &Path) -> EnvVarGuard {
     let path_text = path.to_string_lossy().to_string();
     EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(path_text.as_str()))
+}
+
+pub(super) fn set_live_solana_bridge_rpc_url_env(value: Option<&str>) -> EnvVarGuard {
+    EnvVarGuard::set("KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL", value)
+}
+
+pub(super) fn set_default_live_solana_bridge_rpc_url_env() -> EnvVarGuard {
+    set_live_solana_bridge_rpc_url_env(Some(LIVE_SOLANA_DEVNET_RPC_URL))
 }
 
 pub(super) fn read_state_json(path: &Path) -> Value {
@@ -150,7 +160,7 @@ where
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.to_owned(),
         max_requests: max_requests as u64,
-        idle_timeout_ms: 2_000,
+        idle_timeout_ms: 10_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,

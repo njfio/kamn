@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::{
     build_bridge_snapshot, forward_bridge, query_bridge, query_missing_bridge, read_state_json,
-    set_state_file_env, submit_bridge, unique_named_state_file,
+    set_live_solana_bridge_rpc_url_env, set_state_file_env, submit_bridge, unique_named_state_file,
 };
 
 #[test]
@@ -13,6 +13,30 @@ fn integration_service_api_endpoint_persists_bridge_state_across_restart() {
     let bridge_id = assert_bridge_submit_phase(caller_did);
     assert_bridge_restart_phase(caller_did, bridge_id, state_file.as_path());
     let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_live_bridge_lane_fails_at_startup_for_empty_rpc_url() {
+    let _env = acquire_service_api_test_env();
+    let _live_rpc_guard = set_live_solana_bridge_rpc_url_env(Some("   "));
+    let snapshot = build_bridge_snapshot("127.0.0.1:34118");
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr,
+        max_requests: 1,
+        idle_timeout_ms: 1,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let error = serve_service_api_endpoint(&endpoint_config, &snapshot)
+        .expect_err("empty live solana bridge rpc url must fail at startup");
+
+    assert!(
+        error.contains("KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL"),
+        "startup error must identify the missing live bridge rpc env: {error}"
+    );
 }
 
 fn assert_bridge_submit_phase(caller_did: &str) -> String {
