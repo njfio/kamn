@@ -12,6 +12,7 @@ This runbook documents one bounded live escrow settlement slice on current `main
 - `crates/kamn-e2e-harness/src/drivers/sdk_direct/live_probe_tranche_one/escrow_probe_support.rs`
 - `crates/kamn-e2e-harness/src/drivers/cli_scripted/live_probe_tranche_one/escrow_probe_support.rs`
 - `crates/kamn-e2e-harness/src/drivers/mcp_agent/live_probe_tranche_one/escrow_settlement_probe.rs`
+- `crates/kamn-e2e-harness/tests/live_s05_sdk_direct_external_execution.rs`
 
 ## What This Proves
 - the external-execution `sdk-direct` driver can execute S-05 escrow settlement on current `main`
@@ -81,16 +82,26 @@ target/debug/kamn-node \
 ```
 
 ## Operator Commands
-Enable the live `sdk-direct` lane and run S-05 only:
+Enable the live `sdk-direct` lane and run the explicit local-heavy S-05 probe:
 
 ```bash
 export KAMN_E2E_SDK_DIRECT_LIVE=true
-export KAMN_ENDPOINT=http://127.0.0.1:8080
-export KAMN_KOLME_ENDPOINT=http://127.0.0.1:3000
+export KAMN_ENDPOINT=http://127.0.0.1:18080
+export KAMN_KOLME_ENDPOINT=http://127.0.0.1:13000
+export KAMN_AGENT_NAME=kamn-live-s05-proof
 export KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY=/home/n/Code/kamn/target/debug/kamn-node
 export KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY=/home/n/Code/kamn/target/debug/kamn-node
 export KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY=/home/n/Code/kamn/target/debug/kamn-node
 
+cargo test -p kamn-e2e-harness \
+  --test live_s05_sdk_direct_external_execution \
+  integration_live_s05_sdk_direct_escrow_settlement_probe_against_local_runtime \
+  -- --ignored --exact --nocapture
+```
+
+Optional harness external-execution contract run for the surrounding orchestration surface:
+
+```bash
 target/debug/kamn-e2e-harness run \
   --mode sdk-direct \
   --kolme-binary /tmp/kolme/target/release/example-p2p \
@@ -99,7 +110,7 @@ target/debug/kamn-e2e-harness run \
   --scenarios S-05 > /tmp/kamn-e2e-live-s05-run.json
 ```
 
-Verify the generated evidence:
+Verify the generated evidence contract output:
 
 ```bash
 target/debug/kamn-e2e-harness verify \
@@ -109,8 +120,10 @@ target/debug/kamn-e2e-harness verify \
 ```
 
 ## Expected Evidence
-- run output records exactly one selected scenario: `S-05`
-- S-05 status is `PASS`
+- explicit live probe test passes for `S-05`
+- the explicit live probe uses the real `sdk-direct` driver against the running local endpoints
+- optional harness `run` output records exactly one selected scenario: `S-05`
+- optional harness `run` output records `S-05` status as `PASS`
 - evidence bundle contains the scenario-declared artifacts:
   - `evidence/s05/escrow_lifecycle_trace.json`
   - `evidence/s05/settlement_breakdown.json`
@@ -121,4 +134,5 @@ target/debug/kamn-e2e-harness verify \
 ## Notes
 - live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`
 - This slice is intentionally bounded to external-execution `sdk-direct` S-05 on current `main`.
+- The explicit proof command is the ignored local-heavy integration test, not the harness scaffold alone.
 - It does not prove Solana-backed settlement, bridge settlement, or external-chain settlement.

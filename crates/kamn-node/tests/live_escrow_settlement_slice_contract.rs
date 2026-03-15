@@ -6,8 +6,9 @@ const INDEX_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
 const SLICE_LABEL: &str = "live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`";
 const REQUIRED_DOC_MARKERS: &[&str] = &[
     "external-execution `sdk-direct` S-05",
-    "--enable-external-execution",
-    "--scenarios S-05",
+    "live_s05_sdk_direct_external_execution",
+    "integration_live_s05_sdk_direct_escrow_settlement_probe_against_local_runtime",
+    "-- --ignored --exact --nocapture",
     "target/debug/kamn-e2e-harness verify",
     "does not prove Solana-backed settlement",
     "does not prove bridge settlement",
