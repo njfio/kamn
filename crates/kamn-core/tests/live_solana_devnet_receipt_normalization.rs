@@ -42,21 +42,34 @@ fn live_report_normalizes_observed_labels() {
         };
         let view = normalize_cross_chain_receipt(&receipt)
             .unwrap_or_else(|error| panic!("failed to normalize {label}: {error:?}"));
-        normalized.insert(label.to_owned(), format!("{:?}", view.finality));
+        normalized.insert(label.to_owned(), view.finality);
     }
 
-    assert_eq!(normalized.get("processed"), Some(&"Pending".to_owned()));
-    assert_eq!(normalized.get("confirmed"), Some(&"Pending".to_owned()));
-    assert_eq!(normalized.get("finalized"), Some(&"Final".to_owned()));
+    assert_eq!(
+        normalized.get("processed"),
+        Some(&CrossChainReceiptFinality::Pending)
+    );
+    assert_eq!(
+        normalized.get("confirmed"),
+        Some(&CrossChainReceiptFinality::Pending)
+    );
+    assert_eq!(
+        normalized.get("finalized"),
+        Some(&CrossChainReceiptFinality::Final)
+    );
 
     if let Some(output_path) = env::var_os(OUTPUT_ENV) {
         let output_path = PathBuf::from(output_path);
+        let normalized_finalities = normalized
+            .iter()
+            .map(|(label, finality)| (label.clone(), format!("{finality:?}")))
+            .collect::<BTreeMap<_, _>>();
         let artifact = json!({
             "schema_version": SCHEMA_VERSION,
             "status": "ok",
             "assertions_passed": true,
             "source_report_file": report_path,
-            "normalized_finalities": normalized,
+            "normalized_finalities": normalized_finalities,
         });
         fs::write(
             &output_path,
