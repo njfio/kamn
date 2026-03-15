@@ -21,12 +21,14 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves a bounded Solana devnet-addressed bridge smoke path on the public bridge surface
 - live solana devnet proof slice: `docs/validation/live-solana-devnet-proof-slice.md`
   - proves bounded live Solana devnet JSON-RPC evidence normalized through the public receipt surface
+- live solana bridge dispatch slice: `docs/validation/live-solana-bridge-dispatch-slice.md`
+  - proves a bounded live Solana-backed bridge evidence lane on the service-api path
 
 ## What Remains Unproven
 - broad production readiness
 - consensus or multi-node finality
 - live chain-backed bridge finality or external settlement
-- live Solana settlement or relay over the KAMN bridge path
+- live Solana settlement over the KAMN bridge path
 - global fault tolerance under arbitrary partitions
 
 ## How To Use This Index

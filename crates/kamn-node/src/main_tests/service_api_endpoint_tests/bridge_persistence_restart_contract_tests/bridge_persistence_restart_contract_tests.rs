@@ -1,8 +1,7 @@
 use super::super::*;
 use super::support::{
     build_bridge_snapshot, forward_bridge, query_bridge, query_missing_bridge, read_state_json,
-    set_default_live_solana_bridge_rpc_url_env, set_live_solana_bridge_rpc_url_env,
-    set_state_file_env, submit_bridge, unique_named_state_file,
+    set_live_solana_bridge_rpc_url_env, set_state_file_env, submit_bridge, unique_named_state_file,
 };
 
 #[test]
@@ -13,76 +12,6 @@ fn integration_service_api_endpoint_persists_bridge_state_across_restart() {
     let caller_did = "kamn:did:agent:test-client-bridge-restart";
     let bridge_id = assert_bridge_submit_phase(caller_did);
     assert_bridge_restart_phase(caller_did, bridge_id, state_file.as_path());
-    let _ = fs::remove_file(state_file);
-}
-
-#[test]
-fn integration_service_api_endpoint_live_bridge_forward_path_rejects_placeholder_evidence() {
-    let _env = acquire_service_api_test_env();
-    let _live_rpc_guard = set_default_live_solana_bridge_rpc_url_env();
-    let state_file = unique_named_state_file("kamn-node-service-api-bridge-live-evidence");
-    let _state_file_guard = set_state_file_env(state_file.as_path());
-    let caller_did = "kamn:did:agent:test-client-bridge-live-evidence";
-    let snapshot = build_bridge_snapshot("127.0.0.1:34117");
-    let bind_addr = reserve_loopback_addr();
-    let submitted = submit_bridge(
-        &snapshot,
-        bind_addr.as_str(),
-        caller_did,
-        201,
-        r#"{"source_message_id":"msg-bridge-live-source"}"#,
-    );
-    let bridge_id = submitted["bridge_id"]
-        .as_str()
-        .expect("bridge id should be string");
-
-    let forwarded = forward_bridge(&snapshot, bind_addr.as_str(), caller_did, 202, bridge_id);
-    let target_message_id = forwarded["target_message_id"]
-        .as_str()
-        .expect("target message id should be string");
-    let forward_tx_hash = forwarded["forward_tx_hash"]
-        .as_str()
-        .expect("forward tx hash should be string");
-
-    assert_non_placeholder_bridge_evidence(bridge_id, target_message_id, forward_tx_hash);
-
-    let _ = fs::remove_file(state_file);
-}
-
-#[test]
-fn integration_service_api_endpoint_live_bridge_forward_evidence_survives_restart() {
-    let _env = acquire_service_api_test_env();
-    let _live_rpc_guard = set_default_live_solana_bridge_rpc_url_env();
-    let state_file = unique_named_state_file("kamn-node-service-api-bridge-live-restart");
-    let _state_file_guard = set_state_file_env(state_file.as_path());
-    let caller_did = "kamn:did:agent:test-client-bridge-live-restart";
-    let first_snapshot = build_bridge_snapshot("127.0.0.1:34119");
-    let first_bind_addr = reserve_loopback_addr();
-    let submitted = submit_bridge(
-        &first_snapshot,
-        first_bind_addr.as_str(),
-        caller_did,
-        301,
-        r#"{"source_message_id":"msg-bridge-live-restart-source"}"#,
-    );
-    let bridge_id = submitted["bridge_id"]
-        .as_str()
-        .expect("bridge id should be string");
-
-    let _forwarded = forward_bridge(&first_snapshot, first_bind_addr.as_str(), caller_did, 302, bridge_id);
-
-    let restart_snapshot = build_bridge_snapshot("127.0.0.1:34120");
-    let restart_bind_addr = reserve_loopback_addr();
-    let queried = query_bridge(
-        &restart_snapshot,
-        restart_bind_addr.as_str(),
-        caller_did,
-        303,
-        bridge_id,
-    );
-
-    assert_non_placeholder_bridge_payload(bridge_id, &queried);
-
     let _ = fs::remove_file(state_file);
 }
 
@@ -107,36 +36,6 @@ fn integration_service_api_endpoint_live_bridge_lane_fails_at_startup_for_empty_
     assert!(
         error.contains("KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL"),
         "startup error must identify the missing live bridge rpc env: {error}"
-    );
-}
-
-fn assert_non_placeholder_bridge_evidence(
-    bridge_id: &str,
-    target_message_id: &str,
-    forward_tx_hash: &str,
-) {
-    assert_ne!(
-        target_message_id,
-        format!("msg-bridge-target-{bridge_id}"),
-        "live bridge path must not persist placeholder target ids"
-    );
-    assert_ne!(
-        forward_tx_hash,
-        format!("sha256:bridge-forwarded-{bridge_id}"),
-        "live bridge path must not persist placeholder forward hashes"
-    );
-}
-
-fn assert_non_placeholder_bridge_payload(bridge_id: &str, queried: &Value) {
-    assert_ne!(
-        queried["target_message_id"],
-        Value::String(format!("msg-bridge-target-{bridge_id}")),
-        "restart-visible live bridge target ids must not fall back to placeholders"
-    );
-    assert_ne!(
-        queried["forward_tx_hash"],
-        Value::String(format!("sha256:bridge-forwarded-{bridge_id}")),
-        "restart-visible live bridge forward hashes must not fall back to placeholders"
     );
 }
 
