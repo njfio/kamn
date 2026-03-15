@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::{Path, PathBuf};
 
 const DOC_PATH: &str = "docs/validation/live-escrow-settlement-slice.md";
 const INDEX_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
@@ -7,30 +8,44 @@ const REQUIRED_DOC_MARKERS: &[&str] = &[
     "--enable-external-execution",
     "--scenarios S-05",
     "target/debug/kamn-e2e-harness verify",
-    "not prove Solana-backed settlement",
-    "not bridge settlement",
-    "not external-chain settlement",
+    "does not prove Solana-backed settlement",
+    "does not prove bridge settlement",
+    "does not prove external-chain settlement",
     "live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`",
+];
+const REQUIRED_INDEX_MARKERS: &[&str] = &[
+    "live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`",
+    "proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05",
 ];
 
 #[test]
 fn live_escrow_settlement_doc_exists_and_stays_bounded() {
-    let doc = fs::read_to_string(DOC_PATH)
-        .unwrap_or_else(|error| panic!("live escrow settlement slice doc missing: {error}"));
-    for marker in REQUIRED_DOC_MARKERS {
-        assert!(
-            doc.contains(marker),
-            "live escrow settlement doc missing marker: {marker}"
-        );
-    }
+    let doc = read_workspace_file(DOC_PATH);
+    assert_contains_all(doc.as_str(), REQUIRED_DOC_MARKERS, "live escrow settlement doc");
 }
 
 #[test]
 fn runtime_proof_index_includes_live_escrow_settlement_slice() {
-    let index = fs::read_to_string(INDEX_PATH)
-        .unwrap_or_else(|error| panic!("runtime proof index missing: {error}"));
-    assert!(
-        index.contains("live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`"),
-        "runtime proof index must link the live escrow settlement slice"
-    );
+    let index = read_workspace_file(INDEX_PATH);
+    assert_contains_all(index.as_str(), REQUIRED_INDEX_MARKERS, "runtime proof index");
+}
+
+fn assert_contains_all(doc: &str, markers: &[&str], label: &str) {
+    for marker in markers {
+        assert!(doc.contains(marker), "{label} missing marker: {marker}");
+    }
+}
+
+fn read_workspace_file(relative_path: &str) -> String {
+    let path = workspace_root().join(relative_path);
+    assert!(path.exists(), "expected path to exist: {}", path.display());
+    fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("failed to read {}: {}", path.display(), error))
+}
+
+fn workspace_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .expect("workspace root should resolve")
 }
