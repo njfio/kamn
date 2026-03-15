@@ -9,14 +9,14 @@ const REQUIRED_ENV_KEYS: &[&str] = &[
     "KAMN_AGENT_NAME",
     "KAMN_AGENT_KEY_FILE",
 ];
+const LIVE_EXECUTION_MODE: ExecutionMode = ExecutionMode::McpTau;
 
 #[test]
 #[ignore = "requires local Kolme + KAMN runtime with explicit live env"]
 fn integration_live_s05_mcp_agent_escrow_settlement_probe_against_local_runtime() {
     require_envs(REQUIRED_ENV_KEYS);
 
-    let driver = McpAgentDriver::from_env(ExecutionMode::McpTau)
-        .expect("mcp agent live S-05 test should build driver");
+    let driver = live_driver();
     let result = driver.execute("S-05");
 
     assert_eq!(result.scenario_id, "S-05");
@@ -25,6 +25,11 @@ fn integration_live_s05_mcp_agent_escrow_settlement_probe_against_local_runtime(
         "live mcp-agent S-05 failed: {:?}",
         result.detail
     );
+}
+
+fn live_driver() -> McpAgentDriver {
+    McpAgentDriver::from_env(LIVE_EXECUTION_MODE)
+        .expect("mcp agent live S-05 test should build driver")
 }
 
 fn require_envs(keys: &[&str]) {
