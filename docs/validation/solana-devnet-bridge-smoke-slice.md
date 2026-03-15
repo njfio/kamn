@@ -34,6 +34,7 @@ cargo test -p kamn-node --test solana_devnet_bridge_smoke_slice_contract -- --no
 - the Solana devnet route id is configured as `solana:devnet:program:task-v1`
 - outbound quorum success produces a `BridgePlatform::Custom("solana")` dispatch with two required approvals
 - inbound Solana projection produces a canonical message envelope for the configured target DID
+- replay rejection remains explicit as `duplicate inbound message id: solana:slot-881991:ix-2`
 - under-quorum, unauthorized-approver, and replay cases fail closed rather than degrading silently
 
 ## Bound

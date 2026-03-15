@@ -3,13 +3,15 @@ use std::path::PathBuf;
 
 const DOC_PATH: &str = "docs/validation/solana-devnet-bridge-smoke-slice.md";
 const INDEX_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
-const REQUIRED_DOC_MARKERS: [&str; 9] = [
+const REQUIRED_DOC_MARKERS: [&str; 11] = [
     "# Solana Devnet Bridge Smoke Slice",
     "solana:devnet:program:task-v1",
     "solana_quorum_dispatches_outbound",
     "integration_projects_solana_inbound_to_envelope",
     "regression_rejects_replayed_solana_inbound_projection_event",
     "integration_outbound_quorum_rejections_are_explicit_and_fail_closed",
+    "BridgePlatform::Custom(\"solana\")",
+    "duplicate inbound message id: solana:slot-881991:ix-2",
     "not live Solana RPC/devnet-backed proof",
     "What This Slice Proves",
     "What This Slice Does Not Prove",
