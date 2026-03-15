@@ -29,6 +29,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05
 - live escrow CLI parity slice: `docs/validation/live-escrow-cli-parity-slice.md`
   - proves one bounded live escrow settlement execution lane through CLI-scripted S-05 parity
+- live escrow MCP parity slice: `docs/validation/live-escrow-mcp-parity-slice.md`
+  - proves one bounded live escrow settlement execution lane through MCP-agent S-05 parity
 
 ## What Remains Unproven
 - broad production readiness
