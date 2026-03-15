@@ -3,10 +3,11 @@ use std::path::PathBuf;
 
 const DOC_PATH: &str = "docs/review/corrected-audit-response-2026-03-14.md";
 const REVIEW_README_PATH: &str = "docs/review/README.md";
-const REQUIRED_MARKERS: [&str; 10] = [
+const REQUIRED_MARKERS: [&str; 11] = [
     "docs/validation/working-vertical-slice.md",
     "docs/validation/sdk-tcp-vertical-slice.md",
     "docs/validation/solana-receipt-finality-slice.md",
+    "docs/validation/solana-devnet-bridge-smoke-slice.md",
     "Accurate Claims",
     "Stale Or Incorrect Claims",
     "Unproven Claims",
