@@ -18,8 +18,10 @@ The current proof anchors on `main` include:
 - `docs/validation/live-solana-devnet-proof-slice.md`
 - `docs/validation/live-solana-bridge-dispatch-slice.md`
 - `docs/validation/live-solana-bridge-websocket-slice.md`
+- `docs/validation/live-escrow-settlement-slice.md`
+- `docs/validation/live-escrow-cli-parity-slice.md`
 
-Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, bridge-finality, Solana-finality, Solana bridge-smoke, live Solana devnet, live Solana bridge-dispatch, and live Solana bridge-websocket proofs make the bounded persistence and finality claims easier to inspect from one place.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, live escrow parity, bridge-finality, Solana-finality, Solana bridge-smoke, live Solana devnet, live Solana bridge-dispatch, and live Solana bridge-websocket proofs make the bounded persistence and finality claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -98,6 +100,8 @@ Current build-health status for the specific blockers that audit called out:
 `docs/validation/live-solana-bridge-websocket-slice.md` proves that the same live Solana-backed bridge evidence lane reaches the real websocket event stream as a `service-api.bridge.forwarded` event carrying non-placeholder `target_message_id` and `forward_tx_hash` values, without claiming settlement or finality.
 
 `docs/validation/live-escrow-settlement-slice.md` proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05 on current `main`, while staying explicit that the claim is not Solana-backed settlement, bridge settlement, or external-chain settlement.
+
+`docs/validation/live-escrow-cli-parity-slice.md` proves one bounded CLI-scripted parity lane for that same local-heavy S-05 settlement path, again without claiming Solana-backed settlement, bridge settlement, or external-chain settlement.
 
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
