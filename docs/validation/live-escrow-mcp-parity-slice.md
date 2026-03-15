@@ -67,6 +67,7 @@ export KAMN_E2E_MCP_AGENT_BINARY=/home/n/Code/kamn/target/debug/kamn-mcp-server
 export KAMN_ENDPOINT=http://127.0.0.1:18180
 export KAMN_AGENT_NAME=kamn-live-mcp-s05-proof
 export KAMN_AGENT_KEY_FILE=/tmp/kamn-live-mcp-s05.key
+export KAMN_KOLME_ENDPOINT=http://127.0.0.1:13100
 ```
 
 Run the explicit ignored proof test:
@@ -83,6 +84,7 @@ cargo test -p kamn-e2e-harness \
 - the live MCP driver invokes `probe-fund-escrow` then `probe-release-escrow`
 - MCP output includes non-empty `escrow_id`
 - MCP output returns settlement `state` values required by the checked-in probe validators
+- the test materializes deterministic key material at `KAMN_AGENT_KEY_FILE` from `KAMN_AGENT_NAME` before launching `kamn-mcp-server`
 
 ## Notes
 - live escrow MCP parity slice: `docs/validation/live-escrow-mcp-parity-slice.md`

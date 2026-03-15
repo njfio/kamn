@@ -6,6 +6,7 @@ license = "Apache-2.0"
 
 [dependencies]
 kamn-agent-lib = { path = "../kamn-agent-lib" }
+kamn-sdk = { path = "../kamn-sdk" }
 serde_json.workspace = true
 
 [lints]

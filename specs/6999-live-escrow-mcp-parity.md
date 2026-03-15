@@ -78,3 +78,18 @@ Prove one bounded MCP-agent parity slice for the existing live S-05 escrow-settl
 ## Notes
 - The proof anchor is the explicit ignored integration test, not the harness scaffold alone.
 - This issue is parity-only for the existing bounded local-heavy escrow slice.
+
+## Final Evidence
+- `cargo test -p kamn-node --test live_escrow_mcp_parity_slice_contract -- --nocapture`
+- `cargo test -p kamn-mcp-server --bin kamn-mcp-server regression_issue_6197_load_signing_key_from_file_consumes_key_material -- --nocapture`
+- `cargo build -p kamn-mcp-server`
+- `KAMN_E2E_MCP_AGENT_LIVE=true KAMN_E2E_MCP_AGENT_BINARY=/home/n/Code/kamn/target/debug/kamn-mcp-server KAMN_ENDPOINT=http://127.0.0.1:18182 KAMN_KOLME_ENDPOINT=http://127.0.0.1:13100 KAMN_AGENT_NAME=kamn-live-mcp-s05-proof KAMN_AGENT_KEY_FILE=/tmp/kamn-live-mcp-s05-proof.key cargo test -p kamn-e2e-harness --test live_s05_mcp_agent_execution integration_live_s05_mcp_agent_escrow_settlement_probe_against_local_runtime -- --ignored --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6999-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- Phase 6 exposed a real MCP production defect before the live proof could go green.
+- `kamn-mcp-server` had been constructing legacy `kamn:did:agent:<name>` identities from key-file input, which current service-auth policy rejects in production mode.
+- The fix was kept bounded to the issue scope:
+  - `kamn-mcp-server` now derives a self-certifying DID bound to the signing key from `KAMN_AGENT_KEY_FILE`
+  - the explicit live S-05 MCP proof test now materializes matching key material into the configured key-file path before launching the MCP server
