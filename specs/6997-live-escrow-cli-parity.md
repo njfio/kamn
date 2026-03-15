@@ -76,3 +76,14 @@ Prove one bounded CLI-scripted parity slice for the existing live S-05 escrow-se
 ## Notes
 - The proof anchor is the explicit ignored integration test, not the harness scaffold alone.
 - This issue is parity-only for the existing bounded local-heavy escrow slice.
+
+## Execution Evidence
+- `cargo test -p kamn-node --test live_escrow_cli_parity_slice_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test live_s05_cli_scripted_execution --no-run`
+- `KAMN_E2E_CLI_SCRIPTED_LIVE=true KAMN_E2E_CLI_BINARY=/home/n/Code/kamn/target/debug/kamn-cli KAMN_ENDPOINT=http://127.0.0.1:18180 KAMN_AGENT_NAME=kamn-live-cli-s05-proof cargo test -p kamn-e2e-harness --test live_s05_cli_scripted_execution integration_live_s05_cli_scripted_escrow_settlement_probe_against_local_runtime -- --ignored --exact --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6997-touched-size.json`
+
+## Deviations
+- The bounded proof uses one local KAMN API node plus a live local Kolme API process rather than the three-node external-execution topology used by the existing `sdk-direct` slice.
+- The runbook keeps the claim explicit: this issue proves CLI-scripted parity for the bounded local-heavy S-05 escrow lane, not multi-node runtime equivalence or external-chain settlement.
