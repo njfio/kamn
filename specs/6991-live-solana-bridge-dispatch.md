@@ -28,11 +28,11 @@ Replace the synthetic service-api bridge forwarding placeholder values with boun
 - The runbook overstates the proof as settlement or full bridge finality.
 
 ## Acceptance criteria (testable booleans)
-- [ ] A bounded live Solana bridge-forward path exists behind startup-validated configuration.
-- [ ] The live path persists non-synthetic bridge evidence in `target_message_id` and `forward_tx_hash`.
-- [ ] A hard-fail integration test proves the live path does not emit placeholder bridge values.
-- [ ] Restart-visible bridge state preserves the live-backed evidence.
-- [ ] A bounded validation runbook documents what the slice proves and what it does not prove.
+- [x] A bounded live Solana bridge-forward path exists behind startup-validated configuration.
+- [x] The live path persists non-synthetic bridge evidence in `target_message_id` and `forward_tx_hash`.
+- [x] A hard-fail integration test proves the live path does not emit placeholder bridge values.
+- [x] Restart-visible bridge state preserves the live-backed evidence.
+- [x] A bounded validation runbook documents what the slice proves and what it does not prove.
 
 ## Files to touch
 - `specs/6991-live-solana-bridge-dispatch.md`
@@ -51,3 +51,13 @@ Replace the synthetic service-api bridge forwarding placeholder values with boun
 - Phase 3 red tests: add a bridge-forward integration test that asserts placeholder target ids and placeholder forward hashes are rejected on the live Solana-backed path.
 - Green by implementing the bounded live bridge forward path and updating persisted bridge state.
 - Re-run bridge forward integration, restart persistence, and touched-Rust checks before publish.
+
+## Deviations
+- The bounded live lane uses the checked-in live Solana proof runner from `#6989` as its real Solana-backed evidence source instead of introducing a second Solana RPC client into `kamn-node`.
+- The bridge restart contract file was split during refactor so the touched-Rust file-size gate stayed green after the live-path tests were added.
+
+## Final evidence
+- `cargo test -p kamn-node --test live_solana_bridge_dispatch_slice_contract -- --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::bridge_persistence_restart_contract_tests::live_bridge_contract_tests::integration_service_api_endpoint_live_bridge_forward_path_rejects_placeholder_evidence' -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::bridge_persistence_restart_contract_tests::live_bridge_contract_tests::integration_service_api_endpoint_live_bridge_forward_evidence_survives_restart' -- --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/6991-touched-size.json`
