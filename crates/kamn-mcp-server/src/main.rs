@@ -2,6 +2,7 @@ use kamn_agent_lib::{AgentIdentity, KamnAgentHandle};
 use kamn_mcp_server::config::McpServerConfig;
 use kamn_mcp_server::process_stdio_input;
 use kamn_mcp_server::tools::build_tool_registry;
+use kamn_sdk::{service_public_key_for_private_key, AgentDid};
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
@@ -72,8 +73,11 @@ fn normalize_agent_name_for_did(name: &str) -> Result<String, String> {
 
 fn build_identity_from_key_file(agent_name: &str, key_file: &str) -> Result<AgentIdentity, String> {
     let normalized = normalize_agent_name_for_did(agent_name)?;
-    let did = format!("kamn:did:agent:{normalized}");
     let signing_key = load_signing_key_from_file(Path::new(key_file))?;
+    let signer_public_key = service_public_key_for_private_key(signing_key.as_str())
+        .map_err(|error| format!("failed to derive signer public key: {error}"))?;
+    let did = AgentDid::with_public_key_hex_binding(normalized.as_str(), signer_public_key.as_str())
+        .map_err(|error| format!("failed to bind did to signer public key: {error}"))?;
     AgentIdentity::from_did_and_signing_key(did.as_str(), signing_key.as_str())
         .map_err(|error| format!("failed to construct identity: {error}"))
 }
@@ -217,6 +221,7 @@ mod tests {
         build_identity_from_key_file, load_signing_key_from_file, validate_framed_content_length,
         MAX_FRAMED_CONTENT_LENGTH_BYTES,
     };
+    use kamn_sdk::{service_public_key_for_private_key, AgentDid};
     use std::fs;
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -232,14 +237,25 @@ mod tests {
         ))
     }
 
-    #[test]
-    fn regression_issue_6197_load_signing_key_from_file_consumes_key_material() {
-        let path = temp_file_path("regression-6197");
+    fn write_test_key_file(path: &PathBuf) {
         fs::write(
             path.as_path(),
             "1111111111111111111111111111111111111111111111111111111111111111\n",
         )
         .expect("key file should write");
+    }
+
+    fn expected_bound_did(signing_key: &str) -> AgentDid {
+        let expected_public_key = service_public_key_for_private_key(signing_key)
+            .expect("public key should derive from key file");
+        AgentDid::with_public_key_hex_binding("alice", expected_public_key.as_str())
+            .expect("expected did should bind to signer key")
+    }
+
+    #[test]
+    fn regression_issue_6197_load_signing_key_from_file_consumes_key_material() {
+        let path = temp_file_path("regression-6197");
+        write_test_key_file(&path);
 
         let loaded =
             load_signing_key_from_file(path.as_path()).expect("key file should load successfully");
@@ -250,7 +266,8 @@ mod tests {
 
         let identity = build_identity_from_key_file("Alice", path.to_str().expect("utf8 path"))
             .expect("identity should build from key file");
-        assert_eq!(identity.did().as_str(), "kamn:did:agent:alice");
+        let expected_did = expected_bound_did(loaded.as_str());
+        assert_eq!(identity.did(), &expected_did);
         assert_eq!(identity.signing_key(), loaded);
 
         let _ = fs::remove_file(path.as_path());

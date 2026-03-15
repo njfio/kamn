@@ -1707,6 +1707,7 @@ name = "kamn-mcp-server"
 version = "0.1.0"
 dependencies = [
  "kamn-agent-lib",
+ "kamn-sdk",
  "serde_json",
 ]
 
