@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 const DOC_PATH: &str = "docs/validation/live-escrow-settlement-slice.md";
 const INDEX_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
+const SLICE_LABEL: &str = "live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`";
 const REQUIRED_DOC_MARKERS: &[&str] = &[
     "external-execution `sdk-direct` S-05",
     "--enable-external-execution",
@@ -11,10 +12,10 @@ const REQUIRED_DOC_MARKERS: &[&str] = &[
     "does not prove Solana-backed settlement",
     "does not prove bridge settlement",
     "does not prove external-chain settlement",
-    "live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`",
+    SLICE_LABEL,
 ];
 const REQUIRED_INDEX_MARKERS: &[&str] = &[
-    "live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`",
+    SLICE_LABEL,
     "proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05",
 ];
 
