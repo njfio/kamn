@@ -80,3 +80,14 @@ Prove one bounded MCP-agent parity slice for the existing live S-04 task-lifecyc
 ## Notes
 - The proof anchor is the explicit ignored integration test, not the harness scaffold alone.
 - This issue is parity-only for the existing bounded local-heavy task-lifecycle slice.
+
+## Final Evidence
+- `cargo test -p kamn-node --test live_task_lifecycle_mcp_parity_slice_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test live_s04_mcp_agent_execution --no-run`
+- `cargo build -p kamn-node -p kamn-mcp-server -p kamn-e2e-harness`
+- `KAMN_E2E_MCP_AGENT_LIVE=true KAMN_E2E_MCP_AGENT_BINARY=/home/n/Code/kamn/target/debug/kamn-mcp-server KAMN_ENDPOINT=http://127.0.0.1:18180 KAMN_KOLME_ENDPOINT=http://127.0.0.1:13100 KAMN_AGENT_NAME=kamn-live-mcp-s04-proof KAMN_AGENT_KEY_FILE=/tmp/kamn-live-mcp-s04-proof.key cargo test -p kamn-e2e-harness --test live_s04_mcp_agent_execution integration_live_s04_mcp_agent_task_lifecycle_probe_against_local_runtime -- --ignored --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/7003-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None. The proof remained bounded to MCP parity for the existing local-heavy S-04 task-lifecycle lane and did not claim CLI parity, crash recovery, or external settlement.
