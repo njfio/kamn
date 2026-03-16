@@ -27,11 +27,11 @@ Prove one bounded live Solana-backed bridge presence-stream slice on current `ma
 - the proof overstates the claim as settlement, finality, or external economic movement
 
 ## Acceptance Criteria (testable booleans)
-- [ ] one docs contract fails when `docs/validation/live-solana-bridge-presence-stream-slice.md` is absent or missing required markers
-- [ ] one runbook exists that states the proof is bounded to live bridge projection on the presence stream
-- [ ] one integration test proves the presence-mode websocket consumer observes the live bridge projection event from the existing live bridge lane
-- [ ] `docs/validation/current-proven-runtime-slices.md` links the new runbook
-- [ ] the runbook explicitly states that the slice does not prove live on-chain settlement, bridge finality, or external economic settlement
+- [x] one docs contract fails when `docs/validation/live-solana-bridge-presence-stream-slice.md` is absent or missing required markers
+- [x] one runbook exists that states the proof is bounded to live bridge projection on the presence stream
+- [x] one integration test proves the presence-mode websocket consumer observes the live bridge projection event from the existing live bridge lane
+- [x] `docs/validation/current-proven-runtime-slices.md` links the new runbook
+- [x] the runbook explicitly states that the slice does not prove live on-chain settlement, bridge finality, or external economic settlement
 
 ## Files to Touch
 - `specs/7007-live-bridge-presence-stream-slice.md`
@@ -60,3 +60,18 @@ Prove one bounded live Solana-backed bridge presence-stream slice on current `ma
 ## Notes
 - This issue intentionally deepens the live bridge value-flow proof through a different real consumer surface.
 - It is not an external settlement issue.
+
+## Final Evidence
+- Docs contract:
+  - `cargo test -p kamn-node --test live_solana_bridge_presence_stream_slice_contract -- --nocapture`
+- Integration proof:
+  - `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::websocket_contract_tests::presence_projection_contract_tests::live_bridge_presence_stream_contract_tests::integration_service_api_endpoint_websocket_presence_mode_streams_live_bridge_projection_event' -- --exact --nocapture`
+- Review-surface contract:
+  - `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- Touched-Rust policy:
+  - `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/7007-touched-size.json`
+  - result: `policy_decision=GO`
+
+## Deviations
+- No behavioral deviation from the spec.
+- The proof remains explicitly bounded to live bridge projection on the presence-mode websocket surface. It does not claim settlement, finality, or external economic movement.
