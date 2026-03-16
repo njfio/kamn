@@ -60,8 +60,8 @@ KAMN_SERVICE_API_TLS_MODE=disabled target/debug/kamn-node \
   --storage-dir /tmp/kamn-node-live-s04
 ```
 
-## Operator Commands
-Export the live `sdk-direct` env:
+## Required Environment
+Export the live `sdk-direct` env before running the proof:
 
 ```bash
 export KAMN_E2E_SDK_DIRECT_LIVE=true
@@ -70,6 +70,7 @@ export KAMN_KOLME_ENDPOINT=http://127.0.0.1:13100
 export KAMN_AGENT_NAME=kamn-live-s04-proof
 ```
 
+## Proof Command
 Run the explicit ignored proof test:
 
 ```bash
