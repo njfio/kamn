@@ -17,6 +17,10 @@ This runbook documents one bounded CLI-scripted parity slice for live task lifec
 - the proof is exercised through the explicit ignored integration test `integration_live_s04_cli_scripted_task_lifecycle_probe_against_local_runtime`
 - current `main` has one operator-comprehensible CLI parity lane for the same bounded live task-lifecycle slice already proven through `sdk-direct`
 
+## Parity Bound
+- this slice adds CLI parity only
+- it does not widen the underlying S-04 claim beyond the existing bounded local-heavy task-lifecycle lane
+
 ## What This Does Not Prove
 - does not prove crash recovery
 - does not prove Solana-backed settlement
