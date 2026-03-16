@@ -149,10 +149,15 @@ fn assert_live_bridge_forwarded_frame(response: &[u8]) {
         "presence-mode websocket stream should include a bridge forwarded event: {frames:?}",
     );
     let payload = &forwarded[0];
-    assert_eq!(
-        payload["event"].as_str(),
-        Some("service-api.bridge.forwarded")
-    );
+    assert_live_bridge_forwarded_identity(payload);
+    assert_live_bridge_forwarded_evidence(payload);
+}
+
+fn assert_live_bridge_forwarded_identity(payload: &Value) {
+    assert_eq!(payload["event"].as_str(), Some("service-api.bridge.forwarded"));
+}
+
+fn assert_live_bridge_forwarded_evidence(payload: &Value) {
     assert!(payload["target_message_id"].as_str().is_some());
     assert!(payload["forward_tx_hash"].as_str().is_some());
 }
