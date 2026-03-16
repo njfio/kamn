@@ -31,6 +31,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves a bounded live Solana-backed bridge evidence lane on the service-api path
 - live solana bridge websocket slice: `docs/validation/live-solana-bridge-websocket-slice.md`
   - proves the live Solana-backed bridge evidence lane reaches the websocket event stream
+- live solana bridge presence-stream slice: `docs/validation/live-solana-bridge-presence-stream-slice.md`
+  - proves the live Solana-backed bridge evidence lane reaches the presence-mode websocket surface
 - live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`
   - proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05
 - live escrow CLI parity slice: `docs/validation/live-escrow-cli-parity-slice.md`
