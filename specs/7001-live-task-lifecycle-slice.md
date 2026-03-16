@@ -73,3 +73,13 @@ Prove one bounded live task-lifecycle slice on current `main` by executing the e
 ## Notes
 - The proof anchor is the explicit ignored integration test, not the harness scaffold alone.
 - This issue is intentionally bounded to one `sdk-direct` live task-lifecycle lane.
+
+## Final Evidence
+- `cargo test -p kamn-node --test live_task_lifecycle_slice_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test live_s04_sdk_direct_execution --no-run`
+- `KAMN_E2E_SDK_DIRECT_LIVE=true KAMN_ENDPOINT=http://127.0.0.1:18180 KAMN_KOLME_ENDPOINT=http://127.0.0.1:13100 KAMN_AGENT_NAME=kamn-live-s04-proof cargo test -p kamn-e2e-harness --test live_s04_sdk_direct_execution integration_live_s04_sdk_direct_task_lifecycle_probe_against_local_runtime -- --ignored --exact --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/7001-touched-size.json`
+- touched-Rust result: `policy_decision=GO`
+
+## Deviations
+- None. The proof remained bounded to one local-heavy `sdk-direct` S-04 lane and did not claim MCP or CLI parity.
