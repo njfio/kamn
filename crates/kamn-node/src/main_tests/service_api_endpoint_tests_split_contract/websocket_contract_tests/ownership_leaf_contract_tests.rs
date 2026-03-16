@@ -36,6 +36,11 @@ fn assert_presence_projection_leaf() {
         &["fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event()"],
         "websocket presence projection contract file",
     );
+    assert_single_leaf(
+        "src/main_tests/service_api_endpoint_tests/websocket_contract_tests/presence_projection_contract_tests/live_bridge_presence_stream_contract_tests.rs",
+        &["fn integration_service_api_endpoint_websocket_presence_mode_streams_live_bridge_projection_event()"],
+        "websocket live bridge presence-stream contract file",
+    );
 }
 
 fn assert_presence_validation_leaves() {

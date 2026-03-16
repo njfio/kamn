@@ -1,6 +1,9 @@
 use super::support::*;
 use super::*;
 
+#[path = "presence_projection_contract_tests/live_bridge_presence_stream_contract_tests.rs"]
+mod live_bridge_presence_stream_contract_tests;
+
 #[test]
 fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event() {
     let harness = build_websocket_harness("127.0.0.1:34058", 1);
@@ -28,7 +31,7 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_proje
     );
 }
 
-fn assert_presence_projection_response(response: &[u8], sender_did: &str) {
+pub(super) fn assert_presence_projection_response(response: &[u8], sender_did: &str) {
     let (header, payload) = parse_websocket_response(response);
     assert!(header.contains("HTTP/1.1 101 Switching Protocols"));
     let payload_json: Value =
@@ -37,7 +40,7 @@ fn assert_presence_projection_response(response: &[u8], sender_did: &str) {
     assert_presence_visibility_fields(&payload_json);
 }
 
-fn assert_presence_identity_fields(payload_json: &Value, sender_did: &str) {
+pub(super) fn assert_presence_identity_fields(payload_json: &Value, sender_did: &str) {
     assert_eq!(
         payload_json.get("event").and_then(Value::as_str),
         Some("m9.presence.snapshot")
@@ -78,7 +81,7 @@ fn assert_presence_target_fields(payload_json: &Value, sender_did: &str) {
     );
 }
 
-fn assert_presence_visibility_fields(payload_json: &Value) {
+pub(super) fn assert_presence_visibility_fields(payload_json: &Value) {
     assert_eq!(
         payload_json.get("visible").and_then(Value::as_bool),
         Some(true)
