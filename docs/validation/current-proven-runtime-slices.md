@@ -15,6 +15,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves one bounded live task-lifecycle execution lane through `sdk-direct` S-04
 - live task-lifecycle MCP parity slice: `docs/validation/live-task-lifecycle-mcp-parity-slice.md`
   - proves one bounded live task-lifecycle execution lane through MCP-agent S-04 parity
+- live task-lifecycle CLI parity slice: `docs/validation/live-task-lifecycle-cli-parity-slice.md`
+  - proves one bounded live task-lifecycle execution lane through CLI-scripted S-04 parity
 - escrow settlement slice: `docs/validation/escrow-settlement-slice.md`
   - proves service-api escrow lifecycle persistence through fund, release, and restart-visible released state
 - bridge finality slice: `docs/validation/bridge-finality-slice.md`
