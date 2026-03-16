@@ -17,6 +17,10 @@ This runbook documents one bounded MCP-agent parity slice for live task lifecycl
 - the proof is exercised through the explicit ignored integration test `integration_live_s04_mcp_agent_task_lifecycle_probe_against_local_runtime`
 - current `main` has one operator-comprehensible MCP parity lane for the same bounded live task-lifecycle slice already proven through `sdk-direct`
 
+## Parity Bound
+- this slice adds MCP-agent parity only
+- it does not widen the underlying S-04 claim beyond the existing bounded local-heavy task-lifecycle lane
+
 ## What This Does Not Prove
 - does not prove crash recovery
 - does not prove Solana-backed settlement
