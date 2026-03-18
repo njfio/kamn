@@ -20,6 +20,10 @@ serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "time", "signal"] }
 axum-server = { version = "0.7.2", features = ["tls-rustls-no-provider"] }
 rustls-pemfile.workspace = true
+solana-commitment-config = "3.0.0"
+solana-rpc-client = "3.0.8"
+solana-sdk = "3.0.0"
+solana-system-transaction = "3.0.0"
 zeroize.workspace = true
 
 [dev-dependencies]

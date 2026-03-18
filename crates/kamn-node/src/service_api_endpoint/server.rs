@@ -285,6 +285,10 @@ pub(super) async fn serve_service_api_endpoint_async(
         resolve_service_api_tls_mode(snapshot.runtime_mode.as_str(), config.bind_addr.as_str())?;
     let live_solana_bridge_dispatch =
         super::live_bridge_dispatch::resolve_live_solana_bridge_dispatch_config()?;
+    let live_solana_settlement =
+        super::live_settlement_dispatch::resolve_live_solana_settlement_config(
+            live_solana_bridge_dispatch.as_ref(),
+        )?;
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
     let state_file = resolve_service_api_state_file(&config)?;
     let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
@@ -311,6 +315,7 @@ pub(super) async fn serve_service_api_endpoint_async(
         message_store: Arc::new(Mutex::new(message_store)),
         relay_spool_file,
         live_solana_bridge_dispatch,
+        live_solana_settlement,
     });
     let request_budget_shared = runtime_state.request_budget.clone();
     let timeout_reached = Arc::new(AtomicBool::new(false));

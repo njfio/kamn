@@ -54,8 +54,9 @@ use std::{env, fs, net::SocketAddr};
 use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
-use message_store::ServiceApiMessageStore;
 use live_bridge_dispatch::LiveSolanaBridgeDispatchConfig;
+use live_settlement_dispatch::LiveSolanaSettlementConfig;
+use message_store::ServiceApiMessageStore;
 pub(crate) use models::{
     ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiAgentSearchRequestBody,
     ServiceApiBridgeStatusBody, ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody,
@@ -63,6 +64,7 @@ pub(crate) use models::{
     ServiceApiEndpointConfig, ServiceApiEndpointResponse, ServiceApiErrorBody,
     ServiceApiEscrowStatusBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
     ServiceApiMessageGetBody, ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry,
+    ServiceApiSettlementMetadata,
     ServiceApiTaskCreateBody, ServiceApiTaskGetBody, ServiceApiTaskTransitionBody,
     ServiceApiWebsocketStateTransitionBody,
 };
@@ -75,6 +77,11 @@ pub(crate) use state_io::{
     project_service_api_relayed_message_statuses,
 };
 use websocket::ServiceApiWebsocketEventFanout;
+
+#[cfg(test)]
+pub(crate) use live_settlement_dispatch::{
+    set_test_live_solana_settlement_override,
+};
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
@@ -340,6 +347,7 @@ struct ServiceApiRuntimeState {
     message_store: Arc<Mutex<ServiceApiMessageStore>>,
     relay_spool_file: Option<String>,
     live_solana_bridge_dispatch: Option<LiveSolanaBridgeDispatchConfig>,
+    live_solana_settlement: Option<LiveSolanaSettlementConfig>,
 }
 
 #[derive(Debug)]

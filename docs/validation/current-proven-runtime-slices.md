@@ -41,11 +41,14 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves one bounded live escrow settlement execution lane through MCP-agent S-05 parity
 - external-chain-backed settlement slice: `docs/validation/external-chain-backed-settlement-slice.md`
   - proves one bounded external-chain-backed escrow settlement lane
+- solana devnet asset-movement slice: `docs/validation/solana-devnet-asset-movement-slice.md`
+  - proves one bounded live Solana devnet asset-movement lane
 
 ## What Remains Unproven
 - broad production readiness
 - consensus or multi-node finality
-- live chain-backed bridge finality or external settlement
+- live chain-backed bridge finality
+- generalized external settlement beyond one bounded Solana devnet asset-movement lane
 - live Solana settlement over the KAMN bridge path
 - broad multi-driver live economic-settlement parity
 - global fault tolerance under arbitrary partitions

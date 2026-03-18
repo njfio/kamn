@@ -2,6 +2,8 @@
 mod env_support;
 #[path = "support/request_support.rs"]
 mod request_support;
+#[path = "support/solana_asset_movement_support.rs"]
+mod solana_asset_movement_support;
 #[path = "support/state_support.rs"]
 mod state_support;
 
@@ -12,6 +14,12 @@ pub(super) use env_support::{
 pub(super) use request_support::{
     accept_task, create_task, fund_escrow, query_task, raw_signed_request, register_agent_profile,
     release_escrow,
+};
+pub(super) use solana_asset_movement_support::{
+    assert_persisted_solana_signature_metadata,
+    assert_released_escrow_has_solana_signature_metadata,
+    build_live_solana_asset_movement_context, fund_and_release_live_escrow,
+    release_live_escrow_across_restart, release_live_escrow_twice, settlement_tx_signature,
 };
 pub(super) use state_support::{
     build_task_escrow_snapshot, set_state_file_env, unique_named_state_file,

@@ -114,6 +114,7 @@ pub(crate) fn test_service_api_runtime_state() -> ServiceApiRuntimeState {
         message_store: message_store(),
         relay_spool_file: None,
         live_solana_bridge_dispatch: None,
+        live_solana_settlement: None,
     }
 }
 

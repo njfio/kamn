@@ -235,7 +235,7 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiEscrowStatusBody {
                 escrow_id,
                 state: "funded".to_owned(),
-                settlement_receipt_hash: None,
+                settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,
@@ -247,7 +247,7 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiEscrowStatusBody {
                 escrow_id: escrow_id.to_owned(),
                 state: "released".to_owned(),
-                settlement_receipt_hash: None,
+                settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,

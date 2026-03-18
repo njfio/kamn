@@ -1,4 +1,5 @@
 use super::super::*;
+use super::state_routes_release::{live_settlement_evidence_error, resolve_release_escrow_result};
 
 pub(super) async fn handle_post_route(
     state: &Arc<ServiceApiRuntimeState>,
@@ -13,7 +14,6 @@ pub(super) async fn handle_post_route(
     }
     content_route_response(state, path).await
 }
-
 async fn task_route_response(state: &Arc<ServiceApiRuntimeState>, path: &str) -> Option<Response> {
     if let Some(task_id) = super::payload::task_accept_path_id(path) {
         return Some(task_transition(state, task_id, "accepted", true).await);
@@ -21,7 +21,6 @@ async fn task_route_response(state: &Arc<ServiceApiRuntimeState>, path: &str) ->
     let task_id = super::payload::task_complete_path_id(path)?;
     Some(task_transition(state, task_id, "completed", true).await)
 }
-
 async fn persistence_route_response(
     state: &Arc<ServiceApiRuntimeState>,
     path: &str,
@@ -32,7 +31,6 @@ async fn persistence_route_response(
     let bridge_id = super::payload::bridge_forward_path_id(path)?;
     Some(forward_bridge(state, bridge_id).await)
 }
-
 async fn content_route_response(
     state: &Arc<ServiceApiRuntimeState>,
     path: &str,
@@ -79,27 +77,6 @@ async fn release_escrow(state: &Arc<ServiceApiRuntimeState>, escrow_id: &str) ->
         Ok(None) => not_found(),
         Err(error) => persistence_error("service api escrow persistence failed", error),
     }
-}
-
-async fn resolve_release_escrow_result(
-    state: &Arc<ServiceApiRuntimeState>,
-    escrow_id: &str,
-) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, String> {
-    let Some(config) = state.live_solana_bridge_dispatch.as_ref() else {
-        return Ok(state.message_store.lock().await.release_escrow(escrow_id));
-    };
-    let evidence = crate::service_api_endpoint::live_settlement_dispatch::collect_live_settlement_evidence(
-        config,
-        escrow_id,
-    )?;
-    Ok(state
-        .message_store
-        .lock()
-        .await
-        .release_escrow_with_settlement_receipt_hash(
-            escrow_id,
-            evidence.settlement_receipt_hash.as_str(),
-        ))
 }
 
 enum ContentAction {
@@ -167,14 +144,5 @@ fn live_bridge_dispatch_error(error: &str) -> Response {
         "internal",
         REASON_CODE_LIVE_BRIDGE_DISPATCH_FAILED,
         format!("service api live bridge dispatch failed: {error}").as_str(),
-    )
-}
-
-fn live_settlement_evidence_error(error: &str) -> Response {
-    super::payload::json_error_response(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "internal",
-        REASON_CODE_LIVE_SETTLEMENT_EVIDENCE_FAILED,
-        format!("service api live settlement evidence failed: {error}").as_str(),
     )
 }

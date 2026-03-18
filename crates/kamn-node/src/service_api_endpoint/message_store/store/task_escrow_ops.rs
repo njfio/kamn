@@ -2,14 +2,16 @@ use super::super::*;
 
 mod dispatch;
 mod settlement;
+mod tasks;
 
 use dispatch::{
     dispatch_prerequisite_missing_error, dispatch_request_from_record,
-    parse_dispatchable_task_payload, select_dispatch_assignee, DispatchableTaskPayload,
+    parse_dispatchable_task_payload, select_dispatch_assignee,
 };
 use settlement::{
-    build_escrow_record, next_escrow_id, released_escrow_response, release_escrow_record,
+    build_escrow_record, escrow_status_response, next_escrow_id, release_escrow_record,
 };
+use tasks::{build_task_record, next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
     pub(crate) fn create_task(
@@ -76,8 +78,19 @@ impl ServiceApiMessageStore {
         Ok(ServiceApiEscrowStatusBody {
             escrow_id,
             state: "funded".to_owned(),
-            settlement_receipt_hash: None,
+            settlement: ServiceApiSettlementMetadata::default(),
         })
+    }
+
+    pub(crate) fn get_escrow_status(
+        &mut self,
+        escrow_id: &str,
+    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        self.refresh_from_disk()?;
+        let Some(record) = self.snapshot.escrows.get(escrow_id) else {
+            return Ok(None);
+        };
+        Ok(Some(escrow_status_response(record)))
     }
 
     pub(crate) fn release_escrow(
@@ -92,24 +105,41 @@ impl ServiceApiMessageStore {
         escrow_id: &str,
         settlement_receipt_hash: &str,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
-        self.release_escrow_inner(escrow_id, Some(settlement_receipt_hash))
+        self.release_escrow_inner(
+            escrow_id,
+            Some(&ServiceApiSettlementMetadata {
+                settlement_receipt_hash: Some(settlement_receipt_hash.to_owned()),
+                ..ServiceApiSettlementMetadata::default()
+            }),
+        )
+    }
+
+    pub(crate) fn release_escrow_with_settlement_metadata(
+        &mut self,
+        escrow_id: &str,
+        settlement: &ServiceApiSettlementMetadata,
+    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        self.release_escrow_inner(escrow_id, Some(settlement))
     }
 
     fn release_escrow_inner(
         &mut self,
         escrow_id: &str,
-        settlement_receipt_hash: Option<&str>,
+        settlement: Option<&ServiceApiSettlementMetadata>,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
         self.refresh_from_disk()?;
-        let Some(record) = self.snapshot.escrows.get_mut(escrow_id) else {
-            return Ok(None);
+        let response = {
+            let Some(record) = self.snapshot.escrows.get_mut(escrow_id) else {
+                return Ok(None);
+            };
+            if record.state == "released" {
+                return Ok(Some(escrow_status_response(record)));
+            }
+            release_escrow_record(record, settlement);
+            escrow_status_response(record)
         };
-        release_escrow_record(record, settlement_receipt_hash);
         self.persist()?;
-        Ok(Some(released_escrow_response(
-            escrow_id,
-            settlement_receipt_hash,
-        )))
+        Ok(Some(response))
     }
 
     fn dispatch_task_if_ready(&mut self, task_id: &str) -> Result<(), String> {
@@ -133,53 +163,4 @@ impl ServiceApiMessageStore {
         record.state = "completed".to_owned();
         self.persist()
     }
-}
-
-fn next_task_id(store: &ServiceApiMessageStore, payload: &str) -> String {
-    next_local_task_escrow_id("task-local", payload, |candidate| {
-        store.snapshot.tasks.contains_key(candidate)
-    })
-}
-
-fn next_local_task_escrow_id<F>(prefix: &str, payload: &str, exists: F) -> String
-where
-    F: Fn(&str) -> bool,
-{
-    let base = format!(
-        "{prefix}-{:016x}",
-        deterministic_body_tag(payload.as_bytes())
-    );
-    let mut candidate = base.clone();
-    let mut suffix = 1_u64;
-    while exists(candidate.as_str()) {
-        candidate = format!("{base}-{suffix}");
-        suffix = suffix.saturating_add(1);
-    }
-    candidate
-}
-
-fn build_task_record(
-    task_id: &str,
-    dispatch_metadata: Option<DispatchableTaskPayload>,
-) -> ServiceApiPersistedTaskRecord {
-    ServiceApiPersistedTaskRecord {
-        task_id: task_id.to_owned(),
-        state: "submitted".to_owned(),
-        creator_did: dispatch_metadata
-            .as_ref()
-            .map(|metadata| metadata.creator_did.clone()),
-        task_type: dispatch_metadata
-            .as_ref()
-            .map(|metadata| metadata.task_type.clone()),
-        description: dispatch_metadata.map(|metadata| metadata.description),
-        assignee: None,
-    }
-}
-
-fn persist_task_created_audit_export(
-    store: &ServiceApiMessageStore,
-    task_id: &str,
-) -> Result<(), String> {
-    let event = service_api_task_created_audit_event(task_id);
-    persist_service_api_audit_export_event(store.audit_export_file.as_deref(), event)
 }

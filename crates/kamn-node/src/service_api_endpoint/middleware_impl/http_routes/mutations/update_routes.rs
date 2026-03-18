@@ -2,6 +2,7 @@ use super::*;
 
 mod message_routes;
 mod state_routes;
+mod state_routes_release;
 
 pub(super) async fn handle_post_route(
     state: &Arc<ServiceApiRuntimeState>,
