@@ -49,7 +49,7 @@ fn normalize_live_solana_bridge_rpc_url(value: &str) -> Result<String, String> {
             "live solana bridge rpc env must start with http:// or https://: {LIVE_SOLANA_BRIDGE_RPC_URL_ENV}"
         ));
     }
-    validate_live_solana_proof_script_path(proof_script_path().as_path())?;
+    validate_live_solana_proof_script_path(live_solana_proof_script_path().as_path())?;
     Ok(normalized.to_owned())
 }
 
@@ -67,7 +67,7 @@ pub(super) fn collect_live_bridge_forward_evidence(
     config: &LiveSolanaBridgeDispatchConfig,
     bridge_id: &str,
 ) -> Result<LiveBridgeForwardEvidence, String> {
-    let report_path = live_bridge_report_path(bridge_id);
+    let report_path = live_solana_proof_report_path(bridge_id);
     let result = collect_live_bridge_forward_evidence_from_report(config, bridge_id, &report_path);
     let _ = fs::remove_file(report_path);
     result
@@ -77,7 +77,7 @@ pub(super) fn collect_live_solana_finalized_slot(
     config: &LiveSolanaBridgeDispatchConfig,
     proof_subject: &str,
 ) -> Result<u64, String> {
-    let report_path = live_bridge_report_path(proof_subject);
+    let report_path = live_solana_proof_report_path(proof_subject);
     let result = collect_live_solana_finalized_slot_from_report(config, &report_path);
     let _ = fs::remove_file(report_path);
     result
@@ -107,7 +107,7 @@ fn collect_live_solana_finalized_slot_from_report(
 
 fn run_live_solana_devnet_proof(rpc_url: &str, report_path: &Path) -> Result<(), String> {
     let output = Command::new("python3")
-        .arg(proof_script_path())
+        .arg(live_solana_proof_script_path())
         .arg("--rpc-url")
         .arg(rpc_url)
         .arg("--output-json")
@@ -169,10 +169,10 @@ fn build_live_bridge_forward_evidence(
     }
 }
 
-fn live_bridge_report_path(bridge_id: &str) -> PathBuf {
+fn live_solana_proof_report_path(report_subject: &str) -> PathBuf {
     let entropy = deterministic_body_tag(
         format!(
-            "{bridge_id}:{}",
+            "{report_subject}:{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
@@ -183,7 +183,7 @@ fn live_bridge_report_path(bridge_id: &str) -> PathBuf {
     std::env::temp_dir().join(format!("kamn-live-bridge-proof-{entropy:016x}.json"))
 }
 
-fn proof_script_path() -> PathBuf {
+fn live_solana_proof_script_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../scripts/runtime/run_live_solana_devnet_proof.py")
 }
