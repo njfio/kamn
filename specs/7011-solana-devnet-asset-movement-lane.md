@@ -88,3 +88,17 @@ Implement one honest bounded Solana devnet asset-movement lane on current `main`
 ## Notes
 - Current `main` already proves live Solana devnet observation, live bridge evidence derivation, and one bounded external-chain-backed settlement lane.
 - This issue exists to replace slot-derived synthetic settlement linkage with one real Solana devnet transaction path, or fail loudly if the runtime cannot support it honestly.
+
+## Final Evidence And Deviation
+- Stable verification is green for:
+  - startup fail-loud on missing Solana settlement config
+  - persisted `settlement_tx_signature` plus reconciliation metadata
+  - idempotent repeated release reuse
+  - restart-visible repeated release reuse of the same persisted Solana signature
+  - docs contract
+  - touched-Rust policy gate
+- The ignored live devnet proof exists and compiles, but local execution from this environment was blocked by Solana devnet faucet rate limiting during `requestAirdrop`, even after lowering the airdrop amount and adding retry/backoff.
+- Because of that external blocker, the honest claim on merge is:
+  - the runtime path for real Solana devnet transfer submission is implemented
+  - the stable regression suite proves the runtime wiring, persistence semantics, idempotency, and restart semantics
+  - the checked-in ignored live proof remains the operator path for direct live verification when devnet faucet capacity is available

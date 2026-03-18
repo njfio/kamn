@@ -22,8 +22,9 @@ The current proof anchors on `main` include:
 - `docs/validation/live-escrow-settlement-slice.md`
 - `docs/validation/live-escrow-cli-parity-slice.md`
 - `docs/validation/external-chain-backed-settlement-slice.md`
+- `docs/validation/solana-devnet-asset-movement-slice.md`
 
-Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, live escrow parity, bounded external-chain-backed settlement, bridge-finality, Solana-finality, Solana bridge-smoke, live Solana devnet, live Solana bridge-dispatch, live Solana bridge-websocket, and live Solana bridge presence-stream proofs make the bounded persistence and finality claims easier to inspect from one place.
+Those proofs matter because they establish that current `main` is not only type definitions and wrappers. The node path proves one real service-API vertical slice. The SDK path proves one real TCP signed-relay vertical slice. The newer relay, restart, escrow, live escrow parity, bounded external-chain-backed settlement, bounded Solana devnet asset movement, bridge-finality, Solana-finality, Solana bridge-smoke, live Solana devnet, live Solana bridge-dispatch, live Solana bridge-websocket, and live Solana bridge presence-stream proofs make the bounded persistence and finality claims easier to inspect from one place.
 
 ## Accurate Claims
 - `kamn-core` is still too large and too central.
@@ -55,7 +56,7 @@ Current build-health status for the specific blockers that audit called out:
 
 ## Unproven Claims
 - The repo does not yet prove broad production readiness.
-- The repo does not yet prove full consensus maturity, bridge finality, or live economic settlement from one operator-facing path.
+- The repo does not yet prove full consensus maturity, bridge finality, or generalized live economic settlement from one operator-facing path.
 - The repo does not yet prove that every major noun in the architecture has equivalent runtime depth.
 - Claims like `no real persistence` or `only scaffolding` are too absolute for current `main`, but broad product maturity is still not proven either.
 
@@ -109,6 +110,9 @@ Current build-health status for the specific blockers that audit called out:
 `docs/validation/live-escrow-cli-parity-slice.md` proves one bounded CLI-scripted parity lane for that same local-heavy S-05 settlement path, again without claiming Solana-backed settlement, bridge settlement, or external-chain settlement.
 
 `docs/validation/external-chain-backed-settlement-slice.md` proves one bounded external-chain-backed escrow settlement lane on the public service-api surface, specifically that release semantics consume and persist a non-placeholder receipt linkage from the existing live Solana proof path, without claiming external economic settlement or on-chain value movement.
+
+### Bounded Solana Devnet Asset-Movement Slice
+`docs/validation/solana-devnet-asset-movement-slice.md` proves one bounded public KAMN release lane that can submit a real Solana devnet transfer, persist `settlement_tx_signature` plus settlement metadata, and reuse the same persisted transaction linkage on repeated release without claiming broad production settlement semantics.
 
 ## Bottom Line
 The strongest version of the external critique is strategic, not numerical.
