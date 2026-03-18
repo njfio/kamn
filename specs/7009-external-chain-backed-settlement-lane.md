@@ -29,12 +29,12 @@ Implement one honest bounded external-chain-backed settlement lane on current `m
 - the runbook overstates the claim as external economic settlement or finality when the implementation only proves evidence-coupled settlement semantics
 
 ## Acceptance Criteria (testable booleans)
-- [ ] one real release or refund path consumes external-chain-backed evidence before emitting the terminal escrow state
-- [ ] the resulting escrow settlement state persists a non-placeholder external evidence linkage that remains queryable across restart
-- [ ] one integration or e2e proof exercises the real settlement lane end-to-end and fails if the external evidence linkage is missing or placeholder
-- [ ] one validation runbook exists at `docs/validation/` with explicit `What This Proves` and `What This Does Not Prove` sections
-- [ ] one hard-fail docs contract fails when the runbook or proof-index marker is missing or overstates the claim
-- [ ] `docs/validation/current-proven-runtime-slices.md` links the new runbook
+- [x] one real release path consumes external-chain-backed evidence before emitting the terminal escrow state
+- [x] the resulting escrow settlement state persists a non-placeholder external evidence linkage that remains queryable across restart
+- [x] one integration proof exercises the real settlement lane end-to-end and fails if the external evidence linkage is missing or placeholder
+- [x] one validation runbook exists at `docs/validation/` with explicit `What This Proves` and `What This Does Not Prove` sections
+- [x] one hard-fail docs contract fails when the runbook or proof-index marker is missing or overstates the claim
+- [x] `docs/validation/current-proven-runtime-slices.md` links the new runbook
 
 ## Files to Touch
 - `specs/7009-external-chain-backed-settlement-lane.md`
@@ -74,3 +74,23 @@ Implement one honest bounded external-chain-backed settlement lane on current `m
   - local-heavy live S-05 escrow settlement
   - live Solana-backed bridge evidence collection
 - This issue exists to connect those capabilities honestly, or fail loudly if that connection cannot be implemented cleanly.
+
+## Final Implementation
+- The service-api escrow release route now consumes the existing live Solana proof lane when `KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL` is set.
+- Successful live release responses now expose `settlement_receipt_hash`.
+- Persisted escrow records now retain `settlement_receipt_hash` across restart.
+- The route fails loud with `service_api_live_settlement_evidence_failed` when the selected live proof source is unreachable.
+- The existing local-only release lane remains intact when the live Solana env is not selected.
+
+## Final Evidence
+- `cargo test -p kamn-node --test external_chain_backed_settlement_slice_contract -- --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::task_escrow_persistence_contract_tests::task_escrow_live_settlement_contract_tests::integration_service_api_endpoint_live_settlement_release_persists_external_receipt_linkage' -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::task_escrow_persistence_contract_tests::task_escrow_live_settlement_contract_tests::integration_service_api_endpoint_live_settlement_release_fails_loud_for_unreachable_rpc' -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::task_escrow_persistence_contract_tests::task_escrow_routes_contract_tests::integration_service_api_endpoint_persists_task_and_escrow_state_across_routes' -- --exact --nocapture`
+- `cargo test -p kamn-node --bin kamn-node 'main_tests::service_api_endpoint_tests::task_escrow_persistence_contract_tests::task_escrow_restart_contract_tests::integration_service_api_endpoint_persists_task_and_escrow_state_across_restart' -- --exact --nocapture`
+- `cargo test -p kamn-core --test corrected_audit_response_docs -- --nocapture`
+- `python3 scripts/ci/check_touched_rust_size_policy.py --repo-root /home/n/Code/kamn --base-ref origin/main --output-json /tmp/7009-touched-size.json`
+
+## Deviations
+- No deviation from the scoped objective.
+- The external evidence source is bounded to the existing live Solana proof lane on current `main`; this issue still does not claim external economic settlement or on-chain asset movement.
