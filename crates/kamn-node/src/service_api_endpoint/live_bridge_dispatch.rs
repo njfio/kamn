@@ -73,19 +73,36 @@ pub(super) fn collect_live_bridge_forward_evidence(
     result
 }
 
+pub(super) fn collect_live_solana_finalized_slot(
+    config: &LiveSolanaBridgeDispatchConfig,
+    proof_subject: &str,
+) -> Result<u64, String> {
+    let report_path = live_bridge_report_path(proof_subject);
+    let result = collect_live_solana_finalized_slot_from_report(config, &report_path);
+    let _ = fs::remove_file(report_path);
+    result
+}
+
 fn collect_live_bridge_forward_evidence_from_report(
     config: &LiveSolanaBridgeDispatchConfig,
     bridge_id: &str,
     report_path: &Path,
 ) -> Result<LiveBridgeForwardEvidence, String> {
-    run_live_solana_devnet_proof(config.rpc_url.as_str(), report_path)?;
-    let report = load_live_solana_report(report_path)?;
-    let finalized_slot = finalized_slot_from_report(&report)?;
+    let finalized_slot = collect_live_solana_finalized_slot_from_report(config, report_path)?;
     Ok(build_live_bridge_forward_evidence(
         bridge_id,
         finalized_slot,
         config.rpc_url.as_str(),
     ))
+}
+
+fn collect_live_solana_finalized_slot_from_report(
+    config: &LiveSolanaBridgeDispatchConfig,
+    report_path: &Path,
+) -> Result<u64, String> {
+    run_live_solana_devnet_proof(config.rpc_url.as_str(), report_path)?;
+    let report = load_live_solana_report(report_path)?;
+    finalized_slot_from_report(&report)
 }
 
 fn run_live_solana_devnet_proof(rpc_url: &str, report_path: &Path) -> Result<(), String> {
