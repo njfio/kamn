@@ -2,6 +2,8 @@ use super::super::super::*;
 use crate::service_api_endpoint::{ServiceApiEndpointConfig, ServiceApiSnapshot};
 use std::path::{Path, PathBuf};
 
+const TASK_ESCROW_TEST_IDLE_TIMEOUT_MS: u64 = 5_000;
+
 pub(crate) fn build_task_escrow_snapshot(api_bind: &str) -> ServiceApiSnapshot {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -71,7 +73,7 @@ fn spawn_api_server(
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.to_owned(),
         max_requests: max_requests as u64,
-        idle_timeout_ms: 2_000,
+        idle_timeout_ms: TASK_ESCROW_TEST_IDLE_TIMEOUT_MS,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
@@ -84,6 +86,7 @@ fn assert_api_server_stopped(server: thread::JoinHandle<Result<(), String>>) {
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
         server_result.is_ok(),
-        "service api endpoint should stop cleanly"
+        "service api endpoint should stop cleanly: {:?}",
+        server_result
     );
 }

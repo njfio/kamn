@@ -70,12 +70,36 @@ async fn task_transition(
 }
 
 async fn release_escrow(state: &Arc<ServiceApiRuntimeState>, escrow_id: &str) -> Response {
-    let result = state.message_store.lock().await.release_escrow(escrow_id);
+    let result = match resolve_release_escrow_result(state, escrow_id).await {
+        Ok(result) => result,
+        Err(error) => return live_settlement_evidence_error(error.as_str()),
+    };
     match result {
         Ok(Some(payload)) => contract_json(200, &payload),
         Ok(None) => not_found(),
         Err(error) => persistence_error("service api escrow persistence failed", error),
     }
+}
+
+async fn resolve_release_escrow_result(
+    state: &Arc<ServiceApiRuntimeState>,
+    escrow_id: &str,
+) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, String> {
+    let Some(config) = state.live_solana_bridge_dispatch.as_ref() else {
+        return Ok(state.message_store.lock().await.release_escrow(escrow_id));
+    };
+    let evidence = crate::service_api_endpoint::live_settlement_dispatch::collect_live_settlement_evidence(
+        config,
+        escrow_id,
+    )?;
+    Ok(state
+        .message_store
+        .lock()
+        .await
+        .release_escrow_with_settlement_receipt_hash(
+            escrow_id,
+            evidence.settlement_receipt_hash.as_str(),
+        ))
 }
 
 enum ContentAction {
@@ -143,5 +167,14 @@ fn live_bridge_dispatch_error(error: &str) -> Response {
         "internal",
         REASON_CODE_LIVE_BRIDGE_DISPATCH_FAILED,
         format!("service api live bridge dispatch failed: {error}").as_str(),
+    )
+}
+
+fn live_settlement_evidence_error(error: &str) -> Response {
+    super::payload::json_error_response(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "internal",
+        REASON_CODE_LIVE_SETTLEMENT_EVIDENCE_FAILED,
+        format!("service api live settlement evidence failed: {error}").as_str(),
     )
 }

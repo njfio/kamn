@@ -102,6 +102,8 @@ pub(crate) struct ServiceApiTaskTransitionBody {
 pub(crate) struct ServiceApiEscrowStatusBody {
     pub(crate) escrow_id: String,
     pub(crate) state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_hash: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

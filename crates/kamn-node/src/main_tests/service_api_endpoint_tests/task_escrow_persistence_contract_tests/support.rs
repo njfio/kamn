@@ -7,6 +7,7 @@ mod state_support;
 
 pub(super) use env_support::{
     default_audit_export_file, read_audit_export_json, read_state_json, set_audit_export_file_env,
+    set_live_solana_bridge_rpc_url_env,
 };
 pub(super) use request_support::{
     accept_task, create_task, fund_escrow, query_task, raw_signed_request, register_agent_profile,

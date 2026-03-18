@@ -1,10 +1,14 @@
 use super::super::*;
 
 mod dispatch;
+mod settlement;
 
 use dispatch::{
     dispatch_prerequisite_missing_error, dispatch_request_from_record,
     parse_dispatchable_task_payload, select_dispatch_assignee, DispatchableTaskPayload,
+};
+use settlement::{
+    build_escrow_record, next_escrow_id, released_escrow_response, release_escrow_record,
 };
 
 impl ServiceApiMessageStore {
@@ -72,6 +76,7 @@ impl ServiceApiMessageStore {
         Ok(ServiceApiEscrowStatusBody {
             escrow_id,
             state: "funded".to_owned(),
+            settlement_receipt_hash: None,
         })
     }
 
@@ -79,16 +84,32 @@ impl ServiceApiMessageStore {
         &mut self,
         escrow_id: &str,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        self.release_escrow_inner(escrow_id, None)
+    }
+
+    pub(crate) fn release_escrow_with_settlement_receipt_hash(
+        &mut self,
+        escrow_id: &str,
+        settlement_receipt_hash: &str,
+    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        self.release_escrow_inner(escrow_id, Some(settlement_receipt_hash))
+    }
+
+    fn release_escrow_inner(
+        &mut self,
+        escrow_id: &str,
+        settlement_receipt_hash: Option<&str>,
+    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
         self.refresh_from_disk()?;
         let Some(record) = self.snapshot.escrows.get_mut(escrow_id) else {
             return Ok(None);
         };
-        record.state = "released".to_owned();
+        release_escrow_record(record, settlement_receipt_hash);
         self.persist()?;
-        Ok(Some(ServiceApiEscrowStatusBody {
-            escrow_id: escrow_id.to_owned(),
-            state: "released".to_owned(),
-        }))
+        Ok(Some(released_escrow_response(
+            escrow_id,
+            settlement_receipt_hash,
+        )))
     }
 
     fn dispatch_task_if_ready(&mut self, task_id: &str) -> Result<(), String> {
@@ -117,12 +138,6 @@ impl ServiceApiMessageStore {
 fn next_task_id(store: &ServiceApiMessageStore, payload: &str) -> String {
     next_local_task_escrow_id("task-local", payload, |candidate| {
         store.snapshot.tasks.contains_key(candidate)
-    })
-}
-
-fn next_escrow_id(store: &ServiceApiMessageStore, payload: &str) -> String {
-    next_local_task_escrow_id("escrow-local", payload, |candidate| {
-        store.snapshot.escrows.contains_key(candidate)
     })
 }
 
@@ -158,13 +173,6 @@ fn build_task_record(
             .map(|metadata| metadata.task_type.clone()),
         description: dispatch_metadata.map(|metadata| metadata.description),
         assignee: None,
-    }
-}
-
-fn build_escrow_record(escrow_id: &str) -> ServiceApiPersistedEscrowRecord {
-    ServiceApiPersistedEscrowRecord {
-        escrow_id: escrow_id.to_owned(),
-        state: "funded".to_owned(),
     }
 }
 

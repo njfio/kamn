@@ -39,6 +39,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves one bounded live escrow settlement execution lane through CLI-scripted S-05 parity
 - live escrow MCP parity slice: `docs/validation/live-escrow-mcp-parity-slice.md`
   - proves one bounded live escrow settlement execution lane through MCP-agent S-05 parity
+- external-chain-backed settlement slice: `docs/validation/external-chain-backed-settlement-slice.md`
+  - proves one bounded external-chain-backed escrow settlement lane
 
 ## What Remains Unproven
 - broad production readiness
