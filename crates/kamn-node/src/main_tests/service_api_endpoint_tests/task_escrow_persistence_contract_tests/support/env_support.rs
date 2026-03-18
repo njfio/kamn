@@ -37,3 +37,7 @@ pub(crate) fn set_audit_export_file_env(path: &Path) -> (String, EnvVarGuard) {
     let guard = EnvVarGuard::set("KAMN_SERVICE_API_AUDIT_EXPORT_FILE", Some(path_text.as_str()));
     (path_text, guard)
 }
+
+pub(crate) fn set_live_solana_bridge_rpc_url_env(value: Option<&str>) -> EnvVarGuard {
+    EnvVarGuard::set("KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL", value)
+}
