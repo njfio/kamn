@@ -44,7 +44,6 @@ mod audit_export;
 use audit_export::{
     persist_service_api_audit_export_event, resolve_service_api_audit_export_file,
     service_api_message_created_audit_event, service_api_message_relayed_audit_event,
-    service_api_task_created_audit_event,
 };
 use models::*;
 use runtime_evidence::build_data_layer_runtime_evidence;

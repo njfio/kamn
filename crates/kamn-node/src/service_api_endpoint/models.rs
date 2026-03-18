@@ -81,6 +81,29 @@ pub(crate) struct ServiceApiChannelMessagesBody {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiSettlementMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_tx_signature: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_network: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_commitment: Option<String>,
+}
+
+impl Default for ServiceApiSettlementMetadata {
+    fn default() -> Self {
+        Self {
+            settlement_receipt_hash: None,
+            settlement_tx_signature: None,
+            settlement_network: None,
+            settlement_commitment: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiTaskCreateBody {
     pub(crate) task_id: String,
     pub(crate) state: String,
@@ -102,8 +125,8 @@ pub(crate) struct ServiceApiTaskTransitionBody {
 pub(crate) struct ServiceApiEscrowStatusBody {
     pub(crate) escrow_id: String,
     pub(crate) state: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) settlement_receipt_hash: Option<String>,
+    #[serde(flatten)]
+    pub(crate) settlement: ServiceApiSettlementMetadata,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

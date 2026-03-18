@@ -1,7 +1,7 @@
 use super::*;
 
 pub(super) fn next_escrow_id(store: &ServiceApiMessageStore, payload: &str) -> String {
-    super::next_local_task_escrow_id("escrow-local", payload, |candidate| {
+    super::tasks::next_local_task_escrow_id("escrow-local", payload, |candidate| {
         store.snapshot.escrows.contains_key(candidate)
     })
 }
@@ -10,25 +10,22 @@ pub(super) fn build_escrow_record(escrow_id: &str) -> ServiceApiPersistedEscrowR
     ServiceApiPersistedEscrowRecord {
         escrow_id: escrow_id.to_owned(),
         state: "funded".to_owned(),
-        settlement_receipt_hash: None,
+        settlement: ServiceApiSettlementMetadata::default(),
     }
 }
 
 pub(super) fn release_escrow_record(
     record: &mut ServiceApiPersistedEscrowRecord,
-    settlement_receipt_hash: Option<&str>,
+    settlement: Option<&ServiceApiSettlementMetadata>,
 ) {
     record.state = "released".to_owned();
-    record.settlement_receipt_hash = settlement_receipt_hash.map(str::to_owned);
+    record.settlement = settlement.cloned().unwrap_or_default();
 }
 
-pub(super) fn released_escrow_response(
-    escrow_id: &str,
-    settlement_receipt_hash: Option<&str>,
-) -> ServiceApiEscrowStatusBody {
+pub(super) fn escrow_status_response(record: &ServiceApiPersistedEscrowRecord) -> ServiceApiEscrowStatusBody {
     ServiceApiEscrowStatusBody {
-        escrow_id: escrow_id.to_owned(),
-        state: "released".to_owned(),
-        settlement_receipt_hash: settlement_receipt_hash.map(str::to_owned),
+        escrow_id: record.escrow_id.clone(),
+        state: record.state.clone(),
+        settlement: record.settlement.clone(),
     }
 }
