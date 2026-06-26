@@ -350,23 +350,28 @@ fn runtime_module_extraction_contract_moves_peer_coordination_types_out_of_runti
 
 #[test]
 fn runtime_module_extraction_contract_keeps_peer_coordination_types_in_new_module() {
-    let runtime_peer_coordination_rs = read_repo_file("runtime_peer_coordination.rs");
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct PeerLifecycle {"),
-        "runtime_peer_coordination module should own PeerLifecycle"
-    );
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct AuthenticatedPeerFrame {"),
-        "runtime_peer_coordination module should own AuthenticatedPeerFrame"
-    );
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct DeterministicProposalPlanner {"),
-        "runtime_peer_coordination module should own DeterministicProposalPlanner"
-    );
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct RuntimeWiring {"),
-        "runtime_peer_coordination module should own RuntimeWiring"
-    );
+    assert_markers(&[
+        (
+            "runtime_peer_coordination/lifecycle_queue/lifecycle.rs",
+            "pub struct PeerLifecycle {",
+            "runtime_peer_coordination lifecycle queue should own PeerLifecycle",
+        ),
+        (
+            "runtime_peer_coordination/peer_frame/frame.rs",
+            "pub struct AuthenticatedPeerFrame {",
+            "runtime_peer_coordination peer frame should own AuthenticatedPeerFrame",
+        ),
+        (
+            "runtime_peer_coordination/proposal_planning.rs",
+            "pub struct DeterministicProposalPlanner {",
+            "runtime_peer_coordination proposal planner should own DeterministicProposalPlanner",
+        ),
+        (
+            "runtime_peer_coordination/runtime_wiring.rs",
+            "pub struct RuntimeWiring {",
+            "runtime_peer_coordination runtime wiring should own RuntimeWiring",
+        ),
+    ]);
 }
 
 #[test]

@@ -128,3 +128,9 @@ denied.
   count was `98` while the R50 marker still capped the branch at `96`. The
   green fix must follow the established R50 reconciliation pattern by matching
   the deterministic current count and keeping baseline/max equality locked.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test runtime_module_extraction_contract`
+  source-shape contract because `runtime_peer_coordination.rs` now re-exports
+  peer coordination types from extracted child modules. The green fix must keep
+  those types in the extracted child modules and retarget the contract instead
+  of moving runtime code back into the root module.
