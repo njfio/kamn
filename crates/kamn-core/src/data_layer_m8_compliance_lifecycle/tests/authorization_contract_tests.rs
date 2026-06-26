@@ -1,6 +1,6 @@
 use crate::data_layer_m8_compliance_lifecycle::{
-    authorize_owner_scope, validate_wrapped_keys, DataLayerM8ComplianceError,
-    DataLayerM8WrappedCekInput,
+    lifecycle::{authorize_owner_scope, validate_wrapped_keys},
+    DataLayerM8ComplianceError, DataLayerM8WrappedCekInput,
 };
 
 #[test]

@@ -12,7 +12,5 @@ mod registry;
 mod tests;
 
 pub use errors::*;
-pub(crate) use lifecycle::{authorize_owner_scope, validate_wrapped_keys};
 pub use models::*;
 pub use policy::*;
-pub use registry::*;
