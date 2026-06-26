@@ -47,6 +47,9 @@ fn serve_keep_alive_requests(
     while handled_requests < expected_requests && Instant::now() < deadline {
         match listener.accept() {
             Ok((mut stream, _)) => {
+                stream
+                    .set_nonblocking(false)
+                    .expect("accepted stream should use blocking reads");
                 accepted_connections += 1;
                 handled_requests += handle_keep_alive_connection(
                     &mut stream,

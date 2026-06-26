@@ -87,3 +87,16 @@ denied.
    - run `make check`
    - run `cargo test -p kamn-core`
    - run `cargo test -p kamn-node`
+
+## Execution notes
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test issue_6319_hmac_hkdf_regression_contract`
+  contract for missing source-text RustCrypto backend markers in guarded crypto
+  facades. The green fix must preserve the marker constants and add explicit
+  guarded source markers without weakening the contract.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test kolme_runtime_commit_http_transport`
+  keep-alive connection-pool contract when the local test server accepted a
+  nonblocking stream and panicked on `WouldBlock`. The green fix must preserve
+  the client keep-alive assertion and stabilize the test harness rather than
+  adding production retry behavior.

@@ -10,8 +10,10 @@ pub(crate) const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] =
 pub(crate) const DIRECT_MESSAGE_NONCE_INFO_V2: &[u8] = b"kamn:direct-message:nonce:v2:";
 pub(crate) const DIRECT_MESSAGE_NONCE_INFO_V1: &[u8] = b"kamn:direct-message:nonce:v1:";
 /// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
+/// Source marker: rustcrypto.hkdf.sha256.v1.
 pub const DIRECT_MESSAGE_HKDF_BACKEND_MARKER: &str = crate::hkdf_sha256::HKDF_SHA256_BACKEND_MARKER;
 /// Marker asserting HMAC backend semantics are provided by RustCrypto primitives.
+/// Source marker: rustcrypto.hmac.sha256.v1.
 pub const DIRECT_MESSAGE_HMAC_BACKEND_MARKER: &str = crate::hkdf_sha256::HMAC_SHA256_BACKEND_MARKER;
 
 mod cipher;
