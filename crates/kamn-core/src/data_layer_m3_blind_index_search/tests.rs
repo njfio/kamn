@@ -23,11 +23,12 @@ fn fixture_record(owner_did: &str, token: &str) -> DataLayerM3MessageMetadataRec
 #[test]
 fn unit_data_layer_m3_register_and_search_blind_index_exact_match() {
     let owner_did = "kamn:did:owner:alice";
-    let token = data_layer_m3_compute_blind_index(owner_did, "subject", "Invoice 42").unwrap();
+    let token = data_layer_m3_compute_blind_index(owner_did, "subject", "Invoice 42")
+        .expect("expected test fixture operation to succeed");
     let mut catalog = DataLayerM3SearchCatalog::new();
     catalog
         .register_record(fixture_record(owner_did, token.as_str()))
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     let results = catalog
         .search_blind_index(DataLayerM3BlindIndexQuery {
             owner_did: owner_did.to_owned(),
@@ -36,7 +37,7 @@ fn unit_data_layer_m3_register_and_search_blind_index_exact_match() {
             mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
             limit: None,
         })
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].message_id, "msg-1");
 }
@@ -44,11 +45,12 @@ fn unit_data_layer_m3_register_and_search_blind_index_exact_match() {
 #[test]
 fn unit_data_layer_m3_search_rejects_unsupported_search_mode() {
     let owner_did = "kamn:did:owner:alice";
-    let token = data_layer_m3_compute_blind_index(owner_did, "subject", "Invoice 42").unwrap();
+    let token = data_layer_m3_compute_blind_index(owner_did, "subject", "Invoice 42")
+        .expect("expected test fixture operation to succeed");
     let mut catalog = DataLayerM3SearchCatalog::new();
     catalog
         .register_record(fixture_record(owner_did, token.as_str()))
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     let error = catalog
         .search_blind_index(DataLayerM3BlindIndexQuery {
             owner_did: owner_did.to_owned(),
@@ -57,7 +59,7 @@ fn unit_data_layer_m3_search_rejects_unsupported_search_mode() {
             mode: DataLayerM3BlindIndexSearchMode::Contains,
             limit: None,
         })
-        .unwrap_err();
+        .expect_err("expected test fixture operation to fail");
     assert!(matches!(
         error,
         DataLayerM3SearchError::UnsupportedBlindIndexSearchMode(
