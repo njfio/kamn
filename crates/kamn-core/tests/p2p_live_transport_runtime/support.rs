@@ -113,6 +113,7 @@ pub(super) fn advertise_messages_peer(
         .expect("peer advertise should pass");
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(super) fn runtime_backpressure_reject(error: P2pTransportError) -> Option<&'static str> {
     match error {
         P2pTransportError::RuntimeBackpressureRejected { reason_code, .. } => Some(reason_code),
@@ -124,6 +125,7 @@ pub(super) fn runtime_backpressure_reject(error: P2pTransportError) -> Option<&'
 mod transport_io_support;
 
 pub(crate) use transport_io_support::{
-    drain_runtime_events_until, drain_until_count, send_frames_expect_success,
-    send_frames_until_error, send_with_retry,
+    drain_runtime_events_until, drain_until_count, send_with_retry,
 };
+#[cfg(not(feature = "libp2p-live-transport"))]
+pub(crate) use transport_io_support::{send_frames_expect_success, send_frames_until_error};

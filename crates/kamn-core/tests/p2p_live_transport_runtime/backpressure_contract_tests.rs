@@ -1,5 +1,7 @@
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(super) use super::support::*;
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(super) fn build_backpressure_pair(
     sender_peer_id: &str,
     recipient_peer_id: &str,
@@ -16,10 +18,12 @@ pub(super) fn build_backpressure_pair(
     (sender_transport, recipient_transport)
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(super) fn assert_backpressure_reason(error: P2pTransportError, expected: &str) {
     assert_eq!(runtime_backpressure_reject(error), Some(expected));
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(super) fn assert_behavior_failure_reason(
     transport: &Libp2pLivePeerLifecycleTransport,
     expected: &str,
@@ -32,9 +36,12 @@ pub(super) fn assert_behavior_failure_reason(
     }));
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 #[path = "backpressure_contract_tests/reason_codes_contract_tests.rs"]
 mod reason_codes_contract_tests;
+#[cfg(not(feature = "libp2p-live-transport"))]
 #[path = "backpressure_contract_tests/reject_saturated_inbox_contract_tests.rs"]
 mod reject_saturated_inbox_contract_tests;
+#[cfg(not(feature = "libp2p-live-transport"))]
 #[path = "backpressure_contract_tests/slow_producer_contract_tests.rs"]
 mod slow_producer_contract_tests;

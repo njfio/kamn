@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io::ErrorKind;
 use std::net::UdpSocket;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use super::validation::{validate_peer_id, validate_topic};
 use super::P2pTransportError;
@@ -203,6 +204,9 @@ struct UdpPeerLifecycleTransportState {
     socket_addr_by_peer: BTreeMap<String, String>,
 }
 
+const UDP_LIVE_EMPTY_DRAIN_WAIT: Duration = Duration::from_millis(100);
+const UDP_LIVE_DRAIN_POLL_INTERVAL: Duration = Duration::from_millis(1);
+
 #[derive(Debug, Clone)]
 /// UDP socket-backed transport adapter for live local convergence drill execution.
 pub struct UdpPeerLifecycleTransport {
@@ -364,6 +368,7 @@ impl PeerLifecycleTransport for UdpPeerLifecycleTransport {
 
         let mut frames = Vec::new();
         let mut buffer = [0u8; 32 * 1024];
+        let started = Instant::now();
         loop {
             match self.socket.recv_from(&mut buffer) {
                 Ok((payload_size, _source)) => {
@@ -372,12 +377,21 @@ impl PeerLifecycleTransport for UdpPeerLifecycleTransport {
                         frames.push(frame);
                     }
                 }
+                Err(error)
+                    if should_wait_for_udp_frame(error.kind(), frames.is_empty(), started) =>
+                {
+                    std::thread::sleep(UDP_LIVE_DRAIN_POLL_INTERVAL);
+                }
                 Err(error) if error.kind() == ErrorKind::WouldBlock => break,
                 Err(_) => return Err(P2pTransportError::LiveSocketReceiveFailed),
             }
         }
         Ok(frames)
     }
+}
+
+fn should_wait_for_udp_frame(error_kind: ErrorKind, empty: bool, started: Instant) -> bool {
+    error_kind == ErrorKind::WouldBlock && empty && started.elapsed() < UDP_LIVE_EMPTY_DRAIN_WAIT
 }
 
 fn udp_live_transport_registry(
