@@ -134,3 +134,23 @@ denied.
   peer coordination types from extracted child modules. The green fix must keep
   those types in the extracted child modules and retarget the contract instead
   of moving runtime code back into the root module.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test script_surface_index_docs` inventory
+  contract because the `scripts/` shell/python surface grew to `757` shell
+  files and `344` Python files while the index still recorded the March
+  inventory. The green fix must refresh the deterministic inventory markers
+  and tracked CI row without changing shell files in this gate-recovery issue.
+- Post-commit governance verification after the script inventory refresh
+  exposed a red
+  `cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance`
+  current-head exact assertion while the underlying checker returned `ok` at a
+  stronger `9` governance / `41` feature commit window. The green fix must
+  update only the exact current-head evidence assertions and preserve the
+  `max_governance_ratio=0.20` enforcement.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test script_surface_reduction_candidates_docs`
+  short-wrapper candidate inventory contract because the `scripts/` surface
+  now has `63` deterministic short-wrapper candidates, with the tracked
+  `scripts/ci` row at `214` scripts and `21` candidates. The green fix must
+  refresh only the generated documentation evidence and matching test
+  assertion without changing shell files in this gate-recovery issue.

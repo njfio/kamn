@@ -1,10 +1,10 @@
 # Script Surface Index
 
 script_surface_inventory_schema_version=kamn.docs.script-surface-index.v1
-script_surface_inventory_generated_on=2026-03-09
-script_surface_inventory_total_sh_files=748
-script_surface_inventory_total_py_files=335
-script_surface_inventory_total_files=1083
+script_surface_inventory_generated_on=2026-06-26
+script_surface_inventory_total_sh_files=757
+script_surface_inventory_total_py_files=344
+script_surface_inventory_total_files=1101
 script_surface_inventory_category_count=24
 script_surface_inventory_primary_categories_csv=runtime,kolme,ci,sdk,bridge,deploy,framework,did
 
@@ -14,17 +14,17 @@ This index is the canonical inventory baseline for `scripts/` shell/python surfa
 
 | File type | Count |
 | --- | --- |
-| `*.sh` | `748` |
-| `*.py` | `335` |
-| Combined (`*.sh` + `*.py`) | `1083` |
+| `*.sh` | `757` |
+| `*.py` | `344` |
+| Combined (`*.sh` + `*.py`) | `1101` |
 
 ## Category Inventory
 
 | Category | `.sh` | `.py` | Total |
 | --- | --- | --- | --- |
-| `scripts/runtime` | `180` | `49` | `229` |
+| `scripts/runtime` | `180` | `52` | `232` |
 | `scripts/kolme` | `117` | `100` | `217` |
-| `scripts/ci` | `147` | `52` | `199` |
+| `scripts/ci` | `156` | `58` | `214` |
 | `scripts/sdk` | `57` | `23` | `80` |
 | `scripts/bridge` | `34` | `8` | `42` |
 | `scripts/deploy` | `31` | `9` | `40` |
