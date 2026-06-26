@@ -11,6 +11,29 @@ fi
 status=0
 line_no=0
 
+valid_yyyy_mm_dd() {
+  local value="$1"
+  local parsed=""
+
+  if ! [[ "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    return 1
+  fi
+
+  if parsed="$(date -u -d "$value" +%Y-%m-%d 2>/dev/null)"; then
+    [ "$parsed" = "$value" ]
+    return
+  fi
+
+  if parsed="$(date -u -j -f "%Y-%m-%d" "$value" +%Y-%m-%d 2>/dev/null)"; then
+    [ "$parsed" = "$value" ]
+    return
+  fi
+
+  return 1
+}
+
+today="$(date -u +%Y-%m-%d)"
+
 while IFS= read -r line || [ -n "$line" ]; do
   line_no=$(( line_no + 1 ))
 
@@ -39,13 +62,12 @@ while IFS= read -r line || [ -n "$line" ]; do
     status=1
   fi
 
-  if ! date -u -d "$expiry" +%Y-%m-%d >/dev/null 2>&1; then
+  if ! valid_yyyy_mm_dd "$expiry"; then
     echo "Invalid expiry date at $REGISTRY_FILE:$line_no (expected YYYY-MM-DD)" >&2
     status=1
     continue
   fi
 
-  today="$(date -u +%Y-%m-%d)"
   if [[ "$expiry" < "$today" ]]; then
     echo "Expired flaky quarantine entry at $REGISTRY_FILE:$line_no (expiry: $expiry)" >&2
     status=1

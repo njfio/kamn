@@ -55,7 +55,13 @@ denied.
 - `specs/7021-restore-local-quality-gates.md`
 - Rust source and test files reported by `cargo fmt --check`
 - Rust source and test files reported by strict workspace clippy
-- No shell, workflow, or template files are expected for this issue
+- `scripts/ci/check_flaky_registry.sh`, only for the verified macOS/GNU date
+  portability drift exposed by the existing shell migration wrapper test
+- `scripts/ci/test_check_flaky_registry.sh`, only to keep the touched checker's
+  own local shell verifier portable
+- `fixtures/ci/shell_test_surface_ratio_baseline.env`, only for a deterministic
+  stale-baseline refresh after the current tracked shell-test count remained
+  stable against `origin/main` while non-doc Rust test coverage grew
 
 ## Error semantics
 - Existing hard-fail behavior must be preserved.
@@ -154,3 +160,36 @@ denied.
   `scripts/ci` row at `214` scripts and `21` candidates. The green fix must
   refresh only the generated documentation evidence and matching test
   assertion without changing shell files in this gate-recovery issue.
+- Full package verification also exposed red shell migration wrapper parity
+  contracts when the libp2p live feature build rejected a widened
+  `pub(crate)` re-export of the `pub(super)` native runtime adapter loop. The
+  green fix must keep the native runtime loop scoped to the extracted p2p
+  module boundary and narrow only the live-module re-export visibility instead
+  of making the adapter type public across the crate.
+- The same shell migration wrapper parity run exposed runtime-budget failures
+  for subprocess-heavy wrapper tests that passed in isolation but contended for
+  cargo package/build locks when the Rust test binary ran them in parallel. The
+  green fix must serialize the existing wrapper subprocess helper instead of
+  increasing lane budgets, skipping checks, or weakening success markers.
+- Post-commit governance verification after the shell wrapper gate fix exposed
+  another current-head exact assertion drift while the checker still returned
+  `ok` at `8` governance / `42` feature commits in the fixed 50-commit window.
+  The green fix must refresh only the exact evidence constants and keep the
+  `max_governance_ratio=0.20` enforcement unchanged.
+- Full lib verification also exposed an intermittent red
+  `bootstrap::tests::fail_closed_contract_tests::regression_bootstrap_fails_closed_when_runtime_snapshot_state_version_regresses`
+  result while isolated bootstrap reruns passed. The green fix must make
+  bootstrap test storage paths unconditionally unique under parallel test
+  execution, preserving fail-closed bootstrap error mapping and assertions.
+- Full package verification also exposed a red
+  `cargo test -p kamn-core --test shell_test_surface_migration_wave2
+  spec_c04_run_cargo_test_with_quarantine_contract_parity` result because
+  the flaky registry checker used GNU `date -d` expiry parsing on a macOS
+  local gate. The green fix must preserve registry validation semantics while
+  accepting the same `YYYY-MM-DD` contract on both GNU and BSD date surfaces.
+- Full package verification then reached a red
+  `cargo test -p kamn-core --test shell_test_surface_ratio_policy` gate because
+  the baseline fixture still recorded `566` shell tests and `268` non-doc Rust
+  tests while the current tracked surface is `572` shell tests and `1072`
+  non-doc Rust tests. The green fix must refresh the evidence fixture only,
+  leaving thresholds and waiver caps unchanged.

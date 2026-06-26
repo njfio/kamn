@@ -26,9 +26,6 @@ pub use regression_harness::{
 pub use swarm_runtime::{canonical_libp2p_identify_protocol_id, canonical_libp2p_topic_id};
 
 #[cfg(feature = "libp2p-live-transport")]
-#[allow(unused_imports)]
-pub(crate) use native_runtime_loop::Libp2pNativeRuntimeAdapterLoop;
-#[cfg(feature = "libp2p-live-transport")]
 pub(crate) use swarm_runtime::{
     apply_libp2p_runtime_network_config, build_libp2p_runtime_swarm,
     runtime_channel_closed_behavior_failure_class, validate_libp2p_runtime_stack_composition,

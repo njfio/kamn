@@ -7,9 +7,8 @@ SCRIPT="$ROOT_DIR/scripts/ci/check_flaky_registry.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-today="$(date -u +%Y-%m-%d)"
-future="$(date -u -d '+7 days' +%Y-%m-%d)"
-past="$(date -u -d '-2 days' +%Y-%m-%d)"
+future="2099-12-31"
+past="2000-01-01"
 
 # Valid registry
 cat > "$TMP_DIR/valid.txt" <<EOF2
