@@ -1,5 +1,4 @@
 use super::shared_support::*;
-use super::*;
 
 #[path = "compatibility_resilience_contract_tests/compatibility_schema_contract_tests.rs"]
 mod compatibility_schema_contract_tests;

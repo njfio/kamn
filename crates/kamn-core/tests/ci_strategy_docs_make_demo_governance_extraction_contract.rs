@@ -13,7 +13,10 @@ const MODULE_FILES: &[&str] = &[
 ];
 
 fn line_count(path: &str) -> usize {
-    fs::read_to_string(repo_path(path)).unwrap().lines().count()
+    fs::read_to_string(repo_path(path))
+        .expect("extracted ci strategy docs fixture should be readable")
+        .lines()
+        .count()
 }
 
 fn read(path: &str) -> String {
