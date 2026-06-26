@@ -40,16 +40,18 @@ denied.
 - proof or validation language is diluted while touching nearby files
 
 ## Acceptance criteria (testable booleans)
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+- [x] `cargo fmt --check` passes.
+- [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings`
       passes.
-- [ ] `make check` passes.
-- [ ] No lint level, formatting rule, test, or proof semantic is weakened.
-- [ ] Any semantic clippy fix is covered by existing or newly added focused
+- [x] `make check` passes.
+- [x] No lint level, formatting rule, test, or proof semantic is weakened.
+- [x] Any semantic clippy fix is covered by existing or newly added focused
       tests for the touched surface.
-- [ ] If the issue becomes too large to review safely, follow-up
+- [x] If the issue becomes too large to review safely, follow-up
       crate/module-specific gate-recovery issues are opened and MVP feature work
-      remains blocked until all gate-recovery slices are green.
+      remains blocked until all gate-recovery slices are green. This issue
+      remained scoped to gate recovery; MVP feature work remains blocked until
+      this PR is reviewed/merged.
 
 ## Files to touch
 - `specs/7021-restore-local-quality-gates.md`
@@ -193,3 +195,69 @@ denied.
   tests while the current tracked surface is `572` shell tests and `1072`
   non-doc Rust tests. The green fix must refresh the evidence fixture only,
   leaving thresholds and waiver caps unchanged.
+- Full package verification later exposed a red
+  `cargo test -p kamn-core --test signature_profile_module_extraction_contract`
+  marker assertion because the source root already declares the extracted test
+  module with rustfmt's two-line `#[cfg(test)]` attribute form. The green fix
+  must keep the extracted module required and only align the contract marker
+  with formatted Rust source.
+- Full package verification then exposed a load-sensitive red
+  `cargo test -p kamn-core --test shell_test_surface_migration_wave1
+  spec_c18_live_network_smoke_contract_lane_wrapper_parity` result where the
+  live-network smoke runner returned `status=fail` under its default
+  120-second budget while the wrapper contract lane already documents a
+  180-second upper bound. The green fix must align the contract-lane success
+  invocation to the existing 180-second budget and preserve the explicit
+  `KAMN_LIVE_NETWORK_SMOKE_MAX_SECONDS=0` fail-closed budget regression.
+- Further isolation showed the same wrapper could fail before report emission
+  when the SDK localhost signed demo launched the sender before the listener
+  example had finished compiling and printed `status=listening`. The green fix
+  must wait for an observable listener-ready marker, fail loud with listener
+  output on early exit or timeout, and avoid adding any silent fallback path.
+- The readiness wait also showed the SDK demo's default 15-second listener
+  timeout is too low for a `cargo run` based local path during cold or locked
+  local builds. The green fix must raise that local demo readiness/completion
+  timeout to a bounded 60 seconds while preserving explicit timeout validation
+  and the live-network smoke lane's separate overall runtime budget.
+- Strict clippy then exposed `module_inception` in the M7 telemetry test module
+  after the local gate recovered enough to reach that target. The green fix
+  renamed the inner cfg-test wrapper to `contracts` while keeping the source
+  wrapped in `#[cfg(test)]`.
+- A subsequent full `cargo test -p kamn-core` rerun exposed the stale
+  `build_health_blockers_contract` assertion that required `mod tests {`.
+  The green fix now asserts a real `#[cfg(test)]` module while explicitly
+  rejecting the module-inception shape.
+- Strict clippy/build-cache recovery required deleting only `kamn-core` build
+  artifacts under `target/` after interrupted clippy children slept indefinitely
+  on stale metadata. No source or tracked artifacts were deleted.
+
+## Verification evidence
+- `cargo fmt --check` passes after the final build-health contract patch.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passes after the final patch; final runtime: `38m 14s`.
+- `make check` passes after the final patch; final clippy runtime inside
+  `make check`: `6m 56s`.
+- `git diff --check` passes before the final spec evidence update; rerun is
+  required after this spec edit before commit.
+- `cargo test -p kamn-core --test build_health_blockers_contract` passes:
+  `1 passed`.
+- `cargo test -p kamn-core --lib
+  data_layer_m7_timeseries_telemetry::tests::contracts -- --nocapture`
+  passes: `3 passed`.
+- Earlier package verification in this issue also passed the touched core/node
+  targeted tests listed in the execution log, including signer backend,
+  signature-profile extraction/zeroization, transport pipeline extraction, ZK
+  message proof extraction, service API split/source contracts, sender DID and
+  managed signer constant-time source contracts, signer provenance/secret
+  hygiene contracts, working vertical slice source contract, live network smoke
+  wrappers, and `cargo test -p kamn-node`.
+
+## Shell-Surface DoD actuals
+- `shell_loc_delta_actual: +95`
+- `rust_loc_delta_actual: +7050`
+- `shell_to_rust_ratio_delta_actual: +0.013475`
+- `shell_surface_ratio_target_status: regressed_with_waiver`
+- Waiver: Issue #7021 had to touch bounded shell/Python runtime wrappers to
+  restore portable local gate execution and the live-network smoke readiness
+  path. No shell test, lint, or success marker was weakened; the broader MVP
+  work remains blocked on this gate-recovery PR.

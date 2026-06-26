@@ -26,12 +26,23 @@ fn p2p_transport_module_boundaries_decompose_live_runtime_sections() {
 
     let p2p_transport_live_rs = read_repo_file("p2p_transport/p2p_transport_live.rs");
     assert!(
-        p2p_transport_live_rs.contains("pub struct Libp2pLivePeerLifecycleTransport {"),
-        "p2p_transport_live module should own Libp2pLivePeerLifecycleTransport"
+        p2p_transport_live_rs.contains("mod peer_lifecycle_transport;"),
+        "p2p_transport_live module should declare peer_lifecycle_transport"
     );
     assert!(
-        p2p_transport_live_rs.contains("pub enum Libp2pLiveRuntimeBackend {"),
-        "p2p_transport_live module should own Libp2pLiveRuntimeBackend"
+        !p2p_transport_live_rs.contains("pub struct Libp2pLivePeerLifecycleTransport {"),
+        "p2p_transport_live module root should not keep inline Libp2pLivePeerLifecycleTransport"
+    );
+
+    let peer_lifecycle_transport_rs =
+        read_repo_file("p2p_transport/p2p_transport_live/peer_lifecycle_transport.rs");
+    assert!(
+        peer_lifecycle_transport_rs.contains("pub struct Libp2pLivePeerLifecycleTransport {"),
+        "peer_lifecycle_transport module should own Libp2pLivePeerLifecycleTransport"
+    );
+    assert!(
+        peer_lifecycle_transport_rs.contains("pub enum Libp2pLiveRuntimeBackend {"),
+        "peer_lifecycle_transport module should own Libp2pLiveRuntimeBackend"
     );
 }
 
@@ -41,6 +52,14 @@ fn block_pipeline_module_boundaries_decompose_ingress_and_store_sections() {
     assert!(
         block_pipeline_rs.contains("mod block_pipeline_support;"),
         "block_pipeline.rs should declare extracted block_pipeline_support module"
+    );
+    assert!(
+        block_pipeline_rs.contains("mod gossip_ingress;"),
+        "block_pipeline.rs should declare extracted gossip_ingress module"
+    );
+    assert!(
+        block_pipeline_rs.contains("mod commit_store;"),
+        "block_pipeline.rs should declare extracted commit_store module"
     );
     assert!(
         !block_pipeline_rs.contains("pub struct GossipIngressAdapter;"),
@@ -53,11 +72,23 @@ fn block_pipeline_module_boundaries_decompose_ingress_and_store_sections() {
 
     let block_pipeline_support_rs = read_repo_file("block_pipeline/block_pipeline_support.rs");
     assert!(
-        block_pipeline_support_rs.contains("pub struct GossipIngressAdapter;"),
-        "block_pipeline_support module should own GossipIngressAdapter"
+        block_pipeline_support_rs.contains("mod gossip_ingress;"),
+        "block_pipeline_support module should keep the compatibility re-export module"
     );
     assert!(
-        block_pipeline_support_rs.contains("pub struct InMemoryCanonicalCommitStore {"),
-        "block_pipeline_support module should own InMemoryCanonicalCommitStore"
+        !block_pipeline_support_rs.contains("pub struct GossipIngressAdapter;"),
+        "block_pipeline_support root should not keep inline GossipIngressAdapter definition"
+    );
+
+    let gossip_ingress_rs = read_repo_file("block_pipeline/gossip_ingress.rs");
+    assert!(
+        gossip_ingress_rs.contains("pub struct GossipIngressAdapter;"),
+        "gossip_ingress module should own GossipIngressAdapter"
+    );
+
+    let commit_store_rs = read_repo_file("block_pipeline/commit_store.rs");
+    assert!(
+        commit_store_rs.contains("pub struct InMemoryCanonicalCommitStore {"),
+        "commit_store module should own InMemoryCanonicalCommitStore"
     );
 }

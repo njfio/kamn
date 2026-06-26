@@ -6,6 +6,7 @@ mod errors;
 mod provider_policy;
 mod request;
 mod router;
+mod signing_cache;
 #[cfg(test)]
 mod tests;
 

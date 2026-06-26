@@ -19,7 +19,7 @@ const DOC_MARKERS: &[&str] = &[
 const ROOT_MARKERS: &[&str] =
     &["#[path = \"service_api_endpoint_tests/vertical_slice_contract_tests.rs\"]"];
 const TEST_MARKERS: &[&str] = &[
-    "fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence()",
+    "fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
     "X25519-XChaCha20-Poly1305",
     "service_api_task_created",
     "completed",

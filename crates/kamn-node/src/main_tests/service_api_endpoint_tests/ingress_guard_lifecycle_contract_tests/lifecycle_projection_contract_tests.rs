@@ -132,8 +132,11 @@ fn lifecycle_projection_responses(
     state_hash: &str,
 ) -> Vec<String> {
     let barrier = Arc::new(Barrier::new(worker_count));
-    (0..worker_count)
+    let clients = (0..worker_count)
         .map(|idx| spawn_lifecycle_projection_client(bind_addr, state_hash, barrier.clone(), idx))
+        .collect::<Vec<_>>();
+    clients
+        .into_iter()
         .map(|client| client.join().expect("client request should complete"))
         .collect()
 }

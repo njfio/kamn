@@ -1,16 +1,16 @@
-use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
+use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 use k256::elliptic_curve::rand_core::OsRng;
 use std::sync::OnceLock;
 
 use super::{
     decode_hex_bytes, encode_hex_lower, service_auth_signing_payload_for_fields,
-    ServiceAuthSignatureError, SERVICE_AUTH_SIGNATURE_ALGORITHM, SERVICE_AUTH_SIGNATURE_PROFILE_ID,
+    ServiceAuthSignatureError, ServiceAuthSigningKey, SERVICE_AUTH_SIGNATURE_ALGORITHM,
+    SERVICE_AUTH_SIGNATURE_PROFILE_ID,
 };
-use crate::signature_profile::encoding::wipe_bytes;
 
 /// Runs the generate ephemeral service auth private key hex contract helper.
 pub fn generate_ephemeral_service_auth_private_key_hex() -> String {
-    let signing_key = SigningKey::random(&mut OsRng);
+    let signing_key = k256::ecdsa::SigningKey::random(&mut OsRng);
     encode_hex_lower(signing_key.to_bytes().as_ref())
 }
 
@@ -40,20 +40,19 @@ pub fn service_auth_sign_with_private_key_hex(
     if private_key_hex.trim().is_empty() {
         return Err(ServiceAuthSignatureError::EmptyField("private_key_hex"));
     }
+    let signing_key = ServiceAuthSigningKey::from_private_key_hex(private_key_hex)?;
+    service_auth_sign_with_signing_key(sender, nonce, state_hash, payload, &signing_key)
+}
+
+pub(crate) fn service_auth_sign_with_signing_key(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+    signing_key: &ServiceAuthSigningKey,
+) -> Result<String, ServiceAuthSignatureError> {
     let message = service_auth_signing_payload_for_fields(sender, nonce, state_hash, payload)?;
-    let mut private_key_bytes = decode_hex_bytes(private_key_hex)
-        .map_err(|_| ServiceAuthSignatureError::InvalidPrivateKeyHex)?;
-    let signing_key = match SigningKey::from_slice(private_key_bytes.as_slice()) {
-        Ok(key) => key,
-        Err(_) => {
-            wipe_bytes(private_key_bytes.as_mut_slice());
-            return Err(ServiceAuthSignatureError::InvalidPrivateKeyHex);
-        }
-    };
-    wipe_bytes(private_key_bytes.as_mut_slice());
-    let (signature, recovery_id) = signing_key
-        .sign_recoverable(message.as_bytes())
-        .map_err(|_| ServiceAuthSignatureError::SigningFailure)?;
+    let (signature, recovery_id) = signing_key.sign_message(message.as_str())?;
     Ok(render_signature(&signature, recovery_id))
 }
 
@@ -72,22 +71,8 @@ pub fn service_auth_public_key_hex_from_private_key_hex(
     if private_key_hex.trim().is_empty() {
         return Err(ServiceAuthSignatureError::EmptyField("private_key_hex"));
     }
-    let mut private_key_bytes = decode_hex_bytes(private_key_hex)
-        .map_err(|_| ServiceAuthSignatureError::InvalidPrivateKeyHex)?;
-    let signing_key = match SigningKey::from_slice(private_key_bytes.as_slice()) {
-        Ok(key) => key,
-        Err(_) => {
-            wipe_bytes(private_key_bytes.as_mut_slice());
-            return Err(ServiceAuthSignatureError::InvalidPrivateKeyHex);
-        }
-    };
-    wipe_bytes(private_key_bytes.as_mut_slice());
-    Ok(encode_hex_lower(
-        signing_key
-            .verifying_key()
-            .to_encoded_point(true)
-            .as_bytes(),
-    ))
+    let signing_key = ServiceAuthSigningKey::from_private_key_hex(private_key_hex)?;
+    Ok(signing_key.public_key_hex())
 }
 
 /// Runs the service auth verify with public key hex contract helper.

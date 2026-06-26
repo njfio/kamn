@@ -22,10 +22,10 @@ fn assert_no_batch_unwraps(batch: &str) {
 
 fn assert_m7_tests_are_wrapped(m7_tests: &str) {
     assert!(
-        m7_tests.contains("#[cfg(test)]")
-            && m7_tests.contains("mod tests {")
+        m7_tests.contains("#[cfg(test)]\nmod ")
+            && !m7_tests.contains("mod tests {")
             && m7_tests.trim_end().ends_with('}'),
-        "m7 telemetry tests should be wrapped in a real cfg(test) module"
+        "m7 telemetry tests should be wrapped in a real cfg(test) module without module inception"
     );
 }
 

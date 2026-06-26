@@ -21,7 +21,7 @@ pub fn parse_signature_profile_metadata(signature: &str) -> Option<SignatureProf
     })
 }
 
-fn decode_hex_nibble(byte: u8) -> Option<u8> {
+pub(crate) fn decode_hex_nibble(byte: u8) -> Option<u8> {
     match byte {
         b'0'..=b'9' => Some(byte - b'0'),
         b'a'..=b'f' => Some(10 + (byte - b'a')),

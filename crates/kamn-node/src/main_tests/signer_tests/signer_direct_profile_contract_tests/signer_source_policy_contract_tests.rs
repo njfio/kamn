@@ -75,13 +75,14 @@ fn regression_signer_private_key_parse_path_requires_zeroize_markers() {
 fn regression_signer_secret_source_precedence_path_requires_zeroize_markers() {
     // Regression: #4165
     const SIGNER_SOURCE: &str = include_str!("../../../signer.rs");
+    const SECRET_PROVIDER_SOURCE: &str = include_str!("../../../signer/secret_provider.rs");
     assert!(
         SIGNER_SOURCE
             .contains("ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize"),
         "signer source precedence path must route through explicit zeroization helper"
     );
     assert!(
-        SIGNER_SOURCE.contains("private_key_hex.zeroize()"),
+        SECRET_PROVIDER_SOURCE.contains("private_key_hex.zeroize()"),
         "signer source precedence helper must explicitly zeroize env-secret buffers"
     );
 }

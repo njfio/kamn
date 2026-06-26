@@ -1,3 +1,4 @@
+use super::status::consensus_status;
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

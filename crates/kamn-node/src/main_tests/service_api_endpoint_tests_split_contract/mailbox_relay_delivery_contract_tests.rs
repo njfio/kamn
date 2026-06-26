@@ -40,9 +40,12 @@ fn spec_c34_service_api_endpoint_mailbox_relay_delivery_module_exists_and_owns_m
 fn assert_mailbox_relay_module_declarations(module_source: &str) {
     for marker in [
         "mod recipient_mailbox_contract_tests;",
+        "mod cross_node_relay_support;",
         "mod relay_delivery_contract_tests;",
         "mod relay_did_rejection_contract_tests;",
+        "mod relay_receiver_support;",
         "mod relay_status_contract_tests;",
+        "mod request_support;",
         "mod support;",
         "mod state_support;",
     ] {
@@ -137,6 +140,9 @@ fn spec_c35_service_api_endpoint_root_declares_mailbox_relay_delivery_submodule(
 fn spec_c36_service_api_endpoint_mailbox_relay_delivery_split_files_stay_below_budget() {
     for path in [
         MAILBOX_RELAY_DELIVERY_MODULE_FILE,
+        MAILBOX_RELAY_CROSS_NODE_SUPPORT_FILE,
+        MAILBOX_RELAY_REQUEST_SUPPORT_FILE,
+        MAILBOX_RELAY_RECEIVER_SUPPORT_FILE,
         RECIPIENT_MAILBOX_FILE,
         RELAY_DELIVERY_FILE,
         RELAY_DID_REJECTION_FILE,

@@ -53,7 +53,7 @@ fn assert_root_markers(root_source: &str) {
         "mod encoding;",
         "mod service_auth;",
         "mod fixtures;",
-        "#[cfg(test)] mod tests;",
+        "#[cfg(test)]\nmod tests;",
     ] {
         assert!(
             root_source.contains(marker),

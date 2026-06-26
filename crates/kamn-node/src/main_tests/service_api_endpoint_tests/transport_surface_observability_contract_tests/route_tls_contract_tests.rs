@@ -1,4 +1,5 @@
 use super::super::*;
+use super::async_route_support::run_async_transport_burst;
 use super::support::{
     assert_server_ok, build_transport_snapshot, send_signed_message_request,
     spawn_transport_server, state_hash,
@@ -37,19 +38,23 @@ fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes
     let _env = acquire_service_api_test_env();
     let snapshot = build_transport_snapshot("127.0.0.1:34066");
     let server = spawn_transport_server(&snapshot, 8);
-    let (health, metrics, send_one, send_two) =
+    let burst =
         run_async_transport_burst(server.bind_addr.as_str(), state_hash(&snapshot).as_str());
 
-    assert!(health
+    assert!(burst
+        .health
         .expect("async health request should succeed")
         .contains("HTTP/1.1 200 OK"));
-    assert!(metrics
+    assert!(burst
+        .metrics
         .expect("async metrics request should succeed")
         .contains("HTTP/1.1 200 OK"));
-    assert!(send_one
+    assert!(burst
+        .send_one
         .expect("async send request one should succeed")
         .contains("HTTP/1.1 202 Accepted"));
-    assert!(send_two
+    assert!(burst
+        .send_two
         .expect("async send request two should succeed")
         .contains("HTTP/1.1 202 Accepted"));
     let result = server
@@ -184,58 +189,3 @@ fn integration_service_api_endpoint_http_response_bodies_match_serde_contracts()
         "service api endpoint should stop cleanly after configured request budget",
     );
 }
-
-async fn async_signed_send(
-    bind_addr: &str,
-    sender_did: &str,
-    nonce: u64,
-    state_hash: &str,
-    body: &str,
-) -> Result<String, String> {
-    let signature = service_api_request_signature_for_fields(sender_did, nonce, state_hash, body);
-    let nonce_text = nonce.to_string();
-    let headers = [
-        ("X-KAMN-Sender-DID", sender_did),
-        ("X-KAMN-Request-Nonce", nonce_text.as_str()),
-        ("X-KAMN-Request-Signature", signature.as_str()),
-    ];
-    send_http_request_with_headers_async(bind_addr, "POST", "/v1/messages/send", body, &headers)
-        .await
-}
-
-fn run_async_transport_burst(bind_addr: &str, state_hash: &str) -> TransportBurstResults {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
-        .enable_all()
-        .build()
-        .expect("async runtime should initialize");
-    runtime.block_on(async move {
-        let one = async_signed_send(
-            bind_addr,
-            "kamn:did:agent:async-http-client-1",
-            900,
-            state_hash,
-            "{\"message\":\"async-route-1\"}",
-        );
-        let two = async_signed_send(
-            bind_addr,
-            "kamn:did:agent:async-http-client-2",
-            901,
-            state_hash,
-            "{\"message\":\"async-route-2\"}",
-        );
-        tokio::join!(
-            send_http_request_with_headers_async(bind_addr, "GET", "/healthz", "", &[]),
-            send_http_request_with_headers_async(bind_addr, "GET", "/metrics", "", &[]),
-            one,
-            two,
-        )
-    })
-}
-
-type TransportBurstResults = (
-    Result<String, String>,
-    Result<String, String>,
-    Result<String, String>,
-    Result<String, String>,
-);

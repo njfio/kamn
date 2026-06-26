@@ -73,7 +73,7 @@ TO_DID="${KAMN_LOCALHOST_SIGNED_DEMO_TO:-kamn:did:agent:listener-1}"
 STATE_HASH="${KAMN_LOCALHOST_SIGNED_DEMO_STATE_HASH:-state:localhost-demo}"
 BODY="${KAMN_LOCALHOST_SIGNED_DEMO_BODY:-hello-from-localhost-demo}"
 NONCE="${KAMN_LOCALHOST_SIGNED_DEMO_NONCE:-1}"
-TIMEOUT_SECONDS="${KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS:-15}"
+TIMEOUT_SECONDS="${KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS:-60}"
 OUTPUT_JSON="${KAMN_LOCALHOST_SIGNED_DEMO_OUTPUT_JSON:-}"
 
 while [ "$#" -gt 0 ]; do
@@ -187,12 +187,56 @@ wait_for_listener_completion() {
   wait "$pid"
 }
 
+fail_listener_not_ready() {
+  local message="$1"
+
+  echo "$message" >&2
+  cat "$LISTENER_OUT" >&2 || true
+}
+
+fail_listener_ready_timeout() {
+  local pid="$1"
+  local timeout_seconds="$2"
+
+  fail_listener_not_ready "listener did not become ready within ${timeout_seconds}s"
+  kill "$pid" >/dev/null 2>&1 || true
+  wait "$pid" >/dev/null 2>&1 || true
+}
+
+wait_for_listener_ready() {
+  local pid="$1"
+  local timeout_seconds="$2"
+  local elapsed=0
+
+  while true; do
+    if grep -Fq "status=listening" "$LISTENER_OUT"; then
+      return 0
+    fi
+
+    if ! kill -0 "$pid" >/dev/null 2>&1; then
+      wait "$pid" >/dev/null 2>&1 || true
+      fail_listener_not_ready "listener exited before accepting connections"
+      return 1
+    fi
+
+    if [ "$elapsed" -ge "$timeout_seconds" ]; then
+      fail_listener_ready_timeout "$pid" "$timeout_seconds"
+      return 1
+    fi
+
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+}
+
 cargo run --quiet -p kamn-sdk --example localhost_signed_listener -- \
   --addr "$ADDR" \
   --expected-from "$FROM_DID" \
   --expected-to "$TO_DID" \
   --state-hash "$STATE_HASH" >"$LISTENER_OUT" 2>&1 &
 LISTENER_PID=$!
+
+wait_for_listener_ready "$LISTENER_PID" "$TIMEOUT_SECONDS"
 
 cargo run --quiet -p kamn-sdk --example localhost_signed_sender -- \
   --addr "$ADDR" \

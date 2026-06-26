@@ -127,7 +127,7 @@ async fn read_async_response(stream: &mut tokio::net::TcpStream) -> Result<Strin
     let mut response = Vec::new();
     let mut chunk = [0_u8; 1024];
     loop {
-        match tokio::time::timeout(Duration::from_millis(150), stream.read(&mut chunk)).await {
+        match tokio::time::timeout(Duration::from_secs(2), stream.read(&mut chunk)).await {
             Ok(Ok(0)) => break,
             Ok(Ok(count)) => response.extend_from_slice(&chunk[..count]),
             Ok(Err(error)) => return Err(format!("async http response read failed: {error}")),

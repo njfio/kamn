@@ -29,6 +29,32 @@ def _require_bool(variable_name: str, raw_value: str) -> bool:
     return raw_value == "true"
 
 
+def _run_checked_command(
+    command: list[str],
+    label: str,
+    env_overrides: dict[str, str] | None = None,
+) -> None:
+    env = os.environ.copy()
+    if env_overrides:
+        env.update(env_overrides)
+    completed = subprocess.run(
+        command,
+        cwd=ROOT_DIR,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+    if completed.returncode == 0:
+        return
+
+    output = f"{completed.stdout}{completed.stderr}".strip()
+    detail = f"{label} failed with exit code {completed.returncode}"
+    if output:
+        detail = f"{detail}: {output}"
+    fail(detail)
+
+
 def run_live_network_smoke_lane(args: argparse.Namespace) -> int:
     output_json = args.output_json or ""
 
@@ -50,39 +76,34 @@ def run_live_network_smoke_lane(args: argparse.Namespace) -> int:
         time.sleep(fake_delay_seconds)
 
     commands: list[str] = []
-    try:
-        if not skip_commands:
-            subprocess.run(
-                ["bash", str(ROOT_DIR / "scripts/sdk/run_localhost_signed_demo.sh")],
-                cwd=ROOT_DIR,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-                text=True,
-            )
-            commands.append("scripts/sdk/run_localhost_signed_demo.sh")
+    if not skip_commands:
+        command_timeout_seconds = max(max_seconds, 1)
+        _run_checked_command(
+            ["bash", str(ROOT_DIR / "scripts/sdk/run_localhost_signed_demo.sh")],
+            "localhost signed demo",
+            {
+                "KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS": str(
+                    command_timeout_seconds
+                )
+            },
+        )
+        commands.append("scripts/sdk/run_localhost_signed_demo.sh")
 
-            subprocess.run(
-                [
-                    "cargo",
-                    "test",
-                    "-p",
-                    "kamn-core",
-                    "--test",
-                    "role_smoke_network",
-                    "functional_roles_complete_smoke_roundtrip_with_gossip",
-                    "--",
-                    "--exact",
-                ],
-                cwd=ROOT_DIR,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-                text=True,
-            )
-            commands.append("cargo_test_role_smoke_network_functional_roundtrip")
-    except subprocess.CalledProcessError as error:
-        fail(f"live-network smoke lane command failed with exit code {error.returncode}")
+        _run_checked_command(
+            [
+                "cargo",
+                "test",
+                "-p",
+                "kamn-core",
+                "--test",
+                "role_smoke_network",
+                "functional_roles_complete_smoke_roundtrip_with_gossip",
+                "--",
+                "--exact",
+            ],
+            "role smoke network contract",
+        )
+        commands.append("cargo_test_role_smoke_network_functional_roundtrip")
 
     elapsed_seconds = int(time.time()) - start_epoch
     reason_codes: list[str] = []

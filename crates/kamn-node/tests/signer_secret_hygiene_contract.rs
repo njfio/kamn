@@ -1,5 +1,7 @@
 const SIGNER_SOURCE: &str = include_str!("../src/signer.rs");
 const SIGNER_ADAPTER_SOURCE: &str = include_str!("../src/signer/signer_adapter.rs");
+const SIGNER_ADAPTER_TESTS_SOURCE: &str =
+    include_str!("../src/signer/tests/adapter_contract_tests.rs");
 const KOLME_RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/architecture/kolme-runtime-commit.md");
 const CI_STRATEGY_DOC: &str = include_str!("../../../docs/ci/strategy.md");
@@ -24,7 +26,7 @@ fn source_declares_signer_decode_zeroization_markers() {
         "signer source must re-export signer_adapter boundary to preserve module ownership"
     );
     assert!(
-        SIGNER_SOURCE
+        SIGNER_ADAPTER_TESTS_SOURCE
             .contains("regression_signer_private_key_decode_failure_redacts_sensitive_input"),
         "signer source must keep decode-failure redaction regression coverage"
     );

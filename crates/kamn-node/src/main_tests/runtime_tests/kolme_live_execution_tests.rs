@@ -94,12 +94,20 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
         3,
         "live runtime should issue nonce, submit, and finality requests"
     );
-    assert!(recorded_requests[0].contains("GET /get-next-nonce?pubkey="));
-    assert!(recorded_requests[1].contains("PUT /broadcast HTTP/1.1"));
-    assert!(recorded_requests[1].contains("X-Idempotency-Key: "));
-    let signature =
-        extract_json_string_field(request_body(recorded_requests[1].as_str()), "signature")
-            .expect("submit request should contain signature JSON field");
+    let nonce_index = recorded_request_index(&recorded_requests, "GET /get-next-nonce?pubkey=");
+    let submit_index = recorded_request_index(&recorded_requests, "PUT /broadcast HTTP/1.1");
+    let finality_index = recorded_request_index(
+        &recorded_requests,
+        "GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1",
+    );
+    assert!(
+        nonce_index < submit_index && submit_index < finality_index,
+        "live runtime should issue nonce, submit, and finality requests in order"
+    );
+    let submit_request = recorded_requests[submit_index].as_str();
+    assert!(submit_request.contains("X-Idempotency-Key: "));
+    let signature = extract_json_string_field(request_body(submit_request), "signature")
+        .expect("submit request should contain signature JSON field");
     // Regression: #2197
     assert!(
         signature.len() == 128
@@ -109,8 +117,13 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
                 .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
         "live runtime submit must not fall back to synthetic idempotency-key signatures"
     );
-    assert!(recorded_requests[2]
-        .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
+}
+
+fn recorded_request_index(recorded_requests: &[String], marker: &str) -> usize {
+    recorded_requests
+        .iter()
+        .position(|request| request.contains(marker))
+        .unwrap_or_else(|| panic!("missing recorded request marker {marker}"))
 }
 
 #[test]

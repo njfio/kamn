@@ -31,10 +31,19 @@ fi
 
 start_epoch="$(date +%s)"
 
+set +e
 smoke_output="$(
-  bash "$SMOKE_RUNNER" \
-    --output-json "$TMP_REPORT"
+  KAMN_LIVE_NETWORK_SMOKE_MAX_SECONDS=180 \
+    bash "$SMOKE_RUNNER" \
+      --output-json "$TMP_REPORT" 2>&1
 )"
+smoke_code=$?
+set -e
+if [ "$smoke_code" -ne 0 ]; then
+  printf '%s\n' "$smoke_output" >&2
+  echo "expected live-network smoke lane command to pass" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$smoke_output" | grep -q '^status=pass$'; then
   echo "expected live-network smoke lane to report pass status" >&2
   exit 1
