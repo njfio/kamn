@@ -47,11 +47,36 @@ fn collect_nested_paths(paths: &mut Vec<PathBuf>, dir: &Path) {
     for entry in read_dir_entries(dir) {
         let path = entry.path();
         if path.is_dir() {
-            collect_nested_paths(paths, &path);
-        } else if path.extension().is_some_and(|ext| ext == "rs") {
+            if !is_test_only_source_path(&path) {
+                collect_nested_paths(paths, &path);
+            }
+        } else if is_counted_rust_source_path(&path) {
             paths.push(path);
         }
     }
+}
+
+fn is_counted_rust_source_path(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| ext == "rs") && !is_test_only_source_path(path)
+}
+
+fn is_test_only_source_path(path: &Path) -> bool {
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_str()
+            .is_some_and(is_test_only_module_name)
+    }) || path
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(is_test_only_module_name)
+}
+
+fn is_test_only_module_name(name: &str) -> bool {
+    name == "tests"
+        || name == "runtime_tests"
+        || name.starts_with("test_")
+        || name.ends_with("_tests")
 }
 
 fn read_dir_entries(dir: &Path) -> Vec<fs::DirEntry> {

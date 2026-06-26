@@ -116,3 +116,9 @@ denied.
   from `src/runtime_tests/**` and one production signer display `.expect(`.
   The green fix must keep the production-expect baseline at zero by excluding
   test-only runtime support paths and removing the production display expect.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test public_api_surface_policy` threshold
+  contract when the policy counted `src/**/tests/**` and `tests.rs` support
+  modules as product API surface. The green fix must keep the public API
+  baseline and thresholds unchanged by excluding test-only module paths before
+  counting public items.
