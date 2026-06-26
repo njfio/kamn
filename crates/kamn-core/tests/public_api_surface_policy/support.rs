@@ -20,4 +20,6 @@ mod render;
 mod thresholds;
 
 pub(crate) use compute::compute_report_with_policy;
+pub(crate) use modules::module_source_paths;
+pub(crate) use paths::repo_path;
 pub(crate) use render::maybe_write_report;
