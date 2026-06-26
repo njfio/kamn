@@ -2,6 +2,7 @@ use crate::{data_layer_m2_default_rls_policies, DataLayerM2RlsPolicy};
 
 use super::super::DataLayerPgRlsStatement;
 
+/// Runs the data layer pg project default rls statements contract helper.
 pub fn data_layer_pg_project_default_rls_statements() -> Vec<DataLayerPgRlsStatement> {
     sorted_policies()
         .into_iter()

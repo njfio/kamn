@@ -7,6 +7,7 @@ use super::{
     DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
 };
 
+/// Runs the data layer pg project m5 embedding insert operation contract helper.
 pub fn data_layer_pg_project_m5_embedding_insert_operation(
     record: &DataLayerM5EmbeddingRecord,
     requester_did: &str,
@@ -15,9 +16,10 @@ pub fn data_layer_pg_project_m5_embedding_insert_operation(
     validate_pgvector_extension(config)?;
     validate_embedding_record(record)?;
     validate_vector(record.vector_plaintext.as_ref(), config.dimensions)?;
-    Ok(build_embedding_insert_operation(requester_did)?)
+    build_embedding_insert_operation(requester_did)
 }
 
+/// Runs the data layer pg project m5 similarity search operation contract helper.
 pub fn data_layer_pg_project_m5_similarity_search_operation(
     request: DataLayerPgM5SimilaritySearchRequest,
     config: DataLayerPgM5PgvectorConfig,
@@ -25,10 +27,7 @@ pub fn data_layer_pg_project_m5_similarity_search_operation(
     validate_pgvector_extension(config)?;
     validate_similarity_request(&request, config.dimensions)?;
     let limit = resolve_vector_limit(request.query.limit)?;
-    Ok(build_similarity_search_operation(
-        request.requester_did.as_str(),
-        limit,
-    )?)
+    build_similarity_search_operation(request.requester_did.as_str(), limit)
 }
 
 fn validate_embedding_record(

@@ -6,6 +6,7 @@ use super::{
     DataLayerPgOperationKind, DataLayerPgSqlOperation, DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT,
 };
 
+/// Runs the data layer pg project m6 age edge upsert operation contract helper.
 pub fn data_layer_pg_project_m6_age_edge_upsert_operation(
     edge: &DataLayerM6GraphEdgeRecord,
     requester_did: &str,
@@ -13,13 +14,14 @@ pub fn data_layer_pg_project_m6_age_edge_upsert_operation(
 ) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
     validate_age_config(&config)?;
     validate_edge(edge)?;
-    Ok(build_edge_upsert_operation(
+    build_edge_upsert_operation(
         requester_did,
         config.graph_name,
         map_age_supported_relation(edge.relation)?,
-    )?)
+    )
 }
 
+/// Runs the data layer pg project m6 age trust query operation contract helper.
 pub fn data_layer_pg_project_m6_age_trust_query_operation(
     request: DataLayerPgM6AgeTrustQueryRequest,
     config: DataLayerPgM6AgeConfig,
@@ -27,11 +29,7 @@ pub fn data_layer_pg_project_m6_age_trust_query_operation(
     validate_age_config(&config)?;
     validate_trust_query(&request)?;
     let limit = resolve_age_limit(request.query.limit)?;
-    Ok(build_trust_query_operation(
-        request.requester_did.as_str(),
-        config.graph_name,
-        limit,
-    )?)
+    build_trust_query_operation(request.requester_did.as_str(), config.graph_name, limit)
 }
 
 fn validate_edge(

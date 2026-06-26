@@ -11,12 +11,16 @@ use super::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Public contract model for Data Layer Pg M5 Pgvector Config.
 pub struct DataLayerPgM5PgvectorConfig {
+    /// Extension enabled carried by this public contract model.
     pub extension_enabled: bool,
+    /// Dimensions carried by this public contract model.
     pub dimensions: usize,
 }
 
 impl DataLayerPgM5PgvectorConfig {
+    /// Creates a new value for this public contract type.
     pub fn new(
         extension_enabled: bool,
         dimensions: usize,
@@ -34,18 +38,25 @@ impl DataLayerPgM5PgvectorConfig {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Public contract model for Data Layer Pg M5 Similarity Search Request.
 pub struct DataLayerPgM5SimilaritySearchRequest {
+    /// Requester did carried by this public contract model.
     pub requester_did: String,
+    /// Query carried by this public contract model.
     pub query: DataLayerM5SemanticQuery,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract model for Data Layer Pg M6 Age Config.
 pub struct DataLayerPgM6AgeConfig {
+    /// Extension enabled carried by this public contract model.
     pub extension_enabled: bool,
+    /// Graph name carried by this public contract model.
     pub graph_name: String,
 }
 
 impl DataLayerPgM6AgeConfig {
+    /// Creates a new value for this public contract type.
     pub fn new(
         extension_enabled: bool,
         graph_name: impl Into<String>,
@@ -64,18 +75,25 @@ impl DataLayerPgM6AgeConfig {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Public contract model for Data Layer Pg M6 Age Trust Query Request.
 pub struct DataLayerPgM6AgeTrustQueryRequest {
+    /// Requester did carried by this public contract model.
     pub requester_did: String,
+    /// Query carried by this public contract model.
     pub query: DataLayerM6TrustPropagationQuery,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract model for Data Layer Pg M7 Timescale Config.
 pub struct DataLayerPgM7TimescaleConfig {
+    /// Extension enabled carried by this public contract model.
     pub extension_enabled: bool,
+    /// Hypertable name carried by this public contract model.
     pub hypertable_name: String,
 }
 
 impl DataLayerPgM7TimescaleConfig {
+    /// Creates a new value for this public contract type.
     pub fn new(
         extension_enabled: bool,
         hypertable_name: impl Into<String>,
@@ -94,10 +112,15 @@ impl DataLayerPgM7TimescaleConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract model for Data Layer Pg M7 Timescale Owner Rollup Request.
 pub struct DataLayerPgM7TimescaleOwnerRollupRequest {
+    /// Requester did carried by this public contract model.
     pub requester_did: String,
+    /// Query carried by this public contract model.
     pub query: DataLayerM7BillingQuery,
+    /// Bucket window seconds carried by this public contract model.
     pub bucket_window_seconds: u64,
+    /// Limit carried by this public contract model.
     pub limit: Option<usize>,
 }
 

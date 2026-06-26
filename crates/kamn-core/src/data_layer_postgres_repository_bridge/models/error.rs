@@ -1,42 +1,71 @@
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract enum for Data Layer Pg Repository Bridge Error.
 pub enum DataLayerPgRepositoryBridgeError {
+    /// Empty field variant for this public contract enum.
     EmptyField(&'static str),
+    /// Invalid requester did variant for this public contract enum.
     InvalidRequesterDid {
+        /// Str carried by this public contract model.
         field: &'static str,
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// String carried by this public contract model.
         detail: String,
     },
+    /// Invalid owner did variant for this public contract enum.
     InvalidOwnerDid {
+        /// Str carried by this public contract model.
         field: &'static str,
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// String carried by this public contract model.
         detail: String,
     },
+    /// Invalid search limit variant for this public contract enum.
     InvalidSearchLimit {
+        /// U32 carried by this public contract model.
         requested: u32,
+        /// U32 carried by this public contract model.
         max_allowed: u32,
     },
+    /// Pgvector extension unavailable variant for this public contract enum.
     PgvectorExtensionUnavailable {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Pgvector dimension mismatch variant for this public contract enum.
     PgvectorDimensionMismatch {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// Usize carried by this public contract model.
         expected: usize,
+        /// Usize carried by this public contract model.
         found: usize,
     },
+    /// Age extension unavailable variant for this public contract enum.
     AgeExtensionUnavailable {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Age unsupported relation variant for this public contract enum.
     AgeUnsupportedRelation {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// Str carried by this public contract model.
         relation_marker: &'static str,
     },
+    /// Timescale extension unavailable variant for this public contract enum.
     TimescaleExtensionUnavailable {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Invalid timescale bucket window variant for this public contract enum.
     InvalidTimescaleBucketWindow {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// U64 carried by this public contract model.
         bucket_window_seconds: u64,
     },
 }

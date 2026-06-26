@@ -42,9 +42,9 @@ pub(crate) use billing::{
     core_m7_billing_reconciliation_report, map_m7_billing_error_to_timeseries,
     project_m7_owner_billing_daily_projection, project_m7_owner_billing_daily_rows,
 };
-pub(crate) use observability::{
-    map_observability_error_to_timeseries, project_m7_observability_projection,
-};
+pub(crate) use observability::map_observability_error_to_timeseries;
+#[cfg(test)]
+pub(crate) use observability::project_m7_observability_projection;
 pub(crate) use owner_reports::{
     evaluate_owner_observability, project_owner_billing_daily, reconcile_owner_billing_daily,
 };

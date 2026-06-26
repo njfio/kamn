@@ -6,6 +6,7 @@ use super::super::{
     DataLayerPgSqlOperation, DATA_LAYER_PG_MAX_BLIND_INDEX_SEARCH_LIMIT,
 };
 
+/// Runs the data layer pg project insert message operation contract helper.
 pub fn data_layer_pg_project_insert_message_operation(
     record: &DataLayerM0EnvelopeRecord,
     owner_did: &str,
@@ -30,6 +31,7 @@ pub fn data_layer_pg_project_insert_message_operation(
     })
 }
 
+/// Runs the data layer pg project select message by id operation contract helper.
 pub fn data_layer_pg_project_select_message_by_id_operation(
     message_id: &str,
     requester_did: &str,
@@ -44,6 +46,7 @@ pub fn data_layer_pg_project_select_message_by_id_operation(
     })
 }
 
+/// Runs the data layer pg project blind index search operation contract helper.
 pub fn data_layer_pg_project_blind_index_search_operation(
     request: DataLayerPgBlindIndexSearchRequest,
 ) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {

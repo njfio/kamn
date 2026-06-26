@@ -134,7 +134,7 @@ fn complex_scheduler_error_reason_code(
         DataLayerM10PartitionLifecycleError::EmptyField(_)
         | DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(_)
         | DataLayerM10PartitionLifecycleError::DuplicatePartitionMonthId(_)
-        | DataLayerM10PartitionLifecycleError::PartitionNotFound(_)
-        | _ => None,
+        | DataLayerM10PartitionLifecycleError::PartitionNotFound(_) => None,
+        _ => None,
     }
 }

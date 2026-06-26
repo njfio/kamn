@@ -11,6 +11,7 @@ use super::{
     DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
 };
 
+/// Runs the data layer pg project m7 timescale ingest operation contract helper.
 pub fn data_layer_pg_project_m7_timescale_ingest_operation(
     record: &DataLayerM7TelemetryPointRecord,
     requester_did: &str,
@@ -19,12 +20,10 @@ pub fn data_layer_pg_project_m7_timescale_ingest_operation(
     validate_timescale_config(&config)?;
     validate_timescale_record(record)?;
     validate_bucket_alignment(record)?;
-    Ok(build_timescale_ingest_operation(
-        requester_did,
-        config.hypertable_name,
-    )?)
+    build_timescale_ingest_operation(requester_did, config.hypertable_name)
 }
 
+/// Runs the data layer pg project m7 timescale owner rollup query operation contract helper.
 pub fn data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
     request: DataLayerPgM7TimescaleOwnerRollupRequest,
     config: DataLayerPgM7TimescaleConfig,
@@ -33,12 +32,12 @@ pub fn data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
     validate_rollup_request(&request)?;
     let interval_marker = resolve_interval_marker(request.bucket_window_seconds)?;
     let limit = resolve_timescale_limit(request.limit)?;
-    Ok(build_owner_rollup_operation(
+    build_owner_rollup_operation(
         request.requester_did.as_str(),
         config.hypertable_name,
         interval_marker,
         limit,
-    )?)
+    )
 }
 
 fn validate_timescale_record(

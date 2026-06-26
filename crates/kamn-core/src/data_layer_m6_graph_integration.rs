@@ -22,4 +22,5 @@ pub use models::{
 };
 pub use registry::DataLayerM6GraphRegistry;
 pub use support::DataLayerM6GraphIntegrationError;
+#[cfg(test)]
 pub(crate) use support::{resolve_limit, validate_non_empty, validate_weight};

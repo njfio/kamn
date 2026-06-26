@@ -18,10 +18,12 @@ pub struct DataLayerM7TelemetryRegistry {
 }
 
 impl DataLayerM7TelemetryRegistry {
+    /// Creates a new value for this public contract type.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Runs the ingest point contract operation.
     pub fn ingest_point(
         &mut self,
         input: DataLayerM7TelemetryPointInput,
@@ -36,10 +38,12 @@ impl DataLayerM7TelemetryRegistry {
         Ok(record)
     }
 
+    /// Runs the points for owner contract operation.
     pub fn points_for_owner(&self, owner_did: &str) -> Option<&[DataLayerM7TelemetryPointRecord]> {
         self.points_by_owner.get(owner_did).map(Vec::as_slice)
     }
 
+    /// Runs the aggregate agent hourly contract operation.
     pub fn aggregate_agent_hourly(
         &self,
         query: DataLayerM7TelemetryScopeQuery,
@@ -50,6 +54,7 @@ impl DataLayerM7TelemetryRegistry {
         )
     }
 
+    /// Runs the aggregate agent daily contract operation.
     pub fn aggregate_agent_daily(
         &self,
         query: DataLayerM7TelemetryScopeQuery,
@@ -60,12 +65,14 @@ impl DataLayerM7TelemetryRegistry {
         )
     }
 
+    /// Runs the aggregate network hourly contract operation.
     pub fn aggregate_network_hourly(
         &self,
     ) -> Result<Vec<DataLayerM7NetworkHourlyAggregate>, DataLayerM7TimeseriesError> {
         Ok(aggregate_network_hourly(&self.points_by_owner))
     }
 
+    /// Runs the project owner billing daily contract operation.
     pub fn project_owner_billing_daily(
         &self,
         query: DataLayerM7BillingQuery,
@@ -74,6 +81,7 @@ impl DataLayerM7TelemetryRegistry {
         project_owner_billing_daily(owner_points, query)
     }
 
+    /// Runs the reconcile owner billing daily contract operation.
     pub fn reconcile_owner_billing_daily(
         &self,
         input: DataLayerM7BillingReconciliationInput,
@@ -83,6 +91,7 @@ impl DataLayerM7TelemetryRegistry {
         reconcile_owner_billing_daily(owner_points, input)
     }
 
+    /// Runs the evaluate owner observability contract operation.
     pub fn evaluate_owner_observability(
         &self,
         query: DataLayerM7BillingQuery,
