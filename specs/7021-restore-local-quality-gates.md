@@ -100,3 +100,8 @@ denied.
   nonblocking stream and panicked on `WouldBlock`. The green fix must preserve
   the client keep-alive assertion and stabilize the test harness rather than
   adding production retry behavior.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test message_lifecycle_parser_extraction_contract`
+  source-shape contract after the message lifecycle snapshot parser had been
+  extracted out of the root module. The green fix must keep the helper and
+  coordinator-size assertions pointed at the actual extracted parser source.

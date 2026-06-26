@@ -1,6 +1,6 @@
 use std::fs;
 
-const SOURCE_FILE: &str = "src/message_lifecycle.rs";
+const SOURCE_FILE: &str = "src/message_lifecycle/snapshot_codec/parse.rs";
 const TARGET_FUNCTION: &str = "fn parse_message_lifecycle_snapshot_payload(";
 const TARGET_HELPERS: &[&str] = &[
     "fn parse_message_lifecycle_snapshot_schema(",
