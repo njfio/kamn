@@ -105,3 +105,8 @@ denied.
   source-shape contract after the message lifecycle snapshot parser had been
   extracted out of the root module. The green fix must keep the helper and
   coordinator-size assertions pointed at the actual extracted parser source.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test p2p_block_module_extraction_contract`
+  visibility contract after the native runtime loop leaked as `pub(crate)`.
+  The green fix must keep the extracted p2p module boundary narrow with
+  `pub(super)` visibility instead of weakening the source-shape contract.
