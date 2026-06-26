@@ -12,7 +12,8 @@ fn constructor_rejects_empty_channel_id() {
 #[test]
 fn distribution_rejects_empty_recipients() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
-        let mut engine = GroupChannelCryptoEngine::new("channel:group:1").unwrap();
+        let mut engine = GroupChannelCryptoEngine::new("channel:group:1")
+            .expect("expected test fixture operation to succeed");
         assert_eq!(
             engine.distribute_sender_key(
                 "kamn:did:agent:alice",
@@ -40,7 +41,7 @@ fn encrypt_decrypt_roundtrip_requires_authorized_recipient() {
         assert_sender_key_rotation_state(&engine, &distribution);
         let sealed = engine
             .encrypt("kamn:did:agent:alice", "group payload", 33)
-            .unwrap();
+            .expect("expected test fixture operation to succeed");
         assert_active_generation_decrypts(&engine, &sealed);
         assert_debug_output_redacts_sender_key_ref(&engine);
         let legacy = legacy_v1_ciphertext(
@@ -52,7 +53,9 @@ fn encrypt_decrypt_roundtrip_requires_authorized_recipient() {
             "legacy payload",
         );
         assert_eq!(
-            engine.decrypt("kamn:did:agent:bob", &legacy).unwrap(),
+            engine
+                .decrypt("kamn:did:agent:bob", &legacy)
+                .expect("expected test fixture operation to succeed"),
             "legacy payload"
         );
     });
@@ -62,21 +65,22 @@ fn engine_with_rotated_sender_key() -> (
     GroupChannelCryptoEngine,
     super::super::SenderKeyDistributionRecord,
 ) {
-    let mut engine = GroupChannelCryptoEngine::new("channel:group:1").unwrap();
+    let mut engine = GroupChannelCryptoEngine::new("channel:group:1")
+        .expect("expected test fixture operation to succeed");
     let distribution = engine
         .distribute_sender_key(
             "kamn:did:agent:alice",
             "kamn:did:agent:alice#sender-key-1",
             vec!["kamn:did:agent:bob".to_owned()],
         )
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     engine
         .rotate_sender_key(
             "kamn:did:agent:alice",
             "kamn:did:agent:alice#sender-key-2",
             vec!["kamn:did:agent:bob".to_owned()],
         )
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     (engine, distribution)
 }
 
@@ -87,13 +91,13 @@ fn assert_sender_key_rotation_state(
     assert_eq!(
         engine
             .active_sender_key_generation("kamn:did:agent:alice")
-            .unwrap(),
+            .expect("expected test fixture operation to succeed"),
         2
     );
     assert_eq!(
         engine
             .sender_key_record("kamn:did:agent:alice", distribution.key_generation)
-            .unwrap()
+            .expect("expected test fixture operation to succeed")
             .sender_key_ref,
         "kamn:did:agent:alice#sender-key-1"
     );
@@ -104,7 +108,9 @@ fn assert_active_generation_decrypts(
     sealed: &super::super::GroupMessageCiphertext,
 ) {
     assert_eq!(
-        engine.decrypt("kamn:did:agent:bob", sealed).unwrap(),
+        engine
+            .decrypt("kamn:did:agent:bob", sealed)
+            .expect("expected test fixture operation to succeed"),
         "group payload"
     );
     assert_eq!(sealed.key_generation, 2);
@@ -121,21 +127,22 @@ fn rotated_generations() -> (
     super::super::SenderKeyDistributionRecord,
     super::super::SenderKeyDistributionRecord,
 ) {
-    let mut engine = GroupChannelCryptoEngine::new("channel:group:1").unwrap();
+    let mut engine = GroupChannelCryptoEngine::new("channel:group:1")
+        .expect("expected test fixture operation to succeed");
     let first = engine
         .distribute_sender_key(
             "kamn:did:agent:alice",
             "kamn:did:agent:alice#sender-key-1",
             vec!["kamn:did:agent:bob".to_owned()],
         )
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     let second = engine
         .rotate_sender_key(
             "kamn:did:agent:alice",
             "kamn:did:agent:alice#sender-key-2",
             vec!["kamn:did:agent:bob".to_owned()],
         )
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     (engine, first, second)
 }
 
@@ -147,7 +154,7 @@ fn assert_generation_activity(
     assert_eq!(
         engine
             .sender_key_record("kamn:did:agent:alice", generation)
-            .unwrap()
+            .expect("expected test fixture operation to succeed")
             .active,
         expected_active
     );

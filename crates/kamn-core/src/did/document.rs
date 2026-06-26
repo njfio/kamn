@@ -5,13 +5,21 @@ use super::{AgentDid, AgentDidMetadata, DidDocument, DidService, DidVerification
 mod support;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract enum for Did Document Error.
 pub enum DidDocumentError {
+    /// Empty public key variant for this public contract enum.
     EmptyPublicKey,
+    /// Empty agent type variant for this public contract enum.
     EmptyAgentType,
+    /// Empty model family variant for this public contract enum.
     EmptyModelFamily,
+    /// Missing capabilities variant for this public contract enum.
     MissingCapabilities,
+    /// Invalid capability variant for this public contract enum.
     InvalidCapability,
+    /// Invalid service endpoint variant for this public contract enum.
     InvalidServiceEndpoint(String),
+    /// Invalid verification method algorithm variant for this public contract enum.
     InvalidVerificationMethodAlgorithm(String),
 }
 
@@ -35,16 +43,19 @@ impl fmt::Display for DidDocumentError {
 
 impl std::error::Error for DidDocumentError {}
 
+/// Runs the canonical service endpoint contract helper.
 pub fn canonical_service_endpoint(raw_endpoint: &str) -> Result<String, DidDocumentError> {
     support::canonical_service_endpoint(raw_endpoint)
 }
 
+/// Runs the validate did verification method algorithms contract helper.
 pub fn validate_did_verification_method_algorithms(
     algorithms: &[String],
 ) -> Result<(), DidDocumentError> {
     support::validate_did_verification_method_algorithms(algorithms)
 }
 
+/// Runs the canonical did document contract helper.
 pub fn canonical_did_document(
     did: &AgentDid,
     public_key_multibase: &str,

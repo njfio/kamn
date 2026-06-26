@@ -23,14 +23,15 @@ fn regression_constructor_accepts_without_insecure_fixture_opt_in() {
 #[test]
 fn encrypt_requires_key_agreement_seed() {
     with_key_agreement_seed(None, || {
-        let mut engine = GroupChannelCryptoEngine::new("channel:group:1").unwrap();
+        let mut engine = GroupChannelCryptoEngine::new("channel:group:1")
+            .expect("expected test fixture operation to succeed");
         engine
             .distribute_sender_key(
                 "kamn:did:agent:alice",
                 "kamn:did:agent:alice#sender-key-1",
                 vec!["kamn:did:agent:bob".to_owned()],
             )
-            .unwrap();
+            .expect("expected test fixture operation to succeed");
         assert_eq!(
             engine.encrypt("kamn:did:agent:alice", "payload", 1),
             Err(GroupChannelCryptoError::MissingKeyAgreementMasterSeed)
@@ -41,8 +42,10 @@ fn encrypt_requires_key_agreement_seed() {
 #[test]
 fn group_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
     let shared_secret = [0x3cu8; 32];
-    let hkdf_key_a = derive_group_aead_key(&shared_secret, "channel:test", 9).unwrap();
-    let hkdf_key_b = derive_group_aead_key(&shared_secret, "channel:test", 9).unwrap();
+    let hkdf_key_a = derive_group_aead_key(&shared_secret, "channel:test", 9)
+        .expect("expected test fixture operation to succeed");
+    let hkdf_key_b = derive_group_aead_key(&shared_secret, "channel:test", 9)
+        .expect("expected test fixture operation to succeed");
     let legacy_key = derive_group_aead_key_legacy(&shared_secret, "channel:test", 9);
     assert_eq!(hkdf_key_a, hkdf_key_b);
     assert_ne!(hkdf_key_a, legacy_key);

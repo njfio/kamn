@@ -4,15 +4,18 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
+/// Public contract model for Federated Did Handshake Evaluator.
 pub struct FederatedDidHandshakeEvaluator<T: FederatedDidTrustStore> {
     trust_store: T,
 }
 
 impl<T: FederatedDidTrustStore> FederatedDidHandshakeEvaluator<T> {
+    /// Creates a new value for this public contract type.
     pub fn new(trust_store: T) -> Self {
         Self { trust_store }
     }
 
+    /// Runs the evaluate contract operation.
     pub fn evaluate(
         &mut self,
         input: FederatedDidHandshakeInput,

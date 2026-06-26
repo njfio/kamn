@@ -25,9 +25,13 @@ fn libp2p_feature_gate_name_matches_constant() {
 fn deterministic_proposal_planner_orders_candidate_ids() {
     let planner = DeterministicProposalPlanner::new("state-hash");
     let candidates = vec![
-        ProposalCandidate::new("b", "did:sender:b", 2, "state-hash").unwrap(),
-        ProposalCandidate::new("a", "did:sender:a", 1, "state-hash").unwrap(),
+        ProposalCandidate::new("b", "did:sender:b", 2, "state-hash")
+            .expect("expected test fixture operation to succeed"),
+        ProposalCandidate::new("a", "did:sender:a", 1, "state-hash")
+            .expect("expected test fixture operation to succeed"),
     ];
-    let plan = planner.plan(candidates).unwrap();
+    let plan = planner
+        .plan(candidates)
+        .expect("expected test fixture operation to succeed");
     assert_eq!(plan.ordered_candidate_ids(), vec!["a", "b"]);
 }

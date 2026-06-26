@@ -27,7 +27,7 @@ fn delivery_input(message_id: &str, nonce: u64, received_at: &str) -> DeliveryGu
 
 fn seeded_bundle() -> DurableGuardSnapshotBundle {
     let mut guards = MessageDeliveryGuards::new();
-    let mut channels = seeded_channel_engine();
+    let channels = seeded_channel_engine();
     assert_delivery_acceptance(&mut guards);
     DurableGuardSnapshotBundle::capture(&guards, &channels)
 }
