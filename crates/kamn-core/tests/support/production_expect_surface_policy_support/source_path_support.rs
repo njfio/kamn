@@ -29,7 +29,7 @@ pub fn is_test_only_source_path(relative_path: &str) -> bool {
     }
     if relative_path
         .split('/')
-        .any(|component| component == "main_tests")
+        .any(|component| component == "main_tests" || component == "runtime_tests")
     {
         return true;
     }

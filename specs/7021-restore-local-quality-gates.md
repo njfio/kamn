@@ -110,3 +110,9 @@ denied.
   visibility contract after the native runtime loop leaked as `pub(crate)`.
   The green fix must keep the extracted p2p module boundary narrow with
   `pub(super)` visibility instead of weakening the source-shape contract.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test production_expect_surface_policy`
+  zero-baseline contract with eight test-support `.expect(` calls counted
+  from `src/runtime_tests/**` and one production signer display `.expect(`.
+  The green fix must keep the production-expect baseline at zero by excluding
+  test-only runtime support paths and removing the production display expect.

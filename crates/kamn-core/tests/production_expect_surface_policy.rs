@@ -157,6 +157,9 @@ fn regression_test_only_source_paths_are_excluded_from_census() {
         "crates/kamn-core/src/runtime_tests_snapshot_store.rs"
     ));
     assert!(is_test_only_source_path(
+        "crates/kamn-core/src/runtime_tests/lifecycle_backpressure_contract_tests/support.rs"
+    ));
+    assert!(is_test_only_source_path(
         "crates/kamn-node/src/service_api_endpoint/tests.rs"
     ));
     assert!(is_test_only_source_path(
