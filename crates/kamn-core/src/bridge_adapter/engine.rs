@@ -37,10 +37,12 @@ where
     A: BridgeAdapter,
     P: BridgePolicyHook,
 {
+    /// Creates a new value for this public contract type.
     pub fn new(adapter: A, policy: P) -> Self {
         Self::with_inbound_freshness_window(adapter, policy, DEFAULT_MAX_INBOUND_AGE_SECS)
     }
 
+    /// Creates or updates state through the with inbound freshness window contract operation.
     pub fn with_inbound_freshness_window(adapter: A, policy: P, max_inbound_age_secs: u64) -> Self {
         Self {
             adapter,
@@ -51,6 +53,7 @@ where
         }
     }
 
+    /// Runs the process inbound contract operation.
     pub fn process_inbound(
         &self,
         inbound: &BridgeInboundEnvelope,
@@ -74,6 +77,7 @@ where
         Ok(normalized)
     }
 
+    /// Runs the process outbound contract operation.
     pub fn process_outbound(
         &self,
         request: &BridgeOutboundRequest,
@@ -89,6 +93,7 @@ where
         Ok(translated)
     }
 
+    /// Runs the process inbound to envelope contract operation.
     pub fn process_inbound_to_envelope(
         &self,
         inbound: &BridgeInboundEnvelope,
