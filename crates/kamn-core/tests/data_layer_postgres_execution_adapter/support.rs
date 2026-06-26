@@ -89,6 +89,16 @@ pub(crate) async fn connect_live_adapter(database_url: String) -> DataLayerPgExe
     adapter
 }
 
+pub(crate) async fn insert_fixture_message(
+    adapter: &DataLayerPgExecutionAdapter,
+    record: &DataLayerM0EnvelopeRecord,
+) {
+    adapter
+        .execute_insert_message(record, "kamn:did:owner:owner-1", "kamn:did:agent:agent-1")
+        .await
+        .expect("insert should succeed");
+}
+
 pub(crate) fn blind_index_map(token: String) -> BTreeMap<String, String> {
     let mut blind_indexes = BTreeMap::new();
     blind_indexes.insert("channel_topic".to_owned(), token);

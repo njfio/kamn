@@ -8,8 +8,8 @@ use kamn_core::{
 };
 
 use crate::support::{
-    connect_live_adapter, current_suffix, fixture_record, live_postgres_url, pending_message,
-    runtime, uuid_from_u128,
+    connect_live_adapter, current_suffix, fixture_record, insert_fixture_message,
+    live_postgres_url, pending_message, runtime, uuid_from_u128,
 };
 
 #[test]
@@ -113,16 +113,6 @@ fn assert_follow_up_policy(outcome: &DataLayerM1AnchoringTickOutcome) {
         follow_up_policy.reason_code,
         DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE
     );
-}
-
-async fn insert_fixture_message(
-    adapter: &kamn_core::DataLayerPgExecutionAdapter,
-    record: &kamn_core::DataLayerM0EnvelopeRecord,
-) {
-    adapter
-        .execute_insert_message(record, "kamn:did:owner:owner-1", "kamn:did:agent:agent-1")
-        .await
-        .expect("insert should succeed");
 }
 
 async fn persist_orchestrator_plan(
