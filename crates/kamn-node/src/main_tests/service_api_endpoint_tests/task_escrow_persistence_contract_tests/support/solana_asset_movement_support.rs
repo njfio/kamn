@@ -19,6 +19,7 @@ pub(crate) use assertions::{
 };
 pub(crate) use context::{
     build_live_solana_asset_movement_context, release_live_escrow_across_restart,
+    LiveSolanaAssetMovementParams,
 };
 
 pub(crate) struct AssetMovementHarness {

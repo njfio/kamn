@@ -24,16 +24,16 @@ fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispa
     // Contract marker: delivered
     let sender_state = read_state_json(case.files.sender_state_file.as_path());
     let audit_export = read_audit_export_json(case.sender_audit_export.as_path());
-    assert_slice_evidence(
-        case.recipient_did.as_str(),
-        &created_message.message_id,
-        &created_task.task_id,
-        &mailbox,
-        &delivered_message,
-        &queried_task,
-        &sender_state,
-        &audit_export,
-    );
+    assert_slice_evidence(support::SliceEvidence {
+        recipient_did: case.recipient_did.as_str(),
+        message_id: &created_message.message_id,
+        task_id: &created_task.task_id,
+        mailbox: &mailbox,
+        delivered_message: &delivered_message,
+        queried_task: &queried_task,
+        sender_state: &sender_state,
+        audit_export: &audit_export,
+    });
     cleanup_case(case);
 }
 

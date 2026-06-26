@@ -29,12 +29,14 @@ pub(super) fn send_persisted_message(
     parse_created_message(&signed_request_response(
         snapshot,
         bind_addr,
-        "send-phase",
-        "POST",
-        "/v1/messages/send",
-        sender_did,
-        nonce,
-        payload,
+        SignedRequestResponse {
+            phase: "send-phase",
+            method: "POST",
+            path: "/v1/messages/send",
+            sender_did,
+            nonce,
+            body: payload,
+        },
     ))
 }
 
@@ -48,12 +50,14 @@ pub(super) fn query_persisted_message(
     parse_queried_message(&signed_request_response(
         snapshot,
         bind_addr,
-        "query-phase",
-        "GET",
-        query_path,
-        sender_did,
-        nonce,
-        "",
+        SignedRequestResponse {
+            phase: "query-phase",
+            method: "GET",
+            path: query_path,
+            sender_did,
+            nonce,
+            body: "",
+        },
     ))
 }
 
@@ -96,30 +100,34 @@ where
     response
 }
 
+struct SignedRequestResponse<'a> {
+    phase: &'a str,
+    method: &'a str,
+    path: &'a str,
+    sender_did: &'a str,
+    nonce: u64,
+    body: &'a str,
+}
+
 fn signed_request_response(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
-    phase: &str,
-    method: &str,
-    path: &str,
-    sender_did: &str,
-    nonce: u64,
-    body: &str,
+    request: SignedRequestResponse<'_>,
 ) -> String {
-    run_single_request_phase(snapshot, bind_addr, phase, |addr| {
-        let nonce_text = nonce.to_string();
+    run_single_request_phase(snapshot, bind_addr, request.phase, |addr| {
+        let nonce_text = request.nonce.to_string();
         let signature = service_api_request_signature_for_fields(
-            sender_did,
-            nonce,
+            request.sender_did,
+            request.nonce,
             service_api_state_hash(snapshot).as_str(),
-            body,
+            request.body,
         );
         send_http_request_with_headers(
             addr,
-            method,
-            path,
-            body,
-            &request_headers(sender_did, nonce_text.as_str(), signature.as_str()),
+            request.method,
+            request.path,
+            request.body,
+            &request_headers(request.sender_did, nonce_text.as_str(), signature.as_str()),
         )
     })
 }

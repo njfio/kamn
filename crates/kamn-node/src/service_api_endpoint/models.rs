@@ -80,7 +80,7 @@ pub(crate) struct ServiceApiChannelMessagesBody {
     pub(crate) messages: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub(crate) struct ServiceApiSettlementMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) settlement_receipt_hash: Option<String>,
@@ -90,17 +90,6 @@ pub(crate) struct ServiceApiSettlementMetadata {
     pub(crate) settlement_network: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) settlement_commitment: Option<String>,
-}
-
-impl Default for ServiceApiSettlementMetadata {
-    fn default() -> Self {
-        Self {
-            settlement_receipt_hash: None,
-            settlement_tx_signature: None,
-            settlement_network: None,
-            settlement_commitment: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

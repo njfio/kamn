@@ -23,6 +23,4 @@ pub(super) fn collect_live_settlement_evidence(
 }
 
 #[cfg(test)]
-pub(crate) use test_support::{
-    set_test_live_solana_settlement_override, TestLiveSolanaSettlementOverrideGuard,
-};
+pub(crate) use test_support::set_test_live_solana_settlement_override;

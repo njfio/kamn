@@ -46,9 +46,12 @@ pub(crate) use secret_provider::{
     ensure_kolme_live_strict_signer_secret_source_precedence,
 };
 
+#[cfg(test)]
 pub(crate) type ManagedExternalKeySourceAdapter = managed_backend::ManagedExternalKeySourceAdapter;
+#[cfg(test)]
 pub(crate) type KolmeForkSecp256k1SignerAdapter = signer_adapter::KolmeForkSecp256k1SignerAdapter;
 
+#[cfg(test)]
 pub(crate) fn build_kolme_live_signer_adapter(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
@@ -56,6 +59,7 @@ pub(crate) fn build_kolme_live_signer_adapter(
     direct_payload::build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)
 }
 
+#[cfg(test)]
 pub(crate) fn read_kolme_live_signer_private_key_hex(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
@@ -66,6 +70,7 @@ pub(crate) fn read_kolme_live_signer_private_key_hex(
     )
 }
 
+#[cfg(test)]
 pub(crate) fn enforce_kolme_live_managed_key_source_provenance_marker_parity(
     signer_selection: &KolmeLiveSignerSelection,
     marker: &KolmeLiveManagedKeySourceProvenanceMarker,
@@ -76,6 +81,7 @@ pub(crate) fn enforce_kolme_live_managed_key_source_provenance_marker_parity(
     )
 }
 
+#[cfg(test)]
 pub(crate) fn ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize(
     strict_signer_profile: Option<&str>,
     signer_selection: &KolmeLiveSignerSelection,

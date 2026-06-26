@@ -1,23 +1,35 @@
 use super::super::*;
 use kamn_core::CANONICAL_ENCRYPTION_ALGORITHM;
 
-pub(crate) fn assert_slice_evidence(
-    recipient_did: &str,
-    message_id: &str,
-    task_id: &str,
-    mailbox: &crate::service_api_endpoint::ServiceApiChannelMessagesBody,
-    delivered_message: &Value,
-    queried_task: &Value,
-    sender_state: &Value,
-    audit_export: &Value,
-) {
+pub(crate) struct SliceEvidence<'a> {
+    pub(crate) recipient_did: &'a str,
+    pub(crate) message_id: &'a str,
+    pub(crate) task_id: &'a str,
+    pub(crate) mailbox: &'a crate::service_api_endpoint::ServiceApiChannelMessagesBody,
+    pub(crate) delivered_message: &'a Value,
+    pub(crate) queried_task: &'a Value,
+    pub(crate) sender_state: &'a Value,
+    pub(crate) audit_export: &'a Value,
+}
+
+pub(crate) fn assert_slice_evidence(evidence: SliceEvidence<'_>) {
     assert_eq!(CANONICAL_ENCRYPTION_ALGORITHM, "X25519-XChaCha20-Poly1305");
-    assert!(mailbox.messages.contains(&message_id.to_owned()));
-    assert_eq!(delivered_message["status"], "delivered");
-    assert_eq!(delivered_message["recipient_did"], recipient_did);
-    assert_runtime_evidence(&sender_state["messages"][message_id]);
-    assert_task_completion(task_id, queried_task, &sender_state["tasks"][task_id]);
-    assert_task_audit_record(task_id, audit_export);
+    assert!(evidence
+        .mailbox
+        .messages
+        .contains(&evidence.message_id.to_owned()));
+    assert_eq!(evidence.delivered_message["status"], "delivered");
+    assert_eq!(
+        evidence.delivered_message["recipient_did"],
+        evidence.recipient_did
+    );
+    assert_runtime_evidence(&evidence.sender_state["messages"][evidence.message_id]);
+    assert_task_completion(
+        evidence.task_id,
+        evidence.queried_task,
+        &evidence.sender_state["tasks"][evidence.task_id],
+    );
+    assert_task_audit_record(evidence.task_id, evidence.audit_export);
 }
 
 pub(crate) fn recipient_env_guards(

@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use k256::ecdsa::{RecoveryId, Signature, SigningKey};
 use kamn_core::KolmeRuntimeCommitRequest;
 
 use crate::signer::{
@@ -59,7 +58,6 @@ pub(super) fn write_managed_signer_script(script_body: &str) -> PathBuf {
 pub(super) struct ManagedBackendFixture {
     pub(super) request: KolmeRuntimeCommitRequest,
     pub(super) canonical_message: String,
-    pub(super) signing_key: SigningKey,
     pub(super) signer_public_key_hex: String,
     pub(super) signature_hex: String,
     pub(super) recovery_id: u8,
@@ -82,7 +80,6 @@ pub(super) fn deterministic_managed_backend_fixture(suffix: &str) -> ManagedBack
     ManagedBackendFixture {
         request,
         canonical_message,
-        signing_key,
         signer_public_key_hex,
         signature_hex: encode_kolme_hex_lower(signature.to_bytes().as_ref()),
         recovery_id: recovery_id.to_byte(),

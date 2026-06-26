@@ -13,13 +13,15 @@ pub(crate) fn register_agent_profile(
     let response = raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/agents/register",
-        caller_did,
-        nonce,
-        payload,
-        &[],
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/agents/register",
+            caller_did,
+            nonce,
+            body: payload,
+            extra_headers: &[],
+        },
     );
     assert!(response.contains("HTTP/1.1 201 Created"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -36,12 +38,15 @@ pub(crate) fn create_task(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/tasks/create",
-        caller_did,
-        nonce,
-        payload,
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/tasks/create",
+            caller_did,
+            nonce,
+            body: payload,
+            extra_headers: &[],
+        },
     );
     assert!(response.contains("HTTP/1.1 201 Created"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -58,12 +63,15 @@ pub(crate) fn accept_task(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        format!("/v1/tasks/{task_id}/accept").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: format!("/v1/tasks/{task_id}/accept").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+            extra_headers: &[],
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
 }
@@ -78,12 +86,15 @@ pub(crate) fn query_task(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "GET",
-        format!("/v1/tasks/{task_id}").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/tasks/{task_id}").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+            extra_headers: &[],
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -100,12 +111,15 @@ pub(crate) fn fund_escrow(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/escrow/fund",
-        caller_did,
-        nonce,
-        payload,
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/escrow/fund",
+            caller_did,
+            nonce,
+            body: payload,
+            extra_headers: &[],
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -122,62 +136,61 @@ pub(crate) fn release_escrow(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        format!("/v1/escrow/{escrow_id}/release").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: format!("/v1/escrow/{escrow_id}/release").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+            extra_headers: &[],
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("escrow release payload should deserialize")
 }
 
+pub(crate) struct SignedRequest<'a> {
+    pub(crate) max_requests: usize,
+    pub(crate) method: &'a str,
+    pub(crate) path: &'a str,
+    pub(crate) caller_did: &'a str,
+    pub(crate) nonce: u64,
+    pub(crate) body: &'a str,
+    pub(crate) extra_headers: &'a [(&'a str, &'a str)],
+}
+
 pub(crate) fn raw_signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
-    max_requests: usize,
-    method: &str,
-    path: &str,
-    caller_did: &str,
-    nonce: u64,
-    body: &str,
-    extra_headers: &[(&str, &str)],
+    request: SignedRequest<'_>,
 ) -> String {
-    super::state_support::with_api_server(snapshot, bind_addr, max_requests, |addr| {
-        let (nonce_text, signature) = build_signed_header_values(snapshot, caller_did, nonce, body);
+    super::state_support::with_api_server(snapshot, bind_addr, request.max_requests, |addr| {
+        let (nonce_text, signature) =
+            build_signed_header_values(snapshot, request.caller_did, request.nonce, request.body);
         let mut headers = vec![
-            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Sender-DID", request.caller_did),
             ("X-KAMN-Request-Nonce", nonce_text.as_str()),
             ("X-KAMN-Request-Signature", signature.as_str()),
         ];
-        headers.extend_from_slice(extra_headers);
-        send_http_request_with_headers(addr, method, path, body, headers.as_slice())
+        headers.extend_from_slice(request.extra_headers);
+        send_http_request_with_headers(
+            addr,
+            request.method,
+            request.path,
+            request.body,
+            headers.as_slice(),
+        )
     })
 }
 
 fn signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
-    max_requests: usize,
-    method: &str,
-    path: &str,
-    caller_did: &str,
-    nonce: u64,
-    body: &str,
+    request: SignedRequest<'_>,
 ) -> String {
-    raw_signed_request(
-        snapshot,
-        bind_addr,
-        max_requests,
-        method,
-        path,
-        caller_did,
-        nonce,
-        body,
-        &[],
-    )
+    raw_signed_request(snapshot, bind_addr, request)
 }
 
 fn build_signed_header_values(

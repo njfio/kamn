@@ -3,14 +3,13 @@ use std::sync::Mutex;
 
 use kamn_core::SignerProviderHandshakeMatrix;
 
-use super::super::{sign_kolme_live_managed_external_message, ManagedExternalKeySourceAdapter};
+use super::super::sign_kolme_live_managed_external_message;
 use super::support::{
     deterministic_managed_backend_fixture, lock_managed_backend_env, managed_backend_env_lock,
     managed_backend_selection, managed_external_core_signer_env_guards,
     managed_signer_command_guard, managed_signer_printf_command, managed_signer_printf_script,
     managed_signer_timeout_guard, sign_with_managed_backend_adapter, unique_temp_path,
-    write_managed_signer_script, EnvVarGuard, TEST_CORE_SIGNER_PRIVATE_KEY_HEX,
-    TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE,
+    write_managed_signer_script, EnvVarGuard, TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE,
 };
 
 fn install_printf_backend_command(fixture: &super::support::ManagedBackendFixture) -> EnvVarGuard {

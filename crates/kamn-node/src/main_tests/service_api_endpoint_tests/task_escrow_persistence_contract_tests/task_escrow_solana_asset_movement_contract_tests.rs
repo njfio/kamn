@@ -4,7 +4,7 @@ use super::support::{
     assert_released_escrow_has_solana_signature_metadata, build_live_solana_asset_movement_context,
     build_task_escrow_snapshot, fund_and_release_live_escrow, read_state_json,
     release_live_escrow_across_restart, release_live_escrow_twice,
-    set_live_solana_bridge_rpc_url_env, settlement_tx_signature,
+    set_live_solana_bridge_rpc_url_env, settlement_tx_signature, LiveSolanaAssetMovementParams,
 };
 
 const LIVE_SOLANA_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
@@ -42,16 +42,16 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
     let _env = acquire_service_api_test_env();
     let _override_guard =
         crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
-    let context = build_live_solana_asset_movement_context(
-        "kamn-node-solana-asset-movement-state",
-        "kamn:did:agent:test-client-solana-asset-movement",
-        "127.0.0.1:34130",
-        "kamn-node-solana-asset-movement-keypair",
-        SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
-        SOLANA_SETTLEMENT_RECIPIENT_ENV,
-        SOLANA_SETTLEMENT_LAMPORTS_ENV,
-        LIVE_SOLANA_DEVNET_RPC_URL,
-    );
+    let context = build_live_solana_asset_movement_context(LiveSolanaAssetMovementParams {
+        state_file_prefix: "kamn-node-solana-asset-movement-state",
+        caller_did: "kamn:did:agent:test-client-solana-asset-movement",
+        api_bind: "127.0.0.1:34130",
+        keypair_prefix: "kamn-node-solana-asset-movement-keypair",
+        keypair_env: SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
+        recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
+        lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
+        live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+    });
     let (escrow_id, released_escrow) = fund_and_release_live_escrow(&context.harness, 101, 102, 13);
     let state_json = read_state_json(context.harness.state_file.as_path());
 
@@ -65,16 +65,16 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_is_idempo
     let _env = acquire_service_api_test_env();
     let _override_guard =
         crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
-    let context = build_live_solana_asset_movement_context(
-        "kamn-node-solana-asset-movement-repeat-state",
-        "kamn:did:agent:test-client-solana-asset-movement-repeat",
-        "127.0.0.1:34131",
-        "kamn-node-solana-asset-movement-repeat-keypair",
-        SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
-        SOLANA_SETTLEMENT_RECIPIENT_ENV,
-        SOLANA_SETTLEMENT_LAMPORTS_ENV,
-        LIVE_SOLANA_DEVNET_RPC_URL,
-    );
+    let context = build_live_solana_asset_movement_context(LiveSolanaAssetMovementParams {
+        state_file_prefix: "kamn-node-solana-asset-movement-repeat-state",
+        caller_did: "kamn:did:agent:test-client-solana-asset-movement-repeat",
+        api_bind: "127.0.0.1:34131",
+        keypair_prefix: "kamn-node-solana-asset-movement-repeat-keypair",
+        keypair_env: SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
+        recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
+        lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
+        live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+    });
     let (first, second) = release_live_escrow_twice(&context.harness, 111, 112, 113, 17);
 
     assert_eq!(
@@ -90,16 +90,16 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_reuses_si
     let _env = acquire_service_api_test_env();
     let _override_guard =
         crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
-    let context = build_live_solana_asset_movement_context(
-        "kamn-node-solana-asset-movement-restart-state",
-        "kamn:did:agent:test-client-solana-asset-movement-restart",
-        "127.0.0.1:34132",
-        "kamn-node-solana-asset-movement-restart-keypair",
-        SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
-        SOLANA_SETTLEMENT_RECIPIENT_ENV,
-        SOLANA_SETTLEMENT_LAMPORTS_ENV,
-        LIVE_SOLANA_DEVNET_RPC_URL,
-    );
+    let context = build_live_solana_asset_movement_context(LiveSolanaAssetMovementParams {
+        state_file_prefix: "kamn-node-solana-asset-movement-restart-state",
+        caller_did: "kamn:did:agent:test-client-solana-asset-movement-restart",
+        api_bind: "127.0.0.1:34132",
+        keypair_prefix: "kamn-node-solana-asset-movement-restart-keypair",
+        keypair_env: SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
+        recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
+        lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
+        live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+    });
     let (first, second) =
         release_live_escrow_across_restart(&context.harness, "127.0.0.1:34133", 121, 122, 123, 19);
 

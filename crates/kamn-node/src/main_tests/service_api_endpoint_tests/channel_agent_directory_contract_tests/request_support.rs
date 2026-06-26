@@ -15,13 +15,15 @@ pub(super) fn send_channel_message(
     parse_created_message(&raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/messages/send",
-        sender_did,
-        nonce,
-        payload,
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/messages/send",
+            sender_did,
+            nonce,
+            body: payload,
+            extra_headers: &[],
+        },
     ))
 }
 
@@ -35,13 +37,15 @@ pub(super) fn list_channel_messages(
     parse_channel_messages(&raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "GET",
-        format!("/v1/channels/{channel_id}/messages").as_str(),
-        sender_did,
-        nonce,
-        "",
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/channels/{channel_id}/messages").as_str(),
+            sender_did,
+            nonce,
+            body: "",
+            extra_headers: &[],
+        },
     ))
 }
 
@@ -55,13 +59,15 @@ pub(super) fn create_channel(
     parse_created_channel(&raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/channels/create",
-        caller_did,
-        nonce,
-        payload,
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/channels/create",
+            sender_did: caller_did,
+            nonce,
+            body: payload,
+            extra_headers: &[],
+        },
     ))
 }
 
@@ -75,13 +81,15 @@ pub(super) fn query_agent_profile(
     parse_agent_profile(&raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "GET",
-        format!("/v1/agents/{target_did}").as_str(),
-        caller_did,
-        nonce,
-        "",
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/agents/{target_did}").as_str(),
+            sender_did: caller_did,
+            nonce,
+            body: "",
+            extra_headers: &[],
+        },
     ))
 }
 
@@ -95,13 +103,15 @@ pub(super) fn register_agent(
     parse_registered_agent(&raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/agents/register",
-        caller_did,
-        nonce,
-        payload,
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/agents/register",
+            sender_did: caller_did,
+            nonce,
+            body: payload,
+            extra_headers: &[],
+        },
     ))
 }
 
@@ -115,42 +125,54 @@ pub(super) fn search_agents(
     parse_agent_search_results(&raw_signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/agents/search",
-        caller_did,
-        nonce,
-        payload,
-        &[("X-KAMN-Authz-Scope", "agents:read")],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/agents/search",
+            sender_did: caller_did,
+            nonce,
+            body: payload,
+            extra_headers: &[("X-KAMN-Authz-Scope", "agents:read")],
+        },
     ))
+}
+
+pub(super) struct RawSignedRequest<'a> {
+    pub(super) max_requests: usize,
+    pub(super) method: &'a str,
+    pub(super) path: &'a str,
+    pub(super) sender_did: &'a str,
+    pub(super) nonce: u64,
+    pub(super) body: &'a str,
+    pub(super) extra_headers: &'a [(&'a str, &'a str)],
 }
 
 pub(super) fn raw_signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
-    max_requests: usize,
-    method: &str,
-    path: &str,
-    sender_did: &str,
-    nonce: u64,
-    body: &str,
-    extra_headers: &[(&str, &str)],
+    request: RawSignedRequest<'_>,
 ) -> String {
-    with_api_server(snapshot, bind_addr, max_requests, |addr| {
-        let nonce_text = nonce.to_string();
+    with_api_server(snapshot, bind_addr, request.max_requests, |addr| {
+        let nonce_text = request.nonce.to_string();
         let signature = service_api_request_signature_for_fields(
-            sender_did,
-            nonce,
+            request.sender_did,
+            request.nonce,
             state_hash(snapshot).as_str(),
-            body,
+            request.body,
         );
         let mut headers = vec![
-            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Sender-DID", request.sender_did),
             ("X-KAMN-Request-Nonce", nonce_text.as_str()),
             ("X-KAMN-Request-Signature", signature.as_str()),
         ];
-        headers.extend_from_slice(extra_headers);
-        send_http_request_with_headers(addr, method, path, body, headers.as_slice())
+        headers.extend_from_slice(request.extra_headers);
+        send_http_request_with_headers(
+            addr,
+            request.method,
+            request.path,
+            request.body,
+            headers.as_slice(),
+        )
     })
 }
 

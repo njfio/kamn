@@ -8,7 +8,7 @@ use super::env_support::{
     initial_daemon_relay_nonce_counter, resolve_daemon_service_api_auth_private_key_hex,
     resolve_daemon_service_api_relay_recipient_route_map,
 };
-use super::forwarding::process_relay_spool;
+use super::forwarding::{process_relay_spool, RelaySpoolArgs};
 use std::time::Duration;
 use tick_iteration::execute_tick;
 

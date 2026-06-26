@@ -13,25 +13,30 @@ struct LiveSolanaAssetMovementGuards {
     lamports_guard: EnvVarGuard,
 }
 
+pub(crate) struct LiveSolanaAssetMovementParams<'a> {
+    pub(crate) state_file_prefix: &'a str,
+    pub(crate) caller_did: &'static str,
+    pub(crate) api_bind: &'a str,
+    pub(crate) keypair_prefix: &'a str,
+    pub(crate) keypair_env: &'static str,
+    pub(crate) recipient_env: &'static str,
+    pub(crate) lamports_env: &'static str,
+    pub(crate) live_rpc_env: &'static str,
+}
+
 pub(crate) fn build_live_solana_asset_movement_context(
-    state_file_prefix: &str,
-    caller_did: &'static str,
-    api_bind: &str,
-    keypair_prefix: &str,
-    keypair_env: &'static str,
-    recipient_env: &'static str,
-    lamports_env: &'static str,
-    live_rpc_env: &'static str,
+    params: LiveSolanaAssetMovementParams<'_>,
 ) -> LiveSolanaAssetMovementContext {
-    let fixture = build_solana_settlement_fixture(keypair_prefix);
+    let fixture = build_solana_settlement_fixture(params.keypair_prefix);
     let guards = build_live_solana_asset_movement_guards(
         &fixture,
-        keypair_env,
-        recipient_env,
-        lamports_env,
-        live_rpc_env,
+        params.keypair_env,
+        params.recipient_env,
+        params.lamports_env,
+        params.live_rpc_env,
     );
-    let harness = build_asset_movement_harness(state_file_prefix, caller_did, api_bind);
+    let harness =
+        build_asset_movement_harness(params.state_file_prefix, params.caller_did, params.api_bind);
     live_solana_asset_movement_context(harness, fixture, guards)
 }
 

@@ -15,13 +15,15 @@ pub(super) async fn log_request_received(
         Err(reason) => Err(super::internal_response(
             state,
             request_started_at,
-            correlation_id,
             parsed_request,
-            REASON_CODE_REQUEST_LOG_EMISSION_FAILED,
-            "log-error",
-            "internal",
-            StatusCode::INTERNAL_SERVER_ERROR,
-            reason.as_str(),
+            super::InternalResponseProjection {
+                correlation_id,
+                reason_code: REASON_CODE_REQUEST_LOG_EMISSION_FAILED,
+                outcome: "log-error",
+                error_label: "internal",
+                status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                message: reason.as_str(),
+            },
         )
         .await),
     }
@@ -73,13 +75,15 @@ async fn auth_error_response(
     super::internal_response(
         state,
         request_started_at,
-        correlation_id,
         parsed_request,
-        auth_error.reason_code,
-        outcome,
-        error_label,
-        status_code,
-        auth_error.message.as_str(),
+        super::InternalResponseProjection {
+            correlation_id,
+            reason_code: auth_error.reason_code,
+            outcome,
+            error_label,
+            status_code,
+            message: auth_error.message.as_str(),
+        },
     )
     .await
 }
@@ -162,13 +166,15 @@ async fn nonce_persistence_response(
     super::internal_response(
         state,
         request_started_at,
-        correlation_id,
         parsed_request,
-        REASON_CODE_STATE_PERSISTENCE_FAILED,
-        "persistence",
-        "internal",
-        StatusCode::INTERNAL_SERVER_ERROR,
-        message,
+        super::InternalResponseProjection {
+            correlation_id,
+            reason_code: REASON_CODE_STATE_PERSISTENCE_FAILED,
+            outcome: "persistence",
+            error_label: "internal",
+            status_code: StatusCode::INTERNAL_SERVER_ERROR,
+            message,
+        },
     )
     .await
 }

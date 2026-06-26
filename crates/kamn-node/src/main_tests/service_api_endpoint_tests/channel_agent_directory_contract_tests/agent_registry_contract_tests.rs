@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::{
     build_directory_snapshot, query_agent_profile, raw_signed_request, register_agent,
-    search_agents, unique_named_state_file,
+    search_agents, unique_named_state_file, RawSignedRequest,
 };
 
 #[test]
@@ -25,24 +25,28 @@ fn integration_service_api_endpoint_registers_agent_metadata_idempotently_and_co
     let duplicate_response = raw_signed_request(
         &snapshot,
         bind_addr.as_str(),
-        1,
-        "POST",
-        "/v1/agents/register",
-        caller_did,
-        202,
-        registration_body,
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/agents/register",
+            sender_did: caller_did,
+            nonce: 202,
+            body: registration_body,
+            extra_headers: &[],
+        },
     );
     let mismatch_response = raw_signed_request(
         &snapshot,
         bind_addr.as_str(),
-        1,
-        "POST",
-        "/v1/agents/register",
-        caller_did,
-        203,
-        r#"{"agent_type":"assistant","model_family":"gpt-5o","capabilities":["text"]}"#,
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/agents/register",
+            sender_did: caller_did,
+            nonce: 203,
+            body: r#"{"agent_type":"assistant","model_family":"gpt-5o","capabilities":["text"]}"#,
+            extra_headers: &[],
+        },
     );
     let query_payload = query_agent_profile(
         &snapshot,
@@ -101,13 +105,15 @@ fn integration_service_api_endpoint_searches_registered_agent_metadata() {
         let response = raw_signed_request(
             &snapshot,
             bind_addr.as_str(),
-            1,
-            "POST",
-            "/v1/agents/register",
-            caller_did,
-            nonce,
-            registration_body,
-            &[],
+            RawSignedRequest {
+                max_requests: 1,
+                method: "POST",
+                path: "/v1/agents/register",
+                sender_did: caller_did,
+                nonce,
+                body: registration_body,
+                extra_headers: &[],
+            },
         );
         assert!(response.contains("HTTP/1.1 201 Created"));
     }
@@ -140,13 +146,15 @@ fn integration_service_api_endpoint_rejects_invalid_agent_search_payload() {
     let response = raw_signed_request(
         &snapshot,
         reserve_loopback_addr().as_str(),
-        1,
-        "POST",
-        "/v1/agents/search",
-        "kamn:did:agent:search-invalid",
-        404,
-        r#"{"capability":"   "}"#,
-        &[("X-KAMN-Authz-Scope", "agents:read")],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/agents/search",
+            sender_did: "kamn:did:agent:search-invalid",
+            nonce: 404,
+            body: r#"{"capability":"   "}"#,
+            extra_headers: &[("X-KAMN-Authz-Scope", "agents:read")],
+        },
     );
 
     assert!(response.contains("HTTP/1.1 400 Bad Request"));

@@ -49,12 +49,14 @@ pub(super) fn register_content(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        "/v1/content/register",
-        caller_did,
-        nonce,
-        payload,
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: "/v1/content/register",
+            caller_did,
+            nonce,
+            body: payload,
+        },
     );
     assert!(response.contains("HTTP/1.1 201 Created"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -71,12 +73,14 @@ pub(super) fn expire_content(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        format!("/v1/content/{content_id}/expire").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: format!("/v1/content/{content_id}/expire").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -93,12 +97,14 @@ pub(super) fn query_content(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "GET",
-        format!("/v1/content/{content_id}").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/content/{content_id}").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -115,12 +121,14 @@ pub(super) fn tombstone_content(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "POST",
-        format!("/v1/content/{content_id}/tombstone").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: format!("/v1/content/{content_id}/tombstone").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+        },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
@@ -137,42 +145,48 @@ pub(super) fn query_missing_content(
     let response = signed_request(
         snapshot,
         bind_addr,
-        1,
-        "GET",
-        format!("/v1/content/{content_id}").as_str(),
-        caller_did,
-        nonce,
-        "",
+        SignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/content/{content_id}").as_str(),
+            caller_did,
+            nonce,
+            body: "",
+        },
     );
     assert!(response.contains("HTTP/1.1 404 Not Found"));
     parse_error_envelope_from_http_response(response.as_str())
 }
 
+struct SignedRequest<'a> {
+    max_requests: usize,
+    method: &'a str,
+    path: &'a str,
+    caller_did: &'a str,
+    nonce: u64,
+    body: &'a str,
+}
+
 fn signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
-    max_requests: usize,
-    method: &str,
-    path: &str,
-    caller_did: &str,
-    nonce: u64,
-    body: &str,
+    request: SignedRequest<'_>,
 ) -> String {
-    with_api_server(snapshot, bind_addr, max_requests, |addr| {
+    with_api_server(snapshot, bind_addr, request.max_requests, |addr| {
         let signature = service_api_request_signature_for_fields(
-            caller_did,
-            nonce,
+            request.caller_did,
+            request.nonce,
             state_hash(snapshot).as_str(),
-            body,
+            request.body,
         );
-        let nonce_text = nonce.to_string();
+        let nonce_text = request.nonce.to_string();
         send_http_request_with_headers(
             addr,
-            method,
-            path,
-            body,
+            request.method,
+            request.path,
+            request.body,
             &[
-                ("X-KAMN-Sender-DID", caller_did),
+                ("X-KAMN-Sender-DID", request.caller_did),
                 ("X-KAMN-Request-Nonce", nonce_text.as_str()),
                 ("X-KAMN-Request-Signature", signature.as_str()),
             ],

@@ -11,21 +11,31 @@ pub(super) fn attach_request_context(
     });
 }
 
+pub(super) struct FinalizeRequestContext<'a> {
+    pub(super) method: &'a str,
+    pub(super) path: &'a str,
+    pub(super) correlation_id: &'a str,
+    pub(super) is_websocket_route: bool,
+    pub(super) request_started_at: Instant,
+    pub(super) concurrency_permit: tokio::sync::OwnedSemaphorePermit,
+}
+
 pub(super) async fn finalize_request(
     state: &Arc<ServiceApiRuntimeState>,
     response: Response,
-    method: &str,
-    path: &str,
-    correlation_id: &str,
-    is_websocket_route: bool,
-    request_started_at: Instant,
-    concurrency_permit: tokio::sync::OwnedSemaphorePermit,
+    context: FinalizeRequestContext<'_>,
 ) -> Response {
     let status_code = response.status().as_u16();
-    let outcome = response_outcome(is_websocket_route, &response);
-    emit_outcome(correlation_id, method, path, status_code, outcome);
-    record_runtime_observation(state, status_code, request_started_at).await;
-    finish_request(state, concurrency_permit);
+    let outcome = response_outcome(context.is_websocket_route, &response);
+    emit_outcome(
+        context.correlation_id,
+        context.method,
+        context.path,
+        status_code,
+        outcome,
+    );
+    record_runtime_observation(state, status_code, context.request_started_at).await;
+    finish_request(state, context.concurrency_permit);
     response
 }
 

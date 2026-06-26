@@ -203,15 +203,7 @@ async fn async_signed_send(
         .await
 }
 
-fn run_async_transport_burst(
-    bind_addr: &str,
-    state_hash: &str,
-) -> (
-    Result<String, String>,
-    Result<String, String>,
-    Result<String, String>,
-    Result<String, String>,
-) {
+fn run_async_transport_burst(bind_addr: &str, state_hash: &str) -> TransportBurstResults {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
         .enable_all()
@@ -240,3 +232,10 @@ fn run_async_transport_burst(
         )
     })
 }
+
+type TransportBurstResults = (
+    Result<String, String>,
+    Result<String, String>,
+    Result<String, String>,
+    Result<String, String>,
+);

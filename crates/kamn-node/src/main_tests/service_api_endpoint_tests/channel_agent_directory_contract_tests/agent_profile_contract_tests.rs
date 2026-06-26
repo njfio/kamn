@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::{
     build_directory_snapshot, query_agent_profile, raw_signed_request, read_state_json,
-    unique_named_state_file,
+    unique_named_state_file, RawSignedRequest,
 };
 
 #[test]
@@ -64,13 +64,15 @@ fn integration_service_api_endpoint_rejects_legacy_agent_profile_path_dids() {
     let response = raw_signed_request(
         &snapshot,
         reserve_loopback_addr().as_str(),
-        1,
-        "GET",
-        format!("/v1/agents/{legacy_target_did}").as_str(),
-        caller_did,
-        121,
-        "",
-        &[],
+        RawSignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/agents/{legacy_target_did}").as_str(),
+            sender_did: caller_did,
+            nonce: 121,
+            body: "",
+            extra_headers: &[],
+        },
     );
 
     assert!(response.contains("HTTP/1.1 400 Bad Request"));
