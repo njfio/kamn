@@ -1,4 +1,7 @@
 //! Task operation workflow contracts, dependency orchestration, and snapshot persistence.
+//!
+//! Snapshot persistence is implemented by `snapshot_codec`, which consumes the extracted
+//! `kamn_snapshot_journal` crate.
 
 mod engine;
 mod models;

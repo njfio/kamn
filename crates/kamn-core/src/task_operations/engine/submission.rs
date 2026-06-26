@@ -72,10 +72,13 @@ fn build_submitted_record(
     })
 }
 
+type DraftDependencyGraph = BTreeMap<String, BTreeSet<String>>;
+type ValidatedDraftGraph = (DraftDependencyGraph, BTreeSet<String>);
+
 fn build_validated_draft_graph(
     engine: &TaskOperationEngine,
     drafts: &[SwarmTaskDraft],
-) -> Result<(BTreeMap<String, BTreeSet<String>>, BTreeSet<String>), TaskOperationError> {
+) -> Result<ValidatedDraftGraph, TaskOperationError> {
     let mut graph = BTreeMap::new();
     let mut draft_ids = BTreeSet::new();
     for draft in drafts {

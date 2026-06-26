@@ -45,15 +45,14 @@ fn validate_snapshot_schema(schema_version: u16) -> Result<(), ChannelSnapshotEr
     Ok(())
 }
 
+type RestoredChannelMaps = (
+    BTreeMap<String, ChannelRecord>,
+    BTreeMap<String, BTreeSet<String>>,
+);
+
 fn restore_snapshot_maps(
     records: Vec<ChannelRecordSnapshot>,
-) -> Result<
-    (
-        BTreeMap<String, ChannelRecord>,
-        BTreeMap<String, BTreeSet<String>>,
-    ),
-    ChannelSnapshotError,
-> {
+) -> Result<RestoredChannelMaps, ChannelSnapshotError> {
     let mut channels = BTreeMap::new();
     let mut channels_by_member = BTreeMap::new();
     for record_snapshot in records {
