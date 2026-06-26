@@ -1,6 +1,7 @@
 use std::fs;
 
 const SOURCE_FILE: &str = "src/message_lifecycle/snapshot_codec/parse.rs";
+const ROOT_SOURCE_FILE: &str = "src/message_lifecycle.rs";
 const TARGET_FUNCTION: &str = "fn parse_message_lifecycle_snapshot_payload(";
 const TARGET_HELPERS: &[&str] = &[
     "fn parse_message_lifecycle_snapshot_schema(",
@@ -57,4 +58,17 @@ fn spec_c02_message_lifecycle_snapshot_parser_declares_extracted_helpers() {
             "expected helper declaration missing: {helper}"
         );
     }
+}
+
+#[test]
+fn spec_c03_message_lifecycle_root_keeps_snapshot_parser_extracted() {
+    let source = read_source_file(ROOT_SOURCE_FILE);
+    assert!(
+        source.contains("mod snapshot_codec;"),
+        "message lifecycle root must delegate snapshot parsing to snapshot_codec"
+    );
+    assert!(
+        !source.contains(TARGET_FUNCTION),
+        "message lifecycle root must not reabsorb snapshot parser coordinator"
+    );
 }
