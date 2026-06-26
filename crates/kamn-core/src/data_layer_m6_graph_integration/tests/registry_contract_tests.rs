@@ -67,16 +67,12 @@ fn unit_m6_graph_registry_registers_deterministic_sequences_and_sorted_projectio
             .collect::<Vec<_>>(),
         vec!["edge-1", "edge-2"]
     );
-    assert!(
-        projection
-            .iter()
-            .all(|row| row.graph_engine_marker == DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE)
-    );
-    assert!(
-        projection
-            .iter()
-            .all(|row| row.portability_profile == DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE)
-    );
+    assert!(projection
+        .iter()
+        .all(|row| row.graph_engine_marker == DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE));
+    assert!(projection
+        .iter()
+        .all(|row| row.portability_profile == DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE));
     assert_eq!(projection[0].relation_marker, "MESSAGED");
     assert_eq!(projection[1].relation_marker, "TRUSTS");
 }

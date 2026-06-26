@@ -55,7 +55,16 @@ pub(super) fn submit_bridge(
     nonce: u64,
     payload: &str,
 ) -> Value {
-    let response = signed_request(snapshot, bind_addr, 1, "POST", "/v1/bridge/submit", caller_did, nonce, payload);
+    let response = signed_request(
+        snapshot,
+        bind_addr,
+        1,
+        "POST",
+        "/v1/bridge/submit",
+        caller_did,
+        nonce,
+        payload,
+    );
     assert!(response.contains("HTTP/1.1 202 Accepted"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("bridge submit payload should deserialize")
@@ -137,7 +146,12 @@ fn signed_request(
     body: &str,
 ) -> String {
     with_api_server(snapshot, bind_addr, max_requests, |addr| {
-        let signature = service_api_request_signature_for_fields(caller_did, nonce, state_hash(snapshot).as_str(), body);
+        let signature = service_api_request_signature_for_fields(
+            caller_did,
+            nonce,
+            state_hash(snapshot).as_str(),
+            body,
+        );
         let nonce_text = nonce.to_string();
         send_http_request_with_headers(
             addr,
@@ -153,7 +167,12 @@ fn signed_request(
     })
 }
 
-fn with_api_server<T, F>(snapshot: &ServiceApiSnapshot, bind_addr: &str, max_requests: usize, request: F) -> T
+fn with_api_server<T, F>(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    max_requests: usize,
+    request: F,
+) -> T
 where
     F: FnOnce(&str) -> T,
 {
@@ -166,11 +185,15 @@ where
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     };
     let server_snapshot = snapshot.clone();
-    let server = thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr);
     let response = request(bind_addr);
     let server_result = server.join().expect("endpoint thread should complete");
-    assert!(server_result.is_ok(), "service api endpoint should stop cleanly");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly"
+    );
     response
 }
 

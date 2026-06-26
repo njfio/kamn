@@ -115,8 +115,13 @@ pub enum DataLayerM1Error {
     EmptyBatch,
     EmptyField(&'static str),
     InvalidContentHash(String),
-    DuplicateLeafIndex { leaf_index: u32 },
-    NonContiguousLeafIndexes { expected: u32, found: u32 },
+    DuplicateLeafIndex {
+        leaf_index: u32,
+    },
+    NonContiguousLeafIndexes {
+        expected: u32,
+        found: u32,
+    },
     DuplicateMessageId(String),
     UnknownMessageId(String),
     InvalidMerkleProof(&'static str),

@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
 use kamn_core::{
-    ContentRetrievalScope, DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexRetrievalProjectionInput,
-    DataLayerM3BlindIndexSearchMode, DataLayerM3MetadataQuery, DataLayerM3RetrievalProjectionRecord,
-    DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    ContentRetrievalScope, DataLayerM3BlindIndexQuery,
+    DataLayerM3BlindIndexRetrievalProjectionInput, DataLayerM3BlindIndexSearchMode,
+    DataLayerM3MetadataQuery, DataLayerM3RetrievalProjectionRecord, DataLayerM3SearchCatalog,
+    DataLayerM3SearchError,
 };
 
 use crate::support::{blind_index_map, derive_blind_index_token, register_record, RecordSeed};
@@ -26,7 +27,10 @@ fn spec_c04_metadata_search_applies_filters_and_returns_stable_order() {
             limit: Some(10),
         })
         .expect("metadata search should succeed");
-    let filtered_ids = filtered.iter().map(|entry| entry.message_id.as_str()).collect::<Vec<_>>();
+    let filtered_ids = filtered
+        .iter()
+        .map(|entry| entry.message_id.as_str())
+        .collect::<Vec<_>>();
     assert_eq!(filtered_ids, vec!["msg-x-2", "msg-x-1"]);
 }
 
@@ -52,9 +56,16 @@ fn spec_c09_blind_index_projection_builds_deterministic_content_retrieval_reques
         })
         .expect("projection should succeed");
 
-    let message_ids = projection.iter().map(|entry| entry.message_id.as_str()).collect::<Vec<_>>();
+    let message_ids = projection
+        .iter()
+        .map(|entry| entry.message_id.as_str())
+        .collect::<Vec<_>>();
     assert_eq!(message_ids, vec!["msg-r-2", "msg-r-1"]);
-    assert_projection_record(projection.first().expect("first projection record should exist"));
+    assert_projection_record(
+        projection
+            .first()
+            .expect("first projection record should exist"),
+    );
 }
 
 #[test]
@@ -98,10 +109,34 @@ fn spec_c11_blind_index_projection_fails_closed_for_invalid_requester_contract()
 
 fn register_metadata_records(catalog: &mut DataLayerM3SearchCatalog) {
     for (message_id, sender_did, session_id, message_type, created_at_epoch_seconds) in [
-        ("msg-x-1", "kamn:did:agent:sender-1", Some("session-1"), "text", 1_708_160_050),
-        ("msg-x-2", "kamn:did:agent:sender-1", Some("session-1"), "text", 1_708_160_080),
-        ("msg-x-3", "kamn:did:agent:sender-2", Some("session-1"), "text", 1_708_160_090),
-        ("msg-x-4", "kamn:did:agent:sender-1", Some("session-2"), "command", 1_708_160_095),
+        (
+            "msg-x-1",
+            "kamn:did:agent:sender-1",
+            Some("session-1"),
+            "text",
+            1_708_160_050,
+        ),
+        (
+            "msg-x-2",
+            "kamn:did:agent:sender-1",
+            Some("session-1"),
+            "text",
+            1_708_160_080,
+        ),
+        (
+            "msg-x-3",
+            "kamn:did:agent:sender-2",
+            Some("session-1"),
+            "text",
+            1_708_160_090,
+        ),
+        (
+            "msg-x-4",
+            "kamn:did:agent:sender-1",
+            Some("session-2"),
+            "command",
+            1_708_160_095,
+        ),
     ] {
         register_record(
             catalog,
@@ -121,7 +156,9 @@ fn register_metadata_records(catalog: &mut DataLayerM3SearchCatalog) {
 }
 
 fn register_projection_records(catalog: &mut DataLayerM3SearchCatalog, token: &str) {
-    for (message_id, created_at_epoch_seconds) in [("msg-r-1", 1_708_160_010), ("msg-r-2", 1_708_160_020)] {
+    for (message_id, created_at_epoch_seconds) in
+        [("msg-r-1", 1_708_160_010), ("msg-r-2", 1_708_160_020)]
+    {
         register_projection_error_record(catalog, message_id, token, "session-r");
         let _ = created_at_epoch_seconds;
     }
@@ -133,7 +170,11 @@ fn register_projection_error_record(
     token: &str,
     session_id: &str,
 ) {
-    let created_at_epoch_seconds = if message_id.ends_with("2") { 1_708_160_020 } else { 1_708_160_010 };
+    let created_at_epoch_seconds = if message_id.ends_with("2") {
+        1_708_160_020
+    } else {
+        1_708_160_010
+    };
     register_record(
         catalog,
         RecordSeed {
@@ -172,13 +213,22 @@ fn projection_input(
 
 fn projection_cids() -> BTreeMap<String, String> {
     BTreeMap::from([
-        ("msg-r-1".to_owned(), "kamn:cid:v1:aaaaaaaaaaaaaaaa".to_owned()),
-        ("msg-r-2".to_owned(), "kamn:cid:v1:bbbbbbbbbbbbbbbb".to_owned()),
+        (
+            "msg-r-1".to_owned(),
+            "kamn:cid:v1:aaaaaaaaaaaaaaaa".to_owned(),
+        ),
+        (
+            "msg-r-2".to_owned(),
+            "kamn:cid:v1:bbbbbbbbbbbbbbbb".to_owned(),
+        ),
     ])
 }
 
 fn assert_projection_record(first: &DataLayerM3RetrievalProjectionRecord) {
     assert_eq!(first.cid, "kamn:cid:v1:bbbbbbbbbbbbbbbb");
     assert_eq!(first.retrieval_request.requester, "kamn:did:agent:reader-1");
-    assert_eq!(first.retrieval_request.scope, ContentRetrievalScope::Task("task-1".to_owned()));
+    assert_eq!(
+        first.retrieval_request.scope,
+        ContentRetrievalScope::Task("task-1".to_owned())
+    );
 }

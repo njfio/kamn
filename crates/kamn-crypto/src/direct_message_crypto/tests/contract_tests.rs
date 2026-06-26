@@ -3,8 +3,10 @@ use super::*;
 #[test]
 fn direct_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1() {
     let shared_secret = [0x5au8; 32];
-    let hkdf_key_a = derive_direct_message_aead_key(&shared_secret).expect("hkdf key should derive");
-    let hkdf_key_b = derive_direct_message_aead_key(&shared_secret).expect("hkdf key should derive");
+    let hkdf_key_a =
+        derive_direct_message_aead_key(&shared_secret).expect("hkdf key should derive");
+    let hkdf_key_b =
+        derive_direct_message_aead_key(&shared_secret).expect("hkdf key should derive");
     let legacy_key = derive_direct_message_aead_key_legacy(&shared_secret);
 
     assert_eq!(hkdf_key_a, hkdf_key_b);
@@ -13,14 +15,27 @@ fn direct_message_hkdf_derivation_is_deterministic_and_distinct_from_legacy_v1()
 
 #[test]
 fn direct_message_derivation_backend_markers_and_manual_helper_removal_contract() {
-    assert_eq!(DIRECT_MESSAGE_HKDF_BACKEND_MARKER, "rustcrypto.hkdf.sha256.v1");
-    assert_eq!(DIRECT_MESSAGE_HMAC_BACKEND_MARKER, "rustcrypto.hmac.sha256.v1");
-    assert!(!SOURCE.contains("\nfn hkdf_sha256_derive_32("), "manual hkdf helper must be removed");
-    assert!(!SOURCE.contains("\nfn hmac_sha256("), "manual hmac helper must be removed");
+    assert_eq!(
+        DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+        "rustcrypto.hkdf.sha256.v1"
+    );
+    assert_eq!(
+        DIRECT_MESSAGE_HMAC_BACKEND_MARKER,
+        "rustcrypto.hmac.sha256.v1"
+    );
+    assert!(
+        !SOURCE.contains("\nfn hkdf_sha256_derive_32("),
+        "manual hkdf helper must be removed"
+    );
+    assert!(
+        !SOURCE.contains("\nfn hmac_sha256("),
+        "manual hmac helper must be removed"
+    );
 }
 
 #[test]
-fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize() {
+fn spec_c09_direct_message_engine_source_contract_enforces_non_clone_redacted_debug_and_drop_zeroize(
+) {
     let engine_source = include_str!("../engine.rs");
     assert_engine_shape_contract(engine_source);
     assert_engine_impl_contract(engine_source);

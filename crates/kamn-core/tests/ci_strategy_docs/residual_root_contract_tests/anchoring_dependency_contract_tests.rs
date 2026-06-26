@@ -1,4 +1,7 @@
-use super::super::{dependency_license_metadata_governance_reason_codes, DOC, OPS_DOC, DEPENDENCY_LICENSE_METADATA_GOVERNANCE_REASON_CODES_CSV};
+use super::super::{
+    dependency_license_metadata_governance_reason_codes,
+    DEPENDENCY_LICENSE_METADATA_GOVERNANCE_REASON_CODES_CSV, DOC, OPS_DOC,
+};
 use super::support::{assert_doc_contains_all, assert_supply_chain_doc_marker};
 
 const MESSAGE_ANCHORING_MARKERS: &[&str] = &[

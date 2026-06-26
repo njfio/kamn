@@ -1,10 +1,10 @@
-use super::*;
 use super::scoring::{
     apply_batching_penalty, apply_engineering_budget, apply_proof_size, apply_setup_policy,
     apply_verifier_latency, apply_witness_determinism, base_assessment, high_risk_count,
     is_feasible,
 };
 use super::validation::{validate_option, validate_policy};
+use super::*;
 use crate::zk_message_proofs::errors::ZkDesignError;
 
 type BaselineSpec = (

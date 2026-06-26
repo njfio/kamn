@@ -16,7 +16,10 @@ fn rejects_daemon_without_tick_interval() {
 fn rejects_full_without_max_ticks() {
     let args = with_pairs(
         full_args(),
-        &[("--daemon-tick-interval-ms", "25"), ("--api-bind", "127.0.0.1:19083")],
+        &[
+            ("--daemon-tick-interval-ms", "25"),
+            ("--api-bind", "127.0.0.1:19083"),
+        ],
     );
     assert_parse_error(args, missing_arg("--daemon-max-ticks"));
 }
@@ -25,7 +28,10 @@ fn rejects_full_without_max_ticks() {
 fn rejects_full_without_api_bind() {
     let args = with_pairs(
         full_args(),
-        &[("--daemon-max-ticks", "3"), ("--daemon-tick-interval-ms", "25")],
+        &[
+            ("--daemon-max-ticks", "3"),
+            ("--daemon-tick-interval-ms", "25"),
+        ],
     );
     assert_parse_error(args, missing_arg("--api-bind"));
 }

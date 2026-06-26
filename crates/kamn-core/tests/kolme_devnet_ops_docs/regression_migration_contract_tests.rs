@@ -1,12 +1,14 @@
-use super::docs_assert_support::{assert_plan_contains_all};
+use super::docs_assert_support::assert_plan_contains_all;
 
-const REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_SCHEDULED_CADENCE_GUARDS_PLAN_MARKERS: &[&str] = &[
-    "Failover/sync budget overruns and unscheduled deep-lane execution fail closed",
-];
+const REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_SCHEDULED_CADENCE_GUARDS_PLAN_MARKERS:
+    &[&str] = &["Failover/sync budget overruns and unscheduled deep-lane execution fail closed"];
 
 #[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_SCHEDULED_CADENCE_GUARDS_PLAN_MARKERS, "regression_requires_failover_sync_budget_and_scheduled_cadence_guards");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_SCHEDULED_CADENCE_GUARDS_PLAN_MARKERS,
+        "regression_requires_failover_sync_budget_and_scheduled_cadence_guards",
+    );
 }
 
 const REGRESSION_REQUIRES_RUNTIME_COMMIT_ADAPTER_REASON_CODE_GUARD_PLAN_MARKERS: &[&str] = &[
@@ -15,7 +17,10 @@ const REGRESSION_REQUIRES_RUNTIME_COMMIT_ADAPTER_REASON_CODE_GUARD_PLAN_MARKERS:
 
 #[test]
 fn regression_requires_runtime_commit_adapter_reason_code_guard() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_RUNTIME_COMMIT_ADAPTER_REASON_CODE_GUARD_PLAN_MARKERS, "regression_requires_runtime_commit_adapter_reason_code_guard");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_RUNTIME_COMMIT_ADAPTER_REASON_CODE_GUARD_PLAN_MARKERS,
+        "regression_requires_runtime_commit_adapter_reason_code_guard",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -24,7 +29,10 @@ const REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_GUARD_MARKER_PLAN_MARKERS: &[&
 
 #[test]
 fn regression_requires_local_only_heavy_matrix_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_only_heavy_matrix_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_only_heavy_matrix_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -33,7 +41,10 @@ const REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_POLICY_CONTRACT_GUARD_MARKER_P
 
 #[test]
 fn regression_requires_local_only_heavy_matrix_policy_contract_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_only_heavy_matrix_policy_contract_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_ONLY_HEAVY_MATRIX_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_only_heavy_matrix_policy_contract_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -42,7 +53,10 @@ const REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARK
 
 #[test]
 fn regression_requires_local_bootstrap_policy_contract_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_bootstrap_policy_contract_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_bootstrap_policy_contract_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LANE_MIGRATION_MATRIX_POLICY_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -51,7 +65,10 @@ const REGRESSION_REQUIRES_LANE_MIGRATION_MATRIX_POLICY_GUARD_MARKER_PLAN_MARKERS
 
 #[test]
 fn regression_requires_lane_migration_matrix_policy_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LANE_MIGRATION_MATRIX_POLICY_GUARD_MARKER_PLAN_MARKERS, "regression_requires_lane_migration_matrix_policy_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LANE_MIGRATION_MATRIX_POLICY_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_lane_migration_matrix_policy_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_TRANCHE1_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -60,7 +77,10 @@ const REGRESSION_REQUIRES_TRANCHE1_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS:
 
 #[test]
 fn regression_requires_tranche1_manifest_migration_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_TRANCHE1_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS, "regression_requires_tranche1_manifest_migration_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_TRANCHE1_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_tranche1_manifest_migration_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_RUNTIME_NONCE_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -69,7 +89,10 @@ const REGRESSION_REQUIRES_RUNTIME_NONCE_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MAR
 
 #[test]
 fn regression_requires_runtime_nonce_manifest_migration_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_RUNTIME_NONCE_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS, "regression_requires_runtime_nonce_manifest_migration_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_RUNTIME_NONCE_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_runtime_nonce_manifest_migration_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_VERSION_MATRIX_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -78,7 +101,10 @@ const REGRESSION_REQUIRES_VERSION_MATRIX_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MA
 
 #[test]
 fn regression_requires_version_matrix_manifest_migration_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_VERSION_MATRIX_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS, "regression_requires_version_matrix_manifest_migration_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_VERSION_MATRIX_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_version_matrix_manifest_migration_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_PROFILE_SELFTEST_PORTABILITY_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -114,7 +140,10 @@ const REGRESSION_REQUIRES_PARITY_DEMO_REAL_PROCESS_MANIFEST_MIGRATION_GUARD_MARK
 
 #[test]
 fn regression_requires_parity_demo_real_process_manifest_migration_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_PARITY_DEMO_REAL_PROCESS_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS, "regression_requires_parity_demo_real_process_manifest_migration_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_PARITY_DEMO_REAL_PROCESS_MANIFEST_MIGRATION_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_parity_demo_real_process_manifest_migration_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_OPT_IN_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -123,7 +152,10 @@ const REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_OPT_IN_GUARD_MARKER_PLAN_MARKERS: &[&s
 
 #[test]
 fn regression_requires_local_bootstrap_opt_in_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_OPT_IN_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_bootstrap_opt_in_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_BOOTSTRAP_OPT_IN_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_bootstrap_opt_in_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_E2E_OPT_IN_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -132,7 +164,10 @@ const REGRESSION_REQUIRES_LOCAL_E2E_OPT_IN_GUARD_MARKER_PLAN_MARKERS: &[&str] = 
 
 #[test]
 fn regression_requires_local_e2e_opt_in_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_E2E_OPT_IN_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_e2e_opt_in_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_E2E_OPT_IN_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_e2e_opt_in_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_E2E_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -141,7 +176,10 @@ const REGRESSION_REQUIRES_LOCAL_E2E_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS: &
 
 #[test]
 fn regression_requires_local_e2e_policy_contract_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_E2E_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_e2e_policy_contract_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_E2E_POLICY_CONTRACT_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_e2e_policy_contract_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_SHARED_LOCAL_HEAVY_OPT_IN_HELPER_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -150,5 +188,8 @@ const REGRESSION_REQUIRES_SHARED_LOCAL_HEAVY_OPT_IN_HELPER_GUARD_MARKER_PLAN_MAR
 
 #[test]
 fn regression_requires_shared_local_heavy_opt_in_helper_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_SHARED_LOCAL_HEAVY_OPT_IN_HELPER_GUARD_MARKER_PLAN_MARKERS, "regression_requires_shared_local_heavy_opt_in_helper_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_SHARED_LOCAL_HEAVY_OPT_IN_HELPER_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_shared_local_heavy_opt_in_helper_guard_marker",
+    );
 }

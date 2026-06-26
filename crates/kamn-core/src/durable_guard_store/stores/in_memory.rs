@@ -1,9 +1,8 @@
 use crate::{ChannelPolicySnapshot, DeliveryGuardSnapshot};
 
 use super::super::{
-    default_bundle, validate_bundle, ChannelPolicySnapshotStore,
-    DeliveryGuardSnapshotStore, DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle,
-    DurableGuardSnapshotStoreError,
+    default_bundle, validate_bundle, ChannelPolicySnapshotStore, DeliveryGuardSnapshotStore,
+    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError,
 };
 
 #[derive(Debug, Clone, Default)]

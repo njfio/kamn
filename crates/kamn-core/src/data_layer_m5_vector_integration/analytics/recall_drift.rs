@@ -130,12 +130,17 @@ fn evaluate_rank_drift(
     for (baseline_rank, baseline_embedding_id) in baseline_top_k_embedding_ids.iter().enumerate() {
         if let Some(current_rank) = current_rank_by_embedding_id.get(baseline_embedding_id) {
             matched_embedding_ids.push(baseline_embedding_id.clone());
-            max_observed_rank_shift = max_observed_rank_shift.max(baseline_rank.abs_diff(*current_rank));
+            max_observed_rank_shift =
+                max_observed_rank_shift.max(baseline_rank.abs_diff(*current_rank));
         } else {
             missing_embedding_ids.push(baseline_embedding_id.clone());
         }
     }
-    (matched_embedding_ids, missing_embedding_ids, max_observed_rank_shift)
+    (
+        matched_embedding_ids,
+        missing_embedding_ids,
+        max_observed_rank_shift,
+    )
 }
 
 fn recall_decision(

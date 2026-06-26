@@ -51,8 +51,16 @@ fn spec_c05_service_api_endpoint_auth_scope_module_exists_and_owns_moved_coverag
     let route_scope_policy = read_repo_file(ROUTE_SCOPE_POLICY_FILE);
     let legacy_signature = read_repo_file(LEGACY_SIGNATURE_FILE);
 
-    assert_contains_markers(auth_scope_module.as_str(), AUTH_SCOPE_SUBMODULE_MARKERS, "auth-scope module");
-    assert_contains_markers(auth_binding.as_str(), AUTH_BINDING_MARKERS, "auth-binding contract file");
+    assert_contains_markers(
+        auth_scope_module.as_str(),
+        AUTH_SCOPE_SUBMODULE_MARKERS,
+        "auth-scope module",
+    );
+    assert_contains_markers(
+        auth_binding.as_str(),
+        AUTH_BINDING_MARKERS,
+        "auth-binding contract file",
+    );
     assert_contains_markers(
         route_scope_policy.as_str(),
         ROUTE_SCOPE_POLICY_MARKERS,

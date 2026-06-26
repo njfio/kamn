@@ -11,7 +11,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn read(path: &Path) -> String {
-    fs::read_to_string(path).unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
+    fs::read_to_string(path)
+        .unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
 }
 
 fn count_lines(path: &Path) -> usize {
@@ -40,7 +41,10 @@ fn assert_required_modules(paths: &[PathBuf; 5]) {
 }
 
 fn assert_root_markers(root_source: &str) {
-    assert!(root_source.contains("mod models;"), "root missing models module marker");
+    assert!(
+        root_source.contains("mod models;"),
+        "root missing models module marker"
+    );
     assert!(
         root_source.contains("mod secret_provider;"),
         "root missing secret_provider module marker"
@@ -53,8 +57,14 @@ fn assert_root_markers(root_source: &str) {
         root_source.contains("mod direct_payload;"),
         "root missing direct_payload module marker"
     );
-    assert!(root_source.contains("#[cfg(test)]"), "root missing test module marker");
-    assert!(root_source.contains("mod tests;"), "root missing tests module marker");
+    assert!(
+        root_source.contains("#[cfg(test)]"),
+        "root missing test module marker"
+    );
+    assert!(
+        root_source.contains("mod tests;"),
+        "root missing tests module marker"
+    );
 }
 
 fn assert_budgets(signer_root: &Path, paths: &[PathBuf; 5]) {

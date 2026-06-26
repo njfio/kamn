@@ -22,9 +22,9 @@ fn basic_message(error: &SignerBackendError) -> Option<String> {
             key_id,
             key_specific_env,
         } => Some(missing_key_material_message(key_id, key_specific_env)),
-        SignerBackendError::InvalidSigningKeyMaterial { key_id } => {
-            Some(format!("invalid signer key material for key reference {key_id}"))
-        }
+        SignerBackendError::InvalidSigningKeyMaterial { key_id } => Some(format!(
+            "invalid signer key material for key reference {key_id}"
+        )),
         _ => None,
     }
 }
@@ -39,7 +39,12 @@ fn key_policy_message(error: &SignerBackendError) -> Option<String> {
             sender_role,
             sender,
             key_id,
-        } => Some(key_role_mismatch_message(key_role, sender_role, sender, key_id)),
+        } => Some(key_role_mismatch_message(
+            key_role,
+            sender_role,
+            sender,
+            key_id,
+        )),
         SignerBackendError::MalformedSecureKeyReference { key_id } => {
             Some(malformed_key_message(key_id))
         }
@@ -174,7 +179,5 @@ fn backend_mismatch_message(
     provided_backend: &str,
     key_id: &str,
 ) -> String {
-    format!(
-        "{prefix} for key {key_id}; expected {expected_backend}, found {provided_backend}"
-    )
+    format!("{prefix} for key {key_id}; expected {expected_backend}, found {provided_backend}")
 }

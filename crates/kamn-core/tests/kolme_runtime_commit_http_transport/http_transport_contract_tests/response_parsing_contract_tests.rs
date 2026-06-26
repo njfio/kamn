@@ -47,7 +47,10 @@ fn regression_http_transport_parses_connection_header_before_content_length() {
 #[test]
 fn regression_http_transport_parses_chunked_headers_without_early_failure() {
     let body = submitted_response("kolme-commit:chunked");
-    let first = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection", body.len());
+    let first = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection",
+        body.len()
+    );
     let second = format!(": close\r\n\r\n{body}");
     let base_url = spawn_server_with_chunked_raw_response(
         first,

@@ -1,10 +1,10 @@
 use super::super::super::super::*;
+use super::super::{build_task_escrow_snapshot, set_live_solana_bridge_rpc_url_env};
 use super::{
     build_asset_movement_harness, build_solana_settlement_fixture,
     cleanup_solana_settlement_fixture, cleanup_state_file, fund_live_escrow, release_escrow,
     AssetMovementHarness, LiveSolanaAssetMovementContext, SolanaSettlementFixture, Value,
 };
-use super::super::{build_task_escrow_snapshot, set_live_solana_bridge_rpc_url_env};
 
 struct LiveSolanaAssetMovementGuards {
     live_rpc_guard: EnvVarGuard,
@@ -45,8 +45,12 @@ pub(crate) fn release_live_escrow_across_restart(
 ) -> (Value, Value) {
     let escrow_id = fund_live_escrow(harness, fund_nonce, amount);
     let first = release_harness_escrow(harness, first_release_nonce, escrow_id.as_str());
-    let second =
-        release_restart_escrow(harness.caller_did, restart_bind, second_release_nonce, escrow_id.as_str());
+    let second = release_restart_escrow(
+        harness.caller_did,
+        restart_bind,
+        second_release_nonce,
+        escrow_id.as_str(),
+    );
     (first, second)
 }
 
@@ -87,11 +91,7 @@ fn live_solana_asset_movement_context(
     }
 }
 
-fn release_harness_escrow(
-    harness: &AssetMovementHarness,
-    nonce: u64,
-    escrow_id: &str,
-) -> Value {
+fn release_harness_escrow(harness: &AssetMovementHarness, nonce: u64, escrow_id: &str) -> Value {
     release_escrow(
         &harness.snapshot,
         harness.bind_addr.as_str(),

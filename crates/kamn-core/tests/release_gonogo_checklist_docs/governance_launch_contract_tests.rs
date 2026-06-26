@@ -14,7 +14,10 @@ const CHECKLIST_CONTAINS_GOVERNANCE_STAKE_SLASH_RISK_THRESHOLD_CONTRACT_MARKERS:
 
 #[test]
 fn checklist_contains_governance_stake_slash_risk_threshold_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_GOVERNANCE_STAKE_SLASH_RISK_THRESHOLD_CONTRACT_MARKERS, "checklist_contains_governance_stake_slash_risk_threshold_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_GOVERNANCE_STAKE_SLASH_RISK_THRESHOLD_CONTRACT_MARKERS,
+        "checklist_contains_governance_stake_slash_risk_threshold_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_REPUTATION_DISPUTE_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -31,7 +34,10 @@ const CHECKLIST_CONTAINS_REPUTATION_DISPUTE_EVIDENCE_CONTRACT_MARKERS: &[&str] =
 
 #[test]
 fn checklist_contains_reputation_dispute_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_REPUTATION_DISPUTE_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_reputation_dispute_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_REPUTATION_DISPUTE_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_reputation_dispute_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_TOKEN_LAUNCH_HANDOFF_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -44,7 +50,10 @@ const CHECKLIST_CONTAINS_TOKEN_LAUNCH_HANDOFF_EVIDENCE_CONTRACT_MARKERS: &[&str]
 
 #[test]
 fn checklist_contains_token_launch_handoff_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_TOKEN_LAUNCH_HANDOFF_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_token_launch_handoff_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_TOKEN_LAUNCH_HANDOFF_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_token_launch_handoff_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_TREASURY_DISBURSEMENT_APPROVAL_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -57,7 +66,10 @@ const CHECKLIST_CONTAINS_TREASURY_DISBURSEMENT_APPROVAL_EVIDENCE_CONTRACT_MARKER
 
 #[test]
 fn checklist_contains_treasury_disbursement_approval_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_TREASURY_DISBURSEMENT_APPROVAL_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_treasury_disbursement_approval_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_TREASURY_DISBURSEMENT_APPROVAL_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_treasury_disbursement_approval_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_MAINNET_CUTOVER_MANIFEST_CONTRACT_MARKERS: &[&str] = &[
@@ -69,7 +81,10 @@ const CHECKLIST_CONTAINS_MAINNET_CUTOVER_MANIFEST_CONTRACT_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_mainnet_cutover_manifest_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_MAINNET_CUTOVER_MANIFEST_CONTRACT_MARKERS, "checklist_contains_mainnet_cutover_manifest_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_MAINNET_CUTOVER_MANIFEST_CONTRACT_MARKERS,
+        "checklist_contains_mainnet_cutover_manifest_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_CUTOVER_ROLLBACK_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -82,7 +97,10 @@ const CHECKLIST_CONTAINS_CUTOVER_ROLLBACK_EVIDENCE_CONTRACT_MARKERS: &[&str] = &
 
 #[test]
 fn checklist_contains_cutover_rollback_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_CUTOVER_ROLLBACK_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_cutover_rollback_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_CUTOVER_ROLLBACK_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_cutover_rollback_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_LAUNCH_CANARY_CRITICAL_PATH_CONTRACT_MARKERS: &[&str] = &[
@@ -96,7 +114,10 @@ const CHECKLIST_CONTAINS_LAUNCH_CANARY_CRITICAL_PATH_CONTRACT_MARKERS: &[&str] =
 
 #[test]
 fn checklist_contains_launch_canary_critical_path_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_LAUNCH_CANARY_CRITICAL_PATH_CONTRACT_MARKERS, "checklist_contains_launch_canary_critical_path_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_LAUNCH_CANARY_CRITICAL_PATH_CONTRACT_MARKERS,
+        "checklist_contains_launch_canary_critical_path_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_POST_CUTOVER_SLO_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -115,14 +136,19 @@ const CHECKLIST_CONTAINS_POST_CUTOVER_SLO_EVIDENCE_CONTRACT_MARKERS: &[&str] = &
 
 #[test]
 fn checklist_contains_post_cutover_slo_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_POST_CUTOVER_SLO_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_post_cutover_slo_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_POST_CUTOVER_SLO_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_post_cutover_slo_evidence_contract",
+    );
 }
 
-const REGRESSION_REQUIRES_ROLLBACK_PRECHECK_IN_CHECKLIST_MARKERS: &[&str] = &[
-    "Rollback precheck result: PASS",
-];
+const REGRESSION_REQUIRES_ROLLBACK_PRECHECK_IN_CHECKLIST_MARKERS: &[&str] =
+    &["Rollback precheck result: PASS"];
 
 #[test]
 fn regression_requires_rollback_precheck_in_checklist() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_ROLLBACK_PRECHECK_IN_CHECKLIST_MARKERS, "regression_requires_rollback_precheck_in_checklist");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_ROLLBACK_PRECHECK_IN_CHECKLIST_MARKERS,
+        "regression_requires_rollback_precheck_in_checklist",
+    );
 }

@@ -1,5 +1,5 @@
-use super::*;
 use super::service_api_policy_support::assert_reason_code_present_in_docs_and_ops;
+use super::*;
 
 #[test]
 fn doc_contains_service_api_tenant_isolation_matrix_docs_parity_markers() {
@@ -39,8 +39,12 @@ fn assert_tenant_isolation_doc_paths() {
     assert!(DOC.contains(&format!(
         "service_api_tenant_isolation_matrix_required_row_ids_csv={SERVICE_API_TENANT_ISOLATION_REQUIRED_ROW_IDS_CSV}"
     )));
-    assert!(DOC.contains("service_api_tenant_isolation_matrix_ops_doc_path=docs/ops/configuration.md"));
-    assert!(DOC.contains("service_api_tenant_isolation_matrix_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(
+        DOC.contains("service_api_tenant_isolation_matrix_ops_doc_path=docs/ops/configuration.md")
+    );
+    assert!(
+        DOC.contains("service_api_tenant_isolation_matrix_strategy_doc_path=docs/ci/strategy.md")
+    );
 }
 
 fn assert_tenant_isolation_doc_commands() {
@@ -51,13 +55,17 @@ fn assert_tenant_isolation_doc_commands() {
 }
 
 fn assert_tenant_isolation_source_markers() {
-    assert!(SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains(&format!(
-        "REASON_TAXONOMY_VERSION = \"{SERVICE_API_TENANT_ISOLATION_REASON_TAXONOMY_VERSION}\""
-    )));
+    assert!(
+        SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains(&format!(
+            "REASON_TAXONOMY_VERSION = \"{SERVICE_API_TENANT_ISOLATION_REASON_TAXONOMY_VERSION}\""
+        ))
+    );
     assert!(SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains("REASON_CODES_CSV = \",\".join("));
-    assert!(SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains(&format!(
-        "MATRIX_SCHEMA = \"{SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION}\""
-    )));
+    assert!(
+        SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains(&format!(
+            "MATRIX_SCHEMA = \"{SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION}\""
+        ))
+    );
 }
 
 fn assert_tenant_isolation_strategy_markers() {

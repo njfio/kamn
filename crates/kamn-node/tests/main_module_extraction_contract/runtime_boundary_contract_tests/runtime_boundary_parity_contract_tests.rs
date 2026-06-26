@@ -1,6 +1,6 @@
 use super::support::{
-    assert_kolme_live_boundary, assert_kolme_live_impl_boundary, assert_runtime_entrypoint_boundary,
-    assert_runtime_mode_delegation, read_runtime_file,
+    assert_kolme_live_boundary, assert_kolme_live_impl_boundary,
+    assert_runtime_entrypoint_boundary, assert_runtime_mode_delegation, read_runtime_file,
 };
 use crate::support::read_repo_file;
 
@@ -8,7 +8,8 @@ use crate::support::read_repo_file;
 fn main_module_extraction_contract_runtime_module_boundary_parity_markers_remain_stable() {
     let main_rs = read_repo_file("src/main.rs");
     let runtime_orchestration_rs = read_runtime_file("runtime_orchestration.rs");
-    let runtime_mode_handlers_rs = read_runtime_file("runtime_orchestration/runtime_mode_handlers.rs");
+    let runtime_mode_handlers_rs =
+        read_runtime_file("runtime_orchestration/runtime_mode_handlers.rs");
     let daemon_phase_rs = read_runtime_file("runtime_orchestration/daemon_phase.rs");
     let runtime_kolme_live_rs = read_repo_file("src/runtime_kolme_live.rs");
 

@@ -82,7 +82,13 @@ fn spec_c82_mode_execution_contract_driver_marker_is_mode_coherent() {
 }
 
 fn assert_mode_driver(mode: &str, agent_binary: Option<&str>, driver: &str) {
-    let output = render_run(&run_config(mode, agent_binary, false, "/tmp/evidence", &["S-01"]));
+    let output = render_run(&run_config(
+        mode,
+        agent_binary,
+        false,
+        "/tmp/evidence",
+        &["S-01"],
+    ));
     assert!(output.contains(&format!(
         "\"mode_execution_contract\":{{\"mode\":\"{mode}\",\"driver\":\"{driver}\""
     )));

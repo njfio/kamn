@@ -8,10 +8,7 @@ pub(crate) fn assert_released_escrow_has_solana_signature_metadata(released_escr
     assert_base58ish_signature(settlement_tx_signature(released_escrow));
 }
 
-pub(crate) fn assert_persisted_solana_signature_metadata(
-    state_json: &Value,
-    escrow_id: &str,
-) {
+pub(crate) fn assert_persisted_solana_signature_metadata(state_json: &Value, escrow_id: &str) {
     let persisted = &state_json["escrows"][escrow_id];
     assert_eq!(persisted["state"], "released");
     assert_eq!(persisted["settlement_network"], "solana:devnet");
@@ -38,5 +35,8 @@ fn assert_base58ish_signature(signature: &str) {
         && signature.chars().all(
             |ch| matches!(ch, '1'..='9' | 'A'..='H' | 'J'..='N' | 'P'..='Z' | 'a'..='k' | 'm'..='z'),
         );
-    assert!(valid, "expected a base58ish Solana signature, got: {signature}");
+    assert!(
+        valid,
+        "expected a base58ish Solana signature, got: {signature}"
+    );
 }

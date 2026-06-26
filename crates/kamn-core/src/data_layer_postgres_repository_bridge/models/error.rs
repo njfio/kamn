@@ -60,23 +60,29 @@ impl DataLayerPgRepositoryBridgeError {
     fn invalid_input_message(&self) -> Option<String> {
         match self {
             Self::EmptyField(field) => Some(format!("{field} must not be empty")),
-            Self::InvalidRequesterDid { field, reason_code, detail } => {
-                Some(invalid_did_message("requester", field, reason_code, detail))
-            }
-            Self::InvalidOwnerDid { field, reason_code, detail } => {
-                Some(invalid_did_message("owner", field, reason_code, detail))
-            }
-            Self::InvalidSearchLimit { requested, max_allowed } => {
-                Some(invalid_limit_message(*requested, *max_allowed))
-            }
+            Self::InvalidRequesterDid {
+                field,
+                reason_code,
+                detail,
+            } => Some(invalid_did_message("requester", field, reason_code, detail)),
+            Self::InvalidOwnerDid {
+                field,
+                reason_code,
+                detail,
+            } => Some(invalid_did_message("owner", field, reason_code, detail)),
+            Self::InvalidSearchLimit {
+                requested,
+                max_allowed,
+            } => Some(invalid_limit_message(*requested, *max_allowed)),
             _ => None,
         }
     }
 
     fn capability_message(&self) -> String {
         match self {
-            Self::PgvectorExtensionUnavailable { .. }
-            | Self::PgvectorDimensionMismatch { .. } => self.pgvector_message(),
+            Self::PgvectorExtensionUnavailable { .. } | Self::PgvectorDimensionMismatch { .. } => {
+                self.pgvector_message()
+            }
             Self::AgeExtensionUnavailable { .. } | Self::AgeUnsupportedRelation { .. } => {
                 self.age_message()
             }
@@ -130,12 +136,7 @@ impl DataLayerPgRepositoryBridgeError {
     }
 }
 
-fn invalid_did_message(
-    label: &str,
-    field: &str,
-    reason_code: &str,
-    detail: &str,
-) -> String {
+fn invalid_did_message(label: &str, field: &str, reason_code: &str, detail: &str) -> String {
     format!("invalid {label} did field {field}: {reason_code} ({detail})")
 }
 

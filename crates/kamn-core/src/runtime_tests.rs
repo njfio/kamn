@@ -11,19 +11,13 @@ use super::{
     RuntimeBackpressureAction, RuntimeBackpressureError, RuntimeBackpressureInput,
     RuntimeBackpressurePolicy, RuntimeLifecycleError, RuntimeQueueError, StateDivergenceError,
     StateDivergenceEvaluator, StateDivergenceSeverity, StateDivergenceStatus,
-    StateDivergenceWatchInput, WatchdogAnomalyError, WatchdogAnomalyEvaluator,
-    WatchdogAnomalyKind, WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
+    StateDivergenceWatchInput, WatchdogAnomalyError, WatchdogAnomalyEvaluator, WatchdogAnomalyKind,
+    WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
 };
 use crate::config::{NodeConfig, NodeRole, SyncMode};
 use crate::signature_profile::baseline_signature_for_fields;
 use std::time::Instant;
 
-#[path = "runtime_tests_snapshot_store.rs"]
-mod runtime_tests_snapshot_store;
-#[path = "runtime_tests_network_fault.rs"]
-mod runtime_tests_network_fault;
-#[path = "runtime_tests/runtime_wiring_contract_tests.rs"]
-mod runtime_wiring_contract_tests;
 #[path = "runtime_tests/lifecycle_backpressure_contract_tests.rs"]
 mod lifecycle_backpressure_contract_tests;
 #[path = "runtime_tests/peer_frame_contract_tests.rs"]
@@ -32,6 +26,12 @@ mod peer_frame_contract_tests;
 mod planner_recovery_lock_contract_tests;
 #[path = "runtime_tests/quorum_watchdog_contract_tests.rs"]
 mod quorum_watchdog_contract_tests;
+#[path = "runtime_tests_network_fault.rs"]
+mod runtime_tests_network_fault;
+#[path = "runtime_tests_snapshot_store.rs"]
+mod runtime_tests_snapshot_store;
+#[path = "runtime_tests/runtime_wiring_contract_tests.rs"]
+mod runtime_wiring_contract_tests;
 
 fn sample_config(role: NodeRole) -> NodeConfig {
     NodeConfig {

@@ -11,8 +11,7 @@ const UNREACHABLE_SOLANA_RPC_URL: &str = "http://127.0.0.1:1";
 #[test]
 fn integration_service_api_endpoint_live_settlement_release_persists_external_receipt_linkage() {
     let _env = acquire_service_api_test_env();
-    let _live_rpc_guard =
-        set_live_solana_bridge_rpc_url_env(Some(LIVE_SOLANA_DEVNET_RPC_URL));
+    let _live_rpc_guard = set_live_solana_bridge_rpc_url_env(Some(LIVE_SOLANA_DEVNET_RPC_URL));
     let harness = build_live_settlement_harness(
         "kamn-node-live-settlement-state",
         "kamn:did:agent:test-client-live-settlement",

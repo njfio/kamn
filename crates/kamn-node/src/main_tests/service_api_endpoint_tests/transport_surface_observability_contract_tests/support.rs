@@ -21,7 +21,10 @@ pub(super) fn build_transport_snapshot(api_bind: &str) -> ServiceApiSnapshot {
     build_service_api_snapshot(&report)
 }
 
-pub(super) fn spawn_transport_server(snapshot: &ServiceApiSnapshot, max_requests: u64) -> TransportServer {
+pub(super) fn spawn_transport_server(
+    snapshot: &ServiceApiSnapshot,
+    max_requests: u64,
+) -> TransportServer {
     spawn_transport_server_with_limits(
         snapshot,
         max_requests,
@@ -50,7 +53,8 @@ pub(super) fn spawn_transport_server_with_limits(
         rate_limit_per_second,
     };
     let server_snapshot = snapshot.clone();
-    let server = thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
     TransportServer { bind_addr, server }
 }
@@ -75,7 +79,12 @@ pub(super) fn send_signed_message_request(
     nonce: u64,
     body: &str,
 ) -> String {
-    let signature = service_api_request_signature_for_fields(sender_did, nonce, state_hash(snapshot).as_str(), body);
+    let signature = service_api_request_signature_for_fields(
+        sender_did,
+        nonce,
+        state_hash(snapshot).as_str(),
+        body,
+    );
     let nonce_text = nonce.to_string();
     send_http_request_with_headers(
         bind_addr,

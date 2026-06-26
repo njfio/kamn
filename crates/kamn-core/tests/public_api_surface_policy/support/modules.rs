@@ -12,7 +12,9 @@ pub(crate) fn parse_public_modules(lib_rs: &str) -> Vec<String> {
 }
 
 pub(crate) fn module_source_paths(module: &str, src_root: &Path) -> Vec<PathBuf> {
-    let mut paths = root_rs_path(module, src_root).into_iter().collect::<Vec<_>>();
+    let mut paths = root_rs_path(module, src_root)
+        .into_iter()
+        .collect::<Vec<_>>();
     collect_nested_paths(&mut paths, &src_root.join(module));
     paths.sort();
     paths.dedup();
@@ -54,7 +56,12 @@ fn collect_nested_paths(paths: &mut Vec<PathBuf>, dir: &Path) {
 
 fn read_dir_entries(dir: &Path) -> Vec<fs::DirEntry> {
     fs::read_dir(dir)
-        .unwrap_or_else(|error| fail("module_source_missing", &format!("failed to read {}: {}", dir.display(), error)))
+        .unwrap_or_else(|error| {
+            fail(
+                "module_source_missing",
+                &format!("failed to read {}: {}", dir.display(), error),
+            )
+        })
         .map(|entry| {
             entry.unwrap_or_else(|error| {
                 fail(
@@ -88,7 +95,9 @@ fn is_non_public_prefix(trimmed: &str) -> bool {
 
 fn matches_public_tokens(first: Option<&str>, second: Option<&str>) -> bool {
     match first {
-        Some("fn" | "struct" | "enum" | "trait" | "type" | "const" | "static" | "mod" | "use") => true,
+        Some("fn" | "struct" | "enum" | "trait" | "type" | "const" | "static" | "mod" | "use") => {
+            true
+        }
         Some("async" | "unsafe") => second == Some("fn"),
         Some("extern") => true,
         _ => false,

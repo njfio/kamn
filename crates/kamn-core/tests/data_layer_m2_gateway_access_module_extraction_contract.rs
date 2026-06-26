@@ -10,7 +10,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn read(path: &Path) -> String {
-    fs::read_to_string(path).unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
+    fs::read_to_string(path)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
 }
 
 fn source_path(root: &Path) -> PathBuf {
@@ -74,7 +75,11 @@ fn assert_expected_modules(root: &Path) {
 
     for relative in expected_modules {
         let module_path = root.join(relative);
-        assert!(module_path.exists(), "expected extracted module {}", module_path.display());
+        assert!(
+            module_path.exists(),
+            "expected extracted module {}",
+            module_path.display()
+        );
         let module_text = read(&module_path);
         assert!(
             module_text.lines().count() <= 200,

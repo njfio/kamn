@@ -66,7 +66,11 @@ fn assert_module_root_exists() {
 fn assert_extracted_files_fit_budget() {
     for path in MODULE_FILES {
         let full_path = repo_path(path);
-        assert!(full_path.exists(), "missing extracted file {}", full_path.display());
+        assert!(
+            full_path.exists(),
+            "missing extracted file {}",
+            full_path.display()
+        );
         assert!(
             line_count(path) <= 200,
             "extracted file {path} exceeds 200 lines with {}",

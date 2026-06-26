@@ -1,6 +1,6 @@
 use super::super::{
-    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8MessageRecord,
     lifecycle::{parse_kamn_did, validate_non_empty},
+    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8MessageRecord,
 };
 
 pub(super) fn message_for_owner<'a>(

@@ -64,9 +64,12 @@ pub(super) fn resolve_signer_private_key_hex(key_id: &str) -> Result<String, Sig
 }
 
 fn first_fallback_signing_key() -> Option<String> {
-    [SIGNER_PRIVATE_KEY_ENV, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV]
-        .into_iter()
-        .find_map(non_empty_env_value)
+    [
+        SIGNER_PRIVATE_KEY_ENV,
+        SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    ]
+    .into_iter()
+    .find_map(non_empty_env_value)
 }
 
 fn non_empty_env_value(env_name: &str) -> Option<String> {

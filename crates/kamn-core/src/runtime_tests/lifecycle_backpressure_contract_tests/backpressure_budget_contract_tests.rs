@@ -1,12 +1,10 @@
 use super::super::*;
-use super::support::{backpressure_controller, backpressure_input, backpressure_budget};
+use super::support::{backpressure_budget, backpressure_controller, backpressure_input};
 
 #[test]
 fn performance_runtime_queue_backpressure_enforcement_stays_within_ci_budget() {
-    let budget_millis = backpressure_budget(
-        "KAMN_RUNTIME_QUEUE_BACKPRESSURE_ENFORCEMENT_BUDGET_MS",
-        500,
-    );
+    let budget_millis =
+        backpressure_budget("KAMN_RUNTIME_QUEUE_BACKPRESSURE_ENFORCEMENT_BUDGET_MS", 500);
     let controller = backpressure_controller();
     let started = Instant::now();
     for offset in 0..1_024 {

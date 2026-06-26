@@ -46,7 +46,10 @@ pub(super) fn project_partition_reports(
     partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
     request: &DataLayerM10Phase6ExecutionTickRequest,
     owner_did: &str,
-) -> Result<Vec<crate::DataLayerM10ComplianceShredProjectionReport>, DataLayerM10PartitionLifecycleError> {
+) -> Result<
+    Vec<crate::DataLayerM10ComplianceShredProjectionReport>,
+    DataLayerM10PartitionLifecycleError,
+> {
     let mut projection_reports = Vec::with_capacity(request.partition_message_ids_by_month.len());
     for (partition_month_id, partition_message_ids) in &request.partition_message_ids_by_month {
         projection_reports.push(project_single_partition_report(
@@ -66,7 +69,8 @@ fn project_single_partition_report(
     owner_did: &str,
     partition_month_id: u32,
     partition_message_ids: &[String],
-) -> Result<crate::DataLayerM10ComplianceShredProjectionReport, DataLayerM10PartitionLifecycleError> {
+) -> Result<crate::DataLayerM10ComplianceShredProjectionReport, DataLayerM10PartitionLifecycleError>
+{
     validate_partition_message_ids(partition_month_id, partition_message_ids)?;
     let partition_message_ids =
         build_partition_message_ids(compliance_port, owner_did, partition_message_ids)?;

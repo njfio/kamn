@@ -8,8 +8,9 @@ mod anchoring;
 mod batch;
 mod models;
 mod support;
+#[cfg(test)]
+mod tests;
 mod verification;
-#[cfg(test)] mod tests;
 
 pub use anchoring::DataLayerM1KolmeAnchoringWorker;
 pub use batch::DataLayerM1MerkleBatch;

@@ -13,8 +13,9 @@ mod assertions;
 mod context;
 
 pub(crate) use assertions::{
-    assert_persisted_solana_signature_metadata, assert_released_escrow_has_solana_signature_metadata,
-    cleanup_solana_settlement_fixture, cleanup_state_file, settlement_tx_signature,
+    assert_persisted_solana_signature_metadata,
+    assert_released_escrow_has_solana_signature_metadata, cleanup_solana_settlement_fixture,
+    cleanup_state_file, settlement_tx_signature,
 };
 pub(crate) use context::{
     build_live_solana_asset_movement_context, release_live_escrow_across_restart,
@@ -78,11 +79,7 @@ pub(crate) fn fund_and_release_live_escrow(
     (escrow_id, released)
 }
 
-pub(crate) fn fund_live_escrow(
-    harness: &AssetMovementHarness,
-    nonce: u64,
-    amount: u64,
-) -> String {
+pub(crate) fn fund_live_escrow(harness: &AssetMovementHarness, nonce: u64, amount: u64) -> String {
     let payload = format!(r#"{{"task_id":"solana-asset-movement-task","amount":{amount}}}"#);
     let funded_escrow = fund_escrow(
         &harness.snapshot,

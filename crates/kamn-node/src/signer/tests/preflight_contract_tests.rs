@@ -33,12 +33,17 @@ fn unit_signer_preflight_defaults_to_single_signer_quorum_ready() {
 #[test]
 fn regression_signer_preflight_rejects_stale_failover_rotation_epoch() {
     let _lock = lock_signer_env_guard();
-    let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", Some("ops-primary"));
+    let _previous_profile = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+        Some("ops-primary"),
+    );
     let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("2"));
     let _previous_rotation_epoch =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("2"));
-    let _required_approvals =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", Some("2"));
+    let _required_approvals = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+        Some("2"),
+    );
     let _approved_signers = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
         Some("ops-primary,ops-secondary"),
@@ -59,14 +64,21 @@ fn regression_signer_preflight_rejects_stale_failover_rotation_epoch() {
 #[test]
 fn regression_signer_preflight_rejects_non_failover_rotation_epoch_regression() {
     let _lock = lock_signer_env_guard();
-    let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", Some("ops-primary"));
+    let _previous_profile = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+        Some("ops-primary"),
+    );
     let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
     let _previous_rotation_epoch =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("2"));
-    let _required_approvals =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", Some("1"));
-    let _approved_signers =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS", Some("ops-primary"));
+    let _required_approvals = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+        Some("1"),
+    );
+    let _approved_signers = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+        Some("ops-primary"),
+    );
     let error = evaluate_kolme_live_signer_preflight_readiness(&test_primary_selection())
         .expect_err("non-failover rotation epoch regression must fail closed");
     assert!(
@@ -77,12 +89,17 @@ fn regression_signer_preflight_rejects_non_failover_rotation_epoch_regression() 
 #[test]
 fn regression_signer_preflight_rejects_disallowed_secondary_managed_external_pair() {
     let _lock = lock_signer_env_guard();
-    let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", Some("ops-secondary"));
+    let _previous_profile = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+        Some("ops-secondary"),
+    );
     let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
     let _previous_rotation_epoch =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("1"));
-    let _required_approvals =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", Some("1"));
+    let _required_approvals = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+        Some("1"),
+    );
     let _approved_signers = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
         Some("ops-secondary"),
@@ -103,14 +120,21 @@ fn regression_signer_preflight_rejects_disallowed_secondary_managed_external_pai
 #[test]
 fn functional_signer_preflight_rejects_quorum_shortfall() {
     let _lock = lock_signer_env_guard();
-    let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", Some("ops-primary"));
+    let _previous_profile = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+        Some("ops-primary"),
+    );
     let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
     let _previous_rotation_epoch =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("1"));
-    let _required_approvals =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", Some("2"));
-    let _approved_signers =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS", Some("ops-primary"));
+    let _required_approvals = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+        Some("2"),
+    );
+    let _approved_signers = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+        Some("ops-primary"),
+    );
     let error = evaluate_kolme_live_signer_preflight_readiness(&test_primary_selection())
         .expect_err("quorum shortfall must fail closed");
     assert!(
@@ -121,14 +145,21 @@ fn functional_signer_preflight_rejects_quorum_shortfall() {
 #[test]
 fn performance_signer_preflight_readiness_stays_bounded() {
     let _lock = lock_signer_env_guard();
-    let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", Some("ops-primary"));
+    let _previous_profile = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+        Some("ops-primary"),
+    );
     let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
     let _previous_rotation_epoch =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("1"));
-    let _required_approvals =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", Some("1"));
-    let _approved_signers =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS", Some("ops-primary"));
+    let _required_approvals = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+        Some("1"),
+    );
+    let _approved_signers = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+        Some("ops-primary"),
+    );
     let selection = test_primary_selection();
     let started = Instant::now();
     for _ in 0..5_000 {

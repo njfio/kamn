@@ -71,12 +71,17 @@ fn regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys() 
         );
         let base_url = fork_txhash_server("ab12cd34", |_raw_request| {});
         let error = fork_provider(base_url.as_str(), "kolme-fork-local")
-            .submit_runtime_commit(wire_payload.as_str(), "kolme-runtime-commit:direct-required-fields:1")
+            .submit_runtime_commit(
+                wire_payload.as_str(),
+                "kolme-runtime-commit:direct-required-fields:1",
+            )
             .expect_err("missing core field must fail");
         assert_eq!(
             error,
             KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("direct signed payload message missing required field: {missing_field}"),
+                reason: format!(
+                    "direct signed payload message missing required field: {missing_field}"
+                ),
             }
         );
     }
@@ -120,7 +125,10 @@ fn signed_envelope_fixture() -> (String, String) {
             1,
         )
         .expect("signed envelope should build");
-    (envelope.to_wire_payload(), request.idempotency_key().to_owned())
+    (
+        envelope.to_wire_payload(),
+        request.idempotency_key().to_owned(),
+    )
 }
 
 fn assert_signed_envelope_request(raw_request: String) {

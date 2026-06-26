@@ -38,7 +38,11 @@ impl FileTaskOperationSnapshotStore {
         &mut self,
     ) -> Result<TaskOperationRecoveryResult, TaskOperationSnapshotStoreError> {
         if !self.path.exists() && !self.journal_path.exists() {
-            return Ok(recovery_result(None, false, "task_operation_snapshot_recovery_empty"));
+            return Ok(recovery_result(
+                None,
+                false,
+                "task_operation_snapshot_recovery_empty",
+            ));
         }
         match self.read_latest() {
             Ok(snapshot) => Ok(recovery_result(

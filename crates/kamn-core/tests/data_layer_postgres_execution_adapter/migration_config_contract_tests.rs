@@ -29,7 +29,10 @@ fn spec_c04_invalid_database_url_fails_closed() {
             field, reason_code, ..
         } => {
             assert_eq!(field, "database_url");
-            assert_eq!(reason_code, DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE);
+            assert_eq!(
+                reason_code,
+                DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE
+            );
         }
         other => panic!("unexpected error variant: {other:?}"),
     }

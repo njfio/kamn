@@ -48,14 +48,22 @@ impl ChannelPolicyBuilder {
         &mut self,
         value: PermissionRule,
     ) -> Result<(), DurableGuardSnapshotStoreError> {
-        set_once(&mut self.invite, value, "duplicate channel_perm_invite field")
+        set_once(
+            &mut self.invite,
+            value,
+            "duplicate channel_perm_invite field",
+        )
     }
 
     pub(super) fn set_remove(
         &mut self,
         value: PermissionRule,
     ) -> Result<(), DurableGuardSnapshotStoreError> {
-        set_once(&mut self.remove, value, "duplicate channel_perm_remove field")
+        set_once(
+            &mut self.remove,
+            value,
+            "duplicate channel_perm_remove field",
+        )
     }
 
     pub(super) fn set_configure(
@@ -80,7 +88,9 @@ impl ChannelPolicyBuilder {
         )
     }
 
-    pub(super) fn build(self) -> Result<ChannelPolicySnapshotChannel, DurableGuardSnapshotStoreError> {
+    pub(super) fn build(
+        self,
+    ) -> Result<ChannelPolicySnapshotChannel, DurableGuardSnapshotStoreError> {
         Ok(ChannelPolicySnapshotChannel {
             channel_id: self.channel_id,
             members: self.members,
@@ -111,11 +121,16 @@ fn set_once<T>(
     message: &'static str,
 ) -> Result<(), DurableGuardSnapshotStoreError> {
     if slot.replace(value).is_some() {
-        return Err(DurableGuardSnapshotStoreError::InvalidPayload(message.to_owned()));
+        return Err(DurableGuardSnapshotStoreError::InvalidPayload(
+            message.to_owned(),
+        ));
     }
     Ok(())
 }
 
-fn require<T>(value: Option<T>, message: &'static str) -> Result<T, DurableGuardSnapshotStoreError> {
+fn require<T>(
+    value: Option<T>,
+    message: &'static str,
+) -> Result<T, DurableGuardSnapshotStoreError> {
     value.ok_or_else(|| DurableGuardSnapshotStoreError::InvalidPayload(message.to_owned()))
 }

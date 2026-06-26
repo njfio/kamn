@@ -32,7 +32,10 @@ const STARTUP_NEGATIVE_MATRIX_MARKERS: &[&str] = &[
 
 #[test]
 fn doc_contains_touched_shell_strict_mode_markers() {
-    assert_doc_contains_all(TOUCHED_SHELL_STRICT_MODE_MARKERS, "touched shell strict mode");
+    assert_doc_contains_all(
+        TOUCHED_SHELL_STRICT_MODE_MARKERS,
+        "touched shell strict mode",
+    );
 }
 
 #[test]

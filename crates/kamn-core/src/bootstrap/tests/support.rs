@@ -13,7 +13,10 @@ pub fn temp_storage_dir(tag: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("system time should be monotonic")
         .as_nanos();
-    std::env::temp_dir().join(format!("kamn-bootstrap-{tag}-{}-{nonce}", std::process::id()))
+    std::env::temp_dir().join(format!(
+        "kamn-bootstrap-{tag}-{}-{nonce}",
+        std::process::id()
+    ))
 }
 
 pub fn write_fixture(path: PathBuf, contents: &str) {

@@ -48,7 +48,9 @@ fn crate_test_files() -> Vec<PathBuf> {
         .into_iter()
         .filter(|path| {
             path.extension().is_some_and(|extension| extension == "rs")
-                && path.iter().any(|component| component.to_string_lossy() == "tests")
+                && path
+                    .iter()
+                    .any(|component| component.to_string_lossy() == "tests")
         })
         .collect()
 }

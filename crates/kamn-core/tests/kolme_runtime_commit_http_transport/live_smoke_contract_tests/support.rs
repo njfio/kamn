@@ -4,7 +4,9 @@ pub(crate) fn local_heavy_enabled() -> bool {
     if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() == Some("1") {
         return true;
     }
-    eprintln!("skipping live-node smoke; set KAMN_KOLME_LOCAL_HEAVY=1 to run local-heavy live probe");
+    eprintln!(
+        "skipping live-node smoke; set KAMN_KOLME_LOCAL_HEAVY=1 to run local-heavy live probe"
+    );
     false
 }
 
@@ -26,8 +28,12 @@ pub(crate) fn live_smoke_provider(
     provider_hint: &str,
 ) -> KolmeRuntimeCommitLiveProvider<KolmeRuntimeCommitHttpTransport> {
     let transport = live_smoke_transport();
-    KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(base_url, provider_hint, transport)
-        .expect("provider should build")
+    KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+        base_url,
+        provider_hint,
+        transport,
+    )
+    .expect("provider should build")
 }
 
 fn live_smoke_transport() -> KolmeRuntimeCommitHttpTransport {
@@ -77,14 +83,25 @@ pub(crate) fn assert_live_reachability_outcome(
             assert!(!reason.trim().is_empty());
         }
         Err(KolmeRuntimeCommitProviderError::MalformedResponse { reason }) => {
-            assert!(reason.contains("invalid request") || reason.contains("missing required field") || reason.contains("txhash"));
+            assert!(
+                reason.contains("invalid request")
+                    || reason.contains("missing required field")
+                    || reason.contains("txhash")
+            );
         }
-        Err(other) => panic!("live node smoke expected endpoint reachability outcome, got error: {other:?}"),
+        Err(other) => {
+            panic!("live node smoke expected endpoint reachability outcome, got error: {other:?}")
+        }
     }
 }
 
-pub(crate) fn recover_pubkey_hex(message_json: &str, signature_hex: &str, recovery_id: u8) -> String {
-    let signature_bytes = decode_hex_bytes(signature_hex).expect("signature hex must decode for recovery");
+pub(crate) fn recover_pubkey_hex(
+    message_json: &str,
+    signature_hex: &str,
+    recovery_id: u8,
+) -> String {
+    let signature_bytes =
+        decode_hex_bytes(signature_hex).expect("signature hex must decode for recovery");
     let signature = Signature::from_slice(signature_bytes.as_slice())
         .expect("signature bytes must decode into a secp256k1 signature");
     let recovery = RecoveryId::from_byte(recovery_id).expect("recovery id must decode");

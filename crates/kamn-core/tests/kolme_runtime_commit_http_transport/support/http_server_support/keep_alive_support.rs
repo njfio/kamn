@@ -15,7 +15,13 @@ pub(crate) fn spawn_keep_alive_multi_request_server(
     let request_log = Arc::clone(&recorded_requests);
     let status_line = status_line.to_owned();
     let handle = thread::spawn(move || {
-        serve_keep_alive_requests(listener, request_log, response_body, status_line, expected_requests)
+        serve_keep_alive_requests(
+            listener,
+            request_log,
+            response_body,
+            status_line,
+            expected_requests,
+        )
     });
     (format!("http://{addr}"), recorded_requests, handle)
 }

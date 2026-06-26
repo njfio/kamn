@@ -1,9 +1,8 @@
 use super::{
-    aggregate_agent_daily, aggregate_agent_hourly, aggregate_network_hourly,
-    daily_bucket, evaluate_owner_observability, hourly_bucket, project_owner_billing_daily,
+    aggregate_agent_daily, aggregate_agent_hourly, aggregate_network_hourly, daily_bucket,
+    evaluate_owner_observability, hourly_bucket, project_owner_billing_daily,
     reconcile_owner_billing_daily, validate_daily_bucket, validate_kamn_did,
-    DataLayerM7AgentDailyAggregate,
-    DataLayerM7AgentHourlyAggregate, DataLayerM7BillingQuery,
+    DataLayerM7AgentDailyAggregate, DataLayerM7AgentHourlyAggregate, DataLayerM7BillingQuery,
     DataLayerM7BillingReconciliationInput, DataLayerM7BillingReconciliationReport,
     DataLayerM7NetworkHourlyAggregate, DataLayerM7OwnerBillingDailyProjection,
     DataLayerM7OwnerObservabilityReport, DataLayerM7TelemetryPointInput,
@@ -28,7 +27,10 @@ impl DataLayerM7TelemetryRegistry {
         input: DataLayerM7TelemetryPointInput,
     ) -> Result<DataLayerM7TelemetryPointRecord, DataLayerM7TimeseriesError> {
         validate_ingest_input(&input)?;
-        let owner_points = self.points_by_owner.entry(input.owner_did.clone()).or_default();
+        let owner_points = self
+            .points_by_owner
+            .entry(input.owner_did.clone())
+            .or_default();
         let record = build_record(input, owner_points.len() as u64 + 1);
         owner_points.push(record.clone());
         Ok(record)
@@ -42,14 +44,20 @@ impl DataLayerM7TelemetryRegistry {
         &self,
         query: DataLayerM7TelemetryScopeQuery,
     ) -> Result<Vec<DataLayerM7AgentHourlyAggregate>, DataLayerM7TimeseriesError> {
-        aggregate_agent_hourly(self.owner_points_or_error(query.owner_did.as_str())?, &query)
+        aggregate_agent_hourly(
+            self.owner_points_or_error(query.owner_did.as_str())?,
+            &query,
+        )
     }
 
     pub fn aggregate_agent_daily(
         &self,
         query: DataLayerM7TelemetryScopeQuery,
     ) -> Result<Vec<DataLayerM7AgentDailyAggregate>, DataLayerM7TimeseriesError> {
-        aggregate_agent_daily(self.owner_points_or_error(query.owner_did.as_str())?, &query)
+        aggregate_agent_daily(
+            self.owner_points_or_error(query.owner_did.as_str())?,
+            &query,
+        )
     }
 
     pub fn aggregate_network_hourly(
@@ -89,11 +97,12 @@ impl DataLayerM7TelemetryRegistry {
         owner_did: &str,
     ) -> Result<&[DataLayerM7TelemetryPointRecord], DataLayerM7TimeseriesError> {
         validate_kamn_did(owner_did)?;
-        self.points_by_owner.get(owner_did).map(Vec::as_slice).ok_or_else(|| {
-            DataLayerM7TimeseriesError::OwnerNotFound {
+        self.points_by_owner
+            .get(owner_did)
+            .map(Vec::as_slice)
+            .ok_or_else(|| DataLayerM7TimeseriesError::OwnerNotFound {
                 owner_did: owner_did.to_owned(),
-            }
-        })
+            })
     }
 }
 
@@ -103,12 +112,17 @@ fn validate_ingest_input(
     validate_kamn_did(input.owner_did.as_str())?;
     validate_kamn_did(input.agent_did.as_str())?;
     if input.timestamp_epoch_seconds == 0 {
-        return Err(DataLayerM7TimeseriesError::EmptyField("timestamp_epoch_seconds"));
+        return Err(DataLayerM7TimeseriesError::EmptyField(
+            "timestamp_epoch_seconds",
+        ));
     }
     Ok(())
 }
 
-fn build_record(input: DataLayerM7TelemetryPointInput, sequence: u64) -> DataLayerM7TelemetryPointRecord {
+fn build_record(
+    input: DataLayerM7TelemetryPointInput,
+    sequence: u64,
+) -> DataLayerM7TelemetryPointRecord {
     DataLayerM7TelemetryPointRecord {
         owner_did: input.owner_did,
         agent_did: input.agent_did,

@@ -18,7 +18,8 @@ const REQUIRED_FILES: &[&str] = &[
 
 #[test]
 fn stdio_protocol_contract_root_is_extracted() {
-    let source = fs::read_to_string(ROOT).expect("root stdio protocol contract file should be readable");
+    let source =
+        fs::read_to_string(ROOT).expect("root stdio protocol contract file should be readable");
     assert_root_budget(source.as_str());
     assert_root_markers(source.as_str());
     assert_extracted_files();

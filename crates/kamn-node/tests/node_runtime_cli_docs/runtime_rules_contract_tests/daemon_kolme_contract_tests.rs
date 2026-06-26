@@ -65,7 +65,11 @@ fn doc_contains_runtime_daemon_rules() {
 
 #[test]
 fn doc_contains_daemon_shutdown_drain_marker_fields() {
-    assert_doc_markers(DOC, DAEMON_DRAIN_MARKERS, "node runtime CLI daemon drain markers");
+    assert_doc_markers(
+        DOC,
+        DAEMON_DRAIN_MARKERS,
+        "node runtime CLI daemon drain markers",
+    );
 }
 
 #[test]

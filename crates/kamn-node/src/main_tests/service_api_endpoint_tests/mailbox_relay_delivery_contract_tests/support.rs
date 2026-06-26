@@ -46,7 +46,10 @@ pub(super) fn set_state_file_env(path: &Path) -> EnvVarGuard {
 
 pub(super) fn set_relay_spool_env(path: &Path) -> EnvVarGuard {
     let path_text = path.to_string_lossy().to_string();
-    EnvVarGuard::set("KAMN_SERVICE_API_RELAY_SPOOL_FILE", Some(path_text.as_str()))
+    EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+        Some(path_text.as_str()),
+    )
 }
 
 pub(super) fn read_state_json(path: &Path) -> Value {
@@ -71,10 +74,7 @@ pub(super) fn spawn_api_server(
     thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot))
 }
 
-pub(super) fn assert_server_ok(
-    server: thread::JoinHandle<Result<(), String>>,
-    context: &str,
-) {
+pub(super) fn assert_server_ok(server: thread::JoinHandle<Result<(), String>>, context: &str) {
     let result = server.join().expect("endpoint thread should complete");
     assert!(result.is_ok(), "{context}");
 }
@@ -127,7 +127,15 @@ pub(super) fn send_message(
     nonce: u64,
     body: &str,
 ) -> ServiceApiMessageCreateBody {
-    let response = send_signed_request(snapshot, bind_addr, "POST", "/v1/messages/send", caller_did, nonce, body);
+    let response = send_signed_request(
+        snapshot,
+        bind_addr,
+        "POST",
+        "/v1/messages/send",
+        caller_did,
+        nonce,
+        body,
+    );
     assert!(response.contains("HTTP/1.1 202 Accepted"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("send payload should deserialize")
@@ -141,7 +149,15 @@ pub(super) fn list_mailbox(
     recipient_did: &str,
 ) -> ServiceApiChannelMessagesBody {
     let path = format!("/v1/channels/recipient:{recipient_did}/messages");
-    let response = send_signed_request(snapshot, bind_addr, "GET", path.as_str(), caller_did, nonce, "");
+    let response = send_signed_request(
+        snapshot,
+        bind_addr,
+        "GET",
+        path.as_str(),
+        caller_did,
+        nonce,
+        "",
+    );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("mailbox payload should deserialize")
@@ -155,7 +171,15 @@ pub(super) fn query_message(
     message_id: &str,
 ) -> Value {
     let path = format!("/v1/messages/{message_id}");
-    let response = send_signed_request(snapshot, bind_addr, "GET", path.as_str(), caller_did, nonce, "");
+    let response = send_signed_request(
+        snapshot,
+        bind_addr,
+        "GET",
+        path.as_str(),
+        caller_did,
+        nonce,
+        "",
+    );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("message payload should deserialize")
@@ -168,7 +192,15 @@ pub(super) fn relay_message(
     nonce: u64,
     body: &str,
 ) -> String {
-    send_signed_request(snapshot, bind_addr, "POST", "/v1/messages/relay", caller_did, nonce, body)
+    send_signed_request(
+        snapshot,
+        bind_addr,
+        "POST",
+        "/v1/messages/relay",
+        caller_did,
+        nonce,
+        body,
+    )
 }
 
 pub(super) fn state_hash(snapshot: &ServiceApiSnapshot) -> String {

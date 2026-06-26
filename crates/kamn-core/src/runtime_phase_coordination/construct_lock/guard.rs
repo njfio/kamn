@@ -13,14 +13,22 @@ impl ConstructLockGuard {
         if lease_ttl_ticks == 0 {
             return Err(ConstructLockError::InvalidLeaseTtl);
         }
-        Ok(Self { lease_ttl_ticks, current_lease: None })
+        Ok(Self {
+            lease_ttl_ticks,
+            current_lease: None,
+        })
     }
 
     /// Handles lease ttl ticks.
-    pub fn lease_ttl_ticks(&self) -> u64 { self.lease_ttl_ticks }
+    pub fn lease_ttl_ticks(&self) -> u64 {
+        self.lease_ttl_ticks
+    }
 
     /// Handles acquire for.
-    pub fn acquire_for(&mut self, owner_id: &str) -> Result<ConstructLockLease, ConstructLockError> {
+    pub fn acquire_for(
+        &mut self,
+        owner_id: &str,
+    ) -> Result<ConstructLockLease, ConstructLockError> {
         validate_owner_id(owner_id)?;
         if let Some(lease) = &self.current_lease {
             return reuse_or_reject_lease(lease, owner_id);
@@ -31,42 +39,77 @@ impl ConstructLockGuard {
     }
 
     /// Handles renew.
-    pub fn renew(&mut self, owner_id: &str, fencing_token: u64) -> Result<ConstructLockLease, ConstructLockError> {
+    pub fn renew(
+        &mut self,
+        owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<ConstructLockLease, ConstructLockError> {
         validate_owner_id(owner_id)?;
-        let current_lease = self.current_lease.as_ref().ok_or(ConstructLockError::NoActiveLease)?;
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoActiveLease)?;
         validate_current_lease(current_lease, owner_id, fencing_token)?;
-        let renewed = ConstructLockLease::new(current_lease.owner_id().to_owned(), current_lease.fencing_token() + 1);
+        let renewed = ConstructLockLease::new(
+            current_lease.owner_id().to_owned(),
+            current_lease.fencing_token() + 1,
+        );
         self.current_lease = Some(renewed.clone());
         Ok(renewed)
     }
 
     /// Handles release.
-    pub fn release(&mut self, owner_id: &str, fencing_token: u64) -> Result<(), ConstructLockError> {
+    pub fn release(
+        &mut self,
+        owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<(), ConstructLockError> {
         validate_owner_id(owner_id)?;
-        let current_lease = self.current_lease.as_ref().ok_or(ConstructLockError::NoActiveLease)?;
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoActiveLease)?;
         validate_current_lease(current_lease, owner_id, fencing_token)?;
         self.current_lease = None;
         Ok(())
     }
 
     /// Handles transfer.
-    pub fn transfer(&mut self, owner_id: &str, next_owner_id: &str, fencing_token: u64) -> Result<ConstructLockLease, ConstructLockError> {
+    pub fn transfer(
+        &mut self,
+        owner_id: &str,
+        next_owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<ConstructLockLease, ConstructLockError> {
         validate_owner_id(owner_id)?;
         validate_owner_id(next_owner_id)?;
-        let current_lease = self.current_lease.as_ref().ok_or(ConstructLockError::NoActiveLease)?;
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoActiveLease)?;
         validate_current_lease(current_lease, owner_id, fencing_token)?;
         if current_lease.owner_id() == next_owner_id {
-            return Err(ConstructLockError::LeaseAlreadyHeld { owner: current_lease.owner_id().to_owned() });
+            return Err(ConstructLockError::LeaseAlreadyHeld {
+                owner: current_lease.owner_id().to_owned(),
+            });
         }
-        let transferred = ConstructLockLease::new(next_owner_id.to_owned(), current_lease.fencing_token() + 1);
+        let transferred =
+            ConstructLockLease::new(next_owner_id.to_owned(), current_lease.fencing_token() + 1);
         self.current_lease = Some(transferred.clone());
         Ok(transferred)
     }
 
     /// Handles validate execution lease.
-    pub fn validate_execution_lease(&self, owner_id: &str, fencing_token: u64) -> Result<(), ConstructLockError> {
+    pub fn validate_execution_lease(
+        &self,
+        owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<(), ConstructLockError> {
         validate_owner_id(owner_id)?;
-        let current_lease = self.current_lease.as_ref().ok_or(ConstructLockError::NoLeaseForExecution)?;
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoLeaseForExecution)?;
         validate_current_lease(current_lease, owner_id, fencing_token)
     }
 }
@@ -83,13 +126,20 @@ pub fn execute_processor_daemon_tick(
 }
 
 fn validate_owner_id(owner_id: &str) -> Result<(), ConstructLockError> {
-    if owner_id.trim().is_empty() { return Err(ConstructLockError::InvalidOwnerId); }
+    if owner_id.trim().is_empty() {
+        return Err(ConstructLockError::InvalidOwnerId);
+    }
     Ok(())
 }
 
-fn reuse_or_reject_lease(lease: &ConstructLockLease, owner_id: &str) -> Result<ConstructLockLease, ConstructLockError> {
+fn reuse_or_reject_lease(
+    lease: &ConstructLockLease,
+    owner_id: &str,
+) -> Result<ConstructLockLease, ConstructLockError> {
     if lease.owner_id() != owner_id {
-        return Err(ConstructLockError::LeaseAlreadyHeld { owner: lease.owner_id().to_owned() });
+        return Err(ConstructLockError::LeaseAlreadyHeld {
+            owner: lease.owner_id().to_owned(),
+        });
     }
     Ok(lease.clone())
 }

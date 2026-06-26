@@ -4,9 +4,9 @@ mod crypto_helpers;
 mod engine;
 mod errors;
 mod models;
-mod validation;
 #[cfg(test)]
 mod tests;
+mod validation;
 
 pub use engine::GroupChannelCryptoEngine;
 pub use errors::GroupChannelCryptoError;

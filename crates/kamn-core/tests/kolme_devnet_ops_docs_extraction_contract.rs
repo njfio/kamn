@@ -40,16 +40,30 @@ fn kolme_devnet_ops_docs_root_is_extracted() {
         "expected {ROOT} <= {ROOT_CAP} lines after extraction, found {lines}"
     );
     for marker in REQUIRED_MARKERS {
-        assert!(root.contains(marker), "missing root module marker: {marker}");
+        assert!(
+            root.contains(marker),
+            "missing root module marker: {marker}"
+        );
     }
     for marker in MOVED_TEST_MARKERS {
-        assert!(!root.contains(marker), "moved test marker still present: {marker}");
+        assert!(
+            !root.contains(marker),
+            "moved test marker still present: {marker}"
+        );
     }
     for path in MODULE_FILES {
         let full = repo_path(path);
-        assert!(full.exists(), "missing extracted module: {}", full.display());
         assert!(
-            fs::read_to_string(&full).expect("read module").lines().count() <= 200,
+            full.exists(),
+            "missing extracted module: {}",
+            full.display()
+        );
+        assert!(
+            fs::read_to_string(&full)
+                .expect("read module")
+                .lines()
+                .count()
+                <= 200,
             "extracted module exceeds 200 lines: {}",
             full.display()
         );

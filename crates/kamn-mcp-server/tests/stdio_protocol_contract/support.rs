@@ -18,15 +18,24 @@ impl McpToolBackend for ProtocolBackend {
     }
 
     fn list_messages(&self, channel_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"channel_id":"{}","messages":["msg-a","msg-b"]}}"#, channel_id))
+        Ok(format!(
+            r#"{{"channel_id":"{}","messages":["msg-a","msg-b"]}}"#,
+            channel_id
+        ))
     }
 
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"message_id":"{}","status":"created"}}"#, message_id))
+        Ok(format!(
+            r#"{{"message_id":"{}","status":"created"}}"#,
+            message_id
+        ))
     }
 
     fn query_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{}","state":"submitted"}}"#, task_id))
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"submitted"}}"#,
+            task_id
+        ))
     }
 
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
@@ -34,35 +43,60 @@ impl McpToolBackend for ProtocolBackend {
     }
 
     fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"content-{}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#, payload.len()))
+        Ok(format!(
+            r#"{{"content_id":"content-{}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#,
+            payload.len()
+        ))
     }
 
     fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"{}","lifecycle_state":"expired","redaction_status":"none"}}"#, content_id))
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"expired","redaction_status":"none"}}"#,
+            content_id
+        ))
     }
 
     fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#, content_id))
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
+            content_id
+        ))
     }
 
     fn query_content(&self, content_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#, content_id))
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
+            content_id
+        ))
     }
 
     fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"bridge_id":"bridge-{}","source_message_id":"source-{}","bridge_status":"submitted"}}"#, payload.len(), payload.len()))
+        Ok(format!(
+            r#"{{"bridge_id":"bridge-{}","source_message_id":"source-{}","bridge_status":"submitted"}}"#,
+            payload.len(),
+            payload.len()
+        ))
     }
 
     fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#, bridge_id, bridge_id, bridge_id))
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
+            bridge_id, bridge_id, bridge_id
+        ))
     }
 
     fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#, bridge_id, bridge_id, bridge_id))
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
+            bridge_id, bridge_id, bridge_id
+        ))
     }
 
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"task-{}","state":"created"}}"#, payload.len()))
+        Ok(format!(
+            r#"{{"task_id":"task-{}","state":"created"}}"#,
+            payload.len()
+        ))
     }
 
     fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
@@ -70,15 +104,24 @@ impl McpToolBackend for ProtocolBackend {
     }
 
     fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{}","state":"completed"}}"#, task_id))
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"completed"}}"#,
+            task_id
+        ))
     }
 
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"escrow_id":"escrow-{}","state":"funded"}}"#, payload.len()))
+        Ok(format!(
+            r#"{{"escrow_id":"escrow-{}","state":"funded"}}"#,
+            payload.len()
+        ))
     }
 
     fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"escrow_id":"{}","state":"released"}}"#, escrow_id))
+        Ok(format!(
+            r#"{{"escrow_id":"{}","state":"released"}}"#,
+            escrow_id
+        ))
     }
 
     fn health(&self) -> Result<String, AgentLibError> {

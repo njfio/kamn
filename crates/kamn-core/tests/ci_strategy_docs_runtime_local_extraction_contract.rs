@@ -11,9 +11,7 @@ const REQUIRED_MODULES: &[&str] = &[
     "runtime_local_contract_lane_tests/discovery_observability_contract_tests.rs",
     "runtime_local_contract_lane_tests/support.rs",
 ];
-const REQUIRED_MARKERS: &[&str] = &[
-    "mod runtime_local_contract_lane_tests;",
-];
+const REQUIRED_MARKERS: &[&str] = &["mod runtime_local_contract_lane_tests;"];
 const MOVED_TEST_MARKERS: &[&str] = &[
     "fn doc_contains_runtime_observability_endpoint_contract_lane_ci_mode_markers()",
     "fn doc_contains_runtime_local_retry_diagnostics_contract_lane_ci_mode_markers()",
@@ -32,11 +30,18 @@ fn ci_strategy_docs_runtime_local_tranche_is_extracted() {
         "expected {ROOT} <= {ROOT_MAX_LINES} lines after tranche extraction, found {lines}"
     );
     for marker in REQUIRED_MARKERS {
-        assert!(root.contains(marker), "missing root module marker: {marker}");
+        assert!(
+            root.contains(marker),
+            "missing root module marker: {marker}"
+        );
     }
     for name in REQUIRED_MODULES {
         let path = repo_path(MODULE_DIR).join(name);
-        assert!(path.exists(), "missing extracted module: {}", path.display());
+        assert!(
+            path.exists(),
+            "missing extracted module: {}",
+            path.display()
+        );
     }
     for marker in MOVED_TEST_MARKERS {
         assert!(

@@ -64,4 +64,3 @@ impl Drop for HttpsSingleRequestServer {
         let _ = fs::remove_dir_all(&self.temp_dir);
     }
 }
-

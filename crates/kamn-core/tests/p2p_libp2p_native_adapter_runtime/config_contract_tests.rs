@@ -7,7 +7,10 @@ fn unit_libp2p_native_adapter_rejects_invalid_listen_multiaddr() {
         "/ip4/127.0.0.1/tcp/invalid-port",
         vec!["/ip4/127.0.0.1/tcp/9201".to_owned()],
     );
-    assert_eq!(error.reason_code(), "p2p_transport_libp2p_runtime_config_invalid");
+    assert_eq!(
+        error.reason_code(),
+        "p2p_transport_libp2p_runtime_config_invalid"
+    );
 }
 
 #[test]
@@ -17,7 +20,10 @@ fn unit_libp2p_native_adapter_rejects_invalid_bootstrap_multiaddr() {
         "/ip4/127.0.0.1/tcp/9540",
         vec!["/ip4/127.0.0.1/tcp/9541/invalid-proto".to_owned()],
     );
-    assert_eq!(error.reason_code(), "p2p_transport_libp2p_runtime_config_invalid");
+    assert_eq!(
+        error.reason_code(),
+        "p2p_transport_libp2p_runtime_config_invalid"
+    );
 }
 
 fn invalid_runtime_config_error(

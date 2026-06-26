@@ -26,7 +26,10 @@ fn assert_peer_summary(
     baseline: &mut Option<([usize; 3], [usize; 3], PeerLifecycleState)>,
 ) {
     if let Some(expected) = *baseline {
-        assert_eq!(summary, expected, "concurrency replay summary drifted in round {round}");
+        assert_eq!(
+            summary, expected,
+            "concurrency replay summary drifted in round {round}"
+        );
     } else {
         *baseline = Some(summary);
     }

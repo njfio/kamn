@@ -58,7 +58,11 @@ fn airdrop_and_wait(client: &RpcClient, pubkey: &Pubkey, lamports: u64) {
     wait_for_balance_at_least(client, pubkey, lamports);
 }
 
-fn request_airdrop_with_retry(client: &RpcClient, pubkey: &Pubkey, lamports: u64) -> solana_sdk::signature::Signature {
+fn request_airdrop_with_retry(
+    client: &RpcClient,
+    pubkey: &Pubkey,
+    lamports: u64,
+) -> solana_sdk::signature::Signature {
     let mut last_error = String::new();
     for _ in 0..12 {
         match client.request_airdrop(pubkey, lamports) {
@@ -76,7 +80,8 @@ fn build_live_devnet_asset_movement_fixture() -> LiveDevnetAssetMovementFixture 
     let client = devnet_rpc_client();
     let state_file = unique_named_state_file("kamn-node-solana-asset-movement-live-state");
     let (_state_file_text, state_file_guard) = set_state_file_env(state_file.as_path());
-    let sender_keypair_file = unique_named_state_file("kamn-node-solana-asset-movement-live-keypair");
+    let sender_keypair_file =
+        unique_named_state_file("kamn-node-solana-asset-movement-live-keypair");
     let sender = Keypair::new();
     write_keypair_file(&sender, sender_keypair_file.as_path())
         .expect("sender keypair file should write");
@@ -123,10 +128,7 @@ fn configure_live_asset_movement_env(
             SOLANA_SETTLEMENT_RECIPIENT_ENV,
             Some(recipient_pubkey_text.as_str()),
         ),
-        EnvVarGuard::set(
-            SOLANA_SETTLEMENT_LAMPORTS_ENV,
-            Some(lamports_text.as_str()),
-        ),
+        EnvVarGuard::set(SOLANA_SETTLEMENT_LAMPORTS_ENV, Some(lamports_text.as_str())),
     )
 }
 
@@ -152,10 +154,7 @@ fn submit_live_asset_movement_release() -> Value {
     )
 }
 
-fn assert_live_release_result(
-    fixture: &LiveDevnetAssetMovementFixture,
-    released: &Value,
-) {
+fn assert_live_release_result(fixture: &LiveDevnetAssetMovementFixture, released: &Value) {
     let signature = released["settlement_tx_signature"]
         .as_str()
         .expect("release must expose a real Solana transaction signature");

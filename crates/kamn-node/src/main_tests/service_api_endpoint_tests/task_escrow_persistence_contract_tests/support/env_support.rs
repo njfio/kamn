@@ -23,7 +23,10 @@ pub(crate) fn read_audit_export_json(path: &Path) -> Value {
 }
 
 pub(crate) fn default_audit_export_file(state_file: &Path) -> PathBuf {
-    PathBuf::from(format!("{}.audit-export.json", state_file.to_string_lossy()))
+    PathBuf::from(format!(
+        "{}.audit-export.json",
+        state_file.to_string_lossy()
+    ))
 }
 
 pub(crate) fn set_state_file_env(path: &Path) -> (String, EnvVarGuard) {
@@ -34,7 +37,10 @@ pub(crate) fn set_state_file_env(path: &Path) -> (String, EnvVarGuard) {
 
 pub(crate) fn set_audit_export_file_env(path: &Path) -> (String, EnvVarGuard) {
     let path_text = path.to_string_lossy().to_string();
-    let guard = EnvVarGuard::set("KAMN_SERVICE_API_AUDIT_EXPORT_FILE", Some(path_text.as_str()));
+    let guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_AUDIT_EXPORT_FILE",
+        Some(path_text.as_str()),
+    );
     (path_text, guard)
 }
 

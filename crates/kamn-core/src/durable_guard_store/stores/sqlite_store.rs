@@ -1,10 +1,11 @@
-use crate::{ChannelPolicySnapshot, DeliveryGuardSnapshot, SqliteStoreBackend, SqliteStoreBackendError};
+use crate::{
+    ChannelPolicySnapshot, DeliveryGuardSnapshot, SqliteStoreBackend, SqliteStoreBackendError,
+};
 
 use super::super::wire_codec::deserialize_bundle;
 use super::super::{
-    default_bundle, validate_bundle, ChannelPolicySnapshotStore,
-    DeliveryGuardSnapshotStore, DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle,
-    DurableGuardSnapshotStoreError,
+    default_bundle, validate_bundle, ChannelPolicySnapshotStore, DeliveryGuardSnapshotStore,
+    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError,
 };
 use std::path::PathBuf;
 

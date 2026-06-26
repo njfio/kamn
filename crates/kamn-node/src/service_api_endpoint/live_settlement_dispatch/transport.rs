@@ -10,9 +10,9 @@ pub(super) fn collect_live_settlement_evidence(
     _escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, String> {
     #[cfg(test)]
-    if let Some(result) = super::test_support::maybe_collect_test_live_settlement_evidence(
-        config, _escrow_id,
-    ) {
+    if let Some(result) =
+        super::test_support::maybe_collect_test_live_settlement_evidence(config, _escrow_id)
+    {
         return result;
     }
     collect_live_settlement_evidence_via_rpc(config)
@@ -62,9 +62,9 @@ fn build_live_settlement_transaction(
     config: &LiveSolanaSettlementConfig,
     keypair: &solana_sdk::signer::keypair::Keypair,
 ) -> Result<solana_sdk::transaction::Transaction, String> {
-    let latest_blockhash = client
-        .get_latest_blockhash()
-        .map_err(|error| format!("live solana settlement latest blockhash lookup failed: {error}"))?;
+    let latest_blockhash = client.get_latest_blockhash().map_err(|error| {
+        format!("live solana settlement latest blockhash lookup failed: {error}")
+    })?;
     Ok(system_transaction::transfer(
         keypair,
         &config.recipient_pubkey,

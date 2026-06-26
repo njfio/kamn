@@ -1,6 +1,6 @@
 use kamn_core::{
     reconcile_data_layer_m1_finality_observation, DataLayerM1AnchoringFinalityObservation,
-    DataLayerM1AnchoringFollowUpAction, DataLayerM1AnchoringFinalityReconciliationProjection,
+    DataLayerM1AnchoringFinalityReconciliationProjection, DataLayerM1AnchoringFollowUpAction,
     DataLayerM1AnchoringOrchestrator, DataLayerM1AnchoringPersistencePlan,
     DataLayerM1AnchoringTickOutcome, DataLayerM1BatchSchedulerPolicy,
     InMemoryKolmeRuntimeCommitClient, KolmeCommitReceiptFinality,
@@ -31,15 +31,20 @@ fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
         let persistence_plan = planned_persistence_plan(&outcome);
         assert_follow_up_policy(&outcome);
         persist_orchestrator_plan(&adapter, persistence_plan).await;
-        persist_confirmation(&adapter, persistence_plan.batch_id.as_str(), &final_projection).await;
+        persist_confirmation(
+            &adapter,
+            persistence_plan.batch_id.as_str(),
+            &final_projection,
+        )
+        .await;
     });
 }
 
 fn build_orchestrator() -> DataLayerM1AnchoringOrchestrator<InMemoryKolmeRuntimeCommitClient> {
     let client = InMemoryKolmeRuntimeCommitClient::new("kolme-memory")
         .expect("in-memory client should initialize");
-    let policy = DataLayerM1BatchSchedulerPolicy::new(1, 60)
-        .expect("policy should be constructible");
+    let policy =
+        DataLayerM1BatchSchedulerPolicy::new(1, 60).expect("policy should be constructible");
     DataLayerM1AnchoringOrchestrator::new(
         client,
         "kamn:did:agent:orchestrator-live-c03",
@@ -65,7 +70,9 @@ fn plan_outcome(
         .expect("orchestrator tick should evaluate")
 }
 
-fn reconcile_projection(outcome: &DataLayerM1AnchoringTickOutcome) -> DataLayerM1AnchoringFinalityReconciliationProjection {
+fn reconcile_projection(
+    outcome: &DataLayerM1AnchoringTickOutcome,
+) -> DataLayerM1AnchoringFinalityReconciliationProjection {
     reconcile_data_layer_m1_finality_observation(
         outcome,
         &DataLayerM1AnchoringFinalityObservation {
@@ -79,7 +86,9 @@ fn reconcile_projection(outcome: &DataLayerM1AnchoringTickOutcome) -> DataLayerM
     .expect("finality reconciliation should succeed")
 }
 
-fn planned_persistence_plan(outcome: &DataLayerM1AnchoringTickOutcome) -> &DataLayerM1AnchoringPersistencePlan {
+fn planned_persistence_plan(
+    outcome: &DataLayerM1AnchoringTickOutcome,
+) -> &DataLayerM1AnchoringPersistencePlan {
     let DataLayerM1AnchoringTickOutcome::Planned {
         persistence_plan, ..
     } = outcome

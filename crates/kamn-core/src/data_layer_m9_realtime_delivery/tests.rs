@@ -1,10 +1,9 @@
-use super::{
-    DataLayerM9RealtimeDeliveryError,
-    DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS,
-    DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS,
-};
 use super::dispatch::outcome::queue_escalation;
 use super::validation::{authorize_owner_scope, normalize_pair};
+use super::{
+    DataLayerM9RealtimeDeliveryError, DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS,
+    DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS,
+};
 
 #[test]
 fn unit_queue_escalation_thresholds_are_monotonic() {

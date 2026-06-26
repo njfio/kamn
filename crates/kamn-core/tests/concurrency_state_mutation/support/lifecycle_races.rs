@@ -2,14 +2,24 @@ use kamn_core::{PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLi
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread::{self, JoinHandle};
 
-type PeerOutcome = (PeerLifecycleEvent, Result<PeerLifecycleState, RuntimeLifecycleError>);
+type PeerOutcome = (
+    PeerLifecycleEvent,
+    Result<PeerLifecycleState, RuntimeLifecycleError>,
+);
 type PeerHandle = JoinHandle<Vec<PeerOutcome>>;
 
-pub(crate) fn run_peer_lifecycle_race(peer_id: &str) -> ([usize; 3], [usize; 3], PeerLifecycleState) {
-    let lifecycle = Arc::new(Mutex::new(PeerLifecycle::new(peer_id).expect("peer lifecycle should initialize")));
+pub(crate) fn run_peer_lifecycle_race(
+    peer_id: &str,
+) -> ([usize; 3], [usize; 3], PeerLifecycleState) {
+    let lifecycle = Arc::new(Mutex::new(
+        PeerLifecycle::new(peer_id).expect("peer lifecycle should initialize"),
+    ));
     let handles = spawn_peer_handles(&lifecycle);
     let (success_by_phase, invalid_by_phase) = collect_peer_outcomes(handles);
-    let final_state = lifecycle.lock().expect("peer lifecycle lock should acquire").state();
+    let final_state = lifecycle
+        .lock()
+        .expect("peer lifecycle lock should acquire")
+        .state();
     (success_by_phase, invalid_by_phase, final_state)
 }
 
@@ -26,7 +36,10 @@ fn spawn_peer_handle(lifecycle: &Arc<Mutex<PeerLifecycle>>, barrier: &Arc<Barrie
     thread::spawn(move || run_peer_sequence(&lifecycle, &barrier))
 }
 
-fn run_peer_sequence(lifecycle: &Arc<Mutex<PeerLifecycle>>, barrier: &Arc<Barrier>) -> Vec<PeerOutcome> {
+fn run_peer_sequence(
+    lifecycle: &Arc<Mutex<PeerLifecycle>>,
+    barrier: &Arc<Barrier>,
+) -> Vec<PeerOutcome> {
     let mut outcomes = Vec::new();
     for event in [
         PeerLifecycleEvent::StartConnect,
@@ -34,7 +47,10 @@ fn run_peer_sequence(lifecycle: &Arc<Mutex<PeerLifecycle>>, barrier: &Arc<Barrie
         PeerLifecycleEvent::Disconnect,
     ] {
         barrier.wait();
-        let outcome = lifecycle.lock().expect("peer lifecycle lock should acquire").transition(event);
+        let outcome = lifecycle
+            .lock()
+            .expect("peer lifecycle lock should acquire")
+            .transition(event);
         outcomes.push((event, outcome));
         barrier.wait();
     }
@@ -47,7 +63,12 @@ fn collect_peer_outcomes(handles: Vec<PeerHandle>) -> ([usize; 3], [usize; 3]) {
     for handle in handles {
         let outcomes = handle.join().expect("peer lifecycle thread should join");
         for (phase_index, outcome) in outcomes.into_iter().enumerate() {
-            tally_peer_outcome(phase_index, outcome, &mut success_by_phase, &mut invalid_by_phase);
+            tally_peer_outcome(
+                phase_index,
+                outcome,
+                &mut success_by_phase,
+                &mut invalid_by_phase,
+            );
         }
     }
     (success_by_phase, invalid_by_phase)
@@ -61,12 +82,17 @@ fn tally_peer_outcome(
 ) {
     match outcome {
         Ok(next_state) => record_peer_success(phase_index, next_state, success_by_phase),
-        Err(RuntimeLifecycleError::InvalidTransition { from, event: rejected }) => {
+        Err(RuntimeLifecycleError::InvalidTransition {
+            from,
+            event: rejected,
+        }) => {
             invalid_by_phase[phase_index] += 1;
             assert_eq!(rejected, event);
             assert_invalid_transition_state(phase_index, from);
         }
-        Err(RuntimeLifecycleError::InvalidPeerId) => panic!("peer id is fixed and valid in concurrency lane"),
+        Err(RuntimeLifecycleError::InvalidPeerId) => {
+            panic!("peer id is fixed and valid in concurrency lane")
+        }
     }
 }
 

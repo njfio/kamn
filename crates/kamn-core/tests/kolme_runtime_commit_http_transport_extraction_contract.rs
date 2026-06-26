@@ -22,7 +22,10 @@ fn kolme_runtime_commit_http_transport_root_declares_expected_modules() {
 fn kolme_runtime_commit_http_transport_root_no_longer_contains_representative_moved_tests() {
     let root = read(ROOT_FILE);
     for marker in moved_test_markers() {
-        assert!(!root.contains(marker), "root still contains moved marker: {marker}");
+        assert!(
+            !root.contains(marker),
+            "root still contains moved marker: {marker}"
+        );
     }
 }
 
@@ -68,7 +71,10 @@ fn expected_leaf_files() -> &'static [&'static str] {
 }
 
 fn repo_path(rel: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join(rel)
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(rel)
 }
 
 fn read(rel: &str) -> String {

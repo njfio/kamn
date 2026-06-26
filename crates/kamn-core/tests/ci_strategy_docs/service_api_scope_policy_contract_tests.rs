@@ -1,5 +1,5 @@
-use super::*;
 use super::service_api_policy_support::assert_remediation_marker_in_docs_and_ops;
+use super::*;
 
 #[test]
 fn doc_contains_service_api_scope_policy_docs_parity_markers() {
@@ -66,7 +66,8 @@ fn assert_scope_policy_doc_commands() {
 fn assert_scope_policy_source_markers() {
     assert!(SERVICE_API_ENDPOINT_SOURCE
         .contains("pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str ="));
-    assert!(SERVICE_API_ENDPOINT_SOURCE.contains("pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str ="));
     assert!(SERVICE_API_ENDPOINT_SOURCE
         .contains("pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str ="));
     assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION));
@@ -84,7 +85,9 @@ fn assert_scope_policy_strategy_markers() {
     assert!(DOC.contains(&format!(
         "service_api_scope_policy_fixture_schema_version={SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION}"
     )));
-    assert!(DOC.contains(&format!("service_api_scope_policy_fixture_path={SERVICE_API_SCOPE_POLICY_FIXTURE_PATH}")));
+    assert!(DOC.contains(&format!(
+        "service_api_scope_policy_fixture_path={SERVICE_API_SCOPE_POLICY_FIXTURE_PATH}"
+    )));
 }
 
 fn assert_scope_policy_ops_markers() {
@@ -97,7 +100,9 @@ fn assert_scope_policy_ops_markers() {
     assert!(OPS_DOC.contains(&format!(
         "service_api_scope_policy_fixture_schema_version={SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION}"
     )));
-    assert!(OPS_DOC.contains(&format!("service_api_scope_policy_fixture_path={SERVICE_API_SCOPE_POLICY_FIXTURE_PATH}")));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_scope_policy_fixture_path={SERVICE_API_SCOPE_POLICY_FIXTURE_PATH}"
+    )));
 }
 
 fn assert_scope_policy_remediation_markers(reason_code: &str) {

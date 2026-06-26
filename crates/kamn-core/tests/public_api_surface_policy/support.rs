@@ -10,10 +10,10 @@ mod fixtures;
 pub(crate) mod models;
 #[path = "support/modules.rs"]
 mod modules;
-#[path = "support/policy.rs"]
-mod policy;
 #[path = "support/paths.rs"]
 mod paths;
+#[path = "support/policy.rs"]
+mod policy;
 #[path = "support/render.rs"]
 mod render;
 #[path = "support/thresholds.rs"]

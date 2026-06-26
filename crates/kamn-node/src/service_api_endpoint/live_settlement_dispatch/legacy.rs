@@ -12,9 +12,8 @@ pub(super) fn collect_slot_backed_live_settlement_evidence(
         format!("{escrow_id}:{finalized_slot}").as_bytes(),
     );
     let rpc_tag = crate::service_api_endpoint::deterministic_body_tag(config.rpc_url.as_bytes());
-    let settlement_receipt_hash = format!(
-        "solana-devnet-settlement-{rpc_tag:016x}-{finalized_slot:016x}-{escrow_tag:016x}"
-    );
+    let settlement_receipt_hash =
+        format!("solana-devnet-settlement-{rpc_tag:016x}-{finalized_slot:016x}-{escrow_tag:016x}");
     Ok(LiveSettlementEvidence {
         settlement_receipt_hash,
         settlement_tx_signature: String::new(),

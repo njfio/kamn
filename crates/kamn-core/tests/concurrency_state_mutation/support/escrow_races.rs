@@ -6,20 +6,53 @@ use std::thread::{self, JoinHandle};
 
 type EscrowHandle = JoinHandle<Result<EscrowTransitionEvidence, EscrowLifecycleError>>;
 
-pub(crate) fn run_escrow_dispute_refund_race(total_amount: u128) -> (usize, usize, u128, u128, u128) {
-    let escrow = Arc::new(Mutex::new(EscrowLifecycle::new(total_amount).expect("escrow should initialize")));
-    let handles = spawn_action_handles(&escrow, [EscrowTransitionAction::Dispute, EscrowTransitionAction::RefundRemaining]);
+pub(crate) fn run_escrow_dispute_refund_race(
+    total_amount: u128,
+) -> (usize, usize, u128, u128, u128) {
+    let escrow = Arc::new(Mutex::new(
+        EscrowLifecycle::new(total_amount).expect("escrow should initialize"),
+    ));
+    let handles = spawn_action_handles(
+        &escrow,
+        [
+            EscrowTransitionAction::Dispute,
+            EscrowTransitionAction::RefundRemaining,
+        ],
+    );
     let (success_count, invalid_count) = collect_transition_counts(handles);
     let escrow = escrow.lock().expect("escrow lock should acquire");
-    (success_count, invalid_count, escrow.released_amount(), escrow.refunded_amount(), escrow.remaining_amount())
+    (
+        success_count,
+        invalid_count,
+        escrow.released_amount(),
+        escrow.refunded_amount(),
+        escrow.remaining_amount(),
+    )
 }
 
-pub(crate) fn run_escrow_refund_race(total_amount: u128) -> (usize, usize, Vec<&'static str>, u128, u128, u128) {
-    let escrow = Arc::new(Mutex::new(EscrowLifecycle::new(total_amount).expect("escrow should initialize")));
-    let handles = spawn_action_handles(&escrow, [EscrowTransitionAction::RefundRemaining, EscrowTransitionAction::RefundRemaining]);
+pub(crate) fn run_escrow_refund_race(
+    total_amount: u128,
+) -> (usize, usize, Vec<&'static str>, u128, u128, u128) {
+    let escrow = Arc::new(Mutex::new(
+        EscrowLifecycle::new(total_amount).expect("escrow should initialize"),
+    ));
+    let handles = spawn_action_handles(
+        &escrow,
+        [
+            EscrowTransitionAction::RefundRemaining,
+            EscrowTransitionAction::RefundRemaining,
+        ],
+    );
     let (success_count, invalid_count, error_reason_codes) = collect_refund_outcomes(handles);
     let escrow = escrow.lock().expect("escrow lock should acquire");
-    (success_count, invalid_count, error_reason_codes, escrow.released_amount(), escrow.refunded_amount(), escrow.remaining_amount())
+    (
+        success_count,
+        invalid_count,
+        error_reason_codes,
+        escrow.released_amount(),
+        escrow.refunded_amount(),
+        escrow.remaining_amount(),
+    )
 }
 
 fn spawn_action_handles(
@@ -42,7 +75,10 @@ fn spawn_action_handle(
     let barrier = Arc::clone(barrier);
     thread::spawn(move || {
         barrier.wait();
-        escrow.lock().expect("escrow lock should acquire").apply_transition_with_evidence(action)
+        escrow
+            .lock()
+            .expect("escrow lock should acquire")
+            .apply_transition_with_evidence(action)
     })
 }
 
@@ -50,7 +86,10 @@ fn collect_transition_counts(handles: Vec<EscrowHandle>) -> (usize, usize) {
     let mut success_count = 0;
     let mut invalid_count = 0;
     for handle in handles {
-        match handle.join().expect("escrow dispute/refund thread should join") {
+        match handle
+            .join()
+            .expect("escrow dispute/refund thread should join")
+        {
             Ok(evidence) => record_escrow_success(&mut success_count, evidence),
             Err(error) => record_escrow_invalid(&mut invalid_count, error),
         }

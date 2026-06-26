@@ -31,16 +31,18 @@ fn integration_service_api_endpoint_persists_message_state_across_restart() {
     let _ = fs::remove_file(state_file);
 }
 
-fn assert_message_restart_roundtrip(
-    snapshot: ServiceApiSnapshot,
-    sender_did: &str,
-    payload: &str,
-) {
+fn assert_message_restart_roundtrip(snapshot: ServiceApiSnapshot, sender_did: &str, payload: &str) {
     let bind_addr = reserve_loopback_addr();
-    let send_payload = send_persisted_message(&snapshot, bind_addr.as_str(), sender_did, 1, payload);
+    let send_payload =
+        send_persisted_message(&snapshot, bind_addr.as_str(), sender_did, 1, payload);
     let query_path = format!("/v1/messages/{}", send_payload.message_id);
-    let query_payload =
-        query_persisted_message(&snapshot, bind_addr.as_str(), sender_did, 2, query_path.as_str());
+    let query_payload = query_persisted_message(
+        &snapshot,
+        bind_addr.as_str(),
+        sender_did,
+        2,
+        query_path.as_str(),
+    );
     assert_eq!(query_payload.message_id, send_payload.message_id);
     assert_eq!(query_payload.status, "created");
 }

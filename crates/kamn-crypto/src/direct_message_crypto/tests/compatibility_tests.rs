@@ -10,7 +10,9 @@ fn decrypt_accepts_legacy_v1_sha256_kdf_ciphertext_for_compatibility() {
             .expect("engine init should succeed");
         let sealed = legacy_v1_ciphertext(sender_key_ref, recipient_key_ref, "legacy-v1", 41);
 
-        let plaintext = engine.decrypt(&sealed).expect("legacy-v1 decrypt must succeed");
+        let plaintext = engine
+            .decrypt(&sealed)
+            .expect("legacy-v1 decrypt must succeed");
         assert_eq!(plaintext, "legacy-v1");
     });
 }
@@ -30,7 +32,9 @@ fn decrypt_accepts_legacy_raw_prefix_nonce_layout_for_hkdf_v2_compatibility() {
             43,
         );
 
-        let plaintext = engine.decrypt(&sealed).expect("legacy raw-prefix decrypt must succeed");
+        let plaintext = engine
+            .decrypt(&sealed)
+            .expect("legacy raw-prefix decrypt must succeed");
         assert_eq!(plaintext, "legacy-raw-prefix");
     });
 }
@@ -92,7 +96,9 @@ fn assert_new_encryptions_reject_legacy_raw_prefix_nonce_layout() {
         let nonce = 57;
         let mut engine = DirectMessageCryptoEngine::new(sender_key_ref, recipient_key_ref)
             .expect("engine init should succeed");
-        let sealed = engine.encrypt("payload", nonce).expect("encrypt should succeed");
+        let sealed = engine
+            .encrypt("payload", nonce)
+            .expect("encrypt should succeed");
         let combined = combined_ciphertext(&sealed);
         let aad = canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
         let legacy_result = decrypt_with_legacy_raw_prefix_nonce(&engine, nonce, &combined, &aad);

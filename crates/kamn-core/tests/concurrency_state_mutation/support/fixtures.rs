@@ -1,6 +1,10 @@
 pub(crate) fn concurrency_replay_fixture() -> [&'static [&'static str]; 3] {
     [
-        &["kamn:did:agent:worker-1", "kamn:did:agent:worker-2", "kamn:did:agent:worker-3"],
+        &[
+            "kamn:did:agent:worker-1",
+            "kamn:did:agent:worker-2",
+            "kamn:did:agent:worker-3",
+        ],
         &[
             "kamn:did:agent:worker-a",
             "kamn:did:agent:worker-b",

@@ -67,7 +67,8 @@ fn resolve_runtime_peer_frame_signing_private_key_hex(
     Err(AuthenticatedPeerFrameError::MissingSigningKeyMaterial)
 }
 
-fn resolve_runtime_peer_frame_signing_public_key_hex() -> Result<String, AuthenticatedPeerFrameError> {
+fn resolve_runtime_peer_frame_signing_public_key_hex() -> Result<String, AuthenticatedPeerFrameError>
+{
     if let Ok(value) = env::var(RUNTIME_PEER_FRAME_SIGNING_PUBLIC_KEY_ENV) {
         let trimmed = value.trim();
         if !trimmed.is_empty() {
@@ -138,7 +139,9 @@ pub(super) fn parse_peer_frame_wire(
 ) -> Result<(String, String, String, u64, String, String), AuthenticatedPeerFrameError> {
     let segments: Vec<_> = raw.split('|').collect();
     if segments.len() != 7 || segments[0] != "frame" {
-        return Err(AuthenticatedPeerFrameError::InvalidWireFormat(raw.to_owned()));
+        return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+            raw.to_owned(),
+        ));
     }
     let nonce = segments[4]
         .parse::<u64>()

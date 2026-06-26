@@ -5,7 +5,10 @@ fn rejects_invalid_daemon_control_argument() {
     assert_parse_error(
         with_pairs(
             daemon_args(),
-            &[("--daemon-max-ticks", "abc"), ("--daemon-tick-interval-ms", "25")],
+            &[
+                ("--daemon-max-ticks", "abc"),
+                ("--daemon-tick-interval-ms", "25"),
+            ],
         ),
         ConfigError::InvalidDaemonControlArgument("abc".to_owned()),
     );

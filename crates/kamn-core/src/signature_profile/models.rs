@@ -37,7 +37,9 @@ impl std::fmt::Display for ServiceAuthSignatureError {
             Self::EmptyField(field) => write!(f, "{field} must not be empty"),
             Self::InvalidNonce => write!(f, "nonce must be positive"),
             Self::InvalidSignatureFormat => write!(f, "signature format is invalid"),
-            Self::UnsupportedAlgorithm(value) => write!(f, "unsupported signature algorithm: {value}"),
+            Self::UnsupportedAlgorithm(value) => {
+                write!(f, "unsupported signature algorithm: {value}")
+            }
             Self::UnsupportedProfile(value) => write!(f, "unsupported signature profile: {value}"),
             Self::InvalidRecoveryId => write!(f, "signature recovery id is invalid"),
             Self::InvalidSignatureHex => write!(f, "signature hex payload is invalid"),

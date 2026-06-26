@@ -13,15 +13,17 @@ fn require_endpoint(raw_endpoint: &str) -> Result<&str, DidDocumentError> {
         return Err(endpoint_error("service endpoint must not be empty"));
     }
     if trimmed.contains('?') || trimmed.contains('#') {
-        return Err(endpoint_error("service endpoint must not include query or fragment"));
+        return Err(endpoint_error(
+            "service endpoint must not include query or fragment",
+        ));
     }
     Ok(trimmed)
 }
 
 fn require_scheme(trimmed: &str) -> Result<&str, DidDocumentError> {
-    let (scheme, remainder) = trimmed.split_once("://").ok_or_else(|| {
-        endpoint_error("service endpoint must include scheme://authority/path")
-    })?;
+    let (scheme, remainder) = trimmed
+        .split_once("://")
+        .ok_or_else(|| endpoint_error("service endpoint must include scheme://authority/path"))?;
     if !scheme.eq_ignore_ascii_case("kamn") {
         return Err(endpoint_error("service endpoint scheme must be kamn"));
     }
@@ -33,10 +35,14 @@ fn require_authority_and_path(remainder: &str) -> Result<&str, DidDocumentError>
         .split_once('/')
         .ok_or_else(|| endpoint_error("service endpoint must include authority and path"))?;
     if !authority.eq_ignore_ascii_case("messaging") {
-        return Err(endpoint_error("service endpoint authority must be messaging"));
+        return Err(endpoint_error(
+            "service endpoint authority must be messaging",
+        ));
     }
     if path.is_empty() || path.contains('/') {
-        return Err(endpoint_error("service endpoint path must be a single segment"));
+        return Err(endpoint_error(
+            "service endpoint path must be a single segment",
+        ));
     }
     Ok(path)
 }
@@ -49,7 +55,9 @@ fn normalize_path(path: &str) -> Result<String, DidDocumentError> {
     {
         return Ok(normalized);
     }
-    Err(endpoint_error("service endpoint path contains invalid characters"))
+    Err(endpoint_error(
+        "service endpoint path contains invalid characters",
+    ))
 }
 
 fn endpoint_error(message: &str) -> DidDocumentError {
@@ -60,7 +68,10 @@ pub(super) fn validate_did_verification_method_algorithms(
     algorithms: &[String],
 ) -> Result<(), DidDocumentError> {
     let normalized = normalize_algorithms(algorithms)?;
-    if normalized.iter().all(|algorithm| algorithm == &normalized[0]) {
+    if normalized
+        .iter()
+        .all(|algorithm| algorithm == &normalized[0])
+    {
         return Ok(());
     }
     Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
@@ -70,18 +81,27 @@ pub(super) fn validate_did_verification_method_algorithms(
 
 fn normalize_algorithms(algorithms: &[String]) -> Result<Vec<String>, DidDocumentError> {
     if algorithms.is_empty() {
-        return Err(algorithm_error("at least one verification method algorithm is required"));
+        return Err(algorithm_error(
+            "at least one verification method algorithm is required",
+        ));
     }
-    algorithms.iter().map(|algorithm| normalize_algorithm(algorithm)).collect()
+    algorithms
+        .iter()
+        .map(|algorithm| normalize_algorithm(algorithm))
+        .collect()
 }
 
 fn normalize_algorithm(algorithm: &str) -> Result<String, DidDocumentError> {
     let normalized = algorithm.trim();
     if normalized.is_empty() {
-        return Err(algorithm_error("verification method algorithm entries must not be empty"));
+        return Err(algorithm_error(
+            "verification method algorithm entries must not be empty",
+        ));
     }
     if normalized != "Multikey" && normalized != "MultikeyV2" {
-        return Err(algorithm_error(&format!("unsupported verification method algorithm: {normalized}")));
+        return Err(algorithm_error(&format!(
+            "unsupported verification method algorithm: {normalized}"
+        )));
     }
     Ok(normalized.to_owned())
 }
@@ -96,9 +116,15 @@ pub(super) fn canonical_did_document(
     metadata: AgentDidMetadata,
 ) -> Result<DidDocument, DidDocumentError> {
     validate_document_inputs(public_key_multibase, &metadata)?;
-    let service_endpoint = canonical_service_endpoint(&format!("kamn://messaging/{}", did.method_specific_id()))?;
+    let service_endpoint =
+        canonical_service_endpoint(&format!("kamn://messaging/{}", did.method_specific_id()))?;
     validate_did_verification_method_algorithms(&["Multikey".to_owned()])?;
-    Ok(build_did_document(did, public_key_multibase, metadata, service_endpoint))
+    Ok(build_did_document(
+        did,
+        public_key_multibase,
+        metadata,
+        service_endpoint,
+    ))
 }
 
 fn validate_document_inputs(
@@ -117,7 +143,11 @@ fn validate_document_inputs(
     if metadata.capabilities.is_empty() {
         return Err(DidDocumentError::MissingCapabilities);
     }
-    if metadata.capabilities.iter().any(|capability| capability.trim().is_empty()) {
+    if metadata
+        .capabilities
+        .iter()
+        .any(|capability| capability.trim().is_empty())
+    {
         return Err(DidDocumentError::InvalidCapability);
     }
     Ok(())

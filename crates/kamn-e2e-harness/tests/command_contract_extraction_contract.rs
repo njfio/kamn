@@ -22,7 +22,10 @@ fn command_contract_root_declares_expected_modules() {
 fn command_contract_root_no_longer_contains_moved_test_markers() {
     let root = read(ROOT_FILE);
     for marker in moved_test_markers() {
-        assert!(!root.contains(marker), "root still contains moved marker: {marker}");
+        assert!(
+            !root.contains(marker),
+            "root still contains moved marker: {marker}"
+        );
     }
 }
 

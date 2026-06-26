@@ -6,7 +6,8 @@ impl DataLayerM4EscrowTransitionEngine {
     pub fn authorize_message_visibility(
         &self,
         request: DataLayerM4EscrowVisibilityRequest,
-    ) -> Result<DataLayerM4EscrowVisibilityDecision, DataLayerM4SettlementEvidenceRegistryError> {
+    ) -> Result<DataLayerM4EscrowVisibilityDecision, DataLayerM4SettlementEvidenceRegistryError>
+    {
         validate_non_empty(request.escrow_id.as_str(), "escrow_id")?;
         validate_kamn_did(request.requester_did.as_str())?;
         let escrow = self.escrows.get(request.escrow_id.as_str()).ok_or(
@@ -20,7 +21,10 @@ impl DataLayerM4EscrowTransitionEngine {
             });
         }
         if escrow.auditor_did.as_deref() == Some(request.requester_did.as_str()) {
-            return Ok(auditor_visibility_decision(escrow, request.reconstructed_auditor_shares));
+            return Ok(auditor_visibility_decision(
+                escrow,
+                request.reconstructed_auditor_shares,
+            ));
         }
         Ok(DataLayerM4EscrowVisibilityDecision::Deny {
             reason_code: DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE,

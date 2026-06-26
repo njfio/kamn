@@ -87,7 +87,10 @@ fn regression_tcp_envelope_rejects_mismatched_did_key_binding_fingerprint() {
 #[test]
 fn integration_tcp_parse_rejects_unbound_sender_did_key_binding() {
     let payload = unbound_sender_payload();
-    assert_eq!(TcpSignedEnvelope::parse_wire_payload(payload.as_str()), Err(binding_failure_error()));
+    assert_eq!(
+        TcpSignedEnvelope::parse_wire_payload(payload.as_str()),
+        Err(binding_failure_error())
+    );
 }
 
 fn assert_binding_failure(envelope: TcpSignedEnvelope) {

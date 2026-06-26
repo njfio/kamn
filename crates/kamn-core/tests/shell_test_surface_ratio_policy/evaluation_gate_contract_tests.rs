@@ -1,10 +1,14 @@
-use crate::support::{current_surface, evaluate_policy, load_baseline, load_thresholds, maybe_write_report};
 use crate::support::constants::{REASON_CODES_CSV, REASON_TAXONOMY_VERSION};
 use crate::support::paths::repo_path;
+use crate::support::{
+    current_surface, evaluate_policy, load_baseline, load_thresholds, maybe_write_report,
+};
 
 #[test]
 fn functional_shell_test_surface_ratio_non_regression_gate() {
-    let baseline = load_baseline(&repo_path("fixtures/ci/shell_test_surface_ratio_baseline.env"));
+    let baseline = load_baseline(&repo_path(
+        "fixtures/ci/shell_test_surface_ratio_baseline.env",
+    ));
     let thresholds = load_thresholds(&repo_path(".ci/shell_test_surface_ratio_thresholds.env"));
     let current = current_surface();
     let evaluation = evaluate_policy(&baseline, &thresholds, &current);

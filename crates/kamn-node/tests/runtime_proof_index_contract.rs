@@ -31,7 +31,11 @@ fn corrected_audit_response_links_runtime_proof_index() {
 
 fn assert_contains_all(doc: &str, markers: &[&str]) {
     for marker in markers {
-        assert!(doc.contains(marker), "runtime proof index missing marker: {}", marker);
+        assert!(
+            doc.contains(marker),
+            "runtime proof index missing marker: {}",
+            marker
+        );
     }
 }
 

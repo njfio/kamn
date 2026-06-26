@@ -11,7 +11,9 @@ pub(crate) struct TestLiveSolanaSettlementOverrideGuard {
 pub(crate) fn set_test_live_solana_settlement_override(
     enabled: bool,
 ) -> TestLiveSolanaSettlementOverrideGuard {
-    let mut guard = override_state().lock().expect("override lock should not poison");
+    let mut guard = override_state()
+        .lock()
+        .expect("override lock should not poison");
     let previous = *guard;
     *guard = enabled;
     TestLiveSolanaSettlementOverrideGuard { previous }
@@ -21,7 +23,10 @@ pub(crate) fn maybe_collect_test_live_settlement_evidence(
     config: &LiveSolanaSettlementConfig,
     escrow_id: &str,
 ) -> Option<Result<LiveSettlementEvidence, String>> {
-    if !*override_state().lock().expect("override lock should not poison") {
+    if !*override_state()
+        .lock()
+        .expect("override lock should not poison")
+    {
         return None;
     }
     Some(Ok(LiveSettlementEvidence {
@@ -34,7 +39,9 @@ pub(crate) fn maybe_collect_test_live_settlement_evidence(
 
 impl Drop for TestLiveSolanaSettlementOverrideGuard {
     fn drop(&mut self) {
-        let mut guard = override_state().lock().expect("override lock should not poison");
+        let mut guard = override_state()
+            .lock()
+            .expect("override lock should not poison");
         *guard = self.previous;
     }
 }

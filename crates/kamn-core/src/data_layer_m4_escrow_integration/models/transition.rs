@@ -55,7 +55,9 @@ pub enum DataLayerM4EscrowTransitionAction {
     /// Move `Funded -> Active`.
     Activate { activated_at_epoch_seconds: u64 },
     /// Move `Active -> Disputed`.
-    OpenDispute { dispute_opened_at_epoch_seconds: u64 },
+    OpenDispute {
+        dispute_opened_at_epoch_seconds: u64,
+    },
     /// Move `Active|Disputed -> Released`.
     ResolveRelease {
         settled_at_epoch_seconds: u64,

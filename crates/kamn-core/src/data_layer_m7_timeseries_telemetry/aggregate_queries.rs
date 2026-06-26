@@ -14,10 +14,14 @@ pub(crate) fn aggregate_agent_hourly(
     query: &DataLayerM7TelemetryScopeQuery,
 ) -> Result<Vec<DataLayerM7AgentHourlyAggregate>, DataLayerM7TimeseriesError> {
     validate_agent_scope(query)?;
-    Ok(group_agent_points(owner_points, query, |point| point.bucket_hour_epoch_seconds)
-        .into_iter()
-        .map(|(bucket_hour_epoch_seconds, totals)| build_agent_hourly(query, bucket_hour_epoch_seconds, totals))
-        .collect())
+    Ok(
+        group_agent_points(owner_points, query, |point| point.bucket_hour_epoch_seconds)
+            .into_iter()
+            .map(|(bucket_hour_epoch_seconds, totals)| {
+                build_agent_hourly(query, bucket_hour_epoch_seconds, totals)
+            })
+            .collect(),
+    )
 }
 
 pub(crate) fn aggregate_agent_daily(
@@ -25,10 +29,14 @@ pub(crate) fn aggregate_agent_daily(
     query: &DataLayerM7TelemetryScopeQuery,
 ) -> Result<Vec<DataLayerM7AgentDailyAggregate>, DataLayerM7TimeseriesError> {
     validate_agent_scope(query)?;
-    Ok(group_agent_points(owner_points, query, |point| point.bucket_day_epoch_seconds)
-        .into_iter()
-        .map(|(bucket_day_epoch_seconds, totals)| build_agent_daily(query, bucket_day_epoch_seconds, totals))
-        .collect())
+    Ok(
+        group_agent_points(owner_points, query, |point| point.bucket_day_epoch_seconds)
+            .into_iter()
+            .map(|(bucket_day_epoch_seconds, totals)| {
+                build_agent_daily(query, bucket_day_epoch_seconds, totals)
+            })
+            .collect(),
+    )
 }
 
 pub(crate) fn aggregate_network_hourly(
@@ -36,7 +44,9 @@ pub(crate) fn aggregate_network_hourly(
 ) -> Vec<DataLayerM7NetworkHourlyAggregate> {
     group_network_points(points_by_owner)
         .into_iter()
-        .map(|(bucket_hour_epoch_seconds, totals)| build_network_hourly(bucket_hour_epoch_seconds, totals))
+        .map(|(bucket_hour_epoch_seconds, totals)| {
+            build_network_hourly(bucket_hour_epoch_seconds, totals)
+        })
         .collect()
 }
 
@@ -46,8 +56,14 @@ fn group_agent_points(
     bucket_of: fn(&DataLayerM7TelemetryPointRecord) -> u64,
 ) -> BTreeMap<u64, DataLayerM7AgentAccumulator> {
     let mut grouped = BTreeMap::new();
-    for point in owner_points.iter().filter(|point| point.agent_did == query.agent_did) {
-        accumulate_agent_totals(grouped.entry(bucket_of(point)).or_insert((0, 0, 0, 0, 0)), point);
+    for point in owner_points
+        .iter()
+        .filter(|point| point.agent_did == query.agent_did)
+    {
+        accumulate_agent_totals(
+            grouped.entry(bucket_of(point)).or_insert((0, 0, 0, 0, 0)),
+            point,
+        );
     }
     grouped
 }
@@ -117,9 +133,14 @@ fn group_network_points(
     for owner_points in points_by_owner.values() {
         for point in owner_points {
             accumulate_network_totals(
-                grouped
-                    .entry(point.bucket_hour_epoch_seconds)
-                    .or_insert((0, 0, 0, 0, 0, BTreeSet::new())),
+                grouped.entry(point.bucket_hour_epoch_seconds).or_insert((
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    BTreeSet::new(),
+                )),
                 point,
             );
         }

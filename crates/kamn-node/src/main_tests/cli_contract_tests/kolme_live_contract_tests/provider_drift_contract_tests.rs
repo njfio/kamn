@@ -13,7 +13,11 @@ fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
     let args = runtime_kolme_live_args(base_url.as_str());
     let parsed = parse_cli(args, "kolme-live provider drift args should parse");
     assert_provider_drift_failure(parsed);
-    assert_request_count(requests, 2, "provider drift should fail after nonce lookup and submit response mapping");
+    assert_request_count(
+        requests,
+        2,
+        "provider drift should fail after nonce lookup and submit response mapping",
+    );
 }
 
 #[test]
@@ -72,7 +76,11 @@ fn assert_provider_drift_failure(parsed: NodeCli) {
     );
 }
 
-fn assert_request_count(requests: std::sync::Arc<std::sync::Mutex<Vec<String>>>, expected: usize, message: &str) {
+fn assert_request_count(
+    requests: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    expected: usize,
+    message: &str,
+) {
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(recorded_requests.len(), expected, "{message}");
 }

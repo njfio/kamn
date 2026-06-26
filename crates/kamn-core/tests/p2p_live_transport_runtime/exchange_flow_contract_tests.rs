@@ -28,7 +28,11 @@ fn build_live_exchange_pair() -> (
         bootstrap_peers,
     );
     (
-        build_coordinator("peer-processor-live", NodeRole::Processor, processor_transport),
+        build_coordinator(
+            "peer-processor-live",
+            NodeRole::Processor,
+            processor_transport,
+        ),
         build_coordinator("peer-listener-live", NodeRole::Listener, listener_transport),
     )
 }
@@ -90,7 +94,10 @@ fn drain_listener_frames(
         if !frames.is_empty() {
             return frames;
         }
-        assert!(started.elapsed() < Duration::from_secs(5), "listener did not receive frame within timeout");
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "listener did not receive frame within timeout"
+        );
         std::thread::sleep(Duration::from_millis(25));
     }
 }

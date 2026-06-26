@@ -47,7 +47,10 @@ fn handshake_matrix_maps_provider_statuses() {
 fn router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes() {
     with_default_signer_key_env(|| {
         let request = secure_operator_request();
-        assert_eq!(sign_with_unavailable_provider(&request).backend, "local-software");
+        assert_eq!(
+            sign_with_unavailable_provider(&request).backend,
+            "local-software"
+        );
         assert_eq!(
             sign_with_policy_blocked_provider(&request),
             expected_policy_blocked_error()
@@ -112,7 +115,9 @@ fn secure_operator_request() -> SigningRequest {
     .expect("request should be valid")
 }
 
-fn sign_with_unavailable_provider(request: &SigningRequest) -> crate::signer_backend::provider_policy::BackendSignature {
+fn sign_with_unavailable_provider(
+    request: &SigningRequest,
+) -> crate::signer_backend::provider_policy::BackendSignature {
     unavailable_router()
         .sign_with_secure_fallback(request)
         .expect("unavailable provider should allow operator fallback")
@@ -142,7 +147,8 @@ fn policy_blocked_router() -> SignerBackendRouter {
     )
 }
 
-fn expected_policy_blocked_error() -> Result<crate::signer_backend::provider_policy::BackendSignature, SignerBackendError> {
+fn expected_policy_blocked_error(
+) -> Result<crate::signer_backend::provider_policy::BackendSignature, SignerBackendError> {
     Err(SignerBackendError::ProviderHandshakeRejected {
         backend: "secure-aws-kms-emulator".to_owned(),
         failure_class: "policy-blocked".to_owned(),

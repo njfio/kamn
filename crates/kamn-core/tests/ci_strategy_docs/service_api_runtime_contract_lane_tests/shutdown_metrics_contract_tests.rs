@@ -19,7 +19,8 @@ fn doc_contains_runtime_service_api_graceful_shutdown_drain_contract_lane_ci_mod
 }
 
 #[test]
-fn doc_contains_runtime_service_api_shutdown_abrupt_close_regression_contract_lane_ci_mode_markers() {
+fn doc_contains_runtime_service_api_shutdown_abrupt_close_regression_contract_lane_ci_mode_markers()
+{
     assert_runtime_lane_contract_markers(
         "## Runtime Service API Shutdown Abrupt-Close Regression Contract Lane",
         &[

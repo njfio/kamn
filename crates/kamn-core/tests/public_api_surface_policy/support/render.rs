@@ -45,7 +45,10 @@ fn header_lines(
         format!("warn_total_delta_max={}", thresholds.warn_total_delta_max),
         format!("fail_total_delta_max={}", thresholds.fail_total_delta_max),
         format!("total_public_items={}", report.total_public_items),
-        format!("baseline_total_public_items={}", report.baseline_total_public_items),
+        format!(
+            "baseline_total_public_items={}",
+            report.baseline_total_public_items
+        ),
         format!("public_items_delta={}", report.public_items_delta),
         format!("module_count={}", report.modules.len()),
     ]
@@ -53,7 +56,10 @@ fn header_lines(
 
 fn append_module_lines(lines: &mut Vec<String>, modules: &[crate::support::models::ModuleSurface]) {
     for module in modules {
-        lines.push(format!("module_public_items.{}={}", module.module, module.public_items));
+        lines.push(format!(
+            "module_public_items.{}={}",
+            module.module, module.public_items
+        ));
         lines.push(format!(
             "module_public_items_baseline.{}={}",
             module.module, module.baseline_public_items

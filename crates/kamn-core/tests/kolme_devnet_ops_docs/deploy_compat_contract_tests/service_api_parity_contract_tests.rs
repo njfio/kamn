@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_deploy_contains_all};
+use super::super::docs_assert_support::assert_deploy_contains_all;
 
 const DEPLOY_COMPAT_CONTAINS_SERVICE_API_AXUM_PROTOCOL_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS: &[&str] = &[
     "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)",
@@ -94,5 +94,8 @@ const DEPLOY_COMPAT_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_MARKER
 
 #[test]
 fn deploy_compat_contains_fork_choice_finality_taxonomy_runbook_parity_markers() {
-    assert_deploy_contains_all(DEPLOY_COMPAT_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS, "deploy_compat_contains_fork_choice_finality_taxonomy_runbook_parity_markers");
+    assert_deploy_contains_all(
+        DEPLOY_COMPAT_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS,
+        "deploy_compat_contains_fork_choice_finality_taxonomy_runbook_parity_markers",
+    );
 }

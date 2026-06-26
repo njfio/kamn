@@ -5,8 +5,7 @@ use super::super::{
 use super::support::{
     accepted_task_snapshot, engine_with_submitted_task, remove_snapshot_artifacts,
     roundtrip_snapshot_store, submit_benchmark_tasks, temp_task_operation_snapshot_journal_path,
-    temp_task_operation_snapshot_path, write_corrupt_journal_tail,
-    write_stale_snapshot_payload,
+    temp_task_operation_snapshot_path, write_corrupt_journal_tail, write_stale_snapshot_payload,
 };
 use std::fs;
 

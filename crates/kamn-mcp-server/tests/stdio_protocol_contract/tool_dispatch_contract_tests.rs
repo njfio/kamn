@@ -33,11 +33,7 @@ fn spec_c08_mcp_tools_call_content_lifecycle_dispatch_contract() {
 }
 
 fn assert_query_task_dispatch() {
-    let body = dispatch_tool_call_body(
-        "req-7",
-        "query_task",
-        r#"{"task_id":"task-1"}"#,
-    );
+    let body = dispatch_tool_call_body("req-7", "query_task", r#"{"task_id":"task-1"}"#);
     assert!(body.contains(r#""jsonrpc":"2.0""#));
     assert!(body.contains(r#""tool":"query_task""#));
     assert!(body.contains(r#""state":"submitted""#));

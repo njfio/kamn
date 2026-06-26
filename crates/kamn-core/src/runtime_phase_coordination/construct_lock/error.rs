@@ -40,16 +40,25 @@ impl Display for ConstructLockError {
             Self::InvalidOwnerId => write!(f, "construct lock owner id cannot be empty"),
             Self::NoActiveLease => write!(f, "construct lock has no active lease"),
             Self::NoLeaseForExecution => {
-                write!(f, "daemon execution requires an active construct lock lease")
+                write!(
+                    f,
+                    "daemon execution requires an active construct lock lease"
+                )
             }
             Self::LeaseAlreadyHeld { owner } => {
                 write!(f, "construct lock lease already held by {owner}")
             }
             Self::LeaseOwnerMismatch { expected, found } => {
-                write!(f, "construct lock owner mismatch: expected {expected}, found {found}")
+                write!(
+                    f,
+                    "construct lock owner mismatch: expected {expected}, found {found}"
+                )
             }
             Self::StaleFencingToken { expected, found } => {
-                write!(f, "construct lock stale fencing token: expected {expected}, found {found}")
+                write!(
+                    f,
+                    "construct lock stale fencing token: expected {expected}, found {found}"
+                )
             }
         }
     }

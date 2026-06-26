@@ -16,6 +16,5 @@ pub(super) fn listener_input(
     sequence: u64,
     attestations: Vec<ListenerAttestation>,
 ) -> ListenerQuorumInput {
-    ListenerQuorumInput::new(event_id, sequence, attestations)
-        .expect("valid listener quorum input")
+    ListenerQuorumInput::new(event_id, sequence, attestations).expect("valid listener quorum input")
 }

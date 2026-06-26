@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const REGRESSION_REQUIRES_LOCAL_KOLME_API_PROBE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
     "local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).",
@@ -6,7 +6,10 @@ const REGRESSION_REQUIRES_LOCAL_KOLME_API_PROBE_GUARD_MARKER_PLAN_MARKERS: &[&st
 
 #[test]
 fn regression_requires_local_kolme_api_probe_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_KOLME_API_PROBE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_kolme_api_probe_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_KOLME_API_PROBE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_kolme_api_probe_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_KOLME_API_SMOKE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -15,7 +18,10 @@ const REGRESSION_REQUIRES_LOCAL_KOLME_API_SMOKE_GUARD_MARKER_PLAN_MARKERS: &[&st
 
 #[test]
 fn regression_requires_local_kolme_api_smoke_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_KOLME_API_SMOKE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_kolme_api_smoke_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_KOLME_API_SMOKE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_kolme_api_smoke_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_RUNTIME_COMMIT_LIVE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -25,7 +31,10 @@ const REGRESSION_REQUIRES_LOCAL_RUNTIME_COMMIT_LIVE_GUARD_MARKER_PLAN_MARKERS: &
 
 #[test]
 fn regression_requires_local_runtime_commit_live_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_RUNTIME_COMMIT_LIVE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_runtime_commit_live_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_RUNTIME_COMMIT_LIVE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_runtime_commit_live_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_RUNTIME_COMMIT_BLOCK_FALLBACK_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -34,7 +43,10 @@ const REGRESSION_REQUIRES_RUNTIME_COMMIT_BLOCK_FALLBACK_GUARD_MARKER_PLAN_MARKER
 
 #[test]
 fn regression_requires_runtime_commit_block_fallback_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_RUNTIME_COMMIT_BLOCK_FALLBACK_GUARD_MARKER_PLAN_MARKERS, "regression_requires_runtime_commit_block_fallback_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_RUNTIME_COMMIT_BLOCK_FALLBACK_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_runtime_commit_block_fallback_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -43,7 +55,10 @@ const REGRESSION_REQUIRES_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_GUARD_MARKER_PLAN_M
 
 #[test]
 fn regression_requires_local_native_api_parity_live_proof_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_native_api_parity_live_proof_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_native_api_parity_live_proof_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_NATIVE_PARITY_DOCS_MATRIX_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -52,7 +67,10 @@ const REGRESSION_REQUIRES_NATIVE_PARITY_DOCS_MATRIX_GUARD_MARKER_PLAN_MARKERS: &
 
 #[test]
 fn regression_requires_native_parity_docs_matrix_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_NATIVE_PARITY_DOCS_MATRIX_GUARD_MARKER_PLAN_MARKERS, "regression_requires_native_parity_docs_matrix_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_NATIVE_PARITY_DOCS_MATRIX_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_native_parity_docs_matrix_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LIVE_KOLME_METHOD_AND_QUERY_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -61,7 +79,10 @@ const REGRESSION_REQUIRES_LIVE_KOLME_METHOD_AND_QUERY_GUARD_MARKER_PLAN_MARKERS:
 
 #[test]
 fn regression_requires_live_kolme_method_and_query_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LIVE_KOLME_METHOD_AND_QUERY_GUARD_MARKER_PLAN_MARKERS, "regression_requires_live_kolme_method_and_query_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LIVE_KOLME_METHOD_AND_QUERY_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_live_kolme_method_and_query_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_LIVE_API_CONFORMANCE_HARNESS_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -70,7 +91,10 @@ const REGRESSION_REQUIRES_LOCAL_LIVE_API_CONFORMANCE_HARNESS_GUARD_MARKER_PLAN_M
 
 #[test]
 fn regression_requires_local_live_api_conformance_harness_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_LIVE_API_CONFORMANCE_HARNESS_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_live_api_conformance_harness_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_LIVE_API_CONFORMANCE_HARNESS_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_live_api_conformance_harness_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -79,7 +103,10 @@ const REGRESSION_REQUIRES_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_GUARD_MARKER_PLAN_
 
 #[test]
 fn regression_requires_local_kamn_live_runtime_integration_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_kamn_live_runtime_integration_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_kamn_live_runtime_integration_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCALHOST_SIGNED_RUNTIME_INTEGRATION_PREREQUISITE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -97,5 +124,8 @@ const REGRESSION_REQUIRES_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_GUARD_MARKER_PLAN_M
 
 #[test]
 fn regression_requires_unified_local_signed_to_kolme_demo_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_GUARD_MARKER_PLAN_MARKERS, "regression_requires_unified_local_signed_to_kolme_demo_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_unified_local_signed_to_kolme_demo_guard_marker",
+    );
 }

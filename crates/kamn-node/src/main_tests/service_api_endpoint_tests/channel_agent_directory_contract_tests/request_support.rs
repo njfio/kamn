@@ -13,7 +13,15 @@ pub(super) fn send_channel_message(
     payload: &str,
 ) -> ServiceApiMessageCreateBody {
     parse_created_message(&raw_signed_request(
-        snapshot, bind_addr, 1, "POST", "/v1/messages/send", sender_did, nonce, payload, &[],
+        snapshot,
+        bind_addr,
+        1,
+        "POST",
+        "/v1/messages/send",
+        sender_did,
+        nonce,
+        payload,
+        &[],
     ))
 }
 
@@ -45,7 +53,15 @@ pub(super) fn create_channel(
     payload: &str,
 ) -> ServiceApiChannelCreateBody {
     parse_created_channel(&raw_signed_request(
-        snapshot, bind_addr, 1, "POST", "/v1/channels/create", caller_did, nonce, payload, &[],
+        snapshot,
+        bind_addr,
+        1,
+        "POST",
+        "/v1/channels/create",
+        caller_did,
+        nonce,
+        payload,
+        &[],
     ))
 }
 
@@ -77,7 +93,15 @@ pub(super) fn register_agent(
     payload: &str,
 ) -> ServiceApiAgentGetBody {
     parse_registered_agent(&raw_signed_request(
-        snapshot, bind_addr, 1, "POST", "/v1/agents/register", caller_did, nonce, payload, &[],
+        snapshot,
+        bind_addr,
+        1,
+        "POST",
+        "/v1/agents/register",
+        caller_did,
+        nonce,
+        payload,
+        &[],
     ))
 }
 
@@ -114,8 +138,12 @@ pub(super) fn raw_signed_request(
 ) -> String {
     with_api_server(snapshot, bind_addr, max_requests, |addr| {
         let nonce_text = nonce.to_string();
-        let signature =
-            service_api_request_signature_for_fields(sender_did, nonce, state_hash(snapshot).as_str(), body);
+        let signature = service_api_request_signature_for_fields(
+            sender_did,
+            nonce,
+            state_hash(snapshot).as_str(),
+            body,
+        );
         let mut headers = vec![
             ("X-KAMN-Sender-DID", sender_did),
             ("X-KAMN-Request-Nonce", nonce_text.as_str()),
@@ -137,11 +165,15 @@ where
 {
     let endpoint_config = endpoint_config(bind_addr, max_requests);
     let server_snapshot = snapshot.clone();
-    let server = thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr);
     let response = request(bind_addr);
     let server_result = server.join().expect("endpoint thread should complete");
-    assert!(server_result.is_ok(), "service api endpoint should stop cleanly");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly"
+    );
     response
 }
 

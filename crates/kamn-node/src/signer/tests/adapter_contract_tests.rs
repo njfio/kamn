@@ -1,6 +1,4 @@
-use super::support::{
-    is_zeroized_hex_buffer, TEST_PRIVATE_KEY_ENV, TEST_PRIVATE_KEY_HEX,
-};
+use super::support::{is_zeroized_hex_buffer, TEST_PRIVATE_KEY_ENV, TEST_PRIVATE_KEY_HEX};
 use super::{ConfigError, Duration, Instant, KolmeForkSecp256k1SignerAdapter};
 
 #[test]

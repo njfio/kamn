@@ -44,7 +44,9 @@ impl TaskOperationEngine {
     }
 }
 
-fn restore_snapshot_maps(tasks: Vec<TaskOperationRecordSnapshot>) -> Result<RestoredMaps, TaskOperationError> {
+fn restore_snapshot_maps(
+    tasks: Vec<TaskOperationRecordSnapshot>,
+) -> Result<RestoredMaps, TaskOperationError> {
     let mut restored_tasks = BTreeMap::new();
     let mut restored_notices = BTreeMap::new();
     let mut restored_dependencies = BTreeMap::new();
@@ -64,7 +66,14 @@ fn restore_snapshot_maps(tasks: Vec<TaskOperationRecordSnapshot>) -> Result<Rest
 
 fn restore_snapshot_record(
     task: TaskOperationRecordSnapshot,
-) -> Result<(TaskOperationRecord, BTreeSet<String>, Vec<TaskOperationNoticeKind>), TaskOperationError> {
+) -> Result<
+    (
+        TaskOperationRecord,
+        BTreeSet<String>,
+        Vec<TaskOperationNoticeKind>,
+    ),
+    TaskOperationError,
+> {
     validate_record_metadata(&task)?;
     let lifecycle = restore_record_lifecycle(&task)?;
     let dependency_set = restore_dependency_set(&task)?;
@@ -95,7 +104,9 @@ fn validate_record_metadata(task: &TaskOperationRecordSnapshot) -> Result<(), Ta
     Ok(())
 }
 
-fn restore_record_lifecycle(task: &TaskOperationRecordSnapshot) -> Result<TaskLifecycle, TaskOperationError> {
+fn restore_record_lifecycle(
+    task: &TaskOperationRecordSnapshot,
+) -> Result<TaskLifecycle, TaskOperationError> {
     TaskLifecycle::restore(&task.task_id, task.lifecycle_history.clone()).map_err(|error| {
         TaskOperationError::InvalidSnapshot(format!(
             "task {} has invalid lifecycle history: {error}",
@@ -185,8 +196,10 @@ fn restored_dependency_state(
     task_id: &str,
     dependency_id: &str,
 ) -> Result<TaskState, TaskOperationError> {
-    restored_task_state(restored_tasks, dependency_id).map_err(|_| TaskOperationError::UnknownDependency {
-        task_id: task_id.to_owned(),
-        dependency_id: dependency_id.to_owned(),
+    restored_task_state(restored_tasks, dependency_id).map_err(|_| {
+        TaskOperationError::UnknownDependency {
+            task_id: task_id.to_owned(),
+            dependency_id: dependency_id.to_owned(),
+        }
     })
 }

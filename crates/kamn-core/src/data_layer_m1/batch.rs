@@ -27,7 +27,10 @@ impl DataLayerM1MerkleBatch {
         &self.leaves
     }
 
-    pub fn inclusion_proof(&self, message_id: &str) -> Result<DataLayerM1MerkleInclusionProof, DataLayerM1Error> {
+    pub fn inclusion_proof(
+        &self,
+        message_id: &str,
+    ) -> Result<DataLayerM1MerkleInclusionProof, DataLayerM1Error> {
         let position = find_leaf_position(&self.leaves, message_id)?;
         Ok(build_inclusion_proof(self, position))
     }
@@ -72,7 +75,12 @@ fn build_batch(
     let first_message_id = leaves[0].message_id.clone();
     let last_message_id = leaves[leaves.len() - 1].message_id.clone();
     let merkle_root = resolve_merkle_root(&levels)?;
-    let batch_id = batch_digest(&merkle_root, leaves.len(), &first_message_id, &last_message_id);
+    let batch_id = batch_digest(
+        &merkle_root,
+        leaves.len(),
+        &first_message_id,
+        &last_message_id,
+    );
     Ok(DataLayerM1MerkleBatch {
         batch_id,
         merkle_root,
@@ -93,14 +101,20 @@ fn resolve_merkle_root(levels: &[Vec<String>]) -> Result<String, DataLayerM1Erro
         .ok_or(DataLayerM1Error::EmptyBatch)
 }
 
-fn find_leaf_position(leaves: &[DataLayerM1MerkleLeaf], message_id: &str) -> Result<usize, DataLayerM1Error> {
+fn find_leaf_position(
+    leaves: &[DataLayerM1MerkleLeaf],
+    message_id: &str,
+) -> Result<usize, DataLayerM1Error> {
     leaves
         .iter()
         .position(|leaf| leaf.message_id == message_id)
         .ok_or_else(|| DataLayerM1Error::UnknownMessageId(message_id.to_owned()))
 }
 
-fn build_inclusion_proof(batch: &DataLayerM1MerkleBatch, position: usize) -> DataLayerM1MerkleInclusionProof {
+fn build_inclusion_proof(
+    batch: &DataLayerM1MerkleBatch,
+    position: usize,
+) -> DataLayerM1MerkleInclusionProof {
     let leaf = &batch.leaves[position];
     DataLayerM1MerkleInclusionProof {
         batch_id: batch.batch_id.clone(),
@@ -113,7 +127,10 @@ fn build_inclusion_proof(batch: &DataLayerM1MerkleBatch, position: usize) -> Dat
     }
 }
 
-fn build_proof_steps(levels: &[Vec<String>], start_index: usize) -> Vec<DataLayerM1MerkleProofStep> {
+fn build_proof_steps(
+    levels: &[Vec<String>],
+    start_index: usize,
+) -> Vec<DataLayerM1MerkleProofStep> {
     let mut steps = Vec::new();
     let mut node_index = start_index;
     for level in &levels[..levels.len() - 1] {
@@ -129,7 +146,11 @@ fn build_proof_steps(levels: &[Vec<String>], start_index: usize) -> Vec<DataLaye
 
 fn sibling_step(level: &[String], node_index: usize) -> (usize, DataLayerM1ProofSiblingSide) {
     if node_index % 2 == 0 {
-        let right = if node_index + 1 < level.len() { node_index + 1 } else { node_index };
+        let right = if node_index + 1 < level.len() {
+            node_index + 1
+        } else {
+            node_index
+        };
         (right, DataLayerM1ProofSiblingSide::Right)
     } else {
         (node_index - 1, DataLayerM1ProofSiblingSide::Left)

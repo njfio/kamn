@@ -36,8 +36,10 @@ pub(crate) fn decode_hex_bytes(value: &str) -> Result<Vec<u8>, ServiceAuthSignat
     }
     let mut decoded = Vec::with_capacity(trimmed.len() / 2);
     for pair in trimmed.as_bytes().chunks_exact(2) {
-        let high = decode_hex_nibble(pair[0]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
-        let low = decode_hex_nibble(pair[1]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
+        let high =
+            decode_hex_nibble(pair[0]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
+        let low =
+            decode_hex_nibble(pair[1]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
         decoded.push((high << 4) | low);
     }
     Ok(decoded)
@@ -57,7 +59,12 @@ pub(crate) fn wipe_bytes(bytes: &mut [u8]) {
     bytes.zeroize();
 }
 
-fn canonical_service_auth_message(sender: &str, nonce: u64, state_hash: &str, payload: &str) -> String {
+fn canonical_service_auth_message(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
     format!(
         "sender_len={}\nsender={sender}\nnonce={nonce}\nstate_hash_len={}\nstate_hash={state_hash}\npayload_len={}\npayload={payload}",
         sender.len(),
@@ -81,10 +88,17 @@ pub fn service_auth_signing_payload_for_fields(
     if state_hash.trim().is_empty() {
         return Err(ServiceAuthSignatureError::EmptyField("state_hash"));
     }
-    Ok(canonical_service_auth_message(sender, nonce, state_hash, payload))
+    Ok(canonical_service_auth_message(
+        sender, nonce, state_hash, payload,
+    ))
 }
 
-pub(crate) fn baseline_signature_for_fields(sender: &str, nonce: u64, state_hash: &str, payload: &str) -> String {
+pub(crate) fn baseline_signature_for_fields(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
     format!(
         "sig:{}:{}:{}:{}:{}:{}",
         BASELINE_SIGNATURE_ALGORITHM,

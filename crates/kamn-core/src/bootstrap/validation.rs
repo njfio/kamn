@@ -4,8 +4,12 @@ use super::error_mapping::{
     map_message_lifecycle_store_validation_error, map_runtime_snapshot_store_error,
     map_task_operation_store_validation_error,
 };
-use super::models::{RuntimePersistenceLayout, RuntimeStoreAdapter, DID_REGISTRY_BOOTSTRAP_PROVIDER};
-use crate::channel_models::{ChannelSnapshotStore, FileChannelSnapshotStore, SqliteChannelSnapshotStore};
+use super::models::{
+    RuntimePersistenceLayout, RuntimeStoreAdapter, DID_REGISTRY_BOOTSTRAP_PROVIDER,
+};
+use crate::channel_models::{
+    ChannelSnapshotStore, FileChannelSnapshotStore, SqliteChannelSnapshotStore,
+};
 use crate::config::ConfigError;
 use crate::content_storage::FileContentAdapter;
 use crate::did_registry::FileDidRegistrationChainAdapter;
@@ -13,7 +17,8 @@ use crate::durable_guard_store::{
     DurableGuardBundleSnapshotStore, FileDurableGuardSnapshotStore, SqliteDurableGuardSnapshotStore,
 };
 use crate::message_lifecycle::{
-    FileMessageLifecycleSnapshotStore, MessageLifecycleSnapshotStore, SqliteMessageLifecycleSnapshotStore,
+    FileMessageLifecycleSnapshotStore, MessageLifecycleSnapshotStore,
+    SqliteMessageLifecycleSnapshotStore,
 };
 use crate::runtime::{FileRuntimeSnapshotStore, RuntimeSnapshotStore, SqliteRuntimeSnapshotStore};
 use crate::task_operations::{
@@ -22,11 +27,15 @@ use crate::task_operations::{
 use std::fs;
 use std::path::Path;
 
-pub fn validate_runtime_persistence_layout(layout: &RuntimePersistenceLayout) -> Result<(), ConfigError> {
-    fs::create_dir_all(&layout.storage_root).map_err(|error| ConfigError::RuntimeStoreCompatibility {
-        store: "runtime-storage-root",
-        reason_code: "runtime_storage_root_unavailable",
-        detail: error.to_string(),
+pub fn validate_runtime_persistence_layout(
+    layout: &RuntimePersistenceLayout,
+) -> Result<(), ConfigError> {
+    fs::create_dir_all(&layout.storage_root).map_err(|error| {
+        ConfigError::RuntimeStoreCompatibility {
+            store: "runtime-storage-root",
+            reason_code: "runtime_storage_root_unavailable",
+            detail: error.to_string(),
+        }
     })?;
     validate_content_store_path(&layout.content_store_path)?;
     validate_did_registry_store_path(&layout.did_registry_store_path)?;
@@ -53,7 +62,9 @@ fn validate_sqlite_store_paths(path: &Path) -> Result<(), ConfigError> {
 }
 
 fn validate_content_store_path(path: &Path) -> Result<(), ConfigError> {
-    FileContentAdapter::new(path.to_path_buf()).map(|_| ()).map_err(map_content_store_validation_error)
+    FileContentAdapter::new(path.to_path_buf())
+        .map(|_| ())
+        .map_err(map_content_store_validation_error)
 }
 
 fn validate_did_registry_store_path(path: &Path) -> Result<(), ConfigError> {

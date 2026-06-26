@@ -34,12 +34,13 @@ const SERVICE_API_DATA_LAYER_RUNTIME_EVIDENCE_SCHEMA_VERSION: &str =
 const INITIAL_SERVICE_API_AGENT_REPUTATION_SCORE: u64 = 500;
 const INITIAL_SERVICE_API_AGENT_BALANCE: u64 = 100;
 
+mod audit_export;
 mod models;
 mod persistence;
 mod runtime_evidence;
 mod store;
-mod audit_export;
-#[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 
 use audit_export::{
     persist_service_api_audit_export_event, resolve_service_api_audit_export_file,

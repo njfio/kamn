@@ -42,23 +42,27 @@ fn spec_c70_integration_config_flags_map_for_sdk_direct_external_enabled() {
 
 #[test]
 fn spec_c71_integration_config_flags_map_for_mcp_tau_external_enabled() {
-    with_two_executable_binaries("kolme-node-mcp-map", "agent-node-mcp-map", |kolme, agent| {
-        let config = RunCommandConfig {
-            mode: "mcp-tau".to_owned(),
-            kolme_binary: kolme.display().to_string(),
-            agent_binary: Some(agent.display().to_string()),
-            external_execution: true,
-            evidence_dir: "/tmp/evidence".to_owned(),
-            scenario_ids: vec!["S-01".to_owned()],
-        };
-        let output = with_external_component_binaries(|| render_run(&config));
-        assert_contains_all(
-            &output,
-            &[
-                "\"integration_config\":",
-                "\"agent_binary_required\":true",
-                "\"external_execution_enabled\":true",
-            ],
-        );
-    });
+    with_two_executable_binaries(
+        "kolme-node-mcp-map",
+        "agent-node-mcp-map",
+        |kolme, agent| {
+            let config = RunCommandConfig {
+                mode: "mcp-tau".to_owned(),
+                kolme_binary: kolme.display().to_string(),
+                agent_binary: Some(agent.display().to_string()),
+                external_execution: true,
+                evidence_dir: "/tmp/evidence".to_owned(),
+                scenario_ids: vec!["S-01".to_owned()],
+            };
+            let output = with_external_component_binaries(|| render_run(&config));
+            assert_contains_all(
+                &output,
+                &[
+                    "\"integration_config\":",
+                    "\"agent_binary_required\":true",
+                    "\"external_execution_enabled\":true",
+                ],
+            );
+        },
+    );
 }

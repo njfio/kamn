@@ -1,9 +1,9 @@
 use crate::{GovernanceProposalStatus, GovernanceVoteChoice};
 
 use crate::agent_upgrade_workflow::{
+    support::{validate_did, AGENT_UPGRADE_WORKFLOW_INVALID_VALIDATOR_DID_REASON_CODE},
     AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind,
     AgentUpgradeProposalRecord, AgentUpgradeProposalState, AgentUpgradeWorkflowError,
-    support::{AGENT_UPGRADE_WORKFLOW_INVALID_VALIDATOR_DID_REASON_CODE, validate_did},
 };
 
 impl AgentDrivenUpgradeWorkflow {

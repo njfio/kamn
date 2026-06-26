@@ -22,10 +22,8 @@ pub(crate) fn map_phase6_runtime_evidence_input_to_policy(
 ) -> Result<DataLayerM10Phase6PolicyRuntimeEvidenceInput, DataLayerM10PartitionLifecycleError> {
     validate_non_empty(input.owner_did.as_str(), "owner_did")?;
     let owner_did = parse_kamn_did(input.owner_did.as_str())?;
-    let cycle_report = map_phase6_runtime_evidence_cycle_report_to_policy(
-        input.cycle_report,
-        owner_did.as_str(),
-    )?;
+    let cycle_report =
+        map_phase6_runtime_evidence_cycle_report_to_policy(input.cycle_report, owner_did.as_str())?;
     Ok(DataLayerM10Phase6PolicyRuntimeEvidenceInput {
         owner_did: owner_did.as_str().to_owned(),
         cycle_report,

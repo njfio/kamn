@@ -1,4 +1,6 @@
-use super::decisions::{agent_decision, auditor_decision, deny_decision, owner_decision, validate_escrow_id};
+use super::decisions::{
+    agent_decision, auditor_decision, deny_decision, owner_decision, validate_escrow_id,
+};
 use super::matrix::{build_fixture, matrix_decision, validate_case, validate_cases};
 use super::models::{
     DataLayerM2ActorRole, DataLayerM2AuthorizationDecision, DataLayerM2MessageScope,
@@ -61,7 +63,9 @@ impl DataLayerM2AbacEngine {
         Ok(match requester_role {
             DataLayerM2ActorRole::Agent => agent_decision(requester.as_str(), &scope),
             DataLayerM2ActorRole::Owner => owner_decision(requester.as_str(), &scope),
-            DataLayerM2ActorRole::EscrowAuditor => auditor_decision(self, requester.as_str(), &scope),
+            DataLayerM2ActorRole::EscrowAuditor => {
+                auditor_decision(self, requester.as_str(), &scope)
+            }
             DataLayerM2ActorRole::PlatformOperator => deny_decision(),
         })
     }

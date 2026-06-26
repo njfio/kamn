@@ -65,22 +65,34 @@ impl AuthenticatedPeerFrame {
     }
 
     /// Handles frame id.
-    pub fn frame_id(&self) -> &str { &self.frame_id }
+    pub fn frame_id(&self) -> &str {
+        &self.frame_id
+    }
 
     /// Handles sender peer did.
-    pub fn sender_peer_did(&self) -> &str { &self.sender_peer_did }
+    pub fn sender_peer_did(&self) -> &str {
+        &self.sender_peer_did
+    }
 
     /// Handles recipient peer did.
-    pub fn recipient_peer_did(&self) -> &str { &self.recipient_peer_did }
+    pub fn recipient_peer_did(&self) -> &str {
+        &self.recipient_peer_did
+    }
 
     /// Handles nonce.
-    pub fn nonce(&self) -> u64 { self.nonce }
+    pub fn nonce(&self) -> u64 {
+        self.nonce
+    }
 
     /// Handles payload.
-    pub fn payload(&self) -> &str { &self.payload }
+    pub fn payload(&self) -> &str {
+        &self.payload
+    }
 
     /// Handles signature.
-    pub fn signature(&self) -> &str { &self.signature }
+    pub fn signature(&self) -> &str {
+        &self.signature
+    }
 
     /// Handles verify signature.
     pub fn verify_signature(&self) -> Result<(), AuthenticatedPeerFrameError> {
@@ -120,7 +132,13 @@ fn validate_new_frame_inputs(
     }
     validate_peer_frame_dids(sender_peer_did, recipient_peer_did)?;
     validate_peer_frame_payload(nonce, payload, signature)?;
-    validate_peer_frame_wire_fields(frame_id, sender_peer_did, recipient_peer_did, payload, signature)
+    validate_peer_frame_wire_fields(
+        frame_id,
+        sender_peer_did,
+        recipient_peer_did,
+        payload,
+        signature,
+    )
 }
 
 fn validate_peer_frame_dids(

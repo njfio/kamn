@@ -56,7 +56,8 @@ fn decode_journal_line(
     let payload_hex = parse_task_operation_snapshot_journal_record(line, index)?;
     let payload_bytes = decode_snapshot_journal_hex(&payload_hex)
         .ok_or_else(|| task_operation_snapshot_journal_corrupt_tail(index))?;
-    String::from_utf8(payload_bytes).map_err(|_| task_operation_snapshot_journal_corrupt_tail(index))
+    String::from_utf8(payload_bytes)
+        .map_err(|_| task_operation_snapshot_journal_corrupt_tail(index))
 }
 
 fn verify_replayed_snapshot(

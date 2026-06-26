@@ -33,7 +33,6 @@ pub(crate) fn resolve_live_postgres_gate_decision() -> (&'static str, Option<Str
     }
 }
 
-
 pub(crate) fn parse_live_postgres_distributed_host_pair(raw: &str) -> Option<(String, String)> {
     let hosts = raw
         .split(',')

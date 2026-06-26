@@ -23,7 +23,11 @@ where
 }
 
 pub(crate) fn state_hash(snapshot: &ServiceApiSnapshot) -> String {
-    format!("service-api:{}:{}", snapshot.chain_id.as_str(), snapshot.chain_version.as_str())
+    format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    )
 }
 
 fn assert_status(response: &str, expected: &str) {

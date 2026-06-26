@@ -1,10 +1,11 @@
 use crate::data_layer_m9_realtime_delivery::{
-    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceRecord,
-    DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
-    DATA_LAYER_M9_INVALID_AGENT_DID_REASON_CODE,
+    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceRecord, DataLayerM9RealtimeDeliveryError,
+    DataLayerM9RealtimeDeliveryRegistry, DATA_LAYER_M9_INVALID_AGENT_DID_REASON_CODE,
 };
 
-use crate::data_layer_m9_realtime_delivery::validation::{authorize_owner_scope, parse_agent_did, validate_non_empty};
+use crate::data_layer_m9_realtime_delivery::validation::{
+    authorize_owner_scope, parse_agent_did, validate_non_empty,
+};
 
 impl DataLayerM9RealtimeDeliveryRegistry {
     /// Registers or refreshes active presence for one agent.
@@ -24,7 +25,10 @@ impl DataLayerM9RealtimeDeliveryRegistry {
 fn validate_presence_request(
     request: &DataLayerM9PresenceConnectRequest,
 ) -> Result<crate::AgentDid, DataLayerM9RealtimeDeliveryError> {
-    authorize_owner_scope(request.requester_owner_did.as_str(), request.owner_did.as_str())?;
+    authorize_owner_scope(
+        request.requester_owner_did.as_str(),
+        request.owner_did.as_str(),
+    )?;
     let parsed_agent_did = parse_agent_did(
         request.agent_did.as_str(),
         "agent_did",
@@ -50,8 +54,13 @@ fn normalize_capabilities(
 ) -> Result<Vec<String>, DataLayerM9RealtimeDeliveryError> {
     capabilities_active.sort();
     capabilities_active.dedup();
-    if capabilities_active.iter().any(|value| value.trim().is_empty()) {
-        return Err(DataLayerM9RealtimeDeliveryError::EmptyField("capabilities_active"));
+    if capabilities_active
+        .iter()
+        .any(|value| value.trim().is_empty())
+    {
+        return Err(DataLayerM9RealtimeDeliveryError::EmptyField(
+            "capabilities_active",
+        ));
     }
     Ok(capabilities_active)
 }

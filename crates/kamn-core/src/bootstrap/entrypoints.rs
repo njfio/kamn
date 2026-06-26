@@ -3,7 +3,9 @@ use super::models::{maybe_profile, BootstrapPlan};
 use super::validation::validate_runtime_persistence_layout;
 use crate::config::{ConfigError, NodeConfig};
 use crate::migrations::MigrationRegistry;
-use crate::runtime::{build_runtime_wiring, build_runtime_wiring_with_transport_profile, RuntimeTransportProfile};
+use crate::runtime::{
+    build_runtime_wiring, build_runtime_wiring_with_transport_profile, RuntimeTransportProfile,
+};
 use crate::state::{AppStateSchema, StateVersion, APP_STATE_VERSION};
 use crate::token::default_token_config;
 
@@ -17,7 +19,11 @@ pub fn bootstrap_with_transport_profile(
     config: NodeConfig,
     transport_profile: RuntimeTransportProfile,
 ) -> Result<BootstrapPlan, ConfigError> {
-    bootstrap_from_state_version_with_transport_profile(config, APP_STATE_VERSION, Some(transport_profile))
+    bootstrap_from_state_version_with_transport_profile(
+        config,
+        APP_STATE_VERSION,
+        Some(transport_profile),
+    )
 }
 
 /// Builds a bootstrap plan from an explicit persisted state version.
@@ -84,7 +90,8 @@ fn append_runtime_store_components(
     wiring: &mut crate::runtime::RuntimeWiring,
     persistence_layout: &super::models::RuntimePersistenceLayout,
 ) {
-    for component in prioritized_runtime_store_components(&persistence_layout.runtime_store_adapter) {
+    for component in prioritized_runtime_store_components(&persistence_layout.runtime_store_adapter)
+    {
         if !wiring.common_components.contains(&component) {
             wiring.common_components.push(component);
         }

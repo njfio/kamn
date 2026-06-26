@@ -1,9 +1,9 @@
 pub(crate) use kamn_core::{
     build_p2p_swarm_deterministic_config, resolve_libp2p_live_runtime_backend,
     Libp2pLivePeerLifecycleTransport, Libp2pLiveRuntimeBackend, NodeConfig, NodeRole,
-    P2pSwarmHarnessMode, P2pSwarmDeterministicConfig, P2pTransportError,
-    PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleState, PeerLifecycleTransport,
-    PeerLifecycleTransportCoordinator, RuntimeTransportProfile, SyncMode,
+    P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, P2pTransportError, PeerDiscoveryRecord,
+    PeerGossipFrame, PeerLifecycleState, PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
+    RuntimeTransportProfile, SyncMode,
 };
 pub(crate) use std::sync::atomic::{AtomicU16, Ordering};
 pub(crate) use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};

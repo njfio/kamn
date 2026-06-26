@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_MILESTONE_UPGRADE_LINEAGE_POLICY_MARKERS_PLAN_MARKERS: &[&str] = &[
     "## Milestone Review Aggregate Evidence Bundle (Issue #3247)",
@@ -15,10 +15,14 @@ const PLAN_CONTAINS_MILESTONE_UPGRADE_LINEAGE_POLICY_MARKERS_PLAN_MARKERS: &[&st
 
 #[test]
 fn plan_contains_milestone_upgrade_lineage_policy_markers() {
-    assert_plan_contains_all(PLAN_CONTAINS_MILESTONE_UPGRADE_LINEAGE_POLICY_MARKERS_PLAN_MARKERS, "plan_contains_milestone_upgrade_lineage_policy_markers");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_MILESTONE_UPGRADE_LINEAGE_POLICY_MARKERS_PLAN_MARKERS,
+        "plan_contains_milestone_upgrade_lineage_policy_markers",
+    );
 }
 
-const PLAN_CONTAINS_RELEASE_PROMOTION_EVIDENCE_CONVERGENCE_INTEGRITY_MARKERS_PLAN_MARKERS: &[&str] = &[
+const PLAN_CONTAINS_RELEASE_PROMOTION_EVIDENCE_CONVERGENCE_INTEGRITY_MARKERS_PLAN_MARKERS:
+    &[&str] = &[
     "Convergence integrity markers:",
     "`required_artifact_ids` must include `local_full_runtime_convergence`.",
     "release_manifest_missing_required_artifact:local_full_runtime_convergence",
@@ -28,7 +32,10 @@ const PLAN_CONTAINS_RELEASE_PROMOTION_EVIDENCE_CONVERGENCE_INTEGRITY_MARKERS_PLA
 
 #[test]
 fn plan_contains_release_promotion_evidence_convergence_integrity_markers() {
-    assert_plan_contains_all(PLAN_CONTAINS_RELEASE_PROMOTION_EVIDENCE_CONVERGENCE_INTEGRITY_MARKERS_PLAN_MARKERS, "plan_contains_release_promotion_evidence_convergence_integrity_markers");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_RELEASE_PROMOTION_EVIDENCE_CONVERGENCE_INTEGRITY_MARKERS_PLAN_MARKERS,
+        "plan_contains_release_promotion_evidence_convergence_integrity_markers",
+    );
 }
 
 const PLAN_CONTAINS_R27_21_UPGRADE_COMPATIBILITY_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_MARKERS: &[&str] = &[
@@ -44,7 +51,10 @@ const PLAN_CONTAINS_R27_21_UPGRADE_COMPATIBILITY_CI_SMOKE_GOVERNANCE_CLOSURE_MAR
 
 #[test]
 fn plan_contains_r27_21_upgrade_compatibility_ci_smoke_governance_closure_markers() {
-    assert_plan_contains_all(PLAN_CONTAINS_R27_21_UPGRADE_COMPATIBILITY_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_MARKERS, "plan_contains_r27_21_upgrade_compatibility_ci_smoke_governance_closure_markers");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_R27_21_UPGRADE_COMPATIBILITY_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_MARKERS,
+        "plan_contains_r27_21_upgrade_compatibility_ci_smoke_governance_closure_markers",
+    );
 }
 
 const PLAN_CONTAINS_R27_22_FULL_STACK_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_MARKERS: &[&str] = &[
@@ -60,5 +70,8 @@ const PLAN_CONTAINS_R27_22_FULL_STACK_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_M
 
 #[test]
 fn plan_contains_r27_22_full_stack_ci_smoke_governance_closure_markers() {
-    assert_plan_contains_all(PLAN_CONTAINS_R27_22_FULL_STACK_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_MARKERS, "plan_contains_r27_22_full_stack_ci_smoke_governance_closure_markers");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_R27_22_FULL_STACK_CI_SMOKE_GOVERNANCE_CLOSURE_MARKERS_PLAN_MARKERS,
+        "plan_contains_r27_22_full_stack_ci_smoke_governance_closure_markers",
+    );
 }

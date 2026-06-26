@@ -1,17 +1,17 @@
 #[path = "support/constants.rs"]
 pub(crate) mod constants;
-#[path = "support/models.rs"]
-pub(crate) mod models;
-#[path = "support/paths.rs"]
-pub(crate) mod paths;
-#[path = "support/fixtures.rs"]
-pub(crate) mod fixtures;
-#[path = "support/loading.rs"]
-pub(crate) mod loading;
 #[path = "support/current_surface.rs"]
 pub(crate) mod current_surface;
 #[path = "support/evaluation.rs"]
 pub(crate) mod evaluation;
+#[path = "support/fixtures.rs"]
+pub(crate) mod fixtures;
+#[path = "support/loading.rs"]
+pub(crate) mod loading;
+#[path = "support/models.rs"]
+pub(crate) mod models;
+#[path = "support/paths.rs"]
+pub(crate) mod paths;
 #[path = "support/report.rs"]
 pub(crate) mod report;
 

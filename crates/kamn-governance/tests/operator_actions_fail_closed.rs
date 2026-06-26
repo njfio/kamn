@@ -1,6 +1,7 @@
 use kamn_governance::{
-    OperatorActionOutcome, OperatorActionServiceError, OperatorBindingAction, OperatorBindingEngine,
-    OperatorBindingError, OperatorBindingProof, PermissionedOperatorActionService,
+    OperatorActionOutcome, OperatorActionServiceError, OperatorBindingAction,
+    OperatorBindingEngine, OperatorBindingError, OperatorBindingProof,
+    PermissionedOperatorActionService,
 };
 
 const AGENT_DID: &str = "kamn:did:agent:ops-3";
@@ -15,7 +16,9 @@ fn proof_for(operator_did: &str) -> OperatorBindingProof {
     }
 }
 
-fn service_with_permissions(permissions: &[OperatorBindingAction]) -> PermissionedOperatorActionService {
+fn service_with_permissions(
+    permissions: &[OperatorBindingAction],
+) -> PermissionedOperatorActionService {
     let mut bindings = OperatorBindingEngine::new();
     bindings
         .register_binding(
@@ -28,10 +31,7 @@ fn service_with_permissions(permissions: &[OperatorBindingAction]) -> Permission
     PermissionedOperatorActionService::new(bindings)
 }
 
-fn assert_single_denied_audit_entry(
-    service: &PermissionedOperatorActionService,
-    target: &str,
-) {
+fn assert_single_denied_audit_entry(service: &PermissionedOperatorActionService, target: &str) {
     let audit_log = service.audit_log();
     assert_eq!(audit_log.len(), 1);
     assert_eq!(audit_log[0].target, target);

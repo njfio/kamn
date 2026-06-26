@@ -10,7 +10,11 @@ pub(crate) fn parse_key_value_fixture(raw: &str, reason_code: &str) -> BTreeMap<
     map
 }
 
-pub(crate) fn required_value<'a>(map: &'a BTreeMap<String, String>, key: &str, reason_code: &str) -> &'a str {
+pub(crate) fn required_value<'a>(
+    map: &'a BTreeMap<String, String>,
+    key: &str,
+    reason_code: &str,
+) -> &'a str {
     map.get(key)
         .map(String::as_str)
         .unwrap_or_else(|| fail(reason_code, &format!("missing required key {}", key)))
@@ -19,13 +23,23 @@ pub(crate) fn required_value<'a>(map: &'a BTreeMap<String, String>, key: &str, r
 pub(crate) fn required_i64(map: &BTreeMap<String, String>, key: &str, reason_code: &str) -> i64 {
     required_value(map, key, reason_code)
         .parse::<i64>()
-        .unwrap_or_else(|error| fail(reason_code, &format!("key {} must parse as integer: {}", key, error)))
+        .unwrap_or_else(|error| {
+            fail(
+                reason_code,
+                &format!("key {} must parse as integer: {}", key, error),
+            )
+        })
 }
 
 pub(crate) fn required_f64(map: &BTreeMap<String, String>, key: &str, reason_code: &str) -> f64 {
     required_value(map, key, reason_code)
         .parse::<f64>()
-        .unwrap_or_else(|error| fail(reason_code, &format!("key {} must parse as float: {}", key, error)))
+        .unwrap_or_else(|error| {
+            fail(
+                reason_code,
+                &format!("key {} must parse as float: {}", key, error),
+            )
+        })
 }
 
 pub(crate) fn optional_i64_with_default(
@@ -37,7 +51,10 @@ pub(crate) fn optional_i64_with_default(
     map.get(key)
         .map(|value| {
             value.parse::<i64>().unwrap_or_else(|error| {
-                fail(reason_code, &format!("key {} must parse as integer: {}", key, error))
+                fail(
+                    reason_code,
+                    &format!("key {} must parse as integer: {}", key, error),
+                )
             })
         })
         .unwrap_or(default)
@@ -69,7 +86,10 @@ fn insert_fixture_entry(
         return;
     }
     let (key, value) = trimmed.split_once('=').unwrap_or_else(|| {
-        fail(reason_code, &format!("line {} missing key=value form", index + 1))
+        fail(
+            reason_code,
+            &format!("line {} missing key=value form", index + 1),
+        )
     });
     let key = key.trim();
     if key.is_empty() {

@@ -11,10 +11,9 @@ pub(crate) fn validate_non_empty(
     Ok(())
 }
 
-pub(crate) fn parse_kamn_did(
-    value: &str,
-) -> Result<KamnDid, DataLayerM5VectorIntegrationError> {
-    KamnDid::parse(value).map_err(|_| DataLayerM5VectorIntegrationError::InvalidDid(value.to_owned()))
+pub(crate) fn parse_kamn_did(value: &str) -> Result<KamnDid, DataLayerM5VectorIntegrationError> {
+    KamnDid::parse(value)
+        .map_err(|_| DataLayerM5VectorIntegrationError::InvalidDid(value.to_owned()))
 }
 
 pub(crate) fn validate_agent_did(
@@ -38,7 +37,9 @@ pub(crate) fn validate_vector(
         return Err(DataLayerM5VectorIntegrationError::EmptyField(field_name));
     }
     if vector.iter().any(|value| !value.is_finite()) {
-        return Err(DataLayerM5VectorIntegrationError::InvalidVectorValue(field_name));
+        return Err(DataLayerM5VectorIntegrationError::InvalidVectorValue(
+            field_name,
+        ));
     }
     Ok(vector)
 }
@@ -58,14 +59,14 @@ pub(crate) fn resolve_lookback_window(
 ) -> Result<usize, DataLayerM5VectorIntegrationError> {
     let resolved = lookback_window.unwrap_or(500);
     if resolved == 0 {
-        return Err(DataLayerM5VectorIntegrationError::InvalidLookbackWindow(resolved));
+        return Err(DataLayerM5VectorIntegrationError::InvalidLookbackWindow(
+            resolved,
+        ));
     }
     Ok(resolved)
 }
 
-pub(crate) fn owner_vector_dimensions(
-    records: &[DataLayerM5EmbeddingRecord],
-) -> Option<usize> {
+pub(crate) fn owner_vector_dimensions(records: &[DataLayerM5EmbeddingRecord]) -> Option<usize> {
     records
         .iter()
         .find_map(|record| record.vector_plaintext.as_ref().map(Vec::len))

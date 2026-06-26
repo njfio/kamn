@@ -17,9 +17,9 @@ use crate::bridge_adapter::engine::replay::{
 };
 use crate::bridge_adapter::support::parse_agent_did;
 use crate::bridge_adapter::support::{
-    BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE, DEFAULT_MAX_INBOUND_AGE_SECS,
     validate_inbound_envelope, validate_normalized_inbound, validate_outbound_request,
-    validate_timestamp,
+    validate_timestamp, BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE,
+    DEFAULT_MAX_INBOUND_AGE_SECS,
 };
 
 /// Bridge orchestration engine that enforces policy, freshness, and replay guards.

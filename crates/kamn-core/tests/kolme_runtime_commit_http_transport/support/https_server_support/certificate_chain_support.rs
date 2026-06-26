@@ -1,12 +1,21 @@
 use super::*;
 
-pub(crate) fn generate_test_ca_signed_certificate_chain(temp_dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
+pub(crate) fn generate_test_ca_signed_certificate_chain(
+    temp_dir: &Path,
+) -> (PathBuf, PathBuf, PathBuf) {
     let paths = certificate_paths(temp_dir);
     run_openssl_ca_request(paths.ca_cert_path.as_path(), paths.ca_key_path.as_path());
-    run_openssl_server_csr(paths.server_key_path.as_path(), paths.server_csr_path.as_path());
+    run_openssl_server_csr(
+        paths.server_key_path.as_path(),
+        paths.server_csr_path.as_path(),
+    );
     write_server_extensions(paths.server_extensions_path.as_path());
     run_openssl_server_sign(paths.as_refs());
-    (paths.ca_cert_path, paths.server_cert_path, paths.server_key_path)
+    (
+        paths.ca_cert_path,
+        paths.server_cert_path,
+        paths.server_key_path,
+    )
 }
 
 struct CertificatePaths {
@@ -51,17 +60,29 @@ fn certificate_paths(temp_dir: &Path) -> CertificatePaths {
 
 fn run_openssl_ca_request(ca_cert_path: &Path, ca_key_path: &Path) {
     let status = Command::new("openssl")
-        .args(["req", "-x509", "-newkey", "rsa:2048", "-days", "1", "-nodes"])
+        .args([
+            "req", "-x509", "-newkey", "rsa:2048", "-days", "1", "-nodes",
+        ])
         .arg("-keyout")
         .arg(ca_key_path)
         .arg("-out")
         .arg(ca_cert_path)
-        .args(["-subj", "/CN=kamn-test-ca", "-addext", "basicConstraints = critical,CA:TRUE", "-addext", "keyUsage = critical,keyCertSign,cRLSign"])
+        .args([
+            "-subj",
+            "/CN=kamn-test-ca",
+            "-addext",
+            "basicConstraints = critical,CA:TRUE",
+            "-addext",
+            "keyUsage = critical,keyCertSign,cRLSign",
+        ])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
         .expect("openssl should run for CA certificate generation");
-    assert!(status.success(), "openssl CA certificate generation should succeed");
+    assert!(
+        status.success(),
+        "openssl CA certificate generation should succeed"
+    );
 }
 
 fn run_openssl_server_csr(server_key_path: &Path, server_csr_path: &Path) {
@@ -76,7 +97,10 @@ fn run_openssl_server_csr(server_key_path: &Path, server_csr_path: &Path) {
         .stderr(Stdio::null())
         .status()
         .expect("openssl should run for server csr generation");
-    assert!(status.success(), "openssl server csr generation should succeed");
+    assert!(
+        status.success(),
+        "openssl server csr generation should succeed"
+    );
 }
 
 fn write_server_extensions(server_extensions_path: &Path) {
@@ -104,5 +128,8 @@ fn run_openssl_server_sign(paths: CertificatePathRefs<'_>) {
         .stderr(Stdio::null())
         .status()
         .expect("openssl should run for server certificate signing");
-    assert!(status.success(), "openssl server certificate signing should succeed");
+    assert!(
+        status.success(),
+        "openssl server certificate signing should succeed"
+    );
 }

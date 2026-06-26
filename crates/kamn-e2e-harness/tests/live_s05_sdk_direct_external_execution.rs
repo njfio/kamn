@@ -13,7 +13,11 @@ fn integration_live_s05_sdk_direct_escrow_settlement_probe_against_local_runtime
     let result = driver.execute("S-05");
 
     assert_eq!(result.scenario_id, "S-05");
-    assert_eq!(result.status, "pass", "live sdk-direct S-05 failed: {:?}", result.detail);
+    assert_eq!(
+        result.status, "pass",
+        "live sdk-direct S-05 failed: {:?}",
+        result.detail
+    );
 }
 
 fn require_env(key: &str) {

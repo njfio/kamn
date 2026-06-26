@@ -25,8 +25,7 @@ pub(super) fn verify_signature_matches_message(
 ) -> Result<(), ConfigError> {
     let signature = parse_backend_signature(backend_signature)?;
     let recovery = parse_backend_recovery_id(backend_signature.recovery_id)?;
-    let recovered =
-        recover_backend_verifying_key(canonical_message, &signature, recovery)?;
+    let recovered = recover_backend_verifying_key(canonical_message, &signature, recovery)?;
     let expected = decode_signer_verifying_key(backend_signature.signer_public_key_hex.as_str())?;
     if recovered == expected {
         return Ok(());

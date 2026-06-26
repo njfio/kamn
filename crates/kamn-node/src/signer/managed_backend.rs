@@ -26,9 +26,9 @@ struct ManagedSignerCommandSpec {
     args: Vec<String>,
 }
 
-pub(crate) use adapter::ManagedExternalKeySourceAdapter;
 #[cfg(test)]
 pub(crate) use adapter::sign_kolme_live_managed_external_message;
+pub(crate) use adapter::ManagedExternalKeySourceAdapter;
 pub(crate) use command::resolve_kolme_live_managed_signer_required_marker;
 pub(super) use command::resolve_required_kolme_live_managed_signer_command;
 pub(super) use key_material::resolve_required_managed_signer_public_key_hex;

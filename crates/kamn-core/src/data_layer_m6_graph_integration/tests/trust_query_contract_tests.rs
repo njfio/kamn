@@ -69,9 +69,7 @@ fn unit_m6_graph_registry_trust_propagation_is_ranked_and_limited() {
         results[1].reason_code,
         DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED
     );
-    assert!(
-        results
-            .iter()
-            .all(|row| row.target_agent_node_id != "agent-b")
-    );
+    assert!(results
+        .iter()
+        .all(|row| row.target_agent_node_id != "agent-b"));
 }

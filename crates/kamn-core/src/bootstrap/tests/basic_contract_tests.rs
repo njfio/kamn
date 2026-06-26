@@ -24,14 +24,18 @@ fn bootstrap_fails_for_invalid_config() {
 
 #[test]
 fn bootstrap_rejects_state_downgrade() {
-    let result = bootstrap_from_state_version(valid_config("/tmp/kamn"), StateVersion(APP_STATE_VERSION.0 + 1));
+    let result = bootstrap_from_state_version(
+        valid_config("/tmp/kamn"),
+        StateVersion(APP_STATE_VERSION.0 + 1),
+    );
     assert!(matches!(result, Err(ConfigError::MigrationPlan(_))));
 }
 
 #[test]
 fn bootstrap_wiring_includes_durable_store_components() {
     let storage_dir = temp_storage_dir("durable-components");
-    let plan = bootstrap(valid_config(&storage_dir.to_string_lossy())).expect("bootstrap should succeed");
+    let plan =
+        bootstrap(valid_config(&storage_dir.to_string_lossy())).expect("bootstrap should succeed");
     let components = plan.wiring.all_components();
     assert!(components.contains(&"content-storage:file-default"));
     assert!(components.contains(&"did-registry:file-default"));

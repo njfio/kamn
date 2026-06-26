@@ -4,18 +4,37 @@ use super::super::support::*;
 fn integration_libp2p_native_adapter_three_node_partition_rejoin_and_publish_drop_convergence_over_sockets(
 ) {
     let (sender_a_transport, sender_b_transport, recipient_transport) = three_node_transports();
-    advertise_messages(&sender_a_transport, "peer-native-three-node-sender-a", NodeRole::Processor);
-    advertise_messages(&sender_b_transport, "peer-native-three-node-sender-b", NodeRole::Processor);
+    advertise_messages(
+        &sender_a_transport,
+        "peer-native-three-node-sender-a",
+        NodeRole::Processor,
+    );
+    advertise_messages(
+        &sender_b_transport,
+        "peer-native-three-node-sender-b",
+        NodeRole::Processor,
+    );
     assert_partitioned_publish_fails(&sender_b_transport);
-    advertise_messages(&recipient_transport, "peer-native-three-node-recipient", NodeRole::Listener);
+    advertise_messages(
+        &recipient_transport,
+        "peer-native-three-node-recipient",
+        NodeRole::Listener,
+    );
     assert_recipient_discovered(&sender_a_transport, "peer-native-three-node-sender-a");
     assert_recipient_discovered(&sender_b_transport, "peer-native-three-node-sender-b");
-    assert_rejoin_publish_succeeds(&sender_a_transport, "peer-native-three-node-sender-a", "tx-native-three-node-rejoin-a");
-    assert_rejoin_publish_succeeds(&sender_b_transport, "peer-native-three-node-sender-b", "tx-native-three-node-rejoin-b");
+    assert_rejoin_publish_succeeds(
+        &sender_a_transport,
+        "peer-native-three-node-sender-a",
+        "tx-native-three-node-rejoin-a",
+    );
+    assert_rejoin_publish_succeeds(
+        &sender_b_transport,
+        "peer-native-three-node-sender-b",
+        "tx-native-three-node-rejoin-b",
+    );
 }
 
-fn three_node_transports(
-) -> (
+fn three_node_transports() -> (
     Libp2pLivePeerLifecycleTransport,
     Libp2pLivePeerLifecycleTransport,
     Libp2pLivePeerLifecycleTransport,
@@ -81,17 +100,22 @@ fn assert_partitioned_publish_fails(transport: &Libp2pLivePeerLifecycleTransport
     assert_eq!(error.reason_code(), "p2p_transport_unknown_recipient_peer");
 }
 
-fn assert_recipient_discovered(
-    transport: &Libp2pLivePeerLifecycleTransport,
-    sender_id: &str,
-) {
+fn assert_recipient_discovered(transport: &Libp2pLivePeerLifecycleTransport, sender_id: &str) {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        let discovered = transport.discover(sender_id, "messages").expect("discovery should succeed");
-        if discovered.iter().any(|record| record.peer_id == "peer-native-three-node-recipient") {
+        let discovered = transport
+            .discover(sender_id, "messages")
+            .expect("discovery should succeed");
+        if discovered
+            .iter()
+            .any(|record| record.peer_id == "peer-native-three-node-recipient")
+        {
             return;
         }
-        assert!(Instant::now() < deadline, "sender failed to discover recipient within timeout");
+        assert!(
+            Instant::now() < deadline,
+            "sender failed to discover recipient within timeout"
+        );
         std::thread::sleep(Duration::from_millis(25));
     }
 }

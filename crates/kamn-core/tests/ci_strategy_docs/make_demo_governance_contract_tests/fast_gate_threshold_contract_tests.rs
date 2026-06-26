@@ -92,8 +92,5 @@ fn doc_contains_local_exclusion_and_budget_markers() {
 
 #[test]
 fn doc_contains_extraction_threshold_markers() {
-    assert_doc_contains_all(
-        RUNTIME_EXTRACTION_THRESHOLD_MARKERS,
-        "extraction threshold",
-    );
+    assert_doc_contains_all(RUNTIME_EXTRACTION_THRESHOLD_MARKERS, "extraction threshold");
 }

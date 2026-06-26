@@ -1,11 +1,15 @@
 use super::{
-    baseline_signature_algorithm, baseline_signature_profile_id,
-    parse_signature_profile_metadata, BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID,
-    UNKNOWN_SIGNATURE_ALGORITHM_ID,
+    baseline_signature_algorithm, baseline_signature_profile_id, parse_signature_profile_metadata,
+    BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
 };
 use crate::signature_profile::encoding::baseline_signature_for_fields as render_baseline_signature;
 
-pub fn baseline_signature_for_fields(sender: &str, nonce: u64, state_hash: &str, payload: &str) -> String {
+pub fn baseline_signature_for_fields(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
     render_baseline_signature(sender, nonce, state_hash, payload)
 }
 

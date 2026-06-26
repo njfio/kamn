@@ -17,12 +17,18 @@ fn regression_3599_startup_signer_mode_negative_matrix_corpus() {
         "strict-selector-env-mismatch-preflight",
         "fallback-secret-preflight",
     ];
-    assert_eq!(covered_cases, expected_cases, "startup_negative_matrix_policy_marker_missing");
+    assert_eq!(
+        covered_cases, expected_cases,
+        "startup_negative_matrix_policy_marker_missing"
+    );
 }
 
 fn strict_missing_signer_profile_case() -> &'static str {
     assert_parse_error(
-        with_pairs(strict_kolme_live_args(), &[("--kolme-live-signer-key-source", "env-local")]),
+        with_pairs(
+            strict_kolme_live_args(),
+            &[("--kolme-live-signer-key-source", "env-local")],
+        ),
         ConfigError::MissingArgumentValue("--kolme-live-signer-profile"),
     );
     "strict-missing-signer-profile"
@@ -30,7 +36,10 @@ fn strict_missing_signer_profile_case() -> &'static str {
 
 fn strict_missing_signer_key_source_case() -> &'static str {
     assert_parse_error(
-        with_pairs(strict_kolme_live_args(), &[("--kolme-live-signer-profile", "ops-primary")]),
+        with_pairs(
+            strict_kolme_live_args(),
+            &[("--kolme-live-signer-profile", "ops-primary")],
+        ),
         ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
     );
     "strict-missing-signer-key-source"
@@ -61,7 +70,10 @@ fn strict_selector_env_mismatch_preflight_case() -> &'static str {
     let _fallback_key = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
     let _override = EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", None);
     let (base_url, requests) = spawn_kolme_live_mock_server(selector_env_replies());
-    let parsed = parse_cli(strict_runtime_args(base_url.as_str()), "strict mismatch args should parse");
+    let parsed = parse_cli(
+        strict_runtime_args(base_url.as_str()),
+        "strict mismatch args should parse",
+    );
     assert!(
         matches!(
             execute(parsed),
@@ -70,7 +82,10 @@ fn strict_selector_env_mismatch_preflight_case() -> &'static str {
         ),
         "matrix case strict-selector-env-mismatch-preflight must fail closed before network"
     );
-    assert_no_live_requests(requests, "strict selector/env mismatch must fail before network");
+    assert_no_live_requests(
+        requests,
+        "strict selector/env mismatch must fail before network",
+    );
     "strict-selector-env-mismatch-preflight"
 }
 
@@ -84,10 +99,13 @@ fn fallback_secret_preflight_case() -> &'static str {
         "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
         Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
     );
-    let (base_url, requests) = spawn_kolme_live_mock_server(vec![
-        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
-    ]);
-    let parsed = parse_cli(strict_runtime_args(base_url.as_str()), "fallback-secret args should parse");
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+        r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#,
+    )]);
+    let parsed = parse_cli(
+        strict_runtime_args(base_url.as_str()),
+        "fallback-secret args should parse",
+    );
     assert!(
         matches!(
             execute(parsed),
@@ -96,7 +114,10 @@ fn fallback_secret_preflight_case() -> &'static str {
         ),
         "matrix case fallback-secret-preflight must fail closed with deterministic reason code"
     );
-    assert_no_live_requests(requests, "fallback secret path must fail before network dispatch");
+    assert_no_live_requests(
+        requests,
+        "fallback secret path must fail before network dispatch",
+    );
     "fallback-secret-preflight"
 }
 

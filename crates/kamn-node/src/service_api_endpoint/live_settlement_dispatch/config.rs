@@ -64,8 +64,7 @@ fn require_bridge_rpc_url(
     bridge_config
         .map(|config| config.rpc_url.clone())
         .ok_or_else(|| {
-            "live solana settlement requires KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL"
-                .to_owned()
+            "live solana settlement requires KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL".to_owned()
         })
 }
 
@@ -116,7 +115,9 @@ fn read_optional_env(name: &str) -> Result<Option<String>, String> {
 fn normalize_non_empty_env(name: &str, value: String) -> Result<String, String> {
     let normalized = value.trim();
     if normalized.is_empty() {
-        return Err(format!("live solana settlement env must not be empty: {name}"));
+        return Err(format!(
+            "live solana settlement env must not be empty: {name}"
+        ));
     }
     Ok(normalized.to_owned())
 }

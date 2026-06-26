@@ -36,7 +36,10 @@ fn rejects_invalid_runtime_mode() {
 #[test]
 fn rejects_invalid_diagnostics_mode() {
     assert_parse_error(
-        with_pairs(processor_runtime_args("api"), &[("--diagnostics", "extended")]),
+        with_pairs(
+            processor_runtime_args("api"),
+            &[("--diagnostics", "extended")],
+        ),
         ConfigError::InvalidDiagnosticsMode("extended".to_owned()),
     );
 }

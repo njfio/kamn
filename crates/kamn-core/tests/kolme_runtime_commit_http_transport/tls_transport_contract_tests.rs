@@ -57,7 +57,10 @@ fn performance_https_transport_timeout_budget_is_bounded() {
             .submit_runtime_commit("operation_id=op-https\n", "idempotency-key-https");
         let elapsed = started.elapsed();
 
-        assert!(elapsed <= Duration::from_secs(2), "native HTTPS timeout handling exceeded 2s fast-gate budget window: {elapsed:?}");
+        assert!(
+            elapsed <= Duration::from_secs(2),
+            "native HTTPS timeout handling exceeded 2s fast-gate budget window: {elapsed:?}"
+        );
         assert!(
             matches!(
                 result,
@@ -75,6 +78,7 @@ fn regression_https_transport_does_not_use_openssl_subprocess() {
     assert!(!transport_source().contains(".arg(\"s_client\")"));
     assert!(!transport_source().contains("Command::new("));
     assert!(!transport_source().contains("curl"));
-    assert!(tls_adr_source().contains("Subprocess TLS paths (`curl`, `openssl s_client`) are not allowed"));
+    assert!(tls_adr_source()
+        .contains("Subprocess TLS paths (`curl`, `openssl s_client`) are not allowed"));
     assert!(tls_adr_source().contains("Regression: #4105"));
 }

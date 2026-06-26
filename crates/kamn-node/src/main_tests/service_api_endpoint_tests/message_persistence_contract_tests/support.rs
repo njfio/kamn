@@ -46,7 +46,14 @@ pub(super) fn query_persisted_message(
     query_path: &str,
 ) -> ServiceApiMessageGetBody {
     parse_queried_message(&signed_request_response(
-        snapshot, bind_addr, "query-phase", "GET", query_path, sender_did, nonce, "",
+        snapshot,
+        bind_addr,
+        "query-phase",
+        "GET",
+        query_path,
+        sender_did,
+        nonce,
+        "",
     ))
 }
 
@@ -77,7 +84,8 @@ where
 {
     let endpoint_config = message_endpoint_config(bind_addr);
     let server_snapshot = snapshot.clone();
-    let server = thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr);
     let response = request(bind_addr);
     let server_result = server.join().expect("endpoint thread should complete");
@@ -100,8 +108,12 @@ fn signed_request_response(
 ) -> String {
     run_single_request_phase(snapshot, bind_addr, phase, |addr| {
         let nonce_text = nonce.to_string();
-        let signature =
-            service_api_request_signature_for_fields(sender_did, nonce, service_api_state_hash(snapshot).as_str(), body);
+        let signature = service_api_request_signature_for_fields(
+            sender_did,
+            nonce,
+            service_api_state_hash(snapshot).as_str(),
+            body,
+        );
         send_http_request_with_headers(
             addr,
             method,

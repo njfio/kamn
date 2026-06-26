@@ -14,7 +14,10 @@ fn integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_
         let (_, _, released, refunded, remaining) = run_escrow_dispute_refund_race(21);
         let summary = (released, refunded, remaining);
         if let Some(expected) = baseline {
-            assert_eq!(summary, expected, "escrow dispute/refund race snapshot drifted in round {round}");
+            assert_eq!(
+                summary, expected,
+                "escrow dispute/refund race snapshot drifted in round {round}"
+            );
         } else {
             baseline = Some(summary);
         }
@@ -26,8 +29,14 @@ fn regression_escrow_refund_race_never_allows_multiple_refund_winners() {
     for round in 0..32 {
         let (success_count, invalid_count, reason_codes, released, refunded, remaining) =
             run_escrow_refund_race(34);
-        assert_eq!(success_count, 1, "round {round} must have one refund winner");
-        assert_eq!(invalid_count, 1, "round {round} must reject one replayed refund attempt");
+        assert_eq!(
+            success_count, 1,
+            "round {round} must have one refund winner"
+        );
+        assert_eq!(
+            invalid_count, 1,
+            "round {round} must reject one replayed refund attempt"
+        );
         assert_eq!(reason_codes, vec!["escrow_transition_invalid"]);
         assert_eq!((released, refunded, remaining), (0, 34, 0));
     }

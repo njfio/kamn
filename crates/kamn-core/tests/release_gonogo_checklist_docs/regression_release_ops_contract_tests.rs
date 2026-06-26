@@ -6,7 +6,10 @@ const REGRESSION_REQUIRES_STAGING_REHEARSAL_MISMATCH_GUARD_MARKERS: &[&str] = &[
 
 #[test]
 fn regression_requires_staging_rehearsal_mismatch_guard() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_STAGING_REHEARSAL_MISMATCH_GUARD_MARKERS, "regression_requires_staging_rehearsal_mismatch_guard");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_STAGING_REHEARSAL_MISMATCH_GUARD_MARKERS,
+        "regression_requires_staging_rehearsal_mismatch_guard",
+    );
 }
 
 const REGRESSION_REQUIRES_CHAIN_RECEIPT_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -16,7 +19,10 @@ const REGRESSION_REQUIRES_CHAIN_RECEIPT_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] =
 
 #[test]
 fn regression_requires_chain_receipt_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_CHAIN_RECEIPT_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_chain_receipt_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_CHAIN_RECEIPT_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_chain_receipt_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LEDGER_REFERENCE_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -25,7 +31,10 @@ const REGRESSION_REQUIRES_LEDGER_REFERENCE_EVIDENCE_GUARD_MARKER_MARKERS: &[&str
 
 #[test]
 fn regression_requires_ledger_reference_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_LEDGER_REFERENCE_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_ledger_reference_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_LEDGER_REFERENCE_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_ledger_reference_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_DURABLE_GUARD_SHARED_CONTRACT_MARKER_MARKERS: &[&str] = &[
@@ -34,7 +43,10 @@ const REGRESSION_REQUIRES_DURABLE_GUARD_SHARED_CONTRACT_MARKER_MARKERS: &[&str] 
 
 #[test]
 fn regression_requires_durable_guard_shared_contract_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_DURABLE_GUARD_SHARED_CONTRACT_MARKER_MARKERS, "regression_requires_durable_guard_shared_contract_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_DURABLE_GUARD_SHARED_CONTRACT_MARKER_MARKERS,
+        "regression_requires_durable_guard_shared_contract_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_CADENCE_GUARD_MARKERS_MARKERS: &[&str] = &[
@@ -44,7 +56,10 @@ const REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_CADENCE_GUARD_MARKERS_MARKERS
 
 #[test]
 fn regression_requires_failover_sync_budget_and_cadence_guard_markers() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_CADENCE_GUARD_MARKERS_MARKERS, "regression_requires_failover_sync_budget_and_cadence_guard_markers");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_FAILOVER_SYNC_BUDGET_AND_CADENCE_GUARD_MARKERS_MARKERS,
+        "regression_requires_failover_sync_budget_and_cadence_guard_markers",
+    );
 }
 
 const REGRESSION_REQUIRES_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -53,7 +68,10 @@ const REGRESSION_REQUIRES_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_GUARD_MARKER_MA
 
 #[test]
 fn regression_requires_live_network_pilot_launch_and_rollback_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_GUARD_MARKER_MARKERS, "regression_requires_live_network_pilot_launch_and_rollback_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_GUARD_MARKER_MARKERS,
+        "regression_requires_live_network_pilot_launch_and_rollback_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LIVE_NETWORK_PARTITION_RECONNECT_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -62,7 +80,10 @@ const REGRESSION_REQUIRES_LIVE_NETWORK_PARTITION_RECONNECT_GUARD_MARKER_MARKERS:
 
 #[test]
 fn regression_requires_live_network_partition_reconnect_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_LIVE_NETWORK_PARTITION_RECONNECT_GUARD_MARKER_MARKERS, "regression_requires_live_network_partition_reconnect_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_LIVE_NETWORK_PARTITION_RECONNECT_GUARD_MARKER_MARKERS,
+        "regression_requires_live_network_partition_reconnect_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_WATCHDOG_PROOF_CONSENSUS_BUDGET_AND_CADENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -71,7 +92,10 @@ const REGRESSION_REQUIRES_WATCHDOG_PROOF_CONSENSUS_BUDGET_AND_CADENCE_GUARD_MARK
 
 #[test]
 fn regression_requires_watchdog_proof_consensus_budget_and_cadence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_WATCHDOG_PROOF_CONSENSUS_BUDGET_AND_CADENCE_GUARD_MARKER_MARKERS, "regression_requires_watchdog_proof_consensus_budget_and_cadence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_WATCHDOG_PROOF_CONSENSUS_BUDGET_AND_CADENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_watchdog_proof_consensus_budget_and_cadence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_SOC2_CONTROL_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -80,16 +104,21 @@ const REGRESSION_REQUIRES_SOC2_CONTROL_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = 
 
 #[test]
 fn regression_requires_soc2_control_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_SOC2_CONTROL_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_soc2_control_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_SOC2_CONTROL_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_soc2_control_evidence_guard_marker",
+    );
 }
 
-const REGRESSION_REQUIRES_DSAR_LEGAL_HOLD_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
-    "legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`).",
-];
+const REGRESSION_REQUIRES_DSAR_LEGAL_HOLD_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] =
+    &["legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`)."];
 
 #[test]
 fn regression_requires_dsar_legal_hold_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_DSAR_LEGAL_HOLD_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_dsar_legal_hold_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_DSAR_LEGAL_HOLD_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_dsar_legal_hold_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_FEDERATED_DID_HANDSHAKE_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -98,5 +127,8 @@ const REGRESSION_REQUIRES_FEDERATED_DID_HANDSHAKE_EVIDENCE_GUARD_MARKER_MARKERS:
 
 #[test]
 fn regression_requires_federated_did_handshake_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_FEDERATED_DID_HANDSHAKE_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_federated_did_handshake_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_FEDERATED_DID_HANDSHAKE_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_federated_did_handshake_evidence_guard_marker",
+    );
 }

@@ -49,15 +49,24 @@ fn create_and_progress_escrow(
     engine: &mut DataLayerM4EscrowTransitionEngine,
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     engine.create_escrow(fixture_draft())?;
-    apply_transition(engine, DataLayerM4EscrowTransitionAction::Fund {
-        funded_at_epoch_seconds: 1_001,
-    })?;
-    apply_transition(engine, DataLayerM4EscrowTransitionAction::Activate {
-        activated_at_epoch_seconds: 1_002,
-    })?;
-    apply_transition(engine, DataLayerM4EscrowTransitionAction::OpenDispute {
-        dispute_opened_at_epoch_seconds: 1_003,
-    })
+    apply_transition(
+        engine,
+        DataLayerM4EscrowTransitionAction::Fund {
+            funded_at_epoch_seconds: 1_001,
+        },
+    )?;
+    apply_transition(
+        engine,
+        DataLayerM4EscrowTransitionAction::Activate {
+            activated_at_epoch_seconds: 1_002,
+        },
+    )?;
+    apply_transition(
+        engine,
+        DataLayerM4EscrowTransitionAction::OpenDispute {
+            dispute_opened_at_epoch_seconds: 1_003,
+        },
+    )
 }
 
 fn apply_transition(

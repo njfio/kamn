@@ -1,5 +1,5 @@
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
 use super::support::assert_runtime_local_contract_lane_markers;
 
 #[test]

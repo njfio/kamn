@@ -61,12 +61,18 @@ fn validate_bucket_alignment(
 ) -> Result<(), DataLayerPgRepositoryBridgeError> {
     validate_bucket(
         record.bucket_hour_epoch_seconds,
-        aligned_bucket(record.timestamp_epoch_seconds, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS),
+        aligned_bucket(
+            record.timestamp_epoch_seconds,
+            DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+        ),
         DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
     )?;
     validate_bucket(
         record.bucket_day_epoch_seconds,
-        aligned_bucket(record.timestamp_epoch_seconds, DATA_LAYER_M7_DAILY_BUCKET_SECONDS),
+        aligned_bucket(
+            record.timestamp_epoch_seconds,
+            DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+        ),
         DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
     )
 }

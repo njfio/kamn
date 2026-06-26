@@ -79,7 +79,10 @@ pub fn service_auth_public_key_hex_from_private_key_hex(
     };
     wipe_bytes(private_key_bytes.as_mut_slice());
     Ok(encode_hex_lower(
-        signing_key.verifying_key().to_encoded_point(true).as_bytes(),
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
     ))
 }
 
@@ -107,7 +110,9 @@ fn validate_verify_inputs(
         return Err(ServiceAuthSignatureError::EmptyField("signature"));
     }
     if expected_public_key_hex.trim().is_empty() {
-        return Err(ServiceAuthSignatureError::EmptyField("expected_public_key_hex"));
+        return Err(ServiceAuthSignatureError::EmptyField(
+            "expected_public_key_hex",
+        ));
     }
     Ok(())
 }
@@ -123,10 +128,14 @@ fn parse_signature(signature: &str) -> Result<(RecoveryId, Signature), ServiceAu
         return Err(ServiceAuthSignatureError::InvalidSignatureFormat);
     }
     if algorithm != SERVICE_AUTH_SIGNATURE_ALGORITHM {
-        return Err(ServiceAuthSignatureError::UnsupportedAlgorithm(algorithm.to_owned()));
+        return Err(ServiceAuthSignatureError::UnsupportedAlgorithm(
+            algorithm.to_owned(),
+        ));
     }
     if profile_id != SERVICE_AUTH_SIGNATURE_PROFILE_ID {
-        return Err(ServiceAuthSignatureError::UnsupportedProfile(profile_id.to_owned()));
+        return Err(ServiceAuthSignatureError::UnsupportedProfile(
+            profile_id.to_owned(),
+        ));
     }
     if recovery_id_raw.trim().is_empty() || signature_hex.trim().is_empty() {
         return Err(ServiceAuthSignatureError::InvalidSignatureFormat);

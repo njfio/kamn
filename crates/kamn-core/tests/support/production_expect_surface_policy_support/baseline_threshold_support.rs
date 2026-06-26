@@ -62,17 +62,14 @@ pub fn load_thresholds(path: &Path) -> Thresholds {
 
 fn ensure_fixture_exists(path: &Path, reason_code: &str, label: &str) {
     if !path.is_file() {
-        fail(reason_code, &format!("{} is missing: {}", label, path.display()));
+        fail(
+            reason_code,
+            &format!("{} is missing: {}", label, path.display()),
+        );
     }
 }
 
-fn assert_schema(
-    actual: &str,
-    expected: &str,
-    reason_code: &str,
-    path: &Path,
-    label: &str,
-) {
+fn assert_schema(actual: &str, expected: &str, reason_code: &str, path: &Path, label: &str) {
     if actual != expected {
         fail(
             reason_code,
@@ -86,10 +83,7 @@ fn assert_schema(
     }
 }
 
-fn assert_reason_markers(
-    map: &std::collections::BTreeMap<String, String>,
-    path: &Path,
-) {
+fn assert_reason_markers(map: &std::collections::BTreeMap<String, String>, path: &Path) {
     let actual_taxonomy =
         required_value(map, "reason_taxonomy_version", "threshold_schema_invalid");
     if actual_taxonomy != REASON_TAXONOMY_VERSION {

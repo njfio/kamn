@@ -40,7 +40,10 @@ fn store_fixture_entry(
         return;
     }
     let (key, value) = trimmed.split_once('=').unwrap_or_else(|| {
-        fail(reason_code, &format!("line {} missing key=value form", index + 1))
+        fail(
+            reason_code,
+            &format!("line {} missing key=value form", index + 1),
+        )
     });
     let key = key.trim();
     if key.is_empty() {

@@ -9,16 +9,16 @@ use crate::data_layer_m10_partition_archival::{
 };
 use crate::DataLayerM8ComplianceRegistry;
 
-use super::report_projection::project_phase6_scheduler_cycle_report;
-use super::tick::data_layer_m10_execute_phase6_orchestration_tick_with_port;
+use super::super::super::adapters::bridge::M8Phase6CompliancePortAdapter;
+use super::super::super::adapters::error_mapping::map_phase6_port_error_to_m10;
 use super::super::budget::{
     data_layer_m10_evaluate_phase6_execution_tick_budget,
     evaluate_phase6_scheduler_preflight_budget, project_phase6_scheduler_budget_overflow_error,
     validate_phase6_execution_tick_budget,
 };
 use super::super::trigger::data_layer_m10_evaluate_phase6_scheduler_trigger;
-use super::super::super::adapters::bridge::M8Phase6CompliancePortAdapter;
-use super::super::super::adapters::error_mapping::map_phase6_port_error_to_m10;
+use super::report_projection::project_phase6_scheduler_cycle_report;
+use super::tick::data_layer_m10_execute_phase6_orchestration_tick_with_port;
 
 /// Executes one scheduler cycle against the concrete M8 compliance registry.
 pub fn data_layer_m10_execute_phase6_scheduler_cycle(
@@ -44,12 +44,18 @@ pub fn data_layer_m10_execute_phase6_scheduler_cycle_with_port(
     authorize_scheduler_owner(compliance_port, &mut request)?;
     let due_candidate_count = count_due_candidates(compliance_port, &request)?;
     let trigger_decision = evaluate_trigger(&request, due_candidate_count)?;
-    if matches!(trigger_decision, DataLayerM10Phase6SchedulerTriggerDecision::Deferred { .. }) {
+    if matches!(
+        trigger_decision,
+        DataLayerM10Phase6SchedulerTriggerDecision::Deferred { .. }
+    ) {
         return Ok(deferred_cycle_report(trigger_decision));
     }
     enforce_preflight_budget(&request, due_candidate_count)?;
-    let execution_report =
-        execute_scheduler_cycle(compliance_port, partition_registry, request.execution_request)?;
+    let execution_report = execute_scheduler_cycle(
+        compliance_port,
+        partition_registry,
+        request.execution_request,
+    )?;
     finalize_applied_cycle_report(trigger_decision, execution_report, request.budget)
 }
 
@@ -76,7 +82,8 @@ fn finalize_applied_cycle_report(
     execution_report: crate::DataLayerM10Phase6ExecutionTickReport,
     budget: crate::DataLayerM10Phase6ExecutionTickBudget,
 ) -> Result<DataLayerM10Phase6SchedulerCycleReport, DataLayerM10PartitionLifecycleError> {
-    let budget_report = data_layer_m10_evaluate_phase6_execution_tick_budget(&execution_report, budget)?;
+    let budget_report =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&execution_report, budget)?;
     enforce_post_execution_budget(&budget_report)?;
     Ok(project_phase6_scheduler_cycle_report(
         trigger_decision,
@@ -133,7 +140,10 @@ fn enforce_preflight_budget(
 ) -> Result<(), DataLayerM10PartitionLifecycleError> {
     let preflight_budget = evaluate_phase6_scheduler_preflight_budget(
         due_candidate_count,
-        request.execution_request.partition_message_ids_by_month.len(),
+        request
+            .execution_request
+            .partition_message_ids_by_month
+            .len(),
         request.budget,
     )?;
     if let Some(error) = project_phase6_scheduler_budget_overflow_error(

@@ -30,7 +30,10 @@ pub(crate) fn approver_args() -> Vec<String> {
 }
 
 pub(crate) fn processor_runtime_args(mode: &str) -> Vec<String> {
-    with_pairs(cli_args(), &[("--role", "processor"), ("--runtime-mode", mode)])
+    with_pairs(
+        cli_args(),
+        &[("--role", "processor"), ("--runtime-mode", mode)],
+    )
 }
 
 pub(crate) fn planning_args() -> Vec<String> {

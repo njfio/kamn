@@ -1,5 +1,5 @@
-use super::env_support::{set_relay_spool_env, set_state_file_env};
 use super::super::super::*;
+use super::env_support::{set_relay_spool_env, set_state_file_env};
 
 pub(crate) fn project_relay_to_recipient(
     sender_state_file: &std::path::Path,

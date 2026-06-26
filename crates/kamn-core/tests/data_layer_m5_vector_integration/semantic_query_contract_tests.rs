@@ -36,16 +36,19 @@ fn spec_c04_owner_side_encrypted_mode_rejects_server_side_semantic_query() {
     });
     assert!(matches!(
         denied,
-        Err(DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
-            reason_code: DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
-        })
+        Err(
+            DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
+                reason_code: DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
+            }
+        )
     ));
 }
 
 #[test]
 fn spec_c13_semantic_query_accepts_canonical_equivalent_owner_did() {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     registry
         .append(vector_input(
             "embed-m5-canonical-query",
@@ -68,8 +71,9 @@ fn spec_c13_semantic_query_accepts_canonical_equivalent_owner_did() {
 }
 
 fn seeded_semantic_registry() -> DataLayerM5EmbeddingRegistry {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     for (embedding_id, message_id, owner_did, agent_did, vector) in semantic_entries() {
         append_embedding(
             &mut registry,
@@ -102,7 +106,13 @@ fn append_embedding(
         .expect("semantic test append should succeed");
 }
 
-fn semantic_entries() -> [(&'static str, &'static str, &'static str, &'static str, Vec<f32>); 3] {
+fn semantic_entries() -> [(
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    Vec<f32>,
+); 3] {
     [
         (
             "embed-m5-a",
@@ -144,6 +154,9 @@ fn assert_ranked_results(
     results: &[kamn_core::DataLayerM5SemanticQueryResult],
     expected_message_ids: &[&str],
 ) {
-    let actual: Vec<&str> = results.iter().map(|result| result.message_id.as_str()).collect();
+    let actual: Vec<&str> = results
+        .iter()
+        .map(|result| result.message_id.as_str())
+        .collect();
     assert_eq!(actual, expected_message_ids);
 }

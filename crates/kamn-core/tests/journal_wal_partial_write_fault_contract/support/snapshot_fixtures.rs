@@ -23,7 +23,12 @@ pub(crate) fn channel_snapshots() -> (ChannelSnapshot, ChannelSnapshot) {
 pub(crate) fn message_snapshots() -> (MessageLifecycleSnapshot, MessageLifecycleSnapshot) {
     let first = MessageLifecycleSnapshot {
         schema_version: MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
-        records: vec![message_record("message-fixture-1", "sender_1", "recipient_1", 0)],
+        records: vec![message_record(
+            "message-fixture-1",
+            "sender_1",
+            "recipient_1",
+            0,
+        )],
     };
     let second = MessageLifecycleSnapshot {
         schema_version: MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
@@ -38,7 +43,11 @@ pub(crate) fn message_snapshots() -> (MessageLifecycleSnapshot, MessageLifecycle
 pub(crate) fn task_snapshots() -> (TaskOperationSnapshot, TaskOperationSnapshot) {
     let first = TaskOperationSnapshot {
         schema_version: TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
-        tasks: vec![task_record("task-fixture-1", "requester_1", "first fixture task")],
+        tasks: vec![task_record(
+            "task-fixture-1",
+            "requester_1",
+            "first fixture task",
+        )],
     };
     let second = TaskOperationSnapshot {
         schema_version: TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
@@ -77,7 +86,11 @@ fn message_record(
     }
 }
 
-fn task_record(task_id: &str, requester_id: &str, description: &str) -> TaskOperationRecordSnapshot {
+fn task_record(
+    task_id: &str,
+    requester_id: &str,
+    description: &str,
+) -> TaskOperationRecordSnapshot {
     TaskOperationRecordSnapshot {
         task_id: task_id.to_owned(),
         requester: did(requester_id),

@@ -25,10 +25,10 @@ pub(crate) fn with_tls_env_none<T>(run: impl FnOnce() -> T) -> T {
     run()
 }
 
-fn tls_env_scope(
-    value: Option<&str>,
-) -> (std::sync::MutexGuard<'static, ()>, EnvVarGuard) {
-    let guard = tls_env_lock().lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+fn tls_env_scope(value: Option<&str>) -> (std::sync::MutexGuard<'static, ()>, EnvVarGuard) {
+    let guard = tls_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, value);
     (guard, env_guard)
 }
@@ -37,8 +37,8 @@ pub(crate) fn https_provider(
     base_url: &str,
     timeout_seconds: u64,
 ) -> KolmeRuntimeCommitLiveProvider<KolmeRuntimeCommitHttpTransport> {
-    let transport = KolmeRuntimeCommitHttpTransport::new(timeout_seconds)
-        .expect("transport should build");
+    let transport =
+        KolmeRuntimeCommitHttpTransport::new(timeout_seconds).expect("transport should build");
     KolmeRuntimeCommitLiveProvider::new(base_url, "/broadcast/runtime-commit", transport)
         .expect("provider should build")
 }
@@ -68,7 +68,8 @@ fn spawn_tls_socket_listener(sleep: Duration) -> std::net::SocketAddr {
         let (mut stream, _) = listener.accept().expect("connection should be accepted");
         if sleep.is_zero() {
             let _ = stream.read(&mut [0_u8; 64]);
-            let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            let _ = stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             return;
         }
         thread::sleep(sleep);

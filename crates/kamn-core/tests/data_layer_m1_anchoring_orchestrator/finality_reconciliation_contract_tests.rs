@@ -13,8 +13,11 @@ use super::support::{memory_orchestrator, pending};
 #[test]
 fn spec_c03_reconcile_pending_and_final_finality_observation_projects_deterministic_updates() {
     let mut orchestrator = memory_orchestrator("kamn:did:agent:m1-orchestrator-c03-reconcile", 1);
-    let outcome =
-        planned_outcome(&mut orchestrator, "00000000-0000-0000-0000-000000000501", "sha256:c03a");
+    let outcome = planned_outcome(
+        &mut orchestrator,
+        "00000000-0000-0000-0000-000000000501",
+        "sha256:c03a",
+    );
     let submission = submission_metadata(&outcome);
 
     assert_pending_projection(&outcome, submission.kolme_tx_hash.as_str());
@@ -25,8 +28,11 @@ fn spec_c03_reconcile_pending_and_final_finality_observation_projects_determinis
 fn spec_c04_reconcile_finality_observation_fails_closed_for_mismatch_and_missing_block_height() {
     let mut orchestrator =
         memory_orchestrator("kamn:did:agent:m1-orchestrator-c04-finality-fail", 1);
-    let outcome =
-        planned_outcome(&mut orchestrator, "00000000-0000-0000-0000-000000000601", "sha256:c04e");
+    let outcome = planned_outcome(
+        &mut orchestrator,
+        "00000000-0000-0000-0000-000000000601",
+        "sha256:c04e",
+    );
     let submission = submission_metadata(&outcome);
 
     assert_mismatch_error(&outcome, submission.kolme_tx_hash.as_str());
@@ -52,7 +58,10 @@ fn planned_outcome<C: kamn_core::KolmeRuntimeCommitClient>(
 fn submission_metadata(
     outcome: &DataLayerM1AnchoringTickOutcome,
 ) -> &kamn_core::DataLayerM1AnchoringSubmissionMetadata {
-    let DataLayerM1AnchoringTickOutcome::Planned { persistence_plan, .. } = outcome else {
+    let DataLayerM1AnchoringTickOutcome::Planned {
+        persistence_plan, ..
+    } = outcome
+    else {
         panic!("expected planned outcome");
     };
     persistence_plan
@@ -151,7 +160,9 @@ fn mismatch_observation() -> DataLayerM1AnchoringFinalityObservation {
     }
 }
 
-fn missing_block_height_observation(transaction_id: &str) -> DataLayerM1AnchoringFinalityObservation {
+fn missing_block_height_observation(
+    transaction_id: &str,
+) -> DataLayerM1AnchoringFinalityObservation {
     DataLayerM1AnchoringFinalityObservation {
         provider: "kolme-memory".to_owned(),
         transaction_id: transaction_id.to_owned(),

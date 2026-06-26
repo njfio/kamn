@@ -141,7 +141,9 @@ fn finalized_slot_from_report(report: &serde_json::Value) -> Result<u64, String>
 }
 
 fn enforce_report_schema(report: &serde_json::Value) -> Result<(), String> {
-    if report.get("schema_version").and_then(serde_json::Value::as_str)
+    if report
+        .get("schema_version")
+        .and_then(serde_json::Value::as_str)
         == Some(LIVE_SOLANA_PROOF_SCHEMA_VERSION)
     {
         return Ok(());
@@ -150,7 +152,11 @@ fn enforce_report_schema(report: &serde_json::Value) -> Result<(), String> {
 }
 
 fn enforce_report_health(report: &serde_json::Value) -> Result<(), String> {
-    if report.get("health_status").and_then(serde_json::Value::as_str) == Some("ok") {
+    if report
+        .get("health_status")
+        .and_then(serde_json::Value::as_str)
+        == Some("ok")
+    {
         return Ok(());
     }
     Err("live solana bridge report health is not ok".to_owned())

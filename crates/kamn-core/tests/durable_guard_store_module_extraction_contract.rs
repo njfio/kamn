@@ -7,9 +7,18 @@ const MODULES: &[(&str, &str)] = &[
     ("mod bundle;", "src/durable_guard_store/bundle.rs"),
     ("mod stores;", "src/durable_guard_store/stores.rs"),
     ("mod wire_codec;", "src/durable_guard_store/wire_codec.rs"),
-    ("mod legacy_codec;", "src/durable_guard_store/legacy_codec.rs"),
-    ("mod policy_codec;", "src/durable_guard_store/policy_codec.rs"),
-    ("#[cfg(test)]\nmod tests;", "src/durable_guard_store/tests.rs"),
+    (
+        "mod legacy_codec;",
+        "src/durable_guard_store/legacy_codec.rs",
+    ),
+    (
+        "mod policy_codec;",
+        "src/durable_guard_store/policy_codec.rs",
+    ),
+    (
+        "#[cfg(test)]\nmod tests;",
+        "src/durable_guard_store/tests.rs",
+    ),
 ];
 
 #[test]
@@ -44,14 +53,14 @@ fn assert_module_layout(root: &str) {
 
 fn assert_root_delegates(root: &str) {
     assert!(
-        !root.contains("fn serialize_bundle(") &&
-        !root.contains("fn deserialize_bundle(") &&
-        !root.contains("fn deserialize_bundle_legacy(") &&
-        !root.contains("struct ChannelPolicyBuilder") &&
-        !root.contains("struct FileDurableGuardSnapshotStore") &&
-        !root.contains("struct SqliteDurableGuardSnapshotStore") &&
-        !root.contains("mod tests {") &&
-        !root.contains("fn bundle_serialization_roundtrip()"),
+        !root.contains("fn serialize_bundle(")
+            && !root.contains("fn deserialize_bundle(")
+            && !root.contains("fn deserialize_bundle_legacy(")
+            && !root.contains("struct ChannelPolicyBuilder")
+            && !root.contains("struct FileDurableGuardSnapshotStore")
+            && !root.contains("struct SqliteDurableGuardSnapshotStore")
+            && !root.contains("mod tests {")
+            && !root.contains("fn bundle_serialization_roundtrip()"),
         "expected durable_guard_store root to delegate extracted implementation details"
     );
 }

@@ -97,16 +97,25 @@ pub(crate) fn lifecycle_error(error: TaskLifecycleError) -> TaskOperationError {
 
 fn write_dependency_error(error: &TaskOperationError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
-        TaskOperationError::DuplicateDependency { task_id, dependency_id } => {
+        TaskOperationError::DuplicateDependency {
+            task_id,
+            dependency_id,
+        } => {
             write!(f, "duplicate dependency {dependency_id} for task {task_id}")
         }
-        TaskOperationError::UnknownDependency { task_id, dependency_id } => {
+        TaskOperationError::UnknownDependency {
+            task_id,
+            dependency_id,
+        } => {
             write!(f, "unknown dependency {dependency_id} for task {task_id}")
         }
         TaskOperationError::CyclicDependency { task_id } => {
             write!(f, "cyclic task dependency detected at task {task_id}")
         }
-        TaskOperationError::DependencyNotSatisfied { task_id, dependency_id } => write!(
+        TaskOperationError::DependencyNotSatisfied {
+            task_id,
+            dependency_id,
+        } => write!(
             f,
             "task {task_id} cannot start before dependency {dependency_id} is completed"
         ),

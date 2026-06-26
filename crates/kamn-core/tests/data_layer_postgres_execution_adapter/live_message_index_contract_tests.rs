@@ -102,5 +102,7 @@ async fn assert_index_search_includes_message(
         .execute_search_messages_by_blind_index(blind_index_request(token))
         .await
         .expect("search should succeed");
-    assert!(search_results.iter().any(|row| row.message_id == message_id));
+    assert!(search_results
+        .iter()
+        .any(|row| row.message_id == message_id));
 }

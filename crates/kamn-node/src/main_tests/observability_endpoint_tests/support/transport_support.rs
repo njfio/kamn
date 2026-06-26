@@ -1,6 +1,6 @@
 use super::super::*;
-use std::net::TcpStream;
 use std::io::{ErrorKind, Read, Write};
+use std::net::TcpStream;
 use std::thread;
 
 fn build_request(host: &str, path: &str) -> String {

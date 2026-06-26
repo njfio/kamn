@@ -1,6 +1,6 @@
 use super::{
-    DirectMessageCryptoError, DIRECT_MESSAGE_AEAD_KDF_INFO_V2,
-    DIRECT_MESSAGE_AEAD_KDF_SALT_V2, KEY_AGREEMENT_MASTER_SEED_ENV,
+    DirectMessageCryptoError, DIRECT_MESSAGE_AEAD_KDF_INFO_V2, DIRECT_MESSAGE_AEAD_KDF_SALT_V2,
+    KEY_AGREEMENT_MASTER_SEED_ENV,
 };
 use sha2::{Digest, Sha256, Sha512};
 use std::env;
@@ -32,8 +32,8 @@ pub(crate) fn validate_key_ref_match(
 }
 
 pub(crate) fn load_key_agreement_master_seed() -> Result<[u8; 32], DirectMessageCryptoError> {
-    let mut seed_hex =
-        env::var(KEY_AGREEMENT_MASTER_SEED_ENV).map_err(|_| DirectMessageCryptoError::MissingKeyAgreementMasterSeed)?;
+    let mut seed_hex = env::var(KEY_AGREEMENT_MASTER_SEED_ENV)
+        .map_err(|_| DirectMessageCryptoError::MissingKeyAgreementMasterSeed)?;
     let seed = parse_fixed_hex_32(seed_hex.trim());
     seed_hex.zeroize();
     seed

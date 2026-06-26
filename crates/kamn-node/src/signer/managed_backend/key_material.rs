@@ -2,8 +2,8 @@ use std::env;
 
 use kamn_core::ConfigError;
 
-use super::VerifyingKey;
 use super::super::{decode_kolme_hex_bytes, encode_kolme_hex_lower, KolmeLiveSignerSelection};
+use super::VerifyingKey;
 use crate::{
     KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL, KOLME_LIVE_SIGNER_PROFILE_PRIMARY,
     KOLME_LIVE_SIGNER_PROFILE_SECONDARY, KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_ENV,

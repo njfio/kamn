@@ -10,7 +10,8 @@ const LIVE_SOLANA_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
 #[test]
 fn integration_service_api_endpoint_websocket_presence_mode_streams_live_bridge_projection_event() {
     let (_env, _live_rpc_guard, harness) = build_live_bridge_presence_harness();
-    let publisher = spawn_live_bridge_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
+    let publisher =
+        spawn_live_bridge_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
     let sender_did = test_service_api_sender_did("kamn:did:agent:ws-live-bridge-presence-client");
     let websocket_response = send_live_presence_request(
         &harness.snapshot,
@@ -18,17 +19,25 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_live_bridge_
         sender_did.as_str(),
         711,
     );
-    let (submit_response, forward_response) = publisher.join().expect("bridge publish thread should complete");
+    let (submit_response, forward_response) = publisher
+        .join()
+        .expect("bridge publish thread should complete");
     assert_live_bridge_requests_accepted(submit_response.as_str(), forward_response.as_str());
     super::assert_presence_projection_response(websocket_response.as_slice(), sender_did.as_str());
     assert_live_bridge_forwarded_frame(websocket_response.as_slice());
-    assert_server_ok_or_timeout(harness.server, "service api endpoint should preserve live bridge presence frames");
+    assert_server_ok_or_timeout(
+        harness.server,
+        "service api endpoint should preserve live bridge presence frames",
+    );
 }
 
-fn build_live_bridge_presence_harness() -> (ServiceApiTestEnvGuards, EnvVarGuard, WebsocketHarness) {
+fn build_live_bridge_presence_harness() -> (ServiceApiTestEnvGuards, EnvVarGuard, WebsocketHarness)
+{
     let env = acquire_service_api_test_env();
-    let live_rpc_guard =
-        EnvVarGuard::set("KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL", Some(LIVE_SOLANA_DEVNET_RPC_URL));
+    let live_rpc_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL",
+        Some(LIVE_SOLANA_DEVNET_RPC_URL),
+    );
     let harness = build_websocket_harness("127.0.0.1:34074", 3);
     (env, live_rpc_guard, harness)
 }
@@ -78,8 +87,12 @@ fn spawn_live_bridge_publish_thread(
         let state_hash = state_hash(&snapshot);
         let submit_response = submit_live_bridge(bind_addr.as_str(), state_hash.as_str(), 712);
         let bridge_id = submitted_bridge_id(submit_response.as_str());
-        let forward_response =
-            forward_live_bridge(bind_addr.as_str(), state_hash.as_str(), 713, bridge_id.as_str());
+        let forward_response = forward_live_bridge(
+            bind_addr.as_str(),
+            state_hash.as_str(),
+            713,
+            bridge_id.as_str(),
+        );
         (submit_response, forward_response)
     })
 }
@@ -154,7 +167,10 @@ fn assert_live_bridge_forwarded_frame(response: &[u8]) {
 }
 
 fn assert_live_bridge_forwarded_identity(payload: &Value) {
-    assert_eq!(payload["event"].as_str(), Some("service-api.bridge.forwarded"));
+    assert_eq!(
+        payload["event"].as_str(),
+        Some("service-api.bridge.forwarded")
+    );
 }
 
 fn assert_live_bridge_forwarded_evidence(payload: &Value) {
@@ -166,6 +182,8 @@ fn bridge_forwarded_frames(frames: &[String]) -> Vec<Value> {
     frames
         .iter()
         .filter_map(|frame| serde_json::from_str::<Value>(frame).ok())
-        .filter(|payload| payload.get("event").and_then(Value::as_str) == Some("service-api.bridge.forwarded"))
+        .filter(|payload| {
+            payload.get("event").and_then(Value::as_str) == Some("service-api.bridge.forwarded")
+        })
         .collect()
 }

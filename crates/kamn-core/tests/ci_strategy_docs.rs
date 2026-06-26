@@ -155,44 +155,44 @@ fn dependency_license_metadata_governance_reason_codes() -> Vec<&'static str> {
         .split(',')
         .collect()
 }
-#[path = "ci_strategy_docs/service_api_policy_support.rs"]
-mod service_api_policy_support;
-#[path = "ci_strategy_docs/service_api_request_path_authz_contract_tests.rs"]
-mod service_api_request_path_authz_contract_tests;
-#[path = "ci_strategy_docs/service_api_scope_policy_contract_tests.rs"]
-mod service_api_scope_policy_contract_tests;
-#[path = "ci_strategy_docs/service_api_tenant_isolation_contract_tests.rs"]
-mod service_api_tenant_isolation_contract_tests;
 #[path = "ci_strategy_docs/api_version_policy_contract_tests.rs"]
 mod api_version_policy_contract_tests;
-#[path = "ci_strategy_docs/request_response_schema_compatibility_contract_tests.rs"]
-mod request_response_schema_compatibility_contract_tests;
+#[path = "ci_strategy_docs/convergence_governance_contract_tests.rs"]
+mod convergence_governance_contract_tests;
+#[path = "ci_strategy_docs/deletion_docs_parity_contract_tests.rs"]
+mod deletion_docs_parity_contract_tests;
 #[path = "ci_strategy_docs/fairness_deletion_support.rs"]
 mod fairness_deletion_support;
 #[path = "ci_strategy_docs/fairness_docs_parity_contract_tests.rs"]
 mod fairness_docs_parity_contract_tests;
-#[path = "ci_strategy_docs/deletion_docs_parity_contract_tests.rs"]
-mod deletion_docs_parity_contract_tests;
-#[path = "ci_strategy_docs/performance_docs_contract_tests.rs"]
-mod performance_docs_contract_tests;
-#[path = "ci_strategy_docs/governance_gate_contract_tests.rs"]
-mod governance_gate_contract_tests;
-#[path = "ci_strategy_docs/convergence_governance_contract_tests.rs"]
-mod convergence_governance_contract_tests;
-#[path = "ci_strategy_docs/local_heavy_policy_contract_tests.rs"]
-mod local_heavy_policy_contract_tests;
-#[path = "ci_strategy_docs/overload_governance_contract_tests.rs"]
-mod overload_governance_contract_tests;
-#[path = "ci_strategy_docs/public_api_surface_contract_tests.rs"]
-mod public_api_surface_contract_tests;
-#[path = "ci_strategy_docs/service_api_runtime_contract_lane_tests.rs"]
-mod service_api_runtime_contract_lane_tests;
-#[path = "ci_strategy_docs/runtime_local_contract_lane_tests.rs"]
-mod runtime_local_contract_lane_tests;
 #[path = "ci_strategy_docs/governance_advisory_tail_contract_tests.rs"]
 mod governance_advisory_tail_contract_tests;
+#[path = "ci_strategy_docs/governance_gate_contract_tests.rs"]
+mod governance_gate_contract_tests;
+#[path = "ci_strategy_docs/local_heavy_policy_contract_tests.rs"]
+mod local_heavy_policy_contract_tests;
 #[path = "ci_strategy_docs/make_demo_governance_contract_tests.rs"]
 mod make_demo_governance_contract_tests;
+#[path = "ci_strategy_docs/overload_governance_contract_tests.rs"]
+mod overload_governance_contract_tests;
+#[path = "ci_strategy_docs/performance_docs_contract_tests.rs"]
+mod performance_docs_contract_tests;
+#[path = "ci_strategy_docs/public_api_surface_contract_tests.rs"]
+mod public_api_surface_contract_tests;
+#[path = "ci_strategy_docs/request_response_schema_compatibility_contract_tests.rs"]
+mod request_response_schema_compatibility_contract_tests;
+#[path = "ci_strategy_docs/runtime_local_contract_lane_tests.rs"]
+mod runtime_local_contract_lane_tests;
+#[path = "ci_strategy_docs/service_api_policy_support.rs"]
+mod service_api_policy_support;
+#[path = "ci_strategy_docs/service_api_request_path_authz_contract_tests.rs"]
+mod service_api_request_path_authz_contract_tests;
+#[path = "ci_strategy_docs/service_api_runtime_contract_lane_tests.rs"]
+mod service_api_runtime_contract_lane_tests;
+#[path = "ci_strategy_docs/service_api_scope_policy_contract_tests.rs"]
+mod service_api_scope_policy_contract_tests;
+#[path = "ci_strategy_docs/service_api_tenant_isolation_contract_tests.rs"]
+mod service_api_tenant_isolation_contract_tests;
 
 #[path = "ci_strategy_docs/residual_root_contract_tests.rs"]
 mod residual_root_contract_tests;

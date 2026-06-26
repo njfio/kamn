@@ -64,7 +64,9 @@ fn functional_construct_lock_supports_transfer_then_release_flow() {
         .transfer("processor-a", "processor-b", lease.fencing_token())
         .expect("lease transfer should succeed");
     assert_eq!(transferred.owner_id(), "processor-b");
-    assert!(lock.release("processor-b", transferred.fencing_token()).is_ok());
+    assert!(lock
+        .release("processor-b", transferred.fencing_token())
+        .is_ok());
 }
 
 #[test]

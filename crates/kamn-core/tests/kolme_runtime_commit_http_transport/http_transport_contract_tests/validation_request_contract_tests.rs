@@ -21,8 +21,9 @@ fn regression_http_transport_partial_eq_requires_timeout_and_authorization_match
     let timeout_mismatch = KolmeRuntimeCommitHttpTransport::new(3).expect("transport should build");
     let auth_alpha = KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
         .expect("transport should build");
-    let auth_alpha_clone = KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
-        .expect("transport should build");
+    let auth_alpha_clone =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer alpha")
+            .expect("transport should build");
     let auth_beta = KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer beta")
         .expect("transport should build");
 

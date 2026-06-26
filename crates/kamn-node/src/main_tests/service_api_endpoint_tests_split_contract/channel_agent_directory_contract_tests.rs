@@ -50,9 +50,21 @@ fn spec_c18_service_api_endpoint_channel_agent_directory_module_exists_and_owns_
         CHANNEL_AGENT_DIRECTORY_SUBMODULE_MARKERS,
         "channel-agent-directory module",
     );
-    assert_contains_markers(channel_state.as_str(), CHANNEL_STATE_MARKERS, "channel-state contract file");
-    assert_contains_markers(agent_profile.as_str(), AGENT_PROFILE_MARKERS, "agent-profile contract file");
-    assert_contains_markers(agent_registry.as_str(), AGENT_REGISTRY_MARKERS, "agent-registry contract file");
+    assert_contains_markers(
+        channel_state.as_str(),
+        CHANNEL_STATE_MARKERS,
+        "channel-state contract file",
+    );
+    assert_contains_markers(
+        agent_profile.as_str(),
+        AGENT_PROFILE_MARKERS,
+        "agent-profile contract file",
+    );
+    assert_contains_markers(
+        agent_registry.as_str(),
+        AGENT_REGISTRY_MARKERS,
+        "agent-registry contract file",
+    );
 }
 
 #[test]

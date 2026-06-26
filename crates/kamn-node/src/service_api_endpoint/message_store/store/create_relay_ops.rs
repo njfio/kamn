@@ -23,8 +23,12 @@ impl ServiceApiMessageStore {
     ) -> Result<ServiceApiMessageCreateBody, String> {
         self.refresh_from_disk()?;
         let message_id = next_message_id(self, payload);
-        let data_layer_runtime_evidence =
-            build_created_message_runtime_evidence(message_id.as_str(), payload, sender_did, recipient_did)?;
+        let data_layer_runtime_evidence = build_created_message_runtime_evidence(
+            message_id.as_str(),
+            payload,
+            sender_did,
+            recipient_did,
+        )?;
         persist_created_message(
             self,
             message_id.as_str(),
@@ -69,11 +73,7 @@ impl ServiceApiMessageStore {
         mutated |= ensure_relay_mailbox_membership(self, &request);
         if mutated {
             self.persist()?;
-            persist_message_relayed_audit_export(
-                self,
-                request.message_id,
-                request.sender_did,
-            )?;
+            persist_message_relayed_audit_export(self, request.message_id, request.sender_did)?;
         }
         Ok(relay_message_body(self, request.message_id))
     }

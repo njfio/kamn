@@ -66,8 +66,7 @@ fn feasibility_milestone(option_name: &str) -> ZkPhaseMilestone {
             option_name
         ),
         validation_focus:
-            "Unit + functional validation for policy scoring and witness commitments."
-                .to_owned(),
+            "Unit + functional validation for policy scoring and witness commitments.".to_owned(),
         exit_criteria: vec![
             "Witness commitment remains stable across repeated executions.".to_owned(),
             "Policy errors are explicit for invalid boundaries.".to_owned(),
@@ -96,8 +95,8 @@ fn validator_milestone() -> ZkPhaseMilestone {
         objective:
             "Extend verification to validator quorum and watchdog sampling for abuse detection."
                 .to_owned(),
-        validation_focus:
-            "Regression tests for censorship, replay, and invalid-proof propagation.".to_owned(),
+        validation_focus: "Regression tests for censorship, replay, and invalid-proof propagation."
+            .to_owned(),
         exit_criteria: vec![
             "Quorum paths align on proof validity outcomes.".to_owned(),
             "Watchdog alerts isolate invalid-proof mismatches without false positives.".to_owned(),

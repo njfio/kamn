@@ -2,12 +2,12 @@ use super::{
     BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform,
     NormalizedInboundMessage,
 };
-use crate::AgentDid;
-use crate::bridge_adapter::BridgeAdapterError;
 use crate::bridge_adapter::support::{
-    BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE, escape_json, parse_agent_did,
-    validate_inbound_envelope, validate_outbound_request,
+    escape_json, parse_agent_did, validate_inbound_envelope, validate_outbound_request,
+    BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE,
 };
+use crate::bridge_adapter::BridgeAdapterError;
+use crate::AgentDid;
 
 /// Adapter contract for platform-specific ingress/egress translation.
 pub trait BridgeAdapter {
@@ -30,7 +30,7 @@ pub trait BridgePolicyHook {
         normalized: &NormalizedInboundMessage,
     ) -> Result<(), BridgeAdapterError>;
     fn authorize_outbound(&self, request: &BridgeOutboundRequest)
-    -> Result<(), BridgeAdapterError>;
+        -> Result<(), BridgeAdapterError>;
 }
 
 /// Permissive policy hook that authorizes all bridge traffic.

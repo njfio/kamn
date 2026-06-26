@@ -10,7 +10,10 @@ const CHECKLIST_CONTAINS_GO_NO_GO_EVIDENCE_TEMPLATE_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_go_no_go_evidence_template() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_GO_NO_GO_EVIDENCE_TEMPLATE_MARKERS, "checklist_contains_go_no_go_evidence_template");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_GO_NO_GO_EVIDENCE_TEMPLATE_MARKERS,
+        "checklist_contains_go_no_go_evidence_template",
+    );
 }
 
 const CHECKLIST_CONTAINS_MESSAGE_ANCHORING_MISMATCH_TAMPER_GATE_MARKERS: &[&str] = &[
@@ -26,7 +29,10 @@ const CHECKLIST_CONTAINS_MESSAGE_ANCHORING_MISMATCH_TAMPER_GATE_MARKERS: &[&str]
 
 #[test]
 fn checklist_contains_message_anchoring_mismatch_tamper_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_MESSAGE_ANCHORING_MISMATCH_TAMPER_GATE_MARKERS, "checklist_contains_message_anchoring_mismatch_tamper_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_MESSAGE_ANCHORING_MISMATCH_TAMPER_GATE_MARKERS,
+        "checklist_contains_message_anchoring_mismatch_tamper_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SERVICE_API_PROTOCOL_SESSION_REASON_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -43,7 +49,10 @@ const CHECKLIST_CONTAINS_SERVICE_API_PROTOCOL_SESSION_REASON_MAPPING_GATE_MARKER
 
 #[test]
 fn checklist_contains_service_api_protocol_session_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SERVICE_API_PROTOCOL_SESSION_REASON_MAPPING_GATE_MARKERS, "checklist_contains_service_api_protocol_session_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SERVICE_API_PROTOCOL_SESSION_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_service_api_protocol_session_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_MISMATCH_REASON_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -72,7 +81,10 @@ const CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_MISMATCH_REASON_MAPPING_GATE_
 
 #[test]
 fn checklist_contains_service_api_axum_protocol_mismatch_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_MISMATCH_REASON_MAPPING_GATE_MARKERS, "checklist_contains_service_api_axum_protocol_mismatch_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_MISMATCH_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_service_api_axum_protocol_mismatch_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS: &[&str] = &[
@@ -94,7 +106,10 @@ const CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_TAXONOMY_RUNBOOK_PARITY_GATE_
 
 #[test]
 fn checklist_contains_service_api_axum_protocol_taxonomy_runbook_parity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS, "checklist_contains_service_api_axum_protocol_taxonomy_runbook_parity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SERVICE_API_AXUM_PROTOCOL_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS,
+        "checklist_contains_service_api_axum_protocol_taxonomy_runbook_parity_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SERVICE_API_AXUM_ADMISSION_DECISION_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS: &[&str] = &[
@@ -122,5 +137,8 @@ const CHECKLIST_CONTAINS_SERVICE_API_AXUM_ADMISSION_DECISION_TAXONOMY_RUNBOOK_PA
 
 #[test]
 fn checklist_contains_service_api_axum_admission_decision_taxonomy_runbook_parity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SERVICE_API_AXUM_ADMISSION_DECISION_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS, "checklist_contains_service_api_axum_admission_decision_taxonomy_runbook_parity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SERVICE_API_AXUM_ADMISSION_DECISION_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS,
+        "checklist_contains_service_api_axum_admission_decision_taxonomy_runbook_parity_gate",
+    );
 }

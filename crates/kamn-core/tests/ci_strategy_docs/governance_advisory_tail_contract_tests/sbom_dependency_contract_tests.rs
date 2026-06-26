@@ -2,12 +2,18 @@ use super::support::assert_doc_contains_all;
 
 #[test]
 fn doc_contains_sbom_provenance_artifact_generator_contract_markers() {
-    assert_doc_contains_all(sbom_artifact_generator_markers(), "sbom provenance artifact");
+    assert_doc_contains_all(
+        sbom_artifact_generator_markers(),
+        "sbom provenance artifact",
+    );
 }
 
 #[test]
 fn doc_contains_sbom_provenance_release_gonogo_checker_contract_markers() {
-    assert_doc_contains_all(sbom_release_gonogo_markers(), "sbom provenance release gonogo");
+    assert_doc_contains_all(
+        sbom_release_gonogo_markers(),
+        "sbom provenance release gonogo",
+    );
 }
 
 #[test]

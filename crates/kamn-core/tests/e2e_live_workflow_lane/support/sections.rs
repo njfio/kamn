@@ -1,6 +1,10 @@
 fn section_between<'a>(workflow: &'a str, start: &str, end: Option<&str>) -> Option<&'a str> {
     let start_idx = workflow.find(start)?;
-    let end_idx = end.and_then(|marker| workflow[start_idx..].find(marker).map(|idx| start_idx + idx));
+    let end_idx = end.and_then(|marker| {
+        workflow[start_idx..]
+            .find(marker)
+            .map(|idx| start_idx + idx)
+    });
     Some(&workflow[start_idx..end_idx.unwrap_or(workflow.len())])
 }
 

@@ -59,7 +59,9 @@ pub enum DataLayerM4SettlementEvidenceRegistryError {
     InvalidDid(String),
     InvalidEscrowParties(&'static str),
     DuplicateEscrowId(String),
-    EscrowNotFound { escrow_id: String },
+    EscrowNotFound {
+        escrow_id: String,
+    },
     InvalidEscrowTransition {
         escrow_id: String,
         from: DataLayerM4EscrowState,
@@ -76,7 +78,10 @@ pub enum DataLayerM4SettlementEvidenceRegistryError {
         position: usize,
         reason: &'static str,
     },
-    EvidenceSequenceNotFound { escrow_id: String, sequence: u64 },
+    EvidenceSequenceNotFound {
+        escrow_id: String,
+        sequence: u64,
+    },
 }
 
 impl fmt::Display for DataLayerM4SettlementEvidenceRegistryError {
@@ -131,7 +136,9 @@ fn write_identity_error(
         DataLayerM4SettlementEvidenceRegistryError::EmptyField(field) => {
             write!(f, "{field} must not be empty").map(|_| true)
         }
-        DataLayerM4SettlementEvidenceRegistryError::InvalidDid(value) => write!(f, "invalid did: {value}").map(|_| true),
+        DataLayerM4SettlementEvidenceRegistryError::InvalidDid(value) => {
+            write!(f, "invalid did: {value}").map(|_| true)
+        }
         DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowParties(reason) => {
             write!(f, "invalid escrow parties: {reason}").map(|_| true)
         }
@@ -141,7 +148,9 @@ fn write_identity_error(
         DataLayerM4SettlementEvidenceRegistryError::EscrowNotFound { escrow_id } => {
             write!(f, "escrow not found: {escrow_id}").map(|_| true)
         }
-        DataLayerM4SettlementEvidenceRegistryError::InvalidHashToken(field) => write!(f, "invalid hash token: {field}").map(|_| true),
+        DataLayerM4SettlementEvidenceRegistryError::InvalidHashToken(field) => {
+            write!(f, "invalid hash token: {field}").map(|_| true)
+        }
         _ => Ok(false),
     }
 }

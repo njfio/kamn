@@ -7,12 +7,16 @@ const REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS: &[&str] = &[
     "--reviewer-did kamn:did:reviewer-001",
 ];
 
-const REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS_FORBIDDEN: &[&str] = &[
-    "did:kamn:",
-];
+const REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS_FORBIDDEN: &[&str] = &["did:kamn:"];
 
 #[test]
 fn regression_requires_canonical_did_examples() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS, "regression_requires_canonical_did_examples");
-    assert_checklist_omits_all(REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS_FORBIDDEN, "regression_requires_canonical_did_examples");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS,
+        "regression_requires_canonical_did_examples",
+    );
+    assert_checklist_omits_all(
+        REGRESSION_REQUIRES_CANONICAL_DID_EXAMPLES_MARKERS_FORBIDDEN,
+        "regression_requires_canonical_did_examples",
+    );
 }

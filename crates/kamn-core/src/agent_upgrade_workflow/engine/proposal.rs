@@ -1,12 +1,12 @@
 use crate::agent_upgrade_workflow::{
+    support::{
+        require_non_empty, validate_did, validate_timestamp,
+        AGENT_UPGRADE_WORKFLOW_INVALID_PROPOSAL_AGENT_DID_REASON_CODE,
+        AGENT_UPGRADE_WORKFLOW_INVALID_REVIEWER_DID_REASON_CODE,
+    },
     AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind,
     AgentUpgradeProposalDraft, AgentUpgradeProposalRecord, AgentUpgradeProposalState,
     AgentUpgradeWorkflowError,
-    support::{
-        AGENT_UPGRADE_WORKFLOW_INVALID_PROPOSAL_AGENT_DID_REASON_CODE,
-        AGENT_UPGRADE_WORKFLOW_INVALID_REVIEWER_DID_REASON_CODE, require_non_empty, validate_did,
-        validate_timestamp,
-    },
 };
 
 impl AgentDrivenUpgradeWorkflow {

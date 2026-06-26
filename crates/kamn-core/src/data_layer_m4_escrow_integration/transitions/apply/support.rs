@@ -66,8 +66,7 @@ pub(super) fn release_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
-    let (settled_at_epoch_seconds, settlement_receipt_hash) =
-        require_release_transition(action);
+    let (settled_at_epoch_seconds, settlement_receipt_hash) = require_release_transition(action);
     super::apply_settlement_transition(
         escrow,
         from,

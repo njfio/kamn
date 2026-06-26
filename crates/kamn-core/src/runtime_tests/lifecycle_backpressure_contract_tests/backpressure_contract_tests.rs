@@ -32,8 +32,13 @@ fn regression_runtime_backpressure_action_reason_matrix_remains_stable() {
     }
 }
 
-fn backpressure_reason_matrix(
-) -> [(&'static str, usize, PeerLifecycleState, RuntimeBackpressureAction, &'static str); 4] {
+fn backpressure_reason_matrix() -> [(
+    &'static str,
+    usize,
+    PeerLifecycleState,
+    RuntimeBackpressureAction,
+    &'static str,
+); 4] {
     [
         (
             "kamn:did:agent:peer-matrix-accept",
@@ -98,8 +103,13 @@ fn integration_runtime_backpressure_purges_stale_disconnected_peer_queue() {
 #[test]
 fn functional_runtime_queue_enforces_reject_action_on_enqueue() {
     let controller = backpressure_controller();
-    let decision =
-        evaluated_backpressure_action(&controller, "kamn:did:agent:peer-c", 9, 10, PeerLifecycleState::Active);
+    let decision = evaluated_backpressure_action(
+        &controller,
+        "kamn:did:agent:peer-c",
+        9,
+        10,
+        PeerLifecycleState::Active,
+    );
     assert_eq!(decision.action, RuntimeBackpressureAction::RejectNewEnqueue);
 }
 
@@ -129,5 +139,8 @@ fn regression_runtime_queue_backpressure_reason_markers_remain_stable() {
         10,
         PeerLifecycleState::Active,
     );
-    assert_eq!(decision.reason_code(), "runtime_backpressure_reject_new_enqueue");
+    assert_eq!(
+        decision.reason_code(),
+        "runtime_backpressure_reject_new_enqueue"
+    );
 }

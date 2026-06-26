@@ -56,7 +56,12 @@ pub fn run_checker(head_sha: &str, output_json: &PathBuf) -> Output {
         .expect("checker should launch")
 }
 
-pub fn run_subject_checker(name: &str, subjects: &[&str], window_size: &str, max_ratio: &str) -> (Output, Value) {
+pub fn run_subject_checker(
+    name: &str,
+    subjects: &[&str],
+    window_size: &str,
+    max_ratio: &str,
+) -> (Output, Value) {
     let subject_path = subjects_file(name, subjects);
     let report_path = output_json(name);
     let output = Command::new("python3")

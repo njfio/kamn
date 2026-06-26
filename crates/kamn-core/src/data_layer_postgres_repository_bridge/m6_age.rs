@@ -34,7 +34,9 @@ pub fn data_layer_pg_project_m6_age_trust_query_operation(
     )?)
 }
 
-fn validate_edge(edge: &DataLayerM6GraphEdgeRecord) -> Result<(), DataLayerPgRepositoryBridgeError> {
+fn validate_edge(
+    edge: &DataLayerM6GraphEdgeRecord,
+) -> Result<(), DataLayerPgRepositoryBridgeError> {
     validate_non_empty(edge.owner_did.as_str(), "owner_did")?;
     validate_non_empty(edge.edge_id.as_str(), "edge_id")?;
     validate_non_empty(edge.from_node_id.as_str(), "from_node_id")?;
@@ -78,7 +80,10 @@ fn validate_trust_query(
     request: &DataLayerPgM6AgeTrustQueryRequest,
 ) -> Result<(), DataLayerPgRepositoryBridgeError> {
     validate_non_empty(request.query.owner_did.as_str(), "owner_did")?;
-    validate_non_empty(request.query.source_agent_node_id.as_str(), "source_agent_node_id")?;
+    validate_non_empty(
+        request.query.source_agent_node_id.as_str(),
+        "source_agent_node_id",
+    )?;
     validate_owner_did(request.query.owner_did.as_str())?;
     validate_owner_did(request.query.requester_owner_did.as_str())?;
     if request.query.max_depth == 0 {

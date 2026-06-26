@@ -1,5 +1,5 @@
-use super::*;
 use super::runtime_wiring::LIBP2P_LIVE_TRANSPORT_FEATURE_NAME;
+use super::*;
 
 #[test]
 fn runtime_transport_profile_markers_remain_stable() {
@@ -15,7 +15,10 @@ fn runtime_transport_profile_markers_remain_stable() {
 
 #[test]
 fn libp2p_feature_gate_name_matches_constant() {
-    assert_eq!(libp2p_feature_gate_name(), LIBP2P_LIVE_TRANSPORT_FEATURE_NAME);
+    assert_eq!(
+        libp2p_feature_gate_name(),
+        LIBP2P_LIVE_TRANSPORT_FEATURE_NAME
+    );
 }
 
 #[test]

@@ -1,5 +1,5 @@
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
 
 #[test]
 fn doc_contains_dependency_local_heavy_deep_scan_policy_checker_contract() {

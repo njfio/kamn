@@ -53,7 +53,9 @@ pub(crate) fn map_channel_snapshot_error(error: ChannelSnapshotError) -> ConfigE
     }
 }
 
-pub(crate) fn map_message_lifecycle_snapshot_error(error: MessageLifecycleSnapshotError) -> ConfigError {
+pub(crate) fn map_message_lifecycle_snapshot_error(
+    error: MessageLifecycleSnapshotError,
+) -> ConfigError {
     match error {
         MessageLifecycleSnapshotError::SnapshotVersionMismatch { expected, found } => schema_error(
             "message-lifecycle-snapshot-store",
@@ -69,7 +71,11 @@ pub(crate) fn map_message_lifecycle_snapshot_error(error: MessageLifecycleSnapsh
     }
 }
 
-pub(crate) fn runtime_regression_error(reason_code: &'static str, previous: u64, found: u64) -> ConfigError {
+pub(crate) fn runtime_regression_error(
+    reason_code: &'static str,
+    previous: u64,
+    found: u64,
+) -> ConfigError {
     schema_error(
         "runtime-snapshot-store",
         reason_code,
@@ -108,9 +114,21 @@ pub(crate) fn corrupt_payload(
     reason_code: &'static str,
     detail: String,
 ) -> ConfigError {
-    ConfigError::RuntimeStoreCorruptPayload { store, reason_code, detail }
+    ConfigError::RuntimeStoreCorruptPayload {
+        store,
+        reason_code,
+        detail,
+    }
 }
 
-pub(crate) fn io_error(store: &'static str, reason_code: &'static str, detail: String) -> ConfigError {
-    ConfigError::RuntimeStoreCompatibility { store, reason_code, detail }
+pub(crate) fn io_error(
+    store: &'static str,
+    reason_code: &'static str,
+    detail: String,
+) -> ConfigError {
+    ConfigError::RuntimeStoreCompatibility {
+        store,
+        reason_code,
+        detail,
+    }
 }

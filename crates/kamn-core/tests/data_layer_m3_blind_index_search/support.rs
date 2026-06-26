@@ -42,10 +42,7 @@ pub(crate) fn derive_blind_index_token(owner_key: &str, field_name: &str, value:
         .expect("blind index token should be derived")
 }
 
-pub(crate) fn register_record(
-    catalog: &mut DataLayerM3SearchCatalog,
-    seed: RecordSeed<'_>,
-) {
+pub(crate) fn register_record(catalog: &mut DataLayerM3SearchCatalog, seed: RecordSeed<'_>) {
     catalog
         .register_record(record(seed))
         .expect("record registration should succeed");

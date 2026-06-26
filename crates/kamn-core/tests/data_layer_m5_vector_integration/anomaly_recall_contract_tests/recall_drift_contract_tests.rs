@@ -24,7 +24,10 @@ fn spec_c06_recall_drift_is_stable_when_recall_and_rank_shift_are_within_thresho
         .expect("recall drift should succeed");
 
     assert_eq!(report.decision, DataLayerM5RecallDriftDecision::Stable);
-    assert_eq!(report.reason_code, DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE);
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE
+    );
     assert_eq!(report.recall_at_k, 1.0);
     assert_eq!(report.max_observed_rank_shift, 0);
     assert!(report.missing_embedding_ids.is_empty());
@@ -38,15 +41,24 @@ fn spec_c07_recall_drift_is_degraded_when_baseline_ids_are_missing() {
         .evaluate_recall_drift(DataLayerM5RecallDriftEvaluationInput {
             owner_did: "kamn:did:owner:alpha".to_owned(),
             query_vector: vec![1.0, 0.0, 0.0],
-            baseline_top_k_embedding_ids: vec!["embed-m5-r3".to_owned(), "embed-m5-r4-missing".to_owned()],
+            baseline_top_k_embedding_ids: vec![
+                "embed-m5-r3".to_owned(),
+                "embed-m5-r4-missing".to_owned(),
+            ],
             min_recall_at_k: 1.0,
             max_allowed_rank_shift: 0,
         })
         .expect("recall drift should succeed");
 
     assert_eq!(report.decision, DataLayerM5RecallDriftDecision::Degraded);
-    assert_eq!(report.reason_code, DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE);
-    assert_eq!(report.missing_embedding_ids, vec!["embed-m5-r4-missing".to_owned()]);
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE
+    );
+    assert_eq!(
+        report.missing_embedding_ids,
+        vec!["embed-m5-r4-missing".to_owned()]
+    );
 }
 
 #[test]
@@ -67,22 +79,27 @@ fn spec_c08_recall_drift_is_degraded_when_rank_shift_exceeds_threshold() {
         .expect("recall drift should succeed");
 
     assert_eq!(report.decision, DataLayerM5RecallDriftDecision::Degraded);
-    assert_eq!(report.reason_code, DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE);
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE
+    );
     assert_eq!(report.max_observed_rank_shift, 1);
 }
 
 #[test]
 fn spec_c09_recall_drift_rejects_invalid_threshold_and_empty_baseline() {
-    let registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
 
     assert_empty_baseline_rejected(&registry);
     assert_invalid_threshold_rejected(&registry);
 }
 
 fn make_recall_registry(entries: &[(&str, &str, Vec<f32>)]) -> DataLayerM5EmbeddingRegistry {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     for (embedding_id, message_id, vector) in entries {
         registry
             .append(vector_input(
@@ -107,7 +124,9 @@ fn assert_empty_baseline_rejected(registry: &DataLayerM5EmbeddingRegistry) {
     });
     assert!(matches!(
         empty_baseline,
-        Err(DataLayerM5VectorIntegrationError::EmptyField("baseline_top_k_embedding_ids"))
+        Err(DataLayerM5VectorIntegrationError::EmptyField(
+            "baseline_top_k_embedding_ids"
+        ))
     ));
 }
 
@@ -121,6 +140,8 @@ fn assert_invalid_threshold_rejected(registry: &DataLayerM5EmbeddingRegistry) {
     });
     assert!(matches!(
         invalid_threshold,
-        Err(DataLayerM5VectorIntegrationError::InvalidVectorValue("min_recall_at_k"))
+        Err(DataLayerM5VectorIntegrationError::InvalidVectorValue(
+            "min_recall_at_k"
+        ))
     ));
 }

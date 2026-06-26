@@ -45,10 +45,7 @@ pub(super) fn spawn_ingress_server(
     IngressServer { bind_addr, server }
 }
 
-pub(super) fn assert_server_ok(
-    server: thread::JoinHandle<Result<(), String>>,
-    context: &str,
-) {
+pub(super) fn assert_server_ok(server: thread::JoinHandle<Result<(), String>>, context: &str) {
     let result = server.join().expect("endpoint thread should complete");
     assert!(result.is_ok(), "{context}");
 }

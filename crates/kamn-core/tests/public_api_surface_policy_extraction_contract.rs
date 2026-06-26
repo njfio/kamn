@@ -20,7 +20,8 @@ const REQUIRED_FILES: &[&str] = &[
 
 #[test]
 fn public_api_surface_policy_root_is_extracted() {
-    let source = fs::read_to_string(ROOT).expect("root public api surface policy test file should be readable");
+    let source = fs::read_to_string(ROOT)
+        .expect("root public api surface policy test file should be readable");
     assert_root_budget(source.as_str());
     assert_root_markers(source.as_str());
     assert_extracted_files();
@@ -28,12 +29,18 @@ fn public_api_surface_policy_root_is_extracted() {
 
 fn assert_root_budget(source: &str) {
     let line_count = source.lines().count();
-    assert!(line_count <= ROOT_BUDGET, "expected {ROOT} to be <= {ROOT_BUDGET} lines after extraction, got {line_count}");
+    assert!(
+        line_count <= ROOT_BUDGET,
+        "expected {ROOT} to be <= {ROOT_BUDGET} lines after extraction, got {line_count}"
+    );
 }
 
 fn assert_root_markers(source: &str) {
     for marker in REQUIRED_MODULE_MARKERS {
-        assert!(source.contains(marker), "expected root shell to contain module marker `{marker}`");
+        assert!(
+            source.contains(marker),
+            "expected root shell to contain module marker `{marker}`"
+        );
     }
 }
 
@@ -45,6 +52,9 @@ fn assert_extracted_files() {
             .unwrap_or_else(|error| panic!("failed to read `{path}`: {error}"))
             .lines()
             .count();
-        assert!(count <= 200, "expected extracted file `{path}` to stay within 200 lines, got {count}");
+        assert!(
+            count <= 200,
+            "expected extracted file `{path}` to stay within 200 lines, got {count}"
+        );
     }
 }

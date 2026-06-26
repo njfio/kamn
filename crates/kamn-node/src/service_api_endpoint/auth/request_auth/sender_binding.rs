@@ -1,5 +1,5 @@
 use super::super::support::{
-    SELF_CERTIFYING_AGENT_DID_KEY_PREFIX, header_value, normalized_public_key_hexes_match,
+    header_value, normalized_public_key_hexes_match, SELF_CERTIFYING_AGENT_DID_KEY_PREFIX,
 };
 use super::*;
 

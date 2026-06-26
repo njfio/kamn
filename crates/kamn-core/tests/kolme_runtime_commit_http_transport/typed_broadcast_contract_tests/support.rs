@@ -1,6 +1,10 @@
 use super::*;
 
-pub(crate) fn broadcast_request(message: &str, signature: &str, recovery_id: u8) -> KolmeApiBroadcastRequest {
+pub(crate) fn broadcast_request(
+    message: &str,
+    signature: &str,
+    recovery_id: u8,
+) -> KolmeApiBroadcastRequest {
     KolmeApiBroadcastRequest::new(message, signature, recovery_id)
         .expect("broadcast request should build")
 }

@@ -28,8 +28,7 @@ pub const DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE: &str =
 /// Recall drift remained within configured guardrails.
 pub const DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE: &str = "m5_vector_recall_drift_stable";
 /// Recall drift degraded beyond configured guardrails.
-pub const DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE: &str =
-    "m5_vector_recall_drift_degraded";
+pub const DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE: &str = "m5_vector_recall_drift_degraded";
 /// Agent DID failed canonical parser validation.
 pub const DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE: &str = "m5_vector_invalid_agent_did";
 /// Retention due projection reason marker.

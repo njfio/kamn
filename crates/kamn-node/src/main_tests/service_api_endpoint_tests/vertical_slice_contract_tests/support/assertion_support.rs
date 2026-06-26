@@ -24,7 +24,10 @@ pub(crate) fn recipient_env_guards(
     state_file: &std::path::Path,
     spool_file: &std::path::Path,
 ) -> ((String, EnvVarGuard), (String, EnvVarGuard)) {
-    (set_state_file_env(state_file), set_relay_spool_env(spool_file))
+    (
+        set_state_file_env(state_file),
+        set_relay_spool_env(spool_file),
+    )
 }
 
 fn assert_runtime_evidence(sender_message: &Value) {
@@ -46,7 +49,11 @@ fn assert_task_completion(task_id: &str, queried_task: &Value, persisted_task: &
 fn assert_task_audit_record(task_id: &str, audit_export: &Value) {
     let task_record = audit_export["records"]
         .as_array()
-        .and_then(|records| records.iter().find(|record| is_task_create_record(record, task_id)))
+        .and_then(|records| {
+            records
+                .iter()
+                .find(|record| is_task_create_record(record, task_id))
+        })
         .expect("audit export should contain the task-create record");
     assert_eq!(task_record["action"], "service_api_task_created");
     assert_eq!(task_record["event_id"], task_id);

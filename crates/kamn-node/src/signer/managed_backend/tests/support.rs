@@ -8,9 +8,9 @@ use k256::ecdsa::{RecoveryId, Signature, SigningKey};
 use kamn_core::KolmeRuntimeCommitRequest;
 
 use crate::signer::{
-    build_kolme_live_managed_signing_key, encode_kolme_hex_lower,
-    KolmeLiveManagedKeySourceAdapter, KolmeLiveManagedKeySourceAdapterOutput,
-    KolmeLiveSignerSelection, ManagedExternalKeySourceAdapter,
+    build_kolme_live_managed_signing_key, encode_kolme_hex_lower, KolmeLiveManagedKeySourceAdapter,
+    KolmeLiveManagedKeySourceAdapterOutput, KolmeLiveSignerSelection,
+    ManagedExternalKeySourceAdapter,
 };
 use kamn_core::SignerProviderHandshakeMatrix;
 
@@ -70,8 +70,12 @@ pub(super) fn deterministic_managed_backend_fixture(suffix: &str) -> ManagedBack
     let canonical_message = format!("{{\"managed\":\"{suffix}\"}}");
     let signing_key = build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
         .expect("managed signing key should derive");
-    let signer_public_key_hex =
-        encode_kolme_hex_lower(signing_key.verifying_key().to_encoded_point(true).as_bytes());
+    let signer_public_key_hex = encode_kolme_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    );
     let (signature, recovery_id) = signing_key
         .sign_recoverable(canonical_message.as_bytes())
         .expect("managed signing key should sign canonical message");

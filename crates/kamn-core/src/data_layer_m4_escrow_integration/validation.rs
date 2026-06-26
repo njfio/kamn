@@ -6,7 +6,9 @@ pub(super) fn validate_non_empty(
     field_name: &'static str,
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if value.trim().is_empty() {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::EmptyField(field_name));
+        return Err(DataLayerM4SettlementEvidenceRegistryError::EmptyField(
+            field_name,
+        ));
     }
     Ok(())
 }
@@ -16,7 +18,9 @@ pub(super) fn validate_non_zero_timestamp(
     field_name: &'static str,
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if value == 0 {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::EmptyField(field_name));
+        return Err(DataLayerM4SettlementEvidenceRegistryError::EmptyField(
+            field_name,
+        ));
     }
     Ok(())
 }
@@ -26,11 +30,15 @@ pub(super) fn validate_kamn_did(
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     let trimmed = value.trim();
     if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidDid(value.to_owned()));
+        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidDid(
+            value.to_owned(),
+        ));
     }
     let segments = trimmed.split(':').collect::<Vec<_>>();
     if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidDid(value.to_owned()));
+        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidDid(
+            value.to_owned(),
+        ));
     }
     Ok(())
 }
@@ -53,16 +61,20 @@ pub(super) fn validate_auditor_threshold(
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if let Some(threshold) = threshold {
         if threshold == 0 || auditor_did.is_none() || share_holder_count < threshold as usize {
-            return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidAuditorThreshold {
-                threshold,
-                share_holder_count,
-            });
+            return Err(
+                DataLayerM4SettlementEvidenceRegistryError::InvalidAuditorThreshold {
+                    threshold,
+                    share_holder_count,
+                },
+            );
         }
     } else if auditor_did.is_some() && share_holder_count > 0 {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidAuditorThreshold {
-            threshold: 0,
-            share_holder_count,
-        });
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::InvalidAuditorThreshold {
+                threshold: 0,
+                share_holder_count,
+            },
+        );
     }
     Ok(())
 }
@@ -74,11 +86,13 @@ pub(super) fn ensure_transition_allowed(
     allowed_states: &[DataLayerM4EscrowState],
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if !allowed_states.contains(&from) {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowTransition {
-            escrow_id: escrow_id.to_owned(),
-            from,
-            action: action.marker(),
-        });
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowTransition {
+                escrow_id: escrow_id.to_owned(),
+                from,
+                action: action.marker(),
+            },
+        );
     }
     Ok(())
 }
@@ -100,7 +114,9 @@ pub(super) fn reason_code_for_transition(
         DataLayerM4EscrowTransitionAction::ResolveRefund { .. } => {
             DATA_LAYER_M4_ESCROW_REFUNDED_REASON_CODE
         }
-        DataLayerM4EscrowTransitionAction::Expire { .. } => DATA_LAYER_M4_ESCROW_EXPIRED_REASON_CODE,
+        DataLayerM4EscrowTransitionAction::Expire { .. } => {
+            DATA_LAYER_M4_ESCROW_EXPIRED_REASON_CODE
+        }
     }
 }
 

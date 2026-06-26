@@ -45,8 +45,9 @@ impl<TTransport> TransportEventMempoolFeed<TTransport> {
             return Ok(());
         }
         validate_required_topics(self.required_topics.as_ref(), &frames)?;
-        let decoded = GossipIngressAdapter::decode_frames(&frames)
-            .map_err(|error| BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error)))?;
+        let decoded = GossipIngressAdapter::decode_frames(&frames).map_err(|error| {
+            BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error))
+        })?;
         self.pending_transactions = decoded.transactions;
         self.pending_candidates = decoded.canonical_candidates;
         Ok(())
@@ -101,8 +102,7 @@ fn normalize_topic_set(topics: Vec<String>) -> Result<BTreeSet<String>, BlockPip
     for topic in topics {
         if topic.trim().is_empty() {
             return Err(BlockPipelineError::TransportFeed(
-                "transport feed required topic is empty (transport_feed_topics_invalid)"
-                    .to_owned(),
+                "transport feed required topic is empty (transport_feed_topics_invalid)".to_owned(),
             ));
         }
         normalized.insert(topic.trim().to_owned());

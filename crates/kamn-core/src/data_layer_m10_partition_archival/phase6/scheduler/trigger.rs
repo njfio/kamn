@@ -5,12 +5,12 @@ use kamn_data_layer::{
     DataLayerM10Phase6SchedulerSignalPolicy, DataLayerM10Phase6SchedulerTriggerPolicy,
 };
 
-use super::super::policy_mapping::{
-    map_data_layer_policy_error_to_m10, map_phase6_scheduler_trigger_decision_from_policy,
-};
 use super::super::super::{
     DataLayerM10PartitionLifecycleError, DataLayerM10Phase6SchedulerPolicy,
     DataLayerM10Phase6SchedulerSignal, DataLayerM10Phase6SchedulerTriggerDecision,
+};
+use super::super::policy_mapping::{
+    map_data_layer_policy_error_to_m10, map_phase6_scheduler_trigger_decision_from_policy,
 };
 
 pub(crate) fn validate_phase6_scheduler_policy(
@@ -64,9 +64,8 @@ fn map_phase6_scheduler_trigger_policy_from_core(
 pub(crate) fn phase6_scheduler_error_reason_code(
     error: &DataLayerM10PartitionLifecycleError,
 ) -> &'static str {
-    structured_scheduler_error_reason_code(error).unwrap_or(
-        crate::DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
-    )
+    structured_scheduler_error_reason_code(error)
+        .unwrap_or(crate::DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE)
 }
 
 fn structured_scheduler_error_reason_code(

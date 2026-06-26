@@ -1,11 +1,11 @@
 use crate::GovernanceProposalStatus;
 
 use crate::agent_upgrade_workflow::{
-    AgentDrivenUpgradeWorkflow, AgentUpgradeWorkflowError,
     support::{
-        AGENT_UPGRADE_WORKFLOW_INVALID_EXECUTED_BY_DID_REASON_CODE, require_non_empty,
-        validate_did, validate_timestamp,
+        require_non_empty, validate_did, validate_timestamp,
+        AGENT_UPGRADE_WORKFLOW_INVALID_EXECUTED_BY_DID_REASON_CODE,
     },
+    AgentDrivenUpgradeWorkflow, AgentUpgradeWorkflowError,
 };
 
 pub(super) fn validate_execution_request(

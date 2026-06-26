@@ -74,7 +74,11 @@ fn assert_moved_markers_removed(root: &str) {
 fn assert_module_files_exist_and_fit_budget() {
     for path in MODULE_FILES {
         let full = repo_path(path);
-        assert!(full.exists(), "missing extracted module: {}", full.display());
+        assert!(
+            full.exists(),
+            "missing extracted module: {}",
+            full.display()
+        );
         let lines = fs::read_to_string(&full)
             .expect("read module")
             .lines()

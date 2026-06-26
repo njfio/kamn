@@ -108,7 +108,9 @@ pub trait DurableGuardBundleSnapshotStore {
     ) -> Result<(), DurableGuardSnapshotStoreError>;
 
     /// Loads a durable guard bundle, if present.
-    fn load_bundle(&self) -> Result<Option<DurableGuardSnapshotBundle>, DurableGuardSnapshotStoreError>;
+    fn load_bundle(
+        &self,
+    ) -> Result<Option<DurableGuardSnapshotBundle>, DurableGuardSnapshotStoreError>;
 }
 
 /// Store interface for delivery-guard snapshot lane.
@@ -120,7 +122,9 @@ pub trait DeliveryGuardSnapshotStore {
     ) -> Result<(), DurableGuardSnapshotStoreError>;
 
     /// Loads only delivery-guard snapshot payload, if present.
-    fn load_delivery_guard(&self) -> Result<Option<DeliveryGuardSnapshot>, DurableGuardSnapshotStoreError>;
+    fn load_delivery_guard(
+        &self,
+    ) -> Result<Option<DeliveryGuardSnapshot>, DurableGuardSnapshotStoreError>;
 }
 
 /// Store interface for channel-policy snapshot lane.
@@ -132,7 +136,9 @@ pub trait ChannelPolicySnapshotStore {
     ) -> Result<(), DurableGuardSnapshotStoreError>;
 
     /// Loads only channel-policy snapshot payload, if present.
-    fn load_channel_policy(&self) -> Result<Option<ChannelPolicySnapshot>, DurableGuardSnapshotStoreError>;
+    fn load_channel_policy(
+        &self,
+    ) -> Result<Option<ChannelPolicySnapshot>, DurableGuardSnapshotStoreError>;
 }
 
 pub(crate) fn default_bundle() -> DurableGuardSnapshotBundle {
@@ -157,8 +163,10 @@ fn ensure_schema_version(found: u16) -> Result<(), DurableGuardSnapshotStoreErro
     if found == DURABLE_GUARD_BUNDLE_SCHEMA_VERSION {
         return Ok(());
     }
-    Err(DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch {
-        expected: DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
-        found,
-    })
+    Err(
+        DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch {
+            expected: DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
+            found,
+        },
+    )
 }

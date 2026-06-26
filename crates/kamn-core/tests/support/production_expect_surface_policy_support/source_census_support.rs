@@ -36,7 +36,10 @@ pub fn evaluate_policy(
     }
     Evaluation {
         final_decision: "NO-GO",
-        reason_codes: vec!["expect_delta_exceeded", "expect_threshold_exceeded_unwaived"],
+        reason_codes: vec![
+            "expect_delta_exceeded",
+            "expect_threshold_exceeded_unwaived",
+        ],
     }
 }
 

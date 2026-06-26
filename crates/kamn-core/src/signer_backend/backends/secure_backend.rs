@@ -3,9 +3,7 @@ use super::provider_client::{
 };
 use super::traits::SignerBackend;
 use super::verification::{matches_legacy_signature, verify_with_expected_public_key};
-use crate::signer_backend::env::{
-    SECURE_MOCK_BACKEND_NAME,
-};
+use crate::signer_backend::env::SECURE_MOCK_BACKEND_NAME;
 use crate::signer_backend::errors::SignerBackendError;
 use crate::signer_backend::provider_policy::{
     BackendSignature, CanonicalSecureKeyReference, SecureSignerProvider, SignerKeyRole,

@@ -14,8 +14,15 @@ fn read(rel: &str) -> String {
 
 fn assert_root_shell(root: &str) {
     let root_lines = root.lines().count();
-    assert!(root_lines <= 180, "did.rs should be a thin shell after extraction, got {root_lines} lines");
-    for marker in ["mod federated;", "mod document;", "#[cfg(test)]\nmod tests;"] {
+    assert!(
+        root_lines <= 180,
+        "did.rs should be a thin shell after extraction, got {root_lines} lines"
+    );
+    for marker in [
+        "mod federated;",
+        "mod document;",
+        "#[cfg(test)]\nmod tests;",
+    ] {
         assert!(root.contains(marker), "root missing marker: {marker}");
     }
 }
@@ -26,7 +33,10 @@ fn assert_root_exclusions(root: &str) {
         "pub enum DidDocumentError",
         "#[cfg(test)]\nmod tests {",
     ] {
-        assert!(!root.contains(marker), "root still contains moved marker: {marker}");
+        assert!(
+            !root.contains(marker),
+            "root still contains moved marker: {marker}"
+        );
     }
 }
 

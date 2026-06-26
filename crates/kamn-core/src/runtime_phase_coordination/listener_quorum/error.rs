@@ -11,13 +11,21 @@ pub enum ListenerQuorumError {
     /// Invalid event sequence.
     InvalidEventSequence,
     /// Invalid listener did.
-    InvalidListenerDid { field: &'static str, reason_code: &'static str, detail: String },
+    InvalidListenerDid {
+        field: &'static str,
+        reason_code: &'static str,
+        detail: String,
+    },
     /// Invalid attestation id.
     InvalidAttestationId,
     /// Duplicate listener attestation.
     DuplicateListenerAttestation { listener_did: String },
     /// Replayed event sequence.
-    ReplayedEventSequence { event_id: String, previous_sequence: u64, received_sequence: u64 },
+    ReplayedEventSequence {
+        event_id: String,
+        previous_sequence: u64,
+        received_sequence: u64,
+    },
     /// Insufficient confirmations.
     InsufficientConfirmations { required: usize, received: usize },
 }

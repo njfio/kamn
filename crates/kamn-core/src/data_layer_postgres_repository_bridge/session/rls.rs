@@ -31,7 +31,10 @@ fn enable_rls_statement(policy: &DataLayerM2RlsPolicy) -> DataLayerPgRlsStatemen
     DataLayerPgRlsStatement {
         table_name: policy.table_name.clone(),
         policy_name: policy.policy_name.clone(),
-        sql: format!("ALTER TABLE {} ENABLE ROW LEVEL SECURITY;", policy.table_name),
+        sql: format!(
+            "ALTER TABLE {} ENABLE ROW LEVEL SECURITY;",
+            policy.table_name
+        ),
     }
 }
 

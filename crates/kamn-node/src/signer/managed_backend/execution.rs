@@ -6,12 +6,11 @@ use std::time::{Duration, Instant};
 
 use kamn_core::{ConfigError, SigningRequest};
 
-use super::{ManagedExternalBackendSignature, MANAGED_SIGNER_CHILD_ENV_ALLOWLIST};
 use super::command::{
-    parse_kolme_live_managed_signer_command_spec,
-    resolve_kolme_live_managed_signer_timeout_seconds,
+    parse_kolme_live_managed_signer_command_spec, resolve_kolme_live_managed_signer_timeout_seconds,
 };
 use super::response::parse_kolme_live_managed_signer_command_output;
+use super::{ManagedExternalBackendSignature, MANAGED_SIGNER_CHILD_ENV_ALLOWLIST};
 use crate::KOLME_LIVE_MANAGED_SIGNER_POLL_INTERVAL_MILLIS;
 
 pub(super) fn execute_kolme_live_managed_signer_backend_command(
@@ -35,7 +34,11 @@ pub(super) fn execute_kolme_live_managed_signer_backend_command(
     let status = wait_for_child_completion(&mut child, timeout_seconds)?;
     let stdout_text = read_child_pipe(&mut stdout, "stdout")?;
     let stderr_text = read_child_pipe(&mut stderr, "stderr")?;
-    ensure_success_status(status.success(), status.to_string().as_str(), stderr_text.as_str())?;
+    ensure_success_status(
+        status.success(),
+        status.to_string().as_str(),
+        stderr_text.as_str(),
+    )?;
     parse_kolme_live_managed_signer_command_output(stdout_text.as_str())
 }
 
@@ -56,9 +59,15 @@ fn build_child_command(
     }
     child_command
         .env("KAMN_MANAGED_SIGNER_KEY_REFERENCE", key_reference)
-        .env("KAMN_MANAGED_SIGNER_ACTOR_DID", signing_request.sender.as_str())
+        .env(
+            "KAMN_MANAGED_SIGNER_ACTOR_DID",
+            signing_request.sender.as_str(),
+        )
         .env("KAMN_MANAGED_SIGNER_NONCE", nonce)
-        .env("KAMN_MANAGED_SIGNER_STATE_ROOT", signing_request.state_hash.as_str())
+        .env(
+            "KAMN_MANAGED_SIGNER_STATE_ROOT",
+            signing_request.state_hash.as_str(),
+        )
         .env("KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE", canonical_message)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -138,7 +147,11 @@ fn read_child_pipe(pipe: &mut impl Read, label: &str) -> Result<String, ConfigEr
     Ok(text)
 }
 
-fn ensure_success_status(success: bool, status: &str, stderr_text: &str) -> Result<(), ConfigError> {
+fn ensure_success_status(
+    success: bool,
+    status: &str,
+    stderr_text: &str,
+) -> Result<(), ConfigError> {
     if success {
         return Ok(());
     }

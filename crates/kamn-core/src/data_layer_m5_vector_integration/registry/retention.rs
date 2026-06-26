@@ -11,7 +11,9 @@ impl DataLayerM5EmbeddingRegistry {
     ) -> Result<Vec<DataLayerM5RetentionDueCandidate>, DataLayerM5VectorIntegrationError> {
         let owner_did = parse_kamn_did(owner_did)?;
         if now_epoch_seconds == 0 {
-            return Err(DataLayerM5VectorIntegrationError::EmptyField("now_epoch_seconds"));
+            return Err(DataLayerM5VectorIntegrationError::EmptyField(
+                "now_epoch_seconds",
+            ));
         }
         let owner_records = owner_records(self, owner_did.as_str())?;
         let mut due_candidates = owner_records

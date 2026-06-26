@@ -10,9 +10,18 @@ fn main_module_extraction_contract_removes_inline_kolme_live_branch_execution_im
     assert_not_contains_all(
         &main_rs,
         &[
-            ("KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(", "main.rs should not keep inline Kolme live provider constructor path"),
-            ("submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())", "main.rs should not keep inline Kolme live submit invocation"),
-            ("KolmeRuntimeCommitFinalityChecker::new(", "main.rs should not keep inline Kolme live finality checker orchestration"),
+            (
+                "KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(",
+                "main.rs should not keep inline Kolme live provider constructor path",
+            ),
+            (
+                "submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())",
+                "main.rs should not keep inline Kolme live submit invocation",
+            ),
+            (
+                "KolmeRuntimeCommitFinalityChecker::new(",
+                "main.rs should not keep inline Kolme live finality checker orchestration",
+            ),
         ],
     );
     assert!(
@@ -29,8 +38,14 @@ fn main_module_extraction_contract_delegates_endpoint_orchestration_to_runtime_e
     assert_not_contains_all(
         &main_rs,
         &[
-            ("fn classify_service_api_endpoint_runtime_path(", "main.rs should not keep inline service-api endpoint runtime-path classifier"),
-            ("fn should_skip_observability_endpoint_for_full_supervisor(", "main.rs should not keep inline observability endpoint runtime-path guard"),
+            (
+                "fn classify_service_api_endpoint_runtime_path(",
+                "main.rs should not keep inline service-api endpoint runtime-path classifier",
+            ),
+            (
+                "fn should_skip_observability_endpoint_for_full_supervisor(",
+                "main.rs should not keep inline observability endpoint runtime-path guard",
+            ),
         ],
     );
     assert!(

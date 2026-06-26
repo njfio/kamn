@@ -21,5 +21,8 @@ fn regression_waiver_mitigation_issue_marker_must_match_issue_format() {
     let panic_result = std::panic::catch_unwind(|| {
         let _ = load_waiver(&invalid_waiver);
     });
-    assert!(panic_result.is_err(), "invalid waiver mitigation issue format must fail closed");
+    assert!(
+        panic_result.is_err(),
+        "invalid waiver mitigation issue format must fail closed"
+    );
 }

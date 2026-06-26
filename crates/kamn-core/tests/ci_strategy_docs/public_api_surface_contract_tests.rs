@@ -1,5 +1,5 @@
-use super::DOC;
 use super::fairness_deletion_support::assert_contains_all;
+use super::DOC;
 
 #[test]
 fn doc_contains_public_api_surface_ratchet_contract_markers() {

@@ -7,5 +7,8 @@ pub fn assert_doc_contains_all(markers: &[&str], label: &str) {
 }
 
 pub fn assert_supply_chain_doc_marker(marker: &str) {
-    assert!(DOC.contains(marker), "missing supply-chain advisory marker: {marker}");
+    assert!(
+        DOC.contains(marker),
+        "missing supply-chain advisory marker: {marker}"
+    );
 }

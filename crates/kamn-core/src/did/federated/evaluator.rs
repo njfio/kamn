@@ -47,12 +47,16 @@ fn ensure_resolver_and_signature(
     input: &FederatedDidHandshakeInput,
 ) -> Result<(), FederatedDidHandshakeError> {
     if input.resolver_version.trim().is_empty() {
-        return Err(FederatedDidHandshakeError::ResolverVersionMissing { handshake_id: input.handshake_id.clone() });
+        return Err(FederatedDidHandshakeError::ResolverVersionMissing {
+            handshake_id: input.handshake_id.clone(),
+        });
     }
     if input.signature_policy_passed {
         return Ok(());
     }
-    Err(FederatedDidHandshakeError::SignaturePolicyFailed { handshake_id: input.handshake_id.clone() })
+    Err(FederatedDidHandshakeError::SignaturePolicyFailed {
+        handshake_id: input.handshake_id.clone(),
+    })
 }
 
 fn ensure_quorum(input: &FederatedDidHandshakeInput) -> Result<(), FederatedDidHandshakeError> {
@@ -69,13 +73,21 @@ fn validate_runtime_guards(
     input: &FederatedDidHandshakeInput,
 ) -> Result<(), FederatedDidHandshakeError> {
     if !input.nonce_monotonic {
-        return Err(FederatedDidHandshakeError::NonceReplayDetected { handshake_id: input.handshake_id.clone() });
+        return Err(FederatedDidHandshakeError::NonceReplayDetected {
+            handshake_id: input.handshake_id.clone(),
+        });
     }
     if !input.partition_sequence_monotonic {
-        return Err(FederatedDidHandshakeError::PartitionSequenceReplayDetected { handshake_id: input.handshake_id.clone() });
+        return Err(
+            FederatedDidHandshakeError::PartitionSequenceReplayDetected {
+                handshake_id: input.handshake_id.clone(),
+            },
+        );
     }
     if input.downgrade_detected {
-        return Err(FederatedDidHandshakeError::DowngradeDetected { handshake_id: input.handshake_id.clone() });
+        return Err(FederatedDidHandshakeError::DowngradeDetected {
+            handshake_id: input.handshake_id.clone(),
+        });
     }
     Ok(())
 }

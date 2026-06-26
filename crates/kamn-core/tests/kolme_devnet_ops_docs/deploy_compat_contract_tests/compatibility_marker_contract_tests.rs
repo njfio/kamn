@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_deploy_contains_all};
+use super::super::docs_assert_support::assert_deploy_contains_all;
 
 const DEPLOY_COMPAT_CONTAINS_KOLME_UPGRADE_COMPATIBILITY_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS: &[&str] = &[
     "## Kolme Upgrade Compatibility Taxonomy and Runbook Marker Parity Contracts (Issues #4182, #4183)",
@@ -114,7 +114,10 @@ const DEPLOY_COMPAT_CONTAINS_DRIFT_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKER
 
 #[test]
 fn deploy_compat_contains_drift_taxonomy_runbook_parity_markers() {
-    assert_deploy_contains_all(DEPLOY_COMPAT_CONTAINS_DRIFT_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS, "deploy_compat_contains_drift_taxonomy_runbook_parity_markers");
+    assert_deploy_contains_all(
+        DEPLOY_COMPAT_CONTAINS_DRIFT_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS,
+        "deploy_compat_contains_drift_taxonomy_runbook_parity_markers",
+    );
 }
 
 const DEPLOY_COMPAT_CONTAINS_SQLITE_REPLAY_IDEMPOTENCY_TAXONOMY_RUNBOOK_PARITY_MARKERS_DEPLOY_MARKERS: &[&str] = &[
@@ -153,7 +156,10 @@ const DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_REPLAY_EVIDENCE_CONVERGENCE_MARKERS_DE
 
 #[test]
 fn deploy_compat_contains_sqlite_crash_replay_evidence_convergence_markers() {
-    assert_deploy_contains_all(DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_REPLAY_EVIDENCE_CONVERGENCE_MARKERS_DEPLOY_MARKERS, "deploy_compat_contains_sqlite_crash_replay_evidence_convergence_markers");
+    assert_deploy_contains_all(
+        DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_REPLAY_EVIDENCE_CONVERGENCE_MARKERS_DEPLOY_MARKERS,
+        "deploy_compat_contains_sqlite_crash_replay_evidence_convergence_markers",
+    );
 }
 
 const DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_RESTART_RUNBOOK_POLICY_MARKERS_DEPLOY_MARKERS: &[&str] = &[
@@ -171,5 +177,8 @@ const DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_RESTART_RUNBOOK_POLICY_MARKERS_DEPLOY_
 
 #[test]
 fn deploy_compat_contains_sqlite_crash_restart_runbook_policy_markers() {
-    assert_deploy_contains_all(DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_RESTART_RUNBOOK_POLICY_MARKERS_DEPLOY_MARKERS, "deploy_compat_contains_sqlite_crash_restart_runbook_policy_markers");
+    assert_deploy_contains_all(
+        DEPLOY_COMPAT_CONTAINS_SQLITE_CRASH_RESTART_RUNBOOK_POLICY_MARKERS_DEPLOY_MARKERS,
+        "deploy_compat_contains_sqlite_crash_restart_runbook_policy_markers",
+    );
 }

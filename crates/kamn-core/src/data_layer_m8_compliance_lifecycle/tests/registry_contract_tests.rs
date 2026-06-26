@@ -1,9 +1,9 @@
 use crate::data_layer_m8_compliance_lifecycle::{
-    DATA_LAYER_M8_RETENTION_DUE_REASON_CODE, DataLayerM8ComplianceRegistry,
-    DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery, DataLayerM8RetentionClass,
+    DataLayerM8ComplianceRegistry, DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery,
+    DataLayerM8RetentionClass, DATA_LAYER_M8_RETENTION_DUE_REASON_CODE,
 };
 
-use super::support::{OWNER_DID, wrapped_key};
+use super::support::{wrapped_key, OWNER_DID};
 
 #[test]
 fn unit_m8_registry_assigns_deterministic_sequence_and_due_projection_order() {
@@ -52,9 +52,7 @@ fn unit_m8_registry_assigns_deterministic_sequence_and_due_projection_order() {
             .collect::<Vec<_>>(),
         vec!["msg-2", "msg-1"]
     );
-    assert!(
-        due_candidates
-            .iter()
-            .all(|candidate| candidate.reason_code == DATA_LAYER_M8_RETENTION_DUE_REASON_CODE)
-    );
+    assert!(due_candidates
+        .iter()
+        .all(|candidate| candidate.reason_code == DATA_LAYER_M8_RETENTION_DUE_REASON_CODE));
 }

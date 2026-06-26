@@ -12,5 +12,5 @@ mod input;
 pub use attestation::ListenerAttestation;
 pub use decision::ListenerQuorumDecision;
 pub use error::ListenerQuorumError;
-pub use evaluator::{ListenerQuorumEvaluator, evaluate_daemon_listener_quorum};
+pub use evaluator::{evaluate_daemon_listener_quorum, ListenerQuorumEvaluator};
 pub use input::ListenerQuorumInput;

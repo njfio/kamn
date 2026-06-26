@@ -1,13 +1,12 @@
-use super::models::{
-    KolmeLiveManagedKeySourceAdapter, KolmeLiveManagedKeySourceAdapterOutput,
-    KolmeLiveManagedKeySourceProvenanceMarker, KolmeLiveSignerSecretProvider,
-    KolmeLiveSignerSelection,
-};
-use kamn_core::ConfigError;
 use super::managed_backend::{
     resolve_kolme_live_managed_signer_required_marker,
     resolve_required_kolme_live_managed_signer_command,
     resolve_required_managed_signer_public_key_hex, ManagedExternalKeySourceAdapter,
+};
+use super::models::{
+    KolmeLiveManagedKeySourceAdapter, KolmeLiveManagedKeySourceAdapterOutput,
+    KolmeLiveManagedKeySourceProvenanceMarker, KolmeLiveSignerSecretProvider,
+    KolmeLiveSignerSelection,
 };
 use super::secret_provider::{
     ensure_kolme_live_managed_external_private_key_env_unset, EnvKolmeLiveSignerSecretProvider,
@@ -17,7 +16,11 @@ use crate::signer::{
     read_required_kolme_live_key_reference_from_env, resolve_kolme_live_nonce,
 };
 use crate::wire_payload::render_kolme_live_native_direct_message;
-use kamn_core::{KolmeApiBroadcastRequest, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, SignerProviderHandshakeMatrix};
+use kamn_core::ConfigError;
+use kamn_core::{
+    KolmeApiBroadcastRequest, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest,
+    SignerProviderHandshakeMatrix,
+};
 
 pub(crate) fn enforce_kolme_live_managed_key_source_provenance_marker_parity(
     signer_selection: &KolmeLiveSignerSelection,

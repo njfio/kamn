@@ -6,7 +6,10 @@ const REGRESSION_REQUIRES_FEDERATED_RUNTIME_TRUST_STORE_GUARD_MARKER_MARKERS: &[
 
 #[test]
 fn regression_requires_federated_runtime_trust_store_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_FEDERATED_RUNTIME_TRUST_STORE_GUARD_MARKER_MARKERS, "regression_requires_federated_runtime_trust_store_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_FEDERATED_RUNTIME_TRUST_STORE_GUARD_MARKER_MARKERS,
+        "regression_requires_federated_runtime_trust_store_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_FEDERATED_DEEP_LANE_TAMPER_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -15,7 +18,10 @@ const REGRESSION_REQUIRES_FEDERATED_DEEP_LANE_TAMPER_GUARD_MARKER_MARKERS: &[&st
 
 #[test]
 fn regression_requires_federated_deep_lane_tamper_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_FEDERATED_DEEP_LANE_TAMPER_GUARD_MARKER_MARKERS, "regression_requires_federated_deep_lane_tamper_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_FEDERATED_DEEP_LANE_TAMPER_GUARD_MARKER_MARKERS,
+        "regression_requires_federated_deep_lane_tamper_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -24,7 +30,10 @@ const REGRESSION_REQUIRES_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_GUARD_MARKER_
 
 #[test]
 fn regression_requires_federated_delegation_settlement_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_federated_delegation_settlement_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_federated_delegation_settlement_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_KOLME_INCOMPATIBLE_UPGRADE_SIGNATURE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -33,7 +42,10 @@ const REGRESSION_REQUIRES_KOLME_INCOMPATIBLE_UPGRADE_SIGNATURE_GUARD_MARKER_MARK
 
 #[test]
 fn regression_requires_kolme_incompatible_upgrade_signature_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_KOLME_INCOMPATIBLE_UPGRADE_SIGNATURE_GUARD_MARKER_MARKERS, "regression_requires_kolme_incompatible_upgrade_signature_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_KOLME_INCOMPATIBLE_UPGRADE_SIGNATURE_GUARD_MARKER_MARKERS,
+        "regression_requires_kolme_incompatible_upgrade_signature_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_KOLME_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -42,7 +54,10 @@ const REGRESSION_REQUIRES_KOLME_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS: &[&s
 
 #[test]
 fn regression_requires_kolme_runtime_commit_replay_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_KOLME_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS, "regression_requires_kolme_runtime_commit_replay_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_KOLME_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS,
+        "regression_requires_kolme_runtime_commit_replay_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_ADAPTER_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -51,16 +66,21 @@ const REGRESSION_REQUIRES_ADAPTER_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS: &[
 
 #[test]
 fn regression_requires_adapter_runtime_commit_replay_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_ADAPTER_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS, "regression_requires_adapter_runtime_commit_replay_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_ADAPTER_RUNTIME_COMMIT_REPLAY_GUARD_MARKER_MARKERS,
+        "regression_requires_adapter_runtime_commit_replay_guard_marker",
+    );
 }
 
-const REGRESSION_REQUIRES_KOLME_FORK_RELEASE_DRIFT_GUARD_MARKER_MARKERS: &[&str] = &[
-    "fork release-tag drift remains blocked (`Regression: #1401`).",
-];
+const REGRESSION_REQUIRES_KOLME_FORK_RELEASE_DRIFT_GUARD_MARKER_MARKERS: &[&str] =
+    &["fork release-tag drift remains blocked (`Regression: #1401`)."];
 
 #[test]
 fn regression_requires_kolme_fork_release_drift_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_KOLME_FORK_RELEASE_DRIFT_GUARD_MARKER_MARKERS, "regression_requires_kolme_fork_release_drift_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_KOLME_FORK_RELEASE_DRIFT_GUARD_MARKER_MARKERS,
+        "regression_requires_kolme_fork_release_drift_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_KOLME_FORK_POLICY_CHECKER_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -69,5 +89,8 @@ const REGRESSION_REQUIRES_KOLME_FORK_POLICY_CHECKER_GUARD_MARKER_MARKERS: &[&str
 
 #[test]
 fn regression_requires_kolme_fork_policy_checker_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_KOLME_FORK_POLICY_CHECKER_GUARD_MARKER_MARKERS, "regression_requires_kolme_fork_policy_checker_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_KOLME_FORK_POLICY_CHECKER_GUARD_MARKER_MARKERS,
+        "regression_requires_kolme_fork_policy_checker_guard_marker",
+    );
 }

@@ -1,5 +1,5 @@
-use super::*;
 use super::service_api_policy_support::assert_remediation_marker_in_docs_and_ops;
+use super::*;
 
 #[test]
 fn doc_contains_service_api_request_path_authz_docs_parity_markers() {
@@ -66,8 +66,10 @@ fn assert_request_path_authz_doc_commands() {
 fn assert_request_path_authz_source_markers() {
     assert!(SERVICE_API_ENDPOINT_SOURCE
         .contains("pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str ="));
-    assert!(SERVICE_API_ENDPOINT_SOURCE.contains("pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str ="));
-    assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains(SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION));
     assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV));
 }
 

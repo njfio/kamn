@@ -148,10 +148,14 @@ fn regression_ci_strategy_contains_cargo_fuzz_seed_provenance_budget_markers() {
 
 #[test]
 fn regression_message_envelope_fuzz_target_declares_input_bounds_markers() {
-    assert!(MESSAGE_ENVELOPE_TARGET.contains("fn bounded_utf8(data: &[u8], max_len: usize) -> String"));
+    assert!(
+        MESSAGE_ENVELOPE_TARGET.contains("fn bounded_utf8(data: &[u8], max_len: usize) -> String")
+    );
     assert!(MESSAGE_ENVELOPE_TARGET.contains("let raw = bounded_utf8(data, 4096);"));
     assert!(CI_STRATEGY_DOC.contains("message_envelope_parser_input_bound_bytes=4096"));
-    assert!(CI_STRATEGY_DOC.contains("message_envelope_parser_bound_scope=pre-envelope-construction"));
+    assert!(
+        CI_STRATEGY_DOC.contains("message_envelope_parser_bound_scope=pre-envelope-construction")
+    );
 }
 
 #[test]

@@ -3,7 +3,13 @@ use super::super::*;
 #[test]
 fn regression_runtime_daemon_rejects_zero_tick_budget() {
     assert_parse_error(
-        with_pairs(daemon_args(), &[("--daemon-max-ticks", "0"), ("--daemon-tick-interval-ms", "25")]),
+        with_pairs(
+            daemon_args(),
+            &[
+                ("--daemon-max-ticks", "0"),
+                ("--daemon-tick-interval-ms", "25"),
+            ],
+        ),
         ConfigError::InvalidDaemonControlArgument("0".to_owned()),
     );
 }
@@ -30,7 +36,10 @@ fn regression_runtime_daemon_rejects_invalid_lifecycle_transition() {
 
 #[test]
 fn regression_runtime_daemon_ignores_replayed_and_late_shutdown_signals() {
-    let report = execute_cli(daemon_shutdown_replay_args(), "daemon replay execution should succeed");
+    let report = execute_cli(
+        daemon_shutdown_replay_args(),
+        "daemon replay execution should succeed",
+    );
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"daemon_executed_ticks\":5"));
     assert!(rendered.contains(
@@ -40,11 +49,17 @@ fn regression_runtime_daemon_ignores_replayed_and_late_shutdown_signals() {
 
 #[test]
 fn performance_runtime_daemon_shutdown_drain_stays_bounded_by_timeout_budget() {
-    let report = execute_cli(daemon_timeout_args(), "daemon bounded shutdown should succeed");
+    let report = execute_cli(
+        daemon_timeout_args(),
+        "daemon bounded shutdown should succeed",
+    );
     let executed_ticks = report
         .daemon_executed_ticks
         .expect("daemon execution must report executed ticks");
-    assert!(executed_ticks <= 9, "shutdown drain execution must remain within max tick budget");
+    assert!(
+        executed_ticks <= 9,
+        "shutdown drain execution must remain within max tick budget"
+    );
     assert_eq!(
         report.daemon_completion_reason.as_deref(),
         Some("graceful-shutdown-timeout:signal@8;drain_ticks=5;timeout_ticks=1;ignored_signals=0")

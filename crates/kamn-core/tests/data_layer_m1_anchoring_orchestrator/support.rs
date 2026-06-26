@@ -52,8 +52,8 @@ pub fn memory_orchestrator(
 ) -> DataLayerM1AnchoringOrchestrator<InMemoryKolmeRuntimeCommitClient> {
     let client = InMemoryKolmeRuntimeCommitClient::new("kolme-memory")
         .expect("in-memory client should initialize");
-    let policy =
-        DataLayerM1BatchSchedulerPolicy::new(batch_min_messages, 60).expect("policy should be valid");
+    let policy = DataLayerM1BatchSchedulerPolicy::new(batch_min_messages, 60)
+        .expect("policy should be valid");
     DataLayerM1AnchoringOrchestrator::new(client, agent_did, "m1-root", policy)
         .expect("orchestrator should initialize")
 }

@@ -8,12 +8,11 @@ fn regression_managed_key_source_provenance_marker_profile_mismatch_fails_closed
         profile: "ops-secondary",
         key_source: selection.key_source,
         key_reference_env: selection.key_reference_env,
-        signer_public_key_hex:
-            "021111111111111111111111111111111111111111111111111111111111111111".to_owned(),
+        signer_public_key_hex: "021111111111111111111111111111111111111111111111111111111111111111"
+            .to_owned(),
     };
     let error = super::super::enforce_kolme_live_managed_key_source_provenance_marker_parity(
-        &selection,
-        &marker,
+        &selection, &marker,
     )
     .expect_err("profile mismatch must fail closed");
     assert!(

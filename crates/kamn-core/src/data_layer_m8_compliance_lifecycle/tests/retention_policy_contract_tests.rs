@@ -1,7 +1,7 @@
 use crate::data_layer_m8_compliance_lifecycle::{
-    DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS, DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
-    DataLayerM8ComplianceError, DataLayerM8RetentionClass, authorize_owner_scope,
-    data_layer_m8_retention_window_seconds,
+    authorize_owner_scope, data_layer_m8_retention_window_seconds, DataLayerM8ComplianceError,
+    DataLayerM8RetentionClass, DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS,
+    DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
 };
 
 #[test]

@@ -34,8 +34,15 @@ fn assert_root_budget(root: &Path, root_source: &str) {
 fn assert_module_layout(src_root: &Path) {
     for relative in expected_modules() {
         let path = src_root.join(relative);
-        assert!(path.exists(), "missing extracted module: {}", path.display());
-        let line_count = fs::read_to_string(&path).expect("read extracted module").lines().count();
+        assert!(
+            path.exists(),
+            "missing extracted module: {}",
+            path.display()
+        );
+        let line_count = fs::read_to_string(&path)
+            .expect("read extracted module")
+            .lines()
+            .count();
         assert!(
             line_count <= CHILD_MAX_LINES,
             "expected {} <= {} lines, found {}",
@@ -48,13 +55,19 @@ fn assert_module_layout(src_root: &Path) {
 
 fn assert_root_markers(root_source: &str) {
     for marker in expected_markers() {
-        assert!(root_source.contains(marker), "expected root shell marker: {marker}");
+        assert!(
+            root_source.contains(marker),
+            "expected root shell marker: {marker}"
+        );
     }
 }
 
 fn assert_moved_markers_removed(root_source: &str) {
     for marker in moved_markers() {
-        assert!(!root_source.contains(marker), "root still contains moved marker: {marker}");
+        assert!(
+            !root_source.contains(marker),
+            "root still contains moved marker: {marker}"
+        );
     }
 }
 

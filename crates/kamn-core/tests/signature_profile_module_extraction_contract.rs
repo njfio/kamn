@@ -13,7 +13,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn read(path: &Path) -> String {
-    fs::read_to_string(path).unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
+    fs::read_to_string(path)
+        .unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
 }
 
 fn count_lines(path: &Path) -> usize {
@@ -33,8 +34,16 @@ fn required_module_paths(root: &Path) -> [PathBuf; 5] {
 
 fn assert_required_modules_exist(paths: &[PathBuf]) {
     for path in paths {
-        assert!(path.exists(), "expected extracted module {} to exist", path.display());
-        assert!(count_lines(path) <= 200, "expected {} to stay within 200 LOC", path.display());
+        assert!(
+            path.exists(),
+            "expected extracted module {} to exist",
+            path.display()
+        );
+        assert!(
+            count_lines(path) <= 200,
+            "expected {} to stay within 200 LOC",
+            path.display()
+        );
     }
 }
 
@@ -46,7 +55,10 @@ fn assert_root_markers(root_source: &str) {
         "mod fixtures;",
         "#[cfg(test)] mod tests;",
     ] {
-        assert!(root_source.contains(marker), "expected root shell to contain marker `{marker}`");
+        assert!(
+            root_source.contains(marker),
+            "expected root shell to contain marker `{marker}`"
+        );
     }
 }
 
@@ -75,5 +87,8 @@ fn signature_profile_root_is_extracted_into_bounded_modules() {
     assert_required_modules_exist(&required);
     assert_root_markers(&root_source);
     assert_moved_markers_absent(&root_source);
-    assert!(count_lines(&signature_root) <= 180, "expected signature_profile root shell to stay within 180 LOC");
+    assert!(
+        count_lines(&signature_root) <= 180,
+        "expected signature_profile root shell to stay within 180 LOC"
+    );
 }

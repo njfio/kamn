@@ -1,5 +1,5 @@
-use super::*;
 use super::fairness_deletion_support::assert_contains_all;
+use super::*;
 
 #[test]
 fn doc_contains_performance_baseline_provenance_contract_markers() {

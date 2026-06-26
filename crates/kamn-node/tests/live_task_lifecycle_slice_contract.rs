@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 
 const DOC_PATH: &str = "docs/validation/live-task-lifecycle-slice.md";
 const INDEX_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
-const SLICE_LABEL: &str = "live task-lifecycle slice: `docs/validation/live-task-lifecycle-slice.md`";
+const SLICE_LABEL: &str =
+    "live task-lifecycle slice: `docs/validation/live-task-lifecycle-slice.md`";
 const REQUIRED_DOC_MARKERS: &[&str] = &[
     "sdk-direct` S-04",
     "live_s04_sdk_direct_execution",
@@ -27,13 +28,21 @@ const REQUIRED_INDEX_MARKERS: &[&str] = &[
 #[test]
 fn live_task_lifecycle_doc_exists_and_stays_bounded() {
     let doc = read_workspace_file(DOC_PATH);
-    assert_contains_all(doc.as_str(), REQUIRED_DOC_MARKERS, "live task lifecycle doc");
+    assert_contains_all(
+        doc.as_str(),
+        REQUIRED_DOC_MARKERS,
+        "live task lifecycle doc",
+    );
 }
 
 #[test]
 fn runtime_proof_index_includes_live_task_lifecycle_slice() {
     let index = read_workspace_file(INDEX_PATH);
-    assert_contains_all(index.as_str(), REQUIRED_INDEX_MARKERS, "runtime proof index");
+    assert_contains_all(
+        index.as_str(),
+        REQUIRED_INDEX_MARKERS,
+        "runtime proof index",
+    );
 }
 
 fn assert_contains_all(doc: &str, markers: &[&str], label: &str) {

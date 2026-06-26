@@ -1,8 +1,8 @@
 use super::super::{
     baseline_signature_algorithm, baseline_signature_for_fields, baseline_signature_profile_id,
     legacy_signature_for_fields, parse_signature_profile_metadata,
-    signature_matches_supported_profile_for_fields, signature_profile_compatibility_fixtures_for_fields,
-    SignatureProfileMetadata,
+    signature_matches_supported_profile_for_fields,
+    signature_profile_compatibility_fixtures_for_fields, SignatureProfileMetadata,
     BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
 };
 
@@ -18,12 +18,18 @@ fn baseline_signature_profile_is_deterministic() {
 #[test]
 fn baseline_signature_profile_includes_nonce_and_payload_length() {
     let signature = baseline_signature_for_fields("agent-a", 9, "state:x", "abcdef");
-    assert_eq!(signature, "sig:deterministic-v1:baseline-v1:agent-a:9:state:x:6");
+    assert_eq!(
+        signature,
+        "sig:deterministic-v1:baseline-v1:agent-a:9:state:x:6"
+    );
 }
 
 #[test]
 fn baseline_signature_profile_id_helper_matches_constant() {
-    assert_eq!(baseline_signature_profile_id(), BASELINE_SIGNATURE_PROFILE_ID);
+    assert_eq!(
+        baseline_signature_profile_id(),
+        BASELINE_SIGNATURE_PROFILE_ID
+    );
 }
 
 #[test]
@@ -34,7 +40,12 @@ fn legacy_signature_profile_fixture_is_non_versioned() {
 
 #[test]
 fn signature_profile_fixture_matrix_marks_only_baseline_v1_as_supported() {
-    let fixtures = signature_profile_compatibility_fixtures_for_fields("agent-a", 1, "state:genesis", "payload-1");
+    let fixtures = signature_profile_compatibility_fixtures_for_fields(
+        "agent-a",
+        1,
+        "state:genesis",
+        "payload-1",
+    );
     assert_eq!(fixtures.len(), 4);
     assert_eq!(fixtures[0].fixture_id, BASELINE_SIGNATURE_PROFILE_ID);
     assert_eq!(fixtures[1].fixture_id, LEGACY_SIGNATURE_PROFILE_ID);
@@ -72,7 +83,10 @@ fn parse_signature_profile_metadata_extracts_legacy_tags_and_rejects_malformed_s
             profile_id: "1".to_owned(),
         })
     );
-    assert_eq!(parse_signature_profile_metadata("sig:deterministic-v1:baseline-v1"), None);
+    assert_eq!(
+        parse_signature_profile_metadata("sig:deterministic-v1:baseline-v1"),
+        None
+    );
     assert_eq!(parse_signature_profile_metadata("bad"), None);
 }
 
@@ -98,7 +112,12 @@ fn signature_profile_matcher_rejects_unknown_algorithm_fixture() {
 
 #[test]
 fn signature_profile_matcher_accepts_baseline_and_rejects_migration_fixtures() {
-    let fixtures = signature_profile_compatibility_fixtures_for_fields("agent-a", 1, "state:genesis", "payload-1");
+    let fixtures = signature_profile_compatibility_fixtures_for_fields(
+        "agent-a",
+        1,
+        "state:genesis",
+        "payload-1",
+    );
     for fixture in fixtures {
         assert_eq!(
             signature_matches_supported_profile_for_fields(

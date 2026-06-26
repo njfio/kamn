@@ -29,7 +29,8 @@ fn functional_listener_quorum_accepts_canonical_sufficient_attestations() {
 
 #[test]
 fn unit_listener_quorum_rejects_zero_required_confirmations() {
-    let error = ListenerQuorumEvaluator::new(0).expect_err("zero quorum threshold must be rejected");
+    let error =
+        ListenerQuorumEvaluator::new(0).expect_err("zero quorum threshold must be rejected");
     assert_eq!(
         error,
         ListenerQuorumError::InvalidRequiredConfirmations { required: 0 }
@@ -103,7 +104,10 @@ fn regression_replayed_listener_event_sequence_is_rejected() {
     let error = evaluator
         .evaluate(replay)
         .expect_err("stale/replayed sequence must be rejected");
-    assert_eq!(error, replayed_listener_sequence_error("bridge-event-regression", 7, 6));
+    assert_eq!(
+        error,
+        replayed_listener_sequence_error("bridge-event-regression", 7, 6)
+    );
 }
 
 fn replayed_listener_sequence_error(

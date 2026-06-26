@@ -107,10 +107,16 @@ fn prepare_verify_fixture(evidence_dir: &Path, chain_dump_path: &Path) {
 fn assert_verify_report_is_deterministic(config: &VerifyCommandConfig, output_path: &Path) {
     let first = execute_verify_contract(config).expect("verify should succeed");
     let second = execute_verify_contract(config).expect("verify should be deterministic");
-    let written = std::fs::read_to_string(output_path).expect("verification report should be written");
+    let written =
+        std::fs::read_to_string(output_path).expect("verification report should be written");
     assert_eq!(first, second);
     assert_eq!(written, first);
-    for marker in ["\"schema_check\"", "\"proof_check\"", "\"chain_check\"", "\"content_check\""] {
+    for marker in [
+        "\"schema_check\"",
+        "\"proof_check\"",
+        "\"chain_check\"",
+        "\"content_check\"",
+    ] {
         assert!(written.contains(marker));
     }
 }

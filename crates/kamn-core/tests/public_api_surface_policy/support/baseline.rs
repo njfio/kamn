@@ -6,9 +6,15 @@ use std::path::Path;
 
 pub(crate) fn load_baseline(path: &Path, modules: &[String]) -> (usize, BTreeMap<String, usize>) {
     if !path.is_file() {
-        fail("baseline_fixture_missing", &format!("missing baseline fixture {}", path.display()));
+        fail(
+            "baseline_fixture_missing",
+            &format!("missing baseline fixture {}", path.display()),
+        );
     }
-    let baseline_map = parse_key_value_fixture(&read_file(path, "baseline_fixture_missing"), "baseline_fixture_invalid");
+    let baseline_map = parse_key_value_fixture(
+        &read_file(path, "baseline_fixture_missing"),
+        "baseline_fixture_invalid",
+    );
     assert_baseline_schema(&baseline_map, path);
     let baseline_total = non_negative_value(&baseline_map, "total_public_items");
     assert_module_count(&baseline_map, modules.len());
@@ -30,15 +36,15 @@ fn assert_module_count(map: &BTreeMap<String, String>, expected: usize) {
     if module_count != expected {
         fail(
             "baseline_threshold_invalid",
-            &format!("module_count mismatch: fixture={} actual={}", module_count, expected),
+            &format!(
+                "module_count mismatch: fixture={} actual={}",
+                module_count, expected
+            ),
         );
     }
 }
 
-fn module_baselines(
-    modules: &[String],
-    map: &BTreeMap<String, String>,
-) -> BTreeMap<String, usize> {
+fn module_baselines(modules: &[String], map: &BTreeMap<String, String>) -> BTreeMap<String, usize> {
     modules
         .iter()
         .map(|module| (module.clone(), module_baseline(module, map)))

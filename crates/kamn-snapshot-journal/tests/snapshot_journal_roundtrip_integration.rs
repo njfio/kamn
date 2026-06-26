@@ -48,7 +48,10 @@ fn integration_checked_parse_and_decode_restore_payload_exactly() {
     let line = r#"{"schema_version":"kamn.snapshot-journal.entry.v1","payload_hex":"7b226b6579223a2276616c75655c6e6c696e65227d"}"#;
     let payload_hex =
         parse_snapshot_journal_record_checked(line).expect("json record should parse");
-    assert_eq!(parse_snapshot_journal_record(line), Some(payload_hex.clone()));
+    assert_eq!(
+        parse_snapshot_journal_record(line),
+        Some(payload_hex.clone())
+    );
     let decoded = decode_snapshot_journal_hex(&payload_hex).expect("decode payload hex");
     let restored = String::from_utf8(decoded).expect("utf8 payload");
     assert_eq!(restored, "{\"key\":\"value\\nline\"}");

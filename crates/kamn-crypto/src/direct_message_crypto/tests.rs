@@ -1,10 +1,9 @@
 use super::{
     canonical_direct_message_aad, derive_direct_message_aead_key,
-    derive_direct_message_aead_key_legacy, derive_x25519_shared_secret,
-    direct_message_nonce_bytes, hex_decode, hex_encode,
-    legacy_direct_message_nonce_bytes_raw_prefix_v1, load_key_agreement_master_seed,
-    DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
-    DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
+    derive_direct_message_aead_key_legacy, derive_x25519_shared_secret, direct_message_nonce_bytes,
+    hex_decode, hex_encode, legacy_direct_message_nonce_bytes_raw_prefix_v1,
+    load_key_agreement_master_seed, DirectMessageCiphertext, DirectMessageCryptoEngine,
+    DirectMessageCryptoError, DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_HKDF_BACKEND_MARKER,
     DIRECT_MESSAGE_HMAC_BACKEND_MARKER, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
     KEY_AGREEMENT_MASTER_SEED_ENV,
 };
@@ -12,8 +11,7 @@ use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 use std::sync::{Mutex, OnceLock};
 
-const TEST_KEY_SEED_HEX: &str =
-    "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+const TEST_KEY_SEED_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 const SOURCE: &str = include_str!("../direct_message_crypto.rs");
 
 fn key_agreement_seed_env_lock() -> &'static Mutex<()> {
@@ -85,7 +83,8 @@ fn build_legacy_ciphertext(
     nonce_bytes: [u8; 24],
 ) -> DirectMessageCiphertext {
     let master_seed = load_key_agreement_master_seed().expect("master seed should be available");
-    let shared_secret = derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
+    let shared_secret =
+        derive_x25519_shared_secret(sender_key_ref, recipient_key_ref, &master_seed);
     let aead_key = derive_key(&shared_secret);
     let aad = canonical_direct_message_aad(sender_key_ref, recipient_key_ref, nonce);
     let payload = Payload {

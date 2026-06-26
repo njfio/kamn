@@ -6,8 +6,12 @@ fn current_branch_head_restores_ratio_compliance() {
     let output = run_checker("HEAD", &report_path);
     let report = read_report(&report_path);
 
-    assert!(output.status.success(), "checker stdout:
-{}", String::from_utf8_lossy(&output.stdout));
+    assert!(
+        output.status.success(),
+        "checker stdout:
+{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
     assert_eq!(status(&report), "ok");
     assert_eq!(u64_field(&report, "governance_commit_count"), 10);
     assert_eq!(u64_field(&report, "feature_commit_count"), 40);

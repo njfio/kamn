@@ -1,6 +1,6 @@
-use super::support::assert_runtime_lane_contract_markers;
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
+use super::support::assert_runtime_lane_contract_markers;
 
 #[test]
 fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers() {

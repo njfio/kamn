@@ -23,7 +23,9 @@ impl fmt::Display for DidDocumentError {
             Self::EmptyModelFamily => write!(f, "model_family must not be empty"),
             Self::MissingCapabilities => write!(f, "at least one capability is required"),
             Self::InvalidCapability => write!(f, "capability entries must not be empty"),
-            Self::InvalidServiceEndpoint(message) => write!(f, "invalid service endpoint: {message}"),
+            Self::InvalidServiceEndpoint(message) => {
+                write!(f, "invalid service endpoint: {message}")
+            }
             Self::InvalidVerificationMethodAlgorithm(message) => {
                 write!(f, "invalid verification method algorithm: {message}")
             }

@@ -6,7 +6,10 @@ const REGRESSION_REQUIRES_GOVERNANCE_SIMULATION_AND_VETO_GUARD_MARKER_MARKERS: &
 
 #[test]
 fn regression_requires_governance_simulation_and_veto_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_GOVERNANCE_SIMULATION_AND_VETO_GUARD_MARKER_MARKERS, "regression_requires_governance_simulation_and_veto_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_GOVERNANCE_SIMULATION_AND_VETO_GUARD_MARKER_MARKERS,
+        "regression_requires_governance_simulation_and_veto_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_GOVERNANCE_STAKE_SLASH_RISK_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -15,7 +18,10 @@ const REGRESSION_REQUIRES_GOVERNANCE_STAKE_SLASH_RISK_GUARD_MARKER_MARKERS: &[&s
 
 #[test]
 fn regression_requires_governance_stake_slash_risk_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_GOVERNANCE_STAKE_SLASH_RISK_GUARD_MARKER_MARKERS, "regression_requires_governance_stake_slash_risk_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_GOVERNANCE_STAKE_SLASH_RISK_GUARD_MARKER_MARKERS,
+        "regression_requires_governance_stake_slash_risk_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_REPUTATION_DISPUTE_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -24,7 +30,10 @@ const REGRESSION_REQUIRES_REPUTATION_DISPUTE_EVIDENCE_GUARD_MARKER_MARKERS: &[&s
 
 #[test]
 fn regression_requires_reputation_dispute_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_REPUTATION_DISPUTE_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_reputation_dispute_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_REPUTATION_DISPUTE_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_reputation_dispute_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_TOKEN_LAUNCH_HANDOFF_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -33,7 +42,10 @@ const REGRESSION_REQUIRES_TOKEN_LAUNCH_HANDOFF_EVIDENCE_GUARD_MARKER_MARKERS: &[
 
 #[test]
 fn regression_requires_token_launch_handoff_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_TOKEN_LAUNCH_HANDOFF_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_token_launch_handoff_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_TOKEN_LAUNCH_HANDOFF_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_token_launch_handoff_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_TREASURY_DISBURSEMENT_APPROVAL_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -42,7 +54,10 @@ const REGRESSION_REQUIRES_TREASURY_DISBURSEMENT_APPROVAL_GUARD_MARKER_MARKERS: &
 
 #[test]
 fn regression_requires_treasury_disbursement_approval_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_TREASURY_DISBURSEMENT_APPROVAL_GUARD_MARKER_MARKERS, "regression_requires_treasury_disbursement_approval_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_TREASURY_DISBURSEMENT_APPROVAL_GUARD_MARKER_MARKERS,
+        "regression_requires_treasury_disbursement_approval_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_TREASURY_SHARED_CONTRACT_LANE_MARKER_MARKERS: &[&str] = &[
@@ -51,7 +66,10 @@ const REGRESSION_REQUIRES_TREASURY_SHARED_CONTRACT_LANE_MARKER_MARKERS: &[&str] 
 
 #[test]
 fn regression_requires_treasury_shared_contract_lane_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_TREASURY_SHARED_CONTRACT_LANE_MARKER_MARKERS, "regression_requires_treasury_shared_contract_lane_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_TREASURY_SHARED_CONTRACT_LANE_MARKER_MARKERS,
+        "regression_requires_treasury_shared_contract_lane_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_MAINNET_CUTOVER_DEPENDENCY_AND_APPROVAL_GUARDS_MARKERS: &[&str] = &[
@@ -60,7 +78,10 @@ const REGRESSION_REQUIRES_MAINNET_CUTOVER_DEPENDENCY_AND_APPROVAL_GUARDS_MARKERS
 
 #[test]
 fn regression_requires_mainnet_cutover_dependency_and_approval_guards() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_MAINNET_CUTOVER_DEPENDENCY_AND_APPROVAL_GUARDS_MARKERS, "regression_requires_mainnet_cutover_dependency_and_approval_guards");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_MAINNET_CUTOVER_DEPENDENCY_AND_APPROVAL_GUARDS_MARKERS,
+        "regression_requires_mainnet_cutover_dependency_and_approval_guards",
+    );
 }
 
 const REGRESSION_REQUIRES_CUTOVER_ROLLBACK_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -69,7 +90,10 @@ const REGRESSION_REQUIRES_CUTOVER_ROLLBACK_EVIDENCE_GUARD_MARKER_MARKERS: &[&str
 
 #[test]
 fn regression_requires_cutover_rollback_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_CUTOVER_ROLLBACK_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_cutover_rollback_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_CUTOVER_ROLLBACK_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_cutover_rollback_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LAUNCH_CANARY_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -78,7 +102,10 @@ const REGRESSION_REQUIRES_LAUNCH_CANARY_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] =
 
 #[test]
 fn regression_requires_launch_canary_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_LAUNCH_CANARY_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_launch_canary_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_LAUNCH_CANARY_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_launch_canary_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LAUNCH_CANARY_SHARED_CONTRACT_LANE_MARKER_MARKERS: &[&str] = &[
@@ -87,16 +114,21 @@ const REGRESSION_REQUIRES_LAUNCH_CANARY_SHARED_CONTRACT_LANE_MARKER_MARKERS: &[&
 
 #[test]
 fn regression_requires_launch_canary_shared_contract_lane_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_LAUNCH_CANARY_SHARED_CONTRACT_LANE_MARKER_MARKERS, "regression_requires_launch_canary_shared_contract_lane_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_LAUNCH_CANARY_SHARED_CONTRACT_LANE_MARKER_MARKERS,
+        "regression_requires_launch_canary_shared_contract_lane_marker",
+    );
 }
 
-const REGRESSION_REQUIRES_POST_CUTOVER_SLO_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] = &[
-    "stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).",
-];
+const REGRESSION_REQUIRES_POST_CUTOVER_SLO_EVIDENCE_GUARD_MARKER_MARKERS: &[&str] =
+    &["stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`)."];
 
 #[test]
 fn regression_requires_post_cutover_slo_evidence_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_POST_CUTOVER_SLO_EVIDENCE_GUARD_MARKER_MARKERS, "regression_requires_post_cutover_slo_evidence_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_POST_CUTOVER_SLO_EVIDENCE_GUARD_MARKER_MARKERS,
+        "regression_requires_post_cutover_slo_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_POST_CUTOVER_SLO_SHARED_CONTRACT_LANE_MARKER_MARKERS: &[&str] = &[
@@ -105,7 +137,10 @@ const REGRESSION_REQUIRES_POST_CUTOVER_SLO_SHARED_CONTRACT_LANE_MARKER_MARKERS: 
 
 #[test]
 fn regression_requires_post_cutover_slo_shared_contract_lane_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_POST_CUTOVER_SLO_SHARED_CONTRACT_LANE_MARKER_MARKERS, "regression_requires_post_cutover_slo_shared_contract_lane_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_POST_CUTOVER_SLO_SHARED_CONTRACT_LANE_MARKER_MARKERS,
+        "regression_requires_post_cutover_slo_shared_contract_lane_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_SIGNER_INCIDENT_RECOVERY_STALE_ARTIFACT_GUARD_MARKER_MARKERS: &[&str] = &[
@@ -114,5 +149,8 @@ const REGRESSION_REQUIRES_SIGNER_INCIDENT_RECOVERY_STALE_ARTIFACT_GUARD_MARKER_M
 
 #[test]
 fn regression_requires_signer_incident_recovery_stale_artifact_guard_marker() {
-    assert_checklist_contains_all(REGRESSION_REQUIRES_SIGNER_INCIDENT_RECOVERY_STALE_ARTIFACT_GUARD_MARKER_MARKERS, "regression_requires_signer_incident_recovery_stale_artifact_guard_marker");
+    assert_checklist_contains_all(
+        REGRESSION_REQUIRES_SIGNER_INCIDENT_RECOVERY_STALE_ARTIFACT_GUARD_MARKER_MARKERS,
+        "regression_requires_signer_incident_recovery_stale_artifact_guard_marker",
+    );
 }

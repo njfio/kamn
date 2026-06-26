@@ -9,7 +9,10 @@ const PLAN_CONTAINS_RUNTIME_COMMIT_ADAPTER_REPLAY_LANE_POLICY_PLAN_MARKERS: &[&s
 
 #[test]
 fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
-    assert_plan_contains_all(PLAN_CONTAINS_RUNTIME_COMMIT_ADAPTER_REPLAY_LANE_POLICY_PLAN_MARKERS, "plan_contains_runtime_commit_adapter_replay_lane_policy");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_RUNTIME_COMMIT_ADAPTER_REPLAY_LANE_POLICY_PLAN_MARKERS,
+        "plan_contains_runtime_commit_adapter_replay_lane_policy",
+    );
 }
 
 const PLAN_CONTAINS_RUNTIME_COMMIT_BLOCK_FALLBACK_FAST_LANE_POLICY_PLAN_MARKERS: &[&str] = &[
@@ -20,7 +23,10 @@ const PLAN_CONTAINS_RUNTIME_COMMIT_BLOCK_FALLBACK_FAST_LANE_POLICY_PLAN_MARKERS:
 
 #[test]
 fn plan_contains_runtime_commit_block_fallback_fast_lane_policy() {
-    assert_plan_contains_all(PLAN_CONTAINS_RUNTIME_COMMIT_BLOCK_FALLBACK_FAST_LANE_POLICY_PLAN_MARKERS, "plan_contains_runtime_commit_block_fallback_fast_lane_policy");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_RUNTIME_COMMIT_BLOCK_FALLBACK_FAST_LANE_POLICY_PLAN_MARKERS,
+        "plan_contains_runtime_commit_block_fallback_fast_lane_policy",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_KOLME_API_PROBE_LANE_PLAN_MARKERS: &[&str] = &[
@@ -33,7 +39,10 @@ const PLAN_CONTAINS_LOCAL_KOLME_API_PROBE_LANE_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_local_kolme_api_probe_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_KOLME_API_PROBE_LANE_PLAN_MARKERS, "plan_contains_local_kolme_api_probe_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_KOLME_API_PROBE_LANE_PLAN_MARKERS,
+        "plan_contains_local_kolme_api_probe_lane",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_KOLME_API_SMOKE_LANE_PLAN_MARKERS: &[&str] = &[
@@ -44,7 +53,10 @@ const PLAN_CONTAINS_LOCAL_KOLME_API_SMOKE_LANE_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_local_kolme_api_smoke_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_KOLME_API_SMOKE_LANE_PLAN_MARKERS, "plan_contains_local_kolme_api_smoke_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_KOLME_API_SMOKE_LANE_PLAN_MARKERS,
+        "plan_contains_local_kolme_api_smoke_lane",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_LIVE_API_CONFORMANCE_HARNESS_PLAN_MARKERS: &[&str] = &[
@@ -58,7 +70,10 @@ const PLAN_CONTAINS_LOCAL_LIVE_API_CONFORMANCE_HARNESS_PLAN_MARKERS: &[&str] = &
 
 #[test]
 fn plan_contains_local_live_api_conformance_harness() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_LIVE_API_CONFORMANCE_HARNESS_PLAN_MARKERS, "plan_contains_local_live_api_conformance_harness");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_LIVE_API_CONFORMANCE_HARNESS_PLAN_MARKERS,
+        "plan_contains_local_live_api_conformance_harness",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_LANE_PLAN_MARKERS: &[&str] = &[
@@ -88,7 +103,10 @@ const PLAN_CONTAINS_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_LANE_PLAN_MARKERS: &[&st
 
 #[test]
 fn plan_contains_local_kamn_live_runtime_integration_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_LANE_PLAN_MARKERS, "plan_contains_local_kamn_live_runtime_integration_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_KAMN_LIVE_RUNTIME_INTEGRATION_LANE_PLAN_MARKERS,
+        "plan_contains_local_kamn_live_runtime_integration_lane",
+    );
 }
 
 const PLAN_CONTAINS_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_LANE_PLAN_MARKERS: &[&str] = &[
@@ -106,7 +124,10 @@ const PLAN_CONTAINS_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_LANE_PLAN_MARKERS: &[&str
 
 #[test]
 fn plan_contains_unified_local_signed_to_kolme_demo_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_LANE_PLAN_MARKERS, "plan_contains_unified_local_signed_to_kolme_demo_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_UNIFIED_LOCAL_SIGNED_TO_KOLME_DEMO_LANE_PLAN_MARKERS,
+        "plan_contains_unified_local_signed_to_kolme_demo_lane",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_RUNTIME_COMMIT_LIVE_LANE_PLAN_MARKERS: &[&str] = &[
@@ -143,7 +164,10 @@ const PLAN_CONTAINS_LOCAL_RUNTIME_COMMIT_LIVE_LANE_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_local_runtime_commit_live_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_RUNTIME_COMMIT_LIVE_LANE_PLAN_MARKERS, "plan_contains_local_runtime_commit_live_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_RUNTIME_COMMIT_LIVE_LANE_PLAN_MARKERS,
+        "plan_contains_local_runtime_commit_live_lane",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_LANE_PLAN_MARKERS: &[&str] = &[
@@ -156,5 +180,8 @@ const PLAN_CONTAINS_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_LANE_PLAN_MARKERS: &[&str
 
 #[test]
 fn plan_contains_local_native_api_parity_live_proof_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_LANE_PLAN_MARKERS, "plan_contains_local_native_api_parity_live_proof_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_NATIVE_API_PARITY_LIVE_PROOF_LANE_PLAN_MARKERS,
+        "plan_contains_local_native_api_parity_live_proof_lane",
+    );
 }

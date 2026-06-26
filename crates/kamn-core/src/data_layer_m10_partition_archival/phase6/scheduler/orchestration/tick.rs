@@ -10,11 +10,9 @@ use crate::data_layer_m10_partition_archival::{
 };
 use crate::DataLayerM8ComplianceRegistry;
 
-use super::projection::{
-    archive_due_partitions, project_partition_reports, shred_due_candidates,
-};
 use super::super::super::adapters::bridge::M8Phase6CompliancePortAdapter;
 use super::super::super::adapters::error_mapping::map_phase6_port_error_to_m10;
+use super::projection::{archive_due_partitions, project_partition_reports, shred_due_candidates};
 
 /// Executes one Phase-6 archival tick against the concrete M8 compliance registry.
 pub fn data_layer_m10_execute_phase6_orchestration_tick(
@@ -40,10 +38,18 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick_with_port(
     validate_tick_request(&request)?;
     let due_candidates = retention_due_candidates(compliance_port, &owner_did, &request)?;
     let due_candidate_count = due_candidates.len();
-    let shredded_message_ids =
-        shred_due_messages(compliance_port, owner_did.as_str(), &request, due_candidates)?;
-    let projection_reports =
-        project_sorted_partition_reports(compliance_port, partition_registry, &request, &owner_did)?;
+    let shredded_message_ids = shred_due_messages(
+        compliance_port,
+        owner_did.as_str(),
+        &request,
+        due_candidates,
+    )?;
+    let projection_reports = project_sorted_partition_reports(
+        compliance_port,
+        partition_registry,
+        &request,
+        &owner_did,
+    )?;
     let archived_entries = archive_due_partitions(partition_registry, request)?;
     Ok(build_execution_report(
         owner_did,
@@ -73,7 +79,10 @@ fn project_sorted_partition_reports(
     partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
     request: &DataLayerM10Phase6ExecutionTickRequest,
     owner_did: &str,
-) -> Result<Vec<crate::DataLayerM10ComplianceShredProjectionReport>, DataLayerM10PartitionLifecycleError> {
+) -> Result<
+    Vec<crate::DataLayerM10ComplianceShredProjectionReport>,
+    DataLayerM10PartitionLifecycleError,
+> {
     let mut projection_reports =
         project_partition_reports(compliance_port, partition_registry, request, owner_did)?;
     projection_reports.sort_by(compare_partition_reports);
@@ -122,7 +131,10 @@ fn retention_due_candidates(
     compliance_port: &mut impl DataLayerM10Phase6CompliancePort,
     owner_did: &str,
     request: &DataLayerM10Phase6ExecutionTickRequest,
-) -> Result<Vec<kamn_data_layer::DataLayerM10Phase6RetentionDueCandidate>, DataLayerM10PartitionLifecycleError> {
+) -> Result<
+    Vec<kamn_data_layer::DataLayerM10Phase6RetentionDueCandidate>,
+    DataLayerM10PartitionLifecycleError,
+> {
     compliance_port
         .retention_due_for_owner(owner_did, request.now_epoch_seconds)
         .map_err(map_phase6_port_error_to_m10)
@@ -143,6 +155,9 @@ fn validate_tick_request(
             "shredded_at_epoch_seconds must be > 0",
         ));
     }
-    validate_non_empty(request.object_storage_prefix.as_str(), "object_storage_prefix")
-        .map_err(crate::data_layer_m10_partition_archival::error::map_phase6_projection_error_to_m10)
+    validate_non_empty(
+        request.object_storage_prefix.as_str(),
+        "object_storage_prefix",
+    )
+    .map_err(crate::data_layer_m10_partition_archival::error::map_phase6_projection_error_to_m10)
 }

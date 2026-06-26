@@ -24,9 +24,8 @@ fn integration_http_transport_finality_query_and_response_mapping() {
     let commit_id = "commit:id/with space";
     let response = "{\"provider\":\"kolme-local\",\"commit_id\":\"commit:id/with space\",\"finality\":\"final\"}";
     let base_url = status_server(response.to_owned(), move |request| {
-        assert!(request.contains(
-            "GET /runtime-commit/status?commit_id=commit%3Aid%2Fwith%20space HTTP/1.1"
-        ));
+        assert!(request
+            .contains("GET /runtime-commit/status?commit_id=commit%3Aid%2Fwith%20space HTTP/1.1"));
     });
 
     let receipt = checker(base_url.as_str(), "/runtime-commit/status")
@@ -87,8 +86,9 @@ fn functional_http_transport_includes_authorization_header_when_configured() {
         assert!(request.contains("Authorization: Bearer integration-token"));
     });
 
-    let transport = KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer integration-token")
-        .expect("transport should build");
+    let transport =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer integration-token")
+            .expect("transport should build");
     let mut provider = KolmeRuntimeCommitLiveProvider::new(
         base_url.as_str(),
         "/broadcast/runtime-commit",

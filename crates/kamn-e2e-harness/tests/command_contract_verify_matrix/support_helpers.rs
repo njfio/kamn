@@ -1,11 +1,11 @@
-pub(crate) use kamn_e2e_harness::{
-    execute_run_contract, execute_verify_contract, RunCommandConfig, VerifyCommandConfig,
-};
-pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use super::support::command_contract_support::{
     set_executable, temp_path, valid_chain_dump_json, with_external_component_binaries,
     write_failing_stub_binary,
 };
+pub(crate) use kamn_e2e_harness::{
+    execute_run_contract, execute_verify_contract, RunCommandConfig, VerifyCommandConfig,
+};
+pub(crate) use std::path::{Path, PathBuf};
 
 pub(crate) const VALID_MANIFEST: &str = r#"{"schema_version":"kamn.e2e.evidence-manifest.v3","run_id":"e2e-run","started_at":"2026-02-21T14:30:52Z","completed_at":"2026-02-21T14:35:12Z","duration_seconds":260,"execution_mode":"sdk-direct","infrastructure":{"kolme_version":"0.x.y","kamn_version":"0.1.0","kamn_commit":"49efe252","kamn_agent_lib_version":"0.1.0","agent_runtime":"sdk-direct","node_count":3,"agent_count":3,"storage_backend":"sqlite+postgres"},"scenarios":[],"summary":{"total_scenarios":15,"passed":13,"failed":1,"skipped":1,"kolme_blocks_produced":47,"messages_exchanged":128,"proofs_anchored":47,"proofs_verified":47}}"#;
 pub(crate) const MISSING_INFRA_KOLME_VERSION_MANIFEST: &str = r#"{"schema_version":"kamn.e2e.evidence-manifest.v3","run_id":"e2e-run","started_at":"2026-02-21T14:30:52Z","completed_at":"2026-02-21T14:35:12Z","duration_seconds":260,"execution_mode":"sdk-direct","infrastructure":{"kamn_version":"0.1.0","kamn_commit":"49efe252","kamn_agent_lib_version":"0.1.0","agent_runtime":"sdk-direct","node_count":3,"agent_count":3,"storage_backend":"sqlite+postgres"},"scenarios":[],"summary":{"total_scenarios":15,"passed":13,"failed":1,"skipped":1,"kolme_blocks_produced":47,"messages_exchanged":128,"proofs_anchored":47,"proofs_verified":47}}"#;

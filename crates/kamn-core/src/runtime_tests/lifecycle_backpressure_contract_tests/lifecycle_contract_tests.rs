@@ -5,7 +5,9 @@ fn functional_peer_lifecycle_allows_connect_heartbeat_recover_disconnect_flow() 
     let mut lifecycle = PeerLifecycle::new("peer-1").expect("valid peer id");
     assert_eq!(lifecycle.peer_id(), "peer-1");
     assert_eq!(lifecycle.state(), PeerLifecycleState::Disconnected);
-    assert!(lifecycle.transition(PeerLifecycleEvent::StartConnect).is_ok());
+    assert!(lifecycle
+        .transition(PeerLifecycleEvent::StartConnect)
+        .is_ok());
     assert!(lifecycle
         .transition(PeerLifecycleEvent::HandshakeSucceeded)
         .is_ok());
@@ -53,7 +55,9 @@ fn unit_rejects_invalid_peer_lifecycle_transition() {
 #[test]
 fn regression_rejoin_without_disconnect_is_rejected() {
     let mut lifecycle = PeerLifecycle::new("peer-1").expect("valid peer id");
-    assert!(lifecycle.transition(PeerLifecycleEvent::StartConnect).is_ok());
+    assert!(lifecycle
+        .transition(PeerLifecycleEvent::StartConnect)
+        .is_ok());
     assert!(lifecycle
         .transition(PeerLifecycleEvent::HandshakeSucceeded)
         .is_ok());
