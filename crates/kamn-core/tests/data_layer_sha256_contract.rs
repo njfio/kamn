@@ -5,10 +5,19 @@ use kamn_core::{
 
 const DATA_LAYER_M0_SOURCE: &str = include_str!("../src/data_layer_m0.rs");
 const DATA_LAYER_M1_SOURCE: &str = include_str!("../src/data_layer_m1.rs");
+const DATA_LAYER_M1_SUPPORT_SOURCE: &str = include_str!("../src/data_layer_m1/support.rs");
 const DATA_LAYER_M2_SOURCE: &str = include_str!("../src/data_layer_m2_gateway_access.rs");
+const DATA_LAYER_M2_PARSING_SOURCE: &str =
+    include_str!("../src/data_layer_m2_gateway_access/models/parsing.rs");
 const DATA_LAYER_M3_SOURCE: &str = include_str!("../src/data_layer_m3_blind_index_search.rs");
+const DATA_LAYER_M3_HASHING_SOURCE: &str =
+    include_str!("../src/data_layer_m3_blind_index_search/hashing.rs");
 const DATA_LAYER_M4_SOURCE: &str = include_str!("../src/data_layer_m4_escrow_integration.rs");
+const DATA_LAYER_M4_VALIDATION_SOURCE: &str =
+    include_str!("../src/data_layer_m4_escrow_integration/validation.rs");
 const DATA_LAYER_M5_SOURCE: &str = include_str!("../src/data_layer_m5_vector_integration.rs");
+const DATA_LAYER_M5_HASHING_SOURCE: &str =
+    include_str!("../src/data_layer_m5_vector_integration/support/hashing.rs");
 
 fn sha256_hex(value: &str) -> String {
     let digest = Sha256::digest(value.as_bytes());
@@ -31,22 +40,29 @@ fn regression_issue_5922_m3_blind_index_digest_matches_real_sha256_vector() {
 #[test]
 fn regression_issue_5922_m0_m5_remove_custom_digest_mixers() {
     // Regression: #5922
-    let modules = [
-        ("m0", DATA_LAYER_M0_SOURCE),
-        ("m1", DATA_LAYER_M1_SOURCE),
-        ("m2", DATA_LAYER_M2_SOURCE),
-        ("m3", DATA_LAYER_M3_SOURCE),
-        ("m4", DATA_LAYER_M4_SOURCE),
-        ("m5", DATA_LAYER_M5_SOURCE),
+    let modules: [(&str, &[&str]); 6] = [
+        ("m0", &[DATA_LAYER_M0_SOURCE]),
+        ("m1", &[DATA_LAYER_M1_SOURCE, DATA_LAYER_M1_SUPPORT_SOURCE]),
+        ("m2", &[DATA_LAYER_M2_SOURCE, DATA_LAYER_M2_PARSING_SOURCE]),
+        ("m3", &[DATA_LAYER_M3_SOURCE, DATA_LAYER_M3_HASHING_SOURCE]),
+        (
+            "m4",
+            &[DATA_LAYER_M4_SOURCE, DATA_LAYER_M4_VALIDATION_SOURCE],
+        ),
+        ("m5", &[DATA_LAYER_M5_SOURCE, DATA_LAYER_M5_HASHING_SOURCE]),
     ];
 
-    for (module, source) in modules {
+    for (module, sources) in modules {
         assert!(
-            !source.contains("fn deterministic_digest_256_hex"),
+            !sources
+                .iter()
+                .any(|source| source.contains("fn deterministic_digest_256_hex")),
             "{module} must not define deterministic_digest_256_hex"
         );
         assert!(
-            source.contains("tagged_sha256("),
+            sources
+                .iter()
+                .any(|source| source.contains("tagged_sha256(")),
             "{module} must route tagged digesting through shared tagged_sha256 helper"
         );
     }
