@@ -11,7 +11,7 @@ pub(crate) use kamn_core::{
     TransportEventMempoolFeed, TransportFedBlockPipeline, TransportMempoolFeed,
 };
 pub(crate) use std::fs;
-pub(crate) use std::path::PathBuf;
+pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::sync::OnceLock;
 pub(crate) use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -94,12 +94,12 @@ pub(crate) fn temp_canonical_commit_store_path(tag: &str) -> PathBuf {
     std::env::temp_dir().join(format!("kamn-canonical-commit-{tag}-{nonce}.log"))
 }
 
-pub(crate) fn cleanup_store_path(path: &PathBuf) {
+pub(crate) fn cleanup_store_path(path: &Path) {
     let _ = fs::remove_file(path);
 }
 
-pub(crate) fn open_file_store(path: &PathBuf) -> FileCanonicalCommitStore {
-    FileCanonicalCommitStore::new(path.clone()).expect("store should build")
+pub(crate) fn open_file_store(path: &Path) -> FileCanonicalCommitStore {
+    FileCanonicalCommitStore::new(path.to_path_buf()).expect("store should build")
 }
 
 pub(crate) fn advertise_transport_topic(
@@ -123,7 +123,7 @@ pub(crate) fn advertise_transport_topic(
 }
 
 pub(crate) fn persist_record(
-    path: &PathBuf,
+    path: &Path,
     record: CanonicalCommitRecord,
 ) -> Vec<CanonicalCommitRecord> {
     let mut store = open_file_store(path);
@@ -153,7 +153,7 @@ pub(crate) fn send_canonical_candidate(
 }
 
 pub(crate) fn restart_replay_pipeline(
-    path: &PathBuf,
+    path: &Path,
     transport: InMemoryPeerLifecycleTransport,
     recipient: &str,
     topic: &str,

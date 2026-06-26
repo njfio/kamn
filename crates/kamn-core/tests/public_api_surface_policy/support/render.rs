@@ -4,7 +4,7 @@ use crate::support::constants::{
 use crate::support::models::{ApiSurfaceReport, PolicyStatus, PolicyThresholds};
 use crate::support::paths::fail;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub(crate) fn render_report(
     report: &ApiSurfaceReport,
@@ -78,7 +78,7 @@ fn output_path() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-fn create_parent_dir(output_path: &PathBuf) {
+fn create_parent_dir(output_path: &Path) {
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).unwrap_or_else(|error| {
             fail(

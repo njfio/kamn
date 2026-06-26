@@ -89,7 +89,7 @@ fn regression_transport_fed_restart_replay_tamper_matrix_emits_deterministic_rea
 }
 
 fn build_restart_replay_pipeline(
-    path: &PathBuf,
+    path: &Path,
 ) -> (
     Vec<CanonicalCommitRecord>,
     TransportFedBlockPipeline<
@@ -119,7 +119,7 @@ fn seeded_restart_transport(
 }
 
 fn build_duplicate_replay_pipeline(
-    path: &PathBuf,
+    path: &Path,
     pre_restart: &[CanonicalCommitRecord],
     transport: InMemoryPeerLifecycleTransport,
     recipient: &str,
