@@ -224,7 +224,7 @@ mod tests {
     };
     use kamn_sdk::{service_public_key_for_private_key, AgentDid};
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_file_path(suffix: &str) -> PathBuf {
@@ -238,9 +238,9 @@ mod tests {
         ))
     }
 
-    fn write_test_key_file(path: &PathBuf) {
+    fn write_test_key_file(path: &Path) {
         fs::write(
-            path.as_path(),
+            path,
             "1111111111111111111111111111111111111111111111111111111111111111\n",
         )
         .expect("key file should write");

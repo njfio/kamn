@@ -77,8 +77,10 @@ fn send_batch(settings: &S14Settings, label: &str, payload: &str) -> Result<Stri
         format!("{}-batch-{label}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-send-message-batch-{label}").as_str(),
-        payload,
-        format!("mcp live s14 batch-{label} send_message").as_str(),
+        (
+            payload,
+            format!("mcp live s14 batch-{label} send_message").as_str(),
+        ),
     )
 }
 
@@ -90,8 +92,10 @@ fn query_batch(settings: &S14Settings, label: &str, message_id: &str) -> Result<
         format!("{}-query-{label}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-batch-{label}").as_str(),
-        message_id,
-        format!("mcp live s14 batch-{label} query_message").as_str(),
+        (
+            message_id,
+            format!("mcp live s14 batch-{label} query_message").as_str(),
+        ),
     )
 }
 

@@ -45,11 +45,13 @@ impl McpAgentDriver {
         Self::with_runners(
             mode,
             live_execution_enabled_from_env(),
-            run_live_s01_mcp_probe,
-            run_live_s02_mcp_direct_message_probe,
-            run_live_s03_mcp_group_channel_probe,
-            run_live_s04_mcp_task_lifecycle_probe,
-            run_live_s05_mcp_escrow_settlement_probe,
+            (
+                run_live_s01_mcp_probe,
+                run_live_s02_mcp_direct_message_probe,
+                run_live_s03_mcp_group_channel_probe,
+                run_live_s04_mcp_task_lifecycle_probe,
+                run_live_s05_mcp_escrow_settlement_probe,
+            ),
             (
                 run_live_s06_mcp_proof_verification_probe,
                 run_live_s07_mcp_replay_protection_probe,
@@ -82,9 +84,10 @@ impl McpAgentDriver {
     #[rustfmt::skip]
     /// Creates MCP driver with explicit per-scenario probe implementations.
     pub fn with_runners<F: McpRunner, G: McpRunner, H: McpRunner, I: McpRunner, J: McpRunner, K: McpRunner, L: McpRunner, M: McpRunner, N: McpRunner, O: McpRunner, P: McpRunner, Q: McpRunner, R: McpRunner, S: McpRunner, T: McpRunner>(
-        mode: ExecutionMode, live_execution_enabled: bool, discovery_probe: F, direct_message_probe: G, group_channel_probe: H, task_lifecycle_probe: I, escrow_probe: J, trailing_probes: (K, L, M, N, O, P, Q, R, S, T),
+        mode: ExecutionMode, live_execution_enabled: bool, leading_probes: (F, G, H, I, J), trailing_probes: (K, L, M, N, O, P, Q, R, S, T),
     ) -> Result<Self, String> {
         validate_mode(mode)?;
+        let (discovery_probe, direct_message_probe, group_channel_probe, task_lifecycle_probe, escrow_probe) = leading_probes;
         let (proof, replay, crash, transport, topology, signer, retention, bridge, merkle, performance) = trailing_probes;
         Ok(Self::from_runner_map(mode, live_execution_enabled, explicit_runner_map([
             Arc::new(discovery_probe), Arc::new(direct_message_probe), Arc::new(group_channel_probe), Arc::new(task_lifecycle_probe), Arc::new(escrow_probe),

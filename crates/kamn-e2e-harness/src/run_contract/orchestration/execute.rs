@@ -2,7 +2,7 @@ use crate::{all_orchestration_phases, ExecutionMode, PhaseResultStatus, RunComma
 
 use super::super::evidence_io::persist_run_evidence_bundle;
 use super::super::external_runtime::{ensure_external_execution_preflight, probe_external_runtime};
-use super::payload::render_run_output;
+use super::payload::{render_run_output, RenderRunOutputInput};
 use super::phase_model::{build_phase_results, status_totals_from_iter};
 use super::scenario_execution::{
     execute_selected_scenarios, execute_selected_scenarios_contract_only, select_scenarios,
@@ -124,18 +124,18 @@ fn render_contract_output(
     summary: &RunExecutionSummary,
     evidence_status: PhaseResultStatus,
 ) -> String {
-    render_run_output(
+    render_run_output(RenderRunOutputInput {
         config,
-        summary.mode,
+        mode: summary.mode,
         selected,
         scenario_results,
-        summary.scenario_totals.clone(),
-        summary.phase_results.as_slice(),
+        scenario_totals: summary.scenario_totals.clone(),
+        phase_results: summary.phase_results.as_slice(),
         evidence_status,
-        config
+        external_runtime_probe: config
             .external_execution
             .then(|| probe_external_runtime(config, summary.mode)),
-    )
+    })
 }
 
 fn phase_status(has_fail_marker: bool) -> PhaseResultStatus {

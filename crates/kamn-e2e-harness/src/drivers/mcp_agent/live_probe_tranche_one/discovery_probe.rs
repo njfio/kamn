@@ -9,8 +9,7 @@ pub(crate) fn run_live_s01_mcp_probe() -> Result<(), String> {
         settings.agent_name.as_str(),
         settings.key_file.as_str(),
         "probe-health",
-        "health",
-        "{}",
+        ("health", "{}"),
     )
     .map(|_| ())
 }

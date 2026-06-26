@@ -81,8 +81,10 @@ fn send_message(
         agent_name,
         settings.key_file.as_str(),
         format!("probe-send-message-{label}").as_str(),
-        payload,
-        format!("mcp live s11 {label} send_message").as_str(),
+        (
+            payload,
+            format!("mcp live s11 {label} send_message").as_str(),
+        ),
     )
 }
 
@@ -99,8 +101,10 @@ fn query_message(
         format!("{agent_name}-query").as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-{label}").as_str(),
-        message_id,
-        format!("mcp live s11 {label} query_message").as_str(),
+        (
+            message_id,
+            format!("mcp live s11 {label} query_message").as_str(),
+        ),
     )
 }
 
