@@ -3,43 +3,73 @@ use std::fmt;
 /// Error taxonomy for M5 vector-layer contracts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM5VectorIntegrationError {
+    /// Empty field variant for this public contract enum.
     EmptyField(&'static str),
+    /// Invalid did variant for this public contract enum.
     InvalidDid(String),
+    /// Invalid agent did variant for this public contract enum.
     InvalidAgentDid {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// String carried by this public contract model.
         detail: String,
     },
+    /// Duplicate embedding id variant for this public contract enum.
     DuplicateEmbeddingId(String),
+    /// Invalid vector dimensions variant for this public contract enum.
     InvalidVectorDimensions {
+        /// Usize carried by this public contract model.
         expected: usize,
+        /// Usize carried by this public contract model.
         found: usize,
     },
+    /// Invalid vector value variant for this public contract enum.
     InvalidVectorValue(&'static str),
+    /// Invalid limit variant for this public contract enum.
     InvalidLimit(usize),
+    /// Invalid lookback window variant for this public contract enum.
     InvalidLookbackWindow(usize),
+    /// Owner not found variant for this public contract enum.
     OwnerNotFound {
+        /// String carried by this public contract model.
         owner_did: String,
     },
+    /// Semantic query unavailable variant for this public contract enum.
     SemanticQueryUnavailable {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Anomaly evaluation unavailable variant for this public contract enum.
     AnomalyEvaluationUnavailable {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Privacy mode violation variant for this public contract enum.
     PrivacyModeViolation {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Insufficient agent history variant for this public contract enum.
     InsufficientAgentHistory {
+        /// String carried by this public contract model.
         owner_did: String,
+        /// String carried by this public contract model.
         agent_did: String,
     },
+    /// Invalid embedding hash chain variant for this public contract enum.
     InvalidEmbeddingHashChain {
+        /// String carried by this public contract model.
         owner_did: String,
+        /// Usize carried by this public contract model.
         position: usize,
+        /// Str carried by this public contract model.
         reason: &'static str,
     },
+    /// Embedding sequence not found variant for this public contract enum.
     EmbeddingSequenceNotFound {
+        /// String carried by this public contract model.
         owner_did: String,
+        /// U64 carried by this public contract model.
         sequence: u64,
     },
 }

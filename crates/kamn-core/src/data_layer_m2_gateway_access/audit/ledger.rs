@@ -11,10 +11,12 @@ pub struct DataLayerM2AccessAuditLedger {
 }
 
 impl DataLayerM2AccessAuditLedger {
+    /// Creates a new value for this public contract type.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Runs the append contract operation.
     pub fn append(
         &mut self,
         input: DataLayerM2AccessAuditInput,
@@ -25,10 +27,12 @@ impl DataLayerM2AccessAuditLedger {
         Ok(record)
     }
 
+    /// Runs the records contract operation.
     pub fn records(&self) -> &[DataLayerM2AccessAuditRecord] {
         &self.records
     }
 
+    /// Runs the verify hash chain contract operation.
     pub fn verify_hash_chain(&self) -> Result<(), DataLayerM2GatewayError> {
         let mut expected_prev = DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS.to_owned();
         for (position, record) in self.records.iter().enumerate() {
@@ -39,6 +43,7 @@ impl DataLayerM2AccessAuditLedger {
         Ok(())
     }
 
+    /// Runs the replace record hash unchecked contract operation.
     pub fn replace_record_hash_unchecked(
         &mut self,
         sequence: u64,

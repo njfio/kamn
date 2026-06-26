@@ -9,7 +9,4 @@ mod support;
 #[cfg(test)]
 mod tests;
 
-pub use analytics::*;
 pub use models::*;
-pub use query::*;
-pub use registry::*;

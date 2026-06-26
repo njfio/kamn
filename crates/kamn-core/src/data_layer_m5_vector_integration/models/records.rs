@@ -22,50 +22,80 @@ impl DataLayerM5EmbeddingPrivacyMode {
 /// Input payload for registering one embedding record.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataLayerM5EmbeddingRecordInput {
+    /// Embedding id carried by this public contract model.
     pub embedding_id: String,
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Owner did carried by this public contract model.
     pub owner_did: String,
+    /// Agent did carried by this public contract model.
     pub agent_did: String,
+    /// Retention class carried by this public contract model.
     pub retention_class: ContentRetentionClass,
+    /// Model id carried by this public contract model.
     pub model_id: String,
+    /// Vector encrypted carried by this public contract model.
     pub vector_encrypted: Vec<u8>,
+    /// Vector plaintext carried by this public contract model.
     pub vector_plaintext: Option<Vec<f32>>,
+    /// Created at epoch seconds carried by this public contract model.
     pub created_at_epoch_seconds: u64,
 }
 
 /// Stored append-only embedding record.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataLayerM5EmbeddingRecord {
+    /// Embedding id carried by this public contract model.
     pub embedding_id: String,
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Owner did carried by this public contract model.
     pub owner_did: String,
+    /// Agent did carried by this public contract model.
     pub agent_did: String,
+    /// Retention class carried by this public contract model.
     pub retention_class: ContentRetentionClass,
+    /// Model id carried by this public contract model.
     pub model_id: String,
+    /// Vector encrypted carried by this public contract model.
     pub vector_encrypted: Vec<u8>,
+    /// Privacy mode carried by this public contract model.
     pub privacy_mode: DataLayerM5EmbeddingPrivacyMode,
+    /// Vector plaintext carried by this public contract model.
     pub vector_plaintext: Option<Vec<f32>>,
+    /// Vector dimensions carried by this public contract model.
     pub vector_dimensions: usize,
+    /// Sequence carried by this public contract model.
     pub sequence: u64,
+    /// Created at epoch seconds carried by this public contract model.
     pub created_at_epoch_seconds: u64,
+    /// Hash chain prev carried by this public contract model.
     pub hash_chain_prev: String,
+    /// Record hash carried by this public contract model.
     pub record_hash: String,
 }
 
 /// Semantic query input contract.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataLayerM5SemanticQuery {
+    /// Owner did carried by this public contract model.
     pub owner_did: String,
+    /// Query vector carried by this public contract model.
     pub query_vector: Vec<f32>,
+    /// Limit carried by this public contract model.
     pub limit: Option<usize>,
 }
 
 /// One semantic query result row.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataLayerM5SemanticQueryResult {
+    /// Embedding id carried by this public contract model.
     pub embedding_id: String,
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Similarity score carried by this public contract model.
     pub similarity_score: f32,
+    /// Cosine distance carried by this public contract model.
     pub cosine_distance: f32,
 }
 
