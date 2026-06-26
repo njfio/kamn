@@ -7,71 +7,113 @@ impl std::fmt::Display for SignerBackendError {
 }
 
 fn error_message(error: &SignerBackendError) -> String {
-    use SignerBackendError::*;
+    basic_message(error)
+        .or_else(|| key_policy_message(error))
+        .or_else(|| provider_message(error))
+        .or_else(|| backend_message(error))
+        .unwrap_or_else(|| unmapped_error_message(error))
+}
 
+fn basic_message(error: &SignerBackendError) -> Option<String> {
     match error {
-        EmptyField(field) => format!("{field} must not be empty"),
-        InvalidNonce => "nonce must be positive".to_owned(),
-        MissingSigningKeyMaterial {
+        SignerBackendError::EmptyField(field) => Some(format!("{field} must not be empty")),
+        SignerBackendError::InvalidNonce => Some("nonce must be positive".to_owned()),
+        SignerBackendError::MissingSigningKeyMaterial {
             key_id,
             key_specific_env,
-        } => missing_key_material_message(key_id, key_specific_env),
-        InvalidSigningKeyMaterial { key_id } => invalid_signing_key_material_message(key_id),
-        FallbackDeniedByRolePolicy { key_role, key_id } => {
-            fallback_denied_message(key_role, key_id)
+        } => Some(missing_key_material_message(key_id, key_specific_env)),
+        SignerBackendError::InvalidSigningKeyMaterial { key_id } => {
+            Some(invalid_signing_key_material_message(key_id))
         }
-        KeyRoleMismatch {
+        _ => None,
+    }
+}
+
+fn key_policy_message(error: &SignerBackendError) -> Option<String> {
+    match error {
+        SignerBackendError::FallbackDeniedByRolePolicy { key_role, key_id } => {
+            Some(fallback_denied_message(key_role, key_id))
+        }
+        SignerBackendError::KeyRoleMismatch {
             key_role,
             sender_role,
             sender,
             key_id,
-        } => key_role_mismatch_message(key_role, sender_role, sender, key_id),
-        MalformedSecureKeyReference { key_id } => malformed_key_message(key_id),
-        UnsupportedSignerKeyRole { role, key_id } => unsupported_key_role_message(role, key_id),
-        ProviderHandshakeRejected {
+        } => Some(key_role_mismatch_message(
+            key_role,
+            sender_role,
+            sender,
+            key_id,
+        )),
+        SignerBackendError::MalformedSecureKeyReference { key_id } => {
+            Some(malformed_key_message(key_id))
+        }
+        SignerBackendError::UnsupportedSignerKeyRole { role, key_id } => {
+            Some(unsupported_key_role_message(role, key_id))
+        }
+        _ => None,
+    }
+}
+
+fn provider_message(error: &SignerBackendError) -> Option<String> {
+    match error {
+        SignerBackendError::ProviderHandshakeRejected {
             backend,
             failure_class,
-        } => provider_handshake_message(backend, failure_class),
-        ProviderUnavailable { backend } => provider_unavailable_message(backend),
-        UnsupportedSecureProvider {
+        } => Some(provider_handshake_message(backend, failure_class)),
+        SignerBackendError::ProviderUnavailable { backend } => {
+            Some(provider_unavailable_message(backend))
+        }
+        SignerBackendError::UnsupportedSecureProvider {
             backend,
             provider,
             key_id,
-        } => unsupported_provider_message(backend, provider, key_id),
-        ProviderClientBackendMismatch {
+        } => Some(unsupported_provider_message(backend, provider, key_id)),
+        _ => None,
+    }
+}
+
+fn backend_message(error: &SignerBackendError) -> Option<String> {
+    match error {
+        SignerBackendError::ProviderClientBackendMismatch {
             expected_backend,
             provided_backend,
             key_id,
-        } => backend_mismatch_message(
+        } => Some(backend_mismatch_message(
             "provider client backend mismatch",
             expected_backend,
             provided_backend,
             key_id,
-        ),
-        SecureProviderBackendMismatch {
+        )),
+        SignerBackendError::SecureProviderBackendMismatch {
             expected_backend,
             provided_backend,
             key_id,
-        } => backend_mismatch_message(
+        } => Some(backend_mismatch_message(
             "secure provider backend mismatch",
             expected_backend,
             provided_backend,
             key_id,
-        ),
-        SignatureMismatch {
+        )),
+        SignerBackendError::SignatureMismatch {
             backend,
             expected,
             found,
-        } => signature_mismatch_message(backend, expected, found),
-        UnknownBackend(backend) => unknown_backend_message(backend),
-        UnsupportedKeyReference { backend, key_id } => {
-            unsupported_key_reference_message(backend, key_id)
+        } => Some(signature_mismatch_message(backend, expected, found)),
+        SignerBackendError::UnknownBackend(backend) => Some(unknown_backend_message(backend)),
+        SignerBackendError::UnsupportedKeyReference { backend, key_id } => {
+            Some(unsupported_key_reference_message(backend, key_id))
         }
+        _ => None,
     }
 }
 
 fn invalid_signing_key_material_message(key_id: &str) -> String {
     format!("invalid signer key material for key reference {key_id}")
+}
+
+fn unmapped_error_message(error: &SignerBackendError) -> String {
+    format!("signer backend error: {error:?}")
 }
 
 fn fallback_denied_message(key_role: &str, key_id: &str) -> String {
