@@ -9,22 +9,31 @@ pub use evaluator::ValidatorProofConsensusEvaluator;
 /// Per-validator verdict on one processor proof artifact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValidatorProofVerdict {
+    /// Valid variant for this public contract enum.
     Valid,
+    /// Invalid variant for this public contract enum.
     Invalid,
+    /// Replay variant for this public contract enum.
     Replay,
 }
 
 /// One validator attestation participating in proof consensus.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofAttestation {
+    /// Attestation id carried by this public contract model.
     pub attestation_id: String,
+    /// Validator did carried by this public contract model.
     pub validator_did: String,
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Artifact id carried by this public contract model.
     pub artifact_id: String,
+    /// Verdict carried by this public contract model.
     pub verdict: ValidatorProofVerdict,
 }
 
 impl ValidatorProofAttestation {
+    /// Creates a new value for this public contract type.
     pub fn new(
         attestation_id: &str,
         validator_did: &str,
@@ -52,12 +61,16 @@ impl ValidatorProofAttestation {
 /// Consensus input for a single message and artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusInput {
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Artifact id carried by this public contract model.
     pub artifact_id: String,
+    /// Attestations carried by this public contract model.
     pub attestations: Vec<ValidatorProofAttestation>,
 }
 
 impl ValidatorProofConsensusInput {
+    /// Creates a new value for this public contract type.
     pub fn new(
         message_id: &str,
         artifact_id: &str,
@@ -79,39 +92,80 @@ impl ValidatorProofConsensusInput {
 /// Aggregate consensus status after tallying validator attestations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidatorProofConsensusStatus {
+    /// Consensus valid variant for this public contract enum.
     ConsensusValid,
+    /// Consensus invalid variant for this public contract enum.
     ConsensusInvalid,
+    /// Consensus replay variant for this public contract enum.
     ConsensusReplay,
+    /// Validator mismatch variant for this public contract enum.
     ValidatorMismatch,
 }
 
 /// Final consensus decision emitted by the validator evaluator.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusDecision {
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Artifact id carried by this public contract model.
     pub artifact_id: String,
+    /// Required quorum carried by this public contract model.
     pub required_quorum: usize,
+    /// Validator count carried by this public contract model.
     pub validator_count: usize,
+    /// Validator dids carried by this public contract model.
     pub validator_dids: Vec<String>,
+    /// Valid attestation count carried by this public contract model.
     pub valid_attestation_count: usize,
+    /// Invalid attestation count carried by this public contract model.
     pub invalid_attestation_count: usize,
+    /// Replay attestation count carried by this public contract model.
     pub replay_attestation_count: usize,
+    /// Status carried by this public contract model.
     pub status: ValidatorProofConsensusStatus,
 }
 
 /// Validation and quorum errors returned while building consensus.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidatorProofConsensusError {
+    /// Invalid required quorum variant for this public contract enum.
     InvalidRequiredQuorum(usize),
-    InvalidField { field: &'static str },
+    /// Invalid field variant for this public contract enum.
+    InvalidField {
+        /// Field carried by this enum variant.
+        field: &'static str,
+    },
+    /// Empty attestations variant for this public contract enum.
     EmptyAttestations,
+    /// Invalid validator did variant for this public contract enum.
     InvalidValidatorDid(String),
-    AttestationMessageMismatch { expected: String, found: String },
-    AttestationArtifactMismatch { expected: String, found: String },
+    /// Attestation message mismatch variant for this public contract enum.
+    AttestationMessageMismatch {
+        /// Expected carried by this enum variant.
+        expected: String,
+        /// Found carried by this enum variant.
+        found: String,
+    },
+    /// Attestation artifact mismatch variant for this public contract enum.
+    AttestationArtifactMismatch {
+        /// Expected carried by this enum variant.
+        expected: String,
+        /// Found carried by this enum variant.
+        found: String,
+    },
+    /// Duplicate validator variant for this public contract enum.
     DuplicateValidator(String),
+    /// Duplicate attestation id variant for this public contract enum.
     DuplicateAttestationId(String),
+    /// Attestation replay variant for this public contract enum.
     AttestationReplay(String),
-    InsufficientAttestations { required: usize, received: usize },
+    /// Insufficient attestations variant for this public contract enum.
+    InsufficientAttestations {
+        /// Required carried by this enum variant.
+        required: usize,
+        /// Received carried by this enum variant.
+        received: usize,
+    },
 }
 
 impl fmt::Display for ValidatorProofConsensusError {

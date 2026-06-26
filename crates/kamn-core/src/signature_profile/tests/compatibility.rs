@@ -6,7 +6,7 @@ use super::super::{
     BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
 };
 
-const SOURCE: &str = include_str!("../../signature_profile.rs");
+const SOURCE: &str = include_str!("../fixtures.rs");
 
 #[test]
 fn baseline_signature_profile_is_deterministic() {

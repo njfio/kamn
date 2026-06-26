@@ -55,13 +55,15 @@ const PHASE4_BASELINE_SPECS: [BaselineSpec; 3] = [
     ),
 ];
 
+/// Runs the phase4 baseline options contract helper.
 pub fn phase4_baseline_options() -> Vec<ZkArchitectureOption> {
     PHASE4_BASELINE_SPECS
         .into_iter()
-        .map(|spec| option_from_spec(spec))
+        .map(option_from_spec)
         .collect()
 }
 
+/// Runs the evaluate zk option contract helper.
 pub fn evaluate_zk_option(
     option: &ZkArchitectureOption,
     policy: ZkEvaluationPolicy,

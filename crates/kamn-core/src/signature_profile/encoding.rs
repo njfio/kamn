@@ -5,6 +5,7 @@ use super::{
     BASELINE_SIGNATURE_PROFILE_ID,
 };
 
+/// Runs the parse signature profile metadata contract helper.
 pub fn parse_signature_profile_metadata(signature: &str) -> Option<SignatureProfileMetadata> {
     let suffix = signature.strip_prefix("sig:")?;
     let mut segments = suffix.splitn(3, ':');
@@ -73,6 +74,7 @@ fn canonical_service_auth_message(
     )
 }
 
+/// Runs the service auth signing payload for fields contract helper.
 pub fn service_auth_signing_payload_for_fields(
     sender: &str,
     nonce: u64,

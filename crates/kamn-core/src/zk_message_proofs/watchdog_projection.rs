@@ -3,32 +3,49 @@ use super::validator_consensus::{ValidatorProofConsensusDecision, ValidatorProof
 /// Watchdog incident class derived from validator proof consensus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProofWatchdogProjectionKind {
+    /// Consensus aligned variant for this public contract enum.
     ConsensusAligned,
+    /// Invalid proof consensus variant for this public contract enum.
     InvalidProofConsensus,
+    /// Replay proof consensus variant for this public contract enum.
     ReplayProofConsensus,
+    /// Validator mismatch variant for this public contract enum.
     ValidatorMismatch,
 }
 
 /// Operational severity attached to the projected watchdog incident.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProofWatchdogSeverity {
+    /// Info variant for this public contract enum.
     Info,
+    /// Warning variant for this public contract enum.
     Warning,
+    /// Critical variant for this public contract enum.
     Critical,
 }
 
 /// Deterministic watchdog projection emitted from proof consensus state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProofWatchdogProjection {
+    /// Incident fingerprint carried by this public contract model.
     pub incident_fingerprint: String,
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Artifact id carried by this public contract model.
     pub artifact_id: String,
+    /// Kind carried by this public contract model.
     pub kind: ProofWatchdogProjectionKind,
+    /// Severity carried by this public contract model.
     pub severity: ProofWatchdogSeverity,
+    /// Required quorum carried by this public contract model.
     pub required_quorum: usize,
+    /// Validator count carried by this public contract model.
     pub validator_count: usize,
+    /// Valid attestation count carried by this public contract model.
     pub valid_attestation_count: usize,
+    /// Invalid attestation count carried by this public contract model.
     pub invalid_attestation_count: usize,
+    /// Replay attestation count carried by this public contract model.
     pub replay_attestation_count: usize,
 }
 
@@ -37,10 +54,12 @@ pub struct ProofWatchdogProjection {
 pub struct ProofWatchdogProjector;
 
 impl ProofWatchdogProjector {
+    /// Creates a new value for this public contract type.
     pub fn new() -> Self {
         Self
     }
 
+    /// Runs the project contract operation.
     pub fn project(&self, decision: &ValidatorProofConsensusDecision) -> ProofWatchdogProjection {
         let (kind, severity) = projection_classification(decision.status);
         ProofWatchdogProjection {

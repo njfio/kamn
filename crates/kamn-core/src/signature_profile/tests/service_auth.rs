@@ -5,7 +5,7 @@ use super::super::{
     SERVICE_AUTH_SIGNATURE_ALGORITHM, SERVICE_AUTH_SIGNATURE_PROFILE_ID,
 };
 
-const SOURCE: &str = include_str!("../../signature_profile.rs");
+const SOURCE: &str = include_str!("../service_auth.rs");
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 

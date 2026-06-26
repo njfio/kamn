@@ -8,11 +8,13 @@ use super::{
 };
 use crate::signature_profile::encoding::wipe_bytes;
 
+/// Runs the generate ephemeral service auth private key hex contract helper.
 pub fn generate_ephemeral_service_auth_private_key_hex() -> String {
     let signing_key = SigningKey::random(&mut OsRng);
     encode_hex_lower(signing_key.to_bytes().as_ref())
 }
 
+/// Runs the debug fallback signer private key hex contract helper.
 pub fn debug_fallback_signer_private_key_hex() -> Option<&'static str> {
     static DEBUG_FALLBACK: OnceLock<Option<String>> = OnceLock::new();
     DEBUG_FALLBACK
@@ -27,6 +29,7 @@ pub fn debug_fallback_signer_private_key_hex() -> Option<&'static str> {
         .as_deref()
 }
 
+/// Runs the service auth sign with private key hex contract helper.
 pub fn service_auth_sign_with_private_key_hex(
     sender: &str,
     nonce: u64,
@@ -62,6 +65,7 @@ fn render_signature(signature: &Signature, recovery_id: RecoveryId) -> String {
     )
 }
 
+/// Runs the service auth public key hex from private key hex contract helper.
 pub fn service_auth_public_key_hex_from_private_key_hex(
     private_key_hex: &str,
 ) -> Result<String, ServiceAuthSignatureError> {
@@ -86,6 +90,7 @@ pub fn service_auth_public_key_hex_from_private_key_hex(
     ))
 }
 
+/// Runs the service auth verify with public key hex contract helper.
 pub fn service_auth_verify_with_public_key_hex(
     signature: &str,
     sender: &str,
