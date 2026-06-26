@@ -1,16 +1,17 @@
 use super::{
+    anchoring_helpers::{anchor_payload, build_outcome, retry_class_from_receipt},
     support::{map_receipt, tagged_digest},
     DataLayerM1AnchorOutcome, DataLayerM1AnchorReceipt, DataLayerM1AnchorResult,
     DataLayerM1AnchorRetryClass, DataLayerM1Error, DataLayerM1MerkleBatch,
 };
 use crate::kolme_runtime_commit::{
-    KolmeCommitReceiptFinality, KolmeRuntimeCommitClient, KolmeRuntimeCommitOutcome,
-    KolmeRuntimeCommitRequest,
+    KolmeRuntimeCommitClient, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitRequest,
 };
 use crate::AgentDid;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
+/// Public contract model for Data Layer M1 Kolme Anchoring Worker.
 pub struct DataLayerM1KolmeAnchoringWorker<C> {
     pub(crate) client: C,
     pub(crate) actor_did: AgentDid,
@@ -22,6 +23,7 @@ pub struct DataLayerM1KolmeAnchoringWorker<C> {
 }
 
 impl<C> DataLayerM1KolmeAnchoringWorker<C> {
+    /// Creates a new value for this public contract type.
     pub fn new(
         client: C,
         actor_did: &str,
@@ -48,6 +50,7 @@ impl<C> DataLayerM1KolmeAnchoringWorker<C>
 where
     C: KolmeRuntimeCommitClient,
 {
+    /// Runs the anchor batch contract operation.
     pub fn anchor_batch(
         &mut self,
         batch: &DataLayerM1MerkleBatch,
@@ -174,37 +177,5 @@ where
             nonce,
             payload_hash.as_str(),
         )?)
-    }
-}
-
-fn retry_class_from_receipt(
-    receipt: &crate::kolme_runtime_commit::KolmeRuntimeCommitReceipt,
-) -> DataLayerM1AnchorRetryClass {
-    if receipt.finality == KolmeCommitReceiptFinality::Pending {
-        DataLayerM1AnchorRetryClass::RetryableInFlight
-    } else {
-        DataLayerM1AnchorRetryClass::FinalizedNoRetry
-    }
-}
-
-fn anchor_payload(batch: &DataLayerM1MerkleBatch) -> String {
-    format!(
-        "anchor-payload|batch:{}|root:{}|count:{}|first:{}|last:{}",
-        batch.batch_id,
-        batch.merkle_root,
-        batch.message_count,
-        batch.first_message_id,
-        batch.last_message_id
-    )
-}
-
-fn build_outcome(
-    receipt: DataLayerM1AnchorReceipt,
-    retry_class: DataLayerM1AnchorRetryClass,
-) -> DataLayerM1AnchorOutcome {
-    if retry_class == DataLayerM1AnchorRetryClass::NewSubmission {
-        DataLayerM1AnchorOutcome::Submitted(receipt)
-    } else {
-        DataLayerM1AnchorOutcome::Duplicate(receipt)
     }
 }

@@ -5,28 +5,38 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract model for Data Layer M1 Merkle Batch.
 pub struct DataLayerM1MerkleBatch {
+    /// Batch id carried by this public contract model.
     pub batch_id: String,
+    /// Merkle root carried by this public contract model.
     pub merkle_root: String,
+    /// Message count carried by this public contract model.
     pub message_count: usize,
+    /// First message id carried by this public contract model.
     pub first_message_id: String,
+    /// Last message id carried by this public contract model.
     pub last_message_id: String,
+    /// Tree height carried by this public contract model.
     pub tree_height: u16,
     pub(crate) leaves: Vec<DataLayerM1MerkleLeaf>,
     pub(crate) levels: Vec<Vec<String>>,
 }
 
 impl DataLayerM1MerkleBatch {
+    /// Creates or updates state through the assemble contract operation.
     pub fn assemble(mut leaves: Vec<DataLayerM1MerkleLeaf>) -> Result<Self, DataLayerM1Error> {
         sort_leaves(&mut leaves)?;
         let levels = build_levels(&leaves);
         build_batch(leaves, levels)
     }
 
+    /// Runs the leaves contract operation.
     pub fn leaves(&self) -> &[DataLayerM1MerkleLeaf] {
         &self.leaves
     }
 
+    /// Runs the inclusion proof contract operation.
     pub fn inclusion_proof(
         &self,
         message_id: &str,
@@ -36,7 +46,7 @@ impl DataLayerM1MerkleBatch {
     }
 }
 
-fn sort_leaves(leaves: &mut Vec<DataLayerM1MerkleLeaf>) -> Result<(), DataLayerM1Error> {
+fn sort_leaves(leaves: &mut [DataLayerM1MerkleLeaf]) -> Result<(), DataLayerM1Error> {
     if leaves.is_empty() {
         return Err(DataLayerM1Error::EmptyBatch);
     }
@@ -145,7 +155,7 @@ fn build_proof_steps(
 }
 
 fn sibling_step(level: &[String], node_index: usize) -> (usize, DataLayerM1ProofSiblingSide) {
-    if node_index % 2 == 0 {
+    if node_index.is_multiple_of(2) {
         let right = if node_index + 1 < level.len() {
             node_index + 1
         } else {

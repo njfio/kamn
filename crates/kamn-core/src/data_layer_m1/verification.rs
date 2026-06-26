@@ -10,16 +10,23 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract enum for Data Layer M1 Proof Verification Decision.
 pub enum DataLayerM1ProofVerificationDecision {
+    /// Valid variant for this public contract enum.
     Valid {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
     },
+    /// Invalid variant for this public contract enum.
     Invalid {
+        /// Str carried by this public contract model.
         reason_code: &'static str,
+        /// Data layer m1 error carried by this public contract model.
         error: DataLayerM1Error,
     },
 }
 
+/// Runs the verify data layer m1 inclusion proof contract helper.
 pub fn verify_data_layer_m1_inclusion_proof(
     proof: &DataLayerM1MerkleInclusionProof,
 ) -> Result<(), DataLayerM1Error> {
@@ -28,6 +35,7 @@ pub fn verify_data_layer_m1_inclusion_proof(
     validate_root_hash(proof)
 }
 
+/// Runs the evaluate data layer m1 inclusion proof contract helper.
 pub fn evaluate_data_layer_m1_inclusion_proof(
     proof: &DataLayerM1MerkleInclusionProof,
 ) -> DataLayerM1ProofVerificationDecision {
@@ -42,6 +50,7 @@ pub fn evaluate_data_layer_m1_inclusion_proof(
     }
 }
 
+/// Runs the evaluate data layer m1 anchor failure matrix contract helper.
 pub fn evaluate_data_layer_m1_anchor_failure_matrix(
     cases: &[DataLayerM1AnchorFailureMatrixCase],
 ) -> Result<DataLayerM1AnchorFailureMatrixReport, DataLayerM1Error> {
@@ -129,7 +138,9 @@ fn collect_failure_matrix_evidence(
 fn build_failure_matrix_entry(
     case: &DataLayerM1AnchorFailureMatrixCase,
 ) -> Result<DataLayerM1AnchorFailureMatrixEvidence, DataLayerM1Error> {
-    require_non_empty(case.case_id.as_str(), "case_id")?;
+    if case.case_id.trim().is_empty() {
+        return Err(DataLayerM1Error::InvalidFailureMatrixInput("case_id"));
+    }
     let observed_outcome_kind = anchor_outcome_kind(&case.result.outcome);
     let observed_retry_class = case.result.retry_class;
     Ok(DataLayerM1AnchorFailureMatrixEvidence {
