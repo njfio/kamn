@@ -122,3 +122,9 @@ denied.
   modules as product API surface. The green fix must keep the public API
   baseline and thresholds unchanged by excluding test-only module paths before
   counting public items.
+- Package-level verification also exposed a red
+  `cargo test -p kamn-core --test review_r50_doc_contract_consolidation_docs_contract`
+  non-regression ratchet because the current top-level doc-contract test-file
+  count was `98` while the R50 marker still capped the branch at `96`. The
+  green fix must follow the established R50 reconciliation pattern by matching
+  the deterministic current count and keeping baseline/max equality locked.
