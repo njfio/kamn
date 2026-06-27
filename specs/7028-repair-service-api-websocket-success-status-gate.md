@@ -36,16 +36,16 @@ fail-closed service API auth contract.
   unavailable; this must be reported as a local environment blocker, not hidden.
 
 ## Acceptance Criteria
-- [ ] Red evidence captures CI failing with `expected websocket success status
+- [x] Red evidence captures CI failing with `expected websocket success status
       line`.
-- [ ] Red local contract evidence captures the standalone websocket validator
+- [x] Red local contract evidence captures the standalone websocket validator
       missing the signer public key header.
-- [ ] The standalone websocket validator sends `X-KAMN-Signer-Public-Key` in
+- [x] The standalone websocket validator sends `X-KAMN-Signer-Public-Key` in
       authenticated websocket upgrade requests.
-- [ ] Existing service API websocket live validation contract tests pass.
-- [ ] Existing service API axum ingress websocket probe contract remains
+- [x] Existing service API websocket live validation contract tests pass.
+- [x] Existing service API axum ingress websocket probe contract remains
       unchanged or equivalent.
-- [ ] `cargo fmt --check`, strict workspace clippy, and `make check` remain
+- [x] `cargo fmt --check`, strict workspace clippy, and `make check` remain
       green.
 
 ## Files To Touch
@@ -80,9 +80,33 @@ fail-closed service API auth contract.
   status line`.
 - Local environment note: direct live validator execution failed before the
   websocket probe because local Python lacks `cryptography`.
+- Red local: `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
+  failed with `expected websocket live validation script to propagate signer
+  public key header`.
+- Red local: `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
+  failed with `expected websocket live validation script to use self-certifying
+  sender did`.
+- Green: `uv run --with cryptography bash scripts/runtime/test_validate_service_api_websocket_live.sh`
+  passed.
+- Integration: `uv run --with cryptography bash scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh`
+  passed.
+- Integration: `uv run --with cryptography bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+  passed.
+- Integration: `bash -n scripts/runtime/validate_service_api_websocket_live.sh scripts/runtime/test_validate_service_api_websocket_live.sh`
+  passed.
+- Closeout: `cargo fmt --check` passed.
+- Closeout: `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed.
+- Closeout: `make check` passed.
+- Closeout: governance ratio passed with `governance_commit_count=7`,
+  `feature_commit_count=43`, and `governance_ratio=0.14`.
 
 ## Shell-Surface Metrics
 - `shell_loc_delta_estimate: +40`
 - `rust_loc_delta_estimate: +120`
 - `shell_to_rust_ratio_delta_estimate: -0.0001`
 - `shell_surface_mitigation_issue: #7028`
+- `shell_loc_delta_actual: +229`
+- `rust_loc_delta_actual: +166366`
+- `shell_to_rust_ratio_delta_actual: -0.181607`
+- `shell_surface_ratio_target_status: improved`
