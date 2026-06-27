@@ -10,22 +10,26 @@ fn critical_path_mutation_gate_uses_extracted_group_channel_selector() {
     let script = read_repo_file("scripts/ci/run_critical_path_mutation_gate.sh");
     let source = read_repo_file(GROUP_CHANNEL_SELECTOR_FILE);
 
-    assert!(
-        source.contains(NONCE_GUARD),
-        "expected extracted group-channel encrypt module to own nonce guard",
+    assert_contains(&source, NONCE_GUARD, "extracted encrypt module");
+    assert_contains(&script, GROUP_CHANNEL_SELECTOR_FILE, "mutation selector");
+    assert_contains(
+        &script,
+        "--file \"$group_channel_nonce_mutation_file\"",
+        "cargo-mutants file argument",
     );
-    assert!(
-        script.contains(GROUP_CHANNEL_SELECTOR_FILE),
-        "group-channel mutation selector must follow extracted encrypt module",
+    assert_not_contains(
+        &script,
+        &format!("grep -n '{NONCE_GUARD}' {LEGACY_GROUP_CHANNEL_SELECTOR_FILE}"),
+        "legacy parent-module selector",
     );
-    assert!(
-        script.contains("--file \"$group_channel_nonce_mutation_file\""),
-        "group-channel mutation slice must pass the resolved selector file to cargo mutants",
-    );
-    assert!(
-        !script.contains(&format!("grep -n '{NONCE_GUARD}' {LEGACY_GROUP_CHANNEL_SELECTOR_FILE}")),
-        "group-channel mutation selector must not drift back to the parent module",
-    );
+}
+
+fn assert_contains(haystack: &str, needle: &str, label: &str) {
+    assert!(haystack.contains(needle), "missing {label}: {needle}");
+}
+
+fn assert_not_contains(haystack: &str, needle: &str, label: &str) {
+    assert!(!haystack.contains(needle), "unexpected {label}: {needle}");
 }
 
 fn read_repo_file(relative_path: &str) -> String {
