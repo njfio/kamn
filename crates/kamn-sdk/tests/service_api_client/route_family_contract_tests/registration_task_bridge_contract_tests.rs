@@ -13,10 +13,12 @@ pub(super) fn assert_registration_surface_contract() {
 }
 
 pub(super) fn assert_task_and_escrow_routes() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 4));
-    wait_for_server_ready(bind_addr.as_str());
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("listener address should resolve")
+        .to_string();
+    let server = thread::spawn(move || run_bound_service_contract_server(listener, 4));
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
         .expect("client should connect");
     let sender =
@@ -30,10 +32,12 @@ pub(super) fn assert_task_and_escrow_routes() {
 }
 
 pub(super) fn assert_bridge_routes() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 3));
-    wait_for_server_ready(bind_addr.as_str());
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("listener address should resolve")
+        .to_string();
+    let server = thread::spawn(move || run_bound_service_contract_server(listener, 3));
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
         .expect("client should connect");
     let sender = AgentDid::parse("kamn:did:agent:sdk-bridge").expect("sender did should parse");

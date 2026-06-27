@@ -4,14 +4,21 @@ use kamn_snapshot_journal::{
 };
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
 fn temp_journal_path() -> PathBuf {
+    let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock must be monotonic enough for tmp naming")
         .as_nanos();
-    std::env::temp_dir().join(format!("kamn-snapshot-journal-roundtrip-{nanos}.journal"))
+    std::env::temp_dir().join(format!(
+        "kamn-snapshot-journal-roundtrip-{}-{counter}-{nanos}.journal",
+        std::process::id()
+    ))
 }
 
 fn append_and_restore(payload: &str) -> String {

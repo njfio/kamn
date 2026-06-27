@@ -69,42 +69,44 @@ cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -
 cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
   direct_message_crypto::tests::decrypt_accepts_legacy_v1_sha256_kdf_ciphertext_for_compatibility --exact
 cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
-  group_channel_crypto::tests::encrypt_requires_key_agreement_seed --exact
+  group_channel_crypto::tests::regression_contract_tests::encrypt_requires_key_agreement_seed --exact
 cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
-  group_channel_crypto::tests::encrypt_decrypt_roundtrip_requires_authorized_recipient --exact
+  group_channel_crypto::tests::lifecycle_contract_tests::encrypt_decrypt_roundtrip_requires_authorized_recipient --exact
 cargo llvm-cov -p kamn-core --test kolme_runtime_commit_http_transport --no-clean --json --output-path "$core_json" -- \
-  regression_http_transport_maps_401_to_authorization_unavailable_error --exact
+  http_transport_contract_tests::response_parsing_contract_tests::regression_http_transport_maps_401_to_authorization_unavailable_error --exact
 cargo llvm-cov -p kamn-core --test kolme_runtime_commit_http_transport --no-clean --json --output-path "$core_json" -- \
-  functional_http_transport_includes_authorization_header_when_configured --exact
+  http_transport_contract_tests::submit_finality_contract_tests::functional_http_transport_includes_authorization_header_when_configured --exact
 cargo llvm-cov -p kamn-core --test kolme_runtime_commit_http_transport --no-clean --json --output-path "$core_json" -- \
-  regression_http_transport_timeout_maps_to_provider_timeout --exact
+  http_transport_contract_tests::submit_finality_contract_tests::regression_http_transport_timeout_maps_to_provider_timeout --exact
 cargo llvm-cov -p kamn-core --test kolme_runtime_commit_http_transport --no-clean --json --output-path "$core_json" -- \
-  regression_https_transport_maps_certificate_errors_to_unavailable --exact
+  tls_transport_contract_tests::regression_https_transport_maps_certificate_errors_to_unavailable --exact
 
 cargo llvm-cov clean --workspace
 
 cargo llvm-cov -p kamn-node --bin kamn-node --json --output-path "$node_json" -- \
   main_tests::runtime_tests::unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  runtime_orchestration::tests::unit_full_supervisor_http_probe_accepts_success_status --exact
+  runtime_orchestration::full_supervisor::tests::unit_full_supervisor_http_probe_accepts_success_status --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  runtime_orchestration::tests::unit_full_supervisor_inter_tick_probes_execute_once_per_lane --exact
+  runtime_orchestration::full_supervisor::tests::unit_full_supervisor_inter_tick_probes_execute_once_per_lane --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  main_tests::service_api_endpoint_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts --exact
+  main_tests::service_api_endpoint_tests::residual_root_contract_tests::error_envelope_contract_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::unit_nonce_retry_classifier_marks_transient_provider_errors --exact
+  signer::tests::nonce_contract_tests::unit_nonce_retry_classifier_marks_transient_provider_errors --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::unit_nonce_retry_backoff_policy_is_deterministic_and_bounded --exact
+  signer::tests::nonce_contract_tests::unit_nonce_retry_backoff_policy_is_deterministic_and_bounded --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::unit_signer_private_key_parse_zeroizes_hex_buffer_on_success --exact
+  signer::tests::adapter_contract_tests::unit_signer_private_key_parse_zeroizes_hex_buffer_on_success --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::unit_signer_preflight_defaults_to_single_signer_quorum_ready --exact
+  signer::tests::preflight_contract_tests::unit_signer_preflight_defaults_to_single_signer_quorum_ready --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::regression_signer_preflight_rejects_stale_failover_rotation_epoch --exact
+  signer::tests::preflight_contract_tests::regression_signer_preflight_rejects_stale_failover_rotation_epoch --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::regression_signer_preflight_rejects_non_failover_rotation_epoch_regression --exact
+  signer::tests::preflight_contract_tests::regression_signer_preflight_rejects_non_failover_rotation_epoch_regression --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
-  signer::tests::regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer --exact
+  signer::tests::secret_source_contract_tests::regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer --exact
+cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
+  main_tests::signer_tests::signer_direct_profile_contract_tests::direct_signature_contract_tests::unit_kolme_live_signer_adapter_signs_and_verifies_runtime_message --exact
 
 python3 scripts/ci/check_critical_path_coverage.py \
   --core-coverage-json "$core_json" \

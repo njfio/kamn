@@ -266,7 +266,7 @@ fn run_libp2p_native_runtime_adapter_loop(
                         locked_state
                             .inbox_by_peer
                             .entry(record.peer_id.clone())
-                            .or_insert_with(VecDeque::new);
+                            .or_default();
                         locked_state
                             .peers_by_id
                             .insert(record.peer_id.clone(), record);
@@ -382,7 +382,7 @@ fn run_libp2p_native_runtime_adapter_loop(
                             let queue = locked_state
                                 .inbox_by_peer
                                 .entry(recipient_peer_id)
-                                .or_insert_with(VecDeque::new);
+                                .or_default();
                             queue.drain(..).collect::<Vec<super::PeerGossipFrame>>()
                         })
                 });

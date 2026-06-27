@@ -105,8 +105,7 @@ fn build_timescale_ingest_operation(
 
 fn timescale_ingest_sql(hypertable_name: &str) -> String {
     format!(
-        "INSERT INTO {} (owner_did, agent_did, observed_at, bucket_hour_epoch_seconds, bucket_day_epoch_seconds, message_count, bytes_stored, query_count, embedding_count, embedding_anomaly_count, ingress_latency_ms_p95, egress_latency_ms_p95, active_sessions, sequence) VALUES ($1, $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);",
-        hypertable_name
+        "INSERT INTO {hypertable_name} (owner_did, agent_did, observed_at, bucket_hour_epoch_seconds, bucket_day_epoch_seconds, message_count, bytes_stored, query_count, embedding_count, embedding_anomaly_count, ingress_latency_ms_p95, egress_latency_ms_p95, active_sessions, sequence) VALUES ($1, $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);"
     )
 }
 
@@ -175,8 +174,7 @@ fn build_owner_rollup_operation(
 
 fn owner_rollup_sql(interval_marker: &str, hypertable_name: &str) -> String {
     format!(
-        "SELECT time_bucket(INTERVAL '{}', observed_at) AS bucket_start, SUM(message_count) AS message_count_total, SUM(bytes_stored) AS bytes_stored_total, SUM(query_count) AS query_count_total, SUM(embedding_count) AS embedding_count_total FROM {} WHERE owner_did = $1 GROUP BY bucket_start ORDER BY bucket_start DESC LIMIT $2;",
-        interval_marker, hypertable_name
+        "SELECT time_bucket(INTERVAL '{interval_marker}', observed_at) AS bucket_start, SUM(message_count) AS message_count_total, SUM(bytes_stored) AS bytes_stored_total, SUM(query_count) AS query_count_total, SUM(embedding_count) AS embedding_count_total FROM {hypertable_name} WHERE owner_did = $1 GROUP BY bucket_start ORDER BY bucket_start DESC LIMIT $2;"
     )
 }
 

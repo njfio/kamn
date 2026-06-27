@@ -72,7 +72,10 @@ pub(super) fn spawn_api_server(
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     };
     let server_snapshot = snapshot.clone();
-    thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot))
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr);
+    server
 }
 
 pub(super) fn assert_server_ok(server: thread::JoinHandle<Result<(), String>>, context: &str) {

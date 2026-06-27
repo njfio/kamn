@@ -3,12 +3,7 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     let _lock = signer_env_lock()
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let _profile_env_guard =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
-    let _env_guard = EnvVarGuard::set(
-        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
-        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
-    );
+    let _env_guards = primary_env_local_signer_guards();
     let (base_url, requests) = spawn_kolme_live_mock_server(vec![
         MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
         MockHttpReply::ok(
@@ -124,6 +119,26 @@ fn recorded_request_index(recorded_requests: &[String], marker: &str) -> usize {
         .iter()
         .position(|request| request.contains(marker))
         .unwrap_or_else(|| panic!("missing recorded request marker {marker}"))
+}
+
+fn primary_env_local_signer_guards() -> Vec<EnvVarGuard> {
+    [
+        ("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary")),
+        (
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        ),
+        ("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY", None),
+        ("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None),
+        ("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", None),
+        ("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", None),
+        ("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", None),
+        ("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", None),
+        ("KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS", None),
+    ]
+    .into_iter()
+    .map(|(key, value)| EnvVarGuard::set(key, value))
+    .collect()
 }
 
 #[test]

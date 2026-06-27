@@ -6,8 +6,6 @@ use std::net::TcpListener;
 use std::thread;
 use std::time::Duration;
 
-pub(crate) use self::contract_server::run_contract_server;
-
 const CHAIN_ID: &str = "kamn-sdk-live";
 const CHAIN_VERSION: &str = "1";
 const LIVE_CHAIN_ID_ENV: &str = "KAMN_SDK_LIVE_CHAIN_ID";
@@ -55,13 +53,39 @@ pub(crate) fn ensure_live_test_env() {
     std::env::set_var(LIVE_REQUESTER_DID_ENV, "kamn:did:agent:live-requester");
 }
 
+#[allow(dead_code)]
 pub(crate) fn reserve_loopback_addr() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let listener = bind_loopback_listener();
     let addr = listener.local_addr().expect("local addr should resolve");
     drop(listener);
     addr.to_string()
 }
 
+pub(crate) fn bind_loopback_listener() -> TcpListener {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    listener
+        .set_nonblocking(true)
+        .expect("listener nonblocking mode should configure");
+    listener
+}
+
+#[allow(dead_code)]
+pub(crate) fn run_contract_server(
+    bind_addr: String,
+    expected_requests: Vec<ExpectedRequest>,
+) -> Result<(), String> {
+    contract_server::run_contract_server(bind_addr, expected_requests)
+}
+
+#[allow(dead_code)]
+pub(crate) fn run_bound_contract_server(
+    listener: TcpListener,
+    expected_requests: Vec<ExpectedRequest>,
+) -> Result<(), String> {
+    contract_server::run_bound_contract_server(listener, expected_requests)
+}
+
+#[allow(dead_code)]
 pub(crate) fn wait_for_server_ready() {
     thread::sleep(Duration::from_millis(40));
 }

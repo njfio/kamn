@@ -7,17 +7,18 @@ pub(super) fn start_service_api_server(
     crate::service_api_endpoint::ServiceApiSnapshot,
     String,
     thread::JoinHandle<Result<(), String>>,
+    ServiceApiTestEnvGuards,
 ) {
+    let env = acquire_service_api_test_env();
     let snapshot = build_service_api_test_snapshot(api_bind);
     let bind_addr = reserve_loopback_addr();
     let server = spawn_service_api_server(&snapshot, bind_addr.as_str(), max_requests);
-    (snapshot, bind_addr, server)
+    (snapshot, bind_addr, server, env)
 }
 
 fn build_service_api_test_snapshot(
     api_bind: &str,
 ) -> crate::service_api_endpoint::ServiceApiSnapshot {
-    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),

@@ -448,11 +448,7 @@ impl fmt::Display for EscrowLifecycleError {
                 )
             }
             Self::InvalidTransition { from, action } => {
-                write!(
-                    f,
-                    "invalid escrow transition from {:?} with action {}",
-                    from, action
-                )
+                write!(f, "invalid escrow transition from {from:?} with action {action}")
             }
             Self::ResolutionMismatch {
                 expected_remaining,

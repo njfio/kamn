@@ -13,15 +13,26 @@ pub(super) struct WebsocketHarness {
     pub bind_addr: String,
     pub snapshot: ServiceApiSnapshot,
     pub server: thread::JoinHandle<Result<(), String>>,
+    _env: ServiceApiTestEnvGuards,
 }
 
 pub(super) fn build_websocket_harness(api_bind: &str, max_requests: u64) -> WebsocketHarness {
+    let env = acquire_service_api_test_env();
+    build_websocket_harness_with_env(api_bind, max_requests, env)
+}
+
+pub(super) fn build_websocket_harness_with_env(
+    api_bind: &str,
+    max_requests: u64,
+    env: ServiceApiTestEnvGuards,
+) -> WebsocketHarness {
     let snapshot = build_websocket_snapshot(api_bind);
     let (bind_addr, server) = spawn_websocket_server(&snapshot, max_requests);
     WebsocketHarness {
         bind_addr,
         snapshot,
         server,
+        _env: env,
     }
 }
 
@@ -171,27 +182,4 @@ pub(super) fn assert_server_ok_or_timeout(
             .as_ref()
             .is_err_and(|error| error.contains("service api timed out after"));
     assert!(ended_cleanly_or_timeout, "{context}: {result:?}");
-}
-
-pub(super) fn assert_websocket_bad_request(
-    response: Vec<u8>,
-    reason_code: &str,
-    message_fragment: Option<&str>,
-) {
-    let response_text = String::from_utf8(response).expect("websocket rejection should be utf-8");
-    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
-    let payload = parse_error_envelope_from_http_response(response_text.as_str());
-    assert_eq!(payload.error, "bad-request");
-    assert_eq!(payload.reason_code, reason_code);
-    if let Some(fragment) = message_fragment {
-        assert!(payload.message.contains(fragment));
-    }
-}
-
-pub(super) fn assert_websocket_forbidden(response: Vec<u8>, reason_code: &str) {
-    let response_text = String::from_utf8(response).expect("websocket rejection should be utf-8");
-    assert!(response_text.contains("HTTP/1.1 403 Forbidden"));
-    let payload = parse_error_envelope_from_http_response(response_text.as_str());
-    assert_eq!(payload.error, "forbidden");
-    assert_eq!(payload.reason_code, reason_code);
 }

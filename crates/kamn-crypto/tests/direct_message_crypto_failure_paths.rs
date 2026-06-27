@@ -15,7 +15,8 @@ const DIRECT_MESSAGE_AEAD_KDF_SALT_V2: &[u8] = b"kamn:direct-message:aead-key:hk
 const DIRECT_MESSAGE_AEAD_KDF_INFO_V2: &[u8] = b"kamn:direct-message:aead-key:hkdf-info:v2";
 const SENDER_KEY_REF: &str = "kamn:did:agent:alice#key-agreement-1";
 const RECIPIENT_KEY_REF: &str = "kamn:did:agent:bob#key-agreement-1";
-const SOURCE: &str = include_str!("../src/direct_message_crypto.rs");
+const ENGINE_SOURCE: &str = include_str!("../src/direct_message_crypto/engine.rs");
+const KEY_AGREEMENT_SOURCE: &str = include_str!("../src/direct_message_crypto/key_agreement.rs");
 
 fn key_agreement_seed_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -178,7 +179,7 @@ fn integration_decrypt_rejects_invalid_utf8_plaintext_output() {
 #[test]
 fn contract_encrypt_maps_aead_failure_to_encryption_failed() {
     assert!(
-        SOURCE.contains(".map_err(|_| DirectMessageCryptoError::EncryptionFailed)?"),
+        ENGINE_SOURCE.contains(".map_err(|_| DirectMessageCryptoError::EncryptionFailed)?"),
         "encrypt path must preserve EncryptionFailed mapping"
     );
 }
@@ -186,7 +187,8 @@ fn contract_encrypt_maps_aead_failure_to_encryption_failed() {
 #[test]
 fn contract_hkdf_failure_maps_to_key_derivation_failed() {
     assert!(
-        SOURCE.contains(".map_err(|_| DirectMessageCryptoError::KeyDerivationFailed)"),
+        KEY_AGREEMENT_SOURCE
+            .contains(".map_err(|_| DirectMessageCryptoError::KeyDerivationFailed)"),
         "hkdf failure path must preserve KeyDerivationFailed mapping"
     );
 }

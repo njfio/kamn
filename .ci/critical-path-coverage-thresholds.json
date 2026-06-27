@@ -7,7 +7,7 @@
       "function_percent_min": 80.0
     },
     {
-      "path": "crates/kamn-core/src/group_channel_crypto.rs",
+      "path": "crates/kamn-core/src/group_channel_crypto/engine/lifecycle.rs",
       "line_percent_min": 55.0,
       "function_percent_min": 55.0
     },

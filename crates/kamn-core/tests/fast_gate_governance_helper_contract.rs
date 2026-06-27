@@ -33,8 +33,33 @@ fn fast_gate_copies_governance_ratio_git_helper() {
     );
 }
 
+#[test]
+fn workspace_premerge_fetches_full_history_for_governance_range_tests() {
+    let workflow =
+        std::fs::read_to_string(workflow_path()).expect("ci-fast-gate workflow should be readable");
+    let job = workflow_job_block(&workflow, "workspace-premerge-gate:");
+
+    assert_workflow_contains(
+        job,
+        "uses: actions/checkout@v4",
+        "Workspace Pre-Merge should use actions checkout",
+    );
+    assert_workflow_contains(
+        job,
+        "fetch-depth: 0",
+        "Workspace Pre-Merge must fetch full history for branch governance tests",
+    );
+}
+
 fn assert_workflow_contains(workflow: &str, marker: &str, message: &str) {
     assert!(workflow.contains(marker), "{message}");
+}
+
+fn workflow_job_block<'a>(workflow: &'a str, job_name: &str) -> &'a str {
+    workflow
+        .split_once(job_name)
+        .unwrap_or_else(|| panic!("{job_name} should exist in workflow"))
+        .1
 }
 
 fn workflow_path() -> PathBuf {

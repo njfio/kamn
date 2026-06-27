@@ -24,6 +24,7 @@ fn read_request_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, String> {
     let mut chunk = [0_u8; 1024];
     let mut expected_total_bytes = None;
     let mut header_end = None;
+    let deadline = Instant::now() + Duration::from_secs(10);
     set_request_timeout(stream)?;
     while continue_reading(request.len(), expected_total_bytes) {
         if !read_request_chunk(
@@ -32,6 +33,7 @@ fn read_request_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, String> {
             &mut request,
             &mut expected_total_bytes,
             &mut header_end,
+            deadline,
         )? {
             break;
         }
@@ -41,7 +43,7 @@ fn read_request_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, String> {
 
 fn set_request_timeout(stream: &mut TcpStream) -> Result<(), String> {
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(Duration::from_millis(100)))
         .map_err(|error| format!("request read-timeout failed: {error}"))
 }
 
@@ -55,6 +57,7 @@ fn read_request_chunk(
     request: &mut Vec<u8>,
     expected_total_bytes: &mut Option<usize>,
     header_end: &mut Option<usize>,
+    deadline: Instant,
 ) -> Result<bool, String> {
     match stream.read(chunk) {
         Ok(0) => Ok(false),
@@ -68,7 +71,11 @@ fn read_request_chunk(
             Ok(true)
         }
         Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-            Ok(false)
+            if Instant::now() > deadline {
+                return Err("request read timed out before complete http payload".to_owned());
+            }
+            thread::sleep(Duration::from_millis(5));
+            Ok(true)
         }
         Err(error) => Err(format!("request read failed: {error}")),
     }
@@ -169,7 +176,10 @@ pub(crate) fn write_http_response(
     );
     stream
         .write_all(payload.as_bytes())
-        .map_err(|error| format!("service api write failed: {error}"))
+        .map_err(|error| format!("service api write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("service api flush failed: {error}"))
 }
 
 fn status_text(status: u16) -> &'static str {

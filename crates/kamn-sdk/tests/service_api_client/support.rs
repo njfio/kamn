@@ -34,12 +34,12 @@ mod websocket_support;
 
 pub(crate) use auth_support::{auth_with_scope, validate_auth};
 pub(crate) use contract_server_support::{
-    run_service_contract_server, run_service_contract_server_with_websocket_payload,
-    wait_for_server_ready,
+    run_bound_service_contract_server, run_service_contract_server,
+    run_service_contract_server_with_websocket_payload, wait_for_server_ready,
 };
 pub(crate) use env_support::{
-    ensure_test_service_auth_private_key, reserve_loopback_addr, tls_env_lock, unique_temp_dir,
-    EnvVarGuard,
+    bind_loopback_listener, ensure_test_service_auth_private_key, reserve_loopback_addr,
+    tls_env_lock, unique_temp_dir, EnvVarGuard,
 };
 pub(crate) use request_parse_support::{parse_http_request, write_http_response};
 pub(crate) use tls_server_support::spawn_https_single_request_server;

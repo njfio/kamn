@@ -22,7 +22,14 @@ pub(crate) fn run_contract_server(
     listener
         .set_nonblocking(true)
         .map_err(|error| format!("nonblocking setup failed: {error}"))?;
-    let deadline = Instant::now() + Duration::from_secs(2);
+    run_bound_contract_server(listener, expected_requests)
+}
+
+pub(crate) fn run_bound_contract_server(
+    listener: TcpListener,
+    expected_requests: Vec<ExpectedRequest>,
+) -> Result<(), String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
     let mut served = 0_usize;
     while served < expected_requests.len() {
         if Instant::now() > deadline {
@@ -156,5 +163,8 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
     );
     stream
         .write_all(payload.as_bytes())
-        .map_err(|error| format!("response write failed: {error}"))
+        .map_err(|error| format!("response write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("response flush failed: {error}"))
 }

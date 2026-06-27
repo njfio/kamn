@@ -38,20 +38,22 @@ impl Drop for EnvVarGuard {
     }
 }
 
-fn reserve_loopback_addr() -> String {
+fn bind_loopback_listener() -> TcpListener {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
-    let addr = listener.local_addr().expect("local addr should resolve");
-    drop(listener);
-    addr.to_string()
+    listener
+        .set_nonblocking(true)
+        .expect("listener nonblocking mode should configure");
+    listener
 }
 
 fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String, String), String> {
     let mut request = Vec::new();
     let mut chunk = [0_u8; 1024];
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(Duration::from_millis(100)))
         .map_err(|error| format!("request read-timeout failed: {error}"))?;
 
+    let deadline = Instant::now() + Duration::from_secs(10);
     let mut expected_total_bytes: Option<usize> = None;
     let mut header_end: Option<usize> = None;
     loop {
@@ -78,7 +80,10 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String, String)
                 }
             }
             Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break;
+                if Instant::now() > deadline {
+                    return Err("request read timed out before complete http payload".to_owned());
+                }
+                thread::sleep(Duration::from_millis(5));
             }
             Err(error) => return Err(format!("request read failed: {error}")),
         }
@@ -134,7 +139,10 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
     );
     stream
         .write_all(payload.as_bytes())
-        .map_err(|error| format!("service api write failed: {error}"))
+        .map_err(|error| format!("service api write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("service api flush failed: {error}"))
 }
 
 fn deterministic_tag(payload: &[u8]) -> u64 {
@@ -146,70 +154,83 @@ fn deterministic_tag(payload: &[u8]) -> u64 {
     acc
 }
 
-fn run_task_and_escrow_server(bind_addr: String, max_requests: u64) -> Result<(), String> {
-    let listener = TcpListener::bind(bind_addr.as_str())
-        .map_err(|error| format!("server bind failed: {error}"))?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| format!("server nonblocking mode failed: {error}"))?;
-
-    let deadline = Instant::now() + Duration::from_secs(2);
+fn run_task_and_escrow_server(listener: TcpListener, max_requests: u64) -> Result<(), String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
     let mut served = 0_u64;
     while served < max_requests {
         if Instant::now() > deadline {
             return Err("server timed out before serving request budget".to_owned());
         }
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                let (method, path, body) = parse_http_request(&mut stream)?;
-                if method == "POST" && path == "/v1/tasks/task-contract-1/accept" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"task_id":"task-contract-1","state":"accepted"}"#,
-                    )?;
-                } else if method == "POST" && path == "/v1/tasks/task-contract-1/complete" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"task_id":"task-contract-1","state":"completed"}"#,
-                    )?;
-                } else if method == "POST" && path == "/v1/escrow/fund" {
-                    let escrow_id =
-                        format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
-                    let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"funded\"}}");
-                    write_http_response(&mut stream, 200, payload.as_str())?;
-                } else if method == "POST"
-                    && path.starts_with("/v1/escrow/")
-                    && path.ends_with("/release")
-                {
-                    let escrow_id = path
-                        .trim_start_matches("/v1/escrow/")
-                        .trim_end_matches("/release")
-                        .trim_end_matches('/');
-                    let payload =
-                        format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"released\"}}");
-                    write_http_response(&mut stream, 200, payload.as_str())?;
-                } else {
-                    write_http_response(
-                        &mut stream,
-                        404,
-                        r#"{"error":"not-found","reason_code":"service_api_route_not_found","message":"not found"}"#,
-                    )?;
-                }
-                served = served.saturating_add(1);
-            }
-            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                thread::sleep(Duration::from_millis(5));
-            }
-            Err(error) => return Err(format!("server accept failed: {error}")),
-        }
+        served = served.saturating_add(accept_task_escrow_request(&listener)?);
     }
     Ok(())
 }
 
-fn wait_for_server_ready() {
-    thread::sleep(Duration::from_millis(40));
+fn accept_task_escrow_request(listener: &TcpListener) -> Result<u64, String> {
+    match listener.accept() {
+        Ok((mut stream, _)) => {
+            serve_task_escrow_connection(&mut stream)?;
+            Ok(1)
+        }
+        Err(error) if error.kind() == ErrorKind::WouldBlock => {
+            thread::sleep(Duration::from_millis(5));
+            Ok(0)
+        }
+        Err(error) => Err(format!("server accept failed: {error}")),
+    }
+}
+
+fn serve_task_escrow_connection(stream: &mut TcpStream) -> Result<(), String> {
+    let (method, path, body) = parse_http_request(stream)?;
+    if write_task_response(stream, &method, &path)? {
+        return Ok(());
+    }
+    if write_escrow_response(stream, &method, &path, &body)? {
+        return Ok(());
+    }
+    write_http_response(
+        stream,
+        404,
+        r#"{"error":"not-found","reason_code":"service_api_route_not_found","message":"not found"}"#,
+    )
+}
+
+fn write_task_response(stream: &mut TcpStream, method: &str, path: &str) -> Result<bool, String> {
+    let body = match (method, path) {
+        ("POST", "/v1/tasks/task-contract-1/accept") => {
+            r#"{"task_id":"task-contract-1","state":"accepted"}"#
+        }
+        ("POST", "/v1/tasks/task-contract-1/complete") => {
+            r#"{"task_id":"task-contract-1","state":"completed"}"#
+        }
+        _ => return Ok(false),
+    };
+    write_http_response(stream, 200, body)?;
+    Ok(true)
+}
+
+fn write_escrow_response(
+    stream: &mut TcpStream,
+    method: &str,
+    path: &str,
+    body: &str,
+) -> Result<bool, String> {
+    if method == "POST" && path == "/v1/escrow/fund" {
+        let escrow_id = format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
+        let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"funded\"}}");
+        write_http_response(stream, 200, payload.as_str())?;
+        return Ok(true);
+    }
+    if method == "POST" && path.starts_with("/v1/escrow/") && path.ends_with("/release") {
+        let escrow_id = path
+            .trim_start_matches("/v1/escrow/")
+            .trim_end_matches("/release")
+            .trim_end_matches('/');
+        let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"released\"}}");
+        write_http_response(stream, 200, payload.as_str())?;
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 #[test]
@@ -218,10 +239,12 @@ fn spec_c04_agent_handle_executes_task_and_escrow_route_contracts() {
         SERVICE_AUTH_PRIVATE_KEY_ENV,
         TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
     );
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_task_and_escrow_server(server_addr, 4));
-    wait_for_server_ready();
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("listener address should resolve")
+        .to_string();
+    let server = thread::spawn(move || run_task_and_escrow_server(listener, 4));
 
     let identity = AgentIdentity::from_agent_name("alice").expect("identity");
     let handle = KamnAgentHandle::with_identity(

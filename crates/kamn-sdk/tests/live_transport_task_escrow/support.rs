@@ -10,8 +10,8 @@ mod server_runtime;
 mod task_flow;
 
 pub(crate) use base::{
-    did, ensure_live_test_env, expected_request, reserve_loopback_addr, run_contract_server,
-    wait_for_server_ready, ExpectedRequest,
+    bind_loopback_listener, did, ensure_live_test_env, expected_request, run_bound_contract_server,
+    ExpectedRequest,
 };
 pub(crate) use client_fixtures::{
     deterministic_u64_tag, live_artifact, live_client, live_escrow, live_task,

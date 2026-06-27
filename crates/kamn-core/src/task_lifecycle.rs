@@ -199,8 +199,7 @@ impl fmt::Display for TaskLifecycleError {
             Self::InvalidTransition { from, transition } => {
                 write!(
                     f,
-                    "invalid task transition from {:?} via {:?}",
-                    from, transition
+                    "invalid task transition from {from:?} via {transition:?}"
                 )
             }
             Self::TerminalState(state) => write!(f, "task is in terminal state: {state:?}"),

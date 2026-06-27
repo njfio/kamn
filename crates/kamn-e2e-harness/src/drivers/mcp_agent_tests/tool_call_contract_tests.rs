@@ -52,7 +52,13 @@ fn unit_run_live_s04_mcp_tool_call_rejects_missing_binary() {
 
 #[test]
 fn unit_run_live_s04_mcp_tool_call_rejects_non_success_exit_status() {
-    assert_tool_call_error_contains("exit_status=1", s04_non_success_exit_result);
+    with_executable_script(
+        "kamn-e2e-mcp-tool-call-exit-1",
+        NON_SUCCESS_SCRIPT,
+        |script_path| {
+            assert_tool_call_error_contains("exit_status=1", || s04_tool_call_result(script_path));
+        },
+    );
 }
 
 #[test]
@@ -78,10 +84,26 @@ fn regression_issue_6214_run_live_s04_mcp_tool_call_rejects_nested_ok_true_when_
 
 #[test]
 fn unit_run_live_s04_mcp_tool_call_success_status_still_requires_framed_payloads() {
-    assert_tool_call_error_contains("invalid framed output", s04_success_without_frames_result);
+    with_executable_script(
+        "kamn-e2e-mcp-tool-call-unframed",
+        UNFRAMED_SUCCESS_SCRIPT,
+        |script_path| {
+            assert_tool_call_error_contains("invalid framed output", || {
+                s04_tool_call_result(script_path)
+            });
+        },
+    );
 }
 
 const ROOT_FALSE_PAYLOAD: &str = r#"{"ok":false,"detail":{"ok":true}}"#;
+const NON_SUCCESS_SCRIPT: &str = r#"#!/usr/bin/env python3
+import sys
+sys.exit(1)
+"#;
+const UNFRAMED_SUCCESS_SCRIPT: &str = r#"#!/usr/bin/env python3
+import sys
+sys.stdout.write("not framed")
+"#;
 
 fn assert_tool_call_error_contains<F>(expected: &str, runner: F)
 where
@@ -106,33 +128,9 @@ fn s04_missing_binary_result() -> Result<String, String> {
     )
 }
 
-fn s04_non_success_exit_result() -> Result<String, String> {
-    run_live_s04_mcp_tool_call(
-        "/bin/false",
-        "http://localhost:8080",
-        "probe",
-        "/tmp/probe.key",
-        "probe-request",
-        "health",
-        "{}",
-    )
-}
-
 fn s04_tool_call_result(script_path: &str) -> Result<String, String> {
     run_live_s04_mcp_tool_call(
         script_path,
-        "http://localhost:8080",
-        "probe",
-        "/tmp/probe.key",
-        "probe-request",
-        "health",
-        "{}",
-    )
-}
-
-fn s04_success_without_frames_result() -> Result<String, String> {
-    run_live_s04_mcp_tool_call(
-        "/bin/true",
         "http://localhost:8080",
         "probe",
         "/tmp/probe.key",
@@ -148,6 +146,16 @@ where
 {
     let script_path = unique_temp_script_path(stem);
     write_mcp_tool_response_script(&script_path, "probe-request", payload);
+    test(script_path_str(&script_path));
+    remove_script(&script_path);
+}
+
+fn with_executable_script<F>(stem: &str, source: &str, test: F)
+where
+    F: FnOnce(&str),
+{
+    let script_path = unique_temp_script_path(stem);
+    write_executable_python_script(&script_path, source);
     test(script_path_str(&script_path));
     remove_script(&script_path);
 }

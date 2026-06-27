@@ -86,11 +86,6 @@ pub(crate) fn canonical_direct_message_aad(
     nonce: u64,
 ) -> String {
     format!(
-        "{}|{}|{}|{}|{}",
-        DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
-        DIRECT_MESSAGE_CIPHER_ALGORITHM,
-        sender_key_ref,
-        recipient_key_ref,
-        nonce
+        "{DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM}|{DIRECT_MESSAGE_CIPHER_ALGORITHM}|{sender_key_ref}|{recipient_key_ref}|{nonce}"
     )
 }

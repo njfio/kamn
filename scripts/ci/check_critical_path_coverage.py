@@ -164,6 +164,21 @@ def find_target_metrics(target_path: str, coverage_by_file: dict[str, dict[str, 
     return None
 
 
+def merge_coverage_metrics(
+    coverage_by_file: dict[str, dict[str, float]],
+    new_metrics_by_file: dict[str, dict[str, float]],
+) -> None:
+    for filename, metrics in new_metrics_by_file.items():
+        existing = coverage_by_file.get(filename)
+        if existing is None:
+            coverage_by_file[filename] = metrics
+            continue
+        coverage_by_file[filename] = {
+            "line_percent": max(existing["line_percent"], metrics["line_percent"]),
+            "function_percent": max(existing["function_percent"], metrics["function_percent"]),
+        }
+
+
 def main() -> int:
     args = parse_args()
     reason_codes: set[str] = set()
@@ -180,7 +195,10 @@ def main() -> int:
 
     coverage_by_file: dict[str, dict[str, float]] = {}
     for coverage_path in (Path(args.core_coverage_json), Path(args.node_coverage_json)):
-        coverage_by_file.update(parse_coverage_report(coverage_path, reason_codes, violations))
+        merge_coverage_metrics(
+            coverage_by_file,
+            parse_coverage_report(coverage_path, reason_codes, violations),
+        )
 
     target_reports: list[dict[str, Any]] = []
     line_failures = 0

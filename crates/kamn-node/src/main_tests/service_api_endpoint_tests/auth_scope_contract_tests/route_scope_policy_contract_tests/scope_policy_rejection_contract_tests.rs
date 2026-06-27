@@ -2,7 +2,7 @@ use super::super::*;
 
 #[test]
 fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes() {
-    let (snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34075", 4);
+    let (snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34075", 4);
     let message_body = "{\"message\":\"scope-policy-check\"}";
     let sender_did = "kamn:did:agent:test-client-scope-policy";
     let bound_sender_did = test_service_api_sender_did(sender_did);
@@ -72,7 +72,7 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
 
 #[test]
 fn integration_service_api_endpoint_rejects_missing_request_auth_headers() {
-    let (_snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34053", 1);
+    let (_snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34053", 1);
     let unauth_response = send_http_request(
         bind_addr.as_str(),
         "POST",

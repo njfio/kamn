@@ -166,8 +166,7 @@ impl SqliteCanonicalCommitStore {
             })?;
             if found != CANONICAL_COMMIT_SQLITE_SCHEMA_VERSION {
                 return Err(BlockPipelineError::CommitStore(format!(
-                    "canonical commit sqlite schema mismatch: expected {}, found {} (canonical_commit_store_sqlite_schema_mismatch)",
-                    CANONICAL_COMMIT_SQLITE_SCHEMA_VERSION, found
+                    "canonical commit sqlite schema mismatch: expected {CANONICAL_COMMIT_SQLITE_SCHEMA_VERSION}, found {found} (canonical_commit_store_sqlite_schema_mismatch)"
                 )));
             }
             return Ok(());

@@ -221,18 +221,16 @@ impl fmt::Display for MigrationError {
             Self::InvalidStepRange { id, from, to } => {
                 write!(
                     f,
-                    "invalid migration step range for {id}: {:?} -> {:?}",
-                    from, to
+                    "invalid migration step range for {id}: {from:?} -> {to:?}"
                 )
             }
             Self::InvalidPlanRange { from, to } => {
-                write!(f, "invalid migration plan range: {:?} -> {:?}", from, to)
+                write!(f, "invalid migration plan range: {from:?} -> {to:?}")
             }
             Self::MissingStep { from, to } => {
                 write!(
                     f,
-                    "missing migration step to progress from {:?} toward {:?}",
-                    from, to
+                    "missing migration step to progress from {from:?} toward {to:?}"
                 )
             }
             Self::NonContiguousStep {
@@ -240,8 +238,7 @@ impl fmt::Display for MigrationError {
                 found_from,
             } => write!(
                 f,
-                "non-contiguous migration step: expected {:?}, found {:?}",
-                expected_from, found_from
+                "non-contiguous migration step: expected {expected_from:?}, found {found_from:?}"
             ),
             Self::StepOvershootsTarget {
                 id,
@@ -249,8 +246,7 @@ impl fmt::Display for MigrationError {
                 step_to,
             } => write!(
                 f,
-                "migration step {id} overshoots target {:?} with {:?}",
-                target, step_to
+                "migration step {id} overshoots target {target:?} with {step_to:?}"
             ),
             Self::UnexpectedStepsForSameVersion => {
                 write!(f, "migration plan for same version must not contain steps")

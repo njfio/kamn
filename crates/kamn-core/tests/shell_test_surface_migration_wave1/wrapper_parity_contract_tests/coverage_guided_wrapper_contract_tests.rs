@@ -106,6 +106,10 @@ fn run_coverage_guided_lane(
         {
             let mut command = Command::new("bash");
             command.arg(contract_lane);
+            command.env(
+                "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS",
+                "300",
+            );
             if let Some(target) = target {
                 command.arg("--target").arg(target);
             }

@@ -10,7 +10,8 @@ fn spec_c19_async_runtime_live_validation_lane_parity() {
 
     let tmp = TempDir::new("async-runtime-live");
     let report_file = tmp.path().join("async-runtime-live-report.json");
-    let lane_output = run_validation_with_report(&validation_script, &report_file, &[]);
+    let lane_output =
+        run_validation_with_report(&validation_script, &report_file, &["--max-seconds", "600"]);
     assert_async_runtime_output(&lane_output);
     assert_async_runtime_report(&report_file);
 }

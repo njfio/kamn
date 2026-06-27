@@ -18,7 +18,7 @@ category using deterministic thresholds:
 
 | Category | Total scripts | Short-wrapper candidates | Candidate ratio |
 | --- | --- | --- | --- |
-| `scripts/ci` | `214` | `21` | `9.81%` |
+| `scripts/ci` | `215` | `21` | `9.77%` |
 | `scripts/sdk` | `80` | `16` | `20.00%` |
 | `scripts/runtime` | `232` | `5` | `2.16%` |
 | `scripts/kolme` | `217` | `5` | `2.30%` |

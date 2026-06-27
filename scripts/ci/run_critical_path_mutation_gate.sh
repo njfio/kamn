@@ -256,7 +256,7 @@ run_slice "core-group-channel-crypto" 1 \
     --output "$tmp_dir/core-group-channel-crypto" \
     --copy-vcs true \
     --cargo-test-arg --lib \
-    --cargo-test-arg group_channel_crypto::tests::encrypt_requires_key_agreement_seed \
+    --cargo-test-arg group_channel_crypto::tests::regression_contract_tests::encrypt_requires_key_agreement_seed \
     --timeout "$timeout_seconds"
 
 run_slice "core-http-transport" 3 \
@@ -312,18 +312,33 @@ run_slice "node-service-api-endpoint" 2 \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
-    --cargo-test-arg main_tests::service_api_endpoint_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender \
+    --cargo-test-arg main_tests::service_api_endpoint_tests::ingress_guard_lifecycle_contract_tests::replay_guard_contract_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender \
     --timeout "$timeout_seconds"
+
+signer_secret_provider_mutation_file="crates/kamn-node/src/signer/secret_provider.rs"
+signer_secret_provider_mutation_line="$(
+  grep -n 'if strict_signer_profile\.is_none()' "$signer_secret_provider_mutation_file" \
+    | head -n 1 \
+    | cut -d: -f1 \
+    || true
+)"
+if [ -z "$signer_secret_provider_mutation_line" ]; then
+  echo "unable to resolve signer secret-provider mutation selector line" >&2
+  exit 1
+fi
+signer_secret_provider_mutation_file_basename="$(basename "$signer_secret_provider_mutation_file")"
+signer_secret_provider_mutation_file_re="${signer_secret_provider_mutation_file_basename//./\\.}"
+signer_secret_provider_mutation_re="${signer_secret_provider_mutation_file_re}:(${signer_secret_provider_mutation_line}:[0-9]+):"
 
 run_slice "node-signer" 1 \
   cargo mutants -p kamn-node \
-    --file crates/kamn-node/src/signer.rs \
-    --re "signer\\.rs:(198:33):" \
+    --file "$signer_secret_provider_mutation_file" \
+    --re "$signer_secret_provider_mutation_re" \
     --output "$tmp_dir/node-signer" \
     --copy-vcs true \
     --cargo-test-arg --bin \
     --cargo-test-arg kamn-node \
-    --cargo-test-arg signer::tests::regression_strict_signer_secret_source_precedence_rejects_dual_private_key_envs \
+    --cargo-test-arg signer::tests::secret_source_contract_tests::regression_strict_signer_secret_source_precedence_rejects_dual_private_key_envs \
     --timeout "$timeout_seconds"
 
 python3 - "$slice_tsv" "$output_json" <<'PY'

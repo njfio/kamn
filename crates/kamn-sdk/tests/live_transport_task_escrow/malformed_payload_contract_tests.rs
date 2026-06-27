@@ -1,7 +1,7 @@
 use crate::support::{
     accept_task_request, create_task_request, did, ensure_live_test_env, expire_artifact_request,
-    live_artifact, live_client, live_task, reserve_loopback_addr, spawn_expected_server,
-    submit_artifact_request, wait_for_server_ready, ExpectedRequest,
+    live_artifact, live_client, live_task, spawn_expected_server, submit_artifact_request,
+    ExpectedRequest,
 };
 use kamn_sdk::{KamnAgent, SdkError};
 
@@ -15,12 +15,8 @@ fn regression_live_transport_artifact_status_rejects_malformed_service_payload()
 #[test]
 fn regression_live_transport_task_status_rejects_malformed_service_payload() {
     ensure_live_test_env();
-    let bind_addr = reserve_loopback_addr();
-    let server = spawn_expected_server(
-        bind_addr.clone(),
-        vec![create_task_request(), malformed_task_status_request()],
-    );
-    wait_for_server_ready();
+    let (bind_addr, server) =
+        spawn_expected_server(vec![create_task_request(), malformed_task_status_request()]);
 
     let mut client = live_client(bind_addr.as_str());
     let task_id = client
@@ -56,28 +52,34 @@ where
     T: std::fmt::Debug,
 {
     ensure_live_test_env();
-    let bind_addr = reserve_loopback_addr();
-    let server = spawn_expected_server(bind_addr.clone(), content_setup_requests(response));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_expected_server(content_setup_requests(response));
 
     let mut client = live_client(bind_addr.as_str());
+    let artifact_id = setup_live_artifact(&mut client);
+    assert_missing_field_failure(action(&mut client, &artifact_id));
+
+    assert!(server.join().expect("server thread should join").is_ok());
+}
+
+fn setup_live_artifact(client: &mut kamn_sdk::LiveTransportKamnClient) -> kamn_sdk::ArtifactId {
     let task_id = client
         .create_task(live_task())
         .expect("create_task should succeed");
     client
         .accept_task(&task_id, &did("assignee-live"))
         .expect("accept_task should succeed");
-    let artifact_id = client
+    client
         .submit_artifact(&task_id, live_artifact())
-        .expect("submit_artifact should succeed");
-    match action(&mut client, &artifact_id) {
+        .expect("submit_artifact should succeed")
+}
+
+fn assert_missing_field_failure<T: std::fmt::Debug>(result: Result<T, SdkError>) {
+    match result {
         Err(SdkError::TransportFailure(message)) => {
             assert_eq!(message, "service response missing required field");
         }
         other => panic!("expected malformed payload failure, got {other:?}"),
     }
-
-    assert!(server.join().expect("server thread should join").is_ok());
 }
 
 fn content_setup_requests(response: ExpectedRequest) -> Vec<ExpectedRequest> {
