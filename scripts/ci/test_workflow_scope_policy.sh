@@ -227,6 +227,11 @@ if ! grep -Fq 'git show "origin/${{ github.base_ref }}:scripts/ci/check_governan
   exit 1
 fi
 
+if ! grep -Fq 'git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to load the git helper from the base branch" >&2
+  exit 1
+fi
+
 if ! grep -Fq 'git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env"' "$FAST_WORKFLOW"; then
   echo "expected governance/feature commit ratio gate to load moratorium config from the base branch" >&2
   exit 1
