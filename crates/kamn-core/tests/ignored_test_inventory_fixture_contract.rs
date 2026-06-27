@@ -6,12 +6,16 @@ const EXPECTED_IGNORED_TEST_COUNT: &str = r#""ignored_test_count": 18"#;
 const MOVED_CHANNEL_PERFORMANCE_TEST: &str =
     "crates/kamn-core/src/channel_models/tests/file_store_contract_tests.rs";
 const LIVE_S04_CLI_TEST: &str = "crates/kamn-e2e-harness/tests/live_s04_cli_scripted_execution.rs";
-const LIVE_SOLANA_ASSET_MOVEMENT_TEST: &str = "task_escrow_solana_asset_movement_live_contract_tests.rs";
+const LIVE_SOLANA_ASSET_MOVEMENT_TEST: &str =
+    "task_escrow_solana_asset_movement_live_contract_tests.rs";
 const LOCAL_HEAVY_REASON: &str = r#""reason": "local-heavy-live-node""#;
 const REPRESENTATIVE_CURRENT_ENTRIES: &[(&str, &str)] = &[
     (MOVED_CHANNEL_PERFORMANCE_TEST, "moved channel test"),
     (LIVE_S04_CLI_TEST, "live S04 CLI"),
-    (LIVE_SOLANA_ASSET_MOVEMENT_TEST, "live Solana asset-movement"),
+    (
+        LIVE_SOLANA_ASSET_MOVEMENT_TEST,
+        "live Solana asset-movement",
+    ),
 ];
 
 #[test]
