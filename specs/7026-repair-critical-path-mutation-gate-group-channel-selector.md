@@ -34,18 +34,18 @@ owner without weakening mutation expectations or escape detection.
   `cargo mutants` remains stale.
 
 ## Acceptance Criteria
-- [ ] Red evidence captures `bash scripts/ci/test_run_critical_path_mutation_gate.sh`
+- [x] Red evidence captures `bash scripts/ci/test_run_critical_path_mutation_gate.sh`
       failing with `unable to resolve group channel mutation selector line`.
-- [ ] A committed contract fails before the selector repair and requires the
+- [x] A committed contract fails before the selector repair and requires the
       group-channel selector to reference
       `crates/kamn-core/src/group_channel_crypto/engine/sealing/encrypt.rs`.
-- [ ] The group-channel mutation selector resolves the current production
+- [x] The group-channel mutation selector resolves the current production
       nonce guard in the extracted encrypt module.
-- [ ] The bounded mutation gate still expects the `core-group-channel-crypto`
+- [x] The bounded mutation gate still expects the `core-group-channel-crypto`
       slice to discover exactly one mutant.
-- [ ] The script regression test passes in stub mode and continues to require
+- [x] The script regression test passes in stub mode and continues to require
       six mutation slices and ten expected mutants.
-- [ ] `cargo fmt --check`, strict workspace clippy, and `make check` remain
+- [x] `cargo fmt --check`, strict workspace clippy, and `make check` remain
       green.
 
 ## Files To Touch
@@ -69,7 +69,24 @@ owner without weakening mutation expectations or escape detection.
   and the new Rust contract.
 
 ## Completion Evidence
-- Pending.
+- Red: `bash scripts/ci/test_run_critical_path_mutation_gate.sh` failed with
+  `unable to resolve group channel mutation selector line`.
+- Red: `cargo test -p kamn-core --test critical_path_mutation_gate_contract`
+  failed because the script did not reference the extracted encrypt module.
+- Green: `cargo test -p kamn-core --test critical_path_mutation_gate_contract`
+  passed.
+- Green: `bash scripts/ci/test_run_critical_path_mutation_gate.sh` passed.
+- Green: `bash -n scripts/ci/run_critical_path_mutation_gate.sh scripts/ci/test_run_critical_path_mutation_gate.sh`
+  passed.
+- Integration note: a broader local CI-tool prefix sequence with GNU `date`
+  progressed past earlier checks but failed before this mutation-gate subtest
+  on pre-existing local runtime-budget parity drift in
+  `shell_test_surface_migration_wave1::spec_c19_async_runtime_live_validation_lane_parity`.
+  This was not counted as #7026 evidence.
+- Closeout: `cargo fmt --check` passed.
+- Closeout: `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed.
+- Closeout: `make check` passed.
 
 ## Shell-Surface Metrics
 - `shell_loc_delta_estimate: +20`

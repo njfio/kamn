@@ -24,6 +24,29 @@ fn critical_path_mutation_gate_uses_extracted_group_channel_selector() {
     );
 }
 
+#[test]
+fn critical_path_mutation_gate_spec_records_selector_repair_evidence() {
+    let spec =
+        read_repo_file("specs/7026-repair-critical-path-mutation-gate-group-channel-selector.md");
+
+    assert_contains(
+        &spec,
+        "cargo test -p kamn-core --test critical_path_mutation_gate_contract",
+        "Rust contract evidence",
+    );
+    assert_contains(
+        &spec,
+        "bash scripts/ci/test_run_critical_path_mutation_gate.sh` passed",
+        "shell contract evidence",
+    );
+    assert_contains(
+        &spec,
+        "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+        "strict clippy closeout evidence",
+    );
+    assert_contains(&spec, "`make check` passed", "make check closeout evidence");
+}
+
 fn assert_contains(haystack: &str, needle: &str, label: &str) {
     assert!(haystack.contains(needle), "missing {label}: {needle}");
 }
