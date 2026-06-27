@@ -292,7 +292,12 @@ public_key_hex = sys.argv[4]
 host, port_text = api_addr.rsplit(":", 1)
 port = int(port_text)
 
-sender_did = f"kamn:did:agent:pkh-{public_key_hex}"
+
+def sender_did_from_public_key(public_key_hex: str) -> str:
+    return f"kamn:did:agent:pkh-{public_key_hex}"
+
+
+sender_did = sender_did_from_public_key(public_key_hex)
 state_hash = "service-api:kamn-devnet:v0.1.0"
 secp256k1_order = int(
     "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
