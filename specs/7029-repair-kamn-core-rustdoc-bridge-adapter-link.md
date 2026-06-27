@@ -33,14 +33,14 @@ broken intra-doc links from bridge adapter envelope docs to the real
 - A future edit escapes the link instead of preserving a valid rustdoc target.
 
 ## Acceptance Criteria
-- [ ] Red evidence captures the rustdoc artifact lane failing with unresolved
+- [x] Red evidence captures the rustdoc artifact lane failing with unresolved
       links to `BridgeAdapter`.
-- [ ] A focused source contract fails when bridge envelope docs use an
+- [x] A focused source contract fails when bridge envelope docs use an
       unqualified `BridgeAdapter` intra-doc link.
-- [ ] Bridge envelope docs link to the actual `BridgeAdapter` trait target.
-- [ ] `RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps` passes.
-- [ ] The kamn-core rustdoc artifact contract lane and policy checker pass.
-- [ ] `cargo fmt --check`, strict workspace clippy, and `make check` remain
+- [x] Bridge envelope docs link to the actual `BridgeAdapter` trait target.
+- [x] `RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps` passes.
+- [x] The kamn-core rustdoc artifact contract lane and policy checker pass.
+- [x] `cargo fmt --check`, strict workspace clippy, and `make check` remain
       green.
 
 ## Files To Touch
@@ -67,9 +67,38 @@ broken intra-doc links from bridge adapter envelope docs to the real
 - Red: `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract --artifact-dir <tmp> --output-json /tmp/kamn-core-rustdoc-artifact-report-before-7029.json`
   failed with unresolved links to `BridgeAdapter` in
   `crates/kamn-core/src/bridge_adapter/models/envelopes.rs`.
+- Red: `cargo test -p kamn-core --test rustdoc_bridge_adapter_link_contract`
+  failed with `bridge envelope docs must not use unresolved BridgeAdapter link
+  sentence`.
+- Green: `cargo test -p kamn-core --test rustdoc_bridge_adapter_link_contract`
+  passed with 1 test.
+- Green: `RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps` passed.
+- Integration: `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract --artifact-dir <tmp> --output-json /tmp/kamn-core-rustdoc-artifact-report-after-7029.json`
+  passed with `kamn_core_rustdoc_artifact_status=pass`.
+- Integration: `bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh --report-file /tmp/kamn-core-rustdoc-artifact-report-after-7029.json`
+  passed with `kamn_core_rustdoc_artifact_policy=ok`.
+- Integration: `bash scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh`
+  passed.
+- Integration: `bash scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh`
+  passed.
+- Full gates: `cargo fmt --check` passed.
+- Full gates: `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed in 13m 59s.
+- Full gates: `make check` passed.
+- Governance: `python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha HEAD --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/kamn-governance-feature-commit-ratio-after-7029.json`
+  passed with `governance_ratio=0.2` and `feature_ratio=0.8`.
+- Telemetry: `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --threshold-file .ci/shell-rust-ratio-guardrail.env --output-json /tmp/kamn-shell-rust-ratio-after-7029.json`
+  passed with `shell_to_rust_ratio=0.421487`.
+- Telemetry: `bash scripts/ci/collect_shell_rust_loc_telemetry.sh --output-json /tmp/kamn-shell-rust-loc-telemetry-after-7029.json`
+  passed with `delta_shell_line_total=229`, `delta_rust_line_total=166408`,
+  and `delta_shell_to_rust_ratio=-0.181627`.
 
 ## Shell-Surface Metrics
 - `shell_loc_delta_estimate: +20`
 - `rust_loc_delta_estimate: +80`
 - `shell_to_rust_ratio_delta_estimate: -0.0001`
 - `shell_surface_mitigation_issue: #7029`
+- `shell_loc_delta_actual: +229`
+- `rust_loc_delta_actual: +166408`
+- `shell_to_rust_ratio_delta_actual: -0.181627`
+- `shell_surface_ratio_target_status: improved`

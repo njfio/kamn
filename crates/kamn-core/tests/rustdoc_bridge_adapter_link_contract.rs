@@ -12,12 +12,20 @@ const UNQUALIFIED_BRIDGE_ADAPTER_SENTENCES: &[&str] = &[
 fn bridge_envelope_docs_link_bridge_adapter_trait() {
     let source = read_crate_file(BRIDGE_ENVELOPES_SOURCE);
 
+    assert_unqualified_bridge_adapter_links_removed(&source);
+    assert_crate_qualified_bridge_adapter_link_present(&source);
+}
+
+fn assert_unqualified_bridge_adapter_links_removed(source: &str) {
     for sentence in UNQUALIFIED_BRIDGE_ADAPTER_SENTENCES {
         assert!(
             !source.contains(sentence),
             "bridge envelope docs must not use unresolved BridgeAdapter link sentence: {sentence}"
         );
     }
+}
+
+fn assert_crate_qualified_bridge_adapter_link_present(source: &str) {
     assert!(
         source.contains(QUALIFIED_BRIDGE_ADAPTER_LINK),
         "bridge envelope docs must link to the crate-qualified BridgeAdapter trait"
