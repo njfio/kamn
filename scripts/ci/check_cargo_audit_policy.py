@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 import time
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -26,8 +27,12 @@ ORDERED_REASON_CODES = (
     "cargo_audit_waiver_expired",
     "cargo_audit_advisory_id_missing",
     "cargo_audit_advisory_severity_unknown",
+    "cargo_audit_advisory_unknown_severity_waived",
     "cargo_audit_advisory_threshold_exceeded_unwaived",
     "cargo_audit_advisory_threshold_exceeded_waived",
+    "cargo_audit_warning_id_missing",
+    "cargo_audit_warning_unwaived",
+    "cargo_audit_warning_waived",
 )
 SEVERITY_ORDER = {"low": 0, "moderate": 1, "high": 2, "critical": 3}
 SEVERITY_ALIASES = {
@@ -39,6 +44,22 @@ SEVERITY_ALIASES = {
 }
 ISSUE_RE = re.compile(r"^#\d+$")
 SCORE_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)")
+
+
+@dataclass
+class PolicyEvaluation:
+    advisory_total: int = 0
+    unknown_total: int = 0
+    unknown_waived_total: int = 0
+    exceeded_total: int = 0
+    unwaived_total: int = 0
+    waived_total: int = 0
+    warning_total: int = 0
+    unwaived_warning_total: int = 0
+    waived_warning_total: int = 0
+    unwaived_markers: list[str] = field(default_factory=list)
+    unknown_markers: list[str] = field(default_factory=list)
+    unwaived_warning_markers: list[str] = field(default_factory=list)
 
 
 def parse_args() -> argparse.Namespace:
@@ -110,6 +131,31 @@ def advisory_rows(payload: Any) -> list[Any] | None:
     return None
 
 
+def warning_rows(payload: Any) -> list[tuple[str, Any]] | None:
+    if not isinstance(payload, dict):
+        return None
+    warnings = payload.get("warnings")
+    if warnings is None:
+        return []
+    if not isinstance(warnings, dict):
+        return None
+    rows: list[tuple[str, Any]] = []
+    for category, category_rows in warnings.items():
+        category_name = category if isinstance(category, str) else "unknown"
+        if isinstance(category_rows, list):
+            rows.extend((category_name, row) for row in category_rows)
+            continue
+        if isinstance(category_rows, dict):
+            nested_rows = category_rows.get("list")
+            if isinstance(nested_rows, list):
+                rows.extend((category_name, row) for row in nested_rows)
+                continue
+            if not category_rows:
+                continue
+        return None
+    return rows
+
+
 def advisory_id(row: Any) -> str:
     if not isinstance(row, dict):
         return ""
@@ -130,6 +176,25 @@ def advisory_package(row: Any) -> str:
     if isinstance(package, str):
         return package.strip()
     return ""
+
+
+def marker_package(package: str) -> str:
+    return package if package else "unknown-package"
+
+
+def warning_id(category: str, row: Any) -> str:
+    aid = advisory_id(row)
+    if aid:
+        return aid
+    package = advisory_package(row)
+    if category == "yanked" and package:
+        return f"cargo-audit-yanked:{package}"
+    return ""
+
+
+def is_waived(waivers: dict[str, list[dict[str, str]]], advisory_id: str, package: str) -> bool:
+    candidates = waivers.get(advisory_id, [])
+    return any(not candidate["package"] or candidate["package"] == package for candidate in candidates)
 
 
 def advisory_severity(row: Any) -> str | None:
@@ -218,6 +283,79 @@ def elapsed_seconds(started_at: float) -> float:
     return round(time.perf_counter() - started_at, 6)
 
 
+def evaluate_advisories(
+    rows: list[Any],
+    threshold_rank: int,
+    waivers: dict[str, list[dict[str, str]]],
+    reason_codes: set[str],
+    violations: list[str],
+) -> PolicyEvaluation:
+    result = PolicyEvaluation()
+    for idx, row in enumerate(rows):
+        aid = advisory_id(row)
+        if not aid:
+            reason_codes.add("cargo_audit_advisory_id_missing")
+            violations.append(f"advisory[{idx}] missing id")
+            continue
+        result.advisory_total += 1
+        package = advisory_package(row)
+        severity = advisory_severity(row)
+        if severity is None:
+            apply_unknown_severity(result, waivers, aid, package, reason_codes)
+            continue
+        if SEVERITY_ORDER[severity] <= threshold_rank:
+            continue
+        result.exceeded_total += 1
+        if is_waived(waivers, aid, package):
+            result.waived_total += 1
+            continue
+        result.unwaived_total += 1
+        reason_codes.add("cargo_audit_advisory_threshold_exceeded_unwaived")
+        result.unwaived_markers.append(f"{aid}:{marker_package(package)}:{severity}")
+    return result
+
+
+def apply_unknown_severity(
+    result: PolicyEvaluation,
+    waivers: dict[str, list[dict[str, str]]],
+    aid: str,
+    package: str,
+    reason_codes: set[str],
+) -> None:
+    if is_waived(waivers, aid, package):
+        result.unknown_waived_total += 1
+        result.waived_total += 1
+        return
+    result.unknown_total += 1
+    reason_codes.add("cargo_audit_advisory_severity_unknown")
+    result.unknown_markers.append(f"{aid}:{marker_package(package)}")
+
+
+def evaluate_warnings(
+    rows: list[tuple[str, Any]],
+    waivers: dict[str, list[dict[str, str]]],
+    reason_codes: set[str],
+    violations: list[str],
+) -> PolicyEvaluation:
+    result = PolicyEvaluation()
+    for category, row in rows:
+        aid = warning_id(category, row)
+        if not aid:
+            reason_codes.add("cargo_audit_warning_id_missing")
+            violations.append(f"warning[{result.warning_total}] missing id")
+            result.warning_total += 1
+            continue
+        result.warning_total += 1
+        package = advisory_package(row)
+        if is_waived(waivers, aid, package):
+            result.waived_warning_total += 1
+            continue
+        result.unwaived_warning_total += 1
+        reason_codes.add("cargo_audit_warning_unwaived")
+        result.unwaived_warning_markers.append(f"{category}:{aid}:{marker_package(package)}")
+    return result
+
+
 def main() -> int:
     started_at = time.perf_counter()
     args = parse_args()
@@ -250,6 +388,11 @@ def main() -> int:
         rows = []
         reason_codes.add("cargo_audit_report_schema_invalid")
         violations.append("unsupported cargo-audit report schema")
+    warnings = warning_rows(audit_payload) if audit_payload is not None else []
+    if warnings is None:
+        warnings = []
+        reason_codes.add("cargo_audit_report_schema_invalid")
+        violations.append("unsupported cargo-audit warnings schema")
 
     waiver_payload = load_json(
         Path(args.waiver_file),
@@ -260,45 +403,25 @@ def main() -> int:
     )
     waivers = parse_waivers(waiver_payload, as_of, reason_codes, violations)
 
-    advisory_total = 0
-    unknown_total = 0
-    exceeded_total = 0
-    unwaived_total = 0
-    waived_total = 0
-    unwaived_markers: list[str] = []
-    unknown_markers: list[str] = []
+    advisory_eval = evaluate_advisories(rows, threshold_rank, waivers, reason_codes, violations)
+    warning_eval = evaluate_warnings(warnings, waivers, reason_codes, violations)
 
-    for idx, row in enumerate(rows):
-        aid = advisory_id(row)
-        if not aid:
-            reason_codes.add("cargo_audit_advisory_id_missing")
-            violations.append(f"advisory[{idx}] missing id")
-            continue
-        advisory_total += 1
-        package = advisory_package(row)
-        severity = advisory_severity(row)
-        if severity is None:
-            unknown_total += 1
-            reason_codes.add("cargo_audit_advisory_severity_unknown")
-            unknown_markers.append(f"{aid}:{package}")
-            continue
-        if SEVERITY_ORDER[severity] <= threshold_rank:
-            continue
-        exceeded_total += 1
-        candidates = waivers.get(aid, [])
-        matched = any(not candidate["package"] or candidate["package"] == package for candidate in candidates)
-        if matched:
-            waived_total += 1
-        else:
-            unwaived_total += 1
-            reason_codes.add("cargo_audit_advisory_threshold_exceeded_unwaived")
-            unwaived_markers.append(f"{aid}:{package}:{severity}")
-
-    review_required = waived_total > 0
-    if review_required and unwaived_total == 0:
+    review_required = advisory_eval.waived_total > 0 or warning_eval.waived_warning_total > 0
+    if advisory_eval.unknown_waived_total > 0 and advisory_eval.unknown_total == 0:
+        reason_codes.add("cargo_audit_advisory_unknown_severity_waived")
+    if advisory_eval.waived_total > 0 and advisory_eval.unwaived_total == 0:
         reason_codes.add("cargo_audit_advisory_threshold_exceeded_waived")
+    if warning_eval.waived_warning_total > 0 and warning_eval.unwaived_warning_total == 0:
+        reason_codes.add("cargo_audit_warning_waived")
 
-    status = "fail" if violations or unknown_total > 0 or unwaived_total > 0 else "pass"
+    status = (
+        "fail"
+        if violations
+        or advisory_eval.unknown_total > 0
+        or advisory_eval.unwaived_total > 0
+        or warning_eval.unwaived_warning_total > 0
+        else "pass"
+    )
     ordered = ordered_reason_codes(reason_codes)
     reason_codes_csv = ",".join(ordered) if ordered else "none"
     reason_class = "violation" if status == "fail" else ("waived" if review_required else "stable")
@@ -316,11 +439,15 @@ def main() -> int:
         "audit_report_file": args.audit_json,
         "waiver_file": args.waiver_file,
         "as_of_date": as_of.isoformat(),
-        "advisory_total": advisory_total,
-        "threshold_exceeded_total": exceeded_total,
-        "waived_total": waived_total,
-        "unwaived_total": unwaived_total,
-        "unknown_severity_total": unknown_total,
+        "advisory_total": advisory_eval.advisory_total,
+        "threshold_exceeded_total": advisory_eval.exceeded_total,
+        "waived_total": advisory_eval.waived_total,
+        "unwaived_total": advisory_eval.unwaived_total,
+        "unknown_severity_total": advisory_eval.unknown_total,
+        "unknown_severity_waived_total": advisory_eval.unknown_waived_total,
+        "warning_total": warning_eval.warning_total,
+        "waived_warning_total": warning_eval.waived_warning_total,
+        "unwaived_warning_total": warning_eval.unwaived_warning_total,
         "review_required": review_required,
         "policy_elapsed_seconds": policy_elapsed_seconds,
         "violations": violations,
@@ -336,20 +463,26 @@ def main() -> int:
     print(f"reason_codes_value={reason_codes_csv}")
     print(f"reason_class={reason_class}")
     print(f"threshold_max_severity={threshold}")
-    print(f"advisory_total={advisory_total}")
-    print(f"threshold_exceeded_total={exceeded_total}")
-    print(f"waived_total={waived_total}")
-    print(f"unwaived_total={unwaived_total}")
-    print(f"unknown_severity_total={unknown_total}")
+    print(f"advisory_total={advisory_eval.advisory_total}")
+    print(f"threshold_exceeded_total={advisory_eval.exceeded_total}")
+    print(f"waived_total={advisory_eval.waived_total}")
+    print(f"unwaived_total={advisory_eval.unwaived_total}")
+    print(f"unknown_severity_total={advisory_eval.unknown_total}")
+    print(f"unknown_severity_waived_total={advisory_eval.unknown_waived_total}")
+    print(f"warning_total={warning_eval.warning_total}")
+    print(f"waived_warning_total={warning_eval.waived_warning_total}")
+    print(f"unwaived_warning_total={warning_eval.unwaived_warning_total}")
     print(f"review_required={'true' if review_required else 'false'}")
     print(f"policy_elapsed_seconds={policy_elapsed_seconds}")
     if status == "fail":
         for violation in violations:
             print(f"violation={violation}")
-        for marker in unknown_markers:
+        for marker in advisory_eval.unknown_markers:
             print(f"unknown_severity_advisory={marker}")
-        for marker in unwaived_markers:
+        for marker in advisory_eval.unwaived_markers:
             print(f"unwaived_threshold_exceeded_advisory={marker}")
+        for marker in warning_eval.unwaived_warning_markers:
+            print(f"unwaived_warning_advisory={marker}")
         return 1
     return 0
 

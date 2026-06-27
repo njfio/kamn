@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from scripts.ci.touched_rust_function_scan import extract_function_spans
+from scripts.ci.touched_rust_size_policy_baseline import (
+    parse_oversized_file_baseline,
+    parse_oversized_function_baseline,
+)
 
 THRESHOLD_SCHEMA = 'kamn.ci.touched-rust-size-policy-thresholds.v1'
 BASELINE_SCHEMA = 'kamn.ci.touched-rust-size-policy-baseline.v1'
@@ -26,11 +30,15 @@ def validate_threshold_payload(payload: dict[str, Any]) -> tuple[int, int]:
     return file_lines, function_lines
 
 
-def validate_baseline_payload(payload: dict[str, Any]) -> None:
+def validate_baseline_payload(payload: dict[str, Any]) -> tuple[dict[str, int], dict[tuple[str, str], int]]:
     if payload.get('schema_version') != BASELINE_SCHEMA:
         raise ValueError('baseline schema mismatch')
     _require_list(payload, 'oversized_files')
     _require_list(payload, 'oversized_functions')
+    return (
+        parse_oversized_file_baseline(payload['oversized_files']),
+        parse_oversized_function_baseline(payload['oversized_functions']),
+    )
 
 
 def _require_list(payload: dict[str, Any], key: str) -> None:

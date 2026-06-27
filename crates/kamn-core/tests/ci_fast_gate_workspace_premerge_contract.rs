@@ -1,4 +1,6 @@
 const CI_FAST_GATE_WORKFLOW: &str = include_str!("../../../.github/workflows/ci-fast-gate.yml");
+const CI_DEEP_VALIDATE_WORKFLOW: &str =
+    include_str!("../../../.github/workflows/ci-deep-validate.yml");
 const CI_STRATEGY_DOC: &str = include_str!("../../../docs/ci/strategy.md");
 const CARGO_AUDIT_ADR: &str = include_str!("../../../docs/architecture/adr-cargo-audit-ci-gate.md");
 
@@ -14,6 +16,26 @@ fn workspace_premerge_section() -> &'static str {
         .split("workspace-premerge-gate:")
         .nth(1)
         .expect("workspace premerge section should exist")
+}
+
+fn assert_cargo_audit_capture_contract(workflow: &str, workflow_name: &str) {
+    assert!(
+        workflow.contains("cargo_audit_status=0"),
+        "{workflow_name}_cargo_audit_status_initialization_missing",
+    );
+    assert!(
+        workflow
+            .contains("cargo audit --json > cargo-audit-report.json || cargo_audit_status=\"$?\""),
+        "{workflow_name}_cargo_audit_nonzero_capture_missing",
+    );
+    assert!(
+        workflow.contains("cargo_audit_exit_status=$cargo_audit_status"),
+        "{workflow_name}_cargo_audit_exit_status_marker_missing",
+    );
+    assert!(
+        workflow.contains("python3 scripts/ci/check_cargo_audit_policy.py"),
+        "{workflow_name}_cargo_audit_policy_command_missing",
+    );
 }
 
 #[test]
@@ -129,4 +151,10 @@ fn spec_c08_workspace_premerge_no_longer_duplicates_cargo_audit() {
         !workspace_premerge.contains("cargo audit --json > cargo-audit-report.json"),
         "workspace_premerge_cargo_audit_command_should_be_absent",
     );
+}
+
+#[test]
+fn spec_c09_cargo_audit_scan_preserves_report_for_policy_after_nonzero_exit() {
+    assert_cargo_audit_capture_contract(fast_gate_section(), "ci_fast_gate");
+    assert_cargo_audit_capture_contract(CI_DEEP_VALIDATE_WORKFLOW, "ci_deep_validate");
 }

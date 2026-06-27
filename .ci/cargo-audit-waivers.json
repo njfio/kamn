@@ -1,4 +1,54 @@
 {
   "schema_version": "kamn.ci.cargo-audit-waiver.v1",
-  "waivers": []
+  "waivers": [
+    {
+      "advisory_id": "RUSTSEC-2026-0119",
+      "package": "hickory-proto",
+      "reason": "Tracked while evaluating libp2p dependency remediation; Cargo.lock includes libp2p DNS packages and the current KAMN native runtime builder remains TCP-only.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    },
+    {
+      "advisory_id": "RUSTSEC-2026-0118",
+      "package": "hickory-proto",
+      "reason": "Tracked while evaluating libp2p dependency remediation; Cargo.lock includes libp2p DNS packages and the current KAMN native runtime builder remains TCP-only.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    },
+    {
+      "advisory_id": "RUSTSEC-2025-0141",
+      "package": "bincode",
+      "reason": "Tracked as an upstream Solana dependency warning with no patched bincode 1.x release available.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    },
+    {
+      "advisory_id": "RUSTSEC-2026-0105",
+      "package": "core2",
+      "reason": "Tracked as an upstream libp2p/multihash dependency warning pending compatible dependency remediation.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    },
+    {
+      "advisory_id": "cargo-audit-yanked:core2",
+      "package": "core2",
+      "reason": "Tracked as the cargo-audit yanked warning for the same upstream libp2p/multihash core2 dependency.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    },
+    {
+      "advisory_id": "RUSTSEC-2024-0436",
+      "package": "paste",
+      "reason": "Tracked as an upstream lockfile warning while dependency replacement is evaluated outside this gate-recovery slice.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    },
+    {
+      "advisory_id": "RUSTSEC-2025-0134",
+      "package": "rustls-pemfile",
+      "reason": "Tracked for follow-up replacement because KAMN and axum-server still depend on rustls-pemfile 2.2.0.",
+      "tracking_issue": "#7032",
+      "expires_on": "2026-09-30"
+    }
+  ]
 }

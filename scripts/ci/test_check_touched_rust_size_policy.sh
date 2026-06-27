@@ -90,6 +90,67 @@ fi
 grep -q '^status=fail$' "$TMP_DIR/file-fail.out"
 grep -q '^reason_codes=touched_rust_size_policy_new_oversized_file$' "$TMP_DIR/file-fail.out"
 
+cat >"$TMP_DIR/thresholds-file-only.json" <<'EOF'
+{
+  "schema_version": "kamn.ci.touched-rust-size-policy-thresholds.v1",
+  "max_file_lines": 6,
+  "max_function_lines": 20
+}
+EOF
+
+cat >"$TMP_DIR/baseline-file-waiver.json" <<'EOF'
+{
+  "schema_version": "kamn.ci.touched-rust-size-policy-baseline.v1",
+  "captured_at": "2026-03-09",
+  "max_file_lines": 6,
+  "max_function_lines": 3,
+  "oversized_files": [
+    {
+      "path": "crates/demo/src/lib.rs",
+      "line_count": 7
+    }
+  ],
+  "oversized_functions": []
+}
+EOF
+
+bash "$CHECKER" \
+  --repo-root "$REPO_DIR" \
+  --base-ref main \
+  --threshold-file "$TMP_DIR/thresholds-file-only.json" \
+  --baseline-file "$TMP_DIR/baseline-file-waiver.json" \
+  --output-json "$TMP_DIR/baseline-file-waiver-pass.json" >"$TMP_DIR/baseline-file-waiver-pass.out"
+grep -q '^status=pass$' "$TMP_DIR/baseline-file-waiver-pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/baseline-file-waiver-pass.out"
+
+cat >"$TMP_DIR/stale-baseline-file-waiver.json" <<'EOF'
+{
+  "schema_version": "kamn.ci.touched-rust-size-policy-baseline.v1",
+  "captured_at": "2026-03-09",
+  "max_file_lines": 6,
+  "max_function_lines": 3,
+  "oversized_files": [
+    {
+      "path": "crates/demo/src/lib.rs",
+      "line_count": 6
+    }
+  ],
+  "oversized_functions": []
+}
+EOF
+
+if bash "$CHECKER" \
+  --repo-root "$REPO_DIR" \
+  --base-ref main \
+  --threshold-file "$TMP_DIR/thresholds-file-only.json" \
+  --baseline-file "$TMP_DIR/stale-baseline-file-waiver.json" \
+  --output-json "$TMP_DIR/stale-baseline-file-waiver-fail.json" >"$TMP_DIR/stale-baseline-file-waiver-fail.out" 2>&1; then
+  echo "expected checker to fail for a stale oversized-file baseline entry" >&2
+  exit 1
+fi
+grep -q '^status=fail$' "$TMP_DIR/stale-baseline-file-waiver-fail.out"
+grep -q '^reason_codes=touched_rust_size_policy_new_oversized_file$' "$TMP_DIR/stale-baseline-file-waiver-fail.out"
+
 cat >"$TMP_DIR/thresholds-function.json" <<'EOF'
 {
   "schema_version": "kamn.ci.touched-rust-size-policy-thresholds.v1",
@@ -119,6 +180,67 @@ if bash "$CHECKER" \
 fi
 grep -q '^status=fail$' "$TMP_DIR/function-fail.out"
 grep -q '^reason_codes=touched_rust_size_policy_new_oversized_function$' "$TMP_DIR/function-fail.out"
+
+cat >"$TMP_DIR/baseline-function-waiver.json" <<'EOF'
+{
+  "schema_version": "kamn.ci.touched-rust-size-policy-baseline.v1",
+  "captured_at": "2026-03-09",
+  "max_file_lines": 20,
+  "max_function_lines": 3,
+  "oversized_files": [],
+  "oversized_functions": [
+    {
+      "path": "crates/demo/src/lib.rs",
+      "name": "too_big_function",
+      "start_line": 1,
+      "end_line": 7,
+      "line_count": 7,
+      "header_key": "pub fn too_big_function() -> u32#1"
+    }
+  ]
+}
+EOF
+
+bash "$CHECKER" \
+  --repo-root "$REPO_DIR" \
+  --base-ref main \
+  --threshold-file "$TMP_DIR/thresholds-function.json" \
+  --baseline-file "$TMP_DIR/baseline-function-waiver.json" \
+  --output-json "$TMP_DIR/baseline-function-waiver-pass.json" >"$TMP_DIR/baseline-function-waiver-pass.out"
+grep -q '^status=pass$' "$TMP_DIR/baseline-function-waiver-pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/baseline-function-waiver-pass.out"
+
+cat >"$TMP_DIR/stale-baseline-function-waiver.json" <<'EOF'
+{
+  "schema_version": "kamn.ci.touched-rust-size-policy-baseline.v1",
+  "captured_at": "2026-03-09",
+  "max_file_lines": 20,
+  "max_function_lines": 3,
+  "oversized_files": [],
+  "oversized_functions": [
+    {
+      "path": "crates/demo/src/lib.rs",
+      "name": "too_big_function",
+      "start_line": 1,
+      "end_line": 7,
+      "line_count": 6,
+      "header_key": "pub fn too_big_function() -> u32#1"
+    }
+  ]
+}
+EOF
+
+if bash "$CHECKER" \
+  --repo-root "$REPO_DIR" \
+  --base-ref main \
+  --threshold-file "$TMP_DIR/thresholds-function.json" \
+  --baseline-file "$TMP_DIR/stale-baseline-function-waiver.json" \
+  --output-json "$TMP_DIR/stale-baseline-function-waiver-fail.json" >"$TMP_DIR/stale-baseline-function-waiver-fail.out" 2>&1; then
+  echo "expected checker to fail for a stale oversized-function baseline entry" >&2
+  exit 1
+fi
+grep -q '^status=fail$' "$TMP_DIR/stale-baseline-function-waiver-fail.out"
+grep -q '^reason_codes=touched_rust_size_policy_new_oversized_function$' "$TMP_DIR/stale-baseline-function-waiver-fail.out"
 
 (
   cd "$REPO_DIR"

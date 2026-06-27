@@ -58,7 +58,10 @@ jobs:
 
       - name: Run cargo-audit dependency scan
         if: steps.detect.outputs.run_rust == 'true'
-        run: cargo audit --json > cargo-audit-report.json
+        run: |
+          cargo_audit_status=0
+          cargo audit --json > cargo-audit-report.json || cargo_audit_status="$?"
+          echo "cargo_audit_exit_status=$cargo_audit_status"
 
       - name: Enforce cargo-audit policy gate
         if: steps.detect.outputs.run_rust == 'true'

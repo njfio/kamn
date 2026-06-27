@@ -35,12 +35,12 @@ def main(argv: list[str]) -> int:
     repo_root = Path(args.repo_root).resolve()
     try:
         file_limit, function_limit = load_limits(repo_root, args.threshold_file)
-        load_baseline(repo_root, args.baseline_file)
+        baseline_files, baseline_functions = load_baseline(repo_root, args.baseline_file)
         merge_base = resolve_merge_base(repo_root, args.base_ref)
     except PolicyError as error:
         return error.emit(args.output_json)
     touched = changed_rust_files(repo_root, merge_base)
-    report = evaluate_touched_files(repo_root, merge_base, touched, file_limit, function_limit)
+    report = evaluate_touched_files(repo_root, merge_base, touched, file_limit, function_limit, baseline_files, baseline_functions)
     return report.emit(args.output_json)
 
 
@@ -52,10 +52,10 @@ def load_limits(repo_root: Path, threshold_file: str) -> tuple[int, int]:
         raise PolicyError('touched_rust_size_policy_threshold_invalid', str(error)) from error
 
 
-def load_baseline(repo_root: Path, baseline_file: str) -> None:
+def load_baseline(repo_root: Path, baseline_file: str) -> tuple[dict[str, int], dict[tuple[str, str], int]]:
     path = resolve_path(repo_root, baseline_file)
     try:
-        validate_baseline_payload(read_json(path))
+        return validate_baseline_payload(read_json(path))
     except Exception as error:
         raise PolicyError('touched_rust_size_policy_baseline_invalid', str(error)) from error
 
@@ -89,11 +89,7 @@ def changed_rust_files(repo_root: Path, merge_base: str) -> list[str]:
 
 
 def filter_changed_paths(repo_root: Path, paths: list[str]) -> list[str]:
-    return [
-        path.strip()
-        for path in paths
-        if path.strip().endswith('.rs') and (repo_root / path.strip()).is_file()
-    ]
+    return [path.strip() for path in paths if path.strip().endswith('.rs') and (repo_root / path.strip()).is_file()]
 
 
 def evaluate_touched_files(
@@ -102,15 +98,19 @@ def evaluate_touched_files(
     touched: list[str],
     file_limit: int,
     function_limit: int,
+    baseline_files: dict[str, int],
+    baseline_functions: dict[tuple[str, str], int],
 ) -> PolicyReport:
     offending_files: list[str] = []
     offending_functions: list[str] = []
     for rel_path in touched:
         current, previous = load_source_pair(repo_root, merge_base, rel_path)
-        if file_regression(current, previous, file_limit):
+        if file_regression(rel_path, current, previous, file_limit, baseline_files):
             offending_files.append(rel_path)
             continue
-        offending_functions.extend(function_regressions(rel_path, current, previous, function_limit))
+        offending_functions.extend(
+            function_regressions(rel_path, current, previous, function_limit, baseline_functions)
+        )
     return build_report(merge_base, touched, offending_files, offending_functions)
 
 
@@ -141,23 +141,41 @@ def build_report(
 
 
 def load_source_pair(repo_root: Path, merge_base: str, rel_path: str) -> tuple[str, str | None]:
-    current = (repo_root / rel_path).read_text(encoding='utf-8')
-    previous = git_show_text(repo_root, merge_base, rel_path)
-    return current, previous
+    return (repo_root / rel_path).read_text(encoding='utf-8'), git_show_text(repo_root, merge_base, rel_path)
 
 
-def file_regression(current: str, previous: str | None, limit: int) -> bool:
+def file_regression(
+    rel_path: str,
+    current: str,
+    previous: str | None,
+    limit: int,
+    baseline_files: dict[str, int],
+) -> bool:
     current_lines = len(current.splitlines())
+    if current_lines <= limit:
+        return False
+    if baseline_files.get(rel_path) == current_lines:
+        return False
     previous_lines = len(previous.splitlines()) if previous is not None else 0
-    return current_lines > limit and previous_lines <= limit
+    return previous_lines <= limit
 
 
-def function_regressions(rel_path: str, current: str, previous: str | None, limit: int) -> list[str]:
+def function_regressions(
+    rel_path: str,
+    current: str,
+    previous: str | None,
+    limit: int,
+    baseline_functions: dict[tuple[str, str], int],
+) -> list[str]:
     previous_spans = map_spans(rel_path, previous) if previous is not None else {}
     offenders: list[str] = []
     for span in extract_function_spans(rel_path, current):
+        if span.line_count <= limit:
+            continue
+        if baseline_functions.get((rel_path, span.header_key)) == span.line_count:
+            continue
         previous_lines = previous_spans.get(span.header_key, 0)
-        if span.line_count > limit and previous_lines <= limit:
+        if previous_lines <= limit:
             offenders.append(span.offender_id())
     return offenders
 
