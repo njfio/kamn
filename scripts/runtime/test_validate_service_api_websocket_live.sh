@@ -14,6 +14,10 @@ if ! grep -Fq "X-KAMN-Signer-Public-Key" "$VALIDATION_SCRIPT"; then
   echo "expected websocket live validation script to propagate signer public key header" >&2
   exit 1
 fi
+if ! grep -Fq 'sender_did = f"kamn:did:agent:pkh-{public_key_hex}"' "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to use self-certifying sender did" >&2
+  exit 1
+fi
 
 validation_output="$(bash "$VALIDATION_SCRIPT" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
