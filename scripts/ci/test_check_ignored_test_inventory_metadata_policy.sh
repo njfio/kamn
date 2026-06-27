@@ -108,12 +108,14 @@ used_reasons = {
     if isinstance(entry, dict) and isinstance(entry.get("reason"), str)
 }
 if categories:
-    filtered = [
-        category
-        for category in categories
-        if category.get("category") not in used_reasons
-    ]
-    if len(filtered) == len(categories):
+    removed_used_category = False
+    filtered = []
+    for category in categories:
+        if category.get("category") in used_reasons and not removed_used_category:
+            removed_used_category = True
+            continue
+        filtered.append(category)
+    if not removed_used_category:
         filtered = categories[:-1]
     payload["categories"] = filtered
 criteria_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
