@@ -10,6 +10,13 @@ fn production_expect_checker_excludes_named_test_only_surfaces() {
     assert_contains(&checker, "file_name == \"test_support.rs\"");
 }
 
+#[test]
+fn production_expect_checker_names_test_only_path_markers() {
+    let checker = read_repo_file("scripts/ci/check_no_production_expect.py");
+
+    assert_contains(&checker, "TEST_ONLY_PATH_MARKERS");
+}
+
 fn assert_contains(haystack: &str, needle: &str) {
     assert!(haystack.contains(needle), "missing marker: {needle}");
 }

@@ -41,20 +41,23 @@ DEFAULT_RUNTIME_ROOTS = (
     "crates/kamn-kolme/src",
     "crates/kamn-e2e-harness/src",
 )
+TEST_ONLY_PATH_MARKERS = (
+    "/main_tests/",
+    "/runtime_tests/",
+    "/cli_tests/",
+    "/cli_scripted_tests/",
+    "/mcp_agent_tests/",
+    "/tests/",
+    "/test_utils/",
+)
 
 
 def is_excluded(path: Path) -> bool:
     path_str = path.as_posix()
     file_name = path.name
     return (
-        "/main_tests/" in path_str
-        or "/runtime_tests/" in path_str
-        or "/cli_tests/" in path_str
-        or "/cli_scripted_tests/" in path_str
-        or "/mcp_agent_tests/" in path_str
-        or "/tests/" in path_str
+        any(marker in path_str for marker in TEST_ONLY_PATH_MARKERS)
         or ("/src/" in path_str and file_name == "tests.rs")
-        or "/test_utils/" in path_str
         or file_name == "test_support.rs"
         or file_name.endswith("_tests.rs")
         or "_tests_" in file_name
