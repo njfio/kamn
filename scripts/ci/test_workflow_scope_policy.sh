@@ -47,7 +47,7 @@ for marker in \
   "pull_request:" \
   "schedule:" \
   "continue-on-error: true" \
-  "aquasecurity/trivy-action" \
+  "aquasecurity/trivy-action@v0.31.0" \
   "scanners: vuln,secret,license" \
   'docker build -t kamn-supply-chain-advisory:${{ github.sha }} .' \
   "format: cyclonedx" \
