@@ -31,8 +31,7 @@ pub fn render_runtime_commit_wire_payload(
     idempotency_key: &str,
 ) -> String {
     format!(
-        "operation_id={}\nstate_root={}\nactor_did={}\nnonce={}\npayload_hash={}\nidempotency_key={}\n",
-        operation_id, state_root, actor_did, nonce, payload_hash, idempotency_key
+        "operation_id={operation_id}\nstate_root={state_root}\nactor_did={actor_did}\nnonce={nonce}\npayload_hash={payload_hash}\nidempotency_key={idempotency_key}\n"
     )
 }
 
@@ -74,10 +73,7 @@ pub fn deterministic_runtime_commit_id(
 ) -> String {
     // Commit identity derives from payload-hash VALUE bytes, not string length.
     let payload_hash_value_component = hex_encode(payload_hash.trim().as_bytes());
-    format!(
-        "kolme-commit:{}:{}:{}:{}",
-        operation_id, actor_did, nonce, payload_hash_value_component
-    )
+    format!("kolme-commit:{operation_id}:{actor_did}:{nonce}:{payload_hash_value_component}")
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
