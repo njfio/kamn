@@ -17,6 +17,25 @@ fn production_expect_checker_names_test_only_path_markers() {
     assert_contains(&checker, "TEST_ONLY_PATH_MARKERS");
 }
 
+#[test]
+fn production_expect_spec_records_ci_compatible_integration_boundary() {
+    let spec = read_repo_file("specs/7025-repair-production-expect-ci-tool-contract.md");
+
+    assert_contains(&spec, "temporary `/opt/homebrew/bin/gdate` shim");
+    assert_contains(&spec, "test_check_no_production_expect");
+}
+
+#[test]
+fn production_expect_spec_records_closeout_gate_evidence() {
+    let spec = read_repo_file("specs/7025-repair-production-expect-ci-tool-contract.md");
+
+    assert_contains(
+        &spec,
+        "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+    );
+    assert_contains(&spec, "`make check` passed");
+}
+
 fn assert_contains(haystack: &str, needle: &str) {
     assert!(haystack.contains(needle), "missing marker: {needle}");
 }
