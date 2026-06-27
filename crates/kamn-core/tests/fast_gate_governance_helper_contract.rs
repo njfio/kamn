@@ -4,6 +4,7 @@ const CHECKER_COPY: &str = r#"git show "origin/${{ github.base_ref }}:scripts/ci
 const SUPPORT_COPY: &str = r#"git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py""#;
 const GIT_HELPER_COPY: &str =
     r#"git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py""#;
+const CHECKER_EXECUTION: &str = r#"python3 "$tmp_dir/check_governance_feature_commit_ratio.py""#;
 
 #[test]
 fn fast_gate_copies_governance_ratio_git_helper() {
@@ -24,6 +25,11 @@ fn fast_gate_copies_governance_ratio_git_helper() {
         &workflow,
         GIT_HELPER_COPY,
         "Fast Gate should copy the governance ratio git helper from the base branch",
+    );
+    assert_workflow_contains(
+        &workflow,
+        CHECKER_EXECUTION,
+        "Fast Gate should execute the copied governance ratio checker from the temp dir",
     );
 }
 
