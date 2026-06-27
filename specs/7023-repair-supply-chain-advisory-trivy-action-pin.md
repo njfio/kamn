@@ -27,12 +27,12 @@ Repair the `Supply-Chain Advisory` workflow action reference so GitHub can resol
 - The fix accidentally removes advisory scan, SBOM, license, or artifact contract markers.
 
 ## Acceptance Criteria
-- [ ] The supply-chain advisory workflow references `aquasecurity/trivy-action@v0.31.0` for every Trivy step.
-- [ ] Local contracts fail against the current `aquasecurity/trivy-action@0.28.0` workflow.
-- [ ] Local contracts pass after the workflow pin repair.
-- [ ] `v0.31.0` tag and action metadata prove the nested setup action is pinned by SHA.
-- [ ] Existing supply-chain artifact contract coverage still passes.
-- [ ] No advisory scan, SBOM, secret, vulnerability, or license evidence is disabled or weakened.
+- [x] The supply-chain advisory workflow references `aquasecurity/trivy-action@v0.31.0` for every Trivy step.
+- [x] Local contracts fail against the current `aquasecurity/trivy-action@0.28.0` workflow.
+- [x] Local contracts pass after the workflow pin repair.
+- [x] `v0.31.0` tag and action metadata prove the nested setup action is pinned by SHA.
+- [x] Existing supply-chain artifact contract coverage still passes.
+- [x] No advisory scan, SBOM, secret, vulnerability, or license evidence is disabled or weakened.
 
 ## Files To Touch
 - `.github/workflows/ci-supply-chain-advisory.yml`
@@ -56,3 +56,26 @@ Repair the `Supply-Chain Advisory` workflow action reference so GitHub can resol
 - `rust_loc_delta_estimate: +60`
 - `shell_to_rust_ratio_delta_estimate: -0.0001`
 - `shell_surface_mitigation_issue: #7023`
+
+## Phase Evidence
+- Red:
+  - `bash scripts/ci/test_supply_chain_advisory_artifact_contract.sh` failed on missing `aquasecurity/trivy-action@v0.31.0`.
+  - `bash scripts/ci/test_workflow_scope_policy.sh` failed on missing `aquasecurity/trivy-action@v0.31.0`.
+  - `target/debug/deps/supply_chain_advisory_workflow_contract-69fdb5be3435aa11 --nocapture` failed on missing `aquasecurity/trivy-action@v0.31.0`.
+- Green:
+  - `bash scripts/ci/test_supply_chain_advisory_artifact_contract.sh && bash scripts/ci/test_workflow_scope_policy.sh` passed.
+  - `cargo test -p kamn-core --test supply_chain_advisory_workflow_contract` passed.
+  - `gh api repos/aquasecurity/trivy-action/git/ref/tags/v0.31.0 --jq .ref` returned `refs/tags/v0.31.0`.
+  - `v0.31.0` action metadata references `aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087`.
+- Refactor:
+  - No separate code reshape was warranted for this pin-only workflow repair; adding indirection would make the workflow less explicit.
+- Integration:
+  - The workflow contract scripts exercise the real `.github/workflows/ci-supply-chain-advisory.yml` file.
+  - `scripts/ci/collect_shell_rust_loc_telemetry.sh --output-json <tmp>` reported `status=ok`, `final_decision=GO`.
+
+## Shell-Surface Closure Metrics
+- `shell_loc_delta_actual: +219`
+- `rust_loc_delta_actual: +166008`
+- `shell_to_rust_ratio_delta_actual: -0.181472`
+- `shell_surface_ratio_target_status: improved`
+- `shell_surface_mitigation_issue: None`
