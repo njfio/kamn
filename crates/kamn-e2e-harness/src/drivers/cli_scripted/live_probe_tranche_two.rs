@@ -1,5 +1,3 @@
-use std::env;
-
 #[path = "live_probe_tranche_two/message_query_support.rs"]
 mod message_query_support;
 #[path = "live_probe_tranche_two/proof_replay_probes.rs"]
@@ -40,7 +38,7 @@ pub(super) fn default_endpoint() -> String {
 }
 
 pub(super) fn env_payload(name: &str, default: &str) -> String {
-    env::var(name).unwrap_or_else(|_| default.to_owned())
+    super::env_var_or_default(name, default)
 }
 
 pub(super) fn env_value(name: &str, default: &str) -> String {

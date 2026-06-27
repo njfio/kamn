@@ -6,11 +6,12 @@ pub(super) fn fund_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
+    let funded_at_epoch_seconds = require_fund_timestamp(escrow, from, action)?;
     apply_simple_transition(
         escrow,
         from,
         action,
-        require_fund_timestamp(action),
+        funded_at_epoch_seconds,
         "funded_at_epoch_seconds",
         &[DataLayerM4EscrowState::Created],
         DataLayerM4EscrowState::Funded,
@@ -22,11 +23,12 @@ pub(super) fn activate_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
+    let activated_at_epoch_seconds = require_activate_timestamp(escrow, from, action)?;
     apply_simple_transition(
         escrow,
         from,
         action,
-        require_activate_timestamp(action),
+        activated_at_epoch_seconds,
         "activated_at_epoch_seconds",
         &[DataLayerM4EscrowState::Funded],
         DataLayerM4EscrowState::Active,
@@ -38,7 +40,8 @@ pub(super) fn dispute_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
-    apply_dispute_transition(escrow, from, action, require_dispute_timestamp(action))
+    let dispute_opened_at_epoch_seconds = require_dispute_timestamp(escrow, from, action)?;
+    apply_dispute_transition(escrow, from, action, dispute_opened_at_epoch_seconds)
 }
 
 pub(super) fn expire_transition(
@@ -46,11 +49,12 @@ pub(super) fn expire_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
+    let expired_at_epoch_seconds = require_expire_timestamp(escrow, from, action)?;
     apply_simple_transition(
         escrow,
         from,
         action,
-        require_expire_timestamp(action),
+        expired_at_epoch_seconds,
         "expired_at_epoch_seconds",
         &[
             DataLayerM4EscrowState::Created,
@@ -66,7 +70,8 @@ pub(super) fn release_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
-    let (settled_at_epoch_seconds, settlement_receipt_hash) = require_release_transition(action);
+    let (settled_at_epoch_seconds, settlement_receipt_hash) =
+        require_release_transition(escrow, from, action)?;
     super::apply_settlement_transition(
         escrow,
         from,
@@ -82,7 +87,8 @@ pub(super) fn refund_transition(
     from: DataLayerM4EscrowState,
     action: &DataLayerM4EscrowTransitionAction,
 ) -> Result<DataLayerM4EscrowState, DataLayerM4SettlementEvidenceRegistryError> {
-    let (settled_at_epoch_seconds, settlement_receipt_hash) = require_refund_transition(action);
+    let (settled_at_epoch_seconds, settlement_receipt_hash) =
+        require_refund_transition(escrow, from, action)?;
     super::apply_settlement_transition(
         escrow,
         from,
@@ -93,58 +99,96 @@ pub(super) fn refund_transition(
     )
 }
 
-fn require_fund_timestamp(action: &DataLayerM4EscrowTransitionAction) -> u64 {
+fn require_fund_timestamp(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &DataLayerM4EscrowTransitionAction,
+) -> Result<u64, DataLayerM4SettlementEvidenceRegistryError> {
     match action {
         DataLayerM4EscrowTransitionAction::Fund {
             funded_at_epoch_seconds,
-        } => *funded_at_epoch_seconds,
-        _ => unreachable!("fund transition requires fund action"),
+        } => Ok(*funded_at_epoch_seconds),
+        _ => invalid_transition_action(escrow, from, action),
     }
 }
 
-fn require_activate_timestamp(action: &DataLayerM4EscrowTransitionAction) -> u64 {
+fn require_activate_timestamp(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &DataLayerM4EscrowTransitionAction,
+) -> Result<u64, DataLayerM4SettlementEvidenceRegistryError> {
     match action {
         DataLayerM4EscrowTransitionAction::Activate {
             activated_at_epoch_seconds,
-        } => *activated_at_epoch_seconds,
-        _ => unreachable!("activate transition requires activate action"),
+        } => Ok(*activated_at_epoch_seconds),
+        _ => invalid_transition_action(escrow, from, action),
     }
 }
 
-fn require_dispute_timestamp(action: &DataLayerM4EscrowTransitionAction) -> u64 {
+fn require_dispute_timestamp(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &DataLayerM4EscrowTransitionAction,
+) -> Result<u64, DataLayerM4SettlementEvidenceRegistryError> {
     match action {
         DataLayerM4EscrowTransitionAction::OpenDispute {
             dispute_opened_at_epoch_seconds,
-        } => *dispute_opened_at_epoch_seconds,
-        _ => unreachable!("dispute transition requires dispute action"),
+        } => Ok(*dispute_opened_at_epoch_seconds),
+        _ => invalid_transition_action(escrow, from, action),
     }
 }
 
-fn require_expire_timestamp(action: &DataLayerM4EscrowTransitionAction) -> u64 {
+fn require_expire_timestamp(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &DataLayerM4EscrowTransitionAction,
+) -> Result<u64, DataLayerM4SettlementEvidenceRegistryError> {
     match action {
         DataLayerM4EscrowTransitionAction::Expire {
             expired_at_epoch_seconds,
-        } => *expired_at_epoch_seconds,
-        _ => unreachable!("expire transition requires expire action"),
+        } => Ok(*expired_at_epoch_seconds),
+        _ => invalid_transition_action(escrow, from, action),
     }
 }
 
-fn require_release_transition(action: &DataLayerM4EscrowTransitionAction) -> (u64, &str) {
+fn require_release_transition<'a>(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &'a DataLayerM4EscrowTransitionAction,
+) -> Result<(u64, &'a str), DataLayerM4SettlementEvidenceRegistryError> {
     match action {
         DataLayerM4EscrowTransitionAction::ResolveRelease {
             settled_at_epoch_seconds,
             settlement_receipt_hash,
-        } => (*settled_at_epoch_seconds, settlement_receipt_hash.as_str()),
-        _ => unreachable!("release transition requires release action"),
+        } => Ok((*settled_at_epoch_seconds, settlement_receipt_hash.as_str())),
+        _ => invalid_transition_action(escrow, from, action),
     }
 }
 
-fn require_refund_transition(action: &DataLayerM4EscrowTransitionAction) -> (u64, &str) {
+fn require_refund_transition<'a>(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &'a DataLayerM4EscrowTransitionAction,
+) -> Result<(u64, &'a str), DataLayerM4SettlementEvidenceRegistryError> {
     match action {
         DataLayerM4EscrowTransitionAction::ResolveRefund {
             settled_at_epoch_seconds,
             settlement_receipt_hash,
-        } => (*settled_at_epoch_seconds, settlement_receipt_hash.as_str()),
-        _ => unreachable!("refund transition requires refund action"),
+        } => Ok((*settled_at_epoch_seconds, settlement_receipt_hash.as_str())),
+        _ => invalid_transition_action(escrow, from, action),
     }
+}
+
+fn invalid_transition_action<T>(
+    escrow: &DataLayerM4EscrowRecord,
+    from: DataLayerM4EscrowState,
+    action: &DataLayerM4EscrowTransitionAction,
+) -> Result<T, DataLayerM4SettlementEvidenceRegistryError> {
+    Err(
+        DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowTransition {
+            escrow_id: escrow.escrow_id.clone(),
+            from,
+            action: action.marker(),
+        },
+    )
 }

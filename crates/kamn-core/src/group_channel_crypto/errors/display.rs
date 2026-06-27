@@ -36,7 +36,7 @@ fn simple_message(error: &GroupChannelCryptoError) -> &'static str {
     if let Some(message) = sender_ref_or_transport_message(error) {
         return message;
     }
-    unreachable!("caller filters dynamic variants")
+    "group channel crypto error formatter route mismatch"
 }
 
 fn policy_or_input_message(error: &GroupChannelCryptoError) -> Option<&'static str> {
@@ -79,7 +79,7 @@ fn crypto_policy_message(error: &GroupChannelCryptoError) -> &'static str {
         GroupChannelCryptoError::InvalidKeyAgreementMasterSeed => {
             "invalid key-agreement seed KAMN_KEY_AGREEMENT_MASTER_SEED_HEX; expected 32-byte hex"
         }
-        _ => unreachable!("caller filters crypto-policy variants"),
+        _ => "group channel crypto policy formatter route mismatch",
     }
 }
 
@@ -88,7 +88,7 @@ fn input_message(error: &GroupChannelCryptoError) -> &'static str {
         GroupChannelCryptoError::EmptyChannelId => "channel_id must not be empty",
         GroupChannelCryptoError::EmptyRecipients => "recipient allowlist must not be empty",
         GroupChannelCryptoError::EmptyPayload => "plaintext payload must not be empty",
-        _ => unreachable!("caller filters input variants"),
+        _ => "group channel crypto input formatter route mismatch",
     }
 }
 
@@ -100,7 +100,7 @@ fn transport_message(error: &GroupChannelCryptoError) -> &'static str {
         GroupChannelCryptoError::KeyDerivationFailed => "group message key derivation failed",
         GroupChannelCryptoError::IntegrityCheckFailed => "group message integrity check failed",
         GroupChannelCryptoError::InvalidCiphertextEncoding => "invalid ciphertext encoding",
-        _ => unreachable!("caller filters transport variants"),
+        _ => "group channel crypto transport formatter route mismatch",
     }
 }
 

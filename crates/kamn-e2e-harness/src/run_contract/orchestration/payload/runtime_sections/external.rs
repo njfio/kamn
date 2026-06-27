@@ -23,7 +23,10 @@ pub(super) fn runtime_orchestration_json(
     if !external_execution {
         return skipped_runtime_json();
     }
-    build_runtime_component_json(probe.expect("external probe"))
+    match probe {
+        Some(probe) => build_runtime_component_json(probe),
+        None => missing_probe_json("orchestration_contract"),
+    }
 }
 
 pub(super) fn runtime_lifecycle_execution_json(
@@ -33,7 +36,10 @@ pub(super) fn runtime_lifecycle_execution_json(
     if !external_execution {
         return skipped_lifecycle_json();
     }
-    build_runtime_lifecycle_json(probe.expect("external probe"))
+    match probe {
+        Some(probe) => build_runtime_lifecycle_json(probe),
+        None => missing_probe_json("lifecycle_contract"),
+    }
 }
 
 pub(super) fn runtime_validation_execution_json(
@@ -45,13 +51,35 @@ pub(super) fn runtime_validation_execution_json(
     if !external_execution {
         return skipped_validation_json();
     }
-    let probe = probe.expect("external probe");
+    let Some(probe) = probe else {
+        return missing_probe_validation_json(scenario_totals, evidence_status);
+    };
     let validation = scenario_validation_status(scenario_totals);
     let overall = aggregate_status(&[probe.status, probe.status, validation, evidence_status]);
     format!(
         "{{\"requested\":true,\"orchestration_contract\":\"{}\",\"lifecycle_contract\":\"{}\",\"live_validation_contract\":\"{}\",\"evidence_contract\":\"{}\",\"overall\":\"{}\"}}",
         probe.status.as_str(),
         probe.status.as_str(),
+        validation.as_str(),
+        evidence_status.as_str(),
+        overall.as_str()
+    )
+}
+
+fn missing_probe_json(contract_field: &str) -> String {
+    format!(
+        "{{\"requested\":true,\"{contract_field}\":\"FAIL\",\"reason\":\"external runtime probe missing\"}}"
+    )
+}
+
+fn missing_probe_validation_json(
+    scenario_totals: LifecycleStatusTotals,
+    evidence_status: PhaseResultStatus,
+) -> String {
+    let validation = scenario_validation_status(scenario_totals);
+    let overall = aggregate_status(&[PhaseResultStatus::Fail, validation, evidence_status]);
+    format!(
+        "{{\"requested\":true,\"orchestration_contract\":\"FAIL\",\"lifecycle_contract\":\"FAIL\",\"live_validation_contract\":\"{}\",\"evidence_contract\":\"{}\",\"overall\":\"{}\",\"reason\":\"external runtime probe missing\"}}",
         validation.as_str(),
         evidence_status.as_str(),
         overall.as_str()

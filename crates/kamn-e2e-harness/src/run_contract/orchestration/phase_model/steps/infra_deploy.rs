@@ -4,17 +4,18 @@ use super::super::super::super::is_mcp_mode;
 
 pub(super) fn infra_steps(fail_path_marker: bool) -> Vec<OrchestrationStepRecord> {
     let mut steps = base_steps(INFRA_LABELS, PhaseResultStatus::Pass, INFRA_DETAILS);
-    let last = steps.last_mut().expect("health check step");
-    last.status = if fail_path_marker {
-        PhaseResultStatus::Fail
-    } else {
-        PhaseResultStatus::Pass
-    };
-    last.detail = if fail_path_marker {
-        "deterministic fail-path marker: kamn health check failed".to_owned()
-    } else {
-        "deterministic placeholder: kamn health verified".to_owned()
-    };
+    if let Some(last) = steps.last_mut() {
+        last.status = if fail_path_marker {
+            PhaseResultStatus::Fail
+        } else {
+            PhaseResultStatus::Pass
+        };
+        last.detail = if fail_path_marker {
+            "deterministic fail-path marker: kamn health check failed".to_owned()
+        } else {
+            "deterministic placeholder: kamn health verified".to_owned()
+        };
+    }
     steps
 }
 

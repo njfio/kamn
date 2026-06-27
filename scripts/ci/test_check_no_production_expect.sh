@@ -51,7 +51,17 @@ RS
 assert_checker_passes_root "$TMP_DIR" "expected *_tests/support files under src to be treated as test-only"
 rm -rf "$TMP_DIR/src"
 
-baseline_output="$(bash "$CHECKER" --output-json "$BASELINE_REPORT")"
+set +e
+baseline_output="$(bash "$CHECKER" --output-json "$BASELINE_REPORT" 2>&1)"
+baseline_code=$?
+set -e
+
+if [ "$baseline_code" -ne 0 ]; then
+  printf '%s\n' "$baseline_output" >&2
+  echo "expected baseline production panic checker path to exit 0" >&2
+  exit 1
+fi
+
 if ! printf '%s\n' "$baseline_output" | grep -q '^status=ok$'; then
   printf '%s\n' "$baseline_output" >&2
   echo "expected status=ok for baseline production panic checker path" >&2

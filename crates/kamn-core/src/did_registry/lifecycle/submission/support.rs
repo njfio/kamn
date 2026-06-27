@@ -123,7 +123,9 @@ pub(super) fn lifecycle_evidence(
         DidSubmissionRetryClass::RetryableInFlight | DidSubmissionRetryClass::FinalizedNoRetry => {
             stored_lifecycle_evidence(registry, did, submission_key, idempotency_key)
         }
-        DidSubmissionRetryClass::ConflictNoRetry => unreachable!("handled above"),
+        DidSubmissionRetryClass::ConflictNoRetry => {
+            stored_lifecycle_evidence(registry, did, submission_key, idempotency_key)
+        }
     }
 }
 

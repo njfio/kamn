@@ -120,7 +120,7 @@ impl DataLayerPgRepositoryBridgeError {
             Self::EmptyField(_)
             | Self::InvalidRequesterDid { .. }
             | Self::InvalidOwnerDid { .. }
-            | Self::InvalidSearchLimit { .. } => unreachable!("handled by invalid_input_message"),
+            | Self::InvalidSearchLimit { .. } => self.fallback_message(),
         }
     }
 
@@ -134,7 +134,7 @@ impl DataLayerPgRepositoryBridgeError {
                 expected,
                 found,
             } => vector_mismatch_message(reason_code, *expected, *found),
-            _ => unreachable!("handled by capability_message"),
+            _ => self.fallback_message(),
         }
     }
 
@@ -147,7 +147,7 @@ impl DataLayerPgRepositoryBridgeError {
                 reason_code,
                 relation_marker,
             } => unsupported_relation_message(reason_code, relation_marker),
-            _ => unreachable!("handled by capability_message"),
+            _ => self.fallback_message(),
         }
     }
 
@@ -160,8 +160,12 @@ impl DataLayerPgRepositoryBridgeError {
                 reason_code,
                 bucket_window_seconds,
             } => invalid_bucket_window_message(reason_code, *bucket_window_seconds),
-            _ => unreachable!("handled by capability_message"),
+            _ => self.fallback_message(),
         }
+    }
+
+    fn fallback_message(&self) -> String {
+        format!("postgres repository bridge error formatter route mismatch: {self:?}")
     }
 }
 

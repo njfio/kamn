@@ -181,6 +181,6 @@ fn signing_key_error_message(error: &AuthenticatedPeerFrameError) -> &'static st
         AuthenticatedPeerFrameError::InvalidSigningKeyMaterial => {
             "runtime peer frame signing key material is invalid"
         }
-        _ => unreachable!("non-signing error routed to signing_key_error_message"),
+        _ => "runtime peer frame signing key formatter route mismatch",
     }
 }

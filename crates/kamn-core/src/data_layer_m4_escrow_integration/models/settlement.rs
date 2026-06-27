@@ -213,7 +213,10 @@ fn write_state_error(
             escrow_id,
             sequence,
         } => write!(f, "evidence sequence not found for {escrow_id}: {sequence}"),
-        _ => unreachable!("structured settlement error variants handled first"),
+        _ => write!(
+            f,
+            "settlement evidence error formatter route mismatch: {error:?}"
+        ),
     }
 }
 

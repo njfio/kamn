@@ -41,7 +41,10 @@ fn write_did_error(
     {
         return write_reason_detail(f, "invalid did field", field, reason_code, detail);
     }
-    unreachable!("write_did_error only formats InvalidDid")
+    write!(
+        f,
+        "realtime delivery error formatter route mismatch: {error:?}"
+    )
 }
 
 fn write_policy_error(
@@ -59,7 +62,10 @@ fn write_policy_error(
             reason_code,
             detail,
         } => write_context_detail(f, "channel policy check failed", reason_code, detail),
-        _ => unreachable!("write_policy_error only formats policy variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -77,7 +83,10 @@ fn write_dispatch_error(
         DataLayerM9RealtimeDeliveryError::AntiSpamEngineError { detail } => {
             write!(f, "anti-spam engine evaluation failed: {detail}")
         }
-        _ => unreachable!("write_dispatch_error only formats dispatch variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -113,7 +122,10 @@ fn write_backpressure_error(
             reason_code,
             detail,
         ),
-        _ => unreachable!("write_backpressure_error only formats runtime backpressure variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -136,7 +148,10 @@ fn write_terminal_error(
         DataLayerM9RealtimeDeliveryError::DuplicateMessageId(value) => {
             write!(f, "duplicate message id: {value}")
         }
-        _ => unreachable!("write_terminal_error only formats terminal variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 

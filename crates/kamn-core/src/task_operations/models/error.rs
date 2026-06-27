@@ -119,7 +119,10 @@ fn write_dependency_error(error: &TaskOperationError, f: &mut fmt::Formatter<'_>
             f,
             "task {task_id} cannot start before dependency {dependency_id} is completed"
         ),
-        _ => unreachable!("dependency formatter only handles dependency variants"),
+        _ => write!(
+            f,
+            "task operation dependency formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -136,7 +139,7 @@ fn write_snapshot_error(error: &TaskOperationError, f: &mut fmt::Formatter<'_>) 
             f,
             "task {task_id} has dependency {dependency_id} in {dependency_state:?} during snapshot restore"
         ),
-        _ => unreachable!("snapshot formatter only handles snapshot variants"),
+        _ => write!(f, "task operation snapshot formatter route mismatch: {error:?}"),
     }
 }
 

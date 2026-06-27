@@ -1,5 +1,3 @@
-use std::env;
-
 #[path = "live_probe_tranche_three/batch_merkle_probe.rs"]
 mod batch_merkle_probe;
 #[path = "live_probe_tranche_three/bridge_forwarding_probe.rs"]
@@ -48,7 +46,7 @@ pub(super) fn default_endpoint() -> String {
 }
 
 pub(super) fn env_payload(name: &str, default: &str) -> String {
-    env::var(name).unwrap_or_else(|_| default.to_owned())
+    super::env_var_or_default(name, default)
 }
 
 pub(super) fn env_value(name: &str, default: &str) -> String {

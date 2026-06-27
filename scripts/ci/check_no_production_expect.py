@@ -48,9 +48,14 @@ def is_excluded(path: Path) -> bool:
     file_name = path.name
     return (
         "/main_tests/" in path_str
+        or "/runtime_tests/" in path_str
+        or "/cli_tests/" in path_str
+        or "/cli_scripted_tests/" in path_str
+        or "/mcp_agent_tests/" in path_str
         or "/tests/" in path_str
         or ("/src/" in path_str and file_name == "tests.rs")
         or "/test_utils/" in path_str
+        or file_name == "test_support.rs"
         or file_name.endswith("_tests.rs")
         or "_tests_" in file_name
         or file_name.startswith("runtime_tests")
