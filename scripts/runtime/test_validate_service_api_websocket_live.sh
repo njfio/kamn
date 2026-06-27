@@ -10,6 +10,10 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected websocket live validation script to be executable" >&2
   exit 1
 fi
+if ! grep -Fq "X-KAMN-Signer-Public-Key" "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to propagate signer public key header" >&2
+  exit 1
+fi
 
 validation_output="$(bash "$VALIDATION_SCRIPT" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
