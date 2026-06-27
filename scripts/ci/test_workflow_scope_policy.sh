@@ -11,6 +11,16 @@ DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
 EXPECTED_ADVISORY_TOOLCHAIN_MARKER='channel = "1.88.0"'
 EXPECTED_ADVISORY_DOCKERFILE_BUILDER='FROM rust:1.88-bookworm AS builder'
 
+require_fast_workflow_marker() {
+  local marker="$1"
+  local message="$2"
+
+  if ! grep -Fq "$marker" "$FAST_WORKFLOW"; then
+    echo "$message" >&2
+    exit 1
+  fi
+}
+
 if [ ! -f "$SUPPLY_CHAIN_WORKFLOW" ]; then
   echo "expected advisory supply-chain workflow file to exist" >&2
   exit 1
@@ -217,25 +227,25 @@ if ! grep -Fq "Governance/feature commit ratio gate" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq 'source "$tmp_dir/governance-feature-commit-ratio-moratorium.env"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to source moratorium activation config from the base branch payload" >&2
-  exit 1
-fi
+require_fast_workflow_marker \
+  'source "$tmp_dir/governance-feature-commit-ratio-moratorium.env"' \
+  "expected governance/feature commit ratio gate to source moratorium activation config from the base branch payload"
 
-if ! grep -Fq 'git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to load the checker from the base branch" >&2
-  exit 1
-fi
+require_fast_workflow_marker \
+  'git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py"' \
+  "expected governance/feature commit ratio gate to load the checker from the base branch"
 
-if ! grep -Fq 'git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to load the git helper from the base branch" >&2
-  exit 1
-fi
+require_fast_workflow_marker \
+  'git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py"' \
+  "expected governance/feature commit ratio gate to load the support helper from the base branch"
 
-if ! grep -Fq 'git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to load moratorium config from the base branch" >&2
-  exit 1
-fi
+require_fast_workflow_marker \
+  'git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py"' \
+  "expected governance/feature commit ratio gate to load the git helper from the base branch"
+
+require_fast_workflow_marker \
+  'git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env"' \
+  "expected governance/feature commit ratio gate to load moratorium config from the base branch"
 
 if ! grep -Fq 'grep -Fq -- "--base-sha" "$tmp_dir/check_governance_feature_commit_ratio.py"' "$FAST_WORKFLOW"; then
   echo "expected governance/feature commit ratio gate to detect the new git-range checker interface" >&2
