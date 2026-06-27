@@ -234,8 +234,9 @@ run_slice "core-direct-message-crypto" 2 \
     --cargo-test-arg direct_message_crypto::tests:: \
     --timeout "$timeout_seconds"
 
+group_channel_nonce_mutation_file="crates/kamn-core/src/group_channel_crypto/engine/sealing/encrypt.rs"
 group_channel_nonce_mutation_line="$(
-  grep -n 'if nonce == 0' crates/kamn-core/src/group_channel_crypto.rs \
+  grep -n 'if nonce == 0' "$group_channel_nonce_mutation_file" \
     | head -n 1 \
     | cut -d: -f1 \
     || true
@@ -244,11 +245,13 @@ if [ -z "$group_channel_nonce_mutation_line" ]; then
   echo "unable to resolve group channel mutation selector line" >&2
   exit 1
 fi
-group_channel_nonce_mutation_re="group_channel_crypto\\.rs:(${group_channel_nonce_mutation_line}:[0-9]+): replace == with != in GroupChannelCryptoEngine::encrypt"
+group_channel_nonce_mutation_file_basename="$(basename "$group_channel_nonce_mutation_file")"
+group_channel_nonce_mutation_file_re="${group_channel_nonce_mutation_file_basename//./\\.}"
+group_channel_nonce_mutation_re="${group_channel_nonce_mutation_file_re}:(${group_channel_nonce_mutation_line}:[0-9]+): replace == with !="
 
 run_slice "core-group-channel-crypto" 1 \
   cargo mutants -p kamn-core \
-    --file crates/kamn-core/src/group_channel_crypto.rs \
+    --file "$group_channel_nonce_mutation_file" \
     --re "$group_channel_nonce_mutation_re" \
     --output "$tmp_dir/core-group-channel-crypto" \
     --copy-vcs true \

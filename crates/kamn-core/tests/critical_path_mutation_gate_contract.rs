@@ -19,6 +19,10 @@ fn critical_path_mutation_gate_uses_extracted_group_channel_selector() {
         "group-channel mutation selector must follow extracted encrypt module",
     );
     assert!(
+        script.contains("--file \"$group_channel_nonce_mutation_file\""),
+        "group-channel mutation slice must pass the resolved selector file to cargo mutants",
+    );
+    assert!(
         !script.contains(&format!("grep -n '{NONCE_GUARD}' {LEGACY_GROUP_CHANNEL_SELECTOR_FILE}")),
         "group-channel mutation selector must not drift back to the parent module",
     );
