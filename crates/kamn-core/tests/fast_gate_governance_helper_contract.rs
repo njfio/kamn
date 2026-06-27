@@ -1,9 +1,7 @@
 use std::path::{Path, PathBuf};
 
-const CHECKER_COPY: &str =
-    r#"git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py""#;
-const SUPPORT_COPY: &str =
-    r#"git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py""#;
+const CHECKER_COPY: &str = r#"git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py""#;
+const SUPPORT_COPY: &str = r#"git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py""#;
 const GIT_HELPER_COPY: &str =
     r#"git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py""#;
 
@@ -12,18 +10,25 @@ fn fast_gate_copies_governance_ratio_git_helper() {
     let workflow =
         std::fs::read_to_string(workflow_path()).expect("ci-fast-gate workflow should be readable");
 
-    assert!(
-        workflow.contains(CHECKER_COPY),
-        "Fast Gate should copy the governance ratio checker from the base branch"
+    assert_workflow_contains(
+        &workflow,
+        CHECKER_COPY,
+        "Fast Gate should copy the governance ratio checker from the base branch",
     );
-    assert!(
-        workflow.contains(SUPPORT_COPY),
-        "Fast Gate should copy governance ratio support from the base branch"
+    assert_workflow_contains(
+        &workflow,
+        SUPPORT_COPY,
+        "Fast Gate should copy governance ratio support from the base branch",
     );
-    assert!(
-        workflow.contains(GIT_HELPER_COPY),
-        "Fast Gate should copy the governance ratio git helper from the base branch"
+    assert_workflow_contains(
+        &workflow,
+        GIT_HELPER_COPY,
+        "Fast Gate should copy the governance ratio git helper from the base branch",
     );
+}
+
+fn assert_workflow_contains(workflow: &str, marker: &str, message: &str) {
+    assert!(workflow.contains(marker), "{message}");
 }
 
 fn workflow_path() -> PathBuf {

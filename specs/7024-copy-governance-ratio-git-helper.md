@@ -25,11 +25,11 @@ Repair the Fast Gate governance/feature commit-ratio step so the base-branch che
 - A future edit removes the helper copy line while keeping the git-range checker path.
 
 ## Acceptance Criteria
-- [ ] `ci-fast-gate.yml` copies `scripts/ci/governance_feature_commit_ratio_git.py` into `$tmp_dir`.
-- [ ] Local contracts fail before the workflow wiring fix.
-- [ ] Local contracts pass after the workflow wiring fix.
-- [ ] Exact base-checker temp-dir reproduction produces `status=ok` for this branch.
-- [ ] Governance threshold, moratorium base, and report output semantics remain unchanged.
+- [x] `ci-fast-gate.yml` copies `scripts/ci/governance_feature_commit_ratio_git.py` into `$tmp_dir`.
+- [x] Local contracts fail before the workflow wiring fix.
+- [x] Local contracts pass after the workflow wiring fix.
+- [x] Exact base-checker temp-dir reproduction produces `status=ok` for this branch.
+- [x] Governance threshold, moratorium base, and report output semantics remain unchanged.
 
 ## Files To Touch
 - `.github/workflows/ci-fast-gate.yml`
@@ -45,6 +45,13 @@ Repair the Fast Gate governance/feature commit-ratio step so the base-branch che
 - Red: add contracts requiring the helper copy line and run them against the current workflow to confirm failure.
 - Green: add the helper copy line in `ci-fast-gate.yml`, then rerun the targeted contracts.
 - Integration: reproduce the CI temp-dir invocation using base-branch checker files and confirm `status=ok`.
+
+## Completion Evidence
+- Red: `bash scripts/ci/test_workflow_scope_policy.sh` failed with `expected governance/feature commit ratio gate to load the git helper from the base branch`.
+- Red gap: `cargo test -p kamn-core --test fast_gate_governance_helper_contract` initially hung after launching the local integration test binary; the same contract passed after a longer bounded green run.
+- Green: `bash scripts/ci/test_workflow_scope_policy.sh` passed.
+- Green: `cargo test -p kamn-core --test fast_gate_governance_helper_contract` passed.
+- Integration: base-checker temp-dir reproduction passed with `status=ok`, `governance_commit_count=9`, `feature_commit_count=41`, `governance_ratio=0.18`, and `max_governance_ratio=0.2`.
 
 ## Shell-Surface Metrics
 - `shell_loc_delta_estimate: +5`

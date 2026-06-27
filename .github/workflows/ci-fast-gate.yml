@@ -88,6 +88,7 @@ jobs:
           trap 'rm -rf "$tmp_dir"' EXIT
           git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py" > "$tmp_dir/check_governance_feature_commit_ratio.py"
           git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py" > "$tmp_dir/governance_feature_commit_ratio_support.py"
+          git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py" > "$tmp_dir/governance_feature_commit_ratio_git.py"
           git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env" > "$tmp_dir/governance-feature-commit-ratio-moratorium.env"
           chmod +x "$tmp_dir/check_governance_feature_commit_ratio.py"
           source "$tmp_dir/governance-feature-commit-ratio-moratorium.env"
