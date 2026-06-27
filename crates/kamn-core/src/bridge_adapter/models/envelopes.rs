@@ -19,7 +19,7 @@ pub struct BridgeInboundEnvelope {
     pub received_at_unix: u64,
 }
 
-/// Canonical inbound shape produced by a [`BridgeAdapter`].
+/// Canonical inbound shape produced by a [`BridgeAdapter`](crate::bridge_adapter::BridgeAdapter).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NormalizedInboundMessage {
     /// Bridge message id carried by this public contract model.
@@ -55,7 +55,7 @@ pub struct BridgeOutboundRequest {
     pub created_at: String,
 }
 
-/// Platform-ready outbound envelope emitted by a [`BridgeAdapter`].
+/// Platform-ready outbound envelope emitted by a [`BridgeAdapter`](crate::bridge_adapter::BridgeAdapter).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BridgeOutboundEnvelope {
     /// Request id carried by this public contract model.
