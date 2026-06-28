@@ -149,6 +149,9 @@ Output:
   keep the same old-style format shape even when the current local toolchain
   does not flag them; normalize them proactively to avoid another CI-only
   strict-clippy round.
+- Newer strict CI clippy may continue into kamn-node extraction-budget contract
+  assertions after MCP fixture cleanup; the fix must keep the same budget
+  assertion and source-marker proof semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -241,6 +244,8 @@ Output:
   strict-clippy clean under CI without changing framed protocol payloads.
 - MCP test framing helpers and payload-length fixture builders are normalized
   to strict-clippy style without changing HTTP, stdio, or fixture JSON payloads.
+- Message-store runtime-evidence extraction budget assertions are strict-clippy
+  clean under CI without changing line-budget or marker checks.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -514,6 +519,32 @@ cargo fmt --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-mcp-stdio-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+
+gh api repos/njfio/kamn/actions/jobs/83932840209/logs
+# Fast Gate attempt 2 reached strict clippy after Workspace Pre-Merge passed and
+# reported `clippy::uninlined_format_args` in
+# `crates/kamn-node/tests/message_store_runtime_evidence_extraction_contract.rs`.
+
+cargo test -p kamn-node --test message_store_runtime_evidence_extraction_contract -- --nocapture
+# 3 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-node --all-targets --all-features -- -D warnings
+# passed
+
+cargo fmt --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-node-runtime-evidence-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none

@@ -28,9 +28,7 @@ fn message_store_runtime_evidence_function_stays_within_active_budget() {
         .expect("build_data_layer_runtime_evidence should exist");
     assert!(
         line_count <= ROOT_MAX_LINES,
-        "build_data_layer_runtime_evidence should stay within {} lines, found {}",
-        ROOT_MAX_LINES,
-        line_count
+        "build_data_layer_runtime_evidence should stay within {ROOT_MAX_LINES} lines, found {line_count}"
     );
 }
 
