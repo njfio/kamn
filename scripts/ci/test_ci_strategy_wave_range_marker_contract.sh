@@ -29,7 +29,18 @@ fi
 
 mutated_wave_end=$((wave_end + 1))
 mutated_wave_marker="non_kolme_wrapper_family_wave_range=${wave_start}-${mutated_wave_end}"
-sed -i "0,/${wave_marker}/s//${mutated_wave_marker}/" "$tmp_doc"
+python3 - "$tmp_doc" "$wave_marker" "$mutated_wave_marker" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+old = sys.argv[2]
+new = sys.argv[3]
+payload = path.read_text(encoding="utf-8")
+if old not in payload:
+    raise SystemExit("expected wave-range marker before mutation")
+path.write_text(payload.replace(old, new, 1), encoding="utf-8")
+PY
 
 if KAMN_CI_STRATEGY_DOC_FILE="$tmp_doc" bash "$STRATEGY_CONTRACT_SCRIPT" >"$tmp_output" 2>&1; then
   echo "expected strategy contract to fail when non_kolme_wrapper_family_wave_range diverges from documented snippets" >&2

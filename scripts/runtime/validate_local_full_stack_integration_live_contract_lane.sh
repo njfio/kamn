@@ -466,7 +466,8 @@ if summary_report.get("kolme_fixture_profile_version") != "v1":
     raise SystemExit("expected Kolme fixture profile version marker in summary report")
 if summary_report.get("kolme_fixture_profile_status") != expected_domain_status:
     raise SystemExit(f"expected kolme_fixture_profile_status={expected_domain_status} in summary report")
-if summary_report.get("kolme_checkout_path") != sys.argv[7]:
+expected_kolme_checkout_path = str(pathlib.Path(sys.argv[7]).expanduser().resolve())
+if summary_report.get("kolme_checkout_path") != expected_kolme_checkout_path:
     raise SystemExit("expected kolme checkout path marker in summary report")
 if summary_report.get("kolme_expected_remote_url") != sys.argv[8]:
     raise SystemExit("expected kolme expected remote url marker in summary report")

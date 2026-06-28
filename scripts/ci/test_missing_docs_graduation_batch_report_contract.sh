@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 REPORT_DOC_PATH="$ROOT_DIR/docs/planning/issues/missing-docs-first-batch-graduation-report.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -39,7 +40,7 @@ validate_report_doc "$REPORT_DOC_PATH"
 
 MUTATED_REPORT_DOC="$TMP_DIR/mutated-report.md"
 cp "$REPORT_DOC_PATH" "$MUTATED_REPORT_DOC"
-sed -i '/schema_version: kamn.ci.kamn-core-missing-docs-graduation-batch-report.v1/d' \
+test_harness_sed_in_place '/schema_version: kamn.ci.kamn-core-missing-docs-graduation-batch-report.v1/d' \
   "$MUTATED_REPORT_DOC"
 
 if validate_report_doc "$MUTATED_REPORT_DOC" >"$TMP_DIR/fail.out" 2>&1; then

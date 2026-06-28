@@ -158,6 +158,22 @@ Output:
 - Critical-path mutation may target a stale source line after signer module
   extraction, discovering zero mutants instead of proving the strict signer
   secret-source precedence contract.
+- Fast Gate may cancel on elapsed-budget policy before reaching format, strict
+  clippy, production panic-surface, or bounded test steps when the CI-tool
+  regression bundle runs inside the same 20-minute job on a 969-file branch
+  surface and cold Rust cache.
+- The fast-mode CI-tool regression command may be CI-green on Ubuntu while
+  failing locally on macOS if shell tests depend on GNU-only `date -d`
+  behavior.
+- Local full-stack dry-run contract tests may hard-code `/tmp/kolme_fork` even
+  though the validator intentionally emits the resolved checkout path, which is
+  `/private/tmp/kolme_fork` on macOS.
+- Fast-mode CI-tool regression shell tests may use GNU `sed -i` fixture
+  mutation syntax, which fails locally on BSD/macOS `sed` before the command
+  can prove the same policy checks.
+- Kolme dispatcher manifest metadata contract tests may use GNU `find -printf`
+  to inventory wrapper symlinks, which fails locally on BSD/macOS `find` before
+  the contract can prove dispatcher metadata resolution.
 
 ## Acceptance criteria
 
@@ -254,6 +270,26 @@ Output:
   secret-provider implementation instead of stale `signer.rs` line numbers.
 - Critical-path mutation runner still expects 10 mutants across 6 slices and
   catches all selected mutants locally or in CI.
+- Fast Gate still runs format, strict clippy, production panic-surface, bounded
+  tests, runtime fuzz, performance smoke, and budget telemetry in the
+  `Fast Gate (PR)` job.
+- CI-tool regression coverage remains PR-blocking through a separate
+  `CI Tool Regression Gate (PR)` job that runs the same
+  `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` entrypoint
+  under its own 20-minute budget when selector output requires CI tool checks.
+- The `Fast Gate (PR)` job no longer runs the CI-tool regression bundle inside
+  its own runtime budget.
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` is locally
+  runnable on the shared macOS workspace for its shell-test date fixtures
+  without weakening Ubuntu CI behavior.
+- Local full-stack dry-run contract tests compare the Kolme checkout marker
+  against the platform-resolved `/tmp/kolme_fork` default while preserving the
+  validator's existing resolved-path output semantics.
+- Missing-docs policy shell tests mutate fixtures through a portable in-place
+  sed helper that works on both GNU/Linux and BSD/macOS sed.
+- Kolme dispatcher manifest metadata contract tests inventory wrapper symlinks
+  without GNU-only `find -printf` while preserving the non-empty wrapper
+  inventory and manifest metadata assertions.
 - `cargo test --workspace --locked --all-features --no-fail-fast` passes locally or remaining unrelated failures are separately filed with evidence.
 - `make check` remains green.
 - The PR head is governance-ratio compliant.
@@ -545,6 +581,42 @@ cargo fmt --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-node-runtime-evidence-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+
+cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract -- --nocapture
+# red before workflow split: fast_gate_job_must_not_run_ci_tool_regression_bundle
+# and workflow job section missing: ci-tool-regression-gate
+
+bash scripts/kolme/test_dispatcher_manifest_metadata_contract.sh
+# red before portable find fix:
+# find: -printf: unknown primary or operator
+# expected run and contract wrapper symlink inventory to be non-empty
+
+cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract -- --nocapture
+# 10 passed
+
+bash scripts/kolme/test_dispatcher_manifest_metadata_contract.sh
+# Kolme dispatcher manifest metadata contract tests passed.
+
+uv run --python 3.11 --with cryptography /tmp/kamn-bash5-bin/bash -lc 'PATH=/tmp/kamn-bash5-bin:$PATH; set -o pipefail; KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh 2>&1 | tee /tmp/kamn-ci-tools-fast-mode-uv-py311-bash5-pipefail-final.log'
+# Fast-mode CI tool regression tests passed.
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-final-fast-gate-split.json
 # status=pass
 # policy_decision=GO
 # offending_files=none

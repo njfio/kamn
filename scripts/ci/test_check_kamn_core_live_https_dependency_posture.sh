@@ -58,7 +58,7 @@ PY
 
 MANIFEST_FIXTURE="$TMP_DIR/Cargo.toml"
 cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$MANIFEST_FIXTURE"
-sed -i 's/rustls-pemfile = { workspace = true, optional = true }/rustls-pemfile = { workspace = true, optional = false }/' "$MANIFEST_FIXTURE"
+test_harness_sed_in_place 's/rustls-pemfile = { workspace = true, optional = true }/rustls-pemfile = { workspace = true, optional = false }/' "$MANIFEST_FIXTURE"
 
 set +e
 manifest_failure_output="$(run_checker --cargo-manifest "$MANIFEST_FIXTURE" 2>&1)"
@@ -174,7 +174,7 @@ fi
 
 README_FIXTURE="$TMP_DIR/README.md"
 cp "$ROOT_DIR/README.md" "$README_FIXTURE"
-sed -i '/adr-kamn-core-live-tls-transport.md/d' "$README_FIXTURE"
+test_harness_sed_in_place '/adr-kamn-core-live-tls-transport.md/d' "$README_FIXTURE"
 
 set +e
 readme_failure_output="$(run_checker --readme "$README_FIXTURE" 2>&1)"
@@ -197,7 +197,7 @@ fi
 
 README_DEP_DRIFT_FIXTURE="$TMP_DIR/README.dep-drift.md"
 cp "$ROOT_DIR/README.md" "$README_DEP_DRIFT_FIXTURE"
-sed -i '/`webpki-roots`/d' "$README_DEP_DRIFT_FIXTURE"
+test_harness_sed_in_place '/`webpki-roots`/d' "$README_DEP_DRIFT_FIXTURE"
 
 set +e
 readme_dep_drift_output="$(run_checker --readme "$README_DEP_DRIFT_FIXTURE" 2>&1)"
@@ -228,7 +228,7 @@ fi
 
 CI_STRATEGY_DRIFT_FIXTURE="$TMP_DIR/ci-strategy-drift.md"
 cp "$ROOT_DIR/docs/ci/strategy.md" "$CI_STRATEGY_DRIFT_FIXTURE"
-sed -i '/cargo check -p kamn-core --no-default-features/d' "$CI_STRATEGY_DRIFT_FIXTURE"
+test_harness_sed_in_place '/cargo check -p kamn-core --no-default-features/d' "$CI_STRATEGY_DRIFT_FIXTURE"
 
 set +e
 ci_strategy_drift_output="$(run_checker --ci-strategy "$CI_STRATEGY_DRIFT_FIXTURE" 2>&1)"

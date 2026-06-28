@@ -54,3 +54,11 @@ test_harness_assert_file_contains_fixed() {
     return 1
   fi
 }
+
+test_harness_sed_in_place() {
+  if sed --version >/dev/null 2>&1; then
+    sed -i "$@"
+  else
+    sed -i '' "$@"
+  fi
+}

@@ -18,6 +18,25 @@ fn workspace_premerge_section() -> &'static str {
         .expect("workspace premerge section should exist")
 }
 
+fn workflow_job_section(job_id: &str) -> String {
+    let marker = format!("  {job_id}:");
+    let mut found = false;
+    let mut section = String::new();
+    for line in CI_FAST_GATE_WORKFLOW.lines() {
+        if line == marker {
+            found = true;
+        } else if found && line.starts_with("  ") && !line.starts_with("    ") {
+            break;
+        }
+        if found {
+            section.push_str(line);
+            section.push('\n');
+        }
+    }
+    assert!(found, "workflow job section missing: {job_id}");
+    section
+}
+
 fn assert_cargo_audit_capture_contract(workflow: &str, workflow_name: &str) {
     assert!(
         workflow.contains("cargo_audit_status=0"),
@@ -157,4 +176,25 @@ fn spec_c08_workspace_premerge_no_longer_duplicates_cargo_audit() {
 fn spec_c09_cargo_audit_scan_preserves_report_for_policy_after_nonzero_exit() {
     assert_cargo_audit_capture_contract(fast_gate_section(), "ci_fast_gate");
     assert_cargo_audit_capture_contract(CI_DEEP_VALIDATE_WORKFLOW, "ci_deep_validate");
+}
+
+#[test]
+fn spec_c10_ci_tool_regression_has_own_runtime_budget() {
+    let fast_gate = workflow_job_section("fast-gate");
+    assert!(
+        !fast_gate.contains("Run CI tool regression tests"),
+        "fast_gate_job_must_not_run_ci_tool_regression_bundle",
+    );
+    assert!(
+        !fast_gate.contains("bash scripts/ci/test_ci_tools.sh"),
+        "fast_gate_job_must_not_share_budget_with_ci_tool_regression_bundle",
+    );
+    let ci_tools = workflow_job_section("ci-tool-regression-gate");
+    assert!(
+        ci_tools.contains("CI Tool Regression Gate (PR)"),
+        "ci_tool_regression_gate_name_missing",
+    );
+    assert!(ci_tools.contains("timeout-minutes: 20"));
+    assert!(ci_tools.contains("KAMN_CI_TOOLS_FAST_MODE: 'true'"));
+    assert!(ci_tools.contains("bash scripts/ci/test_ci_tools.sh"));
 }
