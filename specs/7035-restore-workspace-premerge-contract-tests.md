@@ -159,6 +159,10 @@ Output:
 - Newer strict CI clippy may continue into signer module extraction budget
   assertions after the gate reaches later kamn-node contract tests; the fix
   must keep the same module, source-marker, and file-budget proof semantics.
+- Newer strict CI clippy may continue into kamn-node command-surface and proof
+  doc contract assertions after the gate reaches later test targets; the fix
+  must keep the same required selectors, doc markers, and reason-code proof
+  semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -274,6 +278,10 @@ Output:
 - Signer module extraction budget assertions are strict-clippy clean under CI
   without changing module presence, source-marker, or file-budget proof
   semantics.
+- Main-tests command-surface parity, runtime proof index, and restart
+  persistence proof contract assertions are strict-clippy clean under CI
+  without changing required selectors, doc markers, or reason-code proof
+  semantics.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -327,6 +335,9 @@ Likely:
 - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_contract_tests/upgrade_delivery_contract_tests/live_bridge_delivery_contract_tests.rs`
 - `crates/kamn-node/src/signer/tests/adapter_contract_tests.rs`
 - `crates/kamn-node/tests/signer_module_extraction_contract.rs`
+- `crates/kamn-node/tests/main_tests_command_surface_parity_contract.rs`
+- `crates/kamn-node/tests/runtime_proof_index_contract.rs`
+- `crates/kamn-node/tests/restart_persistence_proof_contract.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -688,6 +699,40 @@ git diff --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-signer-extraction-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+
+gh api repos/njfio/kamn/actions/jobs/83947261892/logs
+# Fast Gate reached late Lint (strict) after runtime contract lanes and failed
+# on `clippy::uninlined_format_args` in:
+# - `crates/kamn-node/tests/main_tests_command_surface_parity_contract.rs`
+# - `crates/kamn-node/tests/runtime_proof_index_contract.rs`
+# - `crates/kamn-node/tests/restart_persistence_proof_contract.rs`
+
+cargo test -p kamn-node --test main_tests_command_surface_parity_contract --test runtime_proof_index_contract --test restart_persistence_proof_contract -- --nocapture
+# 5 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-node --test main_tests_command_surface_parity_contract --test runtime_proof_index_contract --test restart_persistence_proof_contract --all-features -- -D warnings
+# passed
+
+rg -n "\{\}" crates/kamn-node/tests/main_tests_command_surface_parity_contract.rs crates/kamn-node/tests/runtime_proof_index_contract.rs crates/kamn-node/tests/restart_persistence_proof_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-command-proof-doc-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
