@@ -163,6 +163,10 @@ Output:
   doc contract assertions after the gate reaches later test targets; the fix
   must keep the same required selectors, doc markers, and reason-code proof
   semantics.
+- Newer strict CI clippy may continue into service API endpoint module
+  extraction contract assertions after the gate reaches later kamn-node test
+  targets; the fix must keep the same module, OpenAPI-marker, and line-budget
+  proof semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -282,6 +286,9 @@ Output:
   persistence proof contract assertions are strict-clippy clean under CI
   without changing required selectors, doc markers, or reason-code proof
   semantics.
+- Service API endpoint module extraction assertions are strict-clippy clean
+  under CI without changing module declarations, OpenAPI markers, or line-budget
+  proof semantics.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -338,6 +345,7 @@ Likely:
 - `crates/kamn-node/tests/main_tests_command_surface_parity_contract.rs`
 - `crates/kamn-node/tests/runtime_proof_index_contract.rs`
 - `crates/kamn-node/tests/restart_persistence_proof_contract.rs`
+- `crates/kamn-node/tests/service_api_endpoint_module_extraction_contract.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -733,6 +741,38 @@ git diff --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-command-proof-doc-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+
+gh api repos/njfio/kamn/actions/jobs/83948726724/logs
+# Fast Gate reached late Lint (strict) and failed on
+# `crates/kamn-node/tests/service_api_endpoint_module_extraction_contract.rs`
+# with `clippy::uninlined_format_args`.
+
+cargo test -p kamn-node --test service_api_endpoint_module_extraction_contract -- --nocapture
+# 5 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-node --test service_api_endpoint_module_extraction_contract --all-features -- -D warnings
+# passed
+
+rg -n "\{\}" crates/kamn-node/tests/service_api_endpoint_module_extraction_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-service-api-endpoint-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none

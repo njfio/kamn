@@ -52,9 +52,7 @@ fn conformance_service_api_endpoint_root_stays_within_line_budget() {
 
     assert!(
         root_lines <= max_root_lines,
-        "service_api_endpoint.rs root exceeded line budget: {} > {}",
-        root_lines,
-        max_root_lines
+        "service_api_endpoint.rs root exceeded line budget: {root_lines} > {max_root_lines}"
     );
 }
 
@@ -86,10 +84,10 @@ fn conformance_service_api_endpoint_submodule_files_exist() {
         "src/service_api_endpoint/websocket.rs",
     ] {
         let full_path = manifest_dir.join(path);
+        let full_path_display = full_path.display();
         assert!(
             full_path.exists(),
-            "expected service_api_endpoint submodule file missing: {}",
-            full_path.display()
+            "expected service_api_endpoint submodule file missing: {full_path_display}"
         );
     }
 }
