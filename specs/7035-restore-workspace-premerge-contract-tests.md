@@ -136,6 +136,9 @@ Output:
 - Newer strict CI clippy may reject uninlined `format!` arguments or default
   insertion helpers that the local toolchain does not flag yet; the fix must
   satisfy CI without adding allows or weakening `-D warnings`.
+- Newer strict CI clippy may also reject MCP JSON-RPC protocol response
+  formatting that local cached workspace checks did not revisit before CI; the
+  fix must keep the emitted response JSON unchanged.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -220,6 +223,8 @@ Output:
   block-pipeline schema errors, zk planning text, and native p2p queue
   insertion are strict-clippy clean under CI without changing emitted strings or
   behavior.
+- MCP JSON-RPC success response rendering is strict-clippy clean under CI
+  without changing the emitted response envelope.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -283,6 +288,7 @@ Likely:
 - `crates/kamn-core/src/p2p_transport/native_runtime.rs`
 - `crates/kamn-core/src/task_lifecycle.rs`
 - `crates/kamn-core/src/zk_message_proofs/planning/recommendation.rs`
+- `crates/kamn-mcp-server/src/protocol.rs`
 - `fixtures/ci/test_file_size_policy_baseline.env`
 
 Git history may also need a local fold of spec-only checkpoint commits into
@@ -323,6 +329,7 @@ cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::
 cargo mutants -p kamn-core --file crates/kamn-core/src/group_channel_crypto/engine/sealing/encrypt.rs --re 'encrypt\.rs:([0-9]+:[0-9]+): replace == with !=' --output /tmp/kamn-mutants-core-group-channel-crypto --copy-vcs true --cargo-test-arg --lib --cargo-test-arg group_channel_crypto::tests::encrypt_requires_key_agreement_seed --timeout 900
 cargo mutants -p kamn-node --file crates/kamn-node/src/service_api_endpoint.rs --re 'ServiceApiReplayGuard::record_nonce_if_fresh -> bool with (true|false)' --output /tmp/kamn-mutants-node-service-api-endpoint --copy-vcs true --cargo-test-arg --bin --cargo-test-arg kamn-node --cargo-test-arg main_tests::service_api_endpoint_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender --timeout 900
 gh api repos/njfio/kamn/actions/jobs/83917258068/logs
+gh api repos/njfio/kamn/actions/jobs/83923030478/logs
 ```
 
 Green verification:
@@ -348,6 +355,7 @@ cargo test -p kamn-core --test critical_path_mutation_gate_contract -- --nocaptu
 bash scripts/ci/test_run_critical_path_mutation_gate.sh
 bash scripts/ci/run_critical_path_mutation_gate.sh --output-json /tmp/kamn-critical-path-mutation-7035-final.json --timeout-seconds 900
 cargo clippy -p kamn-crypto --all-targets --all-features -- -D warnings
+cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
 cargo test --workspace --locked --all-features --no-fail-fast
 make check
@@ -410,4 +418,30 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 
 cargo test -p kamn-core --lib data_layer_m4_escrow_integration -- --nocapture
 # 2 passed
+
+gh api repos/njfio/kamn/actions/jobs/83923030478/logs
+# Fast Gate strict clippy exited 101 on `crates/kamn-mcp-server/src/protocol.rs:389`
+# with `clippy::uninlined_format_args`; the same Fast Gate run also exceeded
+# its elapsed budget after the failed lint lane.
+
+cargo fmt --check
+# passed
+
+cargo test -p kamn-mcp-server --lib protocol -- --nocapture
+# 8 passed
+
+cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
+# passed
+
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-mcp-protocol-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+make check
+# passed
 ```
