@@ -43,7 +43,7 @@ fn tools_list_body() -> String {
 fn assert_tools_inventory(body: &str) {
     assert!(body.contains(r#""tools""#));
     for name in tool_names() {
-        assert!(body.contains(&format!(r#""name":"{}""#, name)));
+        assert!(body.contains(&format!(r#""name":"{name}""#)));
     }
 }
 

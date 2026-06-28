@@ -142,6 +142,13 @@ Output:
 - Newer strict CI clippy may continue into MCP test fixture response builders
   after the protocol response fix; the fix must keep every fixture payload
   shape unchanged.
+- Newer strict CI clippy may also report the same fixture response-builder
+  pattern in extracted MCP stdio protocol support and request helpers; the fix
+  must keep framed request/response JSON unchanged.
+- Remaining MCP test framing helpers and payload-length fixture builders may
+  keep the same old-style format shape even when the current local toolchain
+  does not flag them; normalize them proactively to avoid another CI-only
+  strict-clippy round.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -230,6 +237,10 @@ Output:
   without changing the emitted response envelope.
 - MCP tool-dispatch fixture response builders are strict-clippy clean under CI
   without changing structured fixture payloads.
+- MCP stdio protocol fixture response builders and request helpers are
+  strict-clippy clean under CI without changing framed protocol payloads.
+- MCP test framing helpers and payload-length fixture builders are normalized
+  to strict-clippy style without changing HTTP, stdio, or fixture JSON payloads.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -295,6 +306,12 @@ Likely:
 - `crates/kamn-core/src/zk_message_proofs/planning/recommendation.rs`
 - `crates/kamn-mcp-server/src/protocol.rs`
 - `crates/kamn-mcp-server/tests/tool_dispatch_contract.rs`
+- `crates/kamn-mcp-server/tests/stdio_protocol_contract/support.rs`
+- `crates/kamn-mcp-server/tests/stdio_protocol_contract/tool_dispatch_contract_tests.rs`
+- `crates/kamn-mcp-server/tests/stdio_protocol_contract/initialize_inventory_contract_tests.rs`
+- `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
+- `crates/kamn-mcp-server/tests/main_stdio_persistent_contract.rs`
+- `crates/kamn-mcp-server/tests/tool_inventory_contract.rs`
 - `fixtures/ci/test_file_size_policy_baseline.env`
 
 Git history may also need a local fold of spec-only checkpoint commits into
@@ -364,6 +381,7 @@ bash scripts/ci/run_critical_path_mutation_gate.sh --output-json /tmp/kamn-criti
 cargo clippy -p kamn-crypto --all-targets --all-features -- -D warnings
 cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
 cargo test -p kamn-mcp-server --test tool_dispatch_contract -- --nocapture
+cargo test -p kamn-mcp-server --test stdio_protocol_contract -- --nocapture
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
 cargo test --workspace --locked --all-features --no-fail-fast
 make check
@@ -468,6 +486,34 @@ cargo fmt --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-mcp-tool-dispatch-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+
+gh api repos/njfio/kamn/actions/jobs/83927107079/logs
+# Fast Gate strict clippy reported `clippy::uninlined_format_args` in
+# `crates/kamn-mcp-server/tests/stdio_protocol_contract/support.rs` and
+# `crates/kamn-mcp-server/tests/stdio_protocol_contract/tool_dispatch_contract_tests.rs`.
+# The same run exceeded the fast-gate elapsed budget after lint cancellation.
+
+cargo test -p kamn-mcp-server --test stdio_protocol_contract --test tool_dispatch_contract --test tool_inventory_contract --test main_stdio_persistent_contract --test real_backend_integration_contract -- --nocapture
+# 35 passed
+
+cargo clean -p kamn-mcp-server
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
+# passed
+
+cargo fmt --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-mcp-stdio-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none

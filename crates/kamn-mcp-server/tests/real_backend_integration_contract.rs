@@ -73,10 +73,9 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
         404 => "404 Not Found",
         _ => "500 Internal Server Error",
     };
+    let body_len = body.len();
     let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(),
-        body
+        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n{body}"
     );
     stream
         .write_all(payload.as_bytes())
@@ -238,7 +237,8 @@ fn real_backend(bind_addr: &str) -> KamnAgentHandle {
 }
 
 fn frame_request(body: &str) -> String {
-    format!("Content-Length: {}\r\n\r\n{}", body.len(), body)
+    let body_len = body.len();
+    format!("Content-Length: {body_len}\r\n\r\n{body}")
 }
 
 fn parse_framed_json(response: &str) -> String {

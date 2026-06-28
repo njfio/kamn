@@ -10,11 +10,13 @@ impl McpToolBackend for TestBackend {
     }
 
     fn send_message(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"message_id":"msg-{}"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(r#"{{"message_id":"msg-{payload_len}"}}"#))
     }
 
     fn create_channel(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"channel_id":"channel-{}"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(r#"{{"channel_id":"channel-{payload_len}"}}"#))
     }
 
     fn list_messages(&self, channel_id: &str) -> Result<String, AgentLibError> {
@@ -38,9 +40,9 @@ impl McpToolBackend for TestBackend {
     }
 
     fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
+        let payload_len = payload.len();
         Ok(format!(
-            r#"{{"content_id":"content-{}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#,
-            payload.len()
+            r#"{{"content_id":"content-{payload_len}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#
         ))
     }
 
@@ -63,10 +65,9 @@ impl McpToolBackend for TestBackend {
     }
 
     fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError> {
+        let payload_len = payload.len();
         Ok(format!(
-            r#"{{"bridge_id":"bridge-{}","source_message_id":"source-{}","bridge_status":"submitted"}}"#,
-            payload.len(),
-            payload.len()
+            r#"{{"bridge_id":"bridge-{payload_len}","source_message_id":"source-{payload_len}","bridge_status":"submitted"}}"#
         ))
     }
 
@@ -83,7 +84,8 @@ impl McpToolBackend for TestBackend {
     }
 
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"task-{}"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(r#"{{"task_id":"task-{payload_len}"}}"#))
     }
 
     fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
@@ -95,9 +97,9 @@ impl McpToolBackend for TestBackend {
     }
 
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
+        let payload_len = payload.len();
         Ok(format!(
-            r#"{{"escrow_id":"escrow-{}","state":"funded"}}"#,
-            payload.len()
+            r#"{{"escrow_id":"escrow-{payload_len}","state":"funded"}}"#
         ))
     }
 

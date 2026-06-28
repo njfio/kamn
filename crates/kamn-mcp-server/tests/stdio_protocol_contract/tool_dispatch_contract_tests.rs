@@ -111,8 +111,7 @@ fn assert_query_bridge_dispatch() {
 fn dispatch_tool_call_body(request_id: &str, tool_name: &str, arguments: &str) -> String {
     let backend = ProtocolBackend;
     let request = frame_request(&format!(
-        r#"{{"jsonrpc":"2.0","id":"{}","method":"tools/call","params":{{"name":"{}","arguments":{}}}}}"#,
-        request_id, tool_name, arguments
+        r#"{{"jsonrpc":"2.0","id":"{request_id}","method":"tools/call","params":{{"name":"{tool_name}","arguments":{arguments}}}}}"#
     ));
     let responses = process_stdio_input(&backend, request.as_str()).expect("input should parse");
     parse_framed_json(responses[0].as_str())

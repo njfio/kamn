@@ -57,8 +57,8 @@ fn spec_c04_mcp_tool_registry_has_deterministic_schema_descriptors() {
         );
         assert!(
             input_schema.get("properties").is_some(),
-            "input schema should expose properties for {}",
-            tool.name
+            "input schema should expose properties for {tool_name}",
+            tool_name = tool.name
         );
         assert_eq!(
             output_schema
@@ -69,8 +69,8 @@ fn spec_c04_mcp_tool_registry_has_deterministic_schema_descriptors() {
         );
         assert!(
             output_schema.get("properties").is_some(),
-            "output schema should expose deterministic envelope properties for {}",
-            tool.name
+            "output schema should expose deterministic envelope properties for {tool_name}",
+            tool_name = tool.name
         );
     }
 }

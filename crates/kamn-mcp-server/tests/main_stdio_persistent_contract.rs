@@ -3,7 +3,8 @@ use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn frame_request(body: &str) -> String {
-    format!("Content-Length: {}\r\n\r\n{}", body.len(), body)
+    let body_len = body.len();
+    format!("Content-Length: {body_len}\r\n\r\n{body}")
 }
 
 fn read_framed_response(reader: &mut BufReader<impl Read>) -> String {
@@ -45,10 +46,10 @@ fn temp_key_file_path() -> String {
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be monotonic")
         .as_nanos();
+    let process_id = std::process::id();
     std::env::temp_dir()
         .join(format!(
-            "kamn-mcp-server-main-stdio-persistent-{nanos}-{}.key",
-            std::process::id()
+            "kamn-mcp-server-main-stdio-persistent-{nanos}-{process_id}.key"
         ))
         .to_str()
         .expect("temp key path should be utf-8")
@@ -124,10 +125,10 @@ fn spec_c10_main_stdio_session_processes_multiple_framed_requests_without_eof() 
     let output = child
         .wait_with_output()
         .expect("mcp server should terminate after stdin closes");
+    let stderr = String::from_utf8_lossy(output.stderr.as_slice());
     assert!(
         output.status.success(),
-        "mcp server should exit cleanly after persistent session; stderr={}",
-        String::from_utf8_lossy(output.stderr.as_slice())
+        "mcp server should exit cleanly after persistent session; stderr={stderr}"
     );
     let _ = std::fs::remove_file(key_file.as_str());
 }
