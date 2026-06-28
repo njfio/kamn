@@ -19,27 +19,22 @@ impl McpToolBackend for TestBackend {
 
     fn list_messages(&self, channel_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"channel_id":"{}","messages":["msg-a","msg-b"]}}"#,
-            channel_id
+            r#"{{"channel_id":"{channel_id}","messages":["msg-a","msg-b"]}}"#
         ))
     }
 
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"message_id":"{}","status":"created"}}"#,
-            message_id
+            r#"{{"message_id":"{message_id}","status":"created"}}"#
         ))
     }
 
     fn query_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(
-            r#"{{"task_id":"{}","state":"submitted"}}"#,
-            task_id
-        ))
+        Ok(format!(r#"{{"task_id":"{task_id}","state":"submitted"}}"#))
     }
 
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"did":"{}","reputation_score":777}}"#, did))
+        Ok(format!(r#"{{"did":"{did}","reputation_score":777}}"#))
     }
 
     fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
@@ -51,22 +46,19 @@ impl McpToolBackend for TestBackend {
 
     fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"content_id":"{}","lifecycle_state":"expired","redaction_status":"none"}}"#,
-            content_id
+            r#"{{"content_id":"{content_id}","lifecycle_state":"expired","redaction_status":"none"}}"#
         ))
     }
 
     fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
-            content_id
+            r#"{{"content_id":"{content_id}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#
         ))
     }
 
     fn query_content(&self, content_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
-            content_id
+            r#"{{"content_id":"{content_id}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#
         ))
     }
 
@@ -80,15 +72,13 @@ impl McpToolBackend for TestBackend {
 
     fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
-            bridge_id, bridge_id, bridge_id
+            r#"{{"bridge_id":"{bridge_id}","bridge_status":"forwarded","target_message_id":"target-{bridge_id}","forward_tx_hash":"sha256:bridge-{bridge_id}"}}"#
         ))
     }
 
     fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
-            bridge_id, bridge_id, bridge_id
+            r#"{{"bridge_id":"{bridge_id}","bridge_status":"forwarded","target_message_id":"target-{bridge_id}","forward_tx_hash":"sha256:bridge-{bridge_id}"}}"#
         ))
     }
 
@@ -97,14 +87,11 @@ impl McpToolBackend for TestBackend {
     }
 
     fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{}","state":"accepted"}}"#, task_id))
+        Ok(format!(r#"{{"task_id":"{task_id}","state":"accepted"}}"#))
     }
 
     fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(
-            r#"{{"task_id":"{}","state":"completed"}}"#,
-            task_id
-        ))
+        Ok(format!(r#"{{"task_id":"{task_id}","state":"completed"}}"#))
     }
 
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
@@ -116,8 +103,7 @@ impl McpToolBackend for TestBackend {
 
     fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"escrow_id":"{}","state":"released"}}"#,
-            escrow_id
+            r#"{{"escrow_id":"{escrow_id}","state":"released"}}"#
         ))
     }
 
@@ -136,8 +122,7 @@ impl McpToolBackend for TestBackend {
             || finality.eq_ignore_ascii_case("finalized")
             || finality.eq_ignore_ascii_case("confirmed");
         Ok(format!(
-            r#"{{"message_id":"{}","tx_hash":"{}","block_height":{},"finality":"{}","verified":{}}}"#,
-            message_id, tx_hash, block_height, finality, verified
+            r#"{{"message_id":"{message_id}","tx_hash":"{tx_hash}","block_height":{block_height},"finality":"{finality}","verified":{verified}}}"#
         ))
     }
 }

@@ -139,6 +139,9 @@ Output:
 - Newer strict CI clippy may also reject MCP JSON-RPC protocol response
   formatting that local cached workspace checks did not revisit before CI; the
   fix must keep the emitted response JSON unchanged.
+- Newer strict CI clippy may continue into MCP test fixture response builders
+  after the protocol response fix; the fix must keep every fixture payload
+  shape unchanged.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -225,6 +228,8 @@ Output:
   behavior.
 - MCP JSON-RPC success response rendering is strict-clippy clean under CI
   without changing the emitted response envelope.
+- MCP tool-dispatch fixture response builders are strict-clippy clean under CI
+  without changing structured fixture payloads.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -289,6 +294,7 @@ Likely:
 - `crates/kamn-core/src/task_lifecycle.rs`
 - `crates/kamn-core/src/zk_message_proofs/planning/recommendation.rs`
 - `crates/kamn-mcp-server/src/protocol.rs`
+- `crates/kamn-mcp-server/tests/tool_dispatch_contract.rs`
 - `fixtures/ci/test_file_size_policy_baseline.env`
 
 Git history may also need a local fold of spec-only checkpoint commits into
@@ -330,6 +336,7 @@ cargo mutants -p kamn-core --file crates/kamn-core/src/group_channel_crypto/engi
 cargo mutants -p kamn-node --file crates/kamn-node/src/service_api_endpoint.rs --re 'ServiceApiReplayGuard::record_nonce_if_fresh -> bool with (true|false)' --output /tmp/kamn-mutants-node-service-api-endpoint --copy-vcs true --cargo-test-arg --bin --cargo-test-arg kamn-node --cargo-test-arg main_tests::service_api_endpoint_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender --timeout 900
 gh api repos/njfio/kamn/actions/jobs/83917258068/logs
 gh api repos/njfio/kamn/actions/jobs/83923030478/logs
+gh api repos/njfio/kamn/actions/jobs/83925054489/logs
 ```
 
 Green verification:
@@ -356,6 +363,7 @@ bash scripts/ci/test_run_critical_path_mutation_gate.sh
 bash scripts/ci/run_critical_path_mutation_gate.sh --output-json /tmp/kamn-critical-path-mutation-7035-final.json --timeout-seconds 900
 cargo clippy -p kamn-crypto --all-targets --all-features -- -D warnings
 cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
+cargo test -p kamn-mcp-server --test tool_dispatch_contract -- --nocapture
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
 cargo test --workspace --locked --all-features --no-fail-fast
 make check
@@ -441,6 +449,32 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # policy_decision=GO
 # offending_files=none
 # offending_functions=none
+
+make check
+# passed
+
+gh api repos/njfio/kamn/actions/jobs/83925054489/logs
+# Fast Gate strict clippy exited 101 on
+# `crates/kamn-mcp-server/tests/tool_dispatch_contract.rs` fixture response
+# builders with `clippy::uninlined_format_args`.
+
+cargo test -p kamn-mcp-server --test tool_dispatch_contract -- --nocapture
+# 9 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
+# passed after `cargo clean -p kamn-mcp-server`
+
+cargo fmt --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-mcp-tool-dispatch-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
 
 make check
 # passed
