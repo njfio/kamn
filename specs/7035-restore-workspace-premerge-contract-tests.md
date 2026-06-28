@@ -152,6 +152,10 @@ Output:
 - Newer strict CI clippy may continue into kamn-node extraction-budget contract
   assertions after MCP fixture cleanup; the fix must keep the same budget
   assertion and source-marker proof semantics.
+- Newer strict CI clippy may continue into durable cross-node relay slice
+  doc-marker contract assertions after the gate reaches later kamn-node test
+  targets; the fix must keep the same required marker list and doc proof
+  semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -262,6 +266,8 @@ Output:
   to strict-clippy style without changing HTTP, stdio, or fixture JSON payloads.
 - Message-store runtime-evidence extraction budget assertions are strict-clippy
   clean under CI without changing line-budget or marker checks.
+- Durable cross-node relay slice doc-marker assertions are strict-clippy clean
+  under CI without changing the required marker list or doc proof semantics.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -617,6 +623,32 @@ git diff --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-final-fast-gate-split.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+
+gh api repos/njfio/kamn/actions/jobs/83944719211/logs
+# Fast Gate reached Format check and then failed Lint (strict) on
+# `crates/kamn-node/tests/durable_cross_node_relay_slice_contract.rs` with
+# `clippy::uninlined_format_args`.
+
+cargo test -p kamn-node --test durable_cross_node_relay_slice_contract -- --nocapture
+# 1 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-node --test durable_cross_node_relay_slice_contract --all-features -- -D warnings
+# passed
+
+cargo fmt --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-durable-cross-node-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
