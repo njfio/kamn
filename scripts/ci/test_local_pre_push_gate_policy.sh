@@ -39,6 +39,14 @@ if [ -z "$pre_push_target" ]; then
 fi
 
 for marker in \
+  "PRE_PUSH_PYTHON3_CANDIDATES" \
+  "python@3.12/libexec/bin/python3"; do
+  if ! grep -Fq "$marker" "$MAKEFILE"; then
+    fail "expected Makefile to include local pre-push python selector marker: $marker"
+  fi
+done
+
+for marker in \
   "PRE_PUSH_PYTHON3" \
   "import cryptography" \
   "tomllib" \

@@ -1,5 +1,6 @@
 SHELL := /bin/bash
-PRE_PUSH_PYTHON3 ?= $(shell for py in python3 .venv/bin/python /opt/homebrew/opt/python@3.12/bin/python3.12 /usr/bin/python3 /Applications/Xcode.app/Contents/Developer/usr/bin/python3; do if command -v "$$py" >/dev/null 2>&1 && "$$py" -c "import cryptography, tomllib" >/dev/null 2>&1; then command -v "$$py"; break; fi; done)
+PRE_PUSH_PYTHON3_CANDIDATES := python3 .venv/bin/python3 /opt/homebrew/opt/python@3.12/libexec/bin/python3 /usr/bin/python3 /Applications/Xcode.app/Contents/Developer/usr/bin/python3
+PRE_PUSH_PYTHON3 ?= $(shell for py in $(PRE_PUSH_PYTHON3_CANDIDATES); do if command -v "$$py" >/dev/null 2>&1 && "$$py" -c "import cryptography, tomllib" >/dev/null 2>&1; then command -v "$$py"; break; fi; done)
 PRE_PUSH_PYTHON3_DIR := $(dir $(PRE_PUSH_PYTHON3))
 PRE_PUSH_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(PATH)"
 
