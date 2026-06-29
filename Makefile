@@ -1,4 +1,7 @@
 SHELL := /bin/bash
+PRE_PUSH_PYTHON3 ?= $(shell for py in python3 .venv/bin/python /usr/bin/python3 /opt/homebrew/opt/python@3.12/bin/python3.12 /Applications/Xcode.app/Contents/Developer/usr/bin/python3; do if command -v "$$py" >/dev/null 2>&1 && "$$py" -c "import cryptography" >/dev/null 2>&1; then command -v "$$py"; break; fi; done)
+PRE_PUSH_PYTHON3_DIR := $(dir $(PRE_PUSH_PYTHON3))
+PRE_PUSH_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(PATH)"
 
 .PHONY: help check test pre-push smoke-live-network deep-live-network demo demo-localhost-transport ci-tools kolme-local-heavy kolme-fork-rust-tests-local
 
@@ -24,23 +27,25 @@ test:
 	cargo test
 
 pre-push:
-	$(MAKE) check
-	$(MAKE) ci-tools
-	bash scripts/ci/check_touched_rust_size_policy.sh \
+	@if [ -z "$(PRE_PUSH_PYTHON3)" ]; then echo "make pre-push requires a python3 interpreter with cryptography installed" >&2; exit 2; fi
+	@"$(PRE_PUSH_PYTHON3)" -c "import cryptography"
+	$(PRE_PUSH_ENV) $(MAKE) check
+	$(PRE_PUSH_ENV) $(MAKE) ci-tools
+	$(PRE_PUSH_ENV) bash scripts/ci/check_touched_rust_size_policy.sh \
 		--base-ref main \
 		--threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json \
 		--baseline-file fixtures/ci/touched_rust_size_policy_baseline.json \
 		--output-json /tmp/kamn-touched-rust-size-policy-pre-push.json
-	bash scripts/ci/run_with_retry.sh \
+	$(PRE_PUSH_ENV) bash scripts/ci/run_with_retry.sh \
 		--label local-pre-push-workspace-tests \
 		--max-attempts 2 \
 		-- bash -lc "bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test --workspace --locked --all-features --no-fail-fast"
-	bash scripts/ci/run_critical_path_coverage_gate.sh \
+	$(PRE_PUSH_ENV) bash scripts/ci/run_critical_path_coverage_gate.sh \
 		--threshold-file .ci/critical-path-coverage-thresholds.json \
 		--core-json /tmp/kamn-critical-path-core-coverage-pre-push.json \
 		--node-json /tmp/kamn-critical-path-node-coverage-pre-push.json \
 		--output-json /tmp/kamn-critical-path-coverage-policy-pre-push.json
-	bash scripts/ci/run_critical_path_mutation_gate.sh \
+	$(PRE_PUSH_ENV) bash scripts/ci/run_critical_path_mutation_gate.sh \
 		--output-json /tmp/kamn-critical-path-mutation-report-pre-push.json \
 		--timeout-seconds 900
 

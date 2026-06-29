@@ -39,6 +39,8 @@ if [ -z "$pre_push_target" ]; then
 fi
 
 for marker in \
+  "PRE_PUSH_PYTHON3" \
+  "import cryptography" \
   "\$(MAKE) check" \
   "\$(MAKE) ci-tools" \
   "cargo test --workspace --locked --all-features --no-fail-fast" \

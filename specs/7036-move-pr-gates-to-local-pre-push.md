@@ -161,6 +161,20 @@ Integration/Proof:
 - `bash -n scripts/ci/test_local_pre_push_gate_policy.sh` passes.
 - `cargo fmt --check` passes.
 
+## Integration Evidence
+
+- Initial `make pre-push` failed inside `make ci-tools` at
+  `scripts/runtime/test_check_service_api_axum_ingress_live_evidence_convergence.sh`
+  because the default Homebrew `python3.14` did not provide `cryptography`.
+- The local machine already has `/usr/bin/python3` resolving to Xcode Python
+  with `cryptography 48.0.1`; `make pre-push` now selects an existing
+  cryptography-capable Python and prepends it to PATH for the local gate run.
+- `bash scripts/ci/test_local_pre_push_gate_policy.sh` passes after adding the
+  Python preflight marker.
+- `make -n pre-push` shows `/usr/bin/python3` for the cryptography preflight
+  and PATH-prefixed local gate commands.
+- `git diff --check` passes after the Python selection change.
+
 ## Shell-Surface DoD
 
 - `shell_loc_delta_actual: TBD`
