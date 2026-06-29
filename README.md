@@ -136,6 +136,18 @@ Managed-signer startup validation anchors:
 - `ci_local_promotion_budget_boundary_status=verified`
 - `execution_scope=local-scheduled`
 
+Live-provider runtime integration anchors:
+- `run_local_live_provider_runtime_integration_contract_lane.sh`
+- `run_local_runtime_commit_live_lane.sh`
+- `check_local_runtime_commit_live_evidence_policy.py`
+- `provider_client_contract=KolmeRuntimeCommitLiveProvider`
+- `provider_client_contract_mismatch`
+- `provider_in_memory_reference_detected`
+- `provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter`
+- `provider_signer_adapter_contract_mismatch`
+- `live_preflight_failed`
+- `live_preflight_timeout`
+
 ## Key Links
 
 - CI strategy: `docs/ci/strategy.md`
