@@ -42,11 +42,12 @@ pub(super) fn lock_managed_backend_env() -> std::sync::MutexGuard<'static, ()> {
 }
 
 pub(super) fn unique_temp_path(prefix: &str, suffix: &str) -> PathBuf {
+    let process_id = std::process::id();
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be after unix epoch")
         .as_nanos();
-    env::temp_dir().join(format!("{prefix}-{}-{nanos}{suffix}", std::process::id()))
+    env::temp_dir().join(format!("{prefix}-{process_id}-{nanos}{suffix}"))
 }
 
 pub(super) fn write_managed_signer_script(script_body: &str) -> PathBuf {
@@ -92,8 +93,7 @@ pub(super) fn managed_signer_printf_command(
     signer_public_key_hex: &str,
 ) -> String {
     format!(
-        "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
-        signature_hex, recovery_id, signer_public_key_hex
+        "printf 'signature_hex={signature_hex}\\nrecovery_id={recovery_id}\\nsigner_public_key_hex={signer_public_key_hex}\\n'"
     )
 }
 
@@ -102,10 +102,8 @@ pub(super) fn managed_signer_printf_script(
     recovery_id: u8,
     signer_public_key_hex: &str,
 ) -> String {
-    format!(
-        "{}\n",
-        managed_signer_printf_command(signature_hex, recovery_id, signer_public_key_hex)
-    )
+    let command = managed_signer_printf_command(signature_hex, recovery_id, signer_public_key_hex);
+    format!("{command}\n")
 }
 
 pub(super) fn managed_signer_command_guard(command: &str) -> EnvVarGuard {

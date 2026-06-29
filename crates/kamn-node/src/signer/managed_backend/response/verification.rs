@@ -12,10 +12,9 @@ pub(super) fn verify_public_key_match(
     if constant_time_eq_bytes(actual.as_slice(), expected.as_slice()) {
         return Ok(());
     }
+    let actual_signer_public_key_hex = backend_signature.signer_public_key_hex.as_str();
     Err(ConfigError::RuntimeKolmeLive(format!(
-        "managed-external signer backend response signer_public_key_hex does not match expected runtime signer key material (expected={}, found={}) (managed_signer_backend_response_provenance_mismatch)",
-        expected_signer_public_key_hex,
-        backend_signature.signer_public_key_hex,
+        "managed-external signer backend response signer_public_key_hex does not match expected runtime signer key material (expected={expected_signer_public_key_hex}, found={actual_signer_public_key_hex}) (managed_signer_backend_response_provenance_mismatch)",
     )))
 }
 
@@ -50,8 +49,7 @@ fn parse_backend_signature(
 fn parse_backend_recovery_id(recovery_id: u8) -> Result<RecoveryId, ConfigError> {
     RecoveryId::from_byte(recovery_id).ok_or_else(|| {
         ConfigError::RuntimeKolmeLive(format!(
-            "managed-external signer backend response recovery_id must be within secp256k1 range [0,3], found {} (managed_signer_backend_response_malformed)",
-            recovery_id
+            "managed-external signer backend response recovery_id must be within secp256k1 range [0,3], found {recovery_id} (managed_signer_backend_response_malformed)"
         ))
     })
 }

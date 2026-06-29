@@ -171,6 +171,19 @@ Output:
   reason-code formatting after the gate reaches later kamn-node test targets;
   the fix must keep the same budget thresholds, reason taxonomy, and detail
   payload semantics.
+- Newer strict CI clippy may continue into working vertical slice doc/root/test
+  marker assertions after the gate reaches later kamn-node contract tests; the
+  fix must keep the same local proof markers and integration-test wiring
+  semantics.
+- Newer strict CI clippy may report uninlined arguments in service API websocket
+  mode validation, managed signer key material and response verification, and
+  managed signer test helpers; the fix must keep emitted runtime errors and
+  fixture command payloads unchanged.
+- Newer strict CI clippy may report uninlined arguments in live Postgres
+  projection/topology contracts, observability readiness metrics, task escrow
+  endpoint shutdown checks, and signer managed-external helpers; the fix must
+  keep reason-code, metrics, topology, shutdown, and signer payload semantics
+  unchanged.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -296,6 +309,15 @@ Output:
 - Main-tests surface-budget contract formatting is strict-clippy clean under
   CI without changing budget thresholds, reason taxonomy, or detail payload
   semantics.
+- Working vertical slice proof-marker assertions are strict-clippy clean under
+  CI without changing the doc markers, root module wiring assertion, or
+  integration-test marker semantics.
+- Service API websocket mode validation and managed signer runtime errors are
+  strict-clippy clean under CI without changing their emitted messages.
+- Live Postgres projection/topology, observability readiness, task escrow
+  shutdown, and managed signer helper payloads are strict-clippy clean under CI
+  without changing their reason codes, metric strings, topology checks, or
+  fixture command output.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -354,6 +376,16 @@ Likely:
 - `crates/kamn-node/tests/restart_persistence_proof_contract.rs`
 - `crates/kamn-node/tests/service_api_endpoint_module_extraction_contract.rs`
 - `crates/kamn-node/tests/main_tests_surface_budget_contract.rs`
+- `crates/kamn-node/tests/working_vertical_slice_contract.rs`
+- `crates/kamn-node/src/service_api_endpoint/websocket.rs`
+- `crates/kamn-node/src/signer/managed_backend/key_material.rs`
+- `crates/kamn-node/src/signer/managed_backend/response/verification.rs`
+- `crates/kamn-node/src/signer/managed_backend/tests/support.rs`
+- `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contract_tests/projection_taxonomy_contract_tests.rs`
+- `crates/kamn-node/src/main_tests/daemon_tests/live_postgres_topology_contract_tests/topology_mapping_contract_tests/host_pair_directionality_contract_tests.rs`
+- `crates/kamn-node/src/main_tests/observability_endpoint_tests/endpoint_runtime_contract_tests/readiness_contract_tests.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/support/state_support.rs`
+- `crates/kamn-node/src/main_tests/signer_tests/signer_managed_external_contract_tests/support.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -813,6 +845,82 @@ git diff --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-main-tests-surface-budget-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-28 for head
+`289ac953ba8f571be4c773c4d606e1deb858bb51` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83951144588/logs
+# Fast Gate reached late Lint (strict) and failed on
+# `clippy::uninlined_format_args` in:
+# - `crates/kamn-node/tests/working_vertical_slice_contract.rs`
+# - `crates/kamn-node/src/service_api_endpoint/websocket.rs`
+# - `crates/kamn-node/src/signer/managed_backend/key_material.rs`
+# - `crates/kamn-node/src/signer/managed_backend/response/verification.rs`
+# - `crates/kamn-node/src/signer/managed_backend/tests/support.rs`
+# - live Postgres, observability, task-escrow, and signer main-test helpers.
+
+cargo test -p kamn-node --test working_vertical_slice_contract -- --nocapture
+# 3 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-node --test working_vertical_slice_contract --all-features -- -D warnings
+# passed
+
+cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_contract_is_canonical -- --exact --nocapture
+# 1 passed
+
+cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::host_pair_directionality_contract_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_pair_directionality_contract_is_canonical -- --exact --nocapture
+# 1 passed
+
+cargo test -p kamn-node --bin kamn-node main_tests::observability_endpoint_tests::endpoint_runtime_contract_tests::readiness_contract_tests::functional_observability_endpoint_projects_readiness_reason_code_parity_across_endpoint_surfaces -- --exact --nocapture
+# 1 passed
+
+cargo test -p kamn-node --bin kamn-node main_tests::signer_tests::signer_managed_external_contract_tests::backend_provenance_contract_tests::regression_kolme_live_managed_external_backend_response_rejects_signer_public_key_mismatch -- --exact --nocapture
+# 1 passed
+
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::task_escrow_persistence_contract_tests::task_escrow_routes_contract_tests::integration_service_api_endpoint_persists_task_and_escrow_state_across_routes -- --exact --nocapture
+# 1 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-node --all-targets --all-features -- -D warnings
+# passed
+
+rustup run stable rustc --version
+# rustc 1.89.0 (29483883e 2025-08-04)
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-node --all-targets --all-features -- -D warnings
+# passed
+
+rg -n '"[^\"]*\{\}[^\"]*",|"[^\"]*\{:\?\}[^\"]*",|panic!\("[^\"]*\{\}[^\"]*",|format!\(\s*"[^\"]*\{\}[^\"]*"' \
+  crates/kamn-node/tests/working_vertical_slice_contract.rs \
+  crates/kamn-node/src/service_api_endpoint/websocket.rs \
+  crates/kamn-node/src/signer/managed_backend/key_material.rs \
+  crates/kamn-node/src/signer/managed_backend/response/verification.rs \
+  crates/kamn-node/src/signer/managed_backend/tests/support.rs \
+  crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contract_tests/projection_taxonomy_contract_tests.rs \
+  crates/kamn-node/src/main_tests/daemon_tests/live_postgres_topology_contract_tests/topology_mapping_contract_tests/host_pair_directionality_contract_tests.rs \
+  crates/kamn-node/src/main_tests/observability_endpoint_tests/endpoint_runtime_contract_tests/readiness_contract_tests.rs \
+  crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/support/state_support.rs \
+  crates/kamn-node/src/main_tests/signer_tests/signer_managed_external_contract_tests/support.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-node-runtime-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none

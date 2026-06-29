@@ -266,10 +266,7 @@ pub(super) fn project_websocket_event_payload(
     if !mode.eq_ignore_ascii_case(WS_EVENTS_MODE_PRESENCE) {
         return Err(ServiceApiReasonedError::new(
             REASON_CODE_WS_EVENTS_MODE_INVALID,
-            format!(
-                "invalid websocket events mode header: {}={mode}",
-                REQUEST_WS_EVENTS_MODE_HEADER
-            ),
+            format!("invalid websocket events mode header: {REQUEST_WS_EVENTS_MODE_HEADER}={mode}"),
         ));
     }
     project_presence_mode_payload(headers)

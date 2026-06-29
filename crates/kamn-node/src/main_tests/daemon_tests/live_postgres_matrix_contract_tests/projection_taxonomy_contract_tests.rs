@@ -38,10 +38,7 @@ fn functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_co
     assert_eq!(scenario_csv, LIVE_POSTGRES_MATRIX_SCENARIOS_CSV);
 
     let reason_codes_csv = format!(
-        "{},{},{}",
-        LIVE_POSTGRES_ENV_UNSET_REASON_CODE,
-        LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
-        LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE
+        "{LIVE_POSTGRES_ENV_UNSET_REASON_CODE},{LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE},{LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE}"
     );
     assert_eq!(reason_codes_csv, LIVE_POSTGRES_MATRIX_REASON_CODES_CSV);
     assert_eq!(
