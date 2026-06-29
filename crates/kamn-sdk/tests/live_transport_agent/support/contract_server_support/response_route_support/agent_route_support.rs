@@ -120,13 +120,10 @@ fn registration_payload(
     metadata: &(String, String, Vec<String>),
 ) -> Result<String, String> {
     let (agent_type, model_family, capabilities) = metadata;
+    let capabilities_json = serde_json::to_string(capabilities)
+        .map_err(|error| format!("capability serialization failed: {error}"))?;
     Ok(format!(
-        "{{\"did\":\"{}\",\"reputation_score\":777,\"agent_type\":\"{}\",\"model_family\":\"{}\",\"capabilities\":{}}}",
-        did,
-        agent_type,
-        model_family,
-        serde_json::to_string(capabilities)
-            .map_err(|error| format!("capability serialization failed: {error}"))?
+        "{{\"did\":\"{did}\",\"reputation_score\":777,\"agent_type\":\"{agent_type}\",\"model_family\":\"{model_family}\",\"capabilities\":{capabilities_json}}}"
     ))
 }
 

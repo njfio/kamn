@@ -191,6 +191,10 @@ Output:
   contract-server support response builders after the gate reaches route-family
   fixture targets; the fix must keep the same JSON payloads, HTTP responses,
   deterministic IDs, and route-family fixture semantics.
+- Newer strict CI clippy may continue into SDK live transport agent
+  contract-server support response builders after the gate reaches the
+  `live_transport_agent` test target; the fix must keep the same channel,
+  message, agent registration, and live transport fixture semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -331,6 +335,9 @@ Output:
 - SDK service API client contract-server support response builders are
   strict-clippy clean under CI without changing response payload shapes,
   status codes, deterministic IDs, or route-family behavior.
+- SDK live transport agent contract-server support response builders are
+  strict-clippy clean under CI without changing response payload shapes,
+  registration metadata, or live transport route behavior.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -406,6 +413,9 @@ Likely:
 - `crates/kamn-sdk/tests/service_api_client/support/contract_server_support/message_task_route_support/channel_task_route_support.rs`
 - `crates/kamn-sdk/tests/service_api_client/support/contract_server_support/message_task_route_support/message_route_support.rs`
 - `crates/kamn-sdk/tests/service_api_client/support/contract_server_support/message_task_route_support/task_mutation_route_support.rs`
+- `crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support/response_route_support/agent_route_support.rs`
+- `crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support/response_route_support/channel_route_support.rs`
+- `crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support/response_route_support/message_route_support.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -871,6 +881,51 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-28 for head
+`f7b596910e93552f8115d86be5f3b6c05c74c332` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83957969743/logs
+# Fast Gate reached late Lint (strict) and failed on
+# `clippy::uninlined_format_args` in SDK live transport agent
+# contract-server support response builders:
+# - `response_route_support/channel_route_support.rs`
+# - `response_route_support/message_route_support.rs`
+
+cargo test -p kamn-sdk --test live_transport_agent -- --nocapture
+# 16 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-sdk --test live_transport_agent --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-sdk --test live_transport_agent --all-features -- -D warnings
+# passed
+
+rg -n '"[^\"]*\{\}[^\"]*",|"[^\"]*\{:\?\}[^\"]*",|panic!\("[^\"]*\{\}[^\"]*",|format!\(\s*"[^\"]*\{\}[^\"]*"' crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-sdk-live-transport-agent-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings
 # passed
 
 make check

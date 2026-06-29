@@ -46,10 +46,7 @@ fn write_get_message_response(
         return Ok(false);
     }
     let message_id = path.trim_start_matches("/v1/messages/");
-    let payload = format!(
-        "{{\"message_id\":\"{}\",\"status\":\"created\"}}",
-        message_id
-    );
+    let payload = format!("{{\"message_id\":\"{message_id}\",\"status\":\"created\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }

@@ -33,8 +33,5 @@ fn channel_payload(name: String) -> String {
     if name == "empty-channel" {
         return r#"{"channel_id":"","status":"created"}"#.to_owned();
     }
-    format!(
-        "{{\"channel_id\":\"channel-live-{}\",\"status\":\"created\"}}",
-        name
-    )
+    format!("{{\"channel_id\":\"channel-live-{name}\",\"status\":\"created\"}}")
 }
