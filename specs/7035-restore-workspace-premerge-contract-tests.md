@@ -260,6 +260,10 @@ Output:
 - Newer strict CI clippy may continue into the R53 review docs contract after
   message lifecycle cleanup; normalize the schema-marker cap assertion without
   changing review README marker-count limits or review governance semantics.
+- Newer strict CI clippy may continue into the node test-surface ownership docs
+  contract after R53 cleanup; normalize taxonomy-marker and guard-command
+  assertion formatting without changing ownership taxonomy, reason codes, or
+  required guard command semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1029,6 +1033,49 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`5350c58bffd3b5d4cae4c448be8815e61c25ccbe` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/84004401626/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/node_test_surface_ownership_docs.rs:12`
+# `crates/kamn-core/tests/node_test_surface_ownership_docs.rs:19`
+# `crates/kamn-core/tests/node_test_surface_ownership_docs.rs:47`
+# with `clippy::uninlined_format_args` in the node runtime ownership taxonomy,
+# reason-code, and guard-command assertions.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-core/tests/node_test_surface_ownership_docs.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test node_test_surface_ownership_docs -- --nocapture
+# 2 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test node_test_surface_ownership_docs --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test node_test_surface_ownership_docs --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-node-test-surface-ownership-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
 # passed
 
 make check
