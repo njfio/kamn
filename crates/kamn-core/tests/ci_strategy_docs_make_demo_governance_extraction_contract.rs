@@ -55,29 +55,28 @@ fn assert_root_budget() {
     let lines = line_count(ROOT);
     assert!(
         lines <= ROOT_CAP,
-        "root line count {} exceeds staged cap {}",
-        lines,
-        ROOT_CAP
+        "root line count {lines} exceeds staged cap {ROOT_CAP}"
     );
 }
 
 fn assert_module_root_exists() {
     let path = repo_path(MODULE_ROOT);
-    assert!(path.exists(), "missing module root {}", path.display());
+    let path_display = path.display();
+    assert!(path.exists(), "missing module root {path_display}");
 }
 
 fn assert_extracted_files_fit_budget() {
     for path in MODULE_FILES {
         let full_path = repo_path(path);
+        let full_path_display = full_path.display();
         assert!(
             full_path.exists(),
-            "missing extracted file {}",
-            full_path.display()
+            "missing extracted file {full_path_display}"
         );
+        let lines = line_count(path);
         assert!(
-            line_count(path) <= 200,
-            "extracted file {path} exceeds 200 lines with {}",
-            line_count(path)
+            lines <= 200,
+            "extracted file {path} exceeds 200 lines with {lines}"
         );
     }
 }

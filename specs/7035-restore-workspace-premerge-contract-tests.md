@@ -226,6 +226,10 @@ Output:
   message-format normalization expands `all_test_file_lines`; split helper
   ownership below the touched function limit without changing inventory
   filtering or line-count semantics.
+- Newer strict CI clippy may continue into CI strategy make/demo governance
+  extraction contract assertions after test-file size policy cleanup; normalize
+  assertion message formatting without changing module markers, staged caps, or
+  extracted-file proof semantics.
 - Workspace Pre-Merge may fail deterministic inventory/evidence contracts after
   the strict-clippy repair commits shift the current branch evidence window and
   script wrapper inventory; refresh only the observed branch-head counts and
@@ -999,6 +1003,46 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`5866dc8d298d2e72c5af9df9ebfc73887185717c` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83979362101/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/ci_strategy_docs_make_demo_governance_extraction_contract.rs:56`
+# with `clippy::uninlined_format_args` in the root line-count assertion.
+# The same touched test file had three more old-style assertion messages that
+# were normalized under the same CI-only strict-clippy failure mode.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"|format!\(\s*"[^"]*\{:\.[0-9]+\}[^"]*"' crates/kamn-core/tests/ci_strategy_docs_make_demo_governance_extraction_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test ci_strategy_docs_make_demo_governance_extraction_contract -- --nocapture
+# 1 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test ci_strategy_docs_make_demo_governance_extraction_contract --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test ci_strategy_docs_make_demo_governance_extraction_contract --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-ci-strategy-docs-governance-clippy.json
+# status=pass
+# policy_decision=GO
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
 # passed
 
 make check
