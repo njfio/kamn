@@ -242,6 +242,10 @@ Output:
   contract assertion messages after governance-window refresh; normalize
   formatting without changing required module, root-marker, or file-budget
   proof semantics.
+- Newer strict CI clippy may continue into the data-layer SHA-256 contract
+  digest-vector formatting after block-pipeline cleanup; normalize the test
+  payload construction without changing the expected digest vector or shared
+  `tagged_sha256` routing assertions.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1015,6 +1019,47 @@ CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D 
 
 make check
 # passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`24192ffe3053c2a44b44d596dccc583ae115c6e8` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83985792414/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/data_layer_sha256_contract.rs:32`
+# with `clippy::uninlined_format_args` in the expected blind-index digest
+# payload. The companion `sha256:{digest}` formatter was normalized under the
+# same failure without changing the expected digest vector or tagged-sha256
+# routing assertions.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"|format!\(\s*"[^"]*\{:\.[0-9]+\}[^"]*"' crates/kamn-core/tests/data_layer_sha256_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test data_layer_sha256_contract -- --nocapture
+# 2 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test data_layer_sha256_contract --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test data_layer_sha256_contract --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-data-layer-sha256-clippy.json
+# status=pass
+# policy_decision=GO
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed in 10m16s
 ```
 
 Closeout evidence captured on 2026-06-29 for head

@@ -30,10 +30,10 @@ fn regression_issue_5922_m3_blind_index_digest_matches_real_sha256_vector() {
     let token = data_layer_m3_compute_blind_index("pepper-5922", "subject", "Alice Example")
         .expect("blind index derivation should succeed");
     let expected_payload = format!(
-        "m3-blind-index|key:pepper-5922|field:subject|value:alice example|profile:{}",
-        DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE
+        "m3-blind-index|key:pepper-5922|field:subject|value:alice example|profile:{DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE}"
     );
-    let expected = format!("sha256:{}", sha256_hex(expected_payload.as_str()));
+    let expected_digest = sha256_hex(expected_payload.as_str());
+    let expected = format!("sha256:{expected_digest}");
     assert_eq!(token, expected);
 }
 
