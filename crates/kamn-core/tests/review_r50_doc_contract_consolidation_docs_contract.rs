@@ -105,8 +105,6 @@ fn regression_r50_doc_contract_non_regression_cap_is_not_breached() {
     let current = current_doc_contract_test_file_count();
     assert!(
         current <= cap,
-        "doc contract test count {} exceeds cap {}",
-        current,
-        cap
+        "doc contract test count {current} exceeds cap {cap}",
     );
 }
