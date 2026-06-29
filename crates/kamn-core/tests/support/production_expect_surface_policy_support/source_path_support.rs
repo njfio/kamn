@@ -13,14 +13,15 @@ pub fn repo_path(relative: &str) -> PathBuf {
 
 pub fn fail(reason_code: &str, detail: &str) -> ! {
     panic!(
-        "reason_taxonomy_version={} reason_codes_csv={} reason_code={} detail={}",
-        REASON_TAXONOMY_VERSION, REASON_CODES_CSV, reason_code, detail
+        "reason_taxonomy_version={REASON_TAXONOMY_VERSION} reason_codes_csv={REASON_CODES_CSV} reason_code={reason_code} detail={detail}",
     );
 }
 
 pub fn read_file(path: &Path, reason_code: &str) -> String {
-    fs::read_to_string(path)
-        .unwrap_or_else(|error| fail(reason_code, &format!("{}: {}", path.display(), error)))
+    fs::read_to_string(path).unwrap_or_else(|error| {
+        let display_path = path.display();
+        fail(reason_code, &format!("{display_path}: {error}"))
+    })
 }
 
 pub fn is_test_only_source_path(relative_path: &str) -> bool {

@@ -264,6 +264,10 @@ Output:
   contract after R53 cleanup; normalize taxonomy-marker and guard-command
   assertion formatting without changing ownership taxonomy, reason codes, or
   required guard command semantics.
+- Newer strict CI clippy may continue into the production-expect surface policy
+  support subtree after node ownership cleanup; normalize old-style formatting
+  in that existing support code without changing fixture parsing, source census,
+  threshold loading, source-path classification, or failure semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1033,6 +1037,52 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`ef114720510816e887ede76da7104cf6a9915a4b` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/84010153088/logs
+# Fast Gate strict clippy failed on:
+# `crates/kamn-core/tests/support/production_expect_surface_policy_support/fixture_parsing_support.rs:20`
+# `crates/kamn-core/tests/support/production_expect_surface_policy_support/fixture_parsing_support.rs:61`
+# `crates/kamn-core/tests/support/production_expect_surface_policy_support/source_census_support.rs:62`
+# `crates/kamn-core/tests/support/production_expect_surface_policy_support/source_census_support.rs:72`
+# `crates/kamn-core/tests/support/production_expect_surface_policy_support/source_path_support.rs:15`
+# with `clippy::uninlined_format_args` in the production-expect surface
+# policy support subtree. The same scoped support subtree was scanned and
+# normalized to avoid another same-target Fast Gate iteration.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-core/tests/support/production_expect_surface_policy_support
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test production_expect_surface_policy -- --nocapture
+# 7 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test production_expect_surface_policy --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test production_expect_surface_policy --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-production-expect-surface-support-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
 # passed
 
 make check
