@@ -34,6 +34,17 @@ shell_escape() {
   printf "%q" "$1"
 }
 
+resolve_path() {
+  python3 - "$1" <<'PY'
+from __future__ import annotations
+
+import pathlib
+import sys
+
+print(pathlib.Path(sys.argv[1]).resolve())
+PY
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --mode)
@@ -281,6 +292,14 @@ for numeric_value in \
     exit 1
   fi
 done
+
+OUTPUT_JSON="$(resolve_path "$OUTPUT_JSON")"
+INTEGRATION_REPORT="$(resolve_path "$INTEGRATION_REPORT")"
+PROCESS_OUTPUT_FILE="$(resolve_path "$PROCESS_OUTPUT_FILE")"
+INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="$(resolve_path "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE")"
+INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="$(resolve_path "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT")"
+ROLLBACK_EVIDENCE_FILE="$(resolve_path "$ROLLBACK_EVIDENCE_FILE")"
+RECOVERY_EVIDENCE_FILE="$(resolve_path "$RECOVERY_EVIDENCE_FILE")"
 
 if [ ! -x "$INTEGRATION_RUNNER" ]; then
   echo "expected local KAMN live runtime integration runner to be executable" >&2
