@@ -149,6 +149,18 @@ Integration/Proof:
   passes; runtime: `4m 47s`.
 - `make check` passes; runtime: `9m 11s`.
 
+## Refactor Evidence
+
+- `make pre-push` now reuses `$(MAKE) check` instead of duplicating the
+  fmt/clippy commands.
+- `bash scripts/ci/test_local_pre_push_gate_policy.sh` passes after retargeting
+  the contract to verify both `pre-push` and `check`.
+- `make -n pre-push` expands through `make check`, `make ci-tools`, full
+  workspace tests, touched-size policy, critical-path coverage, and
+  critical-path mutation.
+- `bash -n scripts/ci/test_local_pre_push_gate_policy.sh` passes.
+- `cargo fmt --check` passes.
+
 ## Shell-Surface DoD
 
 - `shell_loc_delta_actual: TBD`

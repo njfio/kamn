@@ -24,8 +24,7 @@ test:
 	cargo test
 
 pre-push:
-	cargo fmt --check
-	cargo clippy --workspace --all-targets --all-features -- -D warnings
+	$(MAKE) check
 	$(MAKE) ci-tools
 	bash scripts/ci/check_touched_rust_size_policy.sh \
 		--base-ref main \
