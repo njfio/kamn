@@ -207,7 +207,6 @@ fn regression_review_readme_schema_marker_count_is_non_expanding() {
         .count();
     assert!(
         schema_marker_count <= 22,
-        "review README schema marker count expanded beyond baseline cap: {}",
-        schema_marker_count
+        "review README schema marker count expanded beyond baseline cap: {schema_marker_count}"
     );
 }

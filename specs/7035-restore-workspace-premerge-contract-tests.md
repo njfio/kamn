@@ -257,6 +257,9 @@ Output:
   extraction contract after public API surface cleanup; normalize assertion
   messages without changing root shell budget, module marker, or extracted-file
   existence semantics.
+- Newer strict CI clippy may continue into the R53 review docs contract after
+  message lifecycle cleanup; normalize the schema-marker cap assertion without
+  changing review README marker-count limits or review governance semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1806,6 +1809,47 @@ CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test governance_feature_commit_r
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-governance-current-head-post-e5f054ad.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`fe316010e971d4a423e5a49f5a96b52ff2103886` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/84000053284/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/review_r53_docs_contract.rs:208`
+# with `clippy::uninlined_format_args` in the review README schema marker cap
+# assertion.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-core/tests/review_r53_docs_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test review_r53_docs_contract -- --nocapture
+# 5 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test review_r53_docs_contract --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test review_r53_docs_contract --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-review-r53-docs-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
