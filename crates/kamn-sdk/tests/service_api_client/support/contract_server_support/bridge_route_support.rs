@@ -60,7 +60,6 @@ fn write_query_response(stream: &mut TcpStream, method: &str, path: &str) -> Res
 
 fn forwarded_payload(bridge_id: &str) -> String {
     format!(
-        "{{\"bridge_id\":\"{}\",\"bridge_status\":\"forwarded\",\"target_message_id\":\"msg-bridge-target-{}\",\"forward_tx_hash\":\"sha256:bridge-forwarded-{}\"}}",
-        bridge_id, bridge_id, bridge_id
+        "{{\"bridge_id\":\"{bridge_id}\",\"bridge_status\":\"forwarded\",\"target_message_id\":\"msg-bridge-target-{bridge_id}\",\"forward_tx_hash\":\"sha256:bridge-forwarded-{bridge_id}\"}}"
     )
 }

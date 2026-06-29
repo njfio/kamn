@@ -40,10 +40,9 @@ fn write_metrics_response(
         return Ok(false);
     }
     let body = "kamn_service_api_health{runtime_mode=\"api\"} 1\n";
+    let body_len = body.len();
     let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(),
-        body
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n{body}"
     );
     stream
         .write_all(response.as_bytes())

@@ -27,8 +27,7 @@ fn write_agent_response(stream: &mut TcpStream, method: &str, path: &str) -> Res
     if method == "GET" && path.starts_with("/v1/agents/") {
         let did = path.trim_start_matches("/v1/agents/");
         let payload = format!(
-            "{{\"did\":\"{}\",\"reputation_score\":500,\"agent_type\":\"service-agent\",\"model_family\":\"service-api\",\"capabilities\":[\"profile:read\"]}}",
-            did
+            "{{\"did\":\"{did}\",\"reputation_score\":500,\"agent_type\":\"service-agent\",\"model_family\":\"service-api\",\"capabilities\":[\"profile:read\"]}}"
         );
         write_http_response(stream, 200, payload.as_str())?;
         return Ok(true);
@@ -50,8 +49,7 @@ fn write_content_response(
     if method == "GET" && path.starts_with("/v1/content/") {
         let content_id = path.trim_start_matches("/v1/content/");
         let payload = format!(
-            "{{\"content_id\":\"{}\",\"lifecycle_state\":\"retained\",\"redaction_status\":\"none\"}}",
-            content_id
+            "{{\"content_id\":\"{content_id}\",\"lifecycle_state\":\"retained\",\"redaction_status\":\"none\"}}"
         );
         write_http_response(stream, 200, payload.as_str())?;
         return Ok(true);
@@ -80,8 +78,7 @@ fn write_expire_response(stream: &mut TcpStream, method: &str, path: &str) -> Re
     }
     let content_id = strip_suffix_id(path, "/v1/content/", "/expire");
     let payload = format!(
-        "{{\"content_id\":\"{}\",\"lifecycle_state\":\"expired\",\"redaction_status\":\"none\"}}",
-        content_id
+        "{{\"content_id\":\"{content_id}\",\"lifecycle_state\":\"expired\",\"redaction_status\":\"none\"}}"
     );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
@@ -97,8 +94,7 @@ fn write_tombstone_response(
     }
     let content_id = strip_suffix_id(path, "/v1/content/", "/tombstone");
     let payload = format!(
-        "{{\"content_id\":\"{}\",\"lifecycle_state\":\"tombstoned\",\"redaction_status\":\"redacted\"}}",
-        content_id
+        "{{\"content_id\":\"{content_id}\",\"lifecycle_state\":\"tombstoned\",\"redaction_status\":\"redacted\"}}"
     );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)

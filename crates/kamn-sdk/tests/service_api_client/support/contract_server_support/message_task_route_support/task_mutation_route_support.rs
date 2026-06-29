@@ -31,7 +31,7 @@ fn write_accept_task_response(
         return Ok(false);
     }
     let task_id = strip_suffix_id(path, "/v1/tasks/", "/accept");
-    let payload = format!("{{\"task_id\":\"{}\",\"state\":\"accepted\"}}", task_id);
+    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"accepted\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
@@ -45,7 +45,7 @@ fn write_complete_task_response(
         return Ok(false);
     }
     let task_id = strip_suffix_id(path, "/v1/tasks/", "/complete");
-    let payload = format!("{{\"task_id\":\"{}\",\"state\":\"completed\"}}", task_id);
+    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"completed\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
@@ -60,7 +60,7 @@ fn write_fund_escrow_response(
         return Ok(false);
     }
     let escrow_id = format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
-    let payload = format!("{{\"escrow_id\":\"{}\",\"state\":\"funded\"}}", escrow_id);
+    let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"funded\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
@@ -74,7 +74,7 @@ fn write_release_escrow_response(
         return Ok(false);
     }
     let escrow_id = strip_suffix_id(path, "/v1/escrow/", "/release");
-    let payload = format!("{{\"escrow_id\":\"{}\",\"state\":\"released\"}}", escrow_id);
+    let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"released\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }

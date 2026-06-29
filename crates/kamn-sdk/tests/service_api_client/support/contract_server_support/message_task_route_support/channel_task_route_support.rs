@@ -31,10 +31,7 @@ fn write_channel_response(
         return Ok(false);
     }
     let channel_id = format!("channel-local-{:016x}", deterministic_tag(body.as_bytes()));
-    let payload = format!(
-        "{{\"channel_id\":\"{}\",\"status\":\"created\"}}",
-        channel_id
-    );
+    let payload = format!("{{\"channel_id\":\"{channel_id}\",\"status\":\"created\"}}");
     write_http_response(stream, 201, payload.as_str())?;
     Ok(true)
 }
@@ -52,8 +49,7 @@ fn write_channel_messages_response(
         .trim_end_matches("/messages")
         .trim_end_matches('/');
     let payload = format!(
-        "{{\"channel_id\":\"{}\",\"messages\":[\"msg-local-a\",\"msg-local-b\"]}}",
-        channel_id
+        "{{\"channel_id\":\"{channel_id}\",\"messages\":[\"msg-local-a\",\"msg-local-b\"]}}"
     );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
@@ -69,7 +65,7 @@ fn write_create_task_response(
         return Ok(false);
     }
     let task_id = format!("task-local-{:016x}", deterministic_tag(body.as_bytes()));
-    let payload = format!("{{\"task_id\":\"{}\",\"state\":\"submitted\"}}", task_id);
+    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"submitted\"}}");
     write_http_response(stream, 201, payload.as_str())?;
     Ok(true)
 }
@@ -83,7 +79,7 @@ fn write_get_task_response(
         return Ok(false);
     }
     let task_id = path.trim_start_matches("/v1/tasks/");
-    let payload = format!("{{\"task_id\":\"{}\",\"state\":\"submitted\"}}", task_id);
+    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"submitted\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
