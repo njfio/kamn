@@ -111,8 +111,7 @@ fn append_drained_frames(
 fn assert_drain_deadline(started: Instant, timeout: Duration, expected: usize, current: usize) {
     assert!(
         started.elapsed() < timeout,
-        "expected {expected} frames but only received {current} within {:?}",
-        timeout
+        "expected {expected} frames but only received {current} within {timeout:?}",
     );
     std::thread::sleep(Duration::from_millis(25));
 }

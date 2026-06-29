@@ -207,6 +207,9 @@ Output:
 - The touched-Rust size policy may reject the shell test surface ratio policy
   loader after strict-clippy formatting touches it; keep threshold loading split
   below the touched function limit without changing validation semantics.
+- Newer strict CI clippy may continue into the p2p live transport runtime test
+  support deadline assertion after shell ratio cleanup; normalize the timeout
+  assertion format without changing drain polling or timeout behavior.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -360,6 +363,9 @@ Output:
 - Shell test surface ratio policy support remains below touched-Rust function
   limits while preserving `threshold_value_invalid` validation for negative
   threshold deltas.
+- P2P live transport runtime support is strict-clippy clean under CI while
+  preserving expected-frame deadline messages, timeout values, and polling
+  cadence.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -458,6 +464,7 @@ Likely:
 - `crates/kamn-core/tests/shell_test_surface_ratio_policy/evaluation_gate_contract_tests.rs`
 - `crates/kamn-core/tests/shell_test_surface_ratio_policy/schema_fixture_contract_tests.rs`
 - `crates/kamn-core/tests/shell_test_surface_ratio_policy/waiver_contract_tests.rs`
+- `crates/kamn-core/tests/p2p_live_transport_runtime/support/transport_io_support.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -541,6 +548,7 @@ gh api repos/njfio/kamn/actions/jobs/83923030478/logs
 gh api repos/njfio/kamn/actions/jobs/83925054489/logs
 rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-sdk/tests
 gh api repos/njfio/kamn/actions/jobs/83961695012/logs
+gh api repos/njfio/kamn/actions/jobs/83964490689/logs
 ```
 
 Green verification:
@@ -579,6 +587,8 @@ cargo test -p kamn-sdk --test live_transport_observability -- --nocapture
 cargo clippy -p kamn-sdk --all-targets --all-features -- -D warnings
 cargo test -p kamn-core --test shell_test_surface_ratio_policy -- --nocapture
 cargo clippy -p kamn-core --test shell_test_surface_ratio_policy --all-features -- -D warnings
+cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture
+cargo clippy -p kamn-core --test p2p_live_transport_runtime --all-features -- -D warnings
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
 cargo test --workspace --locked --all-features --no-fail-fast
 make check
@@ -935,6 +945,55 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`c20b03b670622820b1dd8386772a178a84be2407` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83964490689/logs
+# Fast Gate reached late Lint (strict) and failed on
+# `clippy::uninlined_format_args` in
+# `crates/kamn-core/tests/p2p_live_transport_runtime/support/transport_io_support.rs`.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"|format!\(\s*"[^"]*\{:\.[0-9]+\}[^"]*"' crates/kamn-core/tests/p2p_live_transport_runtime
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture
+# 14 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test p2p_live_transport_runtime --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test p2p_live_transport_runtime --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-p2p-runtime-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings
 # passed
 
 make check
