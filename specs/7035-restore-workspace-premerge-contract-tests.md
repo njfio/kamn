@@ -195,6 +195,11 @@ Output:
   contract-server support response builders after the gate reaches the
   `live_transport_agent` test target; the fix must keep the same channel,
   message, agent registration, and live transport fixture semantics.
+- Remaining SDK test/support assertions, HTTP response builders, endpoint
+  formatting, temp-path helpers, and TCP handshake fixtures may still use
+  old-style formatting that newer strict CI clippy rejects after the currently
+  observed targets pass; normalize only format-macro call sites while leaving
+  literal `"{}"` signed-payload bodies unchanged.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -338,6 +343,10 @@ Output:
 - SDK live transport agent contract-server support response builders are
   strict-clippy clean under CI without changing response payload shapes,
   registration metadata, or live transport route behavior.
+- Remaining SDK test/support format-macro call sites are strict-clippy clean
+  under CI without changing assertion meanings, wire payloads, HTTP response
+  bytes, temp path uniqueness, endpoint values, or handshake signatures; literal
+  `"{}"` signed-payload bodies remain literal.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -416,6 +425,17 @@ Likely:
 - `crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support/response_route_support/agent_route_support.rs`
 - `crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support/response_route_support/channel_route_support.rs`
 - `crates/kamn-sdk/tests/live_transport_agent/support/contract_server_support/response_route_support/message_route_support.rs`
+- `crates/kamn-sdk/tests/service_api_client_extraction_contract.rs`
+- `crates/kamn-sdk/tests/tcp_module_extraction_contract.rs`
+- `crates/kamn-sdk/tests/rust_sdk_alpha_docs.rs`
+- `crates/kamn-sdk/tests/tcp_transport_adapter/envelope_validation_contract_tests.rs`
+- `crates/kamn-sdk/tests/support/live_transport_contract_server.rs`
+- `crates/kamn-sdk/tests/service_api_client/support/env_support.rs`
+- `crates/kamn-sdk/tests/live_transport_observability.rs`
+- `crates/kamn-sdk/tests/support/tcp_handshake_constant_time_support.rs`
+- `crates/kamn-sdk/tests/live_transport_agent/message_contract_tests.rs`
+- `crates/kamn-sdk/tests/service_api_client/support/request_parse_support.rs`
+- `crates/kamn-sdk/tests/live_transport_agent/support/request_parse_support.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -497,6 +517,7 @@ cargo mutants -p kamn-node --file crates/kamn-node/src/service_api_endpoint.rs -
 gh api repos/njfio/kamn/actions/jobs/83917258068/logs
 gh api repos/njfio/kamn/actions/jobs/83923030478/logs
 gh api repos/njfio/kamn/actions/jobs/83925054489/logs
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-sdk/tests
 ```
 
 Green verification:
@@ -525,6 +546,14 @@ cargo clippy -p kamn-crypto --all-targets --all-features -- -D warnings
 cargo clippy -p kamn-mcp-server --all-targets --all-features -- -D warnings
 cargo test -p kamn-mcp-server --test tool_dispatch_contract -- --nocapture
 cargo test -p kamn-mcp-server --test stdio_protocol_contract -- --nocapture
+cargo test -p kamn-sdk --test service_api_client_extraction_contract -- --nocapture
+cargo test -p kamn-sdk --test tcp_module_extraction_contract -- --nocapture
+cargo test -p kamn-sdk --test rust_sdk_alpha_docs -- --nocapture
+cargo test -p kamn-sdk --test tcp_transport_adapter -- --nocapture
+cargo test -p kamn-sdk --test service_api_client -- --nocapture
+cargo test -p kamn-sdk --test live_transport_agent -- --nocapture
+cargo test -p kamn-sdk --test live_transport_observability -- --nocapture
+cargo clippy -p kamn-sdk --all-targets --all-features -- -D warnings
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
 cargo test --workspace --locked --all-features --no-fail-fast
 make check
@@ -881,6 +910,48 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for the remaining SDK
+test/support strict-clippy formatting sweep:
+
+```bash
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-sdk/tests
+# only literal `"{}"` signed-payload body arguments to `auth_with_scope(...)`
+# remain; no format-macro call sites matched.
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-sdk --test service_api_client_extraction_contract --test tcp_module_extraction_contract --test rust_sdk_alpha_docs --test tcp_transport_adapter --test service_api_client --test live_transport_agent --test live_transport_observability -- --nocapture
+# 53 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-sdk --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-sdk --all-targets --all-features -- -D warnings
+# passed
+
+cargo test -p kamn-sdk --all-features -- --nocapture
+# passed; 1 ignored; doc-tests: 0
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-sdk-remaining-format-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings
 # passed
 
 make check

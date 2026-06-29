@@ -61,7 +61,8 @@ pub(crate) fn unique_temp_dir(prefix: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be after unix epoch")
         .as_nanos();
-    let path = env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
+    let process_id = std::process::id();
+    let path = env::temp_dir().join(format!("{prefix}-{process_id}-{nanos}"));
     fs::create_dir_all(&path).expect("temporary directory should be created");
     path
 }

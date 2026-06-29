@@ -70,17 +70,18 @@ fn validate_request(
     body: &str,
 ) -> Result<(), String> {
     if method != expected.method || path != expected.path {
+        let expected_method = expected.method;
+        let expected_path = &expected.path;
         return Err(format!(
-            "unexpected request route: expected {} {}, got {} {}",
-            expected.method, expected.path, method, path
+            "unexpected request route: expected {expected_method} {expected_path}, got {method} {path}"
         ));
     }
     if body == expected.body {
         return Ok(());
     }
+    let expected_body = &expected.body;
     Err(format!(
-        "unexpected request body for {method} {path}: expected `{}`, got `{body}`",
-        expected.body
+        "unexpected request body for {method} {path}: expected `{expected_body}`, got `{body}`"
     ))
 }
 
@@ -93,16 +94,16 @@ fn validate_headers(
 ) -> Result<(), String> {
     let sender_did = required_header(headers, "x-kamn-sender-did", "missing sender did header")?;
     if sender_did != expected.sender_did {
+        let expected_sender_did = &expected.sender_did;
         return Err(format!(
-            "unexpected sender did for {method} {path}: expected `{}`, got `{sender_did}`",
-            expected.sender_did
+            "unexpected sender did for {method} {path}: expected `{expected_sender_did}`, got `{sender_did}`"
         ));
     }
     let scope = required_header(headers, "x-kamn-authz-scope", "missing auth scope header")?;
     if scope != expected.scope {
+        let expected_scope = expected.scope;
         return Err(format!(
-            "unexpected auth scope for {method} {path}: expected `{}`, got `{scope}`",
-            expected.scope
+            "unexpected auth scope for {method} {path}: expected `{expected_scope}`, got `{scope}`"
         ));
     }
     validate_signature(sender_did, method, path, body, headers)
@@ -156,10 +157,9 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
         202 => "202 Accepted",
         _ => "500 Internal Server Error",
     };
+    let body_len = body.len();
     let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(),
-        body
+        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n{body}"
     );
     stream
         .write_all(payload.as_bytes())

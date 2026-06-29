@@ -40,10 +40,10 @@ fn expected_markers() -> [&'static str; 6] {
 }
 
 fn assert_root_budget(root: &str) {
+    let root_lines = lines(root);
     assert!(
-        lines(root) <= 180,
-        "expected {root} to be <= 180 LOC after extraction, got {}",
-        lines(root)
+        root_lines <= 180,
+        "expected {root} to be <= 180 LOC after extraction, got {root_lines}"
     );
 }
 
@@ -58,14 +58,14 @@ fn assert_root_markers(root_contents: &str) {
 
 fn assert_extracted_files() {
     for path in expected_files() {
+        let path_lines = lines(path);
         assert!(
             repo_root().join(path).is_file(),
             "expected extracted file {path} to exist"
         );
         assert!(
-            lines(path) <= 200,
-            "expected {path} to be <= 200 LOC, got {}",
-            lines(path)
+            path_lines <= 200,
+            "expected {path} to be <= 200 LOC, got {path_lines}"
         );
     }
 }

@@ -71,13 +71,11 @@ pub fn handshake_payload(
     signer_public_key: &str,
     signature: &str,
 ) -> String {
+    let from = &envelope.from;
+    let to = &envelope.to;
+    let nonce = envelope.nonce;
+    let body = envelope.to_wire_payload();
     format!(
-        "frame=handshake\nversion=1\nprofile=secp256k1:baseline-v2\nfrom={}\nto={}\nnonce={}\nsigner_public_key={}\nsignature={}\n\n{}",
-        envelope.from,
-        envelope.to,
-        envelope.nonce,
-        signer_public_key,
-        signature,
-        envelope.to_wire_payload()
+        "frame=handshake\nversion=1\nprofile=secp256k1:baseline-v2\nfrom={from}\nto={to}\nnonce={nonce}\nsigner_public_key={signer_public_key}\nsignature={signature}\n\n{body}"
     )
 }

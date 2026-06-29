@@ -133,19 +133,18 @@ fn manual_binding_envelope(
 fn unbound_sender_payload() -> String {
     let from = did_unbound("sender-wire-unbound");
     let to = did("listener-wire-bound");
+    let from_value = from.as_str();
+    let to_value = to.as_str();
     let signature = service_auth_sign_with_private_key_hex(
-        from.as_str(),
+        from_value,
         5,
         "state:wire-binding",
         "wire-binding-check",
         TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     )
     .expect("signature");
+    let signer_public_key = signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX);
     format!(
-        "from={}\nto={}\nnonce=5\nstate_hash=state:wire-binding\nbody=wire-binding-check\nsigner_public_key={}\nsignature={}\n",
-        from.as_str(),
-        to.as_str(),
-        signer_public_key_hex_for_private_key(TEST_TCP_SIGNING_PRIVATE_KEY_HEX),
-        signature
+        "from={from_value}\nto={to_value}\nnonce=5\nstate_hash=state:wire-binding\nbody=wire-binding-check\nsigner_public_key={signer_public_key}\nsignature={signature}\n"
     )
 }
