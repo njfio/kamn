@@ -112,6 +112,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_workflow_runtime_ceiling_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
+  bash "$ROOT_DIR/scripts/ci/test_local_pre_push_gate_policy.sh"
   cargo test -p kamn-core --test e2e_live_workflow_lane
   bash "$ROOT_DIR/scripts/ci/test_local_signal_secret_hygiene_ci_exclusion_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh"

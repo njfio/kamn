@@ -125,6 +125,12 @@ Integration/Proof:
 - `make pre-push`, or documented NO-GO evidence if an existing pre-push check
   is already failing for a separately filed reason.
 
+## Red Evidence
+
+- `bash scripts/ci/test_local_pre_push_gate_policy.sh` fails before
+  implementation with:
+  `ci-fast-gate GitHub workflow must be removed; run local gates with make pre-push`
+
 ## Shell-Surface DoD
 
 - `shell_loc_delta_actual: TBD`
