@@ -5,17 +5,17 @@ use std::path::Path;
 #[test]
 fn public_api_surface_policy_enforces_warn_fail_contract() {
     let (report, thresholds, status, _reason_codes, _rendered) = compute_report_with_policy();
+    let public_items_delta = report.public_items_delta;
+    let fail_total_delta_max = thresholds.fail_total_delta_max;
+    let status_marker = status.as_marker();
     assert!(matches!(
         status,
         PolicyStatus::Within | PolicyStatus::Warn | PolicyStatus::ExceptionApplied
     ));
     assert!(
-        report.public_items_delta <= thresholds.fail_total_delta_max
+        public_items_delta <= fail_total_delta_max
             || matches!(status, PolicyStatus::ExceptionApplied),
-        "delta={} fail_max={} status={}",
-        report.public_items_delta,
-        thresholds.fail_total_delta_max,
-        status.as_marker()
+        "delta={public_items_delta} fail_max={fail_total_delta_max} status={status_marker}"
     );
 }
 
@@ -29,8 +29,7 @@ fn module_source_paths_exclude_cfg_test_sources() {
     );
     assert!(
         !paths.iter().any(|path| has_test_only_component(path)),
-        "cfg(test) source paths must not count as public API: {:?}",
-        paths
+        "cfg(test) source paths must not count as public API: {paths:?}"
     );
 }
 

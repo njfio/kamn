@@ -7,9 +7,10 @@ use std::path::Path;
 
 pub(crate) fn load_thresholds(path: &Path) -> PolicyThresholds {
     if !path.is_file() {
+        let path_display = path.display();
         fail(
             "threshold_fixture_missing",
-            &format!("missing threshold fixture {}", path.display()),
+            &format!("missing threshold fixture {path_display}"),
         );
     }
     let map = parse_key_value_fixture(
@@ -37,9 +38,10 @@ pub(crate) fn load_waiver(path: &Path) -> PolicyWaiver {
     assert_mitigation_issue(mitigation_issue, path);
     let max_total_delta = required_i64(&map, "max_total_delta", "waiver_fixture_invalid");
     if max_total_delta < 0 {
+        let path_display = path.display();
         fail(
             "waiver_fixture_invalid",
-            &format!("max_total_delta must be non-negative in {}", path.display()),
+            &format!("max_total_delta must be non-negative in {path_display}"),
         );
     }
     PolicyWaiver {
@@ -51,9 +53,10 @@ pub(crate) fn load_waiver(path: &Path) -> PolicyWaiver {
 fn assert_threshold_schema(map: &BTreeMap<String, String>, path: &Path) {
     let schema_version = required_value(map, "schema_version", "threshold_schema_mismatch");
     if schema_version != THRESHOLD_SCHEMA_VERSION {
+        let path_display = path.display();
         fail(
             "threshold_schema_mismatch",
-            &format!("unexpected schema {} in {}", schema_version, path.display()),
+            &format!("unexpected schema {schema_version} in {path_display}"),
         );
     }
 }
@@ -68,11 +71,12 @@ fn waiver_path(map: &BTreeMap<String, String>) -> Option<std::path::PathBuf> {
 
 fn assert_threshold_order(thresholds: &PolicyThresholds) {
     if thresholds.warn_total_delta_max > thresholds.fail_total_delta_max {
+        let warn_total_delta_max = thresholds.warn_total_delta_max;
+        let fail_total_delta_max = thresholds.fail_total_delta_max;
         fail(
             "threshold_value_invalid",
             &format!(
-                "warn_total_delta_max ({}) must be <= fail_total_delta_max ({})",
-                thresholds.warn_total_delta_max, thresholds.fail_total_delta_max
+                "warn_total_delta_max ({warn_total_delta_max}) must be <= fail_total_delta_max ({fail_total_delta_max})"
             ),
         );
     }
@@ -81,13 +85,10 @@ fn assert_threshold_order(thresholds: &PolicyThresholds) {
 fn assert_waiver_schema(map: &BTreeMap<String, String>, path: &Path) {
     let schema_version = required_value(map, "schema_version", "waiver_schema_mismatch");
     if schema_version != WAIVER_SCHEMA_VERSION {
+        let path_display = path.display();
         fail(
             "waiver_schema_mismatch",
-            &format!(
-                "unexpected waiver schema {} in {}",
-                schema_version,
-                path.display()
-            ),
+            &format!("unexpected waiver schema {schema_version} in {path_display}"),
         );
     }
 }
@@ -99,12 +100,11 @@ fn assert_mitigation_issue(mitigation_issue: &str, path: &Path) {
             .chars()
             .all(|ch| ch.is_ascii_digit());
     if !valid {
+        let path_display = path.display();
         fail(
             "waiver_invalid_mitigation_issue",
             &format!(
-                "mitigation_issue must be #<digits>, got {} in {}",
-                mitigation_issue,
-                path.display()
+                "mitigation_issue must be #<digits>, got {mitigation_issue} in {path_display}"
             ),
         );
     }

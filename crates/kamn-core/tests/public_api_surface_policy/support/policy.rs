@@ -56,7 +56,7 @@ fn build_module_surface(
     if source_paths.is_empty() {
         fail(
             "module_source_missing",
-            &format!("module {} has no source files", module),
+            &format!("module {module} has no source files"),
         );
     }
     let module_public_items = source_paths
@@ -90,21 +90,18 @@ fn evaluate_waiver(
 fn evaluate_loaded_waiver(delta: i64, waiver_path: &std::path::Path) -> (PolicyStatus, String) {
     let waiver = load_waiver(waiver_path);
     if delta <= waiver.max_total_delta {
+        let mitigation_issue = &waiver.mitigation_issue;
         return (
             PolicyStatus::ExceptionApplied,
-            format!(
-                "public_api_surface_fail_threshold_exceeded_waived:{}",
-                waiver.mitigation_issue
-            ),
+            format!("public_api_surface_fail_threshold_exceeded_waived:{mitigation_issue}"),
         );
     }
+    let waiver_cap = waiver.max_total_delta;
+    let waiver_path_display = waiver_path.display();
     fail(
         "waiver_cap_exceeded",
         &format!(
-            "public_items_delta {} exceeds waiver cap {} ({})",
-            delta,
-            waiver.max_total_delta,
-            waiver_path.display()
+            "public_items_delta {delta} exceeds waiver cap {waiver_cap} ({waiver_path_display})"
         ),
     )
 }
@@ -112,9 +109,6 @@ fn evaluate_loaded_waiver(delta: i64, waiver_path: &std::path::Path) -> (PolicyS
 fn fail_unwaived(delta: i64, fail_total_delta_max: i64) -> ! {
     fail(
         "public_api_surface_fail_threshold_exceeded_unwaived",
-        &format!(
-            "public_items_delta {} exceeds fail_total_delta_max {}",
-            delta, fail_total_delta_max
-        ),
+        &format!("public_items_delta {delta} exceeds fail_total_delta_max {fail_total_delta_max}"),
     )
 }

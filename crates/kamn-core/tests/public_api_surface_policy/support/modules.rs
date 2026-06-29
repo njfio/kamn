@@ -36,7 +36,7 @@ fn public_module_name(line: &str) -> Option<String> {
 }
 
 fn root_rs_path(module: &str, src_root: &Path) -> Option<PathBuf> {
-    let path = src_root.join(format!("{}.rs", module));
+    let path = src_root.join(format!("{module}.rs"));
     path.is_file().then_some(path)
 }
 
@@ -80,18 +80,19 @@ fn is_test_only_module_name(name: &str) -> bool {
 }
 
 fn read_dir_entries(dir: &Path) -> Vec<fs::DirEntry> {
+    let dir_display = dir.display();
     fs::read_dir(dir)
         .unwrap_or_else(|error| {
             fail(
                 "module_source_missing",
-                &format!("failed to read {}: {}", dir.display(), error),
+                &format!("failed to read {dir_display}: {error}"),
             )
         })
         .map(|entry| {
             entry.unwrap_or_else(|error| {
                 fail(
                     "module_source_missing",
-                    &format!("failed to read dir entry in {}: {}", dir.display(), error),
+                    &format!("failed to read dir entry in {dir_display}: {error}"),
                 )
             })
         })

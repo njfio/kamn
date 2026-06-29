@@ -246,6 +246,13 @@ Output:
   digest-vector formatting after block-pipeline cleanup; normalize the test
   payload construction without changing the expected digest vector or shared
   `tagged_sha256` routing assertions.
+- Newer strict CI clippy may continue into the public API surface policy test
+  subtree after data-layer SHA-256 cleanup; normalize report, fixture, policy,
+  and path formatting without changing schema markers, reason-code taxonomy,
+  waiver behavior, or public-item threshold semantics.
+- The public API surface policy formatting cleanup must still satisfy touched
+  Rust size policy; split report header rendering helpers if interpolation
+  locals would otherwise make a touched function exceed the local size limit.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1678,6 +1685,46 @@ CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test test_file
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-test-file-size-policy-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`d6ae583c0980db0c0bc7fe70f642ee71f4155377` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83989408945/logs
+# Fast Gate strict clippy failed in the public API surface policy subtree with
+# 13 `clippy::uninlined_format_args` diagnostics across report, fixture,
+# policy, path, module, baseline, and threshold helpers.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"|format!\(\s*"[^"]*\{:\.[0-9]+\}[^"]*"' crates/kamn-core/tests/public_api_surface_policy
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test public_api_surface_policy -- --nocapture
+# 3 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test public_api_surface_policy --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test public_api_surface_policy --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-public-api-surface-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
