@@ -92,6 +92,29 @@ Detailed command matrices, contract markers, policy snippets, and lane-specific 
 
 This keeps the root README onboarding-focused while preserving deterministic contract markers in a stable docs location.
 
+Managed-signer backend SLO telemetry anchors:
+- `generate_managed_signer_backend_slo_telemetry_bundle.sh`
+- `run_managed_signer_backend_slo_telemetry_contract_lane.sh`
+- `kamn.kolme.managed-signer-backend-slo-telemetry.v1`
+- `managed_signer_backend_timeout_rate_threshold_exceeded`
+- `managed_signer_backend_unavailable_rate_threshold_exceeded`
+- `managed_signer_backend_error_rate_threshold_exceeded`
+- `managed_signer_backend_ci_fast_gate_failed`
+- `signer_key_source=managed-external`
+- `contracts.required_signer_key_source=managed-external`
+
+Managed-signer backend SLO policy anchors:
+- `check_managed_signer_backend_slo_policy.py`
+- `run_managed_signer_backend_slo_policy_contract_lane.sh`
+- `kamn.kolme.managed-signer-backend-slo-policy-report.v1`
+- `kamn.kolme.managed-signer-backend-slo-policy-contract-report.v1`
+- `managed_signer_backend_slo_within_threshold`
+- `managed_signer_backend_no_action_required`
+- `managed_signer_backend_reduce_timeout_burst`
+- `managed_signer_backend_failover_endpoint`
+- `managed_signer_backend_enable_circuit_breaker`
+- `managed_signer_backend_replay_ci_fast_gate`
+
 ## Key Links
 
 - CI strategy: `docs/ci/strategy.md`
