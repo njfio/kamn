@@ -148,6 +148,11 @@ Live-provider runtime integration anchors:
 - `live_preflight_failed`
 - `live_preflight_timeout`
 
+Localhost signed integration anchors:
+- `run_localhost_signed_integration_contract_lane.sh`
+- `check_localhost_signed_integration_evidence_policy.sh`
+- `/tmp/localhost-signed-integration-contract-report.json`
+
 ## Key Links
 
 - CI strategy: `docs/ci/strategy.md`
