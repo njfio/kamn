@@ -253,6 +253,10 @@ Output:
 - The public API surface policy formatting cleanup must still satisfy touched
   Rust size policy; split report header rendering helpers if interpolation
   locals would otherwise make a touched function exceed the local size limit.
+- Newer strict CI clippy may continue into the message lifecycle module
+  extraction contract after public API surface cleanup; normalize assertion
+  messages without changing root shell budget, module marker, or extracted-file
+  existence semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1725,6 +1729,47 @@ CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test public_ap
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-public-api-surface-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`186e4ab1dd9aead809bc19ffca0cd2c32bb5a654` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83994187878/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/message_lifecycle_module_extraction_contract.rs:32`
+# with `clippy::uninlined_format_args` in the root-shell budget assertion.
+# The same file also had an old-style extracted-file existence assertion.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-core/tests/message_lifecycle_module_extraction_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test message_lifecycle_module_extraction_contract -- --nocapture
+# 3 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test message_lifecycle_module_extraction_contract --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test message_lifecycle_module_extraction_contract --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-message-lifecycle-module-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
