@@ -218,6 +218,14 @@ Output:
   assertions after the p2p libp2p cleanup; normalize the assertion format
   without changing the count formula, cap marker, or doc-contract proof
   semantics.
+- Newer strict CI clippy may continue into test-file size policy assertion and
+  panic messages after the R50 cleanup; normalize message formatting without
+  changing the severe-offender allowlist comparison, budget checks, filesystem
+  reads, or baseline semantics.
+- The touched-Rust size policy may reject `test_file_size_policy.rs` after
+  message-format normalization expands `all_test_file_lines`; split helper
+  ownership below the touched function limit without changing inventory
+  filtering or line-count semantics.
 - Workspace Pre-Merge may fail deterministic inventory/evidence contracts after
   the strict-clippy repair commits shift the current branch evidence window and
   script wrapper inventory; refresh only the observed branch-head counts and
@@ -384,6 +392,11 @@ Output:
 - R50 doc-contract consolidation cap assertions are strict-clippy clean under
   CI while preserving the deterministic repo-local count formula, cap marker,
   and test-file-count proof semantics.
+- Test-file size policy assertion and panic messages are strict-clippy clean
+  under CI while preserving severe-offender allowlist comparison, budget
+  checks, filesystem reads, and baseline semantics.
+- Test-file size policy helper functions remain below touched-Rust size limits
+  while preserving inventory filtering and line-count semantics.
 - The current-head governance ratio contract matches the real checker output
   for `HEAD` and remains below the `0.20` ceiling.
 - The script-surface reduction candidate doc matches filesystem inventory,
@@ -580,6 +593,7 @@ gh api repos/njfio/kamn/actions/jobs/83964490689/logs
 gh api repos/njfio/kamn/actions/jobs/83966724810/logs
 gh api repos/njfio/kamn/actions/jobs/83966724799/logs
 gh api repos/njfio/kamn/actions/jobs/83974051268/logs
+gh api repos/njfio/kamn/actions/jobs/83976624299/logs
 cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance -- --nocapture
 cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture
 ```
@@ -626,6 +640,7 @@ cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime -- --nocapture
 cargo clippy -p kamn-core --test p2p_libp2p_native_adapter_runtime --all-features -- -D warnings
 cargo test -p kamn-core --test review_r50_doc_contract_consolidation_docs_contract -- --nocapture
 cargo clippy -p kamn-core --test review_r50_doc_contract_consolidation_docs_contract --all-features -- -D warnings
+cargo clippy -p kamn-core --test test_file_size_policy --all-features -- -D warnings
 cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance -- --nocapture
 cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
@@ -1441,6 +1456,48 @@ CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test review_r5
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-r50-doc-contract-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`25d01c8655d34b73ec24c7e3715fff9f93e759db` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83976624299/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/test_file_size_policy.rs:206`
+# with `clippy::uninlined_format_args` in the severe-offender allowlist
+# assertion. Local touched-Rust size policy also failed after message-format
+# normalization until `all_test_file_lines` was split.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-core/tests/test_file_size_policy.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test test_file_size_policy -- --nocapture
+# 4 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test test_file_size_policy --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test test_file_size_policy --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-test-file-size-policy-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
