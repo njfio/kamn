@@ -174,6 +174,14 @@ Integration/Proof:
 - `make -n pre-push` shows `/usr/bin/python3` for the cryptography preflight
   and PATH-prefixed local gate commands.
 - `git diff --check` passes after the Python selection change.
+- A second `make pre-push` run passed the earlier `cryptography` boundary and
+  failed later in `scripts/ci/check_workspace_license_policy.py` because
+  `/usr/bin/python3` lacks `tomllib`; the selector now requires both
+  `cryptography` and `tomllib` and prefers Homebrew Python 3.12 before the
+  Xcode fallback.
+- `make -n pre-push` now selects
+  `/opt/homebrew/opt/python@3.12/bin/python3.12` and PATH-prefixes the local
+  gates with `/opt/homebrew/opt/python@3.12/bin/`.
 
 ## Shell-Surface DoD
 

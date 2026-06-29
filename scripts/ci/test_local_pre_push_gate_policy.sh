@@ -41,6 +41,7 @@ fi
 for marker in \
   "PRE_PUSH_PYTHON3" \
   "import cryptography" \
+  "tomllib" \
   "\$(MAKE) check" \
   "\$(MAKE) ci-tools" \
   "cargo test --workspace --locked --all-features --no-fail-fast" \

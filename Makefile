@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-PRE_PUSH_PYTHON3 ?= $(shell for py in python3 .venv/bin/python /usr/bin/python3 /opt/homebrew/opt/python@3.12/bin/python3.12 /Applications/Xcode.app/Contents/Developer/usr/bin/python3; do if command -v "$$py" >/dev/null 2>&1 && "$$py" -c "import cryptography" >/dev/null 2>&1; then command -v "$$py"; break; fi; done)
+PRE_PUSH_PYTHON3 ?= $(shell for py in python3 .venv/bin/python /opt/homebrew/opt/python@3.12/bin/python3.12 /usr/bin/python3 /Applications/Xcode.app/Contents/Developer/usr/bin/python3; do if command -v "$$py" >/dev/null 2>&1 && "$$py" -c "import cryptography, tomllib" >/dev/null 2>&1; then command -v "$$py"; break; fi; done)
 PRE_PUSH_PYTHON3_DIR := $(dir $(PRE_PUSH_PYTHON3))
 PRE_PUSH_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(PATH)"
 
@@ -27,8 +27,8 @@ test:
 	cargo test
 
 pre-push:
-	@if [ -z "$(PRE_PUSH_PYTHON3)" ]; then echo "make pre-push requires a python3 interpreter with cryptography installed" >&2; exit 2; fi
-	@"$(PRE_PUSH_PYTHON3)" -c "import cryptography"
+	@if [ -z "$(PRE_PUSH_PYTHON3)" ]; then echo "make pre-push requires a python3 interpreter with cryptography and tomllib installed" >&2; exit 2; fi
+	@"$(PRE_PUSH_PYTHON3)" -c "import cryptography, tomllib"
 	$(PRE_PUSH_ENV) $(MAKE) check
 	$(PRE_PUSH_ENV) $(MAKE) ci-tools
 	$(PRE_PUSH_ENV) bash scripts/ci/check_touched_rust_size_policy.sh \
