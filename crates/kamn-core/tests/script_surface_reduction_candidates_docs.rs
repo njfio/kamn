@@ -8,7 +8,7 @@ const SH_THRESHOLD_MAX_LOC: usize = 25;
 const PY_THRESHOLD_MAX_LOC: usize = 40;
 const TRACKED_CI_STATS: CategoryStats = CategoryStats {
     total: 215,
-    short: 21,
+    short: 20,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

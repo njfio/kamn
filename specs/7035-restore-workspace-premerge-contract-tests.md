@@ -210,6 +210,14 @@ Output:
 - Newer strict CI clippy may continue into the p2p live transport runtime test
   support deadline assertion after shell ratio cleanup; normalize the timeout
   assertion format without changing drain polling or timeout behavior.
+- Newer strict CI clippy may continue into the p2p libp2p native adapter
+  runtime test support deadline assertion after the live transport cleanup;
+  normalize the timeout assertion format without changing drain polling or
+  timeout behavior.
+- Workspace Pre-Merge may fail deterministic inventory/evidence contracts after
+  the strict-clippy repair commits shift the current branch evidence window and
+  script wrapper inventory; refresh only the observed branch-head counts and
+  generated script-surface candidate counts without weakening the gates.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -366,6 +374,14 @@ Output:
 - P2P live transport runtime support is strict-clippy clean under CI while
   preserving expected-frame deadline messages, timeout values, and polling
   cadence.
+- P2P libp2p native adapter runtime support is strict-clippy clean under CI
+  while preserving expected-frame deadline messages, timeout values, and
+  polling cadence.
+- The current-head governance ratio contract matches the real checker output
+  for `HEAD` and remains below the `0.20` ceiling.
+- The script-surface reduction candidate doc matches filesystem inventory,
+  including the refreshed `scripts/ci` short-wrapper count and total candidate
+  marker.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -465,6 +481,10 @@ Likely:
 - `crates/kamn-core/tests/shell_test_surface_ratio_policy/schema_fixture_contract_tests.rs`
 - `crates/kamn-core/tests/shell_test_surface_ratio_policy/waiver_contract_tests.rs`
 - `crates/kamn-core/tests/p2p_live_transport_runtime/support/transport_io_support.rs`
+- `crates/kamn-core/tests/p2p_libp2p_native_adapter_runtime/support.rs`
+- `crates/kamn-core/tests/governance_feature_commit_ratio_base_compliance/current_head_status_contract_tests.rs`
+- `crates/kamn-core/tests/script_surface_reduction_candidates_docs.rs`
+- `docs/developer/script-surface-reduction-candidates.md`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -549,6 +569,10 @@ gh api repos/njfio/kamn/actions/jobs/83925054489/logs
 rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-sdk/tests
 gh api repos/njfio/kamn/actions/jobs/83961695012/logs
 gh api repos/njfio/kamn/actions/jobs/83964490689/logs
+gh api repos/njfio/kamn/actions/jobs/83966724810/logs
+gh api repos/njfio/kamn/actions/jobs/83966724799/logs
+cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance -- --nocapture
+cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture
 ```
 
 Green verification:
@@ -589,6 +613,10 @@ cargo test -p kamn-core --test shell_test_surface_ratio_policy -- --nocapture
 cargo clippy -p kamn-core --test shell_test_surface_ratio_policy --all-features -- -D warnings
 cargo test -p kamn-core --test p2p_live_transport_runtime -- --nocapture
 cargo clippy -p kamn-core --test p2p_live_transport_runtime --all-features -- -D warnings
+cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime -- --nocapture
+cargo clippy -p kamn-core --test p2p_libp2p_native_adapter_runtime --all-features -- -D warnings
+cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance -- --nocapture
+cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture
 LLVM_COV=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-cov LLVM_PROFDATA=/Users/n/.rustup/toolchains/1.90.0-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/llvm-profdata bash scripts/ci/run_critical_path_coverage_gate.sh --threshold-file .ci/critical-path-coverage-thresholds.json --core-json /tmp/kamn-critical-path-core-7035-selector-final.json --node-json /tmp/kamn-critical-path-node-7035-selector-final.json --output-json /tmp/kamn-critical-path-policy-7035-selector-final.json
 cargo test --workspace --locked --all-features --no-fail-fast
 make check
@@ -1295,6 +1323,79 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`2e1bb6d3d23808ce8059dffca9b6f93af623dc7c` Fast Gate and Workspace Pre-Merge follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83966724810/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/p2p_libp2p_native_adapter_runtime/support.rs`
+# with `clippy::uninlined_format_args` in the expected-frame timeout message.
+
+gh api repos/njfio/kamn/actions/jobs/83966724799/logs
+# Workspace Pre-Merge full tests failed deterministic current-head evidence:
+# governance ratio current-head counts drifted from 10/40 to 8/42 while staying
+# `status=ok`, and script-surface candidate docs expected 63 total candidates
+# while filesystem inventory reported 62.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*"' crates/kamn-core/tests/p2p_libp2p_native_adapter_runtime
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime --all-features -- --nocapture
+# 10 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test p2p_libp2p_native_adapter_runtime --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test p2p_libp2p_native_adapter_runtime --all-features -- -D warnings
+# passed
+
+python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha HEAD --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/kamn-governance-ratio-current-head.json
+# status=ok
+# input_non_merge_commit_total=984
+# non_merge_commit_total=50
+# governance_commit_count=8
+# feature_commit_count=42
+# governance_ratio=0.16
+# feature_ratio=0.84
+
+cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance -- --nocapture
+# 28 passed
+
+cargo test -p kamn-core --test script_surface_reduction_candidates_docs -- --nocapture
+# 1 passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-p2p-libp2p-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+cargo test --workspace --locked --all-features --no-fail-fast
 # passed
 
 make check
