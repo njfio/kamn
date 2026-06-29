@@ -184,6 +184,9 @@ Output:
   endpoint shutdown checks, and signer managed-external helpers; the fix must
   keep reason-code, metrics, topology, shutdown, and signer payload semantics
   unchanged.
+- Newer strict CI clippy may continue into SDK TCP vertical-slice doc and demo
+  script marker assertions after the gate reaches kamn-sdk test targets; the
+  fix must keep the same SDK TCP proof markers and script-marker semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -318,6 +321,9 @@ Output:
   shutdown, and managed signer helper payloads are strict-clippy clean under CI
   without changing their reason codes, metric strings, topology checks, or
   fixture command output.
+- SDK TCP vertical-slice doc and script marker assertions are strict-clippy
+  clean under CI without changing the required marker lists or local SDK demo
+  proof semantics.
 - Test-file size policy inventory accounting is refreshed by exactly one added
   coverage-gate contract test, with oversized counts unchanged.
 - Critical-path mutation runner test selectors match the current split module
@@ -386,6 +392,7 @@ Likely:
 - `crates/kamn-node/src/main_tests/observability_endpoint_tests/endpoint_runtime_contract_tests/readiness_contract_tests.rs`
 - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/support/state_support.rs`
 - `crates/kamn-node/src/main_tests/signer_tests/signer_managed_external_contract_tests/support.rs`
+- `crates/kamn-sdk/tests/sdk_tcp_vertical_slice_contract.rs`
 - `crates/kamn-agent-lib/tests/list_messages_service_contract.rs`
 - `crates/kamn-mcp-server/tests/real_backend_integration_contract.rs`
 - `crates/kamn-sdk/tests/live_transport_task_escrow/*`
@@ -845,6 +852,46 @@ git diff --check
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-main-tests-surface-budget-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-28 for head
+`9f872e86509c8554cd8ddbf77c0a31329354c6bc` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83954008054/logs
+# Fast Gate reached late Lint (strict) and failed on
+# `crates/kamn-sdk/tests/sdk_tcp_vertical_slice_contract.rs` with
+# `clippy::uninlined_format_args`.
+
+cargo test -p kamn-sdk --test sdk_tcp_vertical_slice_contract -- --nocapture
+# 2 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-sdk --test sdk_tcp_vertical_slice_contract --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-sdk --test sdk_tcp_vertical_slice_contract --all-features -- -D warnings
+# passed
+
+rg -n '"[^\"]*\{\}[^\"]*",|"[^\"]*\{:\?\}[^\"]*",|panic!\("[^\"]*\{\}[^\"]*",|format!\(\s*"[^\"]*\{\}[^\"]*"' crates/kamn-sdk/tests/sdk_tcp_vertical_slice_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-sdk-tcp-clippy.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
