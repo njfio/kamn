@@ -234,6 +234,10 @@ Output:
   the strict-clippy repair commits shift the current branch evidence window and
   script wrapper inventory; refresh only the observed branch-head counts and
   generated script-surface candidate counts without weakening the gates.
+- Continued Fast Gate repair commits may shift the 50-commit governance evidence
+  window again; refresh the deterministic current-head contract to the observed
+  passing checker output (`6` governance, `44` feature, ratio `0.12`) while
+  preserving the `status=ok` compliance assertion.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1003,6 +1007,49 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`2481f06f4021ee8740dedda11c7c09cdf35def6f` Workspace Pre-Merge follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83979362093/logs
+# Obsolete previous-head Workspace Pre-Merge full tests failed deterministic
+# current-head evidence after Fast Gate repair commits shifted the 50-commit
+# window. Local checker on the current head reports 6 governance commits, 44
+# feature commits, governance ratio 0.12, feature ratio 0.88, and `status=ok`.
+# The current window's oldest commit is `test(7025): red tests for test-only
+# panic scan`, so adding this `fix(7035)` repair commit should keep the
+# deterministic 6/44 current-head expectations stable.
+
+python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha HEAD --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/kamn-governance-ratio-current-head-post-2481f06-after-patch.json
+# status=ok
+# governance_commit_count=6
+# feature_commit_count=44
+# governance_ratio=0.12
+# feature_ratio=0.88
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance -- --nocapture
+# 28 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test governance_feature_commit_ratio_base_compliance --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-governance-current-head-refresh.json
+# status=pass
+# policy_decision=GO
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
 # passed
 
 make check
