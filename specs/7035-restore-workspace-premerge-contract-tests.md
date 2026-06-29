@@ -238,6 +238,10 @@ Output:
   window again; refresh the deterministic current-head contract to the observed
   passing checker output (`6` governance, `44` feature, ratio `0.12`) while
   preserving the `status=ok` compliance assertion.
+- Newer strict CI clippy may continue into block-pipeline module extraction
+  contract assertion messages after governance-window refresh; normalize
+  formatting without changing required module, root-marker, or file-budget
+  proof semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1007,6 +1011,46 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`5e21d97f4129a31a42039a7a7c95fa268ef4bdb1` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/83983044955/logs
+# Fast Gate strict clippy failed on
+# `crates/kamn-core/tests/block_pipeline_module_extraction_contract.rs:67`
+# with `clippy::uninlined_format_args` in the block-pipeline root budget
+# assertion. The same file had three more old-style assertion/panic messages,
+# all normalized without changing required module, marker, or budget checks.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"|format!\(\s*"[^"]*\{:\.[0-9]+\}[^"]*"' crates/kamn-core/tests/block_pipeline_module_extraction_contract.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test block_pipeline_module_extraction_contract -- --nocapture
+# 1 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test block_pipeline_module_extraction_contract --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test block_pipeline_module_extraction_contract --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-block-pipeline-contract-clippy.json
+# status=pass
+# policy_decision=GO
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
 # passed
 
 make check
