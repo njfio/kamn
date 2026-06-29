@@ -87,12 +87,7 @@ fn direct_message_nonce_bytes(nonce: u64) -> [u8; 24] {
 
 fn canonical_aad(sender_key_ref: &str, recipient_key_ref: &str, nonce: u64) -> String {
     format!(
-        "{}|{}|{}|{}|{}",
-        DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
-        DIRECT_MESSAGE_CIPHER_ALGORITHM,
-        sender_key_ref,
-        recipient_key_ref,
-        nonce
+        "{DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM}|{DIRECT_MESSAGE_CIPHER_ALGORITHM}|{sender_key_ref}|{recipient_key_ref}|{nonce}"
     )
 }
 

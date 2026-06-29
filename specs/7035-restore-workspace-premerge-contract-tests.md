@@ -268,6 +268,10 @@ Output:
   support subtree after node ownership cleanup; normalize old-style formatting
   in that existing support code without changing fixture parsing, source census,
   threshold loading, source-path classification, or failure semantics.
+- Newer strict CI clippy may continue into direct-message crypto contract tests
+  after production-expect support cleanup; normalize canonical AAD format-string
+  construction without changing key agreement, cipher, sender, recipient, nonce,
+  or decrypt failure semantics.
 - Critical-path mutation may invoke stale test selectors after module splits,
   causing `cargo-mutants` slices to run zero tests and report escaped mutants
   even though the runtime contract still has current tests.
@@ -1037,6 +1041,51 @@ bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-fi
 # offending_functions=none
 
 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 for head
+`7f818d0597f961ce0c76be5d73b188c3b5f20d13` Fast Gate follow-up:
+
+```bash
+gh api repos/njfio/kamn/actions/jobs/84015765423/logs
+# Fast Gate strict clippy failed on:
+# `crates/kamn-crypto/tests/direct_message_crypto_failure_paths.rs:89`
+# `crates/kamn-crypto/tests/support/direct_message_crypto_support.rs:68`
+# with `clippy::uninlined_format_args` in direct-message crypto canonical AAD
+# construction.
+
+rg -n '"[^"]*\{\}[^"]*",|"[^"]*\{:\?\}[^"]*",|panic!\("[^"]*\{\}[^"]*",|format!\(\s*"[^"]*\{\}[^"]*"' crates/kamn-crypto/tests/direct_message_crypto_failure_paths.rs crates/kamn-crypto/tests/support/direct_message_crypto_support.rs
+# no matches
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-crypto --test direct_message_crypto_failure_paths -- --nocapture
+# 5 passed
+
+cargo test -p kamn-crypto --test direct_message_crypto_integration -- --nocapture
+# 6 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-crypto --test direct_message_crypto_failure_paths --test direct_message_crypto_integration --all-features -- -D warnings
+# passed
+
+CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-crypto --test direct_message_crypto_failure_paths --test direct_message_crypto_integration --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-direct-message-crypto-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-crypto --all-targets --all-features -- -D warnings
 # passed
 
 make check

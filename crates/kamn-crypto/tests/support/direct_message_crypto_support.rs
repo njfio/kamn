@@ -66,12 +66,7 @@ pub fn legacy_raw_prefix_nonce_bytes_v1(nonce: u64) -> [u8; 24] {
 
 pub fn canonical_aad(sender_key_ref: &str, recipient_key_ref: &str, nonce: u64) -> String {
     format!(
-        "{}|{}|{}|{}|{}",
-        DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
-        DIRECT_MESSAGE_CIPHER_ALGORITHM,
-        sender_key_ref,
-        recipient_key_ref,
-        nonce
+        "{DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM}|{DIRECT_MESSAGE_CIPHER_ALGORITHM}|{sender_key_ref}|{recipient_key_ref}|{nonce}"
     )
 }
 
