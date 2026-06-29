@@ -236,7 +236,7 @@ Output:
   generated script-surface candidate counts without weakening the gates.
 - Continued Fast Gate repair commits may shift the 50-commit governance evidence
   window again; refresh the deterministic current-head contract to the observed
-  passing checker output (`6` governance, `44` feature, ratio `0.12`) while
+  passing checker output (`5` governance, `45` feature, ratio `0.10`) while
   preserving the `status=ok` compliance assertion.
 - Newer strict CI clippy may continue into block-pipeline module extraction
   contract assertion messages after governance-window refresh; normalize
@@ -1770,6 +1770,42 @@ CARGO_INCREMENTAL=0 rustup run stable cargo clippy -p kamn-core --test message_l
 # passed
 
 bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-message-lifecycle-module-clippy.json
+# status=pass
+# policy_decision=GO
+# offending_files=none
+# offending_functions=none
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --all-targets --all-features -- -D warnings
+# passed
+
+make check
+# passed
+```
+
+Closeout evidence captured on 2026-06-29 after
+`e5f054ad9bb61f87d77b2a023f95169a5e5ae4ca` local governance-window refresh:
+
+```bash
+python3 scripts/ci/check_governance_feature_commit_ratio.py --repo-root . --base-sha d2c2fe1b901a1d53ea419f31778e1d836f2b1323 --head-sha HEAD --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/kamn-governance-ratio-current-head-post-e5f054ad-after-patch.json
+# status=ok
+# governance_commit_count=5
+# feature_commit_count=45
+# governance_ratio=0.1
+# feature_ratio=0.9
+
+cargo fmt --check
+# passed
+
+git diff --check
+# passed
+
+cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance current_head_status_contract_tests::current_branch_head_restores_ratio_compliance -- --exact --nocapture
+# 1 passed
+
+CARGO_INCREMENTAL=0 cargo clippy -p kamn-core --test governance_feature_commit_ratio_base_compliance --all-features -- -D warnings
+# passed
+
+bash scripts/ci/check_touched_rust_size_policy.sh --base-ref main --threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json --baseline-file fixtures/ci/touched_rust_size_policy_baseline.json --output-json /tmp/kamn-touched-rust-size-policy-7035-governance-current-head-post-e5f054ad.json
 # status=pass
 # policy_decision=GO
 # offending_files=none
