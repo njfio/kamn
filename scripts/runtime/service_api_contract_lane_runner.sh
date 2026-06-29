@@ -121,6 +121,11 @@ service_api_contract_lane_run() {
     exit 1
   fi
 
+  if [[ "$ci_fast_gate" == "FAIL" ]]; then
+    echo "${LANE_LABEL} policy rejected: ci_fast_gate_failed" >&2
+    exit 1
+  fi
+
   local start_epoch
   start_epoch="$(date +%s)"
   local tmp_dir
