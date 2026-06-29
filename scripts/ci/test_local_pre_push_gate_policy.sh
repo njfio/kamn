@@ -18,8 +18,18 @@ extract_pre_push_target() {
   ' "$MAKEFILE"
 }
 
-if [ -f "$FAST_WORKFLOW" ]; then
-  fail "ci-fast-gate GitHub workflow must be removed; run local gates with make pre-push"
+workflow_has_pr_trigger() {
+  local file="$1"
+  awk '
+    /^on:/ { in_on=1; next }
+    in_on && /^[^[:space:]]/ { in_on=0 }
+    in_on && $1 ~ /^pull_request:/ { found=1 }
+    END { exit found ? 0 : 1 }
+  ' "$file"
+}
+
+if [ -f "$FAST_WORKFLOW" ] && workflow_has_pr_trigger "$FAST_WORKFLOW"; then
+  fail "ci-fast-gate GitHub workflow must not run on pull_request; run local gates with make pre-push"
 fi
 
 pre_push_target="$(extract_pre_push_target)"

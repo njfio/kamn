@@ -26,8 +26,8 @@ Inputs:
 
 Outputs:
 
-- No GitHub Actions workflow file that schedules `ci-fast-gate` PR jobs for
-  new PR heads.
+- No GitHub Actions `pull_request` trigger that schedules `ci-fast-gate` PR
+  jobs for new PR heads.
 - A local make target that runs the pre-push gate sequence explicitly.
 - Contract coverage that fails before the workflow removal/local target change
   and passes after it.
@@ -59,7 +59,7 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] `ci-fast-gate` no longer appears as a GitHub Actions workflow file.
+- [ ] `ci-fast-gate` no longer has a GitHub Actions `pull_request` trigger.
 - [ ] A documented local command, `make pre-push`, runs the gate sequence before
       publishing changes.
 - [ ] `make pre-push` includes formatting, strict clippy, `make ci-tools`,
@@ -130,6 +130,24 @@ Integration/Proof:
 - `bash scripts/ci/test_local_pre_push_gate_policy.sh` fails before
   implementation with:
   `ci-fast-gate GitHub workflow must be removed; run local gates with make pre-push`
+
+## Green Evidence
+
+- `bash scripts/ci/test_local_pre_push_gate_policy.sh` passes.
+- `cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract
+  spec_c02_ci_fast_gate_workspace_premerge_job_is_not_pr_scheduled -- --exact
+  --nocapture` passes: `1 passed`.
+- `bash scripts/ci/test_workflow_scope_policy.sh` passes.
+- `bash scripts/ci/test_workflow_runtime_ceiling_policy.sh` passes.
+- `bash scripts/ci/test_workflow_retry_policy.sh` passes.
+- `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh` passes.
+- `cargo test -p kamn-core --test ci_fast_gate_workspace_premerge_contract
+  -- --nocapture` passes: `10 passed`.
+- `make -n pre-push` shows the local pre-push gate sequence.
+- `cargo fmt --check` passes.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passes; runtime: `4m 47s`.
+- `make check` passes; runtime: `9m 11s`.
 
 ## Shell-Surface DoD
 

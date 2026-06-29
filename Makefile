@@ -1,11 +1,12 @@
 SHELL := /bin/bash
 
-.PHONY: help check test smoke-live-network deep-live-network demo demo-localhost-transport ci-tools kolme-local-heavy kolme-fork-rust-tests-local
+.PHONY: help check test pre-push smoke-live-network deep-live-network demo demo-localhost-transport ci-tools kolme-local-heavy kolme-fork-rust-tests-local
 
 help:
 	@echo "KAMN developer lanes"
 	@echo "  make check  - fast static verification (cargo fmt + strict clippy)"
 	@echo "  make test   - default bounded test lane (cargo test)"
+	@echo "  make pre-push - full local gate sequence before publishing"
 	@echo "  make smoke-live-network - bounded pilot smoke lane + JSON report"
 	@echo "  make deep-live-network - scheduled/manual pilot deep lane summary report"
 	@echo "  make demo   - two-process localhost signed-message demo"
@@ -21,6 +22,28 @@ check:
 
 test:
 	cargo test
+
+pre-push:
+	cargo fmt --check
+	cargo clippy --workspace --all-targets --all-features -- -D warnings
+	$(MAKE) ci-tools
+	bash scripts/ci/check_touched_rust_size_policy.sh \
+		--base-ref main \
+		--threshold-file fixtures/ci/touched_rust_size_policy_thresholds.json \
+		--baseline-file fixtures/ci/touched_rust_size_policy_baseline.json \
+		--output-json /tmp/kamn-touched-rust-size-policy-pre-push.json
+	bash scripts/ci/run_with_retry.sh \
+		--label local-pre-push-workspace-tests \
+		--max-attempts 2 \
+		-- bash -lc "bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test --workspace --locked --all-features --no-fail-fast"
+	bash scripts/ci/run_critical_path_coverage_gate.sh \
+		--threshold-file .ci/critical-path-coverage-thresholds.json \
+		--core-json /tmp/kamn-critical-path-core-coverage-pre-push.json \
+		--node-json /tmp/kamn-critical-path-node-coverage-pre-push.json \
+		--output-json /tmp/kamn-critical-path-coverage-policy-pre-push.json
+	bash scripts/ci/run_critical_path_mutation_gate.sh \
+		--output-json /tmp/kamn-critical-path-mutation-report-pre-push.json \
+		--timeout-seconds 900
 
 smoke-live-network:
 	bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json

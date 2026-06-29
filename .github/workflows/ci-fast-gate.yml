@@ -1,8 +1,6 @@
 name: ci-fast-gate
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       run_kolme_local_heavy_contract_tests:

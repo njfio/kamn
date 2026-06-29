@@ -66,10 +66,10 @@ fn spec_c01_ci_fast_gate_declares_workspace_premerge_job() {
 }
 
 #[test]
-fn spec_c02_ci_fast_gate_workspace_premerge_job_runs_on_pull_requests() {
+fn spec_c02_ci_fast_gate_workspace_premerge_job_is_not_pr_scheduled() {
     assert!(
-        CI_FAST_GATE_WORKFLOW.contains("if: github.event_name == 'pull_request'"),
-        "ci_fast_gate_workspace_premerge_pull_request_scope_missing",
+        !CI_FAST_GATE_WORKFLOW.contains("pull_request:"),
+        "ci_fast_gate_must_not_schedule_pr_gate_jobs",
     );
 }
 
