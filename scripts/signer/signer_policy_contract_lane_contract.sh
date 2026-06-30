@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend functional_privileged_roles_deny_fallback_when_provider_unavailable
-bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core signer_backend::tests::router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes
+bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --lib signer_backend::tests::policy_tests::router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes -- --exact
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend regression_provider_handshake_policy_block_rejects_without_fallback
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend regression_provider_client_backend_mismatch_is_rejected_without_fallback
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test threat_control_matrix_docs

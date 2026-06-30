@@ -3,14 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-cargo test -p kamn-core runtime::tests::functional_runtime_backpressure_classifies_queue_saturation >/dev/null
-cargo test -p kamn-core runtime::tests::regression_runtime_backpressure_rejects_capacity_overflow_sample >/dev/null
-cargo test -p kamn-core runtime::tests::functional_authenticated_peer_frame_roundtrips_wire_and_signature >/dev/null
-cargo test -p kamn-core runtime::tests::regression_forged_or_unauthorized_peer_frame_is_rejected >/dev/null
-cargo test -p kamn-core runtime::tests::regression_replayed_peer_frame_nonce_is_rejected >/dev/null
-cargo test -p kamn-core runtime::tests::functional_file_snapshot_store_recovery_truncates_stale_metadata_suffix >/dev/null
-cargo test -p kamn-core runtime::tests::regression_file_snapshot_store_rejects_cursor_regression_metadata >/dev/null
-cargo test -p kamn-core runtime::tests::regression_snapshot_restore_cursor_mismatch_is_rejected >/dev/null
+cargo test -p kamn-core --lib runtime::tests::lifecycle_backpressure_contract_tests::backpressure_contract_tests::functional_runtime_backpressure_classifies_queue_saturation -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::lifecycle_backpressure_contract_tests::backpressure_budget_contract_tests::regression_runtime_backpressure_rejects_capacity_overflow_sample -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::peer_frame_contract_tests::peer_frame_validation_contract_tests::functional_authenticated_peer_frame_roundtrips_wire_and_signature -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::peer_frame_contract_tests::peer_frame_validation_contract_tests::regression_forged_or_unauthorized_peer_frame_is_rejected -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::peer_frame_contract_tests::peer_frame_validation_contract_tests::regression_replayed_peer_frame_nonce_is_rejected -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::runtime_tests_snapshot_store::functional_file_snapshot_store_recovery_truncates_stale_metadata_suffix -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::runtime_tests_snapshot_store::regression_file_snapshot_store_rejects_cursor_regression_metadata -- --exact >/dev/null
+cargo test -p kamn-core --lib runtime::tests::runtime_tests_snapshot_store::regression_snapshot_restore_cursor_mismatch_is_rejected -- --exact >/dev/null
 cargo test -p kamn-core --test runtime_network_docs >/dev/null
 cargo test -p kamn-core --test runtime_watchdog_attestation_docs >/dev/null
 cargo test -p kamn-core --test live_network_wave_docs >/dev/null
