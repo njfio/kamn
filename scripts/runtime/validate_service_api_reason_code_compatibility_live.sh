@@ -398,7 +398,8 @@ if [ "$selector_index" -le 0 ]; then
 fi
 cargo test -p kamn-sdk --test service_api_client regression_service_api_client_rejects_replayed_nonce -- --exact \
   >"$TMP_DIR/service-api-reason-code-rust-sdk.log" 2>&1
-python3 -m unittest tests.python.test_sdk.PythonLiveTransportSDKTests.test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed \
+python3 -m unittest discover -s tests/python -p test_sdk.py \
+  -k test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed \
   >"$TMP_DIR/service-api-reason-code-python-sdk.log" 2>&1
 popd >/dev/null
 

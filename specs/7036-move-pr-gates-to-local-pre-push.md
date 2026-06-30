@@ -182,6 +182,26 @@ Integration/Proof:
 - `make -n pre-push` now selects
   `/opt/homebrew/opt/python@3.12/bin/python3.12` and PATH-prefixes the local
   gates with `/opt/homebrew/opt/python@3.12/bin/`.
+- A later `make pre-push` run reached
+  `scripts/runtime/test_validate_service_api_reason_code_compatibility_live_contract_lane.sh`
+  and failed silently because the wrapper captured the child contract lane under
+  `set -e`; focused replay showed the nested Python SDK unittest used the
+  dotted `tests.python...` import path, which collides with an installed
+  `tests` package under Homebrew Python 3.12.
+- The reason-code validator now invokes the SDK assertion through
+  `python3 -m unittest discover -s tests/python -p test_sdk.py -k
+  test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed`,
+  and the wrapper prints captured child stdout/stderr before returning a
+  nonzero lane status.
+- `PATH=/opt/homebrew/opt/python@3.12/libexec/bin:$PATH bash
+  scripts/runtime/validate_service_api_reason_code_compatibility_live.sh
+  --output-json /tmp/service-api-reason-code-debug.json --max-seconds 240`
+  passes.
+- `PATH=/opt/homebrew/opt/python@3.12/libexec/bin:$PATH bash
+  scripts/runtime/test_validate_service_api_reason_code_compatibility_live_contract_lane.sh`
+  passes.
+- The adjacent `ci-tools` service API segment from serde parity through
+  validation negative-matrix contract lanes passes under the same PATH.
 
 ## Shell-Surface DoD
 
