@@ -11,41 +11,17 @@ type RelayRouteMap = std::collections::BTreeMap<String, String>;
 type RelayP2pContext = super::super::service_api_relay_p2p::DaemonServiceApiRelayP2pContext;
 type RuntimeProcessing = crate::daemon_observability::DaemonRuntimeProcessingTelemetry;
 
-struct RelaySpoolArgs<'a> {
-    relay_p2p_context: Option<&'a RelayP2pContext>,
-    relay_route_map: &'a RelayRouteMap,
-    relay_signing_private_key_hex: Option<&'a str>,
-    relay_nonce_counter: &'a mut u64,
-    service_api_state_file: Option<&'a str>,
-    service_api_relay_spool_file: Option<&'a str>,
-    service_api_signature_state_hash: &'a str,
+pub(super) struct RelaySpoolArgs<'a> {
+    pub(super) relay_p2p_context: Option<&'a RelayP2pContext>,
+    pub(super) relay_route_map: &'a RelayRouteMap,
+    pub(super) relay_signing_private_key_hex: Option<&'a str>,
+    pub(super) relay_nonce_counter: &'a mut u64,
+    pub(super) service_api_state_file: Option<&'a str>,
+    pub(super) service_api_relay_spool_file: Option<&'a str>,
+    pub(super) service_api_signature_state_hash: &'a str,
 }
 
 pub(super) fn process_relay_spool(
-    runtime_processing: &mut RuntimeProcessing,
-    relay_p2p_context: Option<&RelayP2pContext>,
-    relay_route_map: &RelayRouteMap,
-    relay_signing_private_key_hex: Option<&str>,
-    relay_nonce_counter: &mut u64,
-    service_api_state_file: Option<&str>,
-    service_api_relay_spool_file: Option<&str>,
-    service_api_signature_state_hash: &str,
-) -> Result<(), ConfigError> {
-    process_relay_spool_with_args(
-        runtime_processing,
-        RelaySpoolArgs {
-            relay_p2p_context,
-            relay_route_map,
-            relay_signing_private_key_hex,
-            relay_nonce_counter,
-            service_api_state_file,
-            service_api_relay_spool_file,
-            service_api_signature_state_hash,
-        },
-    )
-}
-
-fn process_relay_spool_with_args(
     runtime_processing: &mut RuntimeProcessing,
     args: RelaySpoolArgs<'_>,
 ) -> Result<(), ConfigError> {
@@ -66,6 +42,14 @@ fn process_relay_spool_with_args(
     )
 }
 
+struct RelayForwardContext<'a> {
+    relay_p2p_context: Option<&'a RelayP2pContext>,
+    relay_route_map: &'a RelayRouteMap,
+    relay_signing_private_key_hex: Option<&'a str>,
+    relay_nonce_counter: &'a mut u64,
+    service_api_signature_state_hash: &'a str,
+}
+
 fn process_relay_entries(
     runtime_processing: &mut crate::daemon_observability::DaemonRuntimeProcessingTelemetry,
     relay_entries: Vec<RelayEntry>,
@@ -76,15 +60,18 @@ fn process_relay_entries(
     service_api_signature_state_hash: &str,
 ) -> Result<RelayBatchOutcome, ConfigError> {
     let mut batch = RelayBatchOutcome::default();
+    let mut forward_context = RelayForwardContext {
+        relay_p2p_context,
+        relay_route_map,
+        relay_signing_private_key_hex,
+        relay_nonce_counter,
+        service_api_signature_state_hash,
+    };
     for relay_entry in relay_entries {
         apply_relay_decision(
             runtime_processing,
             &mut batch,
-            relay_p2p_context,
-            relay_route_map,
-            relay_signing_private_key_hex,
-            relay_nonce_counter,
-            service_api_signature_state_hash,
+            &mut forward_context,
             relay_entry,
         )?;
     }
@@ -100,19 +87,15 @@ enum RelayForwardDecision {
 fn apply_relay_decision(
     runtime_processing: &mut crate::daemon_observability::DaemonRuntimeProcessingTelemetry,
     batch: &mut RelayBatchOutcome,
-    relay_p2p_context: Option<&RelayP2pContext>,
-    relay_route_map: &RelayRouteMap,
-    relay_signing_private_key_hex: Option<&str>,
-    relay_nonce_counter: &mut u64,
-    service_api_signature_state_hash: &str,
+    forward_context: &mut RelayForwardContext<'_>,
     relay_entry: RelayEntry,
 ) -> Result<(), ConfigError> {
     let decision = forward_single_entry(
-        relay_p2p_context,
-        relay_route_map,
-        relay_signing_private_key_hex,
-        relay_nonce_counter,
-        service_api_signature_state_hash,
+        forward_context.relay_p2p_context,
+        forward_context.relay_route_map,
+        forward_context.relay_signing_private_key_hex,
+        forward_context.relay_nonce_counter,
+        forward_context.service_api_signature_state_hash,
         &relay_entry,
     )?;
     record_relay_decision(runtime_processing, batch, relay_entry, decision)?;

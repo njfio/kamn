@@ -1,8 +1,7 @@
 use super::super::*;
 use super::support::{
-    build_content_snapshot, expire_content, query_content, query_missing_content,
-    read_state_json, register_content, set_state_file_env, tombstone_content,
-    unique_named_state_file,
+    build_content_snapshot, expire_content, query_content, query_missing_content, read_state_json,
+    register_content, set_state_file_env, tombstone_content, unique_named_state_file,
 };
 
 #[test]
@@ -26,8 +25,16 @@ fn assert_initial_content_lifecycle_phase(caller_did: &str) -> String {
         91,
         r#"{"content":"restart-content-check"}"#,
     );
-    let content_id = registered["content_id"].as_str().expect("content id should be string");
-    let expired = expire_content(&first_snapshot, bind_addr.as_str(), caller_did, 92, content_id);
+    let content_id = registered["content_id"]
+        .as_str()
+        .expect("content id should be string");
+    let expired = expire_content(
+        &first_snapshot,
+        bind_addr.as_str(),
+        caller_did,
+        92,
+        content_id,
+    );
     assert_registered_and_expired_payloads(&registered, &expired, content_id);
     content_id.to_owned()
 }
@@ -41,12 +48,34 @@ fn assert_registered_and_expired_payloads(registered: &Value, expired: &Value, c
     assert_eq!(expired["redaction_status"], "none");
 }
 
-fn assert_restart_content_lifecycle_phase(caller_did: &str, content_id: String, state_file: &std::path::Path) {
+fn assert_restart_content_lifecycle_phase(
+    caller_did: &str,
+    content_id: String,
+    state_file: &std::path::Path,
+) {
     let restart_snapshot = build_content_snapshot("127.0.0.1:34114");
     let restart_bind_addr = reserve_loopback_addr();
-    let queried = query_content(&restart_snapshot, restart_bind_addr.as_str(), caller_did, 93, content_id.as_str());
-    let tombstoned = tombstone_content(&restart_snapshot, restart_bind_addr.as_str(), caller_did, 94, content_id.as_str());
-    let queried_after = query_content(&restart_snapshot, restart_bind_addr.as_str(), caller_did, 95, content_id.as_str());
+    let queried = query_content(
+        &restart_snapshot,
+        restart_bind_addr.as_str(),
+        caller_did,
+        93,
+        content_id.as_str(),
+    );
+    let tombstoned = tombstone_content(
+        &restart_snapshot,
+        restart_bind_addr.as_str(),
+        caller_did,
+        94,
+        content_id.as_str(),
+    );
+    let queried_after = query_content(
+        &restart_snapshot,
+        restart_bind_addr.as_str(),
+        caller_did,
+        95,
+        content_id.as_str(),
+    );
     let missing = query_missing_content(
         &restart_snapshot,
         restart_bind_addr.as_str(),
@@ -55,7 +84,14 @@ fn assert_restart_content_lifecycle_phase(caller_did: &str, content_id: String, 
         "content-missing-96",
     );
     let state_json = read_state_json(state_file);
-    assert_restart_payloads(&queried, &tombstoned, &queried_after, &missing, &state_json, content_id.as_str());
+    assert_restart_payloads(
+        &queried,
+        &tombstoned,
+        &queried_after,
+        &missing,
+        &state_json,
+        content_id.as_str(),
+    );
 }
 
 fn assert_restart_payloads(
@@ -77,6 +113,12 @@ fn assert_restart_payloads(
     assert_eq!(queried_after["redaction_status"], "redacted");
     assert_eq!(missing.error, "not-found");
     assert_eq!(missing.reason_code, "service_api_route_not_found");
-    assert_eq!(state_json["contents"][content_id]["lifecycle_state"], "tombstoned");
-    assert_eq!(state_json["contents"][content_id]["redaction_status"], "redacted");
+    assert_eq!(
+        state_json["contents"][content_id]["lifecycle_state"],
+        "tombstoned"
+    );
+    assert_eq!(
+        state_json["contents"][content_id]["redaction_status"],
+        "redacted"
+    );
 }

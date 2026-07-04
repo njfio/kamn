@@ -59,5 +59,6 @@ fn require_env(key: &str) {
 }
 
 fn required_env_value(key: &str) -> String {
-    std::env::var(key).unwrap_or_else(|_| panic!("required env missing for live MCP S-05 probe: {key}"))
+    std::env::var(key)
+        .unwrap_or_else(|_| panic!("required env missing for live MCP S-05 probe: {key}"))
 }

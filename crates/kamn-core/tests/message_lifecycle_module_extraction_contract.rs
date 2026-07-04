@@ -31,9 +31,7 @@ fn message_lifecycle_root_shell_stays_within_budget() {
     let line_count = source.lines().count();
     assert!(
         line_count <= ROOT_MAX_LINES,
-        "message_lifecycle.rs should stay within {} lines, found {}",
-        ROOT_MAX_LINES,
-        line_count
+        "message_lifecycle.rs should stay within {ROOT_MAX_LINES} lines, found {line_count}"
     );
 }
 
@@ -52,10 +50,10 @@ fn message_lifecycle_root_declares_extracted_modules() {
 fn message_lifecycle_extracted_files_exist() {
     for relative in REQUIRED_FILES {
         let path = repo_root().join(relative);
+        let path_display = path.display();
         assert!(
             path.exists(),
-            "expected extracted file to exist: {}",
-            path.display()
+            "expected extracted file to exist: {path_display}"
         );
     }
 }

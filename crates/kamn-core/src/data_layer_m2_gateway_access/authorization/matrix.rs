@@ -70,7 +70,10 @@ fn decision_outcome(decision: DataLayerM2AuthorizationDecision) -> (bool, &'stat
 pub(super) fn matrix_decision(
     fixtures: &[DataLayerM2NegativeAuthorizationAuditFixture],
 ) -> DataLayerM2NegativeAuthorizationMatrixDecision {
-    if fixtures.iter().all(|fixture| fixture.denied && !fixture.mismatch) {
+    if fixtures
+        .iter()
+        .all(|fixture| fixture.denied && !fixture.mismatch)
+    {
         return DataLayerM2NegativeAuthorizationMatrixDecision::AllDenied {
             reason_code: DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
         };

@@ -74,7 +74,7 @@ fn build_proof(bridge_agent_did: &str, normalized: &NormalizedInboundMessage) ->
     EnvelopeProof {
         type_name: "Ed25519Signature2020".to_owned(),
         created: normalized.received_at.clone(),
-        verification_method: format!("{}#bridge-key-1", bridge_agent_did),
+        verification_method: format!("{bridge_agent_did}#bridge-key-1"),
         proof_purpose: CANONICAL_PROOF_PURPOSE.to_owned(),
         proof_value: format!("proof:{}", normalized.bridge_message_id),
     }

@@ -3,11 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh"
+CONTRACT_IMPL="$ROOT_DIR/scripts/runtime/libp2p_convergence_process_isolated_live_contract.py"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected process-isolated convergence validation script to be executable" >&2
+  exit 1
+fi
+if ! grep -q 'KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_CLEAN_TARGET' "$CONTRACT_IMPL"; then
+  echo "expected process-isolated convergence smoke target cleanup to be explicit opt-in" >&2
   exit 1
 fi
 

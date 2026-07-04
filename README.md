@@ -92,6 +92,67 @@ Detailed command matrices, contract markers, policy snippets, and lane-specific 
 
 This keeps the root README onboarding-focused while preserving deterministic contract markers in a stable docs location.
 
+Managed-signer backend SLO telemetry anchors:
+- `generate_managed_signer_backend_slo_telemetry_bundle.sh`
+- `run_managed_signer_backend_slo_telemetry_contract_lane.sh`
+- `kamn.kolme.managed-signer-backend-slo-telemetry.v1`
+- `managed_signer_backend_timeout_rate_threshold_exceeded`
+- `managed_signer_backend_unavailable_rate_threshold_exceeded`
+- `managed_signer_backend_error_rate_threshold_exceeded`
+- `managed_signer_backend_ci_fast_gate_failed`
+- `signer_key_source=managed-external`
+- `contracts.required_signer_key_source=managed-external`
+
+Managed-signer backend SLO policy anchors:
+- `check_managed_signer_backend_slo_policy.py`
+- `run_managed_signer_backend_slo_policy_contract_lane.sh`
+- `kamn.kolme.managed-signer-backend-slo-policy-report.v1`
+- `kamn.kolme.managed-signer-backend-slo-policy-contract-report.v1`
+- `managed_signer_backend_slo_within_threshold`
+- `managed_signer_backend_no_action_required`
+- `managed_signer_backend_reduce_timeout_burst`
+- `managed_signer_backend_failover_endpoint`
+- `managed_signer_backend_enable_circuit_breaker`
+- `managed_signer_backend_replay_ci_fast_gate`
+
+Managed-signer startup validation anchors:
+- `run_managed_signer_startup_live_validation_contract_lane.sh`
+- `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`
+- `deployment_preflight_passed`
+- `signer_rotation_promotion_stalled`
+- `quorum_evidence_custody_sha256_mismatch`
+- `checkpoint_failed_signer_profile_contract`
+- `checkpoint_failed_signer_provenance_contract`
+- `checkpoint_failed_signer_rotation_freshness_contract`
+- `signer_key_source_production_managed_external_required`
+- `signer_profile_mismatch`
+- `signer_rotation_epoch_stale`
+- `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`
+- `managed_signer_custody_audit_parity_fail_closed_status=verified`
+- `managed_signer_rotation_reason_taxonomy_status=verified`
+- `managed_signer_rehearsal_output_normalization_status=verified`
+- `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`
+- `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`
+- `ci_local_promotion_budget_boundary_status=verified`
+- `execution_scope=local-scheduled`
+
+Live-provider runtime integration anchors:
+- `run_local_live_provider_runtime_integration_contract_lane.sh`
+- `run_local_runtime_commit_live_lane.sh`
+- `check_local_runtime_commit_live_evidence_policy.py`
+- `provider_client_contract=KolmeRuntimeCommitLiveProvider`
+- `provider_client_contract_mismatch`
+- `provider_in_memory_reference_detected`
+- `provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter`
+- `provider_signer_adapter_contract_mismatch`
+- `live_preflight_failed`
+- `live_preflight_timeout`
+
+Localhost signed integration anchors:
+- `run_localhost_signed_integration_contract_lane.sh`
+- `check_localhost_signed_integration_evidence_policy.sh`
+- `/tmp/localhost-signed-integration-contract-report.json`
+
 ## Key Links
 
 - CI strategy: `docs/ci/strategy.md`

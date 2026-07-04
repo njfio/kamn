@@ -1,5 +1,5 @@
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
 
 #[test]
 fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {

@@ -9,31 +9,36 @@ const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HE
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "1111111111111111111111111111111111111111111111111111111111111111";
 
-fn reserve_loopback_addr() -> String {
+fn bind_loopback_listener() -> TcpListener {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
-    let addr = listener.local_addr().expect("local addr should resolve");
-    drop(listener);
-    addr.to_string()
+    listener
+        .set_nonblocking(true)
+        .expect("listener nonblocking mode should configure");
+    listener
 }
 
 fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String> {
     let mut request = Vec::new();
     let mut chunk = [0_u8; 1024];
     stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
+        .set_read_timeout(Some(Duration::from_millis(100)))
         .map_err(|error| format!("request read-timeout failed: {error}"))?;
+    let deadline = Instant::now() + Duration::from_secs(10);
 
     loop {
+        if request.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("request header terminator missing before deadline".to_owned());
+        }
         match stream.read(&mut chunk) {
             Ok(0) => break,
             Ok(read_count) => {
                 request.extend_from_slice(&chunk[..read_count]);
-                if request.windows(4).any(|window| window == b"\r\n\r\n") {
-                    break;
-                }
             }
             Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break;
+                continue;
             }
             Err(error) => return Err(format!("request read failed: {error}")),
         }
@@ -68,111 +73,153 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
         404 => "404 Not Found",
         _ => "500 Internal Server Error",
     };
+    let body_len = body.len();
     let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(),
-        body
+        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n{body}"
     );
     stream
         .write_all(payload.as_bytes())
-        .map_err(|error| format!("service api write failed: {error}"))
+        .map_err(|error| format!("service api write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("service api flush failed: {error}"))
 }
 
-fn run_real_backend_service_server(bind_addr: String, max_requests: usize) -> Result<(), String> {
-    let listener = TcpListener::bind(bind_addr.as_str())
-        .map_err(|error| format!("server bind failed: {error}"))?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| format!("server nonblocking mode failed: {error}"))?;
-
-    let deadline = Instant::now() + Duration::from_secs(2);
+fn run_real_backend_service_server(
+    listener: TcpListener,
+    max_requests: usize,
+) -> Result<(), String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
     let mut served = 0usize;
     while served < max_requests {
         if Instant::now() > deadline {
             return Err("server timed out before serving request budget".to_owned());
         }
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                let (method, path) = parse_http_request(&mut stream)?;
-                if method == "GET" && path == "/healthz" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
-                    )?;
-                } else if method == "GET" && path == "/v1/channels/channel-contract-1/messages" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"channel_id":"channel-contract-1","messages":["msg-a","msg-b"]}"#,
-                    )?;
-                } else if method == "GET" && path == "/v1/tasks/task-contract-1" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"task_id":"task-contract-1","state":"submitted"}"#,
-                    )?;
-                } else if method == "GET" && path == "/v1/agents/kamn:did:agent:alice" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
-                    )?;
-                } else if method == "POST" && path == "/v1/content/register" {
-                    write_http_response(
-                        &mut stream,
-                        201,
-                        r#"{"content_id":"content-contract-1","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}"#,
-                    )?;
-                } else if method == "POST" && path == "/v1/content/content-contract-1/expire" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"content_id":"content-contract-1","lifecycle_state":"expired","redaction_status":"none"}"#,
-                    )?;
-                } else if (method == "POST" && path == "/v1/content/content-contract-1/tombstone")
-                    || (method == "GET" && path == "/v1/content/content-contract-1")
-                {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"content_id":"content-contract-1","lifecycle_state":"tombstoned","redaction_status":"redacted"}"#,
-                    )?;
-                } else if method == "POST" && path == "/v1/bridge/submit" {
-                    write_http_response(
-                        &mut stream,
-                        202,
-                        r#"{"bridge_id":"bridge-contract-1","source_message_id":"msg-bridge-source-1","bridge_status":"submitted"}"#,
-                    )?;
-                } else if (method == "POST" && path == "/v1/bridge/bridge-contract-1/forward")
-                    || (method == "GET" && path == "/v1/bridge/bridge-contract-1")
-                {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"bridge_id":"bridge-contract-1","bridge_status":"forwarded","target_message_id":"msg-bridge-target-1","forward_tx_hash":"sha256:bridge-forwarded-1"}"#,
-                    )?;
-                } else {
-                    write_http_response(
-                        &mut stream,
-                        404,
-                        r#"{"error":"not-found","reason_code":"route_not_found"}"#,
-                    )?;
-                }
-                served = served.saturating_add(1);
-            }
-            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                thread::sleep(Duration::from_millis(5));
-            }
-            Err(error) => return Err(format!("server accept failed: {error}")),
-        }
+        served = served.saturating_add(accept_real_backend_request(&listener)?);
     }
 
     Ok(())
 }
 
-fn wait_for_server_ready() {
-    thread::sleep(Duration::from_millis(40));
+fn accept_real_backend_request(listener: &TcpListener) -> Result<usize, String> {
+    match listener.accept() {
+        Ok((mut stream, _)) => {
+            serve_real_backend_connection(&mut stream)?;
+            Ok(1)
+        }
+        Err(error) if error.kind() == ErrorKind::WouldBlock => {
+            thread::sleep(Duration::from_millis(5));
+            Ok(0)
+        }
+        Err(error) => Err(format!("server accept failed: {error}")),
+    }
+}
+
+fn serve_real_backend_connection(stream: &mut TcpStream) -> Result<(), String> {
+    let (method, path) = parse_http_request(stream)?;
+    if write_public_or_task_response(stream, &method, &path)? {
+        return Ok(());
+    }
+    if write_content_response(stream, &method, &path)? {
+        return Ok(());
+    }
+    if write_bridge_response(stream, &method, &path)? {
+        return Ok(());
+    }
+    write_http_response(
+        stream,
+        404,
+        r#"{"error":"not-found","reason_code":"route_not_found"}"#,
+    )
+}
+
+fn write_public_or_task_response(
+    stream: &mut TcpStream,
+    method: &str,
+    path: &str,
+) -> Result<bool, String> {
+    let response = match (method, path) {
+        ("GET", "/healthz") => Some((
+            200,
+            r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
+        )),
+        ("GET", "/v1/channels/channel-contract-1/messages") => Some((
+            200,
+            r#"{"channel_id":"channel-contract-1","messages":["msg-a","msg-b"]}"#,
+        )),
+        ("GET", "/v1/tasks/task-contract-1") => {
+            Some((200, r#"{"task_id":"task-contract-1","state":"submitted"}"#))
+        }
+        ("GET", "/v1/agents/kamn:did:agent:alice") => Some((
+            200,
+            r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
+        )),
+        _ => None,
+    };
+    write_optional_response(stream, response)
+}
+
+fn write_content_response(
+    stream: &mut TcpStream,
+    method: &str,
+    path: &str,
+) -> Result<bool, String> {
+    let response = match (method, path) {
+        ("POST", "/v1/content/register") => Some((
+            201,
+            r#"{"content_id":"content-contract-1","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}"#,
+        )),
+        ("POST", "/v1/content/content-contract-1/expire") => Some((
+            200,
+            r#"{"content_id":"content-contract-1","lifecycle_state":"expired","redaction_status":"none"}"#,
+        )),
+        ("POST", "/v1/content/content-contract-1/tombstone")
+        | ("GET", "/v1/content/content-contract-1") => Some((
+            200,
+            r#"{"content_id":"content-contract-1","lifecycle_state":"tombstoned","redaction_status":"redacted"}"#,
+        )),
+        _ => None,
+    };
+    write_optional_response(stream, response)
+}
+
+fn write_bridge_response(stream: &mut TcpStream, method: &str, path: &str) -> Result<bool, String> {
+    let response = match (method, path) {
+        ("POST", "/v1/bridge/submit") => Some((
+            202,
+            r#"{"bridge_id":"bridge-contract-1","source_message_id":"msg-bridge-source-1","bridge_status":"submitted"}"#,
+        )),
+        ("POST", "/v1/bridge/bridge-contract-1/forward")
+        | ("GET", "/v1/bridge/bridge-contract-1") => Some((
+            200,
+            r#"{"bridge_id":"bridge-contract-1","bridge_status":"forwarded","target_message_id":"msg-bridge-target-1","forward_tx_hash":"sha256:bridge-forwarded-1"}"#,
+        )),
+        _ => None,
+    };
+    write_optional_response(stream, response)
+}
+
+fn write_optional_response(
+    stream: &mut TcpStream,
+    response: Option<(u16, &str)>,
+) -> Result<bool, String> {
+    let Some((status, body)) = response else {
+        return Ok(false);
+    };
+    write_http_response(stream, status, body)?;
+    Ok(true)
+}
+
+fn spawn_real_backend_service_server(
+    max_requests: usize,
+) -> (String, thread::JoinHandle<Result<(), String>>) {
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("listener address should resolve")
+        .to_string();
+    let server = thread::spawn(move || run_real_backend_service_server(listener, max_requests));
+    (bind_addr, server)
 }
 
 fn real_backend(bind_addr: &str) -> KamnAgentHandle {
@@ -190,7 +237,8 @@ fn real_backend(bind_addr: &str) -> KamnAgentHandle {
 }
 
 fn frame_request(body: &str) -> String {
-    format!("Content-Length: {}\r\n\r\n{}", body.len(), body)
+    let body_len = body.len();
+    format!("Content-Length: {body_len}\r\n\r\n{body}")
 }
 
 fn parse_framed_json(response: &str) -> String {
@@ -216,10 +264,7 @@ fn parse_framed_json(response: &str) -> String {
 
 #[test]
 fn spec_c01_real_backend_dispatch_health_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
 
     let backend = real_backend(bind_addr.as_str());
     let response = dispatch_tool_request_json(&backend, r#"{"id":"req-1","tool":"health"}"#)
@@ -239,10 +284,7 @@ fn spec_c01_real_backend_dispatch_health_contract() {
 
 #[test]
 fn spec_c02_real_backend_dispatch_list_messages_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
 
     let backend = real_backend(bind_addr.as_str());
     let response = dispatch_tool_request_json(
@@ -265,10 +307,7 @@ fn spec_c02_real_backend_dispatch_list_messages_contract() {
 
 #[test]
 fn spec_c03_real_backend_stdio_tools_call_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
 
     let backend = real_backend(bind_addr.as_str());
     let request = frame_request(
@@ -294,7 +333,11 @@ fn spec_c03_real_backend_stdio_tools_call_contract() {
 
 #[test]
 fn spec_c04_real_backend_dispatch_invalid_request_contract() {
-    let bind_addr = reserve_loopback_addr();
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("listener address should resolve")
+        .to_string();
     let backend = real_backend(bind_addr.as_str());
 
     let response = dispatch_tool_request_json(&backend, r#"{"id":"req-4","tool":"list_messages"}"#)
@@ -307,10 +350,7 @@ fn spec_c04_real_backend_dispatch_invalid_request_contract() {
 
 #[test]
 fn spec_c05_real_backend_dispatch_query_task_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
 
     let backend = real_backend(bind_addr.as_str());
     let response = dispatch_tool_request_json(
@@ -333,10 +373,7 @@ fn spec_c05_real_backend_dispatch_query_task_contract() {
 
 #[test]
 fn spec_c06_real_backend_dispatch_query_agent_profile_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
 
     let backend = real_backend(bind_addr.as_str());
     let response = dispatch_tool_request_json(
@@ -359,10 +396,7 @@ fn spec_c06_real_backend_dispatch_query_agent_profile_contract() {
 
 #[test]
 fn spec_c08_real_backend_dispatch_content_lifecycle_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 4));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(4);
 
     let backend = real_backend(bind_addr.as_str());
 
@@ -416,10 +450,7 @@ fn spec_c08_real_backend_dispatch_content_lifecycle_contract() {
 
 #[test]
 fn spec_c09_real_backend_dispatch_bridge_lifecycle_contract() {
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 3));
-    wait_for_server_ready();
+    let (bind_addr, server) = spawn_real_backend_service_server(3);
 
     let backend = real_backend(bind_addr.as_str());
 

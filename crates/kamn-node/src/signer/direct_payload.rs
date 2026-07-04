@@ -1,3 +1,4 @@
+use super::managed_backend::ManagedExternalKeySourceAdapter;
 use super::managed_flow::{
     build_kolme_live_direct_signed_wire_payload_with_managed_key_source_adapter,
     default_managed_key_source_adapter, validate_preflight,
@@ -7,19 +8,20 @@ use super::secret_provider::{
     ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize,
     EnvKolmeLiveSignerSecretProvider,
 };
-use kamn_core::ConfigError;
-use super::managed_backend::ManagedExternalKeySourceAdapter;
+use super::signer_adapter::KolmeForkSecp256k1SignerAdapter;
 use crate::signer::{
     read_required_kolme_live_key_reference_from_env, resolve_kolme_live_nonce,
     resolve_kolme_live_signer_selection,
 };
-use crate::KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL;
 use crate::wire_payload::render_kolme_live_native_direct_message;
-use super::signer_adapter::KolmeForkSecp256k1SignerAdapter;
-use kamn_core::{KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest};
+use crate::KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL;
+use kamn_core::ConfigError;
 use kamn_core::KolmeApiBroadcastRequest;
+use kamn_core::{KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest};
 
-pub(crate) fn read_kolme_live_signer_private_key_hex_with_provider<P: KolmeLiveSignerSecretProvider>(
+pub(crate) fn read_kolme_live_signer_private_key_hex_with_provider<
+    P: KolmeLiveSignerSecretProvider,
+>(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
     provider: &P,
@@ -95,9 +97,16 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
         let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
         let canonical_message =
             render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
-        let (signature_hex, recovery_id) = signer_adapter.sign_message(canonical_message.as_str())?;
-        debug_assert_eq!(signer_selection.profile, signer_selection_from_adapter.profile);
-        debug_assert_eq!(signer_selection.key_source, signer_selection_from_adapter.key_source);
+        let (signature_hex, recovery_id) =
+            signer_adapter.sign_message(canonical_message.as_str())?;
+        debug_assert_eq!(
+            signer_selection.profile,
+            signer_selection_from_adapter.profile
+        );
+        debug_assert_eq!(
+            signer_selection.key_source,
+            signer_selection_from_adapter.key_source
+        );
         debug_assert_eq!(
             signer_selection.private_key_env,
             signer_selection_from_adapter.private_key_env

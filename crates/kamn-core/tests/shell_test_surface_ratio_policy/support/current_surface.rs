@@ -48,7 +48,9 @@ fn crate_test_files() -> Vec<PathBuf> {
         .into_iter()
         .filter(|path| {
             path.extension().is_some_and(|extension| extension == "rs")
-                && path.iter().any(|component| component.to_string_lossy() == "tests")
+                && path
+                    .iter()
+                    .any(|component| component.to_string_lossy() == "tests")
         })
         .collect()
 }
@@ -70,16 +72,18 @@ fn is_shell_test_file(path: &Path) -> bool {
 
 fn walk_files(root: &Path, output: &mut Vec<PathBuf>) {
     let entries = fs::read_dir(root).unwrap_or_else(|error| {
+        let root_display = root.display();
         fail(
             "threshold_value_invalid",
-            &format!("failed to read directory {}: {}", root.display(), error),
+            &format!("failed to read directory {root_display}: {error}"),
         )
     });
     for entry in entries {
         let entry = entry.unwrap_or_else(|error| {
+            let root_display = root.display();
             fail(
                 "threshold_value_invalid",
-                &format!("failed to read dir entry in {}: {}", root.display(), error),
+                &format!("failed to read dir entry in {root_display}: {error}"),
             )
         });
         let path = entry.path();

@@ -2,8 +2,8 @@ use std::env;
 
 use kamn_core::ConfigError;
 
-use super::VerifyingKey;
 use super::super::{decode_kolme_hex_bytes, encode_kolme_hex_lower, KolmeLiveSignerSelection};
+use super::VerifyingKey;
 use crate::{
     KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL, KOLME_LIVE_SIGNER_PROFILE_PRIMARY,
     KOLME_LIVE_SIGNER_PROFILE_SECONDARY, KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_ENV,
@@ -32,9 +32,9 @@ fn decode_managed_signer_public_key_bytes(
     if key_bytes.len() == 33 {
         return Ok(key_bytes);
     }
+    let key_len = key_bytes.len();
     Err(ConfigError::RuntimeKolmeLive(format!(
-        "{env_name} must decode to 33 bytes compressed secp256k1 key material, found {} (managed_signer_public_key_marker_invalid)",
-        key_bytes.len()
+        "{env_name} must decode to 33 bytes compressed secp256k1 key material, found {key_len} (managed_signer_public_key_marker_invalid)"
     )))
 }
 
@@ -73,8 +73,7 @@ pub(crate) fn resolve_required_managed_signer_public_key_hex(
     match env::var(env_name) {
         Ok(value) => normalize_managed_signer_public_key_hex(value.as_str(), env_name),
         Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{env_name} must be set when --kolme-live-signer-key-source={} (managed_signer_public_key_marker_missing)",
-            KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL
+            "{env_name} must be set when --kolme-live-signer-key-source={KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL} (managed_signer_public_key_marker_missing)"
         ))),
         Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
             "{env_name} must be valid utf-8 when present (managed_signer_public_key_marker_invalid)"

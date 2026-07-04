@@ -1,6 +1,6 @@
 use super::{
-    DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput,
-    DataLayerM5EmbeddingRegistry, DataLayerM5SemanticQuery, DataLayerM5VectorIntegrationError,
+    DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
+    DataLayerM5SemanticQuery, DataLayerM5VectorIntegrationError,
 };
 use crate::ContentRetentionClass;
 
@@ -24,10 +24,15 @@ fn fixture_input(
 
 #[test]
 fn unit_data_layer_m5_append_and_semantic_query_rank_results() {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
-    registry.append(fixture_input("emb-1", "msg-1", Some(vec![1.0, 0.0]))).expect("first embedding append should succeed");
-    registry.append(fixture_input("emb-2", "msg-2", Some(vec![0.0, 1.0]))).expect("second embedding append should succeed");
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
+    registry
+        .append(fixture_input("emb-1", "msg-1", Some(vec![1.0, 0.0])))
+        .expect("first embedding append should succeed");
+    registry
+        .append(fixture_input("emb-2", "msg-2", Some(vec![0.0, 1.0])))
+        .expect("second embedding append should succeed");
 
     let results = registry
         .semantic_query(DataLayerM5SemanticQuery {

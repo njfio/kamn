@@ -1,6 +1,6 @@
 use kamn_core::{
     reconcile_data_layer_m1_finality_observation, DataLayerM1AnchoringFinalityObservation,
-    DataLayerM1AnchoringFollowUpAction, DataLayerM1AnchoringFinalityReconciliationProjection,
+    DataLayerM1AnchoringFinalityReconciliationProjection, DataLayerM1AnchoringFollowUpAction,
     DataLayerM1AnchoringOrchestrator, DataLayerM1AnchoringPersistencePlan,
     DataLayerM1AnchoringTickOutcome, DataLayerM1BatchSchedulerPolicy,
     InMemoryKolmeRuntimeCommitClient, KolmeCommitReceiptFinality,
@@ -8,8 +8,8 @@ use kamn_core::{
 };
 
 use crate::support::{
-    connect_live_adapter, current_suffix, fixture_record, live_postgres_url, pending_message,
-    runtime, uuid_from_u128,
+    connect_live_adapter, current_suffix, fixture_record, insert_fixture_message,
+    live_postgres_url, pending_message, runtime, uuid_from_u128,
 };
 
 #[test]
@@ -31,15 +31,20 @@ fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
         let persistence_plan = planned_persistence_plan(&outcome);
         assert_follow_up_policy(&outcome);
         persist_orchestrator_plan(&adapter, persistence_plan).await;
-        persist_confirmation(&adapter, persistence_plan.batch_id.as_str(), &final_projection).await;
+        persist_confirmation(
+            &adapter,
+            persistence_plan.batch_id.as_str(),
+            &final_projection,
+        )
+        .await;
     });
 }
 
 fn build_orchestrator() -> DataLayerM1AnchoringOrchestrator<InMemoryKolmeRuntimeCommitClient> {
     let client = InMemoryKolmeRuntimeCommitClient::new("kolme-memory")
         .expect("in-memory client should initialize");
-    let policy = DataLayerM1BatchSchedulerPolicy::new(1, 60)
-        .expect("policy should be constructible");
+    let policy =
+        DataLayerM1BatchSchedulerPolicy::new(1, 60).expect("policy should be constructible");
     DataLayerM1AnchoringOrchestrator::new(
         client,
         "kamn:did:agent:orchestrator-live-c03",
@@ -65,7 +70,9 @@ fn plan_outcome(
         .expect("orchestrator tick should evaluate")
 }
 
-fn reconcile_projection(outcome: &DataLayerM1AnchoringTickOutcome) -> DataLayerM1AnchoringFinalityReconciliationProjection {
+fn reconcile_projection(
+    outcome: &DataLayerM1AnchoringTickOutcome,
+) -> DataLayerM1AnchoringFinalityReconciliationProjection {
     reconcile_data_layer_m1_finality_observation(
         outcome,
         &DataLayerM1AnchoringFinalityObservation {
@@ -79,7 +86,9 @@ fn reconcile_projection(outcome: &DataLayerM1AnchoringTickOutcome) -> DataLayerM
     .expect("finality reconciliation should succeed")
 }
 
-fn planned_persistence_plan(outcome: &DataLayerM1AnchoringTickOutcome) -> &DataLayerM1AnchoringPersistencePlan {
+fn planned_persistence_plan(
+    outcome: &DataLayerM1AnchoringTickOutcome,
+) -> &DataLayerM1AnchoringPersistencePlan {
     let DataLayerM1AnchoringTickOutcome::Planned {
         persistence_plan, ..
     } = outcome
@@ -104,16 +113,6 @@ fn assert_follow_up_policy(outcome: &DataLayerM1AnchoringTickOutcome) {
         follow_up_policy.reason_code,
         DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE
     );
-}
-
-async fn insert_fixture_message(
-    adapter: &kamn_core::DataLayerPgExecutionAdapter,
-    record: &kamn_core::DataLayerM0EnvelopeRecord,
-) {
-    adapter
-        .execute_insert_message(record, "kamn:did:owner:owner-1", "kamn:did:agent:agent-1")
-        .await
-        .expect("insert should succeed");
 }
 
 async fn persist_orchestrator_plan(

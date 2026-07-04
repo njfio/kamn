@@ -274,7 +274,7 @@ sanitize_single_line() {
   printf '%s' "$value"
 }
 
-checkout_prepare_command="if checkout exists: git -C \"$CHECKOUT_PATH\" fetch origin \"$EXPECTED_BRANCH\" && git -C \"$CHECKOUT_PATH\" checkout -B \"$EXPECTED_BRANCH\" \"origin/$EXPECTED_BRANCH\"; else: git clone --depth 1 --branch \"$EXPECTED_BRANCH\" \"$FORK_REMOTE_URL\" \"$CHECKOUT_PATH\""
+checkout_prepare_command="if checkout exists: git -c core.hooksPath=/dev/null -C \"$CHECKOUT_PATH\" fetch origin \"$EXPECTED_BRANCH\" && git -c core.hooksPath=/dev/null -C \"$CHECKOUT_PATH\" checkout -B \"$EXPECTED_BRANCH\" \"origin/$EXPECTED_BRANCH\"; else: git -c core.hooksPath=/dev/null clone --depth 1 --branch \"$EXPECTED_BRANCH\" \"$FORK_REMOTE_URL\" \"$CHECKOUT_PATH\""
 sync_metadata_command="bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path \"$CHECKOUT_PATH\" --expected-remote-url \"$EXPECTED_REMOTE_URL\" --expected-ref \"$EXPECTED_REF\""
 if [ -n "$EXPECTED_COMMIT" ]; then
   sync_metadata_command="$sync_metadata_command --expected-commit \"$EXPECTED_COMMIT\""
@@ -326,7 +326,7 @@ if [ "$MODE" = "run" ]; then
   else
     checkout_prepare_output="$(mktemp)"
     if [ -d "$CHECKOUT_PATH/.git" ]; then
-      checkout_prepare_exec="git -C $(printf '%q' "$CHECKOUT_PATH") fetch origin $(printf '%q' "$EXPECTED_BRANCH") && git -C $(printf '%q' "$CHECKOUT_PATH") checkout -B $(printf '%q' "$EXPECTED_BRANCH") origin/$(printf '%q' "$EXPECTED_BRANCH")"
+      checkout_prepare_exec="git -c core.hooksPath=/dev/null -C $(printf '%q' "$CHECKOUT_PATH") fetch origin $(printf '%q' "$EXPECTED_BRANCH") && git -c core.hooksPath=/dev/null -C $(printf '%q' "$CHECKOUT_PATH") checkout -B $(printf '%q' "$EXPECTED_BRANCH") origin/$(printf '%q' "$EXPECTED_BRANCH")"
       if run_command "$checkout_prepare_exec" "$checkout_prepare_output"; then
         record_check "checkout_prepare" "$checkout_prepare_command" "pass" "checkout_updated"
         bootstrap_action="updated"
@@ -354,7 +354,7 @@ if [ "$MODE" = "run" ]; then
       reason_code="checkpoint_failed_checkout_prepare"
     else
       mkdir -p "$(dirname "$CHECKOUT_PATH")"
-      checkout_prepare_exec="git clone --depth 1 --branch $(printf '%q' "$EXPECTED_BRANCH") $(printf '%q' "$FORK_REMOTE_URL") $(printf '%q' "$CHECKOUT_PATH")"
+      checkout_prepare_exec="git -c core.hooksPath=/dev/null clone --depth 1 --branch $(printf '%q' "$EXPECTED_BRANCH") $(printf '%q' "$FORK_REMOTE_URL") $(printf '%q' "$CHECKOUT_PATH")"
       if run_command "$checkout_prepare_exec" "$checkout_prepare_output"; then
         record_check "checkout_prepare" "$checkout_prepare_command" "pass" "checkout_cloned"
         bootstrap_action="cloned"

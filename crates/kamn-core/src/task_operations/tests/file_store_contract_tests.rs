@@ -5,8 +5,7 @@ use super::super::{
 use super::support::{
     accepted_task_snapshot, engine_with_submitted_task, remove_snapshot_artifacts,
     roundtrip_snapshot_store, submit_benchmark_tasks, temp_task_operation_snapshot_journal_path,
-    temp_task_operation_snapshot_path, write_corrupt_journal_tail,
-    write_stale_snapshot_payload,
+    temp_task_operation_snapshot_path, write_corrupt_journal_tail, write_stale_snapshot_payload,
 };
 use std::fs;
 
@@ -32,16 +31,20 @@ fn integration_file_task_operation_snapshot_store_replays_journal_when_snapshot_
     let mut engine = engine_with_submitted_task("task-journal-1", "first snapshot");
     let first_snapshot = engine.export_snapshot();
     let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
-    file_store.write(first_snapshot.clone()).unwrap();
+    file_store
+        .write(first_snapshot.clone())
+        .expect("expected test fixture operation to succeed");
     engine
         .submit(
             "task-journal-2",
             "kamn:did:agent:requester-1",
             "second snapshot",
         )
-        .unwrap();
+        .expect("expected test fixture operation to succeed");
     let second_snapshot = engine.export_snapshot();
-    file_store.write(second_snapshot.clone()).unwrap();
+    file_store
+        .write(second_snapshot.clone())
+        .expect("expected test fixture operation to succeed");
     write_stale_snapshot_payload(&path, &first_snapshot);
     assert_eq!(
         file_store.read_latest().expect("journal replay should win"),
@@ -78,7 +81,10 @@ fn functional_file_task_operation_snapshot_store_recovery_repairs_corrupt_payloa
         .expect("recovery should pass");
     assert!(recovery.latest.is_none());
     assert!(recovery.repaired);
-    assert_eq!(fs::read_to_string(&path).unwrap(), "");
+    assert_eq!(
+        fs::read_to_string(&path).expect("expected test fixture operation to succeed"),
+        ""
+    );
     remove_snapshot_artifacts(&path, &journal_path);
 }
 
@@ -89,7 +95,9 @@ fn regression_file_task_operation_snapshot_store_rejects_corrupt_journal_tail() 
     remove_snapshot_artifacts(&path, &journal_path);
     let snapshot = engine_with_submitted_task("task-tail", "tail payload").export_snapshot();
     let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
-    file_store.write(snapshot).unwrap();
+    file_store
+        .write(snapshot)
+        .expect("expected test fixture operation to succeed");
     write_corrupt_journal_tail(&journal_path);
     assert_eq!(
         file_store.recover_latest_and_repair(),

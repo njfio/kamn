@@ -10,8 +10,71 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected websocket live validation script to be executable" >&2
   exit 1
 fi
+if ! grep -Fq "X-KAMN-Signer-Public-Key" "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to propagate signer public key header" >&2
+  exit 1
+fi
+if ! grep -Fq 'return f"kamn:did:agent:pkh-{public_key_hex}"' "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to use self-certifying sender did" >&2
+  exit 1
+fi
+if ! grep -Fq "KAMN_SERVICE_API_WEBSOCKET_NODE_BIN" "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to accept a prebuilt node binary" >&2
+  exit 1
+fi
+if ! grep -Fq "KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD" "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to support skipping the default build" >&2
+  exit 1
+fi
+if ! grep -Fq "KAMN_SERVICE_API_WEBSOCKET_PREBUILD_TARGET_DIR" "$0"; then
+  echo "expected websocket live test to use an isolated prebuild target dir" >&2
+  exit 1
+fi
+if ! grep -Fq 'timeout "$prebuild_timeout_seconds" cargo build --quiet -p kamn-node' "$0"; then
+  echo "expected websocket live test to bound the isolated prebuild" >&2
+  exit 1
+fi
+if ! grep -Fq 'runtime_storage_dir="$TMP_DIR/service-api-websocket-storage"' "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to use isolated runtime storage" >&2
+  exit 1
+fi
+if ! grep -Fq -- '--storage-dir "$runtime_storage_dir"' "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to pass isolated storage to node" >&2
+  exit 1
+fi
 
-validation_output="$(bash "$VALIDATION_SCRIPT" --output-json "$TMP_REPORT")"
+prebuild_timeout_seconds="${KAMN_SERVICE_API_WEBSOCKET_PREBUILD_MAX_SECONDS:-900}"
+if ! [[ "$prebuild_timeout_seconds" =~ ^[0-9]+$ ]] || [[ "$prebuild_timeout_seconds" -le 0 ]]; then
+  echo "KAMN_SERVICE_API_WEBSOCKET_PREBUILD_MAX_SECONDS must be a positive integer" >&2
+  exit 2
+fi
+prebuild_target_dir="${KAMN_SERVICE_API_WEBSOCKET_PREBUILD_TARGET_DIR:-$ROOT_DIR/target/service-api-websocket}"
+prebuilt_node_bin="$prebuild_target_dir/debug/kamn-node"
+
+pushd "$ROOT_DIR" >/dev/null
+set +e
+CARGO_TARGET_DIR="$prebuild_target_dir" timeout "$prebuild_timeout_seconds" cargo build --quiet -p kamn-node
+prebuild_code=$?
+set -e
+popd >/dev/null
+if [[ "$prebuild_code" -eq 124 ]]; then
+  echo "service api websocket prebuild timed out" >&2
+  exit 124
+fi
+if [[ "$prebuild_code" -ne 0 ]]; then
+  echo "service api websocket prebuild failed" >&2
+  exit "$prebuild_code"
+fi
+if [[ ! -x "$prebuilt_node_bin" ]]; then
+  echo "expected isolated prebuilt kamn-node binary to be executable" >&2
+  exit 1
+fi
+
+validation_output="$(
+  KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD=1 \
+    KAMN_SERVICE_API_WEBSOCKET_NODE_BIN="$prebuilt_node_bin" \
+    bash "$VALIDATION_SCRIPT" --output-json "$TMP_REPORT"
+)"
 if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
   echo "expected websocket live validation pass status marker" >&2
   exit 1

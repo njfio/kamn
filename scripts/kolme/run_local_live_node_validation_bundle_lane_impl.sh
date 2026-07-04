@@ -35,6 +35,17 @@ shell_escape() {
   printf "%q" "$1"
 }
 
+resolve_path() {
+  python3 - "$1" <<'PY'
+from __future__ import annotations
+
+import pathlib
+import sys
+
+print(pathlib.Path(sys.argv[1]).resolve())
+PY
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --mode)
@@ -269,6 +280,16 @@ for required_value in "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$
     exit 1
   fi
 done
+
+OUTPUT_JSON="$(resolve_path "$OUTPUT_JSON")"
+INTEGRATION_REPORT="$(resolve_path "$INTEGRATION_REPORT")"
+INTEGRATION_POLICY_REPORT="$(resolve_path "$INTEGRATION_POLICY_REPORT")"
+INTEGRATION_RUNTIME_POLICY_REPORT="$(resolve_path "$INTEGRATION_RUNTIME_POLICY_REPORT")"
+INTEGRATION_RUNTIME_COMMIT_LIVE_SUMMARY="$(resolve_path "$INTEGRATION_RUNTIME_COMMIT_LIVE_SUMMARY")"
+PROCESS_LIFECYCLE_REPORT="$(resolve_path "$PROCESS_LIFECYCLE_REPORT")"
+PROCESS_LIFECYCLE_POLICY_REPORT="$(resolve_path "$PROCESS_LIFECYCLE_POLICY_REPORT")"
+ROLLBACK_EVIDENCE_FILE="$(resolve_path "$ROLLBACK_EVIDENCE_FILE")"
+RECOVERY_EVIDENCE_FILE="$(resolve_path "$RECOVERY_EVIDENCE_FILE")"
 
 if [ ! -x "$INTEGRATION_RUNNER" ]; then
   echo "expected local KAMN live runtime integration lane runner to be executable" >&2

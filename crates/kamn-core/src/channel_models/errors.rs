@@ -125,7 +125,7 @@ fn write_member_count_error(error: &ChannelModelError, f: &mut fmt::Formatter<'_
             f,
             "channel type {channel_type:?} requires at least {minimum} members, found {actual}"
         ),
-        _ => unreachable!("member-count formatter only handles insufficent-member errors"),
+        _ => write!(f, "channel model error formatter route mismatch: {error:?}"),
     }
 }
 
@@ -141,6 +141,6 @@ fn write_unsupported_operation(
             f,
             "unsupported operation {action} for channel type {channel_type:?}"
         ),
-        _ => unreachable!("unsupported-operation formatter only handles unsupported operations"),
+        _ => write!(f, "channel model error formatter route mismatch: {error:?}"),
     }
 }

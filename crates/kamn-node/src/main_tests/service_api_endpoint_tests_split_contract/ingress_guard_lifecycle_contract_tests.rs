@@ -157,6 +157,7 @@ fn spec_c40_service_api_endpoint_ingress_guard_split_files_stay_below_budget() {
         SENDER_ANTI_SPAM_FILE,
         REPLAY_GUARD_FILE,
         CONCURRENCY_GUARD_FILE,
+        CONCURRENCY_SUPPORT_FILE,
         LIFECYCLE_PROJECTION_FILE,
     ] {
         let source = read_repo_file(path);

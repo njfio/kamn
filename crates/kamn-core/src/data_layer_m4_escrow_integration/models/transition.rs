@@ -51,23 +51,42 @@ pub struct DataLayerM4EscrowRecord {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM4EscrowTransitionAction {
     /// Move `Created -> Funded`.
-    Fund { funded_at_epoch_seconds: u64 },
+    /// Fund variant for this public contract enum.
+    Fund {
+        /// Funded at epoch seconds carried by this enum variant.
+        funded_at_epoch_seconds: u64,
+    },
     /// Move `Funded -> Active`.
-    Activate { activated_at_epoch_seconds: u64 },
+    /// Activate variant for this public contract enum.
+    Activate {
+        /// Activated at epoch seconds carried by this enum variant.
+        activated_at_epoch_seconds: u64,
+    },
     /// Move `Active -> Disputed`.
-    OpenDispute { dispute_opened_at_epoch_seconds: u64 },
+    OpenDispute {
+        /// U64 carried by this public contract model.
+        dispute_opened_at_epoch_seconds: u64,
+    },
     /// Move `Active|Disputed -> Released`.
     ResolveRelease {
+        /// U64 carried by this public contract model.
         settled_at_epoch_seconds: u64,
+        /// String carried by this public contract model.
         settlement_receipt_hash: String,
     },
     /// Move `Active|Disputed -> Refunded`.
     ResolveRefund {
+        /// U64 carried by this public contract model.
         settled_at_epoch_seconds: u64,
+        /// String carried by this public contract model.
         settlement_receipt_hash: String,
     },
     /// Move `Created|Funded|Active -> Expired`.
-    Expire { expired_at_epoch_seconds: u64 },
+    /// Expire variant for this public contract enum.
+    Expire {
+        /// Expired at epoch seconds carried by this enum variant.
+        expired_at_epoch_seconds: u64,
+    },
 }
 
 impl DataLayerM4EscrowTransitionAction {

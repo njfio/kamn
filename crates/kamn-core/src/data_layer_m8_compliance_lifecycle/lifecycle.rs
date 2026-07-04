@@ -3,8 +3,8 @@ use std::collections::BTreeSet;
 use crate::KamnDid;
 
 use super::{
-    DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE, DataLayerM8ComplianceError,
-    DataLayerM8WrappedCekInput,
+    DataLayerM8ComplianceError, DataLayerM8WrappedCekInput,
+    DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
 };
 
 pub(crate) fn validate_non_empty(

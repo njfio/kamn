@@ -13,8 +13,7 @@ fn assert_projection_parity(snapshot: &RuntimeObservabilitySnapshot, expected_re
     let readiness = render_observability_endpoint_response(snapshot, "/readyz");
     let stream = render_observability_endpoint_response(snapshot, "/metrics.stream");
     let metrics_marker = format!(
-        "kamn_observability_readiness_reason_code{{readiness_reason_code=\"{}\"}} 1",
-        expected_reason
+        "kamn_observability_readiness_reason_code{{readiness_reason_code=\"{expected_reason}\"}} 1"
     );
     let json_marker = format!("\"readiness_reason_code\":\"{expected_reason}\"");
     assert!(metrics.body.contains(metrics_marker.as_str()));

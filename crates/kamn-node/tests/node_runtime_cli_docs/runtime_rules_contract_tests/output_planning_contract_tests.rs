@@ -101,22 +101,38 @@ const RUNTIME_MODE_COMMAND_MARKERS: &[&str] = &[
 
 #[test]
 fn doc_contains_output_mode_scope_and_rules() {
-    assert_doc_markers(DOC, OUTPUT_MODE_SCOPE_MARKERS, "node runtime CLI output mode scope rules");
+    assert_doc_markers(
+        DOC,
+        OUTPUT_MODE_SCOPE_MARKERS,
+        "node runtime CLI output mode scope rules",
+    );
 }
 
 #[test]
 fn doc_contains_deterministic_json_fields() {
-    assert_doc_markers(DOC, DETERMINISTIC_JSON_MARKERS, "node runtime CLI deterministic JSON fields");
+    assert_doc_markers(
+        DOC,
+        DETERMINISTIC_JSON_MARKERS,
+        "node runtime CLI deterministic JSON fields",
+    );
 }
 
 #[test]
 fn doc_contains_local_profile_rules() {
-    assert_doc_markers(DOC, LOCAL_PROFILE_MARKERS, "node runtime CLI local profile rules");
+    assert_doc_markers(
+        DOC,
+        LOCAL_PROFILE_MARKERS,
+        "node runtime CLI local profile rules",
+    );
 }
 
 #[test]
 fn doc_contains_diagnostics_snapshot_rules() {
-    assert_doc_markers(DOC, DIAGNOSTICS_MARKERS, "node runtime CLI diagnostics rules");
+    assert_doc_markers(
+        DOC,
+        DIAGNOSTICS_MARKERS,
+        "node runtime CLI diagnostics rules",
+    );
 }
 
 #[test]
@@ -126,10 +142,18 @@ fn doc_contains_runtime_planning_rules() {
 
 #[test]
 fn doc_contains_runtime_recovery_check_rules() {
-    assert_doc_markers(DOC, RECOVERY_MARKERS, "node runtime CLI recovery-check rules");
+    assert_doc_markers(
+        DOC,
+        RECOVERY_MARKERS,
+        "node runtime CLI recovery-check rules",
+    );
 }
 
 #[test]
 fn doc_contains_runtime_mode_command_examples() {
-    assert_doc_markers(DOC, RUNTIME_MODE_COMMAND_MARKERS, "node runtime CLI runtime-mode examples");
+    assert_doc_markers(
+        DOC,
+        RUNTIME_MODE_COMMAND_MARKERS,
+        "node runtime CLI runtime-mode examples",
+    );
 }

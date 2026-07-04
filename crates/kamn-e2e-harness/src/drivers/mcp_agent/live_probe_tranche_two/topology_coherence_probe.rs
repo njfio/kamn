@@ -52,8 +52,10 @@ fn send_primary_message(settings: &S10Settings) -> Result<String, String> {
         format!("{}-primary-send", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         "probe-send-message-primary",
-        settings.message_payload.as_str(),
-        "mcp live s10 primary send_message",
+        (
+            settings.message_payload.as_str(),
+            "mcp live s10 primary send_message",
+        ),
     )
 }
 
@@ -65,8 +67,7 @@ fn query_secondary_and_tertiary(settings: &S10Settings, message_id: &str) -> Res
         format!("{}-secondary-query", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         "probe-query-message-secondary",
-        message_id,
-        "mcp live s10 secondary query_message",
+        (message_id, "mcp live s10 secondary query_message"),
     )?;
     query_message_with_validation(
         "mcp live s10",
@@ -75,8 +76,7 @@ fn query_secondary_and_tertiary(settings: &S10Settings, message_id: &str) -> Res
         format!("{}-tertiary-query", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         "probe-query-message-tertiary",
-        message_id,
-        "mcp live s10 tertiary query_message",
+        (message_id, "mcp live s10 tertiary query_message"),
     )
 }
 

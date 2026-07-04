@@ -1,7 +1,7 @@
 use super::super::{
-    DATA_LAYER_M8_RETENTION_DUE_REASON_CODE, DataLayerM8ComplianceError,
-    DataLayerM8ComplianceRegistry, DataLayerM8OwnerScopeQuery, DataLayerM8RetentionDueCandidate,
-    lifecycle::authorize_owner_scope,
+    lifecycle::authorize_owner_scope, DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry,
+    DataLayerM8OwnerScopeQuery, DataLayerM8RetentionDueCandidate,
+    DATA_LAYER_M8_RETENTION_DUE_REASON_CODE,
 };
 
 pub(super) fn retention_due_for_owner(

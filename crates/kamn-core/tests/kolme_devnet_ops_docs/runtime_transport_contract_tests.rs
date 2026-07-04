@@ -1,4 +1,4 @@
-use super::docs_assert_support::{assert_plan_contains_all};
+use super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_RUNTIME_TRANSPORT_RETRY_RECONNECT_FAILURE_TAXONOMY_PLAN_MARKERS: &[&str] = &[
     "## Runtime Transport Retry-Reconnect Failure Taxonomy (Issue #4508)",
@@ -15,5 +15,8 @@ const PLAN_CONTAINS_RUNTIME_TRANSPORT_RETRY_RECONNECT_FAILURE_TAXONOMY_PLAN_MARK
 
 #[test]
 fn plan_contains_runtime_transport_retry_reconnect_failure_taxonomy() {
-    assert_plan_contains_all(PLAN_CONTAINS_RUNTIME_TRANSPORT_RETRY_RECONNECT_FAILURE_TAXONOMY_PLAN_MARKERS, "plan_contains_runtime_transport_retry_reconnect_failure_taxonomy");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_RUNTIME_TRANSPORT_RETRY_RECONNECT_FAILURE_TAXONOMY_PLAN_MARKERS,
+        "plan_contains_runtime_transport_retry_reconnect_failure_taxonomy",
+    );
 }

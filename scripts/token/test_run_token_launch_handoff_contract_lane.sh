@@ -50,5 +50,9 @@ if ! grep -q "check_token_launch_handoff_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected token launch handoff shared contract-lane module to run policy checker" >&2
   exit 1
 fi
+if ! grep -q "MAX_RUNTIME_SECONDS = 900" "$SHARED_CONTRACT"; then
+  echo "expected token launch handoff contract lane default budget to cover aggregate local-heavy cargo compiles" >&2
+  exit 1
+fi
 
 echo "token launch handoff contract lane script tests passed."

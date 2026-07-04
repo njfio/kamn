@@ -12,11 +12,16 @@ test_harness_require_executable "$CHECKER" "expected cargo-audit policy checker 
 PASS_REPORT="$TMP_DIR/cargo-audit-pass.json"
 HIGH_REPORT="$TMP_DIR/cargo-audit-high.json"
 UNKNOWN_REPORT="$TMP_DIR/cargo-audit-unknown.json"
+WARNING_REPORT="$TMP_DIR/cargo-audit-warning.json"
 WAIVER_EMPTY="$TMP_DIR/cargo-audit-waivers-empty.json"
 WAIVER_VALID="$TMP_DIR/cargo-audit-waivers-valid.json"
+WAIVER_WARNING_VALID="$TMP_DIR/cargo-audit-waivers-warning-valid.json"
+WAIVER_UNKNOWN_VALID="$TMP_DIR/cargo-audit-waivers-unknown-valid.json"
 WAIVER_INVALID_TRACKING="$TMP_DIR/cargo-audit-waivers-invalid-tracking.json"
 PASS_OUTPUT_JSON="$TMP_DIR/cargo-audit-policy-pass.json"
 WAIVED_OUTPUT_JSON="$TMP_DIR/cargo-audit-policy-waived.json"
+WAIVED_WARNING_OUTPUT_JSON="$TMP_DIR/cargo-audit-policy-waived-warning.json"
+WAIVED_UNKNOWN_OUTPUT_JSON="$TMP_DIR/cargo-audit-policy-waived-unknown.json"
 
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$PASS_REPORT" <<'JSON'
 {
@@ -61,6 +66,14 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$HIGH_REPORT" <<'JSON'
           "version": "2.0.0"
         }
       }
+    ],
+    "yanked": [
+      {
+        "package": {
+          "name": "yanked-warning",
+          "version": "4.1.0"
+        }
+      }
     ]
   }
 }
@@ -85,6 +98,38 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$UNKNOWN_REPORT" <<'JSON'
 }
 JSON
 
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WARNING_REPORT" <<'JSON'
+{
+  "vulnerabilities": {
+    "found": false,
+    "count": 0,
+    "list": []
+  },
+  "warnings": {
+    "unmaintained": [
+      {
+        "advisory": {
+          "id": "RUSTSEC-2026-4001",
+          "informational": "unmaintained"
+        },
+        "package": {
+          "name": "stale-warning",
+          "version": "4.0.0"
+        }
+      }
+    ],
+    "yanked": [
+      {
+        "package": {
+          "name": "yanked-warning",
+          "version": "4.1.0"
+        }
+      }
+    ]
+  }
+}
+JSON
+
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_EMPTY" <<'JSON'
 {
   "schema_version": "kamn.ci.cargo-audit-waiver.v1",
@@ -101,6 +146,43 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_VALID" <<'JSON'
       "package": "risky-high",
       "reason": "Temporary exception while upstream patch is pending.",
       "tracking_issue": "#5941",
+      "expires_on": "2099-12-31"
+    }
+  ]
+}
+JSON
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_WARNING_VALID" <<'JSON'
+{
+  "schema_version": "kamn.ci.cargo-audit-waiver.v1",
+  "waivers": [
+    {
+      "advisory_id": "RUSTSEC-2026-4001",
+      "package": "stale-warning",
+      "reason": "Temporary exception while upstream replacement is tracked.",
+      "tracking_issue": "#7032",
+      "expires_on": "2099-12-31"
+    },
+    {
+      "advisory_id": "cargo-audit-yanked:yanked-warning",
+      "package": "yanked-warning",
+      "reason": "Temporary exception while upstream replacement is tracked.",
+      "tracking_issue": "#7032",
+      "expires_on": "2099-12-31"
+    }
+  ]
+}
+JSON
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_UNKNOWN_VALID" <<'JSON'
+{
+  "schema_version": "kamn.ci.cargo-audit-waiver.v1",
+  "waivers": [
+    {
+      "advisory_id": "RUSTSEC-2026-3001",
+      "package": "unknown-severity",
+      "reason": "Temporary exception while upstream severity metadata is tracked.",
+      "tracking_issue": "#7032",
       "expires_on": "2099-12-31"
     }
   ]
@@ -258,5 +340,100 @@ if ! grep -q 'cargo_audit_advisory_severity_unknown' "$TMP_DIR/unknown-severity.
   cat "$TMP_DIR/unknown-severity.out" >&2 || true
   exit 1
 fi
+
+waived_unknown_output="$(
+  python3 "$CHECKER" \
+    --audit-json "$UNKNOWN_REPORT" \
+    --waiver-file "$WAIVER_UNKNOWN_VALID" \
+    --threshold-max-severity moderate \
+    --as-of-date 2026-02-25 \
+    --output-json "$WAIVED_UNKNOWN_OUTPUT_JSON"
+)"
+if ! printf '%s\n' "$waived_unknown_output" | grep -q '^status=ok$'; then
+  echo "expected status=ok with valid unknown-severity waiver" >&2
+  printf '%s\n' "$waived_unknown_output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waived_unknown_output" | grep -q 'cargo_audit_advisory_unknown_severity_waived'; then
+  echo "expected deterministic waived unknown-severity reason code" >&2
+  printf '%s\n' "$waived_unknown_output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waived_unknown_output" | grep -q '^unknown_severity_waived_total=1$'; then
+  echo "expected unknown_severity_waived_total=1" >&2
+  printf '%s\n' "$waived_unknown_output" >&2
+  exit 1
+fi
+python3 - "$WAIVED_UNKNOWN_OUTPUT_JSON" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("unknown_severity_total") != 0:
+    raise SystemExit("expected unknown_severity_total=0")
+if payload.get("unknown_severity_waived_total") != 1:
+    raise SystemExit("expected unknown_severity_waived_total=1")
+if payload.get("review_required") is not True:
+    raise SystemExit("expected review_required=true for unknown-severity waiver")
+PY
+
+if python3 "$CHECKER" \
+  --audit-json "$WARNING_REPORT" \
+  --waiver-file "$WAIVER_EMPTY" \
+  --threshold-max-severity moderate \
+  --as-of-date 2026-02-25 \
+  >"$TMP_DIR/warning-unwaived.out" \
+  2>"$TMP_DIR/warning-unwaived.err"
+then
+  echo "expected checker to fail on unwaived cargo-audit warning advisory" >&2
+  cat "$TMP_DIR/warning-unwaived.out" >&2 || true
+  cat "$TMP_DIR/warning-unwaived.err" >&2 || true
+  exit 1
+fi
+if ! grep -q 'cargo_audit_warning_unwaived' "$TMP_DIR/warning-unwaived.out"; then
+  echo "expected deterministic unwaived warning reason code" >&2
+  cat "$TMP_DIR/warning-unwaived.out" >&2 || true
+  exit 1
+fi
+
+waived_warning_output="$(
+  python3 "$CHECKER" \
+    --audit-json "$WARNING_REPORT" \
+    --waiver-file "$WAIVER_WARNING_VALID" \
+    --threshold-max-severity moderate \
+    --as-of-date 2026-02-25 \
+    --output-json "$WAIVED_WARNING_OUTPUT_JSON"
+)"
+if ! printf '%s\n' "$waived_warning_output" | grep -q '^status=ok$'; then
+  echo "expected status=ok with valid warning waiver" >&2
+  printf '%s\n' "$waived_warning_output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waived_warning_output" | grep -q '^reason_codes_csv=cargo_audit_warning_waived$'; then
+  echo "expected deterministic waived warning reason code" >&2
+  printf '%s\n' "$waived_warning_output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waived_warning_output" | grep -q '^warning_total=2$'; then
+  echo "expected warning_total=2 for warning report" >&2
+  printf '%s\n' "$waived_warning_output" >&2
+  exit 1
+fi
+python3 - "$WAIVED_WARNING_OUTPUT_JSON" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("warning_total") != 2:
+    raise SystemExit("expected warning_total=2")
+if payload.get("waived_warning_total") != 2:
+    raise SystemExit("expected waived_warning_total=2")
+if payload.get("unwaived_warning_total") != 0:
+    raise SystemExit("expected unwaived_warning_total=0")
+if payload.get("review_required") is not True:
+    raise SystemExit("expected review_required=true for warning waiver")
+PY
 
 echo "cargo-audit policy checker tests passed."

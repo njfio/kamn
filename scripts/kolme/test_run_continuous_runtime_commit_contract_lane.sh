@@ -68,10 +68,12 @@ required_impl_markers=(
   "rejects_kolme_live_continuous_mode_without_tick_interval"
   "rejects_kolme_live_continuous_mode_without_max_ticks"
   "functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles"
+  "--bin"
+  "--exact"
   "kamn.kolme.continuous-runtime-commit.contract.v1"
 )
 for marker in "${required_impl_markers[@]}"; do
-  if ! grep -q "$marker" "$CONTRACT_IMPL"; then
+  if ! grep -q -- "$marker" "$CONTRACT_IMPL"; then
     echo "expected continuous runtime commit implementation marker: $marker" >&2
     exit 1
   fi

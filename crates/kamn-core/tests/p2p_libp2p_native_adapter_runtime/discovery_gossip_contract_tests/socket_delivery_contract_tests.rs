@@ -8,8 +8,7 @@ fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets(
     assert_single_broadcast_delivery(&mut processor, &mut listener);
 }
 
-fn build_connected_message_coordinators(
-) -> (
+fn build_connected_message_coordinators() -> (
     PeerLifecycleTransportCoordinator<Libp2pLivePeerLifecycleTransport>,
     PeerLifecycleTransportCoordinator<Libp2pLivePeerLifecycleTransport>,
 ) {
@@ -27,13 +26,19 @@ fn build_connected_message_coordinators(
         listener_listen.as_str(),
         bootstrap_peers,
     );
-    (build_processor(processor_transport), build_listener(listener_transport))
+    (
+        build_processor(processor_transport),
+        build_listener(listener_transport),
+    )
 }
 
 fn build_processor(
     transport: Libp2pLivePeerLifecycleTransport,
 ) -> PeerLifecycleTransportCoordinator<Libp2pLivePeerLifecycleTransport> {
-    assert_eq!(transport.transport_profile(), RuntimeTransportProfile::Libp2pLive);
+    assert_eq!(
+        transport.transport_profile(),
+        RuntimeTransportProfile::Libp2pLive
+    );
     let mut processor = PeerLifecycleTransportCoordinator::new(
         "peer-native-processor",
         NodeRole::Processor,
@@ -64,13 +69,18 @@ fn build_listener(
 }
 
 fn assert_runtime_backend_marker() {
-    assert_eq!(resolve_libp2p_live_runtime_backend().marker(), "native-libp2p-swarm");
+    assert_eq!(
+        resolve_libp2p_live_runtime_backend().marker(),
+        "native-libp2p-swarm"
+    );
 }
 
 fn assert_discovery_converges(
     processor: &mut PeerLifecycleTransportCoordinator<Libp2pLivePeerLifecycleTransport>,
 ) {
-    let discovered = processor.discover("messages").expect("native discovery should succeed");
+    let discovered = processor
+        .discover("messages")
+        .expect("native discovery should succeed");
     assert_eq!(discovered.len(), 1);
     assert_eq!(discovered[0].peer_id, "peer-native-listener");
 }
@@ -94,7 +104,9 @@ fn broadcast_with_retry(
     loop {
         match processor.broadcast("messages", payload) {
             Ok(count) => return count,
-            Err(P2pTransportError::LiveSocketSendFailed) if started.elapsed() < Duration::from_secs(5) => {
+            Err(P2pTransportError::LiveSocketSendFailed)
+                if started.elapsed() < Duration::from_secs(5) =>
+            {
                 std::thread::sleep(Duration::from_millis(25));
             }
             Err(error) => panic!("native broadcast should succeed: {error:?}"),
@@ -107,11 +119,16 @@ fn wait_for_listener_frame(
 ) -> PeerGossipFrame {
     let started = Instant::now();
     loop {
-        let frames = listener.drain_inbox().expect("listener inbox drain should succeed");
+        let frames = listener
+            .drain_inbox()
+            .expect("listener inbox drain should succeed");
         if let Some(frame) = frames.into_iter().next() {
             return frame;
         }
-        assert!(started.elapsed() < Duration::from_secs(5), "listener did not receive frame within timeout");
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "listener did not receive frame within timeout"
+        );
         std::thread::sleep(Duration::from_millis(25));
     }
 }

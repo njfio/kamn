@@ -3,12 +3,27 @@ use std::fmt;
 /// Error taxonomy for M7 time-series contracts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM7TimeseriesError {
+    /// Empty field variant for this public contract enum.
     EmptyField(&'static str),
+    /// Invalid did variant for this public contract enum.
     InvalidDid(String),
-    OwnerNotFound { owner_did: String },
-    OwnerScopeViolation { reason_code: &'static str },
+    /// Owner not found variant for this public contract enum.
+    OwnerNotFound {
+        /// Owner did carried by this enum variant.
+        owner_did: String,
+    },
+    /// Owner scope violation variant for this public contract enum.
+    OwnerScopeViolation {
+        /// Reason code carried by this enum variant.
+        reason_code: &'static str,
+    },
+    /// Invalid bucket day epoch seconds variant for this public contract enum.
     InvalidBucketDayEpochSeconds(u64),
-    ObservabilitySampleInvalid { reason_code: &'static str },
+    /// Observability sample invalid variant for this public contract enum.
+    ObservabilitySampleInvalid {
+        /// Reason code carried by this enum variant.
+        reason_code: &'static str,
+    },
 }
 
 impl fmt::Display for DataLayerM7TimeseriesError {

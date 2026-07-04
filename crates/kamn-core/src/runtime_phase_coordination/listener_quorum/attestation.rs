@@ -15,12 +15,19 @@ impl ListenerAttestation {
         if attestation_id.trim().is_empty() {
             return Err(ListenerQuorumError::InvalidAttestationId);
         }
-        Ok(Self { listener_did: listener_did.to_owned(), attestation_id: attestation_id.to_owned() })
+        Ok(Self {
+            listener_did: listener_did.to_owned(),
+            attestation_id: attestation_id.to_owned(),
+        })
     }
 
     /// Handles listener did.
-    pub fn listener_did(&self) -> &str { &self.listener_did }
+    pub fn listener_did(&self) -> &str {
+        &self.listener_did
+    }
 
     /// Handles attestation id.
-    pub fn attestation_id(&self) -> &str { &self.attestation_id }
+    pub fn attestation_id(&self) -> &str {
+        &self.attestation_id
+    }
 }

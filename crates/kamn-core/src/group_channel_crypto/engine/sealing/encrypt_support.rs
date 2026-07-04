@@ -19,14 +19,7 @@ pub(super) fn build_ciphertext(
 ) -> GroupMessageCiphertext {
     let key_generation = encryption.key_generation;
     let signature = build_signature(engine, sender_did, nonce, &encryption, &sealed);
-    build_group_message(
-        engine,
-        sender_did,
-        nonce,
-        key_generation,
-        sealed,
-        signature,
-    )
+    build_group_message(engine, sender_did, nonce, key_generation, sealed, signature)
 }
 
 fn build_signature(
@@ -37,14 +30,7 @@ fn build_signature(
     sealed: &(String, String),
 ) -> String {
     let (ciphertext, auth_tag) = sealed;
-    ciphertext_signature(
-        engine,
-        sender_did,
-        nonce,
-        encryption,
-        ciphertext,
-        auth_tag,
-    )
+    ciphertext_signature(engine, sender_did, nonce, encryption, ciphertext, auth_tag)
 }
 
 fn build_group_message(

@@ -41,16 +41,30 @@ fn ci_strategy_docs_residual_root_tranche_is_extracted() {
         "expected {ROOT} <= {ROOT_CAP} lines after residual extraction, found {lines}"
     );
     for marker in REQUIRED_MARKERS {
-        assert!(root.contains(marker), "missing residual root marker: {marker}");
+        assert!(
+            root.contains(marker),
+            "missing residual root marker: {marker}"
+        );
     }
     for marker in MOVED_TEST_MARKERS {
-        assert!(!root.contains(marker), "moved residual test still present: {marker}");
+        assert!(
+            !root.contains(marker),
+            "moved residual test still present: {marker}"
+        );
     }
     for path in MODULE_FILES {
         let full_path = repo_path(path);
-        assert!(full_path.exists(), "missing residual module: {}", full_path.display());
         assert!(
-            fs::read_to_string(&full_path).expect("read module").lines().count() <= 200,
+            full_path.exists(),
+            "missing residual module: {}",
+            full_path.display()
+        );
+        assert!(
+            fs::read_to_string(&full_path)
+                .expect("read module")
+                .lines()
+                .count()
+                <= 200,
             "residual module exceeds 200 lines: {}",
             full_path.display()
         );

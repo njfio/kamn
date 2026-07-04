@@ -38,8 +38,7 @@ fn regression_strict_signer_secret_source_precedence_rejects_dual_private_key_en
         "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
         Some(TEST_PRIVATE_KEY_HEX_SECONDARY),
     );
-    let _fallback_guard =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _fallback_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
 
     let error = super::super::read_kolme_live_signer_private_key_hex(
         Some("ops-primary"),
@@ -61,8 +60,7 @@ fn regression_strict_secondary_profile_requires_secondary_secret_even_with_prima
     );
     let _secondary_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY", None);
-    let _fallback_guard =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _fallback_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
 
     let error = super::super::read_kolme_live_signer_private_key_hex(
         Some("ops-secondary"),

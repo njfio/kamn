@@ -125,6 +125,27 @@ for marker in "${required_ci_markers[@]}"; do
   fi
 done
 
+python3 - "$MATRIX_RUNNER" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+runner_path = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("signature_parity_matrix", runner_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+expected = (
+    "main_tests::signer_tests::signer_direct_profile_contract_tests::"
+    "direct_signature_contract_tests::integration_kolme_live_signer_vector_probe_contract"
+)
+if module.VECTOR_TEST_NAME != expected:
+    raise SystemExit("expected signature parity matrix runner to use the focused binary test")
+source_text = runner_path.read_text(encoding="utf-8")
+for marker in ("--bin", "kamn-node", "--exact"):
+    if marker not in source_text:
+        raise SystemExit(f"expected signature parity matrix runner marker: {marker}")
+PY
+
 bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY" >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY" <<'PY'

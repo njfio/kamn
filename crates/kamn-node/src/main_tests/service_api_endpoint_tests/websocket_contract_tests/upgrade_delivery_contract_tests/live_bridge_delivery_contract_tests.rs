@@ -6,14 +6,15 @@ const LIVE_SOLANA_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
 
 #[test]
 fn integration_service_api_endpoint_websocket_streams_live_bridge_forwarded_event_after_upgrade() {
-    let (_env, _live_rpc_guard, harness) = build_live_bridge_websocket_harness();
-    let publisher = spawn_live_bridge_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
+    let (_live_rpc_guard, harness) = build_live_bridge_websocket_harness();
+    let publisher =
+        spawn_live_bridge_publish_thread(harness.bind_addr.clone(), harness.snapshot.clone());
     let websocket_response = send_signed_websocket_request_with_timeout(
         &harness.snapshot,
         harness.bind_addr.as_str(),
         "kamn:did:agent:ws-live-bridge-client",
         701,
-        Duration::from_secs(4),
+        Duration::from_secs(6),
         &[],
     );
     let (submit_response, forward_response) = publisher
@@ -27,15 +28,14 @@ fn integration_service_api_endpoint_websocket_streams_live_bridge_forwarded_even
     );
 }
 
-fn build_live_bridge_websocket_harness(
-) -> (ServiceApiTestEnvGuards, EnvVarGuard, WebsocketHarness) {
+fn build_live_bridge_websocket_harness() -> (EnvVarGuard, WebsocketHarness) {
     let env = acquire_service_api_test_env();
     let live_rpc_guard = EnvVarGuard::set(
         "KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL",
         Some(LIVE_SOLANA_DEVNET_RPC_URL),
     );
-    let harness = build_websocket_harness("127.0.0.1:34072", 3);
-    (env, live_rpc_guard, harness)
+    let harness = build_websocket_harness_with_env("127.0.0.1:34072", 4, env);
+    (live_rpc_guard, harness)
 }
 
 fn send_signed_websocket_request_with_timeout(
@@ -72,8 +72,12 @@ fn spawn_live_bridge_publish_thread(
         let state_hash = state_hash(&snapshot);
         let submit_response = submit_live_bridge(bind_addr.as_str(), state_hash.as_str(), 702);
         let bridge_id = submitted_bridge_id(submit_response.as_str());
-        let forward_response =
-            forward_live_bridge(bind_addr.as_str(), state_hash.as_str(), 703, bridge_id.as_str());
+        let forward_response = forward_live_bridge(
+            bind_addr.as_str(),
+            state_hash.as_str(),
+            703,
+            bridge_id.as_str(),
+        );
         (submit_response, forward_response)
     })
 }
@@ -101,7 +105,7 @@ fn forward_live_bridge(bind_addr: &str, state_hash: &str, nonce: u64, bridge_id:
     let sender_did = "kamn:did:agent:ws-live-bridge-publisher";
     let signature = service_api_request_signature_for_fields(sender_did, nonce, state_hash, "");
     let nonce_text = nonce.to_string();
-    send_http_request_with_headers(
+    send_http_request_with_headers_timeout(
         bind_addr,
         "POST",
         format!("/v1/bridge/{bridge_id}/forward").as_str(),
@@ -112,6 +116,7 @@ fn forward_live_bridge(bind_addr: &str, state_hash: &str, nonce: u64, bridge_id:
             ("X-KAMN-Request-Signature", signature.as_str()),
             ("X-KAMN-Authz-Scope", "bridge:write"),
         ],
+        Duration::from_secs(30),
     )
 }
 
@@ -180,7 +185,8 @@ fn bridge_forwarded_frames(frames: &[String]) -> Vec<Value> {
         .iter()
         .filter_map(|frame| {
             let payload: Value = serde_json::from_str(frame).ok()?;
-            if payload.get("event").and_then(Value::as_str) != Some("service-api.bridge.forwarded") {
+            if payload.get("event").and_then(Value::as_str) != Some("service-api.bridge.forwarded")
+            {
                 return None;
             }
             Some(payload)

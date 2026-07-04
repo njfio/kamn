@@ -1,5 +1,5 @@
-use super::super::{DOC, OVERLOAD_RUNNER_SOURCE};
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::{DOC, OVERLOAD_RUNNER_SOURCE};
 
 #[test]
 fn doc_contains_overload_ci_dry_run_policy_checker_markers() {

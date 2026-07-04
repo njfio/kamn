@@ -5,21 +5,49 @@ use std::fmt::{Display, Formatter};
 /// Listener quorum error.
 pub enum ListenerQuorumError {
     /// Invalid required confirmations.
-    InvalidRequiredConfirmations { required: usize },
+    /// Invalid required confirmations variant for this public contract enum.
+    InvalidRequiredConfirmations {
+        /// Required carried by this enum variant.
+        required: usize,
+    },
     /// Invalid event id.
     InvalidEventId,
     /// Invalid event sequence.
     InvalidEventSequence,
     /// Invalid listener did.
-    InvalidListenerDid { field: &'static str, reason_code: &'static str, detail: String },
+    InvalidListenerDid {
+        /// Str carried by this public contract model.
+        field: &'static str,
+        /// Str carried by this public contract model.
+        reason_code: &'static str,
+        /// String carried by this public contract model.
+        detail: String,
+    },
     /// Invalid attestation id.
     InvalidAttestationId,
     /// Duplicate listener attestation.
-    DuplicateListenerAttestation { listener_did: String },
+    /// Duplicate listener attestation variant for this public contract enum.
+    DuplicateListenerAttestation {
+        /// Listener did carried by this enum variant.
+        listener_did: String,
+    },
     /// Replayed event sequence.
-    ReplayedEventSequence { event_id: String, previous_sequence: u64, received_sequence: u64 },
+    ReplayedEventSequence {
+        /// String carried by this public contract model.
+        event_id: String,
+        /// U64 carried by this public contract model.
+        previous_sequence: u64,
+        /// U64 carried by this public contract model.
+        received_sequence: u64,
+    },
     /// Insufficient confirmations.
-    InsufficientConfirmations { required: usize, received: usize },
+    /// Insufficient confirmations variant for this public contract enum.
+    InsufficientConfirmations {
+        /// Required carried by this enum variant.
+        required: usize,
+        /// Received carried by this enum variant.
+        received: usize,
+    },
 }
 
 impl Display for ListenerQuorumError {

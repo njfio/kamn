@@ -11,6 +11,7 @@ use super::{
     DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
 };
 
+/// Runs the data layer pg project m7 timescale ingest operation contract helper.
 pub fn data_layer_pg_project_m7_timescale_ingest_operation(
     record: &DataLayerM7TelemetryPointRecord,
     requester_did: &str,
@@ -19,12 +20,10 @@ pub fn data_layer_pg_project_m7_timescale_ingest_operation(
     validate_timescale_config(&config)?;
     validate_timescale_record(record)?;
     validate_bucket_alignment(record)?;
-    Ok(build_timescale_ingest_operation(
-        requester_did,
-        config.hypertable_name,
-    )?)
+    build_timescale_ingest_operation(requester_did, config.hypertable_name)
 }
 
+/// Runs the data layer pg project m7 timescale owner rollup query operation contract helper.
 pub fn data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
     request: DataLayerPgM7TimescaleOwnerRollupRequest,
     config: DataLayerPgM7TimescaleConfig,
@@ -33,12 +32,12 @@ pub fn data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
     validate_rollup_request(&request)?;
     let interval_marker = resolve_interval_marker(request.bucket_window_seconds)?;
     let limit = resolve_timescale_limit(request.limit)?;
-    Ok(build_owner_rollup_operation(
+    build_owner_rollup_operation(
         request.requester_did.as_str(),
         config.hypertable_name,
         interval_marker,
         limit,
-    )?)
+    )
 }
 
 fn validate_timescale_record(
@@ -61,12 +60,18 @@ fn validate_bucket_alignment(
 ) -> Result<(), DataLayerPgRepositoryBridgeError> {
     validate_bucket(
         record.bucket_hour_epoch_seconds,
-        aligned_bucket(record.timestamp_epoch_seconds, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS),
+        aligned_bucket(
+            record.timestamp_epoch_seconds,
+            DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+        ),
         DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
     )?;
     validate_bucket(
         record.bucket_day_epoch_seconds,
-        aligned_bucket(record.timestamp_epoch_seconds, DATA_LAYER_M7_DAILY_BUCKET_SECONDS),
+        aligned_bucket(
+            record.timestamp_epoch_seconds,
+            DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+        ),
         DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
     )
 }
@@ -100,8 +105,7 @@ fn build_timescale_ingest_operation(
 
 fn timescale_ingest_sql(hypertable_name: &str) -> String {
     format!(
-        "INSERT INTO {} (owner_did, agent_did, observed_at, bucket_hour_epoch_seconds, bucket_day_epoch_seconds, message_count, bytes_stored, query_count, embedding_count, embedding_anomaly_count, ingress_latency_ms_p95, egress_latency_ms_p95, active_sessions, sequence) VALUES ($1, $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);",
-        hypertable_name
+        "INSERT INTO {hypertable_name} (owner_did, agent_did, observed_at, bucket_hour_epoch_seconds, bucket_day_epoch_seconds, message_count, bytes_stored, query_count, embedding_count, embedding_anomaly_count, ingress_latency_ms_p95, egress_latency_ms_p95, active_sessions, sequence) VALUES ($1, $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);"
     )
 }
 
@@ -170,8 +174,7 @@ fn build_owner_rollup_operation(
 
 fn owner_rollup_sql(interval_marker: &str, hypertable_name: &str) -> String {
     format!(
-        "SELECT time_bucket(INTERVAL '{}', observed_at) AS bucket_start, SUM(message_count) AS message_count_total, SUM(bytes_stored) AS bytes_stored_total, SUM(query_count) AS query_count_total, SUM(embedding_count) AS embedding_count_total FROM {} WHERE owner_did = $1 GROUP BY bucket_start ORDER BY bucket_start DESC LIMIT $2;",
-        interval_marker, hypertable_name
+        "SELECT time_bucket(INTERVAL '{interval_marker}', observed_at) AS bucket_start, SUM(message_count) AS message_count_total, SUM(bytes_stored) AS bytes_stored_total, SUM(query_count) AS query_count_total, SUM(embedding_count) AS embedding_count_total FROM {hypertable_name} WHERE owner_did = $1 GROUP BY bucket_start ORDER BY bucket_start DESC LIMIT $2;"
     )
 }
 

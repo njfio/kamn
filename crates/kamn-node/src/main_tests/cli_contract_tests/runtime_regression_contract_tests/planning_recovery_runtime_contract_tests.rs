@@ -13,7 +13,9 @@ fn regression_runtime_planning_rejects_duplicate_candidate_ids() {
     let parsed = parse_cli(args, "planning args should parse");
     assert_eq!(
         execute(parsed),
-        Err(ConfigError::RuntimePlanner("duplicate proposal candidate id: tx-1".to_owned()))
+        Err(ConfigError::RuntimePlanner(
+            "duplicate proposal candidate id: tx-1".to_owned()
+        ))
     );
 }
 
@@ -49,7 +51,9 @@ fn regression_runtime_recovery_rejects_replay_resume_token() {
     let parsed = parse_cli(args, "recovery-check args should parse");
     assert_eq!(
         execute(parsed),
-        Err(ConfigError::RuntimeRecovery("rejoin resume token replayed: resume-1".to_owned()))
+        Err(ConfigError::RuntimeRecovery(
+            "rejoin resume token replayed: resume-1".to_owned()
+        ))
     );
 }
 

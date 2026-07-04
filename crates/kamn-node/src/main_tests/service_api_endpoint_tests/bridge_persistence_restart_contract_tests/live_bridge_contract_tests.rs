@@ -1,7 +1,8 @@
 use super::super::*;
 use super::support::{
-    build_bridge_snapshot, forward_bridge, query_bridge, set_default_live_solana_bridge_rpc_url_env,
-    set_state_file_env, submit_bridge, unique_named_state_file,
+    build_bridge_snapshot, forward_bridge, query_bridge,
+    set_default_live_solana_bridge_rpc_url_env, set_state_file_env, submit_bridge,
+    unique_named_state_file,
 };
 
 #[test]

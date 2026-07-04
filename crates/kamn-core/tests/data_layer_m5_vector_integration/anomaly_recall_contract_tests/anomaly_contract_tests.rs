@@ -1,7 +1,6 @@
 use kamn_core::{
-    DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput,
-    DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRegistry,
-    DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
+    DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput, DataLayerM5EmbeddingPrivacyMode,
+    DataLayerM5EmbeddingRegistry, DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
     DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE,
 };
 
@@ -9,8 +8,9 @@ use super::super::support::vector_input;
 
 #[test]
 fn spec_c05_anomaly_threshold_detection_uses_centroid_distance_rules() {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     append_history(&mut registry);
 
     assert_anomaly_decision(

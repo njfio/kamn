@@ -87,7 +87,10 @@ fn ensure_authorized_sender(
     authenticator: &PeerFrameAuthenticator,
     frame: &AuthenticatedPeerFrame,
 ) -> Result<(), AuthenticatedPeerFrameError> {
-    if authenticator.allowed_sender_dids.contains(frame.sender_peer_did()) {
+    if authenticator
+        .allowed_sender_dids
+        .contains(frame.sender_peer_did())
+    {
         return Ok(());
     }
     Err(AuthenticatedPeerFrameError::UnauthorizedSender(
@@ -99,7 +102,10 @@ fn ensure_monotonic_nonce(
     authenticator: &PeerFrameAuthenticator,
     frame: &AuthenticatedPeerFrame,
 ) -> Result<(), AuthenticatedPeerFrameError> {
-    if let Some(last_nonce) = authenticator.last_nonce_by_sender.get(frame.sender_peer_did()) {
+    if let Some(last_nonce) = authenticator
+        .last_nonce_by_sender
+        .get(frame.sender_peer_did())
+    {
         if frame.nonce() <= *last_nonce {
             return Err(AuthenticatedPeerFrameError::ReplayNonce {
                 sender_did: frame.sender_peer_did().to_owned(),

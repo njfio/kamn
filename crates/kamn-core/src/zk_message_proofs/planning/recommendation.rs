@@ -62,12 +62,10 @@ fn feasibility_milestone(option_name: &str) -> ZkPhaseMilestone {
     ZkPhaseMilestone {
         phase: "Phase 4.0 - Feasibility harness".to_owned(),
         objective: format!(
-            "Implement deterministic witness harness for `{}` using canonical envelope payloads.",
-            option_name
+            "Implement deterministic witness harness for `{option_name}` using canonical envelope payloads."
         ),
         validation_focus:
-            "Unit + functional validation for policy scoring and witness commitments."
-                .to_owned(),
+            "Unit + functional validation for policy scoring and witness commitments.".to_owned(),
         exit_criteria: vec![
             "Witness commitment remains stable across repeated executions.".to_owned(),
             "Policy errors are explicit for invalid boundaries.".to_owned(),
@@ -96,8 +94,8 @@ fn validator_milestone() -> ZkPhaseMilestone {
         objective:
             "Extend verification to validator quorum and watchdog sampling for abuse detection."
                 .to_owned(),
-        validation_focus:
-            "Regression tests for censorship, replay, and invalid-proof propagation.".to_owned(),
+        validation_focus: "Regression tests for censorship, replay, and invalid-proof propagation."
+            .to_owned(),
         exit_criteria: vec![
             "Quorum paths align on proof validity outcomes.".to_owned(),
             "Watchdog alerts isolate invalid-proof mismatches without false positives.".to_owned(),

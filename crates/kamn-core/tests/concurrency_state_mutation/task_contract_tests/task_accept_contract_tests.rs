@@ -1,4 +1,6 @@
-use crate::support::{concurrency_replay_fixture, regression_accept_contenders, run_task_accept_race};
+use crate::support::{
+    concurrency_replay_fixture, regression_accept_contenders, run_task_accept_race,
+};
 
 #[test]
 fn task_accept_concurrency_has_single_winner_and_consistent_state() {
@@ -10,7 +12,9 @@ fn task_accept_concurrency_has_single_winner_and_consistent_state() {
 fn unit_concurrency_replay_fixture_entries_are_valid() {
     for contenders in concurrency_replay_fixture() {
         assert!(contenders.len() >= 3);
-        assert!(contenders.iter().all(|contender| contender.starts_with("kamn:did:agent:")));
+        assert!(contenders
+            .iter()
+            .all(|contender| contender.starts_with("kamn:did:agent:")));
     }
 }
 

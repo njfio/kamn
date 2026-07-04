@@ -2,7 +2,7 @@ use super::super::super::*;
 use super::super::support::{
     build_task_escrow_snapshot, create_task, query_task, raw_create_task_response,
     raw_signed_request, register_agent_profile, set_audit_export_file_env, set_state_file_env,
-    unique_named_state_file,
+    unique_named_state_file, SignedRequest,
 };
 
 pub(super) fn setup_dispatch_route_case() -> DispatchRouteCase {
@@ -86,13 +86,15 @@ pub(super) fn query_missing_worker_task(missing_worker: &MissingWorkerRouteCase)
     raw_signed_request(
         &missing_worker.snapshot,
         missing_worker.bind_addr.as_str(),
-        1,
-        "GET",
-        format!("/v1/tasks/{}", created_task.task_id).as_str(),
-        missing_worker.creator_did,
-        402,
-        "",
-        &[],
+        SignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: format!("/v1/tasks/{}", created_task.task_id).as_str(),
+            caller_did: missing_worker.creator_did,
+            nonce: 402,
+            body: "",
+            extra_headers: &[],
+        },
     )
 }
 

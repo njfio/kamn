@@ -74,4 +74,3 @@ pub(crate) fn kolme_fork_sign_message(message: &str) -> (String, u8) {
         recovery_id.to_byte(),
     )
 }
-

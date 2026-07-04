@@ -5,6 +5,7 @@ use super::{
     BASELINE_SIGNATURE_PROFILE_ID,
 };
 
+/// Runs the parse signature profile metadata contract helper.
 pub fn parse_signature_profile_metadata(signature: &str) -> Option<SignatureProfileMetadata> {
     let suffix = signature.strip_prefix("sig:")?;
     let mut segments = suffix.splitn(3, ':');
@@ -20,7 +21,7 @@ pub fn parse_signature_profile_metadata(signature: &str) -> Option<SignatureProf
     })
 }
 
-fn decode_hex_nibble(byte: u8) -> Option<u8> {
+pub(crate) fn decode_hex_nibble(byte: u8) -> Option<u8> {
     match byte {
         b'0'..=b'9' => Some(byte - b'0'),
         b'a'..=b'f' => Some(10 + (byte - b'a')),
@@ -36,8 +37,10 @@ pub(crate) fn decode_hex_bytes(value: &str) -> Result<Vec<u8>, ServiceAuthSignat
     }
     let mut decoded = Vec::with_capacity(trimmed.len() / 2);
     for pair in trimmed.as_bytes().chunks_exact(2) {
-        let high = decode_hex_nibble(pair[0]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
-        let low = decode_hex_nibble(pair[1]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
+        let high =
+            decode_hex_nibble(pair[0]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
+        let low =
+            decode_hex_nibble(pair[1]).ok_or(ServiceAuthSignatureError::InvalidSignatureHex)?;
         decoded.push((high << 4) | low);
     }
     Ok(decoded)
@@ -57,7 +60,12 @@ pub(crate) fn wipe_bytes(bytes: &mut [u8]) {
     bytes.zeroize();
 }
 
-fn canonical_service_auth_message(sender: &str, nonce: u64, state_hash: &str, payload: &str) -> String {
+fn canonical_service_auth_message(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
     format!(
         "sender_len={}\nsender={sender}\nnonce={nonce}\nstate_hash_len={}\nstate_hash={state_hash}\npayload_len={}\npayload={payload}",
         sender.len(),
@@ -66,6 +74,7 @@ fn canonical_service_auth_message(sender: &str, nonce: u64, state_hash: &str, pa
     )
 }
 
+/// Runs the service auth signing payload for fields contract helper.
 pub fn service_auth_signing_payload_for_fields(
     sender: &str,
     nonce: u64,
@@ -81,10 +90,17 @@ pub fn service_auth_signing_payload_for_fields(
     if state_hash.trim().is_empty() {
         return Err(ServiceAuthSignatureError::EmptyField("state_hash"));
     }
-    Ok(canonical_service_auth_message(sender, nonce, state_hash, payload))
+    Ok(canonical_service_auth_message(
+        sender, nonce, state_hash, payload,
+    ))
 }
 
-pub(crate) fn baseline_signature_for_fields(sender: &str, nonce: u64, state_hash: &str, payload: &str) -> String {
+pub(crate) fn baseline_signature_for_fields(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
     format!(
         "sig:{}:{}:{}:{}:{}:{}",
         BASELINE_SIGNATURE_ALGORITHM,

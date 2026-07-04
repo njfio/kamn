@@ -21,11 +21,9 @@ fn regression_public_auth_entrypoint_rejects_legacy_sender_binding_without_signe
         error.reason_code,
         REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
     );
-    assert!(
-        error
-            .message
-            .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER)
-    );
+    assert!(error
+        .message
+        .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER));
 }
 
 #[test]
@@ -133,11 +131,9 @@ fn regression_signer_public_key_resolution_requires_header_without_legacy_policy
         error.reason_code,
         REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
     );
-    assert!(
-        error
-            .message
-            .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER)
-    );
+    assert!(error
+        .message
+        .contains(REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER));
 }
 
 #[test]

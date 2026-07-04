@@ -12,6 +12,8 @@ const MODULE_FILES: &[&str] = &[
     "src/zk_message_proofs/witness.rs",
     "src/zk_message_proofs/errors.rs",
     "src/zk_message_proofs/tests.rs",
+    "src/zk_message_proofs/validator_consensus/error_display.rs",
+    "src/zk_message_proofs/validator_consensus/status.rs",
 ];
 const REQUIRED_MARKERS: &[&str] = &[
     "mod planning;",

@@ -2,7 +2,10 @@ use super::{DOC, OPS_DOC};
 
 pub(crate) fn assert_contains_all(haystack: &str, markers: &[&str], label: &str) {
     for marker in markers {
-        assert!(haystack.contains(marker), "missing {label} marker: {marker}");
+        assert!(
+            haystack.contains(marker),
+            "missing {label} marker: {marker}"
+        );
     }
 }
 
@@ -31,7 +34,13 @@ pub(crate) fn assert_docs_and_ops_remediation_markers(
 ) {
     for reason_code in reason_codes {
         let marker = format!("{prefix}.{reason_code}=");
-        assert!(DOC.contains(&marker), "missing {label} remediation marker for {reason_code}");
-        assert!(OPS_DOC.contains(&marker), "ops docs missing {label} remediation marker for {reason_code}");
+        assert!(
+            DOC.contains(&marker),
+            "missing {label} remediation marker for {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(&marker),
+            "ops docs missing {label} remediation marker for {reason_code}"
+        );
     }
 }

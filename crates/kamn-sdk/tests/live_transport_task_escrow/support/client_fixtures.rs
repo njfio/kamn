@@ -1,7 +1,5 @@
 use crate::support::did;
-use kamn_sdk::{
-    Artifact, EscrowConfig, LiveTransportKamnClient, TaskDefinition, TokenAmount,
-};
+use kamn_sdk::{Artifact, EscrowConfig, LiveTransportKamnClient, TaskDefinition, TokenAmount};
 
 pub(crate) fn deterministic_u64_tag(value: &str) -> u64 {
     let mut acc: u64 = 0xcbf29ce484222325;

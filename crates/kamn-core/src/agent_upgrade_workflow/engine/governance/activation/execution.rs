@@ -1,9 +1,9 @@
 use crate::{GovernanceProposalStatus, GovernanceVoteRecord};
 
 use crate::agent_upgrade_workflow::{
-    AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind,
-    AgentUpgradeProposalRecord, AgentUpgradeProposalState, AgentUpgradeWorkflowError,
-    support::apply_yes_votes_as_upgrade_approvals,
+    support::apply_yes_votes_as_upgrade_approvals, AgentDrivenUpgradeWorkflow,
+    AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind, AgentUpgradeProposalRecord,
+    AgentUpgradeProposalState, AgentUpgradeWorkflowError,
 };
 
 pub(super) fn execute_governance_action(

@@ -105,8 +105,10 @@ fn send_message(settings: &S15Settings, iteration: u64) -> Result<String, String
         format!("{}-send-{iteration}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-send-message-s15-{iteration}").as_str(),
-        settings.message_payload.as_str(),
-        "mcp live s15 send_message",
+        (
+            settings.message_payload.as_str(),
+            "mcp live s15 send_message",
+        ),
     )
 }
 
@@ -118,7 +120,6 @@ fn query_message(settings: &S15Settings, iteration: u64, message_id: &str) -> Re
         format!("{}-query-{iteration}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-s15-{iteration}").as_str(),
-        message_id,
-        "mcp live s15 query_message",
+        (message_id, "mcp live s15 query_message"),
     )
 }

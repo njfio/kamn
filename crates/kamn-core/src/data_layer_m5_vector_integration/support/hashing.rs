@@ -52,12 +52,20 @@ fn bytes_marker(value: &[u8]) -> String {
     if value.is_empty() {
         return "none".to_owned();
     }
-    value.iter().map(|byte| format!("{byte:02x}")).collect::<Vec<_>>().join("")
+    value
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 fn vector_marker(value: Option<&[f32]>) -> String {
     match value {
-        Some(vector) => vector.iter().map(|coordinate| format!("{coordinate:.8}")).collect::<Vec<_>>().join(","),
+        Some(vector) => vector
+            .iter()
+            .map(|coordinate| format!("{coordinate:.8}"))
+            .collect::<Vec<_>>()
+            .join(","),
         None => "none".to_owned(),
     }
 }

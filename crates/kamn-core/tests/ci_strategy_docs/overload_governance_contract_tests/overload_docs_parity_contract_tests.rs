@@ -1,5 +1,10 @@
-use super::super::{overload_reason_codes, DOC, OPS_DOC, OVERLOAD_REASON_CODES_CSV, OVERLOAD_REASON_TAXONOMY_VERSION, OVERLOAD_RUNNER_SOURCE};
-use super::super::fairness_deletion_support::{assert_contains_all, assert_docs_and_ops_remediation_markers};
+use super::super::fairness_deletion_support::{
+    assert_contains_all, assert_docs_and_ops_remediation_markers,
+};
+use super::super::{
+    overload_reason_codes, DOC, OPS_DOC, OVERLOAD_REASON_CODES_CSV,
+    OVERLOAD_REASON_TAXONOMY_VERSION, OVERLOAD_RUNNER_SOURCE,
+};
 
 #[test]
 fn doc_contains_overload_docs_parity_and_go_no_go_markers() {
@@ -42,8 +47,12 @@ fn doc_enforces_overload_docs_parity_requires_remediation_marker_for_each_reason
 }
 
 fn assert_overload_strategy_markers() {
-    assert!(DOC.contains(&format!("overload_docs_parity_reason_taxonomy_version={OVERLOAD_REASON_TAXONOMY_VERSION}")));
-    assert!(DOC.contains(&format!("overload_docs_parity_reason_codes_csv={OVERLOAD_REASON_CODES_CSV}")));
+    assert!(DOC.contains(&format!(
+        "overload_docs_parity_reason_taxonomy_version={OVERLOAD_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "overload_docs_parity_reason_codes_csv={OVERLOAD_REASON_CODES_CSV}"
+    )));
     assert!(DOC.contains("overload_docs_parity_runner_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1"));
 }
 
@@ -59,7 +68,9 @@ fn assert_overload_ops_markers() {
         ],
         "overload ops parity",
     );
-    assert!(OPS_DOC.contains(&format!("overload_docs_parity_reason_codes_csv={OVERLOAD_REASON_CODES_CSV}")));
+    assert!(OPS_DOC.contains(&format!(
+        "overload_docs_parity_reason_codes_csv={OVERLOAD_REASON_CODES_CSV}"
+    )));
 }
 
 fn assert_overload_runner_reason_markers() {

@@ -24,6 +24,26 @@ pub(crate) fn send_http_request_with_headers(
     send_http_request_with_headers_raw(addr, method, path, body, refs.as_slice())
 }
 
+pub(crate) fn send_http_request_with_headers_timeout(
+    addr: &str,
+    method: &str,
+    path: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+    read_timeout: Duration,
+) -> String {
+    let enriched = enrich_signed_headers_with_scope(method, path, headers);
+    let refs = header_refs(&enriched);
+    send_http_request_with_headers_raw_timeout(
+        addr,
+        method,
+        path,
+        body,
+        refs.as_slice(),
+        read_timeout,
+    )
+}
+
 pub(crate) fn send_http_request_with_headers_raw(
     addr: &str,
     method: &str,
@@ -31,12 +51,30 @@ pub(crate) fn send_http_request_with_headers_raw(
     body: &str,
     headers: &[(&str, &str)],
 ) -> String {
-    let mut stream = connect_http_stream(addr);
+    send_http_request_with_headers_raw_timeout(
+        addr,
+        method,
+        path,
+        body,
+        headers,
+        Duration::from_secs(10),
+    )
+}
+
+fn send_http_request_with_headers_raw_timeout(
+    addr: &str,
+    method: &str,
+    path: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+    read_timeout: Duration,
+) -> String {
+    let mut stream = connect_http_stream(addr, read_timeout);
     let request = render_http_request(addr, method, path, body, headers);
     stream
         .write_all(request.as_bytes())
         .expect("request should write");
-    read_response_until_timeout(&mut stream)
+    super::response_support::read_single_http_response(&mut stream)
 }
 
 pub(crate) async fn send_http_request_with_headers_async(
@@ -55,10 +93,10 @@ pub(crate) async fn send_http_request_with_headers_async(
     read_async_response(&mut stream).await
 }
 
-fn connect_http_stream(addr: &str) -> TcpStream {
+fn connect_http_stream(addr: &str, read_timeout: Duration) -> TcpStream {
     let stream = TcpStream::connect(addr).expect("endpoint should accept connections");
     stream
-        .set_read_timeout(Some(Duration::from_secs(10)))
+        .set_read_timeout(Some(read_timeout))
         .expect("read timeout should be configurable");
     stream
 }
@@ -92,23 +130,6 @@ pub(crate) fn render_header_lines(headers: &[(&str, &str)]) -> String {
         .collect()
 }
 
-fn read_response_until_timeout(stream: &mut TcpStream) -> String {
-    let mut response = String::new();
-    let mut chunk = [0_u8; 1024];
-    loop {
-        match stream.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(count) => response
-                .push_str(std::str::from_utf8(&chunk[..count]).expect("response must be utf-8")),
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break
-            }
-            Err(error) => panic!("response should be readable: {error}"),
-        }
-    }
-    response
-}
-
 async fn write_async_request(
     stream: &mut tokio::net::TcpStream,
     request: &[u8],
@@ -127,7 +148,7 @@ async fn read_async_response(stream: &mut tokio::net::TcpStream) -> Result<Strin
     let mut response = Vec::new();
     let mut chunk = [0_u8; 1024];
     loop {
-        match tokio::time::timeout(Duration::from_millis(150), stream.read(&mut chunk)).await {
+        match tokio::time::timeout(Duration::from_secs(2), stream.read(&mut chunk)).await {
             Ok(Ok(0)) => break,
             Ok(Ok(count)) => response.extend_from_slice(&chunk[..count]),
             Ok(Err(error)) => return Err(format!("async http response read failed: {error}")),

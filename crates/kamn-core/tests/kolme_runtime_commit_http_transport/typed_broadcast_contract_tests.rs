@@ -15,7 +15,12 @@ fn integration_http_transport_submit_broadcast_request_put_and_parse_txhash() {
         assert!(request.contains("\"recovery_id\":1"));
     });
 
-    let txhash = submit_broadcast(base_url.as_str(), "/broadcast", &request, "kolme-runtime-commit:typed-broadcast-42");
+    let txhash = submit_broadcast(
+        base_url.as_str(),
+        "/broadcast",
+        &request,
+        "kolme-runtime-commit:typed-broadcast-42",
+    );
     assert_eq!(txhash, "tx-typed-42");
 }
 
@@ -26,7 +31,12 @@ fn regression_issue_1912_http_transport_submit_broadcast_trims_idempotency_key()
         assert!(request.contains("X-Idempotency-Key: kolme-runtime-commit:typed-broadcast-1912"));
     });
 
-    let txhash = submit_broadcast(base_url.as_str(), "/broadcast", &request, "  kolme-runtime-commit:typed-broadcast-1912  ");
+    let txhash = submit_broadcast(
+        base_url.as_str(),
+        "/broadcast",
+        &request,
+        "  kolme-runtime-commit:typed-broadcast-1912  ",
+    );
     assert_eq!(txhash, "tx-typed-1912");
 }
 
@@ -37,7 +47,12 @@ fn regression_issue_1888_http_transport_submit_broadcast_defaults_empty_submit_p
         assert!(request.contains("PUT /broadcast HTTP/1.1"));
     });
 
-    let txhash = submit_broadcast(base_url.as_str(), "   ", &request, "kolme-runtime-commit:typed-broadcast-8");
+    let txhash = submit_broadcast(
+        base_url.as_str(),
+        "   ",
+        &request,
+        "kolme-runtime-commit:typed-broadcast-8",
+    );
     assert_eq!(txhash, "tx-typed-8");
 }
 
@@ -51,7 +66,12 @@ fn regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_r
     );
 
     let error = new_broadcast_transport()
-        .submit_broadcast_request(base_url.as_str(), "/broadcast", &request, "kolme-runtime-commit:typed-broadcast-7")
+        .submit_broadcast_request(
+            base_url.as_str(),
+            "/broadcast",
+            &request,
+            "kolme-runtime-commit:typed-broadcast-7",
+        )
         .expect_err("missing txhash must fail");
     assert_eq!(
         error,

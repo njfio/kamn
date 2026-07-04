@@ -4,12 +4,10 @@ const TASK_ESCROW_SUBMODULE_MARKERS: &[&str] = &[
     "mod task_escrow_routes_contract_tests;",
     "mod task_escrow_restart_contract_tests;",
 ];
-const TASK_ESCROW_ROUTES_MARKERS: &[&str] = &[
-    "fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes()",
-];
-const TASK_ESCROW_RESTART_MARKERS: &[&str] = &[
-    "fn integration_service_api_endpoint_persists_task_and_escrow_state_across_restart()",
-];
+const TASK_ESCROW_ROUTES_MARKERS: &[&str] =
+    &["fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes()"];
+const TASK_ESCROW_RESTART_MARKERS: &[&str] =
+    &["fn integration_service_api_endpoint_persists_task_and_escrow_state_across_restart()"];
 
 #[test]
 fn spec_c21_service_api_endpoint_root_file_removes_moved_task_escrow_persistence_contracts() {

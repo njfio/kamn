@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::io::ErrorKind;
 use std::net::UdpSocket;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use super::validation::{validate_peer_id, validate_topic};
 use super::P2pTransportError;
@@ -203,6 +204,10 @@ struct UdpPeerLifecycleTransportState {
     socket_addr_by_peer: BTreeMap<String, String>,
 }
 
+const UDP_LIVE_EMPTY_DRAIN_WAIT: Duration = Duration::from_millis(100);
+const UDP_LIVE_DRAIN_QUIET_WAIT: Duration = Duration::from_millis(10);
+const UDP_LIVE_DRAIN_POLL_INTERVAL: Duration = Duration::from_millis(1);
+
 #[derive(Debug, Clone)]
 /// UDP socket-backed transport adapter for live local convergence drill execution.
 pub struct UdpPeerLifecycleTransport {
@@ -364,13 +369,26 @@ impl PeerLifecycleTransport for UdpPeerLifecycleTransport {
 
         let mut frames = Vec::new();
         let mut buffer = [0u8; 32 * 1024];
+        let started = Instant::now();
+        let mut last_frame_at = None;
         loop {
             match self.socket.recv_from(&mut buffer) {
                 Ok((payload_size, _source)) => {
                     let frame = Self::decode_frame(&buffer[..payload_size])?;
                     if frame.recipient_peer_id == recipient_peer_id {
                         frames.push(frame);
+                        last_frame_at = Some(Instant::now());
                     }
+                }
+                Err(error)
+                    if should_wait_for_udp_frame(
+                        error.kind(),
+                        frames.is_empty(),
+                        started,
+                        last_frame_at,
+                    ) =>
+                {
+                    std::thread::sleep(UDP_LIVE_DRAIN_POLL_INTERVAL);
                 }
                 Err(error) if error.kind() == ErrorKind::WouldBlock => break,
                 Err(_) => return Err(P2pTransportError::LiveSocketReceiveFailed),
@@ -378,6 +396,21 @@ impl PeerLifecycleTransport for UdpPeerLifecycleTransport {
         }
         Ok(frames)
     }
+}
+
+fn should_wait_for_udp_frame(
+    error_kind: ErrorKind,
+    empty: bool,
+    started: Instant,
+    last_frame_at: Option<Instant>,
+) -> bool {
+    if error_kind != ErrorKind::WouldBlock {
+        return false;
+    }
+    if empty {
+        return started.elapsed() < UDP_LIVE_EMPTY_DRAIN_WAIT;
+    }
+    last_frame_at.is_some_and(|seen_at| seen_at.elapsed() < UDP_LIVE_DRAIN_QUIET_WAIT)
 }
 
 fn udp_live_transport_registry(

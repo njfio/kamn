@@ -1,5 +1,7 @@
 use super::models::*;
-use super::support::{cosine_similarity, owner_vector_dimensions, parse_kamn_did, resolve_limit, validate_vector};
+use super::support::{
+    cosine_similarity, owner_vector_dimensions, parse_kamn_did, resolve_limit, validate_vector,
+};
 
 impl DataLayerM5EmbeddingRegistry {
     /// Executes deterministic owner-scoped semantic top-k ranking.
@@ -30,9 +32,11 @@ fn require_query_mode(
     privacy_mode: DataLayerM5EmbeddingPrivacyMode,
 ) -> Result<(), DataLayerM5VectorIntegrationError> {
     if privacy_mode == DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted {
-        return Err(DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
-            reason_code: DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
-        });
+        return Err(
+            DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
+                reason_code: DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
+            },
+        );
     }
     Ok(())
 }
@@ -41,11 +45,13 @@ fn owner_records<'a>(
     registry: &'a DataLayerM5EmbeddingRegistry,
     owner_did: &str,
 ) -> Result<&'a [DataLayerM5EmbeddingRecord], DataLayerM5VectorIntegrationError> {
-    registry.records_by_owner.get(owner_did).map(Vec::as_slice).ok_or_else(|| {
-        DataLayerM5VectorIntegrationError::OwnerNotFound {
+    registry
+        .records_by_owner
+        .get(owner_did)
+        .map(Vec::as_slice)
+        .ok_or_else(|| DataLayerM5VectorIntegrationError::OwnerNotFound {
             owner_did: owner_did.to_owned(),
-        }
-    })
+        })
 }
 
 fn validate_query_dimensions(
@@ -72,7 +78,12 @@ fn score_rows(
 ) -> Result<Vec<DataLayerM5SemanticQueryResult>, DataLayerM5VectorIntegrationError> {
     owner_records
         .iter()
-        .filter_map(|record| record.vector_plaintext.as_ref().map(|vector| (record, vector)))
+        .filter_map(|record| {
+            record
+                .vector_plaintext
+                .as_ref()
+                .map(|vector| (record, vector))
+        })
         .map(|(record, vector)| {
             let similarity = cosine_similarity(query_vector, vector.as_slice())?;
             Ok(DataLayerM5SemanticQueryResult {

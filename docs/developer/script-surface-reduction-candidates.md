@@ -1,11 +1,11 @@
 # Script Surface Reduction Candidates
 
 script_surface_short_wrapper_schema_version=kamn.docs.script-surface-short-wrapper-candidates.v1
-script_surface_short_wrapper_generated_on=2026-03-09
+script_surface_short_wrapper_generated_on=2026-06-26
 script_surface_short_wrapper_shell_threshold_max_loc=25
 script_surface_short_wrapper_python_threshold_max_loc=40
 script_surface_short_wrapper_category_count=24
-script_surface_short_wrapper_total_candidates=61
+script_surface_short_wrapper_total_candidates=62
 script_surface_short_wrapper_priority_categories_csv=ci,sdk,runtime,kolme,bridge,framework
 
 This candidate matrix prioritizes short-wrapper consolidation opportunities by
@@ -18,9 +18,9 @@ category using deterministic thresholds:
 
 | Category | Total scripts | Short-wrapper candidates | Candidate ratio |
 | --- | --- | --- | --- |
-| `scripts/ci` | `199` | `19` | `9.55%` |
+| `scripts/ci` | `216` | `20` | `9.26%` |
 | `scripts/sdk` | `80` | `16` | `20.00%` |
-| `scripts/runtime` | `229` | `5` | `2.18%` |
+| `scripts/runtime` | `232` | `5` | `2.16%` |
 | `scripts/kolme` | `217` | `5` | `2.30%` |
 | `scripts/bridge` | `42` | `3` | `7.14%` |
 | `scripts/framework` | `36` | `3` | `8.33%` |

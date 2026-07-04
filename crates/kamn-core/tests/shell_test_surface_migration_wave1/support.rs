@@ -2,6 +2,7 @@ pub use std::fs;
 pub use std::path::{Path, PathBuf};
 pub use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type CommandOutput = Output;
@@ -12,6 +13,7 @@ pub const CI_TOOLS_SCRIPT: &str = "scripts/ci/test_ci_tools.sh";
 pub const CI_STRATEGY_DOC: &str = "docs/ci/strategy.md";
 
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+static COMMAND_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct TempDir {
@@ -61,6 +63,10 @@ pub fn read_text(relative: &str) -> String {
 }
 
 pub fn run_command(mut command: Command, context: &str) -> Output {
+    let _guard = COMMAND_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("shell migration command lock poisoned");
     command.current_dir(repo_root());
     command
         .output()

@@ -12,7 +12,9 @@ use crate::message_lifecycle::MessageLifecycleSnapshotStoreError;
 use crate::runtime::SnapshotStoreError;
 use crate::task_operations::TaskOperationSnapshotStoreError;
 
-pub fn map_task_operation_store_validation_error(error: TaskOperationSnapshotStoreError) -> ConfigError {
+pub fn map_task_operation_store_validation_error(
+    error: TaskOperationSnapshotStoreError,
+) -> ConfigError {
     match error {
         TaskOperationSnapshotStoreError::InvalidPayload(detail) => corrupt_payload(
             "task-operation-snapshot-store",
@@ -24,11 +26,15 @@ pub fn map_task_operation_store_validation_error(error: TaskOperationSnapshotSto
             "task_operation_snapshot_io_error",
             detail,
         ),
-        TaskOperationSnapshotStoreError::Snapshot(other) => map_task_operation_snapshot_error(other),
+        TaskOperationSnapshotStoreError::Snapshot(other) => {
+            map_task_operation_snapshot_error(other)
+        }
     }
 }
 
-pub fn map_durable_guard_store_validation_error(error: DurableGuardSnapshotStoreError) -> ConfigError {
+pub fn map_durable_guard_store_validation_error(
+    error: DurableGuardSnapshotStoreError,
+) -> ConfigError {
     match error {
         DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch { expected, found } => {
             durable_guard_schema_error(expected, found)
@@ -43,8 +49,12 @@ pub fn map_durable_guard_store_validation_error(error: DurableGuardSnapshotStore
             "durable_guard_snapshot_io_error",
             detail,
         ),
-        DurableGuardSnapshotStoreError::DeliverySnapshot(other) => durable_guard_restore_error(other),
-        DurableGuardSnapshotStoreError::ChannelPolicySnapshot(other) => durable_guard_restore_error(other),
+        DurableGuardSnapshotStoreError::DeliverySnapshot(other) => {
+            durable_guard_restore_error(other)
+        }
+        DurableGuardSnapshotStoreError::ChannelPolicySnapshot(other) => {
+            durable_guard_restore_error(other)
+        }
     }
 }
 
@@ -78,7 +88,9 @@ pub fn map_message_lifecycle_store_validation_error(
             "message_lifecycle_snapshot_io_error",
             detail,
         ),
-        MessageLifecycleSnapshotStoreError::Snapshot(other) => map_message_lifecycle_snapshot_error(other),
+        MessageLifecycleSnapshotStoreError::Snapshot(other) => {
+            map_message_lifecycle_snapshot_error(other)
+        }
     }
 }
 
@@ -94,15 +106,21 @@ pub fn map_runtime_snapshot_store_error(error: SnapshotStoreError) -> ConfigErro
             "runtime_snapshot_io_error",
             detail,
         ),
-        SnapshotStoreError::StateVersionRegression { previous, found } => {
-            runtime_regression_error("runtime_snapshot_state_version_regression_rejected", previous, found)
-        }
-        SnapshotStoreError::CursorRegression { previous, found } => {
-            runtime_regression_error("runtime_snapshot_cursor_regression_rejected", previous, found)
-        }
-        SnapshotStoreError::StaleStateHash { state_hash, previous_version, found_version } => {
-            runtime_stale_hash_error(state_hash, previous_version, found_version)
-        }
+        SnapshotStoreError::StateVersionRegression { previous, found } => runtime_regression_error(
+            "runtime_snapshot_state_version_regression_rejected",
+            previous,
+            found,
+        ),
+        SnapshotStoreError::CursorRegression { previous, found } => runtime_regression_error(
+            "runtime_snapshot_cursor_regression_rejected",
+            previous,
+            found,
+        ),
+        SnapshotStoreError::StaleStateHash {
+            state_hash,
+            previous_version,
+            found_version,
+        } => runtime_stale_hash_error(state_hash, previous_version, found_version),
     }
 }
 
@@ -112,5 +130,10 @@ pub(crate) fn schema_error(
     expected: String,
     found: String,
 ) -> ConfigError {
-    ConfigError::RuntimeStoreSchemaIncompatible { store, reason_code, expected, found }
+    ConfigError::RuntimeStoreSchemaIncompatible {
+        store,
+        reason_code,
+        expected,
+        found,
+    }
 }

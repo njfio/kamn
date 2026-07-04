@@ -5,7 +5,7 @@ use super::super::{
     SERVICE_AUTH_SIGNATURE_ALGORITHM, SERVICE_AUTH_SIGNATURE_PROFILE_ID,
 };
 
-const SOURCE: &str = include_str!("../../signature_profile.rs");
+const SOURCE: &str = include_str!("../service_auth.rs");
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
@@ -32,8 +32,9 @@ fn service_auth_signature_roundtrip_verifies_with_expected_public_key() {
     assert!(signature.starts_with(&format!(
         "sig:{SERVICE_AUTH_SIGNATURE_ALGORITHM}:{SERVICE_AUTH_SIGNATURE_PROFILE_ID}:"
     )));
-    let public_key_hex = service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_AUTH_PRIVATE_KEY_HEX)
-        .expect("public key should derive");
+    let public_key_hex =
+        service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_AUTH_PRIVATE_KEY_HEX)
+            .expect("public key should derive");
     service_auth_verify_with_public_key_hex(
         signature.as_str(),
         "agent-a",
@@ -55,8 +56,9 @@ fn service_auth_signature_verification_rejects_tampered_payload_and_legacy_forma
         TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
     )
     .expect("signature should render");
-    let public_key_hex = service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_AUTH_PRIVATE_KEY_HEX)
-        .expect("public key should derive");
+    let public_key_hex =
+        service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_AUTH_PRIVATE_KEY_HEX)
+            .expect("public key should derive");
     let tampered = service_auth_verify_with_public_key_hex(
         signature.as_str(),
         "agent-a",
@@ -136,7 +138,7 @@ fn regression_requires_constant_time_service_auth_recovered_key_compare() {
         "service-auth verification should use the internal constant-time helper for recovered-key comparison"
     );
     assert!(
-        !SOURCE.contains(["if expected_key !=", " recovered {"] .concat().as_str()),
+        !SOURCE.contains(["if expected_key !=", " recovered {"].concat().as_str()),
         "service-auth verification must not use direct recovered-key equality"
     );
 }

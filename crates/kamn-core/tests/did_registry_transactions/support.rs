@@ -60,7 +60,8 @@ pub(crate) fn registration_adapter() -> InMemoryDidRegistrationChainAdapter {
     InMemoryDidRegistrationChainAdapter::new("ledger-stub")
 }
 
-pub(crate) fn lifecycle_adapter() -> KolmeDidLifecycleChainAdapter<InMemoryKolmeRuntimeCommitClient> {
+pub(crate) fn lifecycle_adapter() -> KolmeDidLifecycleChainAdapter<InMemoryKolmeRuntimeCommitClient>
+{
     let client = InMemoryKolmeRuntimeCommitClient::new("kolme-live").expect("client should build");
     KolmeDidLifecycleChainAdapter::new(client, "did-lifecycle-state").expect("adapter")
 }

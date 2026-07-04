@@ -35,7 +35,7 @@ pub(super) fn extract_canonical_recipient_did_from_payload(
         if recipient_did.is_empty() {
             continue;
         }
-        AgentDid::parse(recipient_did).map_err(|error| invalid_recipient_did(error))?;
+        AgentDid::parse(recipient_did).map_err(invalid_recipient_did)?;
         return Ok(Some(recipient_did.to_owned()));
     }
     Ok(None)

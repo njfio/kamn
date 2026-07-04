@@ -26,12 +26,25 @@ INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
 INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
 INTEGRATION_RUNTIME_PROVIDER_CLIENT_CONTRACT="KolmeRuntimeCommitLiveProvider"
+READINESS_CONNECT_TIMEOUT_SECONDS="${KAMN_KOLME_READINESS_CONNECT_TIMEOUT_SECONDS:-1}"
+READINESS_MAX_TIME_SECONDS="${KAMN_KOLME_READINESS_MAX_TIME_SECONDS:-2}"
 ROLLBACK_EVIDENCE_FILE="/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json"
 RECOVERY_EVIDENCE_FILE="/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json"
 PROCESS_PID=""
 
 shell_escape() {
   printf "%q" "$1"
+}
+
+resolve_path() {
+  python3 - "$1" <<'PY'
+from __future__ import annotations
+
+import pathlib
+import sys
+
+print(pathlib.Path(sys.argv[1]).resolve())
+PY
 }
 
 while [ "$#" -gt 0 ]; do
@@ -282,6 +295,14 @@ for numeric_value in \
   fi
 done
 
+OUTPUT_JSON="$(resolve_path "$OUTPUT_JSON")"
+INTEGRATION_REPORT="$(resolve_path "$INTEGRATION_REPORT")"
+PROCESS_OUTPUT_FILE="$(resolve_path "$PROCESS_OUTPUT_FILE")"
+INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="$(resolve_path "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE")"
+INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="$(resolve_path "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT")"
+ROLLBACK_EVIDENCE_FILE="$(resolve_path "$ROLLBACK_EVIDENCE_FILE")"
+RECOVERY_EVIDENCE_FILE="$(resolve_path "$RECOVERY_EVIDENCE_FILE")"
+
 if [ ! -x "$INTEGRATION_RUNNER" ]; then
   echo "expected local KAMN live runtime integration runner to be executable" >&2
   exit 1
@@ -313,25 +334,27 @@ read_runtime_policy_reason_code() {
   python3 "$ROOT_DIR/scripts/kolme/contracts/read_json_field_or_default.py" "$report_file" "runtime_commit_policy_reason_code" "runtime_commit_policy_reason_code_missing"
 }
 
+bounded_readiness_curl() {
+  local url="$1"
+  curl --connect-timeout "$READINESS_CONNECT_TIMEOUT_SECONDS" \
+    --max-time "$READINESS_MAX_TIME_SECONDS" \
+    --silent --show-error --fail "$url" >/dev/null 2>&1
+}
+
 wait_for_readiness() {
   local base_url="$1"
   local chain_version="$2"
   local max_seconds="$3"
 
-  local max_attempts="$(( max_seconds * 10 ))"
-  if [ "$max_attempts" -lt 1 ]; then
-    max_attempts=1
-  fi
-
   local healthz_url="${base_url%/}/healthz"
   local fork_info_url="${base_url%/}/fork-info?chain_version=${chain_version}"
+  local readiness_deadline_epoch="$(( $(date +%s) + max_seconds ))"
 
-  for _ in $(seq 1 "$max_attempts"); do
+  while [ "$(date +%s)" -le "$readiness_deadline_epoch" ]; do
     if [ -n "$PROCESS_PID" ] && ! kill -0 "$PROCESS_PID" >/dev/null 2>&1; then
       return 1
     fi
-    if curl --silent --show-error --fail "$healthz_url" >/dev/null 2>&1 \
-      && curl --silent --show-error --fail "$fork_info_url" >/dev/null 2>&1; then
+    if bounded_readiness_curl "$healthz_url" && bounded_readiness_curl "$fork_info_url"; then
       return 0
     fi
     sleep 0.1
@@ -365,7 +388,7 @@ graceful_teardown() {
 }
 
 serve_command_planned="${SERVE_COMMAND:-<required-in-run-mode>}"
-readiness_command="curl --silent --show-error --fail ${BASE_URL%/}/healthz && curl --silent --show-error --fail ${BASE_URL%/}/fork-info?chain_version=${FORK_CHAIN_VERSION}"
+readiness_command="curl --connect-timeout ${READINESS_CONNECT_TIMEOUT_SECONDS} --max-time ${READINESS_MAX_TIME_SECONDS} --silent --show-error --fail ${BASE_URL%/}/healthz && curl --connect-timeout ${READINESS_CONNECT_TIMEOUT_SECONDS} --max-time ${READINESS_MAX_TIME_SECONDS} --silent --show-error --fail ${BASE_URL%/}/fork-info?chain_version=${FORK_CHAIN_VERSION}"
 integration_command="bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${INTEGRATION_MAX_SECONDS} --bootstrap-max-seconds ${INTEGRATION_BOOTSTRAP_MAX_SECONDS} --conformance-max-seconds ${INTEGRATION_CONFORMANCE_MAX_SECONDS} --runtime-commit-max-seconds ${INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS} --output-json ${INTEGRATION_REPORT}"
 integration_command="${integration_command} --runtime-provider-client-contract ${INTEGRATION_RUNTIME_PROVIDER_CLIENT_CONTRACT}"
 integration_command="${integration_command} --runtime-commit-live-policy-report $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT}")"

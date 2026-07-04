@@ -3,8 +3,16 @@ use super::support::*;
 #[test]
 fn performance_libp2p_native_adapter_stays_within_local_heavy_budget() {
     let (sender_transport, recipient_transport) = performance_pair();
-    advertise_messages(&sender_transport, "peer-native-perf-sender", NodeRole::Processor);
-    advertise_messages(&recipient_transport, "peer-native-perf-recipient", NodeRole::Listener);
+    advertise_messages(
+        &sender_transport,
+        "peer-native-perf-sender",
+        NodeRole::Processor,
+    );
+    advertise_messages(
+        &recipient_transport,
+        "peer-native-perf-recipient",
+        NodeRole::Listener,
+    );
     warm_transport_path(&sender_transport, &recipient_transport);
     let started = Instant::now();
     send_performance_frames(&sender_transport);
@@ -15,7 +23,10 @@ fn performance_libp2p_native_adapter_stays_within_local_heavy_budget() {
         Duration::from_secs(2),
     );
     assert_eq!(frames.len(), 64);
-    assert!(started.elapsed() <= Duration::from_secs(2), "libp2p native adapter exceeded local-heavy runtime budget");
+    assert!(
+        started.elapsed() <= Duration::from_secs(2),
+        "libp2p native adapter exceeded local-heavy runtime budget"
+    );
 }
 
 fn performance_pair() -> (
@@ -50,13 +61,22 @@ fn warm_transport_path(
     );
     send_with_retry(sender_transport, &frame, Duration::from_secs(5))
         .expect("warmup frame should send");
-    let _ = drain_until_count(recipient_transport, "peer-native-perf-recipient", 1, Duration::from_secs(5));
+    let _ = drain_until_count(
+        recipient_transport,
+        "peer-native-perf-recipient",
+        1,
+        Duration::from_secs(5),
+    );
 }
 
 fn send_performance_frames(sender_transport: &Libp2pLivePeerLifecycleTransport) {
     for nonce in 0..64 {
         let payload = format!("tx-native-performance-{nonce}");
-        let frame = message_frame("peer-native-perf-sender", "peer-native-perf-recipient", payload.as_str());
+        let frame = message_frame(
+            "peer-native-perf-sender",
+            "peer-native-perf-recipient",
+            payload.as_str(),
+        );
         send_with_retry(sender_transport, &frame, Duration::from_secs(2))
             .expect("frame should send");
     }

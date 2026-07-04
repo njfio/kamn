@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_LOCAL_ONLY_HEAVY_VALIDATION_MATRIX_PLAN_MARKERS: &[&str] = &[
     "## Local-Only Heavy Kolme Validation Matrix",
@@ -14,7 +14,10 @@ const PLAN_CONTAINS_LOCAL_ONLY_HEAVY_VALIDATION_MATRIX_PLAN_MARKERS: &[&str] = &
 
 #[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_ONLY_HEAVY_VALIDATION_MATRIX_PLAN_MARKERS, "plan_contains_local_only_heavy_validation_matrix");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_ONLY_HEAVY_VALIDATION_MATRIX_PLAN_MARKERS,
+        "plan_contains_local_only_heavy_validation_matrix",
+    );
 }
 
 const PLAN_CONTAINS_LOCAL_ONLY_HEAVY_E2E_LANE_PLAN_MARKERS: &[&str] = &[
@@ -30,5 +33,8 @@ const PLAN_CONTAINS_LOCAL_ONLY_HEAVY_E2E_LANE_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_local_only_heavy_e2e_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_LOCAL_ONLY_HEAVY_E2E_LANE_PLAN_MARKERS, "plan_contains_local_only_heavy_e2e_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LOCAL_ONLY_HEAVY_E2E_LANE_PLAN_MARKERS,
+        "plan_contains_local_only_heavy_e2e_lane",
+    );
 }

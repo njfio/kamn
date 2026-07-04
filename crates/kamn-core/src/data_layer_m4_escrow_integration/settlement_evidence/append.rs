@@ -1,5 +1,7 @@
 use super::super::models::*;
-use super::super::validation::{compute_evidence_hash, validate_hash_token, validate_non_empty, validate_non_zero_timestamp};
+use super::super::validation::{
+    compute_evidence_hash, validate_hash_token, validate_non_empty, validate_non_zero_timestamp,
+};
 
 impl DataLayerM4SettlementEvidenceRegistry {
     /// Creates an empty settlement evidence registry.
@@ -11,9 +13,13 @@ impl DataLayerM4SettlementEvidenceRegistry {
     pub fn append(
         &mut self,
         input: DataLayerM4SettlementEvidenceInput,
-    ) -> Result<DataLayerM4SettlementEvidenceRecord, DataLayerM4SettlementEvidenceRegistryError> {
+    ) -> Result<DataLayerM4SettlementEvidenceRecord, DataLayerM4SettlementEvidenceRegistryError>
+    {
         validate_append_input(&input)?;
-        let escrow_records = self.records_by_escrow.entry(input.escrow_id.clone()).or_default();
+        let escrow_records = self
+            .records_by_escrow
+            .entry(input.escrow_id.clone())
+            .or_default();
         let sequence = (escrow_records.len() + 1) as u64;
         let hash_chain_prev = escrow_records
             .last()
@@ -40,14 +46,22 @@ fn validate_append_input(
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     validate_non_empty(input.escrow_id.as_str(), "escrow_id")?;
     validate_non_zero_timestamp(input.recorded_at_epoch_seconds, "recorded_at_epoch_seconds")?;
-    validate_hash_token(input.settlement_receipt_hash.as_str(), "settlement_receipt_hash")?;
-    validate_hash_token(input.settlement_payload_hash.as_str(), "settlement_payload_hash")?;
+    validate_hash_token(
+        input.settlement_receipt_hash.as_str(),
+        "settlement_receipt_hash",
+    )?;
+    validate_hash_token(
+        input.settlement_payload_hash.as_str(),
+        "settlement_payload_hash",
+    )?;
     if input.escrow_state != DataLayerM4EscrowState::Released
         && input.escrow_state != DataLayerM4EscrowState::Refunded
     {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::UnsupportedSettlementState(
-            input.escrow_state,
-        ));
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::UnsupportedSettlementState(
+                input.escrow_state,
+            ),
+        );
     }
     Ok(())
 }

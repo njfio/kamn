@@ -92,12 +92,10 @@ pub(super) fn render_backend_output(
 ) -> String {
     match signer_pubkey_hex {
         Some(pubkey) => format!(
-            "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
-            signature_hex, recovery_id, pubkey,
+            "printf 'signature_hex={signature_hex}\\nrecovery_id={recovery_id}\\nsigner_public_key_hex={pubkey}\\n'",
         ),
         None => format!(
-            "printf 'signature_hex={}\\nrecovery_id={}\\n'",
-            signature_hex, recovery_id,
+            "printf 'signature_hex={signature_hex}\\nrecovery_id={recovery_id}\\n'",
         ),
     }
 }

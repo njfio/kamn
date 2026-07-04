@@ -9,7 +9,10 @@ fn subject_mode_emits_expected_schema_markers() {
         "0.20",
     );
 
-    assert_eq!(string_field(&report, "schema_version"), "kamn.ci.governance-feature-commit-ratio-report.v1");
+    assert_eq!(
+        string_field(&report, "schema_version"),
+        "kamn.ci.governance-feature-commit-ratio-report.v1"
+    );
     assert_eq!(
         string_field(&report, "reason_taxonomy_version"),
         "kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1"

@@ -70,12 +70,14 @@ async fn finalize_authenticated_request(
     finalize::finalize_request(
         state,
         response,
-        metadata.method_label.as_str(),
-        metadata.path.as_str(),
-        correlation_id.as_str(),
-        metadata.is_websocket_route,
-        metadata.request_started_at,
-        concurrency_permit,
+        finalize::FinalizeRequestContext {
+            method: metadata.method_label.as_str(),
+            path: metadata.path.as_str(),
+            correlation_id: correlation_id.as_str(),
+            is_websocket_route: metadata.is_websocket_route,
+            request_started_at: metadata.request_started_at,
+            concurrency_permit,
+        },
     )
     .await
 }

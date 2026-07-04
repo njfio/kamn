@@ -1,5 +1,5 @@
-use super::*;
 use super::service_api_policy_support::assert_reason_code_present_in_docs_and_ops;
+use super::*;
 
 #[test]
 fn doc_contains_api_version_policy_docs_parity_markers() {
@@ -37,7 +37,9 @@ fn assert_api_version_doc_headers() {
 }
 
 fn assert_api_version_doc_paths() {
-    assert!(DOC.contains(&format!("api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}")));
+    assert!(DOC.contains(&format!(
+        "api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}"
+    )));
     assert!(DOC.contains(&format!(
         "api_version_policy_required_row_ids_csv={API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV}"
     )));
@@ -56,9 +58,8 @@ fn assert_api_version_source_markers() {
         "REASON_TAXONOMY_VERSION = \"kamn.runtime.api-version-policy-reason-taxonomy.v1\""
     ));
     assert!(API_VERSION_POLICY_CONTRACT_SOURCE.contains("REASON_CODES_CSV = \",\".join("));
-    assert!(API_VERSION_POLICY_CONTRACT_SOURCE.contains(
-        "FIXTURE_SCHEMA = \"kamn.runtime.api-version-policy-fixture-matrix.v1\""
-    ));
+    assert!(API_VERSION_POLICY_CONTRACT_SOURCE
+        .contains("FIXTURE_SCHEMA = \"kamn.runtime.api-version-policy-fixture-matrix.v1\""));
 }
 
 fn assert_api_version_strategy_markers() {
@@ -71,7 +72,9 @@ fn assert_api_version_strategy_markers() {
     assert!(DOC.contains(&format!(
         "api_version_policy_fixture_schema_version={API_VERSION_POLICY_FIXTURE_SCHEMA_VERSION}"
     )));
-    assert!(DOC.contains(&format!("api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}")));
+    assert!(DOC.contains(&format!(
+        "api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}"
+    )));
     assert!(DOC.contains(&format!(
         "api_version_policy_required_row_ids_csv={API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV}"
     )));
@@ -87,7 +90,9 @@ fn assert_api_version_ops_markers() {
     assert!(OPS_DOC.contains(&format!(
         "api_version_policy_fixture_schema_version={API_VERSION_POLICY_FIXTURE_SCHEMA_VERSION}"
     )));
-    assert!(OPS_DOC.contains(&format!("api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}")));
+    assert!(OPS_DOC.contains(&format!(
+        "api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}"
+    )));
     assert!(OPS_DOC.contains(&format!(
         "api_version_policy_required_row_ids_csv={API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV}"
     )));

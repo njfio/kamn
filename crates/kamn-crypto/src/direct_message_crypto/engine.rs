@@ -1,11 +1,10 @@
 use super::{
     canonical_direct_message_aad, decode_combined_ciphertext,
     decrypt_with_compatibility_candidates, derive_direct_message_aead_key,
-    derive_direct_message_aead_key_legacy, derive_x25519_shared_secret,
-    direct_message_nonce_bytes, load_key_agreement_master_seed, validate_ciphertext_context,
-    validate_encrypt_request, validate_key_ref, DirectMessageCiphertext,
-    DirectMessageCryptoError, DIRECT_MESSAGE_CIPHER_ALGORITHM,
-    DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+    derive_direct_message_aead_key_legacy, derive_x25519_shared_secret, direct_message_nonce_bytes,
+    load_key_agreement_master_seed, validate_ciphertext_context, validate_encrypt_request,
+    validate_key_ref, DirectMessageCiphertext, DirectMessageCryptoError,
+    DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
 };
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305, XNonce};
@@ -73,7 +72,11 @@ impl DirectMessageCryptoEngine {
         &self,
         sealed: &DirectMessageCiphertext,
     ) -> Result<String, DirectMessageCryptoError> {
-        validate_ciphertext_context(self.sender_key_ref.as_str(), self.recipient_key_ref.as_str(), sealed)?;
+        validate_ciphertext_context(
+            self.sender_key_ref.as_str(),
+            self.recipient_key_ref.as_str(),
+            sealed,
+        )?;
         let plaintext = decrypt_payload_bytes(self, sealed)?;
         decode_plaintext_utf8(plaintext)
     }

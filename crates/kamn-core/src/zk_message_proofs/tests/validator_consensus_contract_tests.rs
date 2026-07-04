@@ -32,7 +32,8 @@ fn validator_consensus_rejects_duplicate_validator_attestations() {
     );
 }
 
-fn duplicate_validator_input() -> Result<ValidatorProofConsensusInput, ValidatorProofConsensusError> {
+fn duplicate_validator_input() -> Result<ValidatorProofConsensusInput, ValidatorProofConsensusError>
+{
     ValidatorProofConsensusInput::new(
         "urn:uuid:message-1",
         "artifact-1",

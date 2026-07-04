@@ -12,5 +12,5 @@ mod input;
 pub use attestation::ApproverAttestation;
 pub use decision::ApproverQuorumDecision;
 pub use error::ApproverQuorumError;
-pub use evaluator::{ApproverQuorumEvaluator, authorize_daemon_outbound_action};
+pub use evaluator::{authorize_daemon_outbound_action, ApproverQuorumEvaluator};
 pub use input::ApproverQuorumInput;

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_did_binding() {
-    let (snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34075", 1);
+    let (snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34075", 1);
     let response = case_variant_binding_response(&snapshot, bind_addr.as_str());
     assert!(response.contains("HTTP/1.1 202 Accepted"));
     join_service_api_server(
@@ -14,7 +14,7 @@ fn integration_service_api_endpoint_accepts_case_variant_self_certifying_sender_
 #[test]
 fn regression_service_api_endpoint_rejects_legacy_sender_binding_without_signer_public_key_header()
 {
-    let (snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34076", 1);
+    let (snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34076", 1);
     let response = legacy_binding_rejection_response(&snapshot, bind_addr.as_str());
     assert!(response.contains("HTTP/1.1 401 Unauthorized"));
     let error_payload = parse_error_envelope_from_http_response(response.as_str());

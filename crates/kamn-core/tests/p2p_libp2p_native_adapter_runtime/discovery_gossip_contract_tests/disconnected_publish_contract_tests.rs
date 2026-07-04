@@ -3,8 +3,16 @@ use super::super::support::*;
 #[test]
 fn integration_libp2p_native_adapter_disconnected_publish_fails_closed() {
     let (sender_transport, recipient_transport) = disconnected_pair();
-    advertise_messages(&sender_transport, "peer-native-disconnected-sender", NodeRole::Processor);
-    advertise_messages(&recipient_transport, "peer-native-disconnected-recipient", NodeRole::Listener);
+    advertise_messages(
+        &sender_transport,
+        "peer-native-disconnected-sender",
+        NodeRole::Processor,
+    );
+    advertise_messages(
+        &recipient_transport,
+        "peer-native-disconnected-recipient",
+        NodeRole::Listener,
+    );
     let error = sender_transport
         .send(message_frame(
             "peer-native-disconnected-sender",

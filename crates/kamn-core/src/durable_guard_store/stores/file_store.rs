@@ -2,9 +2,8 @@ use crate::{ChannelPolicySnapshot, DeliveryGuardSnapshot};
 
 use super::super::wire_codec::{deserialize_bundle, serialize_bundle};
 use super::super::{
-    default_bundle, validate_bundle, ChannelPolicySnapshotStore,
-    DeliveryGuardSnapshotStore, DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle,
-    DurableGuardSnapshotStoreError,
+    default_bundle, validate_bundle, ChannelPolicySnapshotStore, DeliveryGuardSnapshotStore,
+    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError,
 };
 use std::fs;
 use std::fs::OpenOptions;

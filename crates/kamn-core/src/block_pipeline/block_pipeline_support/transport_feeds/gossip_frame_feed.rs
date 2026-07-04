@@ -32,11 +32,14 @@ impl GossipFrameTransportMempoolFeed {
         if self.pending_frames.is_empty() {
             return Ok(());
         }
-        let decoded = GossipIngressAdapter::decode_frames(&self.pending_frames)
-            .map_err(|error| BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error)))?;
+        let decoded =
+            GossipIngressAdapter::decode_frames(&self.pending_frames).map_err(|error| {
+                BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error))
+            })?;
         self.pending_frames.clear();
         self.pending_transactions.extend(decoded.transactions);
-        self.canonical_candidates.extend(decoded.canonical_candidates);
+        self.canonical_candidates
+            .extend(decoded.canonical_candidates);
         Ok(())
     }
 }

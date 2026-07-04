@@ -7,7 +7,11 @@ SCRIPT="$ROOT_DIR/scripts/ci/post_flaky_report_comment.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-future="$(date -u -d '+7 days' +%Y-%m-%d)"
+if future="$(date -u -d '+7 days' +%Y-%m-%d 2>/dev/null)"; then
+  :
+else
+  future="$(date -u -v+7d +%Y-%m-%d)"
+fi
 cat > "$TMP_DIR/registry.txt" <<EOF2
 owner1|crate::test_a|#70|$future|temporary quarantine
 EOF2

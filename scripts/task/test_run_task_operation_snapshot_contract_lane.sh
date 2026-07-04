@@ -28,6 +28,16 @@ if [ ! -x "$DEEP_IMPL" ]; then
   exit 1
 fi
 
+if ! grep -q "KAMN_TASK_OPERATION_SNAPSHOT_TARGET_DIR" "$SHARED_CONTRACT"; then
+  echo "expected task operation snapshot shared contract module to expose isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR="$task_operation_snapshot_target_dir"' "$SHARED_CONTRACT"; then
+  echo "expected task operation snapshot shared contract module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 

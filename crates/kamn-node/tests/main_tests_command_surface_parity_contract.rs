@@ -20,8 +20,9 @@ fn repo_path(relative: &str) -> PathBuf {
 
 fn read_repo_file(relative: &str) -> String {
     let path = repo_path(relative);
+    let path_display = path.display();
     fs::read_to_string(&path).unwrap_or_else(|error| {
-        panic!("failed to read {}: {}", path.display(), error);
+        panic!("failed to read {path_display}: {error}");
     })
 }
 
@@ -32,10 +33,10 @@ fn runtime_test_sources() -> Vec<(String, String)> {
     )];
     let mut fragment_paths = Vec::new();
     for entry in fs::read_dir(repo_path("src/main_tests/runtime_tests")).unwrap_or_else(|error| {
-        panic!("failed to read runtime_tests fragments: {}", error);
+        panic!("failed to read runtime_tests fragments: {error}");
     }) {
         let entry = entry.unwrap_or_else(|error| {
-            panic!("failed to read runtime_tests fragment entry: {}", error);
+            panic!("failed to read runtime_tests fragment entry: {error}");
         });
         let path = entry.path();
         if path.extension().is_some_and(|ext| ext == "rs") {
@@ -46,11 +47,12 @@ fn runtime_test_sources() -> Vec<(String, String)> {
     for path in fragment_paths {
         let relative = path
             .strip_prefix(repo_path(""))
-            .unwrap_or_else(|error| panic!("failed to relativize fragment path: {}", error))
+            .unwrap_or_else(|error| panic!("failed to relativize fragment path: {error}"))
             .to_string_lossy()
             .to_string();
+        let path_display = path.display();
         let source = fs::read_to_string(&path).unwrap_or_else(|error| {
-            panic!("failed to read {}: {}", path.display(), error);
+            panic!("failed to read {path_display}: {error}");
         });
         sources.push((relative, source));
     }
@@ -128,12 +130,7 @@ fn selector_symbols_and_commands_remain_in_runtime_test_command_surface() {
             reason_codes.into_iter().collect::<Vec<_>>().join(",")
         };
         panic!(
-            "reason_taxonomy_version={} reason_codes_csv={} reason_codes={} missing_symbols={:?} missing_commands={:?}",
-            REASON_TAXONOMY_VERSION,
-            REASON_CODES_CSV,
-            reason_codes_value,
-            missing_symbols,
-            missing_commands
+            "reason_taxonomy_version={REASON_TAXONOMY_VERSION} reason_codes_csv={REASON_CODES_CSV} reason_codes={reason_codes_value} missing_symbols={missing_symbols:?} missing_commands={missing_commands:?}"
         );
     }
 }

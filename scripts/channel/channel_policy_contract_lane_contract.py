@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ def fail(message: str) -> int:
     return 1
 
 
-def run_capture(command: list[str], *, cwd: Path) -> tuple[int, str]:
+def run_capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> tuple[int, str]:
     """Run command and return exit code + merged output."""
     result = subprocess.run(
         command,
@@ -27,22 +28,15 @@ def run_capture(command: list[str], *, cwd: Path) -> tuple[int, str]:
         text=True,
         check=False,
         cwd=str(cwd),
+        env=env,
     )
     return result.returncode, (result.stdout or "") + (result.stderr or "")
 
 
-def main(argv: list[str]) -> int:
-    """Execute channel policy contract-lane checks."""
-    if argv and argv[0] in {"--help", "-h"}:
-        usage()
-        return 0
-    if argv:
-        return fail(f"unknown argument: {argv[0]}")
-
-    root_dir = Path(__file__).resolve().parents[2]
+def contract_commands(root_dir: Path) -> tuple[list[str], ...]:
+    """Return channel policy commands in stable execution order."""
     retention_lane = root_dir / "scripts/channel/run_channel_retention_redaction_contract_lane.sh"
-
-    commands = (
+    return (
         ["cargo", "test", "-p", "kamn-core", "--lib", "channel_policies::tests::"],
         ["cargo", "test", "-p", "kamn-core", "--test", "channel_permissions_retention"],
         [
@@ -65,8 +59,33 @@ def main(argv: list[str]) -> int:
         ],
         ["bash", str(retention_lane)],
     )
-    for command in commands:
-        exit_code, _output = run_capture(command, cwd=root_dir)
+
+
+def resolve_channel_target_dir(root_dir: Path) -> Path:
+    """Return the isolated target dir for channel policy contract tests."""
+    target_override = os.environ.get("KAMN_CHANNEL_POLICY_CONTRACT_TARGET_DIR")
+    channel_target_dir = (
+        Path(target_override)
+        if target_override
+        else root_dir / "target/channel-policy-contract"
+    )
+    channel_target_dir.mkdir(parents=True, exist_ok=True)
+    return channel_target_dir
+
+
+def main(argv: list[str]) -> int:
+    """Execute channel policy contract-lane checks."""
+    if argv and argv[0] in {"--help", "-h"}:
+        usage()
+        return 0
+    if argv:
+        return fail(f"unknown argument: {argv[0]}")
+
+    root_dir = Path(__file__).resolve().parents[2]
+    channel_target_dir = resolve_channel_target_dir(root_dir)
+    cargo_env = {**os.environ, "CARGO_TARGET_DIR": str(channel_target_dir)}
+    for command in contract_commands(root_dir):
+        exit_code, _output = run_capture(command, cwd=root_dir, env=cargo_env)
         if exit_code != 0:
             return fail(f"expected {' '.join(command)} to pass")
 

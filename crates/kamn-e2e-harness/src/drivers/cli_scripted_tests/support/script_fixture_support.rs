@@ -18,7 +18,7 @@ pub(crate) fn write_executable_python_script(script_path: &Path, source: &str) {
     fs::set_permissions(script_path, permissions).expect("script fixture should be executable");
 }
 
-pub(crate) fn script_path_str<'a>(script_path: &'a Path) -> &'a str {
+pub(crate) fn script_path_str(script_path: &Path) -> &str {
     script_path
         .to_str()
         .expect("script path should be valid utf-8")

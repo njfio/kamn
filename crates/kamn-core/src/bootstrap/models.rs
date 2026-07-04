@@ -26,7 +26,8 @@ pub const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT_FILE: &str =
 pub const RUNTIME_SNAPSHOT_STORE_COMPONENT_FILE: &str = "runtime-snapshot-store:file-default";
 pub const TASK_OPERATION_STORE_COMPONENT_SQLITE: &str =
     "task-operation-snapshot-store:sqlite-default";
-pub const DURABLE_GUARD_STORE_COMPONENT_SQLITE: &str = "durable-guard-snapshot-store:sqlite-default";
+pub const DURABLE_GUARD_STORE_COMPONENT_SQLITE: &str =
+    "durable-guard-snapshot-store:sqlite-default";
 pub const CHANNEL_SNAPSHOT_STORE_COMPONENT_SQLITE: &str = "channel-snapshot-store:sqlite-default";
 pub const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT_SQLITE: &str =
     "message-lifecycle-snapshot-store:sqlite-default";
@@ -68,8 +69,6 @@ pub struct BootstrapPlan {
     pub wiring: RuntimeWiring,
 }
 
-pub fn maybe_profile(
-    profile: Option<RuntimeTransportProfile>,
-) -> Option<RuntimeTransportProfile> {
+pub fn maybe_profile(profile: Option<RuntimeTransportProfile>) -> Option<RuntimeTransportProfile> {
     profile
 }

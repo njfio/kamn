@@ -161,7 +161,38 @@ if [[ -z "$convergence_output_json" ]]; then
   convergence_output_json="$tmp_dir/${LANE_SLUG}-convergence-report.json"
 fi
 
-lane_output="$(service_api_contract_lane_run "${runner_args[@]}")"
+prebuild_timeout_seconds="${KAMN_SERVICE_API_WEBSOCKET_PREBUILD_MAX_SECONDS:-900}"
+if ! [[ "$prebuild_timeout_seconds" =~ ^[0-9]+$ ]] || [[ "$prebuild_timeout_seconds" -le 0 ]]; then
+  echo "KAMN_SERVICE_API_WEBSOCKET_PREBUILD_MAX_SECONDS must be a positive integer" >&2
+  exit 2
+fi
+prebuild_target_dir="${KAMN_SERVICE_API_WEBSOCKET_PREBUILD_TARGET_DIR:-$ROOT_DIR/target/service-api-websocket-contract}"
+prebuilt_node_bin="$prebuild_target_dir/debug/kamn-node"
+
+pushd "$ROOT_DIR" >/dev/null
+set +e
+CARGO_TARGET_DIR="$prebuild_target_dir" timeout "$prebuild_timeout_seconds" cargo build --quiet -p kamn-node
+prebuild_code=$?
+set -e
+popd >/dev/null
+if [[ "$prebuild_code" -eq 124 ]]; then
+  echo "service api websocket prebuild timed out" >&2
+  exit 124
+fi
+if [[ "$prebuild_code" -ne 0 ]]; then
+  echo "service api websocket prebuild failed" >&2
+  exit "$prebuild_code"
+fi
+if [[ ! -x "$prebuilt_node_bin" ]]; then
+  echo "expected isolated prebuilt kamn-node binary to be executable" >&2
+  exit 1
+fi
+
+lane_output="$(
+  KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD=1 \
+    KAMN_SERVICE_API_WEBSOCKET_NODE_BIN="$prebuilt_node_bin" \
+    service_api_contract_lane_run "${runner_args[@]}"
+)"
 
 convergence_output="$(
   bash "$EVIDENCE_CHECKER" \

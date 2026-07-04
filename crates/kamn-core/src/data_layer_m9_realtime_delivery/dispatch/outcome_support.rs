@@ -1,3 +1,7 @@
+use crate::data_layer_m9_realtime_delivery::dispatch::outcome::queue_escalation;
+use crate::data_layer_m9_realtime_delivery::validation::{
+    authorize_owner_scope, parse_agent_did, validate_non_empty,
+};
 use crate::{
     data_layer_m9_realtime_delivery::{
         DataLayerM9DispatchAckStatus, DataLayerM9DispatchOutcome, DataLayerM9DispatchRequest,
@@ -10,15 +14,14 @@ use crate::{
     },
     AgentDid,
 };
-use crate::data_layer_m9_realtime_delivery::dispatch::outcome::queue_escalation;
-use crate::data_layer_m9_realtime_delivery::validation::{
-    authorize_owner_scope, parse_agent_did, validate_non_empty,
-};
 
 pub(super) fn validate_dispatch_request(
     request: &DataLayerM9DispatchRequest,
 ) -> Result<AgentDid, DataLayerM9RealtimeDeliveryError> {
-    authorize_owner_scope(request.requester_owner_did.as_str(), request.owner_did.as_str())?;
+    authorize_owner_scope(
+        request.requester_owner_did.as_str(),
+        request.owner_did.as_str(),
+    )?;
     parse_agent_did(
         request.sender_agent_did.as_str(),
         "sender_agent_did",
@@ -42,8 +45,14 @@ pub(super) fn ensure_message_id_is_unique(
     queue_state: &DataLayerM9RecipientQueueState,
     message_id: &str,
 ) -> Result<(), DataLayerM9RealtimeDeliveryError> {
-    if queue_state.pending_message_ids.iter().any(|value| value == message_id)
-        || queue_state.deferred_message_ids.iter().any(|value| value == message_id)
+    if queue_state
+        .pending_message_ids
+        .iter()
+        .any(|value| value == message_id)
+        || queue_state
+            .deferred_message_ids
+            .iter()
+            .any(|value| value == message_id)
     {
         return Err(DataLayerM9RealtimeDeliveryError::DuplicateMessageId(
             message_id.to_owned(),
@@ -71,12 +80,16 @@ pub(super) fn queue_pending_outcome(
     queue_state: &mut DataLayerM9RecipientQueueState,
     request: &DataLayerM9DispatchRequest,
 ) -> DataLayerM9DispatchOutcome {
-    queue_state.pending_message_ids.push(request.message_id.clone());
+    queue_state
+        .pending_message_ids
+        .push(request.message_id.clone());
     if queue_reached_cap(queue_state) && queue_state.first_full_at_epoch_seconds.is_none() {
         queue_state.first_full_at_epoch_seconds = Some(request.dispatched_at_epoch_seconds);
     }
-    let (warning, extension) =
-        queue_escalation(queue_state.first_full_at_epoch_seconds, request.dispatched_at_epoch_seconds);
+    let (warning, extension) = queue_escalation(
+        queue_state.first_full_at_epoch_seconds,
+        request.dispatched_at_epoch_seconds,
+    );
     DataLayerM9DispatchOutcome {
         message_id: request.message_id.clone(),
         ack_status: DataLayerM9DispatchAckStatus::Queued,
@@ -95,9 +108,13 @@ pub(super) fn queue_deferred_outcome(
     if queue_state.first_full_at_epoch_seconds.is_none() {
         queue_state.first_full_at_epoch_seconds = Some(request.dispatched_at_epoch_seconds);
     }
-    queue_state.deferred_message_ids.push(request.message_id.clone());
-    let (warning, extension) =
-        queue_escalation(queue_state.first_full_at_epoch_seconds, request.dispatched_at_epoch_seconds);
+    queue_state
+        .deferred_message_ids
+        .push(request.message_id.clone());
+    let (warning, extension) = queue_escalation(
+        queue_state.first_full_at_epoch_seconds,
+        request.dispatched_at_epoch_seconds,
+    );
     DataLayerM9DispatchOutcome {
         message_id: request.message_id.clone(),
         ack_status: DataLayerM9DispatchAckStatus::Queued,

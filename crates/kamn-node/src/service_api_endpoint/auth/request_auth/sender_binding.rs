@@ -1,5 +1,5 @@
 use super::super::support::{
-    SELF_CERTIFYING_AGENT_DID_KEY_PREFIX, header_value, normalized_public_key_hexes_match,
+    header_value, normalized_public_key_hexes_match, SELF_CERTIFYING_AGENT_DID_KEY_PREFIX,
 };
 use super::*;
 
@@ -38,9 +38,9 @@ pub(crate) fn sender_did_matches_signer_public_key(
     allow_legacy_sender_binding
 }
 
-fn signer_public_key_header<'a>(
-    headers: &'a BTreeMap<String, String>,
-) -> Result<Option<&'a str>, RequestAuthFailure> {
+fn signer_public_key_header(
+    headers: &BTreeMap<String, String>,
+) -> Result<Option<&str>, RequestAuthFailure> {
     let Some(public_key_hex) = header_value(headers, REQUEST_AUTH_SIGNER_PUBLIC_KEY_HEADER) else {
         return Ok(None);
     };

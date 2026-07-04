@@ -38,12 +38,15 @@ impl DataLayerM4SettlementEvidenceRegistry {
                 escrow_id: escrow_id.to_owned(),
             }
         })?;
-        let record = records.iter_mut().find(|entry| entry.sequence == sequence).ok_or_else(|| {
-            DataLayerM4SettlementEvidenceRegistryError::EvidenceSequenceNotFound {
-                escrow_id: escrow_id.to_owned(),
-                sequence,
-            }
-        })?;
+        let record = records
+            .iter_mut()
+            .find(|entry| entry.sequence == sequence)
+            .ok_or_else(|| {
+                DataLayerM4SettlementEvidenceRegistryError::EvidenceSequenceNotFound {
+                    escrow_id: escrow_id.to_owned(),
+                    sequence,
+                }
+            })?;
         record.record_hash = record_hash.to_owned();
         Ok(())
     }
@@ -56,11 +59,13 @@ fn verify_record_prev_link(
     expected_prev: &str,
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if record.hash_chain_prev != expected_prev {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidEvidenceHashChain {
-            escrow_id: escrow_id.to_owned(),
-            position,
-            reason: "hash_chain_prev mismatch",
-        });
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::InvalidEvidenceHashChain {
+                escrow_id: escrow_id.to_owned(),
+                position,
+                reason: "hash_chain_prev mismatch",
+            },
+        );
     }
     Ok(())
 }
@@ -82,11 +87,13 @@ fn verify_record_hash(
         record.hash_chain_prev.as_str(),
     );
     if record.record_hash != expected_hash {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidEvidenceHashChain {
-            escrow_id: escrow_id.to_owned(),
-            position,
-            reason: "record_hash mismatch",
-        });
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::InvalidEvidenceHashChain {
+                escrow_id: escrow_id.to_owned(),
+                position,
+                reason: "record_hash mismatch",
+            },
+        );
     }
     Ok(())
 }

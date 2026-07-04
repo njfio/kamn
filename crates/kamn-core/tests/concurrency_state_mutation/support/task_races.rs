@@ -29,7 +29,11 @@ fn submitted_task_engine(task_id: &str) -> Arc<Mutex<TaskOperationEngine>> {
     engine
         .lock()
         .expect("engine lock should initialize")
-        .submit(task_id, "kamn:did:agent:requester-1", "Concurrency accept gate")
+        .submit(
+            task_id,
+            "kamn:did:agent:requester-1",
+            "Concurrency accept gate",
+        )
         .expect("submit should succeed");
     engine
 }
@@ -58,7 +62,10 @@ fn spawn_accept_handle(
     let barrier = Arc::clone(barrier);
     thread::spawn(move || {
         barrier.wait();
-        let result = engine.lock().expect("engine lock should acquire").accept(&task_id, &actor);
+        let result = engine
+            .lock()
+            .expect("engine lock should acquire")
+            .accept(&task_id, &actor);
         (actor, result)
     })
 }
@@ -71,7 +78,10 @@ fn collect_accept_outcomes(handles: Vec<AcceptHandle>) -> (usize, usize, Option<
         let (actor, outcome) = handle.join().expect("task accept thread should join");
         match outcome {
             Ok(()) => record_accept_success(&mut success_count, &mut winner, actor),
-            Err(TaskOperationError::UnauthorizedActor { actor: rejected, required }) => {
+            Err(TaskOperationError::UnauthorizedActor {
+                actor: rejected,
+                required,
+            }) => {
                 unauthorized_count += 1;
                 assert_eq!(rejected, actor);
                 assert_eq!(required, "unassigned_or_current_assignee");
@@ -146,15 +156,27 @@ fn collect_submit_outcomes(handles: Vec<SubmitHandle>) -> (usize, usize, String)
             Err(error) => panic!("unexpected task submit concurrency error: {error:?}"),
         }
     }
-    (success_count, duplicate_count, winner.expect("one requester must win"))
+    (
+        success_count,
+        duplicate_count,
+        winner.expect("one requester must win"),
+    )
 }
 
-fn record_submit_success(success_count: &mut usize, winner: &mut Option<String>, requester: String) {
+fn record_submit_success(
+    success_count: &mut usize,
+    winner: &mut Option<String>,
+    requester: String,
+) {
     *success_count += 1;
     *winner = Some(requester);
 }
 
-fn assert_submitted_task_state(engine: &Arc<Mutex<TaskOperationEngine>>, task_id: &str, winner: &str) {
+fn assert_submitted_task_state(
+    engine: &Arc<Mutex<TaskOperationEngine>>,
+    task_id: &str,
+    winner: &str,
+) {
     let engine = engine.lock().expect("engine lock should acquire");
     let task = engine.task(task_id).expect("task should exist");
     assert_eq!(task.requester, winner);

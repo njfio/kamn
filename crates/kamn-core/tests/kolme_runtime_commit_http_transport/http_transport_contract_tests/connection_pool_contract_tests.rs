@@ -35,5 +35,7 @@ fn assert_keep_alive_server_metrics(
     assert_eq!(accepted_connections, 1);
     let recorded_requests = requests.lock().expect("request log mutex should lock");
     assert_eq!(recorded_requests.len(), 2);
-    assert!(recorded_requests.iter().all(|request| request.contains("Connection: keep-alive")));
+    assert!(recorded_requests
+        .iter()
+        .all(|request| request.contains("Connection: keep-alive")));
 }

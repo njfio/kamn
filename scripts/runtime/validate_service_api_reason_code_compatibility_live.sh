@@ -5,10 +5,22 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
 PAYLOAD_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/payload.rs"
 MIDDLEWARE_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/middleware_impl.rs"
+MODELS_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/models.rs"
+AUTH_CHECKS_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/middleware_impl/auth_flow/guards/request_validation/auth_checks.rs"
+POLICY_CHECKS_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/middleware_impl/auth_flow/guards/request_validation/policy_checks.rs"
+WEBSOCKET_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/websocket.rs"
 TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs"
+ERROR_ENVELOPE_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/residual_root_contract_tests/error_envelope_contract_tests.rs"
+PAYLOAD_PARSE_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/residual_root_contract_tests/payload_parse_contract_tests.rs"
+REQUEST_AUTH_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/auth_scope_contract_tests/route_scope_policy_contract_tests/scope_policy_rejection_contract_tests.rs"
+REPLAY_GUARD_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/replay_guard_contract_tests.rs"
+WEBSOCKET_VERSION_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/websocket_contract_tests/route_rejection_contract_tests/version_header_contract_tests.rs"
 CORPUS_FILE="$ROOT_DIR/fixtures/runtime/service_api_structured_error_regression_corpus.json"
 RUST_SDK_SOURCE="$ROOT_DIR/crates/kamn-sdk/src/service.rs"
+RUST_SDK_ERROR_SOURCE="$ROOT_DIR/crates/kamn-sdk/src/error.rs"
+RUST_SDK_RESPONSE_SOURCE="$ROOT_DIR/crates/kamn-sdk/src/service_response.rs"
 RUST_SDK_TEST_FILE="$ROOT_DIR/crates/kamn-sdk/tests/service_api_client.rs"
+RUST_SDK_ROUTE_FAMILY_TEST_FILE="$ROOT_DIR/crates/kamn-sdk/tests/service_api_client/route_family_contract_tests.rs"
 PYTHON_SDK_SOURCE="$ROOT_DIR/kamn_sdk.py"
 PYTHON_SDK_TEST_FILE="$ROOT_DIR/tests/python/test_sdk.py"
 
@@ -53,10 +65,34 @@ if [ ! -f "$MIDDLEWARE_SOURCE_FILE" ]; then
   echo "expected service api endpoint middleware source file: $MIDDLEWARE_SOURCE_FILE" >&2
   exit 1
 fi
+if [ ! -f "$MODELS_SOURCE_FILE" ]; then
+  echo "expected service api endpoint models source file: $MODELS_SOURCE_FILE" >&2
+  exit 1
+fi
+for split_source_file in \
+  "$AUTH_CHECKS_SOURCE_FILE" \
+  "$POLICY_CHECKS_SOURCE_FILE" \
+  "$WEBSOCKET_SOURCE_FILE"; do
+  if [ ! -f "$split_source_file" ]; then
+    echo "expected service api endpoint split source file: $split_source_file" >&2
+    exit 1
+  fi
+done
 if [ ! -f "$TEST_FILE" ]; then
   echo "expected service api endpoint test file: $TEST_FILE" >&2
   exit 1
 fi
+for split_test_file in \
+  "$ERROR_ENVELOPE_TEST_FILE" \
+  "$PAYLOAD_PARSE_TEST_FILE" \
+  "$REQUEST_AUTH_TEST_FILE" \
+  "$REPLAY_GUARD_TEST_FILE" \
+  "$WEBSOCKET_VERSION_TEST_FILE"; do
+  if [ ! -f "$split_test_file" ]; then
+    echo "expected service api endpoint split test file: $split_test_file" >&2
+    exit 1
+  fi
+done
 if [ ! -f "$CORPUS_FILE" ]; then
   echo "expected structured error regression corpus file: $CORPUS_FILE" >&2
   exit 1
@@ -65,8 +101,20 @@ if [ ! -f "$RUST_SDK_SOURCE" ]; then
   echo "expected rust sdk source file: $RUST_SDK_SOURCE" >&2
   exit 1
 fi
+if [ ! -f "$RUST_SDK_ERROR_SOURCE" ]; then
+  echo "expected rust sdk error source file: $RUST_SDK_ERROR_SOURCE" >&2
+  exit 1
+fi
+if [ ! -f "$RUST_SDK_RESPONSE_SOURCE" ]; then
+  echo "expected rust sdk response source file: $RUST_SDK_RESPONSE_SOURCE" >&2
+  exit 1
+fi
 if [ ! -f "$RUST_SDK_TEST_FILE" ]; then
   echo "expected rust sdk test file: $RUST_SDK_TEST_FILE" >&2
+  exit 1
+fi
+if [ ! -f "$RUST_SDK_ROUTE_FAMILY_TEST_FILE" ]; then
+  echo "expected rust sdk route family test file: $RUST_SDK_ROUTE_FAMILY_TEST_FILE" >&2
   exit 1
 fi
 if [ ! -f "$PYTHON_SDK_SOURCE" ]; then
@@ -86,7 +134,34 @@ source_has_marker() {
   local marker="$1"
   grep -Fq "$marker" "$SOURCE_FILE" \
     || grep -Fq "$marker" "$PAYLOAD_SOURCE_FILE" \
-    || grep -Fq "$marker" "$MIDDLEWARE_SOURCE_FILE"
+    || grep -Fq "$marker" "$MIDDLEWARE_SOURCE_FILE" \
+    || grep -Fq "$marker" "$MODELS_SOURCE_FILE" \
+    || grep -Fq "$marker" "$AUTH_CHECKS_SOURCE_FILE" \
+    || grep -Fq "$marker" "$POLICY_CHECKS_SOURCE_FILE" \
+    || grep -Fq "$marker" "$WEBSOCKET_SOURCE_FILE"
+}
+
+test_has_marker() {
+  local marker="$1"
+  grep -Fq "$marker" "$TEST_FILE" \
+    || grep -Fq "$marker" "$ERROR_ENVELOPE_TEST_FILE" \
+    || grep -Fq "$marker" "$PAYLOAD_PARSE_TEST_FILE" \
+    || grep -Fq "$marker" "$REQUEST_AUTH_TEST_FILE" \
+    || grep -Fq "$marker" "$REPLAY_GUARD_TEST_FILE" \
+    || grep -Fq "$marker" "$WEBSOCKET_VERSION_TEST_FILE"
+}
+
+rust_sdk_source_has_marker() {
+  local marker="$1"
+  grep -Fq "$marker" "$RUST_SDK_SOURCE" \
+    || grep -Fq "$marker" "$RUST_SDK_ERROR_SOURCE" \
+    || grep -Fq "$marker" "$RUST_SDK_RESPONSE_SOURCE"
+}
+
+rust_sdk_test_has_marker() {
+  local marker="$1"
+  grep -Fq "$marker" "$RUST_SDK_TEST_FILE" \
+    || grep -Fq "$marker" "$RUST_SDK_ROUTE_FAMILY_TEST_FILE"
 }
 
 for reason_code_marker in \
@@ -116,7 +191,7 @@ for rust_sdk_marker in \
   "SdkError::ServiceApiError" \
   "parse_service_api_error_envelope" \
   "parse_service_api_legacy_error_envelope"; do
-  if ! grep -Fq "$rust_sdk_marker" "$RUST_SDK_SOURCE"; then
+  if ! rust_sdk_source_has_marker "$rust_sdk_marker"; then
     echo "missing required rust sdk reason-code parity marker: $rust_sdk_marker" >&2
     exit 1
   fi
@@ -150,7 +225,7 @@ for test_marker in \
   "integration_service_api_endpoint_rejects_missing_request_auth_headers" \
   "regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender" \
   "regression_service_api_endpoint_websocket_rejects_invalid_version_header"; do
-  if ! grep -Fq "$test_marker" "$TEST_FILE"; then
+  if ! test_has_marker "$test_marker"; then
     echo "missing required reason-code compatibility test marker: $test_marker" >&2
     exit 1
   fi
@@ -158,7 +233,7 @@ done
 
 for rust_sdk_test_marker in \
   "regression_service_api_client_rejects_replayed_nonce"; do
-  if ! grep -Fq "$rust_sdk_test_marker" "$RUST_SDK_TEST_FILE"; then
+  if ! rust_sdk_test_has_marker "$rust_sdk_test_marker"; then
     echo "missing required rust sdk parity test marker: $rust_sdk_test_marker" >&2
     exit 1
   fi
@@ -174,7 +249,24 @@ done
 
 corpus_selectors_file="$TMP_DIR/service-api-structured-error-regression-selectors.txt"
 corpus_metadata_file="$TMP_DIR/service-api-structured-error-regression-metadata.json"
-python3 - "$CORPUS_FILE" "$SOURCE_FILE" "$PAYLOAD_SOURCE_FILE" "$TEST_FILE" "$corpus_selectors_file" "$corpus_metadata_file" <<'PY'
+combined_source_file="$TMP_DIR/service-api-reason-code-combined-source.txt"
+combined_test_file="$TMP_DIR/service-api-reason-code-combined-tests.txt"
+cat "$SOURCE_FILE" \
+  "$PAYLOAD_SOURCE_FILE" \
+  "$MIDDLEWARE_SOURCE_FILE" \
+  "$MODELS_SOURCE_FILE" \
+  "$AUTH_CHECKS_SOURCE_FILE" \
+  "$POLICY_CHECKS_SOURCE_FILE" \
+  "$WEBSOCKET_SOURCE_FILE" \
+  >"$combined_source_file"
+cat "$TEST_FILE" \
+  "$ERROR_ENVELOPE_TEST_FILE" \
+  "$PAYLOAD_PARSE_TEST_FILE" \
+  "$REQUEST_AUTH_TEST_FILE" \
+  "$REPLAY_GUARD_TEST_FILE" \
+  "$WEBSOCKET_VERSION_TEST_FILE" \
+  >"$combined_test_file"
+python3 - "$CORPUS_FILE" "$combined_source_file" "$combined_source_file" "$combined_test_file" "$corpus_selectors_file" "$corpus_metadata_file" <<'PY'
 import json
 import pathlib
 import sys
@@ -289,7 +381,7 @@ PY
 )"
 
 pushd "$ROOT_DIR" >/dev/null
-cargo test -p kamn-node main_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::error_envelope_contract_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts -- --exact \
   >"$TMP_DIR/service-api-envelope-unit.log" 2>&1
 selector_index=0
 while IFS= read -r selector; do
@@ -297,7 +389,7 @@ while IFS= read -r selector; do
     continue
   fi
   selector_index=$((selector_index + 1))
-  cargo test -p kamn-node "$selector" -- --exact \
+  cargo test -p kamn-node --bin kamn-node "$selector" -- --exact \
     >"$TMP_DIR/service-api-reason-code-corpus-${selector_index}.log" 2>&1
 done < "$corpus_selectors_file"
 if [ "$selector_index" -le 0 ]; then
@@ -306,7 +398,8 @@ if [ "$selector_index" -le 0 ]; then
 fi
 cargo test -p kamn-sdk --test service_api_client regression_service_api_client_rejects_replayed_nonce -- --exact \
   >"$TMP_DIR/service-api-reason-code-rust-sdk.log" 2>&1
-python3 -m unittest tests.python.test_sdk.PythonLiveTransportSDKTests.test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed \
+python3 -m unittest discover -s tests/python -p test_sdk.py \
+  -k test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed \
   >"$TMP_DIR/service-api-reason-code-python-sdk.log" 2>&1
 popd >/dev/null
 

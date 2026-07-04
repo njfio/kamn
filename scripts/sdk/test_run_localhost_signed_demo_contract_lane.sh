@@ -66,6 +66,26 @@ if [ ! -x "$REPORT_COMPOSER" ]; then
   exit 1
 fi
 
+if ! grep -Fq 'cargo build --quiet -p kamn-sdk --example localhost_signed_listener --example localhost_signed_sender' "$CONTRACT_MODULE"; then
+  echo "expected localhost signed demo contract module to prebuild SDK examples before the timed demo path" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD=true' "$CONTRACT_MODULE"; then
+  echo "expected localhost signed demo contract module to run the demo through prebuilt SDK examples" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS="$max_seconds"' "$CONTRACT_MODULE"; then
+  echo "expected localhost signed demo contract module to bind demo listener timeout to the contract budget" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'max_seconds="${KAMN_LOCALHOST_SIGNED_DEMO_CONTRACT_MAX_SECONDS:-900}"' "$CONTRACT_MODULE"; then
+  echo "expected localhost signed demo contract module default budget to cover aggregate local-heavy SDK demo runs" >&2
+  exit 1
+fi
+
 if ! grep -q "run_localhost_signed_demo_contract_lane.sh" "$README_FILE"; then
   echo "expected README to reference localhost signed demo contract lane command" >&2
   exit 1

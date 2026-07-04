@@ -1,8 +1,8 @@
 mod scanner_primitives;
 
 use scanner_primitives::{
-    char_literal_end, closes_raw_string, consume_block_comment, consume_raw_string,
-    consume_string, raw_string_start, skip_line_comment, starts_with,
+    char_literal_end, closes_raw_string, consume_block_comment, consume_raw_string, consume_string,
+    raw_string_start, skip_line_comment, starts_with,
 };
 
 const EXPECT_CALL_TOKEN: &[u8] = b".expect(";
@@ -41,13 +41,15 @@ fn consume_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Op
     consume_active_non_code(bytes, index, state).or_else(|| start_non_code(bytes, index, state))
 }
 
-fn consume_active_non_code(
-    bytes: &[u8],
-    index: usize,
-    state: &mut CodeScanState,
-) -> Option<usize> {
+fn consume_active_non_code(bytes: &[u8], index: usize, state: &mut CodeScanState) -> Option<usize> {
     if let Some(hash_count) = state.raw_string_hash_count {
-        return Some(consume_raw_string(bytes, index, state, hash_count, closes_raw_string));
+        return Some(consume_raw_string(
+            bytes,
+            index,
+            state,
+            hash_count,
+            closes_raw_string,
+        ));
     }
     if state.block_comment_depth > 0 {
         return Some(consume_block_comment(bytes, index, state, starts_with));

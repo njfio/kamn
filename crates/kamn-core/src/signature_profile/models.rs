@@ -18,16 +18,27 @@ pub const SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_P
 /// Error taxonomy for service-auth cryptographic signing and verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServiceAuthSignatureError {
+    /// Empty field variant for this public contract enum.
     EmptyField(&'static str),
+    /// Invalid nonce variant for this public contract enum.
     InvalidNonce,
+    /// Invalid signature format variant for this public contract enum.
     InvalidSignatureFormat,
+    /// Unsupported algorithm variant for this public contract enum.
     UnsupportedAlgorithm(String),
+    /// Unsupported profile variant for this public contract enum.
     UnsupportedProfile(String),
+    /// Invalid recovery id variant for this public contract enum.
     InvalidRecoveryId,
+    /// Invalid signature hex variant for this public contract enum.
     InvalidSignatureHex,
+    /// Invalid private key hex variant for this public contract enum.
     InvalidPrivateKeyHex,
+    /// Invalid public key hex variant for this public contract enum.
     InvalidPublicKeyHex,
+    /// Signing failure variant for this public contract enum.
     SigningFailure,
+    /// Verification failure variant for this public contract enum.
     VerificationFailure,
 }
 
@@ -37,7 +48,9 @@ impl std::fmt::Display for ServiceAuthSignatureError {
             Self::EmptyField(field) => write!(f, "{field} must not be empty"),
             Self::InvalidNonce => write!(f, "nonce must be positive"),
             Self::InvalidSignatureFormat => write!(f, "signature format is invalid"),
-            Self::UnsupportedAlgorithm(value) => write!(f, "unsupported signature algorithm: {value}"),
+            Self::UnsupportedAlgorithm(value) => {
+                write!(f, "unsupported signature algorithm: {value}")
+            }
             Self::UnsupportedProfile(value) => write!(f, "unsupported signature profile: {value}"),
             Self::InvalidRecoveryId => write!(f, "signature recovery id is invalid"),
             Self::InvalidSignatureHex => write!(f, "signature hex payload is invalid"),
@@ -54,14 +67,18 @@ impl std::error::Error for ServiceAuthSignatureError {}
 /// Parsed metadata extracted from a `sig:<algorithm>:<profile_id>:...` signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignatureProfileMetadata {
+    /// Algorithm carried by this public contract model.
     pub algorithm: String,
+    /// Profile id carried by this public contract model.
     pub profile_id: String,
 }
 
+/// Runs the baseline signature algorithm contract helper.
 pub fn baseline_signature_algorithm() -> &'static str {
     BASELINE_SIGNATURE_ALGORITHM
 }
 
+/// Runs the baseline signature profile id contract helper.
 pub fn baseline_signature_profile_id() -> &'static str {
     BASELINE_SIGNATURE_PROFILE_ID
 }

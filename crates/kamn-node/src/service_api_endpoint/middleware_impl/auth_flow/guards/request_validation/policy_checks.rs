@@ -11,13 +11,15 @@ pub(super) async fn enforce_scope_policy(
         Err(error) => Err(super::internal_response(
             state,
             request_started_at,
-            correlation_id,
             parsed_request,
-            error.reason_code,
-            "unauthorized",
-            "unauthorized",
-            StatusCode::UNAUTHORIZED,
-            error.message.as_str(),
+            super::InternalResponseProjection {
+                correlation_id,
+                reason_code: error.reason_code,
+                outcome: "unauthorized",
+                error_label: "unauthorized",
+                status_code: StatusCode::UNAUTHORIZED,
+                message: error.message.as_str(),
+            },
         )
         .await),
     }
@@ -95,13 +97,15 @@ async fn anti_spam_response(
     super::internal_response(
         state,
         request_started_at,
-        correlation_id,
         parsed_request,
-        projection.reason_code,
-        projection.outcome,
-        projection.error_label,
-        projection.status_code,
-        error.message.as_str(),
+        super::InternalResponseProjection {
+            correlation_id,
+            reason_code: projection.reason_code,
+            outcome: projection.outcome,
+            error_label: projection.error_label,
+            status_code: projection.status_code,
+            message: error.message.as_str(),
+        },
     )
     .await
 }
@@ -129,13 +133,15 @@ async fn ingress_rate_limit_response(
     super::internal_response(
         state,
         request_started_at,
-        correlation_id,
         parsed_request,
-        projection.reason_code,
-        projection.outcome,
-        projection.error_label,
-        projection.status_code,
-        projection.default_message,
+        super::InternalResponseProjection {
+            correlation_id,
+            reason_code: projection.reason_code,
+            outcome: projection.outcome,
+            error_label: projection.error_label,
+            status_code: projection.status_code,
+            message: projection.default_message,
+        },
     )
     .await
 }
@@ -163,13 +169,15 @@ async fn websocket_requirement_response(
     super::internal_response(
         state,
         request_started_at,
-        correlation_id,
         parsed_request,
-        error.reason_code,
-        "websocket-bad-request",
-        "bad-request",
-        StatusCode::BAD_REQUEST,
-        error.message.as_str(),
+        super::InternalResponseProjection {
+            correlation_id,
+            reason_code: error.reason_code,
+            outcome: "websocket-bad-request",
+            error_label: "bad-request",
+            status_code: StatusCode::BAD_REQUEST,
+            message: error.message.as_str(),
+        },
     )
     .await
 }

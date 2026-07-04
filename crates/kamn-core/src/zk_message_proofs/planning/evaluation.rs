@@ -1,10 +1,10 @@
-use super::*;
 use super::scoring::{
     apply_batching_penalty, apply_engineering_budget, apply_proof_size, apply_setup_policy,
     apply_verifier_latency, apply_witness_determinism, base_assessment, high_risk_count,
     is_feasible,
 };
 use super::validation::{validate_option, validate_policy};
+use super::*;
 use crate::zk_message_proofs::errors::ZkDesignError;
 
 type BaselineSpec = (
@@ -55,13 +55,15 @@ const PHASE4_BASELINE_SPECS: [BaselineSpec; 3] = [
     ),
 ];
 
+/// Runs the phase4 baseline options contract helper.
 pub fn phase4_baseline_options() -> Vec<ZkArchitectureOption> {
     PHASE4_BASELINE_SPECS
         .into_iter()
-        .map(|spec| option_from_spec(spec))
+        .map(option_from_spec)
         .collect()
 }
 
+/// Runs the evaluate zk option contract helper.
 pub fn evaluate_zk_option(
     option: &ZkArchitectureOption,
     policy: ZkEvaluationPolicy,

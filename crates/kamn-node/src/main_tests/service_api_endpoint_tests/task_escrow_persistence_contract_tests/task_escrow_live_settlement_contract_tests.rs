@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::{
     build_task_escrow_snapshot, fund_escrow, raw_signed_request, read_state_json, release_escrow,
-    set_live_solana_bridge_rpc_url_env, set_state_file_env, unique_named_state_file,
+    set_live_solana_bridge_rpc_url_env, set_state_file_env, unique_named_state_file, SignedRequest,
 };
 use crate::service_api_endpoint::ServiceApiSnapshot;
 
@@ -11,8 +11,7 @@ const UNREACHABLE_SOLANA_RPC_URL: &str = "http://127.0.0.1:1";
 #[test]
 fn integration_service_api_endpoint_live_settlement_release_persists_external_receipt_linkage() {
     let _env = acquire_service_api_test_env();
-    let _live_rpc_guard =
-        set_live_solana_bridge_rpc_url_env(Some(LIVE_SOLANA_DEVNET_RPC_URL));
+    let _live_rpc_guard = set_live_solana_bridge_rpc_url_env(Some(LIVE_SOLANA_DEVNET_RPC_URL));
     let harness = build_live_settlement_harness(
         "kamn-node-live-settlement-state",
         "kamn:did:agent:test-client-live-settlement",
@@ -109,13 +108,15 @@ fn release_live_escrow_with_unreachable_rpc(
     raw_signed_request(
         &harness.snapshot,
         harness.bind_addr.as_str(),
-        1,
-        "POST",
-        format!("/v1/escrow/{escrow_id}/release").as_str(),
-        harness.caller_did,
-        release_nonce,
-        "",
-        &[],
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: format!("/v1/escrow/{escrow_id}/release").as_str(),
+            caller_did: harness.caller_did,
+            nonce: release_nonce,
+            body: "",
+            extra_headers: &[],
+        },
     )
 }
 

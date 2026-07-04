@@ -3,8 +3,8 @@ mod verification;
 
 use kamn_core::ConfigError;
 
-use super::{ManagedExternalBackendSignature, RecoveryId, VerifyingKey};
 use super::super::encode_kolme_hex_lower;
+use super::{ManagedExternalBackendSignature, RecoveryId, VerifyingKey};
 use decoding::{
     decode_signer_verifying_key, missing_recovery_id, missing_signature_hex, missing_signer_key,
     parse_recovery_id, require_signer_public_key, require_value, validate_signature_material,
@@ -25,9 +25,7 @@ fn parse_backend_response_line(
     match key.trim() {
         "signature_hex" => *signature_hex = Some(require_value(value, "signature_hex")?),
         "recovery_id" => *recovery_id = Some(parse_recovery_id(value)?),
-        "signer_public_key_hex" => {
-            *signer_public_key_hex = Some(require_signer_public_key(value)?)
-        }
+        "signer_public_key_hex" => *signer_public_key_hex = Some(require_signer_public_key(value)?),
         _ => {}
     }
     Ok(())
@@ -46,9 +44,7 @@ fn require_expected_signer_public_key_hex(
     Ok(trimmed)
 }
 
-fn parse_backend_response_fields(
-    stdout: &str,
-) -> Result<(String, u8, String), ConfigError> {
+fn parse_backend_response_fields(stdout: &str) -> Result<(String, u8, String), ConfigError> {
     let mut signature_hex = None;
     let mut recovery_id = None;
     let mut signer_public_key_hex = None;

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/check_kamn_core_missing_docs_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -105,7 +106,7 @@ fi
 
 # Regression: #896
 reset_fixtures
-sed -i '/#!\[warn(missing_docs)\]/d' "$CORE_LIB_FIXTURE"
+test_harness_sed_in_place '/#!\[warn(missing_docs)\]/d' "$CORE_LIB_FIXTURE"
 expect_failure "missing warn policy should fail"
 
 reset_fixtures
@@ -113,31 +114,31 @@ printf '\nsynthetic_module\n' >>"$ALLOWLIST_FIXTURE"
 expect_failure "allowlist drift should fail"
 
 reset_fixtures
-sed -i '/check_kamn_core_missing_docs_policy.sh/d' "$README_FIXTURE"
+test_harness_sed_in_place '/check_kamn_core_missing_docs_policy.sh/d' "$README_FIXTURE"
 expect_failure "README drift should fail"
 
 reset_fixtures
-sed -i '/#!\[warn(missing_docs)\]/d' "$PLAN_DOC_FIXTURE"
+test_harness_sed_in_place '/#!\[warn(missing_docs)\]/d' "$PLAN_DOC_FIXTURE"
 expect_failure "plan doc marker drift should fail"
 
 reset_fixtures
-sed -i '/missing_docs_throughput_report_contract.py/d' "$PLAN_DOC_FIXTURE"
+test_harness_sed_in_place '/missing_docs_throughput_report_contract.py/d' "$PLAN_DOC_FIXTURE"
 expect_failure "plan doc throughput command drift should fail"
 
 reset_fixtures
-sed -i '/missing_docs_velocity_guard.py/d' "$PLAN_DOC_FIXTURE"
+test_harness_sed_in_place '/missing_docs_velocity_guard.py/d' "$PLAN_DOC_FIXTURE"
 expect_failure "plan doc velocity guard command drift should fail"
 
 reset_fixtures
-sed -i '/## Runtime Flow (Condensed)/d' "$ARCH_DOC_FIXTURE"
+test_harness_sed_in_place '/## Runtime Flow (Condensed)/d' "$ARCH_DOC_FIXTURE"
 expect_failure "architecture map runtime flow marker drift should fail"
 
 reset_fixtures
-sed -i '/cargo doc -p kamn-core --no-deps/d' "$RUSTDOC_GUIDE_FIXTURE"
+test_harness_sed_in_place '/cargo doc -p kamn-core --no-deps/d' "$RUSTDOC_GUIDE_FIXTURE"
 expect_failure "rustdoc publishing command drift should fail"
 
 reset_fixtures
-sed -i '/docs\/developer\/rustdoc-publishing.md/d' "$README_FIXTURE"
+test_harness_sed_in_place '/docs\/developer\/rustdoc-publishing.md/d' "$README_FIXTURE"
 if run_checker >"$TMP_DIR/rustdoc-link-drift.out" 2>"$TMP_DIR/rustdoc-link-drift.err"; then
   echo "README rustdoc link drift should fail: expected failure but checker succeeded." >&2
   exit 1
@@ -156,16 +157,16 @@ if ! grep -q '^reason_code=rustdoc_navigation_parity_drift$' "$TMP_DIR/rustdoc-l
 fi
 
 reset_fixtures
-sed -i '/Regression: #2127/d' "$VELOCITY_CADENCE_DOC_FIXTURE"
+test_harness_sed_in_place '/Regression: #2127/d' "$VELOCITY_CADENCE_DOC_FIXTURE"
 expect_failure "velocity cadence regression marker drift should fail"
 
 reset_fixtures
-sed -i '/batch_id: first-three-modules-v1/d' "$GRADUATION_BATCH_REPORT_FIXTURE"
+test_harness_sed_in_place '/batch_id: first-three-modules-v1/d' "$GRADUATION_BATCH_REPORT_FIXTURE"
 expect_failure "graduation batch report marker drift should fail"
 
 for first_batch_module in bootstrap key_recovery kolme_runtime_commit; do
   reset_fixtures
-  sed -i "/^${first_batch_module}\$/d" "$GRADUATED_MODULES_FIXTURE"
+  test_harness_sed_in_place "/^${first_batch_module}\$/d" "$GRADUATED_MODULES_FIXTURE"
   expect_failure "first-batch graduated-module fixture drift (${first_batch_module}) should fail"
   if ! grep -q "first graduation batch module '${first_batch_module}'" "$TMP_DIR/checker.err"; then
     echo "first-batch graduated-module fixture drift should mention missing module '${first_batch_module}'" >&2
@@ -175,8 +176,8 @@ done
 
 reset_fixtures
 printf '\nagent_key_hierarchy\n' >>"$ALLOWLIST_FIXTURE"
-sed -i 's/^pub mod agent_key_hierarchy;/#[allow(missing_docs)]\npub mod agent_key_hierarchy;/' "$CORE_LIB_FIXTURE"
-sed -i '/^agent_key_hierarchy$/d' "$GRADUATED_MODULES_FIXTURE"
+test_harness_sed_in_place 's/^pub mod agent_key_hierarchy;/#[allow(missing_docs)]\npub mod agent_key_hierarchy;/' "$CORE_LIB_FIXTURE"
+test_harness_sed_in_place '/^agent_key_hierarchy$/d' "$GRADUATED_MODULES_FIXTURE"
 python3 - "$VELOCITY_BASELINE_FIXTURE" <<'PY'
 import json
 import sys
@@ -207,7 +208,7 @@ fi
 for first_batch_module in bootstrap key_recovery kolme_runtime_commit; do
   reset_fixtures
   printf '\n%s\n' "$first_batch_module" >>"$ALLOWLIST_FIXTURE"
-  sed -i "s/^pub mod ${first_batch_module};/#[allow(missing_docs)]\\npub mod ${first_batch_module};/" "$CORE_LIB_FIXTURE"
+  test_harness_sed_in_place "s/^pub mod ${first_batch_module};/#[allow(missing_docs)]\\npub mod ${first_batch_module};/" "$CORE_LIB_FIXTURE"
   expect_failure "graduated module allowlist bypass (${first_batch_module}) should fail"
   assert_exemption_regression_markers
 done

@@ -2,11 +2,12 @@ use kamn_data_layer::{
     DataLayerM10ComplianceProjectionPortError, DataLayerM10Phase6CompliancePortError,
 };
 
-use crate::{DataLayerM8ComplianceError, data_layer_m10_partition_archival::error::phase6_execution_failed};
 use crate::data_layer_m10_partition_archival::{
-    DataLayerM10PartitionLifecycleError,
-    DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
+    DataLayerM10PartitionLifecycleError, DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
     DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE,
+};
+use crate::{
+    data_layer_m10_partition_archival::error::phase6_execution_failed, DataLayerM8ComplianceError,
 };
 
 pub(crate) fn map_phase6_port_error_to_projection_port_error(

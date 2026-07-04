@@ -112,7 +112,10 @@ impl TaskOperationEngine {
     }
 
     pub fn notices(&self, task_id: &str) -> Vec<TaskOperationNoticeKind> {
-        self.notices_by_task.get(task_id).cloned().unwrap_or_default()
+        self.notices_by_task
+            .get(task_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
     pub fn ready_tasks(&self) -> Vec<String> {
@@ -148,7 +151,10 @@ impl TaskOperationEngine {
             .push(notice);
     }
 
-    pub(super) fn unsatisfied_dependency(&self, task_id: &str) -> Result<Option<String>, TaskOperationError> {
+    pub(super) fn unsatisfied_dependency(
+        &self,
+        task_id: &str,
+    ) -> Result<Option<String>, TaskOperationError> {
         if !self.tasks.contains_key(task_id) {
             return Err(TaskOperationError::NotFound(task_id.to_owned()));
         }

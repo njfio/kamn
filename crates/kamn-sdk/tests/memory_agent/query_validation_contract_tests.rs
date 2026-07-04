@@ -13,7 +13,9 @@ fn search_agents_filters_by_capability_and_reputation_exists() {
         .expect("search agents failed");
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].did, did_a.clone());
-    let reputation = client.get_reputation(&did_a).expect("get reputation failed");
+    let reputation = client
+        .get_reputation(&did_a)
+        .expect("get reputation failed");
     assert_eq!(reputation.did, did_a);
     assert!(reputation.score > 0);
 }
@@ -21,8 +23,18 @@ fn search_agents_filters_by_capability_and_reputation_exists() {
 #[test]
 fn create_channel_returns_deterministic_channel_id() {
     let mut client = InMemoryKamnClient::new();
-    assert_channel_id(client.create_channel("ops").expect("first create should succeed"), "channel-local-1");
-    assert_channel_id(client.create_channel("ops").expect("second create should succeed"), "channel-local-2");
+    assert_channel_id(
+        client
+            .create_channel("ops")
+            .expect("first create should succeed"),
+        "channel-local-1",
+    );
+    assert_channel_id(
+        client
+            .create_channel("ops")
+            .expect("second create should succeed"),
+        "channel-local-2",
+    );
 }
 
 #[test]

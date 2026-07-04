@@ -17,6 +17,42 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected websocket live validation script to be executable" >&2
   exit 1
 fi
+if ! grep -Fq "X-KAMN-Signer-Public-Key" "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to propagate signer public key header" >&2
+  exit 1
+fi
+if ! grep -Fq 'return f"kamn:did:agent:pkh-{public_key_hex}"' "$VALIDATION_SCRIPT"; then
+  echo "expected websocket live validation script to use self-certifying sender did" >&2
+  exit 1
+fi
+if ! grep -Fq 'cargo build --quiet -p kamn-node' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to prebuild kamn-node before timing live validation" >&2
+  exit 1
+fi
+if ! grep -Fq 'timeout "$prebuild_timeout_seconds" cargo build --quiet -p kamn-node' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to bound kamn-node prebuild" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_WEBSOCKET_PREBUILD_TARGET_DIR' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to isolate kamn-node prebuild target" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_WEBSOCKET_PREBUILD_MAX_SECONDS:-900' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to use a local-heavy prebuild timeout budget" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_WEBSOCKET_NODE_BIN="$prebuilt_node_bin"' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to pass explicit prebuilt node path" >&2
+  exit 1
+fi
+if ! grep -Fq 'service api websocket prebuild timed out' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to fail loud on prebuild timeout" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD=1' "$CONTRACT_LANE"; then
+  echo "expected websocket live contract lane to run validation against the prebuilt node" >&2
+  exit 1
+fi
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected websocket live policy checker script to be executable" >&2
   exit 1

@@ -22,7 +22,7 @@ pub(crate) fn validate_auth(
 
 fn sender_did(headers: &BTreeMap<String, String>) -> Result<String, AuthError> {
     let did = header_value(headers, "x-kamn-sender-did", missing_sender_did())?;
-    AgentDid::parse(did.to_owned()).map_err(|_| invalid_sender_did())?;
+    AgentDid::parse(did).map_err(|_| invalid_sender_did())?;
     Ok(did.to_owned())
 }
 

@@ -11,7 +11,7 @@ fn error_message(error: &SignerBackendError) -> String {
         .or_else(|| key_policy_message(error))
         .or_else(|| provider_message(error))
         .or_else(|| backend_message(error))
-        .expect("every signer backend error must render")
+        .unwrap_or_else(|| unmapped_error_message(error))
 }
 
 fn basic_message(error: &SignerBackendError) -> Option<String> {
@@ -23,7 +23,7 @@ fn basic_message(error: &SignerBackendError) -> Option<String> {
             key_specific_env,
         } => Some(missing_key_material_message(key_id, key_specific_env)),
         SignerBackendError::InvalidSigningKeyMaterial { key_id } => {
-            Some(format!("invalid signer key material for key reference {key_id}"))
+            Some(invalid_signing_key_material_message(key_id))
         }
         _ => None,
     }
@@ -39,7 +39,12 @@ fn key_policy_message(error: &SignerBackendError) -> Option<String> {
             sender_role,
             sender,
             key_id,
-        } => Some(key_role_mismatch_message(key_role, sender_role, sender, key_id)),
+        } => Some(key_role_mismatch_message(
+            key_role,
+            sender_role,
+            sender,
+            key_id,
+        )),
         SignerBackendError::MalformedSecureKeyReference { key_id } => {
             Some(malformed_key_message(key_id))
         }
@@ -69,12 +74,6 @@ fn provider_message(error: &SignerBackendError) -> Option<String> {
 }
 
 fn backend_message(error: &SignerBackendError) -> Option<String> {
-    mismatch_backend_message(error)
-        .or_else(|| signature_backend_message(error))
-        .or_else(|| unknown_backend_surface_message(error))
-}
-
-fn mismatch_backend_message(error: &SignerBackendError) -> Option<String> {
     match error {
         SignerBackendError::ProviderClientBackendMismatch {
             expected_backend,
@@ -96,29 +95,25 @@ fn mismatch_backend_message(error: &SignerBackendError) -> Option<String> {
             provided_backend,
             key_id,
         )),
-        _ => None,
-    }
-}
-
-fn signature_backend_message(error: &SignerBackendError) -> Option<String> {
-    match error {
         SignerBackendError::SignatureMismatch {
             backend,
             expected,
             found,
         } => Some(signature_mismatch_message(backend, expected, found)),
-        _ => None,
-    }
-}
-
-fn unknown_backend_surface_message(error: &SignerBackendError) -> Option<String> {
-    match error {
         SignerBackendError::UnknownBackend(backend) => Some(unknown_backend_message(backend)),
         SignerBackendError::UnsupportedKeyReference { backend, key_id } => {
             Some(unsupported_key_reference_message(backend, key_id))
         }
         _ => None,
     }
+}
+
+fn invalid_signing_key_material_message(key_id: &str) -> String {
+    format!("invalid signer key material for key reference {key_id}")
+}
+
+fn unmapped_error_message(error: &SignerBackendError) -> String {
+    format!("signer backend error: {error:?}")
 }
 
 fn fallback_denied_message(key_role: &str, key_id: &str) -> String {
@@ -174,7 +169,5 @@ fn backend_mismatch_message(
     provided_backend: &str,
     key_id: &str,
 ) -> String {
-    format!(
-        "{prefix} for key {key_id}; expected {expected_backend}, found {provided_backend}"
-    )
+    format!("{prefix} for key {key_id}; expected {expected_backend}, found {provided_backend}")
 }

@@ -10,7 +10,10 @@ const CHECKLIST_CONTAINS_FAILOVER_SYNC_DRILL_EVIDENCE_CONTRACT_MARKERS: &[&str] 
 
 #[test]
 fn checklist_contains_failover_sync_drill_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FAILOVER_SYNC_DRILL_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_failover_sync_drill_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FAILOVER_SYNC_DRILL_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_failover_sync_drill_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS: &[&str] = &[
@@ -32,7 +35,10 @@ const CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKE
 
 #[test]
 fn checklist_contains_fork_choice_finality_taxonomy_runbook_parity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS, "checklist_contains_fork_choice_finality_taxonomy_runbook_parity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS,
+        "checklist_contains_fork_choice_finality_taxonomy_runbook_parity_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_PEER_ADAPTER_REASON_PROJECTION_MULTI_PROCESS_GATE_MARKERS: &[&str] = &[
@@ -51,7 +57,10 @@ const CHECKLIST_CONTAINS_PEER_ADAPTER_REASON_PROJECTION_MULTI_PROCESS_GATE_MARKE
 
 #[test]
 fn checklist_contains_peer_adapter_reason_projection_multi_process_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_PEER_ADAPTER_REASON_PROJECTION_MULTI_PROCESS_GATE_MARKERS, "checklist_contains_peer_adapter_reason_projection_multi_process_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_PEER_ADAPTER_REASON_PROJECTION_MULTI_PROCESS_GATE_MARKERS,
+        "checklist_contains_peer_adapter_reason_projection_multi_process_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_EVIDENCE_GATES_MARKERS: &[&str] = &[
@@ -70,7 +79,10 @@ const CHECKLIST_CONTAINS_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_EVIDENCE_GATES_M
 
 #[test]
 fn checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_EVIDENCE_GATES_MARKERS, "checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_LIVE_NETWORK_PILOT_LAUNCH_AND_ROLLBACK_EVIDENCE_GATES_MARKERS,
+        "checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates",
+    );
 }
 
 const CHECKLIST_CONTAINS_WATCHDOG_PROOF_CONSENSUS_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -84,22 +96,29 @@ const CHECKLIST_CONTAINS_WATCHDOG_PROOF_CONSENSUS_EVIDENCE_CONTRACT_MARKERS: &[&
 
 #[test]
 fn checklist_contains_watchdog_proof_consensus_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_WATCHDOG_PROOF_CONSENSUS_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_watchdog_proof_consensus_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_WATCHDOG_PROOF_CONSENSUS_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_watchdog_proof_consensus_evidence_contract",
+    );
 }
 
-const CHECKLIST_CONTAINS_GOVERNANCE_SIMULATION_AND_HUMAN_VETO_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
-    "## Governance Simulation and Human-Veto Evidence Contract",
-    "generate_governance_simulation_evidence_bundle.sh",
-    "check_governance_simulation_policy.sh",
-    "governance_simulation_contract_lane_contract.py",
-    "framework.contract_lane_helpers",
-    "run_governance_simulation_contract_lane.sh",
-    "run_governance_simulation_deep_lane.sh",
-    "run_governance_simulation_matrix.py",
-    "fixtures/governance_simulation/veto_timelock_cases.json",
-];
+const CHECKLIST_CONTAINS_GOVERNANCE_SIMULATION_AND_HUMAN_VETO_EVIDENCE_CONTRACT_MARKERS: &[&str] =
+    &[
+        "## Governance Simulation and Human-Veto Evidence Contract",
+        "generate_governance_simulation_evidence_bundle.sh",
+        "check_governance_simulation_policy.sh",
+        "governance_simulation_contract_lane_contract.py",
+        "framework.contract_lane_helpers",
+        "run_governance_simulation_contract_lane.sh",
+        "run_governance_simulation_deep_lane.sh",
+        "run_governance_simulation_matrix.py",
+        "fixtures/governance_simulation/veto_timelock_cases.json",
+    ];
 
 #[test]
 fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_GOVERNANCE_SIMULATION_AND_HUMAN_VETO_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_governance_simulation_and_human_veto_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_GOVERNANCE_SIMULATION_AND_HUMAN_VETO_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_governance_simulation_and_human_veto_evidence_contract",
+    );
 }

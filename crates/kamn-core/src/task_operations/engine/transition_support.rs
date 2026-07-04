@@ -59,7 +59,12 @@ pub(super) fn ready_task_id(
     if state != TaskState::Accepted && state != TaskState::Delegated {
         return None;
     }
-    if engine.unsatisfied_dependency(task_id).ok().flatten().is_some() {
+    if engine
+        .unsatisfied_dependency(task_id)
+        .ok()
+        .flatten()
+        .is_some()
+    {
         return None;
     }
     Some(task_id.to_owned())

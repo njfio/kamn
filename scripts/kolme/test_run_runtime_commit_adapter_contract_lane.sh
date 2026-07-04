@@ -40,6 +40,10 @@ if ! grep -q "Regression: #980" "$ROOT_DIR/docs/foundation/release-gonogo-checkl
   exit 1
 fi
 
+for marker in '"--no-run"' '"--message-format=json"' 'compiler-artifact' '"--test-threads=1"' 'timeout=max_seconds' 'subprocess.TimeoutExpired' 'CARGO_TARGET_DIR'; do
+  grep -q "$marker" "$ROOT_DIR/scripts/kolme/contracts/runtime_commit_adapter_contract_lane.py" || { echo "expected runtime commit adapter isolation marker: $marker" >&2; exit 1; }
+done
+
 if ! grep -q "run_runtime_commit_adapter_contract_lane.sh" "$ROOT_DIR/docs/foundation/release-gonogo-checklist.md" \
   && ! grep -q "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract" "$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"; then
   echo "expected release go/no-go doc to reference adapter runtime commit contract lane command" >&2

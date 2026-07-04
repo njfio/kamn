@@ -16,6 +16,30 @@ TMP_SUMMARY_RUN="$TMP_DIR/signed_to_kolme_demo_run_summary.json"
 TMP_POLICY_RUN="$TMP_DIR/signed_to_kolme_demo_run_policy.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+print_json_artifact() {
+  local label="$1"
+  local path="$2"
+  if [ ! -f "$path" ]; then
+    echo "missing $label artifact: $path" >&2
+    return
+  fi
+
+  echo "----- $label: $path -----" >&2
+  python3 -m json.tool "$path" >&2 || cat "$path" >&2
+}
+
+RUN_MAX_SECONDS="${KAMN_KOLME_LOCAL_SIGNED_TO_KOLME_DEMO_TEST_MAX_SECONDS:-420}"
+case "$RUN_MAX_SECONDS" in
+  ''|*[!0-9]*)
+    echo "KAMN_KOLME_LOCAL_SIGNED_TO_KOLME_DEMO_TEST_MAX_SECONDS must be a positive integer" >&2
+    exit 1
+    ;;
+  0)
+    echo "KAMN_KOLME_LOCAL_SIGNED_TO_KOLME_DEMO_TEST_MAX_SECONDS must be a positive integer" >&2
+    exit 1
+    ;;
+esac
+
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected local signed-to-Kolme demo contract lane script to be executable" >&2
   exit 1
@@ -154,6 +178,9 @@ lane_output="$(
 )"
 if ! printf '%s\n' "$lane_output" | grep -q "unified local signed-to-Kolme demo contract lane tests passed."; then
   echo "expected local signed-to-Kolme demo contract lane success marker" >&2
+  printf '%s\n' "$lane_output" >&2
+  print_json_artifact "dry-run summary" "$TMP_SUMMARY_DRY_RUN"
+  print_json_artifact "dry-run policy" "$TMP_POLICY_DRY_RUN"
   exit 1
 fi
 
@@ -227,10 +254,13 @@ run_output="$(
       --mode run \
       --output-json "$TMP_SUMMARY_RUN" \
       --policy-output-json "$TMP_POLICY_RUN" \
-      --max-seconds 240
+      --max-seconds "$RUN_MAX_SECONDS"
 )"
 if ! printf '%s\n' "$run_output" | grep -q "unified local signed-to-Kolme demo contract lane tests passed."; then
   echo "expected signed-to-Kolme run mode success marker" >&2
+  printf '%s\n' "$run_output" >&2
+  print_json_artifact "run summary" "$TMP_SUMMARY_RUN"
+  print_json_artifact "run policy" "$TMP_POLICY_RUN"
   exit 1
 fi
 
@@ -246,6 +276,8 @@ policy = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 if summary.get("mode") != "run":
     raise SystemExit("expected run mode marker in signed-to-Kolme summary")
 if summary.get("status") != "ok":
+    print(json.dumps(summary, sort_keys=True, indent=2), file=sys.stderr)
+    print(json.dumps(policy, sort_keys=True, indent=2), file=sys.stderr)
     raise SystemExit("expected signed-to-Kolme run mode status=ok")
 if summary.get("runtime_commit_submit_evidence_marker_present") is not True:
     raise SystemExit("expected runtime commit submit marker in run-mode signed-to-Kolme summary")

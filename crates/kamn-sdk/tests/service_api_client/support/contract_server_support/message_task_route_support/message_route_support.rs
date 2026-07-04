@@ -26,8 +26,7 @@ fn write_send_message_response(
     }
     let message_id = format!("msg-local-{:016x}", deterministic_tag(body.as_bytes()));
     let payload = format!(
-        "{{\"message_id\":\"{}\",\"status\":\"created\",\"runtime_mode\":\"api\"}}",
-        message_id
+        "{{\"message_id\":\"{message_id}\",\"status\":\"created\",\"runtime_mode\":\"api\"}}"
     );
     write_http_response(stream, 202, payload.as_str())?;
     Ok(true)
@@ -42,10 +41,7 @@ fn write_get_message_response(
         return Ok(false);
     }
     let message_id = path.trim_start_matches("/v1/messages/");
-    let payload = format!(
-        "{{\"message_id\":\"{}\",\"status\":\"created\"}}",
-        message_id
-    );
+    let payload = format!("{{\"message_id\":\"{message_id}\",\"status\":\"created\"}}");
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }

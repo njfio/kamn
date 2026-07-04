@@ -62,8 +62,7 @@ fn send_message(settings: &S02Settings, suffix: &str, payload: &str) -> Result<S
         format!("{}-s02-{suffix}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-send-message-{suffix}").as_str(),
-        payload,
-        step.as_str(),
+        (payload, step.as_str()),
     )
 }
 
@@ -76,7 +75,6 @@ fn query_message(settings: &S02Settings, suffix: &str, message_id: &str) -> Resu
         format!("{}-s02-{suffix}", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-{suffix}").as_str(),
-        message_id,
-        step.as_str(),
+        (message_id, step.as_str()),
     )
 }

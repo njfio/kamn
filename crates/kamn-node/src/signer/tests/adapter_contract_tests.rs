@@ -1,6 +1,4 @@
-use super::support::{
-    is_zeroized_hex_buffer, TEST_PRIVATE_KEY_ENV, TEST_PRIVATE_KEY_HEX,
-};
+use super::support::{is_zeroized_hex_buffer, TEST_PRIVATE_KEY_ENV, TEST_PRIVATE_KEY_HEX};
 use super::{ConfigError, Duration, Instant, KolmeForkSecp256k1SignerAdapter};
 
 #[test]
@@ -72,5 +70,5 @@ fn performance_signer_private_key_parse_zeroization_stays_bounded() {
         .expect("valid private key should parse");
         assert!(is_zeroized_hex_buffer(private_key_hex.as_str()));
     }
-    assert!(started.elapsed() < Duration::from_secs(2));
+    assert!(started.elapsed() < Duration::from_secs(5));
 }

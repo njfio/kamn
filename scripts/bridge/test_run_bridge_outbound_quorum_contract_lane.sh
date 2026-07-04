@@ -17,6 +17,16 @@ test_harness_require_file "$MANIFEST_FILE" "expected bridge outbound quorum cont
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
+if ! grep -q "KAMN_BRIDGE_OUTBOUND_QUORUM_TARGET_DIR" "$FAST_IMPL_SCRIPT"; then
+  echo "expected outbound quorum lane to expose an isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'CARGO_TARGET_DIR="$bridge_outbound_quorum_target_dir"' "$FAST_IMPL_SCRIPT"; then
+  echo "expected outbound quorum lane to run cargo tests in the isolated target dir" >&2
+  exit 1
+fi
+
 bash "$FAST_SCRIPT" --skip-intent-lane >"$TMP_OUT"
 if ! grep -q "bridge outbound quorum contract lane tests passed." "$TMP_OUT"; then
   echo "expected bridge outbound quorum contract lane success marker" >&2

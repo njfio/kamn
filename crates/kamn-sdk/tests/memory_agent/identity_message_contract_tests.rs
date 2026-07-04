@@ -63,8 +63,14 @@ fn receive_stream_does_not_replay_consumed_messages() {
             channel: None,
         })
         .expect("send failed");
-    let first_len = client.receive_stream(&recipient).expect("first stream failed").count();
-    let second_len = client.receive_stream(&recipient).expect("second stream failed").count();
+    let first_len = client
+        .receive_stream(&recipient)
+        .expect("first stream failed")
+        .count();
+    let second_len = client
+        .receive_stream(&recipient)
+        .expect("second stream failed")
+        .count();
     assert_eq!(first_len, 1);
     assert_eq!(second_len, 0);
 }

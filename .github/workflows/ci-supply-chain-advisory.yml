@@ -30,7 +30,7 @@ jobs:
 
       - name: Trivy filesystem advisory scan
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.31.0
         with:
           scan-type: fs
           scan-ref: .
@@ -50,7 +50,7 @@ jobs:
 
       - name: Trivy image advisory scan
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.31.0
         with:
           image-ref: kamn-supply-chain-advisory:${{ github.sha }}
           scanners: vuln
@@ -69,7 +69,7 @@ jobs:
 
       - name: Trivy image SBOM generation
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.31.0
         with:
           image-ref: kamn-supply-chain-advisory:${{ github.sha }}
           format: cyclonedx

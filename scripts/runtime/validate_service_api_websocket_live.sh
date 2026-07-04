@@ -194,13 +194,30 @@ report = {
 report_file.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
-pushd "$ROOT_DIR" >/dev/null
-cargo build --quiet -p kamn-node
-NODE_BIN="$ROOT_DIR/target/debug/kamn-node"
-popd >/dev/null
+skip_build="${KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD:-0}"
+case "$skip_build" in
+  0 | false | no) ;;
+  1 | true | yes) ;;
+  *)
+    echo "KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD must be 0 or 1" >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$skip_build" != "1" && "$skip_build" != "true" && "$skip_build" != "yes" ]]; then
+  pushd "$ROOT_DIR" >/dev/null
+  cargo build --quiet -p kamn-node
+  popd >/dev/null
+fi
+
+NODE_BIN="${KAMN_SERVICE_API_WEBSOCKET_NODE_BIN:-$ROOT_DIR/target/debug/kamn-node}"
 
 if [ ! -x "$NODE_BIN" ]; then
-  echo "expected built kamn-node binary to be executable" >&2
+  if [[ "$skip_build" == "1" || "$skip_build" == "true" || "$skip_build" == "yes" ]]; then
+    echo "expected prebuilt kamn-node binary to be executable" >&2
+  else
+    echo "expected built kamn-node binary to be executable" >&2
+  fi
   exit 1
 fi
 
@@ -244,12 +261,15 @@ if [ -z "$auth_public_key_hex" ]; then
 fi
 
 api_stdout="$TMP_DIR/service-api-websocket.out"
+runtime_storage_dir="$TMP_DIR/service-api-websocket-storage"
+mkdir -p "$runtime_storage_dir"
 KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$auth_public_key_hex" \
 KAMN_SERVICE_API_TLS_MODE="disabled" \
 "$NODE_BIN" \
   --role processor \
   --chain-id kamn-devnet \
   --chain-version v0.1.0 \
+  --storage-dir "$runtime_storage_dir" \
   --runtime-mode api \
   --api-bind "$api_addr" \
   --api-max-requests 7 \
@@ -276,7 +296,7 @@ if [ "$wait_for_ready" -ne 1 ]; then
 fi
 
 ws_results_json="$TMP_DIR/websocket-results.json"
-python3 - "$api_addr" "$ws_results_json" "$auth_private_key_hex" <<'PY'
+python3 - "$api_addr" "$ws_results_json" "$auth_private_key_hex" "$auth_public_key_hex" <<'PY'
 import hashlib
 import json
 import socket
@@ -288,10 +308,16 @@ from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 api_addr = sys.argv[1]
 report_path = sys.argv[2]
 private_key_hex = sys.argv[3]
+public_key_hex = sys.argv[4]
 host, port_text = api_addr.rsplit(":", 1)
 port = int(port_text)
 
-sender_did = "kamn:did:agent:websocket-live-validator"
+
+def sender_did_from_public_key(public_key_hex: str) -> str:
+    return f"kamn:did:agent:pkh-{public_key_hex}"
+
+
+sender_did = sender_did_from_public_key(public_key_hex)
 state_hash = "service-api:kamn-devnet:v0.1.0"
 secp256k1_order = int(
     "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
@@ -447,6 +473,7 @@ def ws_upgrade_request(
                 f"X-KAMN-Sender-DID: {sender_did}",
                 f"X-KAMN-Request-Nonce: {nonce}",
                 f"X-KAMN-Request-Signature: {signature(nonce, '')}",
+                f"X-KAMN-Signer-Public-Key: {public_key_hex}",
                 "X-KAMN-Authz-Scope: events:read",
             ]
         )

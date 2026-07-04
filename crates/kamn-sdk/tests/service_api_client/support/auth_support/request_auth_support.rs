@@ -67,7 +67,7 @@ fn verify_signature(
     headers: &BTreeMap<String, String>,
 ) -> Result<(), AuthError> {
     let signature = header_value(headers, "x-kamn-request-signature", missing_signature())?;
-    let sender = AgentDid::parse(did.to_owned()).map_err(|_| invalid_sender_did())?;
+    let sender = AgentDid::parse(did).map_err(|_| invalid_sender_did())?;
     let expected = service_signature_for_fields(&sender, nonce, CHAIN_ID, CHAIN_VERSION, body)
         .map_err(|_| signature_failed())?;
     if expected == signature {

@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_TRIADIC_SMOKE_CONTRACT_COMMANDS_PLAN_MARKERS: &[&str] = &[
     "run_triadic_devnet_smoke.sh",
@@ -8,7 +8,10 @@ const PLAN_CONTAINS_TRIADIC_SMOKE_CONTRACT_COMMANDS_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_triadic_smoke_contract_commands() {
-    assert_plan_contains_all(PLAN_CONTAINS_TRIADIC_SMOKE_CONTRACT_COMMANDS_PLAN_MARKERS, "plan_contains_triadic_smoke_contract_commands");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_TRIADIC_SMOKE_CONTRACT_COMMANDS_PLAN_MARKERS,
+        "plan_contains_triadic_smoke_contract_commands",
+    );
 }
 
 const PLAN_CONTAINS_FALLBACK_MARKER_RETIREMENT_MATRIX_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -22,7 +25,10 @@ const PLAN_CONTAINS_FALLBACK_MARKER_RETIREMENT_MATRIX_CONTRACT_PLAN_MARKERS: &[&
 
 #[test]
 fn plan_contains_fallback_marker_retirement_matrix_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_FALLBACK_MARKER_RETIREMENT_MATRIX_CONTRACT_PLAN_MARKERS, "plan_contains_fallback_marker_retirement_matrix_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_FALLBACK_MARKER_RETIREMENT_MATRIX_CONTRACT_PLAN_MARKERS,
+        "plan_contains_fallback_marker_retirement_matrix_contract",
+    );
 }
 
 const PLAN_CONTAINS_FAILOVER_SYNC_DRILL_LANE_POLICY_PLAN_MARKERS: &[&str] = &[
@@ -45,7 +51,10 @@ const PLAN_CONTAINS_FAILOVER_SYNC_DRILL_LANE_POLICY_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_failover_sync_drill_lane_policy() {
-    assert_plan_contains_all(PLAN_CONTAINS_FAILOVER_SYNC_DRILL_LANE_POLICY_PLAN_MARKERS, "plan_contains_failover_sync_drill_lane_policy");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_FAILOVER_SYNC_DRILL_LANE_POLICY_PLAN_MARKERS,
+        "plan_contains_failover_sync_drill_lane_policy",
+    );
 }
 
 const PLAN_CONTAINS_SERVICE_API_WEBSOCKET_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -66,7 +75,10 @@ const PLAN_CONTAINS_SERVICE_API_WEBSOCKET_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MAR
 
 #[test]
 fn plan_contains_service_api_websocket_evidence_convergence_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_SERVICE_API_WEBSOCKET_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS, "plan_contains_service_api_websocket_evidence_convergence_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_SERVICE_API_WEBSOCKET_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS,
+        "plan_contains_service_api_websocket_evidence_convergence_contract",
+    );
 }
 
 const PLAN_CONTAINS_SERVICE_API_AXUM_ADMISSION_BACKPRESSURE_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -108,7 +120,10 @@ const PLAN_CONTAINS_SQLITE_CRASH_REPLAY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKE
 
 #[test]
 fn plan_contains_sqlite_crash_replay_evidence_convergence_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_SQLITE_CRASH_REPLAY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS, "plan_contains_sqlite_crash_replay_evidence_convergence_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_SQLITE_CRASH_REPLAY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS,
+        "plan_contains_sqlite_crash_replay_evidence_convergence_contract",
+    );
 }
 
 const PLAN_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -127,5 +142,8 @@ const PLAN_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARK
 
 #[test]
 fn plan_contains_fork_choice_finality_evidence_convergence_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS, "plan_contains_fork_choice_finality_evidence_convergence_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_CONTRACT_PLAN_MARKERS,
+        "plan_contains_fork_choice_finality_evidence_convergence_contract",
+    );
 }

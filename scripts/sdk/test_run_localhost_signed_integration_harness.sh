@@ -3,11 +3,37 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_harness.sh"
+HARNESS_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_harness_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected localhost signed integration harness runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$HARNESS_CONTRACT" ]; then
+  echo "expected localhost signed integration harness contract to be executable" >&2
+  exit 1
+fi
+
+if grep -Fq 'KAMN_LOCALHOST_SIGNED_INTEGRATION_ADDR", "127.0.0.1:17883"' "$HARNESS_CONTRACT"; then
+  echo "expected localhost signed integration harness default to avoid fixed port 17883" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'KAMN_LOCALHOST_SIGNED_INTEGRATION_ADDR", "127.0.0.1:0"' "$HARNESS_CONTRACT"; then
+  echo "expected localhost signed integration harness default to ask the listener for an ephemeral port" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_LOCALHOST_SIGNED_INTEGRATION_TARGET_DIR" "$HARNESS_CONTRACT"; then
+  echo "expected localhost signed integration harness to expose isolated Cargo target dir override" >&2
+  exit 1
+fi
+
+if ! grep -Fq '"CARGO_TARGET_DIR"' "$HARNESS_CONTRACT"; then
+  echo "expected localhost signed integration harness to pass isolated Cargo target dir into cargo commands" >&2
   exit 1
 fi
 

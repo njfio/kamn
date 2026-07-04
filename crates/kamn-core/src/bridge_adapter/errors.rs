@@ -81,7 +81,7 @@ fn stale_message_text(error: &BridgeAdapterError) -> String {
         } => format!(
             "stale inbound message: id={bridge_message_id}, received_at_unix={received_at_unix}, observed_at_unix={observed_at_unix}, max_age_secs={max_age_secs}"
         ),
-        _ => unreachable!("stale_message_text only supports stale inbound messages"),
+        _ => fallback_display_text(error),
     }
 }
 
@@ -100,7 +100,7 @@ fn operation_text(error: &BridgeAdapterError) -> String {
             format!("outbound request id mismatch: expected {expected}, got {actual}")
         }
         BridgeAdapterError::Envelope(value) => format!("invalid canonical envelope: {value}"),
-        _ => unreachable!("operation_text only supports operation errors"),
+        _ => fallback_display_text(error),
     }
 }
 
@@ -117,8 +117,12 @@ fn validation_text(error: &BridgeAdapterError) -> String {
             format!("nonce must be greater than zero: {value}")
         }
         BridgeAdapterError::StaleInboundMessage { .. } => stale_message_text(error),
-        _ => unreachable!("validation_text only supports validation errors"),
+        _ => fallback_display_text(error),
     }
+}
+
+fn fallback_display_text(error: &BridgeAdapterError) -> String {
+    format!("bridge adapter error display route mismatch: {error:?}")
 }
 
 impl std::error::Error for BridgeAdapterError {}

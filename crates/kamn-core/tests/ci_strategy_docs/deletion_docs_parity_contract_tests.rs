@@ -1,9 +1,7 @@
-use super::*;
 use super::fairness_deletion_support::{
-    assert_contains_all,
-    assert_docs_and_ops_remediation_markers,
-    assert_reason_codes_non_empty,
+    assert_contains_all, assert_docs_and_ops_remediation_markers, assert_reason_codes_non_empty,
 };
+use super::*;
 
 #[test]
 fn doc_contains_deletion_docs_parity_and_remediation_markers() {
@@ -43,8 +41,12 @@ fn assert_deletion_doc_headers() {
         ],
         "deletion docs header",
     );
-    assert!(DOC.contains(&format!("deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}")));
-    assert!(DOC.contains(&format!("deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}")));
+    assert!(DOC.contains(&format!(
+        "deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
 }
 
 fn assert_deletion_doc_paths() {
@@ -74,19 +76,35 @@ fn assert_deletion_doc_commands() {
 }
 
 fn assert_deletion_strategy_markers() {
-    assert!(DOC.contains(&format!("deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}")));
-    assert!(DOC.contains(&format!("deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}")));
+    assert!(DOC.contains(&format!(
+        "deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
 }
 
 fn assert_deletion_ops_markers() {
-    assert!(OPS_DOC.contains(&format!("deletion_proof_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}")));
-    assert!(OPS_DOC.contains(&format!("deletion_proof_reason_codes_csv={DELETION_REASON_CODES_CSV}")));
-    assert!(OPS_DOC.contains(&format!("deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}")));
-    assert!(OPS_DOC.contains(&format!("deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}")));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_proof_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_proof_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
 }
 
 fn assert_deletion_fixture_markers() {
     assert!(DELETION_FIXTURE.contains("deletion_proof_fixture_matrix_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1"));
-    assert!(DELETION_FIXTURE.contains(&format!("deletion_proof_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}")));
-    assert!(DELETION_FIXTURE.contains(&format!("deletion_proof_reason_codes_csv={DELETION_REASON_CODES_CSV}")));
+    assert!(DELETION_FIXTURE.contains(&format!(
+        "deletion_proof_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DELETION_FIXTURE.contains(&format!(
+        "deletion_proof_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
 }

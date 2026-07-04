@@ -25,9 +25,27 @@ fi
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
-bash "$FAST_SCRIPT" >"$TMP_OUT"
+if ! grep -Fq "fast_status=\$?" "$0"; then
+  echo "expected message lifecycle wrapper test to capture fast-lane status explicitly" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'cat "$TMP_OUT" >&2' "$0"; then
+  echo "expected message lifecycle wrapper test to print captured fast-lane output on failure" >&2
+  exit 1
+fi
+
+fast_status=0
+bash "$FAST_SCRIPT" >"$TMP_OUT" 2>&1 || fast_status=$?
+if [ "$fast_status" -ne 0 ]; then
+  cat "$TMP_OUT" >&2
+  echo "message lifecycle fast lane failed with status $fast_status" >&2
+  exit "$fast_status"
+fi
+
 if ! grep -q "message lifecycle snapshot contract lane tests passed." "$TMP_OUT"; then
   echo "expected message lifecycle contract lane success marker" >&2
+  cat "$TMP_OUT" >&2
   exit 1
 fi
 

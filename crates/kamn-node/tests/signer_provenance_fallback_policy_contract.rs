@@ -10,6 +10,12 @@ const RUNTIME_ORCHESTRATION_SRC: &str = include_str!("../src/runtime_orchestrati
 const RUNTIME_POLICY_CONTRACTS_SRC: &str =
     include_str!("../src/runtime_orchestration/runtime_policy_contracts.rs");
 const MANAGED_BACKEND_SRC: &str = include_str!("../src/signer/managed_backend.rs");
+const MANAGED_BACKEND_RESPONSE_SRC: &str =
+    include_str!("../src/signer/managed_backend/response.rs");
+const MANAGED_BACKEND_RESPONSE_DECODING_SRC: &str =
+    include_str!("../src/signer/managed_backend/response/decoding.rs");
+const MANAGED_BACKEND_RESPONSE_VERIFICATION_SRC: &str =
+    include_str!("../src/signer/managed_backend/response/verification.rs");
 
 const REQUIRED_KEY_SOURCE_REASON_CODES: &[&str] = &[
     "production_signer_key_source_env_local_forbidden",
@@ -72,7 +78,7 @@ fn integration_signer_provenance_fallback_reason_codes_remain_in_source_and_docs
 
     for reason_code in REQUIRED_PROVENANCE_REASON_CODES {
         assert!(
-            MANAGED_BACKEND_SRC.contains(reason_code),
+            managed_backend_source_contains_reason_code(reason_code),
             "managed backend source missing provenance reason code: {reason_code}"
         );
         assert!(
@@ -142,4 +148,11 @@ fn source_taxonomy_contains_reason_code(reason_code: &str) -> bool {
         || RUNTIME_CONSTANTS_SRC.contains(reason_code)
         || RUNTIME_ORCHESTRATION_SRC.contains(reason_code)
         || RUNTIME_POLICY_CONTRACTS_SRC.contains(reason_code)
+}
+
+fn managed_backend_source_contains_reason_code(reason_code: &str) -> bool {
+    MANAGED_BACKEND_SRC.contains(reason_code)
+        || MANAGED_BACKEND_RESPONSE_SRC.contains(reason_code)
+        || MANAGED_BACKEND_RESPONSE_DECODING_SRC.contains(reason_code)
+        || MANAGED_BACKEND_RESPONSE_VERIFICATION_SRC.contains(reason_code)
 }

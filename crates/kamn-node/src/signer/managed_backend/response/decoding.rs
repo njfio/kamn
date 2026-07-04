@@ -1,7 +1,7 @@
 use kamn_core::ConfigError;
 
-use super::{RecoveryId, VerifyingKey};
 use super::super::super::decode_kolme_hex_bytes;
+use super::{RecoveryId, VerifyingKey};
 
 pub(super) fn require_value(value: &str, key: &str) -> Result<String, ConfigError> {
     let value = value.trim();
@@ -79,7 +79,9 @@ pub(super) fn validate_signature_material(
     Ok(())
 }
 
-pub(super) fn decode_signer_verifying_key(public_key_hex: &str) -> Result<VerifyingKey, ConfigError> {
+pub(super) fn decode_signer_verifying_key(
+    public_key_hex: &str,
+) -> Result<VerifyingKey, ConfigError> {
     let signer_public_key_bytes = decode_kolme_hex_bytes(
         public_key_hex,
         "managed_external_signer_backend_signer_public_key_hex",

@@ -4760,7 +4760,7 @@ Required markers when `Shell-surface impact present` is checked:
 Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 
 ## Script Regression Coverage
-`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` with `KAMN_CI_TOOLS_FAST_MODE=true` to keep PR-critical CI tooling checks bounded and cost-effective, while local/deep lanes continue to run the full script.
+`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` with `KAMN_CI_TOOLS_FAST_MODE=true` in the sibling `CI Tool Regression Gate (PR)` job to keep PR-critical CI tooling checks bounded and cost-effective without sharing the core `Fast Gate (PR)` runtime budget. Local/deep lanes continue to run the full script.
 
 Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)

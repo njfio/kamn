@@ -107,8 +107,7 @@ fn assert_reverse_pairs_forbidden(
         let reverse_id = extract_parallel_lane_topology_host_pair_reverse_id(topology_fingerprint);
         assert!(
             !forbidden_reverse_pairs.contains(&reverse_id.as_str()),
-            "reverse host-pair id {} must remain forbidden under directionality contract",
-            reverse_id
+            "reverse host-pair id {reverse_id} must remain forbidden under directionality contract"
         );
     }
 }

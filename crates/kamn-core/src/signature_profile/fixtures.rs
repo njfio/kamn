@@ -1,14 +1,20 @@
 use super::{
-    baseline_signature_algorithm, baseline_signature_profile_id,
-    parse_signature_profile_metadata, BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID,
-    UNKNOWN_SIGNATURE_ALGORITHM_ID,
+    baseline_signature_algorithm, baseline_signature_profile_id, parse_signature_profile_metadata,
+    BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
 };
 use crate::signature_profile::encoding::baseline_signature_for_fields as render_baseline_signature;
 
-pub fn baseline_signature_for_fields(sender: &str, nonce: u64, state_hash: &str, payload: &str) -> String {
+/// Runs the baseline signature for fields contract helper.
+pub fn baseline_signature_for_fields(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
     render_baseline_signature(sender, nonce, state_hash, payload)
 }
 
+/// Runs the legacy signature for fields contract helper.
 pub fn legacy_signature_for_fields(
     sender: &str,
     nonce: u64,
@@ -18,6 +24,7 @@ pub fn legacy_signature_for_fields(
     format!("sig:{sender}:{nonce}:{state_hash}:{}", payload.len())
 }
 
+/// Runs the unknown signature profile for fields contract helper.
 pub fn unknown_signature_profile_for_fields(
     sender: &str,
     nonce: u64,
@@ -34,6 +41,7 @@ pub fn unknown_signature_profile_for_fields(
     )
 }
 
+/// Runs the unknown signature algorithm for fields contract helper.
 pub fn unknown_signature_algorithm_for_fields(
     sender: &str,
     nonce: u64,
@@ -52,12 +60,17 @@ pub fn unknown_signature_algorithm_for_fields(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract model for Signature Profile Compatibility Fixture.
 pub struct SignatureProfileCompatibilityFixture {
+    /// Fixture id carried by this public contract model.
     pub fixture_id: &'static str,
+    /// Signature carried by this public contract model.
     pub signature: String,
+    /// Should verify carried by this public contract model.
     pub should_verify: bool,
 }
 
+/// Runs the signature profile compatibility fixtures for fields contract helper.
 pub fn signature_profile_compatibility_fixtures_for_fields(
     sender: &str,
     nonce: u64,
@@ -88,6 +101,7 @@ pub fn signature_profile_compatibility_fixtures_for_fields(
     ]
 }
 
+/// Runs the signature matches supported profile for fields contract helper.
 pub fn signature_matches_supported_profile_for_fields(
     signature: &str,
     sender: &str,

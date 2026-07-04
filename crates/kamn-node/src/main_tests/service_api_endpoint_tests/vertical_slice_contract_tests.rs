@@ -5,13 +5,14 @@ use super::*;
 use support::{
     assert_server_ok, assert_slice_evidence, boot_snapshot, create_task, default_audit_export_file,
     list_mailbox_live, project_relay_to_recipient, query_message_live, query_task,
-    recipient_env_guards, read_audit_export_json, read_state_json, register_agent_profile,
+    read_audit_export_json, read_state_json, recipient_env_guards, register_agent_profile,
     send_message, set_audit_export_file_env, set_relay_spool_env, set_state_file_env,
     spawn_api_server, VerticalSliceFiles,
 };
 
 #[test]
-fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence() {
+fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence(
+) {
     let _env = acquire_service_api_test_env();
     let case = build_case();
     let created_message = send_slice_message(&case);
@@ -23,16 +24,16 @@ fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispa
     // Contract marker: delivered
     let sender_state = read_state_json(case.files.sender_state_file.as_path());
     let audit_export = read_audit_export_json(case.sender_audit_export.as_path());
-    assert_slice_evidence(
-        case.recipient_did.as_str(),
-        &created_message.message_id,
-        &created_task.task_id,
-        &mailbox,
-        &delivered_message,
-        &queried_task,
-        &sender_state,
-        &audit_export,
-    );
+    assert_slice_evidence(support::SliceEvidence {
+        recipient_did: case.recipient_did.as_str(),
+        message_id: &created_message.message_id,
+        task_id: &created_task.task_id,
+        mailbox: &mailbox,
+        delivered_message: &delivered_message,
+        queried_task: &queried_task,
+        sender_state: &sender_state,
+        audit_export: &audit_export,
+    });
     cleanup_case(case);
 }
 
@@ -61,7 +62,9 @@ fn build_case() -> VerticalSliceCase {
     }
 }
 
-fn send_slice_message(case: &VerticalSliceCase) -> crate::service_api_endpoint::ServiceApiMessageCreateBody {
+fn send_slice_message(
+    case: &VerticalSliceCase,
+) -> crate::service_api_endpoint::ServiceApiMessageCreateBody {
     let payload = format!(
         r#"{{"recipient_did":"{}","message":"vertical-slice-message"}}"#,
         case.recipient_did,
@@ -80,7 +83,10 @@ fn send_slice_message(case: &VerticalSliceCase) -> crate::service_api_endpoint::
 fn receive_slice_message(
     case: &VerticalSliceCase,
     message_id: &str,
-) -> (crate::service_api_endpoint::ServiceApiChannelMessagesBody, Value) {
+) -> (
+    crate::service_api_endpoint::ServiceApiChannelMessagesBody,
+    Value,
+) {
     let _recipient_env = recipient_env_guards(
         case.files.recipient_state_file.as_path(),
         case.files.recipient_spool_file.as_path(),
@@ -93,7 +99,11 @@ fn receive_slice_message(
 }
 
 fn start_recipient_server(case: &VerticalSliceCase) -> thread::JoinHandle<Result<(), String>> {
-    let server = spawn_api_server(&case.recipient_snapshot, case.recipient_bind_addr.as_str(), 3);
+    let server = spawn_api_server(
+        &case.recipient_snapshot,
+        case.recipient_bind_addr.as_str(),
+        3,
+    );
     wait_for_endpoint_ready(case.recipient_bind_addr.as_str());
     server
 }
@@ -110,7 +120,10 @@ fn project_sender_relay(case: &VerticalSliceCase) {
 fn query_recipient_delivery(
     case: &VerticalSliceCase,
     message_id: &str,
-) -> (crate::service_api_endpoint::ServiceApiChannelMessagesBody, Value) {
+) -> (
+    crate::service_api_endpoint::ServiceApiChannelMessagesBody,
+    Value,
+) {
     let mailbox = list_mailbox_live(
         &case.recipient_snapshot,
         case.recipient_bind_addr.as_str(),
@@ -135,7 +148,9 @@ fn assert_recipient_server_ok(server: thread::JoinHandle<Result<(), String>>) {
     );
 }
 
-fn dispatch_slice_task(case: &VerticalSliceCase) -> (crate::service_api_endpoint::ServiceApiTaskCreateBody, Value) {
+fn dispatch_slice_task(
+    case: &VerticalSliceCase,
+) -> (crate::service_api_endpoint::ServiceApiTaskCreateBody, Value) {
     register_vertical_slice_worker(case);
     let created_task = create_vertical_slice_task(case);
     let queried_task = query_vertical_slice_task(case, created_task.task_id.as_str());

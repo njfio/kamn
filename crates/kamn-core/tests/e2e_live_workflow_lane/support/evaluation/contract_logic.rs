@@ -55,7 +55,10 @@ fn evaluate_strategy_markers(strategy: &str, reasons: &mut Vec<&'static str>) {
     if strategy.is_empty() {
         return;
     }
-    if STRATEGY_REQUIRED_MARKERS.iter().any(|marker| !strategy.contains(marker)) {
+    if STRATEGY_REQUIRED_MARKERS
+        .iter()
+        .any(|marker| !strategy.contains(marker))
+    {
         add_reason(reasons, "ci_strategy_markers_missing");
     }
 }

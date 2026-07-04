@@ -32,7 +32,10 @@ pub(crate) fn parse_fixture() -> Result<(FixtureMetadata, Vec<FixtureCase>), Str
 pub(crate) fn parse_case_line(line: &str) -> Result<FixtureCase, String> {
     let parts: Vec<&str> = line.split('|').map(str::trim).collect();
     if parts.len() != 5 {
-        return Err(format!("expected 5 columns, found {} in '{line}'", parts.len()));
+        return Err(format!(
+            "expected 5 columns, found {} in '{line}'",
+            parts.len()
+        ));
     }
     Ok(FixtureCase {
         case_id: parts[0].to_owned(),

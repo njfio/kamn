@@ -11,7 +11,11 @@ pub struct ApproverAttestation {
 
 impl ApproverAttestation {
     /// Handles new.
-    pub fn new(approver_did: &str, payload_digest: &str, attestation_id: &str) -> Result<Self, ApproverQuorumError> {
+    pub fn new(
+        approver_did: &str,
+        payload_digest: &str,
+        attestation_id: &str,
+    ) -> Result<Self, ApproverQuorumError> {
         parse_approver_did(approver_did, "approver_did")?;
         validate_attestation_fields(payload_digest, attestation_id)?;
         Ok(Self {
@@ -22,13 +26,20 @@ impl ApproverAttestation {
     }
 
     /// Handles approver did.
-    pub fn approver_did(&self) -> &str { &self.approver_did }
+    pub fn approver_did(&self) -> &str {
+        &self.approver_did
+    }
 
     /// Handles payload digest.
-    pub fn payload_digest(&self) -> &str { &self.payload_digest }
+    pub fn payload_digest(&self) -> &str {
+        &self.payload_digest
+    }
 }
 
-fn validate_attestation_fields(payload_digest: &str, attestation_id: &str) -> Result<(), ApproverQuorumError> {
+fn validate_attestation_fields(
+    payload_digest: &str,
+    attestation_id: &str,
+) -> Result<(), ApproverQuorumError> {
     if payload_digest.trim().is_empty() {
         return Err(ApproverQuorumError::InvalidPayloadDigest);
     }

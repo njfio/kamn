@@ -31,7 +31,8 @@ fn watchdog_projection_is_nominal_for_aligned_valid_consensus() {
     assert_eq!(projection.severity, ProofWatchdogSeverity::Info);
 }
 
-fn aligned_valid_input() -> Result<ValidatorProofConsensusInput, super::super::ValidatorProofConsensusError> {
+fn aligned_valid_input(
+) -> Result<ValidatorProofConsensusInput, super::super::ValidatorProofConsensusError> {
     ValidatorProofConsensusInput::new(
         "urn:uuid:message-1",
         "artifact-1",

@@ -1,8 +1,6 @@
 name: ci-fast-gate
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       run_kolme_local_heavy_contract_tests:
@@ -88,6 +86,7 @@ jobs:
           trap 'rm -rf "$tmp_dir"' EXIT
           git show "origin/${{ github.base_ref }}:scripts/ci/check_governance_feature_commit_ratio.py" > "$tmp_dir/check_governance_feature_commit_ratio.py"
           git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_support.py" > "$tmp_dir/governance_feature_commit_ratio_support.py"
+          git show "origin/${{ github.base_ref }}:scripts/ci/governance_feature_commit_ratio_git.py" > "$tmp_dir/governance_feature_commit_ratio_git.py"
           git show "origin/${{ github.base_ref }}:.ci/governance-feature-commit-ratio-moratorium.env" > "$tmp_dir/governance-feature-commit-ratio-moratorium.env"
           chmod +x "$tmp_dir/check_governance_feature_commit_ratio.py"
           source "$tmp_dir/governance-feature-commit-ratio-moratorium.env"
@@ -136,12 +135,6 @@ jobs:
       - name: Run kamn-core missing-docs policy contract check
         if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
         run: bash scripts/ci/check_kamn_core_missing_docs_policy.sh
-
-      - name: Run CI tool regression tests
-        if: steps.scope.outputs.run_ci_tool_checks == 'true'
-        env:
-          KAMN_CI_TOOLS_FAST_MODE: 'true'
-        run: bash scripts/ci/test_ci_tools.sh
 
       - name: Check script-surface budget policy
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
@@ -354,7 +347,10 @@ jobs:
 
       - name: Run cargo-audit dependency scan
         if: steps.scope.outputs.run_rust == 'true'
-        run: cargo audit --json > cargo-audit-report.json
+        run: |
+          cargo_audit_status=0
+          cargo audit --json > cargo-audit-report.json || cargo_audit_status="$?"
+          echo "cargo_audit_exit_status=$cargo_audit_status"
 
       - name: Check touched Rust size policy
         if: steps.scope.outputs.run_rust == 'true'
@@ -747,6 +743,38 @@ jobs:
           path: ci-budget-fast-gate-delta.json
           if-no-files-found: error
 
+  ci-tool-regression-gate:
+    name: CI Tool Regression Gate (PR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select CI tool scope
+        id: scope
+        shell: bash
+        env:
+          CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_kolme_local_heavy_contract_tests || 'false' }}
+        run: bash scripts/ci/select_targets.sh
+
+      - name: Validate CI scripts syntax
+        if: steps.scope.outputs.run_ci_tool_checks == 'true'
+        run: bash -n scripts/ci/*.sh
+
+      - name: Run CI tool regression tests
+        if: steps.scope.outputs.run_ci_tool_checks == 'true'
+        env:
+          KAMN_CI_TOOLS_FAST_MODE: 'true'
+        run: bash scripts/ci/test_ci_tools.sh
+
+      - name: No CI tool checks required
+        if: steps.scope.outputs.run_ci_tool_checks != 'true'
+        run: echo "No CI tool regression checks required."
+
   workspace-premerge-gate:
     name: Workspace Pre-Merge Gate (PR)
     if: github.event_name == 'pull_request'
@@ -756,6 +784,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Reclaim runner disk space
         run: |

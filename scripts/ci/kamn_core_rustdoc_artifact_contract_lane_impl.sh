@@ -19,6 +19,7 @@ MAX_RUNTIME_SECONDS="${KAMN_CORE_RUSTDOC_ARTIFACT_MAX_SECONDS:-180}"
 DOCS_CONTRACT_TEST_COUNT="${KAMN_RUSTDOC_NAV_DOCS_CONTRACT_TEST_COUNT:-2}"
 BEHAVIORAL_TEST_COUNT="${KAMN_RUSTDOC_NAV_BEHAVIORAL_TEST_COUNT:-2}"
 MAX_DOCS_CONTRACT_TO_BEHAVIORAL_RATIO="${KAMN_RUSTDOC_NAV_MAX_DOCS_TO_BEHAVIORAL_RATIO:-1.0}"
+RUSTDOC_TARGET_DIR="${KAMN_CORE_RUSTDOC_ARTIFACT_TARGET_DIR:-$ROOT_DIR/target/ci-tools-rustdoc-artifact}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -104,13 +105,14 @@ PY
 
 mkdir -p "$ARTIFACT_DIR"
 mkdir -p "$(dirname "$OUTPUT_JSON")"
+mkdir -p "$RUSTDOC_TARGET_DIR"
 
-RUSTDOC_COMMAND_DESCRIPTOR='RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps'
+RUSTDOC_COMMAND_DESCRIPTOR='CARGO_TARGET_DIR=target/ci-tools-rustdoc-artifact RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps'
 start_epoch="$(date +%s)"
-RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps >/dev/null
+CARGO_TARGET_DIR="$RUSTDOC_TARGET_DIR" RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps >/dev/null
 
 artifact_path="$ARTIFACT_DIR/kamn-core-rustdoc.tar.gz"
-tar -czf "$artifact_path" -C target doc
+tar -czf "$artifact_path" -C "$RUSTDOC_TARGET_DIR" doc
 
 artifact_bytes="$(wc -c <"$artifact_path" | tr -d '[:space:]')"
 artifact_sha256="$(sha256sum "$artifact_path" | awk '{print $1}')"

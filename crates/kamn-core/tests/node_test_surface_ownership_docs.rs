@@ -9,18 +9,12 @@ const OWNERSHIP_REASON_CODES_CSV: &str = "runtime_tests_shell_owner_marker_missi
 fn doc_contains_node_runtime_test_ownership_taxonomy_and_markers() {
     assert!(WATCHDOG_DOC.contains("## Node Runtime Test-Surface Ownership Mapping"));
     assert!(WATCHDOG_DOC.contains(
-        format!(
-            "node_runtime_test_ownership_reason_taxonomy_version={}",
-            OWNERSHIP_REASON_TAXONOMY_VERSION
-        )
+        format!("node_runtime_test_ownership_reason_taxonomy_version={OWNERSHIP_REASON_TAXONOMY_VERSION}")
         .as_str()
     ));
     assert!(WATCHDOG_DOC.contains(
-        format!(
-            "node_runtime_test_ownership_reason_codes_csv={}",
-            OWNERSHIP_REASON_CODES_CSV
-        )
-        .as_str()
+        format!("node_runtime_test_ownership_reason_codes_csv={OWNERSHIP_REASON_CODES_CSV}")
+            .as_str()
     ));
     assert!(WATCHDOG_DOC.contains("node_runtime_test_ownership_status=verified"));
     assert!(WATCHDOG_DOC.contains("crates/kamn-node/src/main_tests/runtime_tests.rs"));
@@ -48,8 +42,6 @@ fn ci_strategy_contains_node_runtime_test_ownership_guard_command_marker() {
         CI_STRATEGY_DOC.contains(
             "cargo test -p kamn-core --test node_test_surface_ownership_docs -- --nocapture"
         ),
-        "reason_taxonomy_version={} reason_codes_csv={} reason_code=runtime_tests_guard_command_marker_missing",
-        OWNERSHIP_REASON_TAXONOMY_VERSION,
-        OWNERSHIP_REASON_CODES_CSV
+        "reason_taxonomy_version={OWNERSHIP_REASON_TAXONOMY_VERSION} reason_codes_csv={OWNERSHIP_REASON_CODES_CSV} reason_code=runtime_tests_guard_command_marker_missing"
     );
 }

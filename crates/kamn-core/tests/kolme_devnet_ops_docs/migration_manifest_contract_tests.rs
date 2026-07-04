@@ -1,4 +1,4 @@
-use super::docs_assert_support::{assert_plan_contains_all};
+use super::docs_assert_support::assert_plan_contains_all;
 
 const PLAN_CONTAINS_LANE_MIGRATION_MATRIX_CONTRACT_PLAN_MARKERS: &[&str] = &[
     "## Lane Migration Matrix (Issue #1721)",
@@ -11,7 +11,10 @@ const PLAN_CONTAINS_LANE_MIGRATION_MATRIX_CONTRACT_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_lane_migration_matrix_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_LANE_MIGRATION_MATRIX_CONTRACT_PLAN_MARKERS, "plan_contains_lane_migration_matrix_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_LANE_MIGRATION_MATRIX_CONTRACT_PLAN_MARKERS,
+        "plan_contains_lane_migration_matrix_contract",
+    );
 }
 
 const PLAN_CONTAINS_TRANCHE1_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -26,7 +29,10 @@ const PLAN_CONTAINS_TRANCHE1_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] =
 
 #[test]
 fn plan_contains_tranche1_manifest_migration_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_TRANCHE1_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS, "plan_contains_tranche1_manifest_migration_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_TRANCHE1_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS,
+        "plan_contains_tranche1_manifest_migration_contract",
+    );
 }
 
 const PLAN_CONTAINS_RUNTIME_NONCE_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -41,7 +47,10 @@ const PLAN_CONTAINS_RUNTIME_NONCE_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&s
 
 #[test]
 fn plan_contains_runtime_nonce_manifest_migration_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_RUNTIME_NONCE_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS, "plan_contains_runtime_nonce_manifest_migration_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_RUNTIME_NONCE_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS,
+        "plan_contains_runtime_nonce_manifest_migration_contract",
+    );
 }
 
 const PLAN_CONTAINS_VERSION_MATRIX_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -56,10 +65,14 @@ const PLAN_CONTAINS_VERSION_MATRIX_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&
 
 #[test]
 fn plan_contains_version_matrix_manifest_migration_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_VERSION_MATRIX_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS, "plan_contains_version_matrix_manifest_migration_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_VERSION_MATRIX_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS,
+        "plan_contains_version_matrix_manifest_migration_contract",
+    );
 }
 
-const PLAN_CONTAINS_PROFILE_SELFTEST_PORTABILITY_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] = &[
+const PLAN_CONTAINS_PROFILE_SELFTEST_PORTABILITY_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS:
+    &[&str] = &[
     "## Profile+SelfTest+Portability Manifest Migration (Issue #1767)",
     "scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh",
     "scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json",
@@ -71,10 +84,14 @@ const PLAN_CONTAINS_PROFILE_SELFTEST_PORTABILITY_MANIFEST_MIGRATION_CONTRACT_PLA
 
 #[test]
 fn plan_contains_profile_selftest_portability_manifest_migration_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_PROFILE_SELFTEST_PORTABILITY_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS, "plan_contains_profile_selftest_portability_manifest_migration_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_PROFILE_SELFTEST_PORTABILITY_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS,
+        "plan_contains_profile_selftest_portability_manifest_migration_contract",
+    );
 }
 
-const PLAN_CONTAINS_RUNTIME_TRIADIC_BOOTSTRAP_E2E_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] = &[
+const PLAN_CONTAINS_RUNTIME_TRIADIC_BOOTSTRAP_E2E_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS:
+    &[&str] = &[
     "## Runtime+Triadic+Bootstrap+E2E Manifest Migration (Issue #1769)",
     "scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh",
     "scripts/framework/manifests/kolme_runtime_commit_contract_lane.json",
@@ -87,7 +104,10 @@ const PLAN_CONTAINS_RUNTIME_TRIADIC_BOOTSTRAP_E2E_MANIFEST_MIGRATION_CONTRACT_PL
 
 #[test]
 fn plan_contains_runtime_triadic_bootstrap_e2e_manifest_migration_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_RUNTIME_TRIADIC_BOOTSTRAP_E2E_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS, "plan_contains_runtime_triadic_bootstrap_e2e_manifest_migration_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_RUNTIME_TRIADIC_BOOTSTRAP_E2E_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS,
+        "plan_contains_runtime_triadic_bootstrap_e2e_manifest_migration_contract",
+    );
 }
 
 const PLAN_CONTAINS_BOOTSTRAP_CONFORMANCE_RUNTIME_PROCESS_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS: &[&str] = &[
@@ -120,5 +140,8 @@ const PLAN_CONTAINS_PARITY_DEMO_REAL_PROCESS_MANIFEST_MIGRATION_CONTRACT_PLAN_MA
 
 #[test]
 fn plan_contains_parity_demo_real_process_manifest_migration_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_PARITY_DEMO_REAL_PROCESS_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS, "plan_contains_parity_demo_real_process_manifest_migration_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_PARITY_DEMO_REAL_PROCESS_MANIFEST_MIGRATION_CONTRACT_PLAN_MARKERS,
+        "plan_contains_parity_demo_real_process_manifest_migration_contract",
+    );
 }

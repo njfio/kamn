@@ -62,10 +62,17 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   fail "weighted decay property policy checker is not executable"
 fi
 
+weighted_decay_target_dir="${KAMN_REPUTATION_WEIGHTED_DECAY_TARGET_DIR:-$ROOT_DIR/target/reputation-weighted-decay-contract}"
+mkdir -p "$weighted_decay_target_dir"
+
+run_cargo_test() {
+  CARGO_TARGET_DIR="$weighted_decay_target_dir" cargo test "$@" >/dev/null
+}
+
 if [ "$skip_tests" != true ]; then
-  cargo test -p kamn-core --test trust_score_engine >/dev/null
-  cargo test -p kamn-core --test trust_score_property_invariants >/dev/null
-  cargo test -p kamn-core --test trust_score_engine_docs >/dev/null
+  run_cargo_test -p kamn-core --test trust_score_engine
+  run_cargo_test -p kamn-core --test trust_score_property_invariants
+  run_cargo_test -p kamn-core --test trust_score_engine_docs
 fi
 
 start_epoch="$(date +%s)"

@@ -1,9 +1,9 @@
 use crate::{GovernanceProposalDraft, GovernanceProposalStatus};
 
 use crate::agent_upgrade_workflow::{
-    AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind,
-    AgentUpgradeProposalRecord, AgentUpgradeProposalState, AgentUpgradeWorkflowError,
-    support::validate_timestamp,
+    support::validate_timestamp, AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent,
+    AgentUpgradeAuditEventKind, AgentUpgradeProposalRecord, AgentUpgradeProposalState,
+    AgentUpgradeWorkflowError,
 };
 
 impl AgentDrivenUpgradeWorkflow {

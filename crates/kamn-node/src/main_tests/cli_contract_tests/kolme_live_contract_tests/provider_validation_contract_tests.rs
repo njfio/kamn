@@ -22,7 +22,10 @@ fn rejects_kolme_live_with_in_memory_provider_hint_marker() {
             kolme_live_args(),
             &[
                 ("--kolme-live-base-url", "http://127.0.0.1:3000"),
-                ("--kolme-live-provider-hint", "InMemoryKolmeRuntimeCommitClient"),
+                (
+                    "--kolme-live-provider-hint",
+                    "InMemoryKolmeRuntimeCommitClient",
+                ),
                 ("--kolme-live-signing-profile", "kolme-fork-secp256k1-v1"),
             ],
         ),

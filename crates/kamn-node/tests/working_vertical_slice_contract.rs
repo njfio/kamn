@@ -16,9 +16,10 @@ const DOC_MARKERS: &[&str] = &[
     "What This Does Not Prove",
     "cargo test -p kamn-node",
 ];
-const ROOT_MARKERS: &[&str] = &["#[path = \"service_api_endpoint_tests/vertical_slice_contract_tests.rs\"]"];
+const ROOT_MARKERS: &[&str] =
+    &["#[path = \"service_api_endpoint_tests/vertical_slice_contract_tests.rs\"]"];
 const TEST_MARKERS: &[&str] = &[
-    "fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence()",
+    "fn integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
     "X25519-XChaCha20-Poly1305",
     "service_api_task_created",
     "completed",
@@ -31,8 +32,7 @@ fn regression_working_vertical_slice_doc_exists_with_operator_markers() {
     for marker in DOC_MARKERS {
         assert!(
             doc.contains(marker),
-            "working vertical slice doc missing required marker: {}",
-            marker
+            "working vertical slice doc missing required marker: {marker}"
         );
     }
 }
@@ -43,8 +43,7 @@ fn regression_service_api_test_root_wires_vertical_slice_module() {
     for marker in ROOT_MARKERS {
         assert!(
             root.contains(marker),
-            "service_api_endpoint_tests.rs missing vertical-slice marker: {}",
-            marker
+            "service_api_endpoint_tests.rs missing vertical-slice marker: {marker}"
         );
     }
 }
@@ -55,17 +54,17 @@ fn regression_vertical_slice_integration_test_exists_with_required_markers() {
     for marker in TEST_MARKERS {
         assert!(
             test_module.contains(marker),
-            "vertical slice integration module missing required marker: {}",
-            marker
+            "vertical slice integration module missing required marker: {marker}"
         );
     }
 }
 
 fn read_workspace_file(relative_path: &str) -> String {
     let path = workspace_root().join(relative_path);
-    assert!(path.exists(), "expected path to exist: {}", path.display());
+    let path_display = path.display();
+    assert!(path.exists(), "expected path to exist: {path_display}");
     fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {}", path.display(), error))
+        .unwrap_or_else(|error| panic!("failed to read {path_display}: {error}"))
 }
 
 fn workspace_root() -> PathBuf {

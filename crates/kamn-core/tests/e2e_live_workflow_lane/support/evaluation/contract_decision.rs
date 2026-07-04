@@ -14,7 +14,11 @@ pub(crate) fn build_decision(raw_reasons: Vec<&'static str>) -> ContractDecision
     let reasons = normalize_reasons(raw_reasons);
     let status = if reasons.is_empty() { "pass" } else { "fail" };
     let final_decision = if status == "pass" { "GO" } else { "NO-GO" };
-    let contract_status = if status == "pass" { "verified" } else { "violation" };
+    let contract_status = if status == "pass" {
+        "verified"
+    } else {
+        "violation"
+    };
     ContractDecision {
         status,
         final_decision,

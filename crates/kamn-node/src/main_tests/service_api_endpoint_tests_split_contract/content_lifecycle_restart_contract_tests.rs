@@ -17,8 +17,8 @@ fn spec_c26_service_api_endpoint_content_lifecycle_restart_module_exists_and_own
     let restart_source = read_repo_file(CONTENT_LIFECYCLE_RESTART_FILE);
 
     assert!(
-        module_source.contains("mod content_lifecycle_restart_contract_tests;"),
-        "content_lifecycle_restart_contract_tests.rs should declare restart submodule"
+        module_source.contains("mod restart_contract_tests;"),
+        "content_lifecycle_restart_contract_tests.rs should declare restart submodule alias"
     );
     assert!(
         restart_source.contains(

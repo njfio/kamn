@@ -24,7 +24,11 @@ const REQUIRED_INDEX_MARKERS: &[&str] = &[
 #[test]
 fn live_solana_devnet_proof_doc_exists_and_stays_bounded() {
     let doc = read_workspace_file(DOC_PATH);
-    assert_contains_all(doc.as_str(), REQUIRED_DOC_MARKERS, "live Solana devnet proof doc");
+    assert_contains_all(
+        doc.as_str(),
+        REQUIRED_DOC_MARKERS,
+        "live Solana devnet proof doc",
+    );
 }
 
 #[test]

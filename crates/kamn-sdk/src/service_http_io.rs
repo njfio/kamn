@@ -233,7 +233,10 @@ pub(super) fn read_response_bytes<R: Read>(stream: &mut R) -> Result<Vec<u8>, Sd
                 break;
             }
             Err(error)
-                if matches!(error.kind(), ErrorKind::UnexpectedEof) && !response.is_empty() =>
+                if matches!(
+                    error.kind(),
+                    ErrorKind::UnexpectedEof | ErrorKind::ConnectionReset
+                ) && !response.is_empty() =>
             {
                 break;
             }

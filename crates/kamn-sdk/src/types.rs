@@ -1,4 +1,6 @@
 /// Shared canonical agent DID value.
+///
+/// Agent DID strings must use the `kamn:did:agent:` prefix.
 pub use kamn_types::AgentDid;
 
 /// Agent registration metadata.

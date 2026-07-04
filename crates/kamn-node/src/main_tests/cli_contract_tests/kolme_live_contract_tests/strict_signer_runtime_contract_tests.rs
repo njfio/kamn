@@ -20,7 +20,8 @@ fn regression_kolme_live_strict_signer_contracts_reject_profile_selector_env_mis
 }
 
 #[test]
-fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_network_on_selector_env_mismatch() {
+fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_network_on_selector_env_mismatch(
+) {
     let _lock = lock_signer_env_guard();
     let _profile_env = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
     let _primary_key = EnvVarGuard::set(
@@ -31,7 +32,10 @@ fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_net
     let args = strict_runtime_args(base_url.as_str());
     let parsed = parse_cli(args, "strict kolme-live args should parse");
     assert_strict_mismatch_failure(parsed);
-    assert_zero_requests(requests, "strict selector/env mismatch should fail before any live network request");
+    assert_zero_requests(
+        requests,
+        "strict selector/env mismatch should fail before any live network request",
+    );
 }
 
 fn selector_env_replies() -> Vec<MockHttpReply> {

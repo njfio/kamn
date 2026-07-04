@@ -128,22 +128,24 @@ fn invalid_did_error_message(error: &AuthenticatedPeerFrameError) -> Option<Stri
             field,
             reason_code,
             detail,
-        } => Some(format!("invalid did field {field}: {reason_code} ({detail})")),
+        } => Some(format!(
+            "invalid did field {field}: {reason_code} ({detail})"
+        )),
         _ => None,
     }
 }
 
 fn contextual_peer_frame_error_message(error: &AuthenticatedPeerFrameError) -> Option<String> {
     match error {
-        AuthenticatedPeerFrameError::InvalidWireFieldDelimiter { field } => {
-            Some(format!("peer frame field contains unsupported wire delimiters: {field}"))
-        }
+        AuthenticatedPeerFrameError::InvalidWireFieldDelimiter { field } => Some(format!(
+            "peer frame field contains unsupported wire delimiters: {field}"
+        )),
         AuthenticatedPeerFrameError::InvalidWireFormat(payload) => {
             Some(format!("peer frame wire payload is invalid: {payload}"))
         }
-        AuthenticatedPeerFrameError::SignatureMismatch { expected, found } => Some(
-            signature_mismatch_message(expected, found),
-        ),
+        AuthenticatedPeerFrameError::SignatureMismatch { expected, found } => {
+            Some(signature_mismatch_message(expected, found))
+        }
         AuthenticatedPeerFrameError::UnauthorizedSender(value) => {
             Some(format!("peer frame sender is unauthorized: {value}"))
         }
@@ -179,6 +181,6 @@ fn signing_key_error_message(error: &AuthenticatedPeerFrameError) -> &'static st
         AuthenticatedPeerFrameError::InvalidSigningKeyMaterial => {
             "runtime peer frame signing key material is invalid"
         }
-        _ => unreachable!("non-signing error routed to signing_key_error_message"),
+        _ => "runtime peer frame signing key formatter route mismatch",
     }
 }

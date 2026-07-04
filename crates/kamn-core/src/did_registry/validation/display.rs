@@ -103,6 +103,6 @@ fn transition_display_message(error: &DidRegistryError) -> String {
         } => format!(
             "invalid lifecycle mutation transition for did {did}; action {action}, revoked={from_revoked}"
         ),
-        _ => unreachable!("all display variants should be covered"),
+        _ => format!("did registry error formatter route mismatch: {error:?}"),
     }
 }

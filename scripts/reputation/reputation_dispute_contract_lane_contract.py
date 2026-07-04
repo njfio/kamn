@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -42,6 +43,23 @@ def extract_value(output: str, key: str) -> str:
     return ""
 
 
+def run_cargo_doc_test(
+    *, root_dir: Path, reputation_target_dir: Path, test_target: str
+) -> int:
+    """Run a reputation dispute docs test in the lane-specific target dir."""
+    test_env = os.environ.copy()
+    test_env["CARGO_TARGET_DIR"] = str(reputation_target_dir)
+    result = subprocess.run(
+        ["cargo", "test", "-p", "kamn-core", "--test", test_target],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=str(root_dir),
+        env=test_env,
+    )
+    return result.returncode
+
+
 def main(argv: list[str]) -> int:
     """Execute reputation dispute contract-lane smoke checks."""
     output_file: str | None = None
@@ -74,14 +92,23 @@ def main(argv: list[str]) -> int:
     if not policy_checker.is_file():
         return fail("reputation dispute policy checker is not executable")
 
+    reputation_target_dir = Path(
+        os.environ.get(
+            "KAMN_REPUTATION_DISPUTE_TARGET_DIR",
+            root_dir / "target/reputation-dispute-contract",
+        )
+    )
+    reputation_target_dir.mkdir(parents=True, exist_ok=True)
+
     if not skip_tests:
         for test_target in (
             "reputation_state_model_docs",
             "reputation_signal_routing_docs",
         ):
-            code, _ = run_capture(
-                ["cargo", "test", "-p", "kamn-core", "--test", test_target],
-                cwd=root_dir,
+            code = run_cargo_doc_test(
+                root_dir=root_dir,
+                reputation_target_dir=reputation_target_dir,
+                test_target=test_target,
             )
             if code != 0:
                 return fail(

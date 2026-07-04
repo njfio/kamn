@@ -9,7 +9,10 @@ use crate::signer_backend::SignerBackendError;
 #[test]
 fn secure_backend_rejects_provider_client_backend_mismatch() {
     with_default_signer_key_env(|| {
-        assert_eq!(build_backend().sign(&build_request()), Err(expected_mismatch_error()));
+        assert_eq!(
+            build_backend().sign(&build_request()),
+            Err(expected_mismatch_error())
+        );
     });
 }
 

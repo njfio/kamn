@@ -23,7 +23,9 @@ fn validate_leaf_content(leaf: &DataLayerM1MerkleLeaf) -> Result<(), DataLayerM1
         return Err(DataLayerM1Error::EmptyField("message_id"));
     }
     if !is_valid_content_hash(leaf.content_hash.as_str()) {
-        return Err(DataLayerM1Error::InvalidContentHash(leaf.content_hash.clone()));
+        return Err(DataLayerM1Error::InvalidContentHash(
+            leaf.content_hash.clone(),
+        ));
     }
     Ok(())
 }
@@ -34,15 +36,22 @@ fn validate_leaf_uniqueness(
     seen_message_ids: &mut BTreeSet<String>,
 ) -> Result<(), DataLayerM1Error> {
     if !seen_indexes.insert(leaf.leaf_index) {
-        return Err(DataLayerM1Error::DuplicateLeafIndex { leaf_index: leaf.leaf_index });
+        return Err(DataLayerM1Error::DuplicateLeafIndex {
+            leaf_index: leaf.leaf_index,
+        });
     }
     if !seen_message_ids.insert(leaf.message_id.clone()) {
-        return Err(DataLayerM1Error::DuplicateMessageId(leaf.message_id.clone()));
+        return Err(DataLayerM1Error::DuplicateMessageId(
+            leaf.message_id.clone(),
+        ));
     }
     Ok(())
 }
 
-fn validate_leaf_position(position: usize, leaf: &DataLayerM1MerkleLeaf) -> Result<(), DataLayerM1Error> {
+fn validate_leaf_position(
+    position: usize,
+    leaf: &DataLayerM1MerkleLeaf,
+) -> Result<(), DataLayerM1Error> {
     let expected_index = position as u32;
     if leaf.leaf_index != expected_index {
         return Err(DataLayerM1Error::NonContiguousLeafIndexes {
@@ -72,9 +81,15 @@ pub(crate) fn node_digest(level: usize, left: &str, right: &str) -> String {
     tagged_digest(format!("node|level:{level}|left:{left}|right:{right}").as_str())
 }
 
-pub(crate) fn batch_digest(merkle_root: &str, message_count: usize, first: &str, last: &str) -> String {
+pub(crate) fn batch_digest(
+    merkle_root: &str,
+    message_count: usize,
+    first: &str,
+    last: &str,
+) -> String {
     tagged_digest(
-        format!("batch|root:{merkle_root}|count:{message_count}|first:{first}|last:{last}").as_str(),
+        format!("batch|root:{merkle_root}|count:{message_count}|first:{first}|last:{last}")
+            .as_str(),
     )
 }
 
@@ -90,7 +105,9 @@ pub(crate) fn map_receipt(receipt: KolmeRuntimeCommitReceipt) -> DataLayerM1Anch
     }
 }
 
-pub(crate) fn anchor_outcome_kind(outcome: &DataLayerM1AnchorOutcome) -> DataLayerM1AnchorOutcomeKind {
+pub(crate) fn anchor_outcome_kind(
+    outcome: &DataLayerM1AnchorOutcome,
+) -> DataLayerM1AnchorOutcomeKind {
     match outcome {
         DataLayerM1AnchorOutcome::Submitted(_) => DataLayerM1AnchorOutcomeKind::Submitted,
         DataLayerM1AnchorOutcome::Duplicate(_) => DataLayerM1AnchorOutcomeKind::Duplicate,

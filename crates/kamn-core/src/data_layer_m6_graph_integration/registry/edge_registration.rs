@@ -1,6 +1,6 @@
 use crate::data_layer_m6_graph_integration::{
-    DataLayerM6GraphEdgeInput, DataLayerM6GraphIntegrationError,
     support::{parse_kamn_did, validate_non_empty, validate_weight},
+    DataLayerM6GraphEdgeInput, DataLayerM6GraphIntegrationError,
 };
 
 pub(super) fn normalize_edge_input(

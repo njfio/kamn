@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh"
 DID_REGISTRATION_REASON_TAXONOMY_VERSION="kamn.kolme.did-registration-reason-taxonomy.v1"
 DID_REGISTRATION_REASON_CODES_CSV="did_registry_document_did_mismatch,did_registry_submission_key_conflict"
+TARGET_DIR="${KAMN_KOLME_DID_LIFECYCLE_CHAIN_TARGET_DIR:-$ROOT_DIR/target/contract-lanes/did-lifecycle-chain-adapter-live}"
 
 output_json=""
 max_seconds=240
@@ -37,6 +38,8 @@ fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+mkdir -p "$TARGET_DIR"
+export CARGO_TARGET_DIR="$TARGET_DIR"
 
 start_epoch="$(date +%s)"
 contract_report="$TMP_DIR/did-lifecycle-chain-contract-report.json"

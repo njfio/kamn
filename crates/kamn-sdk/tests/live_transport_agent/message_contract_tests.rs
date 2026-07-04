@@ -63,7 +63,8 @@ fn regression_live_transport_message_status_rejects_malformed_service_payload() 
 fn regression_live_transport_message_status_rejects_unknown_alias_before_network() {
     with_env_lock(|| {
         ensure_live_test_env();
-        let endpoint = format!("http://{}", reserve_loopback_addr());
+        let loopback_addr = reserve_loopback_addr();
+        let endpoint = format!("http://{loopback_addr}");
         let client = LiveTransportKamnClient::connect(endpoint.as_str())
             .expect("live transport client should construct");
         assert_eq!(

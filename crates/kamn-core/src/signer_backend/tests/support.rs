@@ -7,8 +7,10 @@ pub(super) fn with_default_signer_key_env<T>(run: impl FnOnce() -> T) -> T {
     let _lock = signer_env_lock()
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let _generic_key_guard =
-        EnvVarGuard::set("KAMN_SIGNER_PRIVATE_KEY_HEX", Some(TEST_SIGNER_PRIVATE_KEY_A_HEX));
+    let _generic_key_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+    );
     let _service_key_guard = EnvVarGuard::set(
         "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
         Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),

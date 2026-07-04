@@ -41,6 +41,9 @@ fn read_request_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, String> {
 
 fn set_request_timeout(stream: &mut TcpStream) -> Result<(), String> {
     stream
+        .set_nonblocking(false)
+        .map_err(|error| format!("request blocking-mode setup failed: {error}"))?;
+    stream
         .set_read_timeout(Some(Duration::from_secs(2)))
         .map_err(|error| format!("request read-timeout failed: {error}"))
 }
@@ -161,15 +164,20 @@ pub(crate) fn write_http_response(
     status: u16,
     body: &str,
 ) -> Result<(), String> {
+    let status_text = status_text(status);
+    let body_len = body.len();
     let payload = format!(
-        "HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        status_text(status),
-        body.len(),
-        body
+        "HTTP/1.1 {status_text}\r\nContent-Type: application/json\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n{body}"
     );
     stream
         .write_all(payload.as_bytes())
-        .map_err(|error| format!("response write failed: {error}"))
+        .map_err(|error| format!("response write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("response flush failed: {error}"))?;
+    stream
+        .shutdown(std::net::Shutdown::Write)
+        .map_err(|error| format!("response shutdown failed: {error}"))
 }
 
 fn status_text(status: u16) -> &'static str {

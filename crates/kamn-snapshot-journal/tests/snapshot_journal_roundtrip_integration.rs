@@ -4,14 +4,21 @@ use kamn_snapshot_journal::{
 };
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
 fn temp_journal_path() -> PathBuf {
+    let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock must be monotonic enough for tmp naming")
         .as_nanos();
-    std::env::temp_dir().join(format!("kamn-snapshot-journal-roundtrip-{nanos}.journal"))
+    std::env::temp_dir().join(format!(
+        "kamn-snapshot-journal-roundtrip-{}-{counter}-{nanos}.journal",
+        std::process::id()
+    ))
 }
 
 fn append_and_restore(payload: &str) -> String {
@@ -48,7 +55,10 @@ fn integration_checked_parse_and_decode_restore_payload_exactly() {
     let line = r#"{"schema_version":"kamn.snapshot-journal.entry.v1","payload_hex":"7b226b6579223a2276616c75655c6e6c696e65227d"}"#;
     let payload_hex =
         parse_snapshot_journal_record_checked(line).expect("json record should parse");
-    assert_eq!(parse_snapshot_journal_record(line), Some(payload_hex.clone()));
+    assert_eq!(
+        parse_snapshot_journal_record(line),
+        Some(payload_hex.clone())
+    );
     let decoded = decode_snapshot_journal_hex(&payload_hex).expect("decode payload hex");
     let restored = String::from_utf8(decoded).expect("utf8 payload");
     assert_eq!(restored, "{\"key\":\"value\\nline\"}");

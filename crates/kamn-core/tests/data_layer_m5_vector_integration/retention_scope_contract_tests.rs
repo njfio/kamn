@@ -1,15 +1,30 @@
 use kamn_core::{
     ContentRetentionClass, DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput,
-    DataLayerM5EmbeddingRegistry, DataLayerM5RetentionDueCandidate, DataLayerM5VectorIntegrationError,
-    DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
+    DataLayerM5EmbeddingRegistry, DataLayerM5RetentionDueCandidate,
+    DataLayerM5VectorIntegrationError, DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
 };
 
 #[test]
 fn spec_c11_retention_due_projection_aligns_with_content_lifecycle_windows() {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
-    append_retention_input(&mut registry, "embed-m5-retention-1", "msg-m5-retention-1", ContentRetentionClass::ShortLived, vec![0.3, 0.4, 0.3], 1_708_300_000);
-    append_retention_input(&mut registry, "embed-m5-retention-2", "msg-m5-retention-2", ContentRetentionClass::Compliance, vec![0.2, 0.5, 0.3], 1_708_300_010);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
+    append_retention_input(
+        &mut registry,
+        "embed-m5-retention-1",
+        "msg-m5-retention-1",
+        ContentRetentionClass::ShortLived,
+        vec![0.3, 0.4, 0.3],
+        1_708_300_000,
+    );
+    append_retention_input(
+        &mut registry,
+        "embed-m5-retention-2",
+        "msg-m5-retention-2",
+        ContentRetentionClass::Compliance,
+        vec![0.2, 0.5, 0.3],
+        1_708_300_010,
+    );
 
     let due: Vec<DataLayerM5RetentionDueCandidate> = registry
         .retention_due_for_owner("kamn:did:owner:alpha", 1_708_500_000)
@@ -22,14 +37,17 @@ fn spec_c11_retention_due_projection_aligns_with_content_lifecycle_windows() {
     let invalid_now = registry.retention_due_for_owner("kamn:did:owner:alpha", 0);
     assert!(matches!(
         invalid_now,
-        Err(DataLayerM5VectorIntegrationError::EmptyField("now_epoch_seconds"))
+        Err(DataLayerM5VectorIntegrationError::EmptyField(
+            "now_epoch_seconds"
+        ))
     ));
 }
 
 #[test]
 fn spec_c12_retention_due_accepts_canonical_equivalent_owner_did() {
-    let mut registry =
-        DataLayerM5EmbeddingRegistry::new(DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn);
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
     append_retention_input(
         &mut registry,
         "embed-m5-retention-canonical",

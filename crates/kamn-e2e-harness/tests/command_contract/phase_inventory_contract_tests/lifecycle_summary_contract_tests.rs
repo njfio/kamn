@@ -74,12 +74,24 @@ fn spec_c19_run_output_contains_lifecycle_summary_totals() {
 #[test]
 fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
     assert_lifecycle_summary_totals(
-        &render_run(&run_config("sdk-direct", None, false, "/tmp/evidence", &["S-01"])),
+        &render_run(&run_config(
+            "sdk-direct",
+            None,
+            false,
+            "/tmp/evidence",
+            &["S-01"],
+        )),
         "\"phase_totals\":{\"total\":5,\"pass\":5,\"fail\":0,\"skip\":0}",
         "\"step_totals\":{\"total\":27,\"pass\":24,\"fail\":0,\"skip\":3}",
     );
     assert_lifecycle_summary_totals(
-        &render_run(&run_config("sdk-direct", None, false, "/tmp/fail-path", &["S-01"])),
+        &render_run(&run_config(
+            "sdk-direct",
+            None,
+            false,
+            "/tmp/fail-path",
+            &["S-01"],
+        )),
         "\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":1,\"skip\":0}",
         "\"step_totals\":{\"total\":27,\"pass\":23,\"fail\":1,\"skip\":3}",
     );

@@ -48,7 +48,9 @@ fn parse_delivery_nonce(
     let sender_hex = parts.next().ok_or_else(|| invalid_payload_err(line))?;
     let nonce_raw = parts.next().ok_or_else(|| invalid_payload_err(line))?;
     let sender = decode_hex(sender_hex)?;
-    let nonce = nonce_raw.parse::<u64>().map_err(|_| invalid_payload_err(line))?;
+    let nonce = nonce_raw
+        .parse::<u64>()
+        .map_err(|_| invalid_payload_err(line))?;
     if next_nonce_by_sender.insert(sender, nonce).is_some() {
         return invalid_payload(line);
     }

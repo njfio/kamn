@@ -386,10 +386,7 @@ fn parse_content_length(header: &str) -> Result<usize, String> {
 }
 
 fn jsonrpc_success_with_id(id_token: &str, result_json: &str) -> String {
-    format!(
-        "{{\"jsonrpc\":\"{}\",\"id\":{},\"result\":{}}}",
-        JSONRPC_VERSION, id_token, result_json
-    )
+    format!("{{\"jsonrpc\":\"{JSONRPC_VERSION}\",\"id\":{id_token},\"result\":{result_json}}}")
 }
 
 fn jsonrpc_error_with_id(id_token: &str, code: i32, message: &str) -> String {

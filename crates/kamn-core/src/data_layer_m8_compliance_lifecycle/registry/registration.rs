@@ -1,7 +1,7 @@
 use super::super::{
+    lifecycle::{parse_kamn_did, validate_non_empty, validate_wrapped_keys},
     DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8MessageRecord,
     DataLayerM8MessageRecordInput, DataLayerM8RetentionClass,
-    lifecycle::{parse_kamn_did, validate_non_empty, validate_wrapped_keys},
 };
 
 pub(super) fn register_message(

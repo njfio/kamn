@@ -42,9 +42,7 @@ pub(super) fn parse_scope(scope: &str) -> Result<ServiceApiScope, ServiceApiReas
     })
 }
 
-fn require_scope_header<'a>(
-    request: &'a ParsedRequest,
-) -> Result<&'a str, ServiceApiReasonedError> {
+fn require_scope_header(request: &ParsedRequest) -> Result<&str, ServiceApiReasonedError> {
     header_value(&request.headers, REQUEST_AUTH_SCOPE_HEADER).ok_or_else(|| {
         ServiceApiReasonedError::new(
             REASON_CODE_AUTH_SCOPE_HEADER_MISSING,

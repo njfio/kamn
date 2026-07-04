@@ -15,7 +15,9 @@ pub(super) fn format_error(
         }
         DataLayerM9RealtimeDeliveryError::ChannelMembershipDenied { .. }
         | DataLayerM9RealtimeDeliveryError::AntiSpamAdmissionDenied { .. }
-        | DataLayerM9RealtimeDeliveryError::AntiSpamEngineError { .. } => write_dispatch_error(error, f),
+        | DataLayerM9RealtimeDeliveryError::AntiSpamEngineError { .. } => {
+            write_dispatch_error(error, f)
+        }
         DataLayerM9RealtimeDeliveryError::RuntimeBackpressurePolicyInvalid { .. }
         | DataLayerM9RealtimeDeliveryError::RuntimeBackpressureInputInvalid { .. }
         | DataLayerM9RealtimeDeliveryError::RuntimeBackpressureEvaluationFailed { .. } => {
@@ -39,7 +41,10 @@ fn write_did_error(
     {
         return write_reason_detail(f, "invalid did field", field, reason_code, detail);
     }
-    unreachable!("write_did_error only formats InvalidDid")
+    write!(
+        f,
+        "realtime delivery error formatter route mismatch: {error:?}"
+    )
 }
 
 fn write_policy_error(
@@ -57,7 +62,10 @@ fn write_policy_error(
             reason_code,
             detail,
         } => write_context_detail(f, "channel policy check failed", reason_code, detail),
-        _ => unreachable!("write_policy_error only formats policy variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -75,7 +83,10 @@ fn write_dispatch_error(
         DataLayerM9RealtimeDeliveryError::AntiSpamEngineError { detail } => {
             write!(f, "anti-spam engine evaluation failed: {detail}")
         }
-        _ => unreachable!("write_dispatch_error only formats dispatch variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -87,16 +98,34 @@ fn write_backpressure_error(
         DataLayerM9RealtimeDeliveryError::RuntimeBackpressurePolicyInvalid {
             reason_code,
             detail,
-        } => write_context_detail(f, "runtime backpressure policy projection failed", reason_code, detail),
+        } => write_context_detail(
+            f,
+            "runtime backpressure policy projection failed",
+            reason_code,
+            detail,
+        ),
         DataLayerM9RealtimeDeliveryError::RuntimeBackpressureInputInvalid {
             reason_code,
             detail,
-        } => write_context_detail(f, "runtime backpressure input projection failed", reason_code, detail),
+        } => write_context_detail(
+            f,
+            "runtime backpressure input projection failed",
+            reason_code,
+            detail,
+        ),
         DataLayerM9RealtimeDeliveryError::RuntimeBackpressureEvaluationFailed {
             reason_code,
             detail,
-        } => write_context_detail(f, "runtime backpressure evaluation failed", reason_code, detail),
-        _ => unreachable!("write_backpressure_error only formats runtime backpressure variants"),
+        } => write_context_detail(
+            f,
+            "runtime backpressure evaluation failed",
+            reason_code,
+            detail,
+        ),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -108,14 +137,21 @@ fn write_terminal_error(
         DataLayerM9RealtimeDeliveryError::InvalidTimestampOrder {
             connected_since_epoch_seconds,
             last_heartbeat_epoch_seconds,
-        } => write_timestamp_order(f, *connected_since_epoch_seconds, *last_heartbeat_epoch_seconds),
+        } => write_timestamp_order(
+            f,
+            *connected_since_epoch_seconds,
+            *last_heartbeat_epoch_seconds,
+        ),
         DataLayerM9RealtimeDeliveryError::SameAgentRelationship => {
             write!(f, "relationship requester and counterparty must differ")
         }
         DataLayerM9RealtimeDeliveryError::DuplicateMessageId(value) => {
             write!(f, "duplicate message id: {value}")
         }
-        _ => unreachable!("write_terminal_error only formats terminal variants"),
+        _ => write!(
+            f,
+            "realtime delivery error formatter route mismatch: {error:?}"
+        ),
     }
 }
 
@@ -123,11 +159,7 @@ fn write_empty_field(f: &mut fmt::Formatter<'_>, field: &str) -> fmt::Result {
     write!(f, "field must not be empty: {field}")
 }
 
-fn write_reason_only(
-    f: &mut fmt::Formatter<'_>,
-    prefix: &str,
-    reason_code: &str,
-) -> fmt::Result {
+fn write_reason_only(f: &mut fmt::Formatter<'_>, prefix: &str, reason_code: &str) -> fmt::Result {
     write!(f, "{prefix}: {reason_code}")
 }
 

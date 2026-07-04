@@ -12,7 +12,12 @@ pub(crate) fn evaluate_workflow_markers(workflow: &str, reasons: &mut Vec<&'stat
     }
     ensure_contains(workflow, "push:", reasons, "push_trigger_missing");
     ensure_main_branch_scope(workflow, reasons);
-    ensure_contains(workflow, "pull_request:", reasons, "pull_request_trigger_missing");
+    ensure_contains(
+        workflow,
+        "pull_request:",
+        reasons,
+        "pull_request_trigger_missing",
+    );
     ensure_contains(
         workflow,
         CENTRALIZED_SERVICE_AUTH_KEY_MARKER,
@@ -25,7 +30,12 @@ pub(crate) fn evaluate_workflow_markers(workflow: &str, reasons: &mut Vec<&'stat
 }
 
 pub(crate) fn evaluate_sdk_markers(workflow: &str, reasons: &mut Vec<&'static str>) {
-    let Some(section) = required_section(workflow, sdk_direct_section(workflow), reasons, "sdk_direct_job_missing") else {
+    let Some(section) = required_section(
+        workflow,
+        sdk_direct_section(workflow),
+        reasons,
+        "sdk_direct_job_missing",
+    ) else {
         return;
     };
     ensure_timeout(section, reasons);
@@ -37,7 +47,12 @@ pub(crate) fn evaluate_sdk_markers(workflow: &str, reasons: &mut Vec<&'static st
 }
 
 pub(crate) fn evaluate_mcp_markers(workflow: &str, reasons: &mut Vec<&'static str>) {
-    let Some(section) = required_section(workflow, mcp_agent_section(workflow), reasons, "mcp_agent_job_missing") else {
+    let Some(section) = required_section(
+        workflow,
+        mcp_agent_section(workflow),
+        reasons,
+        "mcp_agent_job_missing",
+    ) else {
         return;
     };
     ensure_timeout(section, reasons);
@@ -53,7 +68,12 @@ pub(crate) fn evaluate_mcp_markers(workflow: &str, reasons: &mut Vec<&'static st
 }
 
 pub(crate) fn evaluate_cli_markers(workflow: &str, reasons: &mut Vec<&'static str>) {
-    let Some(section) = required_section(workflow, cli_smoke_section(workflow), reasons, "cli_smoke_job_missing") else {
+    let Some(section) = required_section(
+        workflow,
+        cli_smoke_section(workflow),
+        reasons,
+        "cli_smoke_job_missing",
+    ) else {
         return;
     };
     ensure_timeout(section, reasons);
@@ -79,7 +99,12 @@ fn ensure_main_branch_scope(workflow: &str, reasons: &mut Vec<&'static str>) {
 }
 
 fn ensure_timeout(section: &str, reasons: &mut Vec<&'static str>) {
-    ensure_contains(section, "timeout-minutes: 30", reasons, "live_job_timeout_missing");
+    ensure_contains(
+        section,
+        "timeout-minutes: 30",
+        reasons,
+        "live_job_timeout_missing",
+    );
 }
 
 fn ensure_sdk_smoke_selector(section: &str, reasons: &mut Vec<&'static str>) {
@@ -146,7 +171,8 @@ fn ensure_service_health(section: &str, reasons: &mut Vec<&'static str>) {
 fn has_mcp_pr_safe_selector(section: &str) -> bool {
     let smoke_selector = section.contains("MCP_AGENT_PR_SMOKE_SCENARIOS=\"S-01,S-02\"")
         && section.contains("MCP_AGENT_SCENARIOS=\"$MCP_AGENT_PR_SMOKE_SCENARIOS\"");
-    let safe_substitute = section.contains("MCP_AGENT_PR_SAFE_SUBSTITUTE=\"kamn-mcp-server-contract-smoke\"")
+    let safe_substitute = section
+        .contains("MCP_AGENT_PR_SAFE_SUBSTITUTE=\"kamn-mcp-server-contract-smoke\"")
         && section.contains("e2e_mcp_agent_pr_safe_substitute=$MCP_AGENT_PR_SAFE_SUBSTITUTE")
         && section.contains("cargo test -p kamn-mcp-server --test stdio_protocol_contract")
         && section.contains("spec_c03_mcp_tools_call_health_dispatch_contract");

@@ -1,8 +1,8 @@
 use super::super::{
-    DATA_LAYER_M8_CEK_TOMBSTONE_MARKER, DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE,
-    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
-    DataLayerM8LegalHoldRequest, DataLayerM8MessageRecord, DataLayerM8WrappedCekInput,
-    lifecycle::authorize_owner_scope,
+    lifecycle::authorize_owner_scope, DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry,
+    DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest, DataLayerM8MessageRecord,
+    DataLayerM8WrappedCekInput, DATA_LAYER_M8_CEK_TOMBSTONE_MARKER,
+    DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE,
 };
 
 pub(super) fn set_legal_hold(

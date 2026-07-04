@@ -25,8 +25,7 @@ fn unit_data_layer_m1_merkle_batch_proof_verifies() {
     let proof = batch
         .inclusion_proof("msg-1")
         .expect("inclusion proof should build for known message");
-    verify_data_layer_m1_inclusion_proof(&proof)
-        .expect("freshly generated proof should verify");
+    verify_data_layer_m1_inclusion_proof(&proof).expect("freshly generated proof should verify");
 }
 
 #[test]

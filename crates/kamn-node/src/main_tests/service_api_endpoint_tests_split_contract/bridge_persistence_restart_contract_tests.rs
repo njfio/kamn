@@ -17,8 +17,8 @@ fn spec_c30_service_api_endpoint_bridge_persistence_restart_module_exists_and_ow
     let restart_source = read_repo_file(BRIDGE_PERSISTENCE_RESTART_FILE);
 
     assert!(
-        module_source.contains("mod bridge_persistence_restart_contract_tests;"),
-        "bridge_persistence_restart_contract_tests.rs should declare restart submodule"
+        module_source.contains("mod restart_contract_tests;"),
+        "bridge_persistence_restart_contract_tests.rs should declare restart submodule alias"
     );
     assert!(
         restart_source

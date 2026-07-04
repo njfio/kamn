@@ -1,4 +1,7 @@
 //! Channel model contracts covering membership, admin policy, and snapshot recovery.
+//!
+//! Snapshot persistence is implemented by `snapshot_codec`, which consumes the extracted
+//! `kamn_snapshot_journal` crate.
 
 mod errors;
 mod snapshot_codec;

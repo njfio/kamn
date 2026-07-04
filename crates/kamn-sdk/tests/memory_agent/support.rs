@@ -72,9 +72,7 @@ pub(crate) fn submit_report_artifact(
         .unwrap_or_else(|error| panic!("submit artifact failed: {error}"))
 }
 
-pub(crate) fn prepare_task_with_artifact(
-    client: &mut InMemoryKamnClient,
-) -> (TaskId, ArtifactId) {
+pub(crate) fn prepare_task_with_artifact(client: &mut InMemoryKamnClient) -> (TaskId, ArtifactId) {
     let creator = register_agent(client, "autonomous", "claude-4", &["research"]);
     let assignee = register_agent(client, "assistant", "gpt-5", &["research"]);
     let task_id = submit_analysis_task(client, creator, "analysis", "analyze benchmark results");

@@ -41,9 +41,11 @@ fn spec_c42_service_api_endpoint_transport_surface_module_exists_and_owns_moved_
 
 fn assert_transport_surface_module_declarations(module_source: &str) {
     for marker in [
+        "mod async_route_support;",
         "mod route_tls_contract_tests;",
         "mod http_connection_contract_tests;",
         "mod observability_contract_tests;",
+        "mod observability_support;",
         "mod support;",
     ] {
         assert!(
@@ -125,9 +127,11 @@ fn spec_c43_service_api_endpoint_root_declares_transport_surface_submodule() {
 fn spec_c44_service_api_endpoint_transport_surface_split_files_stay_below_budget() {
     for path in [
         TRANSPORT_SURFACE_OBSERVABILITY_MODULE_FILE,
+        TRANSPORT_ASYNC_ROUTE_SUPPORT_FILE,
         ROUTE_TLS_FILE,
         HTTP_CONNECTION_FILE,
         OBSERVABILITY_FILE,
+        OBSERVABILITY_SUPPORT_FILE,
         TRANSPORT_SUPPORT_FILE,
     ] {
         let source = read_repo_file(path);

@@ -26,7 +26,10 @@ fn regression_kolme_fork_submit_profile_requires_non_empty_provider_hint() {
         transport,
     )
     .expect_err("empty provider hint must fail validation");
-    assert_eq!(error.to_string(), "invalid runtime commit request provider_hint: must not be empty");
+    assert_eq!(
+        error.to_string(),
+        "invalid runtime commit request provider_hint: must not be empty"
+    );
 }
 
 #[test]

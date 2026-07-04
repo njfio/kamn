@@ -67,7 +67,10 @@ fn functional_file_channel_snapshot_store_recovery_repairs_corrupt_payload() {
         .expect("recovery should succeed");
     assert!(recovery.latest.is_none());
     assert!(recovery.repaired);
-    assert_eq!(fs::read_to_string(&path).unwrap(), "");
+    assert_eq!(
+        fs::read_to_string(&path).expect("expected test fixture operation to succeed"),
+        ""
+    );
     remove_channel_snapshot_artifacts(&path, &journal_path);
 }
 

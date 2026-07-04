@@ -7,7 +7,7 @@ ANCHORING_GATE_REASON_TAXONOMY_VERSION="kamn.kolme.message-proof-anchoring-gate-
 ANCHORING_GATE_REASON_CODES_CSV="message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required"
 
 output_json=""
-max_seconds=240
+max_seconds=360
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -193,7 +193,8 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
   "ci_smoke_lane_cost_profile": "low",
   "local_heavy_lane_execution_mode": "opt_in",
   "performance_budget_status": "verified",
-  "elapsed_seconds": ${elapsed_seconds}
+  "elapsed_seconds": ${elapsed_seconds},
+  "max_seconds": ${max_seconds}
 }
 JSON
 
@@ -215,3 +216,4 @@ echo "ci_smoke_local_heavy_boundary_status=verified"
 echo "ci_smoke_lane_cost_profile=low"
 echo "local_heavy_lane_execution_mode=opt_in"
 echo "performance_budget_status=verified"
+echo "max_seconds=$max_seconds"

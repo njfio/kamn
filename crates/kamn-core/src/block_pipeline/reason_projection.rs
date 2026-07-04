@@ -69,16 +69,16 @@ pub fn project_durable_commit_checker_reason(
 pub(crate) fn classify_durable_commit_checker_reason(
     reason_code: &str,
 ) -> DurableCommitCheckerReasonClass {
-    if reason_code.starts_with("canonical_replay_")
-        || reason_code.starts_with("durable_commit_checker_local_heavy")
-    {
-        return DurableCommitCheckerReasonClass::ReplayDrift;
-    }
-    if reason_code.starts_with("block_pipeline_commit_store") {
-        return DurableCommitCheckerReasonClass::CommitStore;
-    }
     if reason_code.contains("ci_smoke") || reason_code.contains("local_heavy") {
         return DurableCommitCheckerReasonClass::LaneBoundary;
+    }
+    if reason_code.starts_with("block_pipeline_commit_store")
+        || reason_code.starts_with("canonical_commit_store")
+    {
+        return DurableCommitCheckerReasonClass::CommitStore;
+    }
+    if reason_code.starts_with("canonical_replay_") {
+        return DurableCommitCheckerReasonClass::ReplayDrift;
     }
     DurableCommitCheckerReasonClass::Unclassified
 }

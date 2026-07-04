@@ -54,9 +54,9 @@ impl TryFrom<EscrowStatus> for DataLayerM4EscrowState {
             EscrowStatus::Released => Ok(Self::Released),
             EscrowStatus::Refunded => Ok(Self::Refunded),
             EscrowStatus::Disputed => Ok(Self::Disputed),
-            EscrowStatus::Resolved { .. } => {
-                Err(DataLayerM4EscrowInteropError::UnsupportedLegacyStatus(value))
-            }
+            EscrowStatus::Resolved { .. } => Err(
+                DataLayerM4EscrowInteropError::UnsupportedLegacyStatus(value),
+            ),
         }
     }
 }
@@ -79,7 +79,10 @@ impl fmt::Display for DataLayerM4EscrowInteropError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnsupportedLegacyStatus(status) => {
-                write!(f, "legacy escrow status cannot be represented in M4: {status:?}")
+                write!(
+                    f,
+                    "legacy escrow status cannot be represented in M4: {status:?}"
+                )
             }
         }
     }

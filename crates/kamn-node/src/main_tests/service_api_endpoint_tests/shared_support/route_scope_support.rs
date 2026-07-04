@@ -50,7 +50,10 @@ fn build_route_authz_row(
 
 pub(crate) fn parse_service_api_scope_policy_fixture(
     fixture: &str,
-) -> (BTreeMap<String, String>, Vec<ServiceApiScopePolicyFixtureRow>) {
+) -> (
+    BTreeMap<String, String>,
+    Vec<ServiceApiScopePolicyFixtureRow>,
+) {
     let mut metadata = BTreeMap::new();
     let mut rows = Vec::new();
     for line in fixture.lines().map(str::trim) {
@@ -83,7 +86,12 @@ fn parse_scope_policy_row(payload: &str) -> Option<ServiceApiScopePolicyFixtureR
     let scope = parts.next()?.trim().to_owned();
     let expected = parts.next()?.trim().to_owned();
     (!method.is_empty() && !path.is_empty() && !scope.is_empty() && !expected.is_empty()).then_some(
-        ServiceApiScopePolicyFixtureRow { method, path, scope, expected },
+        ServiceApiScopePolicyFixtureRow {
+            method,
+            path,
+            scope,
+            expected,
+        },
     )
 }
 

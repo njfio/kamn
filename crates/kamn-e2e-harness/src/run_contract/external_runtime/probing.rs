@@ -100,11 +100,17 @@ fn probe_agent(config: &RunCommandConfig, mode: ExecutionMode) -> ExternalRuntim
             detail: "agent probe skipped (mode does not require agent binary)".to_owned(),
         };
     }
-    let agent_binary = config
-        .agent_binary
-        .as_deref()
-        .expect("mcp agent runtime should have been validated before probing");
+    let Some(agent_binary) = config.agent_binary.as_deref() else {
+        return missing_agent_runtime_probe();
+    };
     probe_component(agent_binary, "agent")
+}
+
+fn missing_agent_runtime_probe() -> ExternalRuntimeComponentProbe {
+    ExternalRuntimeComponentProbe {
+        status: PhaseResultStatus::Fail,
+        detail: "mcp agent runtime probe missing after validation".to_owned(),
+    }
 }
 
 fn missing_agent_summary(

@@ -1,5 +1,5 @@
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
 
 #[test]
 fn doc_contains_sqlite_crash_recovery_ci_dry_run_durability_governance_contract() {
@@ -69,6 +69,8 @@ fn assert_sqlite_dry_run_remediation_markers() {
         "sqlite_crash_recovery_ci_dry_run_docs_marker_parity_drift",
         "sqlite_crash_recovery_ci_dry_run_docs_remediation_marker_missing",
     ] {
-        assert!(DOC.contains(&format!("sqlite_crash_recovery_ci_dry_run_remediation.{reason_code}=")));
+        assert!(DOC.contains(&format!(
+            "sqlite_crash_recovery_ci_dry_run_remediation.{reason_code}="
+        )));
     }
 }

@@ -1,5 +1,7 @@
 use super::*;
 
+type ResponseError = Box<Response>;
+
 pub(super) async fn handle_post_route(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
@@ -81,11 +83,11 @@ async fn register_agent(
 ) -> Response {
     let sender_did = match sender_did_from_context(context) {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let registration = match registration_from_context(context) {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let result = state
         .message_store
@@ -95,12 +97,12 @@ async fn register_agent(
     registration_response(result)
 }
 
-fn sender_did_from_context<'a>(context: &'a ServiceApiRequestContext) -> Result<&'a str, Response> {
+fn sender_did_from_context(context: &ServiceApiRequestContext) -> Result<&str, ResponseError> {
     super::auth::header_value(
         &context.parsed_request.headers,
         REQUEST_AUTH_SENDER_DID_HEADER,
     )
-    .ok_or_else(missing_sender_did_response)
+    .ok_or_else(|| Box::new(missing_sender_did_response()))
 }
 
 fn missing_sender_did_response() -> Response {
@@ -114,8 +116,9 @@ fn missing_sender_did_response() -> Response {
 
 fn registration_from_context(
     context: &ServiceApiRequestContext,
-) -> Result<ServiceApiAgentRegisterRequestBody, Response> {
-    parse_agent_registration_payload(context.parsed_request.body.as_str()).map_err(bad_request)
+) -> Result<ServiceApiAgentRegisterRequestBody, ResponseError> {
+    parse_agent_registration_payload(context.parsed_request.body.as_str())
+        .map_err(|error| Box::new(bad_request(error)))
 }
 
 fn registration_response(

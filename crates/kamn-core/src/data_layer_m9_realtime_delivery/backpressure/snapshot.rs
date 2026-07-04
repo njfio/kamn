@@ -1,8 +1,8 @@
+use crate::data_layer_m9_realtime_delivery::validation::{authorize_owner_scope, parse_agent_did};
 use crate::data_layer_m9_realtime_delivery::{
     DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
     DataLayerM9RecipientQueueSnapshot, DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
 };
-use crate::data_layer_m9_realtime_delivery::validation::{authorize_owner_scope, parse_agent_did};
 
 impl DataLayerM9RealtimeDeliveryRegistry {
     /// Snapshots one recipient queue preserving insertion ordering for pending/deferred IDs.
@@ -49,7 +49,8 @@ fn snapshot_parts(
     let deferred_message_ids = queue_state
         .map(|state| state.deferred_message_ids.clone())
         .unwrap_or_default();
-    let first_full_at_epoch_seconds = queue_state.and_then(|state| state.first_full_at_epoch_seconds);
+    let first_full_at_epoch_seconds =
+        queue_state.and_then(|state| state.first_full_at_epoch_seconds);
     (
         pending_message_ids,
         deferred_message_ids,

@@ -1,4 +1,5 @@
-const SIGNATURE_PROFILE_SOURCE: &str = include_str!("../src/signature_profile.rs");
+const SIGNATURE_PROFILE_ENCODING_SOURCE: &str =
+    include_str!("../src/signature_profile/encoding.rs");
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
@@ -30,7 +31,7 @@ fn function_body<'a>(source: &'a str, fn_name: &str) -> Option<&'a str> {
 #[test]
 fn regression_issue_5924_signature_profile_wipe_bytes_uses_zeroize_trait() {
     // Regression: #5924
-    let wipe_bytes_body = function_body(SIGNATURE_PROFILE_SOURCE, "fn wipe_bytes")
+    let wipe_bytes_body = function_body(SIGNATURE_PROFILE_ENCODING_SOURCE, "fn wipe_bytes")
         .expect("wipe_bytes function must remain present");
     assert!(
         wipe_bytes_body.contains("bytes.zeroize();"),

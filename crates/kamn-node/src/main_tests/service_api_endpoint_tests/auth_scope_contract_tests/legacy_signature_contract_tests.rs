@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn integration_service_api_endpoint_rejects_legacy_deterministic_signature_profile() {
-    let (snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34079", 1);
+    let (snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34079", 1);
     let response = legacy_signature_rejection_response(
         &snapshot,
         bind_addr.as_str(),
@@ -27,7 +27,7 @@ fn regression_service_api_endpoint_rejects_legacy_signature_when_toggle_env_is_t
         "KAMN_SERVICE_API_AUTH_ALLOW_LEGACY_SIGNATURES",
         Some("true"),
     );
-    let (snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34095", 1);
+    let (snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34095", 1);
     let response = legacy_signature_rejection_response(
         &snapshot,
         bind_addr.as_str(),

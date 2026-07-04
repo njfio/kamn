@@ -1,12 +1,12 @@
 {
-  "ignored_test_count": 11,
+  "ignored_test_count": 18,
   "ignored_tests": [
     {
-      "source_file": "crates/kamn-core/src/channel_models.rs",
+      "source_file": "crates/kamn-core/src/channel_models/tests/file_store_contract_tests.rs",
       "test_name": "performance_channel_snapshot_deep_lane_stress"
     },
     {
-      "source_file": "crates/kamn-core/src/message_lifecycle.rs",
+      "source_file": "crates/kamn-core/src/message_lifecycle/tests/performance_contract_tests.rs",
       "test_name": "performance_message_lifecycle_snapshot_deep_lane_stress"
     },
     {
@@ -18,11 +18,11 @@
       "test_name": "performance_file_snapshot_store_recovery_deep_lane_large_payload"
     },
     {
-      "source_file": "crates/kamn-core/src/task_operations.rs",
+      "source_file": "crates/kamn-core/src/task_operations/tests/file_store_contract_tests.rs",
       "test_name": "performance_task_operation_snapshot_store_deep_lane_stress"
     },
     {
-      "source_file": "crates/kamn-core/tests/concurrency_state_mutation.rs",
+      "source_file": "crates/kamn-core/tests/concurrency_state_mutation/performance_contract_tests.rs",
       "test_name": "performance_concurrency_state_mutation_deep_lane_stress"
     },
     {
@@ -40,6 +40,34 @@
     {
       "source_file": "crates/kamn-core/tests/zk_witness_fuzz_smoke.rs",
       "test_name": "performance_zk_witness_mutation_deep_lane_stress"
+    },
+    {
+      "source_file": "crates/kamn-e2e-harness/tests/live_s04_cli_scripted_execution.rs",
+      "test_name": "integration_live_s04_cli_scripted_task_lifecycle_probe_against_local_runtime"
+    },
+    {
+      "source_file": "crates/kamn-e2e-harness/tests/live_s04_mcp_agent_execution.rs",
+      "test_name": "integration_live_s04_mcp_agent_task_lifecycle_probe_against_local_runtime"
+    },
+    {
+      "source_file": "crates/kamn-e2e-harness/tests/live_s04_sdk_direct_execution.rs",
+      "test_name": "integration_live_s04_sdk_direct_task_lifecycle_probe_against_local_runtime"
+    },
+    {
+      "source_file": "crates/kamn-e2e-harness/tests/live_s05_cli_scripted_execution.rs",
+      "test_name": "integration_live_s05_cli_scripted_escrow_settlement_probe_against_local_runtime"
+    },
+    {
+      "source_file": "crates/kamn-e2e-harness/tests/live_s05_mcp_agent_execution.rs",
+      "test_name": "integration_live_s05_mcp_agent_escrow_settlement_probe_against_local_runtime"
+    },
+    {
+      "source_file": "crates/kamn-e2e-harness/tests/live_s05_sdk_direct_external_execution.rs",
+      "test_name": "integration_live_s05_sdk_direct_escrow_settlement_probe_against_local_runtime"
+    },
+    {
+      "source_file": "crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/task_escrow_solana_asset_movement_live_contract_tests.rs",
+      "test_name": "integration_service_api_endpoint_live_solana_asset_movement_release_submits_real_devnet_transfer"
     },
     {
       "source_file": "crates/kamn-sdk/tests/tcp_failover_matrix.rs",

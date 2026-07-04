@@ -4,13 +4,12 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use k256::ecdsa::{RecoveryId, Signature, SigningKey};
 use kamn_core::KolmeRuntimeCommitRequest;
 
 use crate::signer::{
-    build_kolme_live_managed_signing_key, encode_kolme_hex_lower,
-    KolmeLiveManagedKeySourceAdapter, KolmeLiveManagedKeySourceAdapterOutput,
-    KolmeLiveSignerSelection, ManagedExternalKeySourceAdapter,
+    build_kolme_live_managed_signing_key, encode_kolme_hex_lower, KolmeLiveManagedKeySourceAdapter,
+    KolmeLiveManagedKeySourceAdapterOutput, KolmeLiveSignerSelection,
+    ManagedExternalKeySourceAdapter,
 };
 use kamn_core::SignerProviderHandshakeMatrix;
 
@@ -43,11 +42,12 @@ pub(super) fn lock_managed_backend_env() -> std::sync::MutexGuard<'static, ()> {
 }
 
 pub(super) fn unique_temp_path(prefix: &str, suffix: &str) -> PathBuf {
+    let process_id = std::process::id();
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be after unix epoch")
         .as_nanos();
-    env::temp_dir().join(format!("{prefix}-{}-{nanos}{suffix}", std::process::id()))
+    env::temp_dir().join(format!("{prefix}-{process_id}-{nanos}{suffix}"))
 }
 
 pub(super) fn write_managed_signer_script(script_body: &str) -> PathBuf {
@@ -59,7 +59,6 @@ pub(super) fn write_managed_signer_script(script_body: &str) -> PathBuf {
 pub(super) struct ManagedBackendFixture {
     pub(super) request: KolmeRuntimeCommitRequest,
     pub(super) canonical_message: String,
-    pub(super) signing_key: SigningKey,
     pub(super) signer_public_key_hex: String,
     pub(super) signature_hex: String,
     pub(super) recovery_id: u8,
@@ -70,15 +69,18 @@ pub(super) fn deterministic_managed_backend_fixture(suffix: &str) -> ManagedBack
     let canonical_message = format!("{{\"managed\":\"{suffix}\"}}");
     let signing_key = build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
         .expect("managed signing key should derive");
-    let signer_public_key_hex =
-        encode_kolme_hex_lower(signing_key.verifying_key().to_encoded_point(true).as_bytes());
+    let signer_public_key_hex = encode_kolme_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    );
     let (signature, recovery_id) = signing_key
         .sign_recoverable(canonical_message.as_bytes())
         .expect("managed signing key should sign canonical message");
     ManagedBackendFixture {
         request,
         canonical_message,
-        signing_key,
         signer_public_key_hex,
         signature_hex: encode_kolme_hex_lower(signature.to_bytes().as_ref()),
         recovery_id: recovery_id.to_byte(),
@@ -91,8 +93,7 @@ pub(super) fn managed_signer_printf_command(
     signer_public_key_hex: &str,
 ) -> String {
     format!(
-        "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
-        signature_hex, recovery_id, signer_public_key_hex
+        "printf 'signature_hex={signature_hex}\\nrecovery_id={recovery_id}\\nsigner_public_key_hex={signer_public_key_hex}\\n'"
     )
 }
 
@@ -101,10 +102,8 @@ pub(super) fn managed_signer_printf_script(
     recovery_id: u8,
     signer_public_key_hex: &str,
 ) -> String {
-    format!(
-        "{}\n",
-        managed_signer_printf_command(signature_hex, recovery_id, signer_public_key_hex)
-    )
+    let command = managed_signer_printf_command(signature_hex, recovery_id, signer_public_key_hex);
+    format!("{command}\n")
 }
 
 pub(super) fn managed_signer_command_guard(command: &str) -> EnvVarGuard {

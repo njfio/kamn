@@ -40,9 +40,21 @@ fn spec_c10_service_api_endpoint_route_render_module_exists_and_owns_moved_cover
     let route_response = read_repo_file(ROUTE_RESPONSE_FILE);
     let route_metrics = read_repo_file(ROUTE_METRICS_FILE);
 
-    assert_contains_markers(module_source.as_str(), ROUTE_RENDER_SUBMODULE_MARKERS, "route-render module");
-    assert_contains_markers(route_response.as_str(), ROUTE_RESPONSE_MARKERS, "route-response contract file");
-    assert_contains_markers(route_metrics.as_str(), ROUTE_METRICS_MARKERS, "route-metrics contract file");
+    assert_contains_markers(
+        module_source.as_str(),
+        ROUTE_RENDER_SUBMODULE_MARKERS,
+        "route-render module",
+    );
+    assert_contains_markers(
+        route_response.as_str(),
+        ROUTE_RESPONSE_MARKERS,
+        "route-response contract file",
+    );
+    assert_contains_markers(
+        route_metrics.as_str(),
+        ROUTE_METRICS_MARKERS,
+        "route-metrics contract file",
+    );
 }
 
 #[test]

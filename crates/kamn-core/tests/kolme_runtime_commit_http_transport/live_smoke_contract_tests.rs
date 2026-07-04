@@ -28,9 +28,14 @@ fn unit_kolme_fork_live_smoke_signer_emits_recoverable_secp256k1_signature() {
     let (signature_hex, recovery_id) = kolme_fork_sign_message(message_json.as_str());
 
     assert_eq!(signature_hex.len(), 128);
-    assert!(signature_hex.chars().all(|character| character.is_ascii_hexdigit()));
+    assert!(signature_hex
+        .chars()
+        .all(|character| character.is_ascii_hexdigit()));
     assert!(recovery_id <= 3, "recovery id must be in secp256k1 range");
-    assert_eq!(recover_pubkey_hex(message_json.as_str(), signature_hex.as_str(), recovery_id), pubkey);
+    assert_eq!(
+        recover_pubkey_hex(message_json.as_str(), signature_hex.as_str(), recovery_id),
+        pubkey
+    );
 }
 
 #[test]

@@ -28,7 +28,7 @@ fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths() {
 
 #[test]
 fn integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers() {
-    let (_snapshot, bind_addr, server) = start_service_api_server("127.0.0.1:34074", 48);
+    let (_snapshot, bind_addr, server, _env) = start_service_api_server("127.0.0.1:34074", 48);
     let matrix_rows = service_api_route_authz_matrix_rows();
     let mut baseline_outcomes: Option<Vec<ObservedRouteOutcome>> = None;
 

@@ -12,8 +12,58 @@ EXPECTED_REASON_TAXONOMY_VERSION="kamn.ci.production-panic-replacement-reason-ta
 EXPECTED_REASON_CODES_CSV="scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default"
 EXPECTED_RUNTIME_EVIDENCE_OUTPUTS_CSV="runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
 BASELINE_REPORT="$TMP_DIR/no-production-expect-baseline-report.json"
-baseline_output="$(bash "$CHECKER" --output-json "$BASELINE_REPORT")"
+
+assert_checker_passes_root() {
+  local root="$1"
+  local message="$2"
+  local checker_output
+  local checker_code
+
+  set +e
+  checker_output="$(python3 "$PY_CHECKER" --root "$root" 2>&1)"
+  checker_code=$?
+  set -e
+
+  if [ "$checker_code" -ne 0 ]; then
+    printf '%s\n' "$checker_output" >&2
+    echo "$message" >&2
+    exit 1
+  fi
+}
+
+mkdir -p "$TMP_DIR/src/runtime_tests"
+cat <<'RS' > "$TMP_DIR/src/runtime_tests/support.rs"
+fn runtime_test_support_fixture() {
+    let _value = Some(9).expect("runtime test support expect should be ignored");
+}
+RS
+
+assert_checker_passes_root "$TMP_DIR" "expected src/runtime_tests support files to be treated as test-only"
+rm -rf "$TMP_DIR/src"
+
+mkdir -p "$TMP_DIR/src/drivers/cli_scripted_tests/support"
+cat <<'RS' > "$TMP_DIR/src/drivers/cli_scripted_tests/support/env_support.rs"
+fn scripted_driver_test_support_fixture() {
+    let _value = Some(9).expect("driver test support expect should be ignored");
+}
+RS
+
+assert_checker_passes_root "$TMP_DIR" "expected *_tests/support files under src to be treated as test-only"
+rm -rf "$TMP_DIR/src"
+
+set +e
+baseline_output="$(bash "$CHECKER" --output-json "$BASELINE_REPORT" 2>&1)"
+baseline_code=$?
+set -e
+
+if [ "$baseline_code" -ne 0 ]; then
+  printf '%s\n' "$baseline_output" >&2
+  echo "expected baseline production panic checker path to exit 0" >&2
+  exit 1
+fi
+
 if ! printf '%s\n' "$baseline_output" | grep -q '^status=ok$'; then
+  printf '%s\n' "$baseline_output" >&2
   echo "expected status=ok for baseline production panic checker path" >&2
   exit 1
 fi

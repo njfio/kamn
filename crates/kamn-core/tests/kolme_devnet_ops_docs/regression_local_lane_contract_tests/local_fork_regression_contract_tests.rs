@@ -1,4 +1,4 @@
-use super::super::docs_assert_support::{assert_plan_contains_all};
+use super::super::docs_assert_support::assert_plan_contains_all;
 
 const REGRESSION_REQUIRES_LOCAL_FORK_SYNC_METADATA_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
     "local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).",
@@ -6,7 +6,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_SYNC_METADATA_GUARD_MARKER_PLAN_MARKERS: &[
 
 #[test]
 fn regression_requires_local_fork_sync_metadata_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_SYNC_METADATA_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_sync_metadata_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_SYNC_METADATA_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_sync_metadata_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_SMOKE_EVIDENCE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -15,7 +18,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_SMOKE_EVIDENCE_GUARD_MARKER_PLAN_MARKERS: &
 
 #[test]
 fn regression_requires_local_fork_smoke_evidence_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_SMOKE_EVIDENCE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_smoke_evidence_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_SMOKE_EVIDENCE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_smoke_evidence_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_CHECKOUT_BOOTSTRAP_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -24,7 +30,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_CHECKOUT_BOOTSTRAP_GUARD_MARKER_PLAN_MARKER
 
 #[test]
 fn regression_requires_local_fork_checkout_bootstrap_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_CHECKOUT_BOOTSTRAP_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_checkout_bootstrap_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_CHECKOUT_BOOTSTRAP_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_checkout_bootstrap_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_MATRIX_PORTABLE_CARGO_PROFILE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -33,7 +42,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_MATRIX_PORTABLE_CARGO_PROFILE_GUARD_MARKER_
 
 #[test]
 fn regression_requires_local_fork_matrix_portable_cargo_profile_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_MATRIX_PORTABLE_CARGO_PROFILE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_matrix_portable_cargo_profile_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_MATRIX_PORTABLE_CARGO_PROFILE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_matrix_portable_cargo_profile_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_BOOTSTRAP_READINESS_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -42,7 +54,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_BOOTSTRAP_READINESS_GUARD_MARKER_PLAN_MARKE
 
 #[test]
 fn regression_requires_local_fork_bootstrap_readiness_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_BOOTSTRAP_READINESS_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_bootstrap_readiness_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_BOOTSTRAP_READINESS_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_bootstrap_readiness_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_PROCESS_LIFECYCLE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -51,7 +66,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_PROCESS_LIFECYCLE_GUARD_MARKER_PLAN_MARKERS
 
 #[test]
 fn regression_requires_local_fork_process_lifecycle_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_PROCESS_LIFECYCLE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_process_lifecycle_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_PROCESS_LIFECYCLE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_process_lifecycle_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -60,7 +78,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_GUARD_MARKER_PLAN_MARKERS
 
 #[test]
 fn regression_requires_local_fork_profile_preflight_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_profile_preflight_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_profile_preflight_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -69,7 +90,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_CONTRACT_LANE_GUARD_MARKE
 
 #[test]
 fn regression_requires_local_fork_profile_preflight_contract_lane_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_profile_preflight_contract_lane_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_PROFILE_PREFLIGHT_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_profile_preflight_contract_lane_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -78,7 +102,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_GUARD_MARKER_PLAN_MARKERS: &[&str
 
 #[test]
 fn regression_requires_local_fork_self_test_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_self_test_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_self_test_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[
@@ -87,7 +114,10 @@ const REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_CONTRACT_LANE_GUARD_MARKER_PLAN_M
 
 #[test]
 fn regression_requires_local_fork_self_test_contract_lane_guard_marker() {
-    assert_plan_contains_all(REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS, "regression_requires_local_fork_self_test_contract_lane_guard_marker");
+    assert_plan_contains_all(
+        REGRESSION_REQUIRES_LOCAL_FORK_SELF_TEST_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS,
+        "regression_requires_local_fork_self_test_contract_lane_guard_marker",
+    );
 }
 
 const REGRESSION_REQUIRES_LOCAL_FORK_PORTABILITY_PREFLIGHT_CONTRACT_LANE_GUARD_MARKER_PLAN_MARKERS: &[&str] = &[

@@ -3,7 +3,9 @@ use kamn_core::{
     DataLayerM3SearchError,
 };
 
-use crate::support::{blind_index_map, derive_blind_index_token, owner_a_text_record, register_record};
+use crate::support::{
+    blind_index_map, derive_blind_index_token, owner_a_text_record, register_record,
+};
 
 #[test]
 fn spec_c01_blind_index_normalization_is_case_and_whitespace_deterministic() {
@@ -40,7 +42,10 @@ fn spec_c03_exact_match_blind_index_search_is_owner_scoped_and_deterministic() {
             limit: Some(10),
         })
         .expect("exact blind-index search should succeed");
-    let exact_ids = exact.iter().map(|entry| entry.message_id.as_str()).collect::<Vec<_>>();
+    let exact_ids = exact
+        .iter()
+        .map(|entry| entry.message_id.as_str())
+        .collect::<Vec<_>>();
     assert_eq!(exact_ids, vec!["msg-a-2", "msg-a-1"]);
 }
 

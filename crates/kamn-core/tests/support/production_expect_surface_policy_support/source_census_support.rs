@@ -36,7 +36,10 @@ pub fn evaluate_policy(
     }
     Evaluation {
         final_decision: "NO-GO",
-        reason_codes: vec!["expect_delta_exceeded", "expect_threshold_exceeded_unwaived"],
+        reason_codes: vec![
+            "expect_delta_exceeded",
+            "expect_threshold_exceeded_unwaived",
+        ],
     }
 }
 
@@ -56,17 +59,18 @@ fn tracked_source_stdout() -> String {
         .args(["ls-tree", "-r", "--name-only", "HEAD", "crates"])
         .current_dir(repo_root())
         .output()
-        .unwrap_or_else(|error| fail("census_command_failed", &format!("git ls-tree: {}", error)));
+        .unwrap_or_else(|error| fail("census_command_failed", &format!("git ls-tree: {error}")));
     if !output.status.success() {
+        let status = output.status;
         fail(
             "census_command_failed",
-            &format!("git ls-tree exited with status {}", output.status),
+            &format!("git ls-tree exited with status {status}"),
         );
     }
     String::from_utf8(output.stdout).unwrap_or_else(|error| {
         fail(
             "census_command_failed",
-            &format!("git ls-tree output is not utf8: {}", error),
+            &format!("git ls-tree output is not utf8: {error}"),
         )
     })
 }
@@ -91,9 +95,10 @@ fn count_expect_surface(files: &[PathBuf]) -> i64 {
 
 fn count_expects_in_file(file: &PathBuf) -> i64 {
     let raw = fs::read_to_string(file).unwrap_or_else(|error| {
+        let display_path = file.display();
         fail(
             "census_value_invalid",
-            &format!("failed to read source file {}: {}", file.display(), error),
+            &format!("failed to read source file {display_path}: {error}"),
         )
     });
     count_expect_occurrences_excluding_cfg_test(&raw)

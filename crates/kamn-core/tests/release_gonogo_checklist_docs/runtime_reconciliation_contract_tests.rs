@@ -18,7 +18,10 @@ const CHECKLIST_CONTAINS_SERVICE_API_WEBSOCKET_SESSION_EVIDENCE_CONVERGENCE_GATE
 
 #[test]
 fn checklist_contains_service_api_websocket_session_evidence_convergence_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SERVICE_API_WEBSOCKET_SESSION_EVIDENCE_CONVERGENCE_GATE_MARKERS, "checklist_contains_service_api_websocket_session_evidence_convergence_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SERVICE_API_WEBSOCKET_SESSION_EVIDENCE_CONVERGENCE_GATE_MARKERS,
+        "checklist_contains_service_api_websocket_session_evidence_convergence_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SERVICE_API_AXUM_ADMISSION_BACKPRESSURE_EVIDENCE_CONVERGENCE_GATE_MARKERS: &[&str] = &[
@@ -62,7 +65,10 @@ const CHECKLIST_CONTAINS_BLOCK_RECONCILIATION_PARTITION_HEALING_MISMATCH_MAPPING
 
 #[test]
 fn checklist_contains_block_reconciliation_partition_healing_mismatch_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_BLOCK_RECONCILIATION_PARTITION_HEALING_MISMATCH_MAPPING_GATE_MARKERS, "checklist_contains_block_reconciliation_partition_healing_mismatch_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_BLOCK_RECONCILIATION_PARTITION_HEALING_MISMATCH_MAPPING_GATE_MARKERS,
+        "checklist_contains_block_reconciliation_partition_healing_mismatch_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_GATE_MARKERS: &[&str] = &[
@@ -85,7 +91,10 @@ const CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_GATE_MARKERS:
 
 #[test]
 fn checklist_contains_fork_choice_finality_evidence_convergence_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_GATE_MARKERS, "checklist_contains_fork_choice_finality_evidence_convergence_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FORK_CHOICE_FINALITY_EVIDENCE_CONVERGENCE_GATE_MARKERS,
+        "checklist_contains_fork_choice_finality_evidence_convergence_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SHUTDOWN_SIGNAL_LIFECYCLE_REASON_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -103,7 +112,10 @@ const CHECKLIST_CONTAINS_SHUTDOWN_SIGNAL_LIFECYCLE_REASON_MAPPING_GATE_MARKERS: 
 
 #[test]
 fn checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SHUTDOWN_SIGNAL_LIFECYCLE_REASON_MAPPING_GATE_MARKERS, "checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SHUTDOWN_SIGNAL_LIFECYCLE_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SHUTDOWN_DRAIN_CHECKPOINT_RECONCILIATION_GATE_MARKERS: &[&str] = &[
@@ -118,7 +130,10 @@ const CHECKLIST_CONTAINS_SHUTDOWN_DRAIN_CHECKPOINT_RECONCILIATION_GATE_MARKERS: 
 
 #[test]
 fn checklist_contains_shutdown_drain_checkpoint_reconciliation_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SHUTDOWN_DRAIN_CHECKPOINT_RECONCILIATION_GATE_MARKERS, "checklist_contains_shutdown_drain_checkpoint_reconciliation_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SHUTDOWN_DRAIN_CHECKPOINT_RECONCILIATION_GATE_MARKERS,
+        "checklist_contains_shutdown_drain_checkpoint_reconciliation_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_RUNTIME_OBSERVABILITY_ENDPOINT_PAYLOAD_CHECKER_GATE_MARKERS: &[&str] = &[
@@ -136,7 +151,10 @@ const CHECKLIST_CONTAINS_RUNTIME_OBSERVABILITY_ENDPOINT_PAYLOAD_CHECKER_GATE_MAR
 
 #[test]
 fn checklist_contains_runtime_observability_endpoint_payload_checker_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_RUNTIME_OBSERVABILITY_ENDPOINT_PAYLOAD_CHECKER_GATE_MARKERS, "checklist_contains_runtime_observability_endpoint_payload_checker_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_RUNTIME_OBSERVABILITY_ENDPOINT_PAYLOAD_CHECKER_GATE_MARKERS,
+        "checklist_contains_runtime_observability_endpoint_payload_checker_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_FAILOVER_DRIFT_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS: &[&str] = &[
@@ -167,5 +185,8 @@ const CHECKLIST_CONTAINS_FAILOVER_DRIFT_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS: &[
 
 #[test]
 fn checklist_contains_failover_drift_taxonomy_runbook_parity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FAILOVER_DRIFT_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS, "checklist_contains_failover_drift_taxonomy_runbook_parity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FAILOVER_DRIFT_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS,
+        "checklist_contains_failover_drift_taxonomy_runbook_parity_gate",
+    );
 }

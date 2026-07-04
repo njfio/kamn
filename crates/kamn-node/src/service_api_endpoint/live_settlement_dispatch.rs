@@ -5,9 +5,7 @@ mod models;
 mod test_support;
 mod transport;
 
-pub(crate) use config::{
-    resolve_live_solana_settlement_config, LiveSolanaSettlementConfig,
-};
+pub(crate) use config::{resolve_live_solana_settlement_config, LiveSolanaSettlementConfig};
 pub(crate) use models::LiveSettlementEvidence;
 
 pub(super) fn collect_slot_backed_live_settlement_evidence(
@@ -25,7 +23,4 @@ pub(super) fn collect_live_settlement_evidence(
 }
 
 #[cfg(test)]
-pub(crate) use test_support::{
-    set_test_live_solana_settlement_override,
-    TestLiveSolanaSettlementOverrideGuard,
-};
+pub(crate) use test_support::set_test_live_solana_settlement_override;

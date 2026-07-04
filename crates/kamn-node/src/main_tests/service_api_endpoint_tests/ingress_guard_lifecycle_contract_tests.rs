@@ -1,5 +1,7 @@
 #[path = "ingress_guard_lifecycle_contract_tests/concurrency_guard_contract_tests.rs"]
 mod concurrency_guard_contract_tests;
+#[path = "ingress_guard_lifecycle_contract_tests/concurrency_support.rs"]
+mod concurrency_support;
 #[path = "ingress_guard_lifecycle_contract_tests/ingress_budget_contract_tests.rs"]
 mod ingress_budget_contract_tests;
 #[path = "ingress_guard_lifecycle_contract_tests/lifecycle_projection_contract_tests.rs"]

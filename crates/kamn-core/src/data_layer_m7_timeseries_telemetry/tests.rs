@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod contracts {
     use super::super::{
         daily_bucket, hourly_bucket, project_m7_observability_projection, validate_kamn_did,
         DataLayerM7TelemetryPointRecord, DataLayerM7TimeseriesError,

@@ -1,23 +1,22 @@
-use super::provider_client::{
-    deterministic_secure_provider_client_sign, SecureSignerProviderClientSignFn,
-};
+use super::provider_client::{SecureSignerProviderClientMode, SecureSignerProviderClientSignFn};
 use super::traits::SignerBackend;
 use super::verification::{matches_legacy_signature, verify_with_expected_public_key};
-use crate::signer_backend::env::{
-    SECURE_MOCK_BACKEND_NAME,
-};
+use crate::signer_backend::env::SECURE_MOCK_BACKEND_NAME;
 use crate::signer_backend::errors::SignerBackendError;
 use crate::signer_backend::provider_policy::{
     BackendSignature, CanonicalSecureKeyReference, SecureSignerProvider, SignerKeyRole,
     SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus,
 };
 use crate::signer_backend::request::SigningRequest;
+use crate::signer_backend::signing_cache::SignerBackendSigningCache;
+use std::sync::Arc;
 
 /// Secure-provider signer backend with handshake and key-role policy enforcement.
 #[derive(Debug, Clone)]
 pub struct SecureSignerBackend {
     provider_handshake_matrix: SignerProviderHandshakeMatrix,
-    provider_client_sign: SecureSignerProviderClientSignFn,
+    provider_client: SecureSignerProviderClientMode,
+    signing_cache: Arc<SignerBackendSigningCache>,
 }
 
 impl SecureSignerBackend {
@@ -32,9 +31,9 @@ impl SecureSignerBackend {
     pub fn with_provider_handshake_matrix(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
     ) -> Self {
-        Self::with_provider_client(
+        Self::with_deterministic_provider_client_and_cache(
             provider_handshake_matrix,
-            deterministic_secure_provider_client_sign,
+            Arc::new(SignerBackendSigningCache::default()),
         )
     }
 
@@ -43,9 +42,33 @@ impl SecureSignerBackend {
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
         provider_client_sign: SecureSignerProviderClientSignFn,
     ) -> Self {
-        Self {
+        Self::with_provider_client_and_cache(
             provider_handshake_matrix,
             provider_client_sign,
+            Arc::new(SignerBackendSigningCache::default()),
+        )
+    }
+
+    pub(crate) fn with_deterministic_provider_client_and_cache(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+        signing_cache: Arc<SignerBackendSigningCache>,
+    ) -> Self {
+        Self {
+            provider_handshake_matrix,
+            provider_client: SecureSignerProviderClientMode::Deterministic,
+            signing_cache,
+        }
+    }
+
+    pub(crate) fn with_provider_client_and_cache(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+        provider_client_sign: SecureSignerProviderClientSignFn,
+        signing_cache: Arc<SignerBackendSigningCache>,
+    ) -> Self {
+        Self {
+            provider_handshake_matrix,
+            provider_client: SecureSignerProviderClientMode::Custom(provider_client_sign),
+            signing_cache,
         }
     }
 
@@ -56,7 +79,7 @@ impl SecureSignerBackend {
         let secure_key = CanonicalSecureKeyReference::parse(&request.key_id)?;
         self.enforce_key_role_segregation(request, &secure_key)?;
         self.enforce_provider_handshake(secure_key.provider)?;
-        let signed = (self.provider_client_sign)(request, &secure_key)?;
+        let signed = self.sign_with_provider_client(request, &secure_key)?;
         let expected_backend = secure_key.provider.backend_name().to_owned();
         if signed.backend != expected_backend {
             return Err(SignerBackendError::ProviderClientBackendMismatch {
@@ -66,6 +89,25 @@ impl SecureSignerBackend {
             });
         }
         Ok(signed)
+    }
+
+    fn sign_with_provider_client(
+        &self,
+        request: &SigningRequest,
+        secure_key: &CanonicalSecureKeyReference,
+    ) -> Result<BackendSignature, SignerBackendError> {
+        match self.provider_client {
+            SecureSignerProviderClientMode::Deterministic => {
+                let signature = request.expected_signature_with_cache(&self.signing_cache)?;
+                Ok(BackendSignature {
+                    backend: secure_key.provider.backend_name().to_owned(),
+                    signature,
+                })
+            }
+            SecureSignerProviderClientMode::Custom(provider_client_sign) => {
+                provider_client_sign(request, secure_key)
+            }
+        }
     }
 
     pub(crate) fn verify_with_backend_name(

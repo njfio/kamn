@@ -133,13 +133,12 @@ const DOC_CONTRACT_CASES: &[DocContractCase] = &[
 #[test]
 fn functional_rust_sdk_alpha_doc_contract_cases_require_markers() {
     for case in DOC_CONTRACT_CASES {
+        let document_label = case.document_label;
+        let case_id = case.case_id;
         for marker in case.required_markers {
             assert!(
                 case.document.contains(marker),
-                "missing marker in {} for case {}: {}",
-                case.document_label,
-                case.case_id,
-                marker
+                "missing marker in {document_label} for case {case_id}: {marker}"
             );
         }
     }

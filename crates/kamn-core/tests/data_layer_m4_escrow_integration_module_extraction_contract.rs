@@ -32,7 +32,11 @@ fn assert_root_budget(root: &Path, root_source: &str) {
 fn assert_module_layout(src_root: &Path) {
     for relative in expected_modules() {
         let path = src_root.join(relative);
-        assert!(path.exists(), "missing extracted module: {}", path.display());
+        assert!(
+            path.exists(),
+            "missing extracted module: {}",
+            path.display()
+        );
     }
 }
 

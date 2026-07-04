@@ -99,7 +99,18 @@ def main(argv: list[str]) -> int:
 
         if run_python:
             print("running python live transport contract lane tests")
-            run_checked(["python3", "-m", "unittest", "tests/python/test_sdk.py"])
+            run_checked(
+                [
+                    "python3",
+                    "-m",
+                    "unittest",
+                    "discover",
+                    "-s",
+                    "tests/python",
+                    "-p",
+                    "test_sdk.py",
+                ]
+            )
 
         if run_typescript:
             print("running typescript live transport contract lane tests")

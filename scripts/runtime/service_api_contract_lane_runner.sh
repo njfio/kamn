@@ -121,6 +121,11 @@ service_api_contract_lane_run() {
     exit 1
   fi
 
+  if [[ "$ci_fast_gate" == "FAIL" ]]; then
+    echo "${LANE_LABEL} policy rejected: ci_fast_gate_failed" >&2
+    exit 1
+  fi
+
   local start_epoch
   start_epoch="$(date +%s)"
   local tmp_dir
@@ -138,6 +143,25 @@ service_api_contract_lane_run() {
 
   local validation_output
   validation_output="$("${validation_cmd[@]}")"
+  local validation_report_markers
+  validation_report_markers="$(
+    python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+for key, value in payload.items():
+    if isinstance(value, bool):
+        print(f"{key}={str(value).lower()}")
+    elif isinstance(value, (str, int, float)):
+        print(f"{key}={value}")
+PY
+  )"
+  validation_output="$(
+    printf '%s\n' "$validation_output"
+    printf '%s\n' "$validation_report_markers"
+  )"
 
   local marker
   for marker in "${VALIDATION_REQUIRED_MARKERS[@]}"; do

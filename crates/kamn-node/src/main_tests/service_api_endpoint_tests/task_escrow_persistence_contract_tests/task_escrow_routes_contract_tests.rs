@@ -4,8 +4,7 @@ mod task_dispatch_support;
 use super::super::*;
 use super::support::{
     accept_task, build_task_escrow_snapshot, create_task, default_audit_export_file, fund_escrow,
-    raw_create_task_response, read_audit_export_json, release_escrow, set_audit_export_file_env,
-    set_state_file_env, unique_named_state_file,
+    read_audit_export_json, release_escrow, set_state_file_env, unique_named_state_file,
 };
 use task_dispatch_support::{
     assert_dispatched_task_state, create_task_with_broken_audit_export,

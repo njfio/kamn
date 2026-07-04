@@ -10,7 +10,11 @@ test_harness_require_executable "$SCRIPT" "expected anti-flake policy checker sc
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-future="$(date -u -d '+14 days' +%Y-%m-%d)"
+if future="$(date -u -d '+14 days' +%Y-%m-%d 2>/dev/null)"; then
+  :
+else
+  future="$(date -u -v+14d +%Y-%m-%d)"
+fi
 
 cat > "$TMP_DIR/empty-registry.txt" <<'EOF'
 # owner|test-id|issue|expiry|notes

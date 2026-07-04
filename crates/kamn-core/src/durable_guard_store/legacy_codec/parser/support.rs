@@ -74,7 +74,9 @@ where
     I: Iterator<Item = &'a str>,
 {
     let line = next_required_line(lines, &format!("missing {field_name} field"))?;
-    let value = line.strip_prefix(prefix).ok_or_else(|| invalid_payload_err(line))?;
+    let value = line
+        .strip_prefix(prefix)
+        .ok_or_else(|| invalid_payload_err(line))?;
     value.parse::<u16>().map_err(|_| invalid_payload_err(line))
 }
 
@@ -88,9 +90,7 @@ where
     lines.next().ok_or_else(|| invalid_payload_err(message))
 }
 
-pub(super) fn invalid_payload<T>(
-    value: &str,
-) -> Result<T, DurableGuardSnapshotStoreError> {
+pub(super) fn invalid_payload<T>(value: &str) -> Result<T, DurableGuardSnapshotStoreError> {
     Err(invalid_payload_err(value))
 }
 

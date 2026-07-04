@@ -417,7 +417,8 @@ if lane_payload.get("kolme_fixture_profile_version") != "v1":
     raise SystemExit("expected kolme_fixture_profile_version marker")
 if lane_payload.get("kolme_fixture_profile_status") != "planned":
     raise SystemExit("expected kolme_fixture_profile_status=planned in dry-run")
-if lane_payload.get("kolme_checkout_path") != "/tmp/kolme_fork":
+default_kolme_checkout_path = str(pathlib.Path("/tmp/kolme_fork").resolve())
+if lane_payload.get("kolme_checkout_path") != default_kolme_checkout_path:
     raise SystemExit("expected default kolme_checkout_path marker")
 if lane_payload.get("kolme_expected_remote_url") != "https://github.com/njfio/kolme_fork.git":
     raise SystemExit("expected default kolme_expected_remote_url marker")

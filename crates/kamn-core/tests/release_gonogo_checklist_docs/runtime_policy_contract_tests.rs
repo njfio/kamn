@@ -14,7 +14,10 @@ const CHECKLIST_CONTAINS_UNIFIED_API_OBSERVABILITY_PAYLOAD_TAXONOMY_GATE_MARKERS
 
 #[test]
 fn checklist_contains_unified_api_observability_payload_taxonomy_gate_markers() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_UNIFIED_API_OBSERVABILITY_PAYLOAD_TAXONOMY_GATE_MARKERS_MARKERS, "checklist_contains_unified_api_observability_payload_taxonomy_gate_markers");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_UNIFIED_API_OBSERVABILITY_PAYLOAD_TAXONOMY_GATE_MARKERS_MARKERS,
+        "checklist_contains_unified_api_observability_payload_taxonomy_gate_markers",
+    );
 }
 
 const CHECKLIST_CONTAINS_PANIC_REPLACEMENT_REASON_TAXONOMY_AND_RUNTIME_EVIDENCE_GATE_MARKERS: &[&str] = &[
@@ -33,7 +36,10 @@ const CHECKLIST_CONTAINS_PANIC_REPLACEMENT_REASON_TAXONOMY_AND_RUNTIME_EVIDENCE_
 
 #[test]
 fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_PANIC_REPLACEMENT_REASON_TAXONOMY_AND_RUNTIME_EVIDENCE_GATE_MARKERS, "checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_PANIC_REPLACEMENT_REASON_TAXONOMY_AND_RUNTIME_EVIDENCE_GATE_MARKERS,
+        "checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_DEPENDENCY_LICENSE_METADATA_DOCS_MISMATCH_GATE_MARKERS: &[&str] = &[
@@ -52,7 +58,10 @@ const CHECKLIST_CONTAINS_DEPENDENCY_LICENSE_METADATA_DOCS_MISMATCH_GATE_MARKERS:
 
 #[test]
 fn checklist_contains_dependency_license_metadata_docs_mismatch_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_DEPENDENCY_LICENSE_METADATA_DOCS_MISMATCH_GATE_MARKERS, "checklist_contains_dependency_license_metadata_docs_mismatch_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_DEPENDENCY_LICENSE_METADATA_DOCS_MISMATCH_GATE_MARKERS,
+        "checklist_contains_dependency_license_metadata_docs_mismatch_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_MACHINE_READABLE_BUNDLE_CONTRACT_MARKERS: &[&str] = &[
@@ -66,7 +75,10 @@ const CHECKLIST_CONTAINS_MACHINE_READABLE_BUNDLE_CONTRACT_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_machine_readable_bundle_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_MACHINE_READABLE_BUNDLE_CONTRACT_MARKERS, "checklist_contains_machine_readable_bundle_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_MACHINE_READABLE_BUNDLE_CONTRACT_MARKERS,
+        "checklist_contains_machine_readable_bundle_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_TLS_EVIDENCE_COMPLETENESS_FRESHNESS_GATE_MARKERS: &[&str] = &[
@@ -85,7 +97,10 @@ const CHECKLIST_CONTAINS_TLS_EVIDENCE_COMPLETENESS_FRESHNESS_GATE_MARKERS: &[&st
 
 #[test]
 fn checklist_contains_tls_evidence_completeness_freshness_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_TLS_EVIDENCE_COMPLETENESS_FRESHNESS_GATE_MARKERS, "checklist_contains_tls_evidence_completeness_freshness_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_TLS_EVIDENCE_COMPLETENESS_FRESHNESS_GATE_MARKERS,
+        "checklist_contains_tls_evidence_completeness_freshness_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_AUDIT_INTEGRITY_CONVERGENCE_GATE_MARKERS: &[&str] = &[
@@ -100,7 +115,10 @@ const CHECKLIST_CONTAINS_AUDIT_INTEGRITY_CONVERGENCE_GATE_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_audit_integrity_convergence_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_AUDIT_INTEGRITY_CONVERGENCE_GATE_MARKERS, "checklist_contains_audit_integrity_convergence_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_AUDIT_INTEGRITY_CONVERGENCE_GATE_MARKERS,
+        "checklist_contains_audit_integrity_convergence_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_JOURNAL_APPEND_CHECKPOINT_INTEGRITY_GATE_MARKERS: &[&str] = &[
@@ -118,7 +136,10 @@ const CHECKLIST_CONTAINS_JOURNAL_APPEND_CHECKPOINT_INTEGRITY_GATE_MARKERS: &[&st
 
 #[test]
 fn checklist_contains_journal_append_checkpoint_integrity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_JOURNAL_APPEND_CHECKPOINT_INTEGRITY_GATE_MARKERS, "checklist_contains_journal_append_checkpoint_integrity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_JOURNAL_APPEND_CHECKPOINT_INTEGRITY_GATE_MARKERS,
+        "checklist_contains_journal_append_checkpoint_integrity_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_REPLAY_IDEMPOTENCY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS: &[&str] = &[
@@ -139,7 +160,10 @@ const CHECKLIST_CONTAINS_REPLAY_IDEMPOTENCY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS
 
 #[test]
 fn checklist_contains_replay_idempotency_taxonomy_runbook_parity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_REPLAY_IDEMPOTENCY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS, "checklist_contains_replay_idempotency_taxonomy_runbook_parity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_REPLAY_IDEMPOTENCY_TAXONOMY_RUNBOOK_PARITY_GATE_MARKERS,
+        "checklist_contains_replay_idempotency_taxonomy_runbook_parity_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_CRASH_REPLAY_EVIDENCE_CONVERGENCE_AND_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -162,5 +186,8 @@ const CHECKLIST_CONTAINS_CRASH_REPLAY_EVIDENCE_CONVERGENCE_AND_MAPPING_GATE_MARK
 
 #[test]
 fn checklist_contains_crash_replay_evidence_convergence_and_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_CRASH_REPLAY_EVIDENCE_CONVERGENCE_AND_MAPPING_GATE_MARKERS, "checklist_contains_crash_replay_evidence_convergence_and_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_CRASH_REPLAY_EVIDENCE_CONVERGENCE_AND_MAPPING_GATE_MARKERS,
+        "checklist_contains_crash_replay_evidence_convergence_and_mapping_gate",
+    );
 }

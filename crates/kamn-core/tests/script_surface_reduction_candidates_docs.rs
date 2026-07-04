@@ -7,8 +7,8 @@ const DOC_PATH: &str = "docs/developer/script-surface-reduction-candidates.md";
 const SH_THRESHOLD_MAX_LOC: usize = 25;
 const PY_THRESHOLD_MAX_LOC: usize = 40;
 const TRACKED_CI_STATS: CategoryStats = CategoryStats {
-    total: 199,
-    short: 19,
+    total: 216,
+    short: 20,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

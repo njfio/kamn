@@ -20,19 +20,12 @@ pub(crate) fn build_task_escrow_snapshot(api_bind: &str) -> ServiceApiSnapshot {
 }
 
 pub(crate) fn unique_named_state_file(prefix: &str) -> PathBuf {
-    std::env::temp_dir().join(format!(
-        "{prefix}-{}-{}.json",
-        std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock should be monotonic")
-            .as_nanos()
-    ))
-}
-
-pub(crate) fn read_state_json(path: &Path) -> Value {
-    let payload = fs::read_to_string(path).expect("state file should remain readable");
-    serde_json::from_str(payload.as_str()).expect("state payload should parse")
+    let process_id = std::process::id();
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be monotonic")
+        .as_nanos();
+    std::env::temp_dir().join(format!("{prefix}-{process_id}-{nanos}.json"))
 }
 
 pub(crate) fn set_state_file_env(path: &Path) -> (String, EnvVarGuard) {
@@ -58,11 +51,9 @@ where
 }
 
 pub(crate) fn state_hash(snapshot: &ServiceApiSnapshot) -> String {
-    format!(
-        "service-api:{}:{}",
-        snapshot.chain_id.as_str(),
-        snapshot.chain_version.as_str()
-    )
+    let chain_id = snapshot.chain_id.as_str();
+    let chain_version = snapshot.chain_version.as_str();
+    format!("service-api:{chain_id}:{chain_version}")
 }
 
 fn spawn_api_server(
@@ -86,7 +77,6 @@ fn assert_api_server_stopped(server: thread::JoinHandle<Result<(), String>>) {
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
         server_result.is_ok(),
-        "service api endpoint should stop cleanly: {:?}",
-        server_result
+        "service api endpoint should stop cleanly: {server_result:?}"
     );
 }

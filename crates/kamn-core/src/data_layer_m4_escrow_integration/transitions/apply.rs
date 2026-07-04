@@ -2,12 +2,12 @@ mod support;
 
 use super::super::models::*;
 use super::super::validation::{
-    ensure_transition_allowed, reason_code_for_transition, validate_hash_token,
-    validate_non_empty, validate_non_zero_timestamp,
+    ensure_transition_allowed, reason_code_for_transition, validate_hash_token, validate_non_empty,
+    validate_non_zero_timestamp,
 };
 use support::{
-    activate_transition, dispute_transition, expire_transition, fund_transition,
-    refund_transition, release_transition,
+    activate_transition, dispute_transition, expire_transition, fund_transition, refund_transition,
+    release_transition,
 };
 
 impl DataLayerM4EscrowTransitionEngine {
@@ -107,7 +107,10 @@ fn apply_settlement_transition(
         escrow.escrow_id.as_str(),
         from,
         action,
-        &[DataLayerM4EscrowState::Active, DataLayerM4EscrowState::Disputed],
+        &[
+            DataLayerM4EscrowState::Active,
+            DataLayerM4EscrowState::Disputed,
+        ],
     )?;
     escrow.settled_at_epoch_seconds = Some(settled_at_epoch_seconds);
     escrow.settlement_receipt_hash = Some(settlement_receipt_hash.to_owned());

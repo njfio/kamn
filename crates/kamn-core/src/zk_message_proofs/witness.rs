@@ -5,12 +5,17 @@ use std::collections::BTreeSet;
 /// Reduced witness summary emitted from a canonical message envelope.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkMessageWitness {
+    /// Public commitment carried by this public contract model.
     pub public_commitment: String,
+    /// Revealed fields carried by this public contract model.
     pub revealed_fields: Vec<String>,
+    /// Hidden field count carried by this public contract model.
     pub hidden_field_count: usize,
+    /// Payload bytes carried by this public contract model.
     pub payload_bytes: usize,
 }
 
+/// Runs the build message witness contract helper.
 pub fn build_message_witness(
     envelope: &CanonicalMessageEnvelope,
     private_fields: &[&str],

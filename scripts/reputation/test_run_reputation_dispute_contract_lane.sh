@@ -56,6 +56,16 @@ if ! grep -q "from framework.contract_lane_helpers import" "$SHARED_CONTRACT"; t
   exit 1
 fi
 
+if ! grep -q "KAMN_REPUTATION_DISPUTE_TARGET_DIR" "$SHARED_CONTRACT"; then
+  echo "expected reputation dispute shared contract-lane module to expose isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR.*reputation_target_dir' "$SHARED_CONTRACT"; then
+  echo "expected reputation dispute shared contract-lane module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+
 bundle_file="$TMP_DIR/reputation-dispute-contract-bundle.json"
 output="$(bash "$CONTRACT_LANE" --output-file "$bundle_file")"
 

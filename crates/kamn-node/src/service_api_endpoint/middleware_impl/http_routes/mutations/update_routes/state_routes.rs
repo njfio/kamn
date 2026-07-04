@@ -127,15 +127,19 @@ async fn resolve_bridge_forward_result(
     let Some(config) = state.live_solana_bridge_dispatch.as_ref() else {
         return Ok(state.message_store.lock().await.forward_bridge(bridge_id));
     };
-    let evidence = crate::service_api_endpoint::live_bridge_dispatch::collect_live_bridge_forward_evidence(
-        config,
-        bridge_id,
-    )?;
-    Ok(state.message_store.lock().await.forward_bridge_with_evidence(
-        bridge_id,
-        evidence.target_message_id.as_str(),
-        evidence.forward_tx_hash.as_str(),
-    ))
+    let evidence =
+        crate::service_api_endpoint::live_bridge_dispatch::collect_live_bridge_forward_evidence(
+            config, bridge_id,
+        )?;
+    Ok(state
+        .message_store
+        .lock()
+        .await
+        .forward_bridge_with_evidence(
+            bridge_id,
+            evidence.target_message_id.as_str(),
+            evidence.forward_tx_hash.as_str(),
+        ))
 }
 
 fn live_bridge_dispatch_error(error: &str) -> Response {

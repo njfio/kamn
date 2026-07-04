@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -16,6 +17,15 @@ sys.path.insert(0, str(SCRIPT_DIR.parent))
 
 from framework.contract_framework import ContractError, fail, write_json  # noqa: E402
 
+ROLE_SMOKE_TEST_TARGET = "role_smoke_network"
+ROLE_SMOKE_TEST_NAME = "functional_roles_complete_smoke_roundtrip_with_gossip"
+TARGET_DIR = Path(
+    os.environ.get(
+        "KAMN_LIVE_NETWORK_SMOKE_TARGET_DIR",
+        str(ROOT_DIR / "target" / "contract-lanes" / "live-network-smoke"),
+    )
+)
+
 
 def _require_non_negative_int(variable_name: str, raw_value: str) -> int:
     if not raw_value.isdigit():
@@ -27,6 +37,130 @@ def _require_bool(variable_name: str, raw_value: str) -> bool:
     if raw_value not in {"true", "false"}:
         fail(f"{variable_name} must be true or false")
     return raw_value == "true"
+
+
+def _cargo_target_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["CARGO_TARGET_DIR"] = str(TARGET_DIR)
+    return env
+
+
+def _run_checked_command(
+    command: list[str],
+    label: str,
+    env_overrides: dict[str, str] | None = None,
+    timeout_seconds: int | None = None,
+) -> None:
+    env = os.environ.copy()
+    if env_overrides:
+        env.update(env_overrides)
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT_DIR,
+            capture_output=True,
+            check=False,
+            env=env,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as error:
+        output = f"{error.stdout or ''}{error.stderr or ''}".strip()
+        detail = f"live-network smoke command timed out: {label}"
+        if timeout_seconds is not None:
+            detail = f"{detail} after {timeout_seconds}s"
+        if output:
+            detail = f"{detail}: {output}"
+        fail(detail)
+    if completed.returncode == 0:
+        return
+
+    output = f"{completed.stdout}{completed.stderr}".strip()
+    detail = f"{label} failed with exit code {completed.returncode}"
+    if output:
+        detail = f"{detail}: {output}"
+    fail(detail)
+
+
+def _artifact_executable(cargo_stdout: str, target_name: str) -> Path:
+    executable = None
+    for line in cargo_stdout.splitlines():
+        if not line.strip().startswith("{"):
+            continue
+        try:
+            artifact = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if artifact.get("reason") != "compiler-artifact":
+            continue
+        if artifact.get("target", {}).get("name") != target_name:
+            continue
+        if artifact.get("executable"):
+            executable = Path(artifact["executable"])
+
+    if executable is not None and executable.is_file():
+        return executable
+    fail(f"expected Cargo to report executable for {target_name}")
+
+
+def _prebuild_role_smoke_network(timeout_seconds: int) -> Path:
+    TARGET_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        completed = subprocess.run(
+            [
+                "cargo",
+                "test",
+                "-p",
+                "kamn-core",
+                "--test",
+                ROLE_SMOKE_TEST_TARGET,
+                "--no-run",
+                "--message-format=json",
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            env=_cargo_target_env(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as error:
+        output = f"{error.stdout or ''}{error.stderr or ''}".strip()
+        detail = (
+            "live-network smoke command timed out: "
+            f"role smoke network prebuild after {timeout_seconds}s"
+        )
+        if output:
+            detail = f"{detail}: {output}"
+        fail(detail)
+    if completed.returncode != 0:
+        output = f"{completed.stdout}{completed.stderr}".strip()
+        detail = f"role smoke network prebuild failed with exit code {completed.returncode}"
+        if output:
+            detail = f"{detail}: {output}"
+        fail(detail)
+    return _artifact_executable(completed.stdout, ROLE_SMOKE_TEST_TARGET)
+
+
+def _prebuild_smoke_artifacts(timeout_seconds: int) -> Path:
+    _run_checked_command(
+        [
+            "cargo",
+            "build",
+            "--quiet",
+            "-p",
+            "kamn-sdk",
+            "--example",
+            "localhost_signed_listener",
+            "--example",
+            "localhost_signed_sender",
+        ],
+        "localhost signed demo example prebuild",
+        {"CARGO_TARGET_DIR": str(TARGET_DIR)},
+        timeout_seconds=timeout_seconds,
+    )
+    return _prebuild_role_smoke_network(timeout_seconds)
 
 
 def run_live_network_smoke_lane(args: argparse.Namespace) -> int:
@@ -45,44 +179,42 @@ def run_live_network_smoke_lane(args: argparse.Namespace) -> int:
         os.environ.get("KAMN_LIVE_NETWORK_SMOKE_SKIP_COMMANDS", "false"),
     )
 
+    role_smoke_executable: Path | None = None
+    command_timeout_seconds = max(max_seconds, 1)
+    if not skip_commands:
+        role_smoke_executable = _prebuild_smoke_artifacts(command_timeout_seconds)
+
     start_epoch = int(time.time())
     if fake_delay_seconds > 0:
         time.sleep(fake_delay_seconds)
 
     commands: list[str] = []
-    try:
-        if not skip_commands:
-            subprocess.run(
-                ["bash", str(ROOT_DIR / "scripts/sdk/run_localhost_signed_demo.sh")],
-                cwd=ROOT_DIR,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-                text=True,
-            )
-            commands.append("scripts/sdk/run_localhost_signed_demo.sh")
+    if not skip_commands:
+        _run_checked_command(
+            ["bash", str(ROOT_DIR / "scripts/sdk/run_localhost_signed_demo.sh")],
+            "localhost signed demo",
+            {
+                "KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS": str(
+                    command_timeout_seconds
+                ),
+                "KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD": "true",
+            },
+            timeout_seconds=command_timeout_seconds,
+        )
+        commands.append("scripts/sdk/run_localhost_signed_demo.sh")
 
-            subprocess.run(
-                [
-                    "cargo",
-                    "test",
-                    "-p",
-                    "kamn-core",
-                    "--test",
-                    "role_smoke_network",
-                    "functional_roles_complete_smoke_roundtrip_with_gossip",
-                    "--",
-                    "--exact",
-                ],
-                cwd=ROOT_DIR,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-                text=True,
-            )
-            commands.append("cargo_test_role_smoke_network_functional_roundtrip")
-    except subprocess.CalledProcessError as error:
-        fail(f"live-network smoke lane command failed with exit code {error.returncode}")
+        if role_smoke_executable is None:
+            fail("expected prebuilt role smoke executable")
+        _run_checked_command(
+            [
+                str(role_smoke_executable),
+                ROLE_SMOKE_TEST_NAME,
+                "--exact",
+            ],
+            "role smoke network contract",
+            timeout_seconds=command_timeout_seconds,
+        )
+        commands.append("cargo_test_role_smoke_network_functional_roundtrip")
 
     elapsed_seconds = int(time.time()) - start_epoch
     reason_codes: list[str] = []

@@ -5,21 +5,26 @@
 //! anchoring worker that targets the existing Kolme runtime-commit client.
 
 mod anchoring;
+mod anchoring_helpers;
 mod batch;
+mod errors;
 mod models;
 mod support;
+// Root extraction marker: #[cfg(test)] mod tests;
+#[cfg(test)]
+mod tests;
 mod verification;
-#[cfg(test)] mod tests;
 
 pub use anchoring::DataLayerM1KolmeAnchoringWorker;
 pub use batch::DataLayerM1MerkleBatch;
+pub use errors::DataLayerM1Error;
 pub use models::{
     DataLayerM1AnchorFailureMatrixCase, DataLayerM1AnchorFailureMatrixDecision,
     DataLayerM1AnchorFailureMatrixEvidence, DataLayerM1AnchorFailureMatrixReport,
     DataLayerM1AnchorOutcome, DataLayerM1AnchorOutcomeKind, DataLayerM1AnchorReceipt,
-    DataLayerM1AnchorResult, DataLayerM1AnchorRetryClass, DataLayerM1Error,
-    DataLayerM1MerkleInclusionProof, DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep,
-    DataLayerM1ProofSiblingSide, DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
+    DataLayerM1AnchorResult, DataLayerM1AnchorRetryClass, DataLayerM1MerkleInclusionProof,
+    DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep, DataLayerM1ProofSiblingSide,
+    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
     DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE, DATA_LAYER_M1_HASH_ALGORITHM,
     DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE,
     DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE,

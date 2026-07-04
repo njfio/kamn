@@ -35,10 +35,7 @@ pub(super) fn accepted_task_snapshot(task_id: &str, description: &str) -> TaskOp
     engine.export_snapshot()
 }
 
-pub(super) fn engine_with_submitted_task(
-    task_id: &str,
-    description: &str,
-) -> TaskOperationEngine {
+pub(super) fn engine_with_submitted_task(task_id: &str, description: &str) -> TaskOperationEngine {
     let mut engine = TaskOperationEngine::new();
     engine
         .submit(task_id, "kamn:did:agent:requester-1", description)
@@ -46,10 +43,7 @@ pub(super) fn engine_with_submitted_task(
     engine
 }
 
-pub(super) fn write_stale_snapshot_payload(
-    path: &PathBuf,
-    snapshot: &TaskOperationSnapshot,
-) {
+pub(super) fn write_stale_snapshot_payload(path: &PathBuf, snapshot: &TaskOperationSnapshot) {
     let payload = serialize_task_operation_snapshot(snapshot).expect("serialize should succeed");
     assert!(fs::write(path, payload).is_ok());
 }

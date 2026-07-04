@@ -4,7 +4,6 @@ use crate::message_lifecycle::{
     MessageLifecycleSnapshot, MessageLifecycleSnapshotError, MessageRecordSnapshot, MessageStatus,
     MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
 };
-use std::collections::BTreeSet;
 
 impl MessageLifecycleStore {
     /// Exports all records into a deterministic snapshot payload model.
@@ -169,18 +168,18 @@ fn insert_restored_indexes(
     restored
         .ids_by_status
         .entry(record_snapshot.status)
-        .or_insert_with(BTreeSet::new)
+        .or_default()
         .insert(message_id.clone());
     restored
         .ids_by_sender
         .entry(record_snapshot.sender.clone())
-        .or_insert_with(BTreeSet::new)
+        .or_default()
         .insert(message_id.clone());
     for recipient in &record_snapshot.recipients {
         restored
             .ids_by_recipient
             .entry(recipient.clone())
-            .or_insert_with(BTreeSet::new)
+            .or_default()
             .insert(message_id.clone());
     }
 }

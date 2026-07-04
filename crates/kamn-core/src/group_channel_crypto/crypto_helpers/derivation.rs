@@ -1,6 +1,5 @@
 use super::super::{
-    GroupChannelCryptoError, GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2,
-    GROUP_MESSAGE_AEAD_KDF_SALT_V2,
+    GroupChannelCryptoError, GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2, GROUP_MESSAGE_AEAD_KDF_SALT_V2,
 };
 use sha2::{Digest, Sha256, Sha512};
 use x25519_dalek::{PublicKey, StaticSecret};

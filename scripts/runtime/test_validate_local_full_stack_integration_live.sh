@@ -369,7 +369,8 @@ if payload.get("kolme_integration_mode_status") != "planned":
     raise SystemExit("expected kolme_integration_mode_status=planned")
 if payload.get("kolme_integration_policy_status") != "planned":
     raise SystemExit("expected kolme_integration_policy_status=planned")
-if payload.get("kolme_checkout_path") != "/tmp/kolme_fork":
+default_kolme_checkout_path = str(pathlib.Path("/tmp/kolme_fork").resolve())
+if payload.get("kolme_checkout_path") != default_kolme_checkout_path:
     raise SystemExit("expected default kolme_checkout_path marker")
 if payload.get("kolme_expected_remote_url") != "https://github.com/njfio/kolme_fork.git":
     raise SystemExit("expected default kolme_expected_remote_url marker")

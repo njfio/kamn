@@ -6,9 +6,16 @@ use std::path::Path;
 
 pub(crate) fn load_baseline(path: &Path, modules: &[String]) -> (usize, BTreeMap<String, usize>) {
     if !path.is_file() {
-        fail("baseline_fixture_missing", &format!("missing baseline fixture {}", path.display()));
+        let path_display = path.display();
+        fail(
+            "baseline_fixture_missing",
+            &format!("missing baseline fixture {path_display}"),
+        );
     }
-    let baseline_map = parse_key_value_fixture(&read_file(path, "baseline_fixture_missing"), "baseline_fixture_invalid");
+    let baseline_map = parse_key_value_fixture(
+        &read_file(path, "baseline_fixture_missing"),
+        "baseline_fixture_invalid",
+    );
     assert_baseline_schema(&baseline_map, path);
     let baseline_total = non_negative_value(&baseline_map, "total_public_items");
     assert_module_count(&baseline_map, modules.len());
@@ -18,9 +25,10 @@ pub(crate) fn load_baseline(path: &Path, modules: &[String]) -> (usize, BTreeMap
 fn assert_baseline_schema(map: &BTreeMap<String, String>, path: &Path) {
     let schema_version = required_value(map, "schema_version", "baseline_schema_mismatch");
     if schema_version != BASELINE_SCHEMA_VERSION {
+        let path_display = path.display();
         fail(
             "baseline_schema_mismatch",
-            &format!("unexpected schema {} in {}", schema_version, path.display()),
+            &format!("unexpected schema {schema_version} in {path_display}"),
         );
     }
 }
@@ -30,15 +38,12 @@ fn assert_module_count(map: &BTreeMap<String, String>, expected: usize) {
     if module_count != expected {
         fail(
             "baseline_threshold_invalid",
-            &format!("module_count mismatch: fixture={} actual={}", module_count, expected),
+            &format!("module_count mismatch: fixture={module_count} actual={expected}"),
         );
     }
 }
 
-fn module_baselines(
-    modules: &[String],
-    map: &BTreeMap<String, String>,
-) -> BTreeMap<String, usize> {
+fn module_baselines(modules: &[String], map: &BTreeMap<String, String>) -> BTreeMap<String, usize> {
     modules
         .iter()
         .map(|module| (module.clone(), module_baseline(module, map)))
@@ -46,7 +51,7 @@ fn module_baselines(
 }
 
 fn module_baseline(module: &str, map: &BTreeMap<String, String>) -> usize {
-    let key = format!("module_public_items.{}", module);
+    let key = format!("module_public_items.{module}");
     non_negative_reason(map, key.as_str(), "baseline_module_missing")
 }
 
@@ -57,7 +62,7 @@ fn non_negative_value(map: &BTreeMap<String, String>, key: &str) -> usize {
 fn non_negative_reason(map: &BTreeMap<String, String>, key: &str, reason: &str) -> usize {
     let value = required_i64(map, key, reason);
     if value < 0 {
-        fail(reason, &format!("{} must be non-negative", key));
+        fail(reason, &format!("{key} must be non-negative"));
     }
     value as usize
 }

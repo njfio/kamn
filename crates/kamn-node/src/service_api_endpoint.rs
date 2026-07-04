@@ -64,9 +64,8 @@ pub(crate) use models::{
     ServiceApiEndpointConfig, ServiceApiEndpointResponse, ServiceApiErrorBody,
     ServiceApiEscrowStatusBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
     ServiceApiMessageGetBody, ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry,
-    ServiceApiSettlementMetadata,
-    ServiceApiTaskCreateBody, ServiceApiTaskGetBody, ServiceApiTaskTransitionBody,
-    ServiceApiWebsocketStateTransitionBody,
+    ServiceApiSettlementMetadata, ServiceApiTaskCreateBody, ServiceApiTaskGetBody,
+    ServiceApiTaskTransitionBody, ServiceApiWebsocketStateTransitionBody,
 };
 use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use snapshot::ServiceApiSnapshot;
@@ -79,9 +78,7 @@ pub(crate) use state_io::{
 use websocket::ServiceApiWebsocketEventFanout;
 
 #[cfg(test)]
-pub(crate) use live_settlement_dispatch::{
-    set_test_live_solana_settlement_override,
-};
+pub(crate) use live_settlement_dispatch::set_test_live_solana_settlement_override;
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
@@ -151,8 +148,7 @@ const REASON_CODE_MESSAGE_RECIPIENT_DID_INVALID: &str = "service_api_message_rec
 const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
 const REASON_CODE_TASK_DISPATCH_PREREQUISITES_MISSING: &str =
     "service_api_task_dispatch_prerequisites_missing";
-const REASON_CODE_LIVE_BRIDGE_DISPATCH_FAILED: &str =
-    "service_api_live_bridge_dispatch_failed";
+const REASON_CODE_LIVE_BRIDGE_DISPATCH_FAILED: &str = "service_api_live_bridge_dispatch_failed";
 const REASON_CODE_LIVE_SETTLEMENT_EVIDENCE_FAILED: &str =
     "service_api_live_settlement_evidence_failed";
 const REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING: &str =

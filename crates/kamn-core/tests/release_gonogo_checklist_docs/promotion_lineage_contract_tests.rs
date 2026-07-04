@@ -12,7 +12,10 @@ const CHECKLIST_CONTAINS_SLO_THRESHOLD_POLICY_GATE_CONVERGENCE_MARKERS: &[&str] 
 
 #[test]
 fn checklist_contains_slo_threshold_policy_gate_convergence() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SLO_THRESHOLD_POLICY_GATE_CONVERGENCE_MARKERS, "checklist_contains_slo_threshold_policy_gate_convergence");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SLO_THRESHOLD_POLICY_GATE_CONVERGENCE_MARKERS,
+        "checklist_contains_slo_threshold_policy_gate_convergence",
+    );
 }
 
 const CHECKLIST_CONTAINS_LIVE_RUN_MODE_REHEARSAL_LINEAGE_GATE_MARKERS: &[&str] = &[
@@ -27,7 +30,10 @@ const CHECKLIST_CONTAINS_LIVE_RUN_MODE_REHEARSAL_LINEAGE_GATE_MARKERS: &[&str] =
 
 #[test]
 fn checklist_contains_live_run_mode_rehearsal_lineage_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_LIVE_RUN_MODE_REHEARSAL_LINEAGE_GATE_MARKERS, "checklist_contains_live_run_mode_rehearsal_lineage_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_LIVE_RUN_MODE_REHEARSAL_LINEAGE_GATE_MARKERS,
+        "checklist_contains_live_run_mode_rehearsal_lineage_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_MILESTONE_REVIEW_AGGREGATE_LINEAGE_GATE_MARKERS: &[&str] = &[
@@ -57,7 +63,10 @@ const CHECKLIST_CONTAINS_MILESTONE_REVIEW_AGGREGATE_LINEAGE_GATE_MARKERS: &[&str
 
 #[test]
 fn checklist_contains_milestone_review_aggregate_lineage_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_MILESTONE_REVIEW_AGGREGATE_LINEAGE_GATE_MARKERS, "checklist_contains_milestone_review_aggregate_lineage_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_MILESTONE_REVIEW_AGGREGATE_LINEAGE_GATE_MARKERS,
+        "checklist_contains_milestone_review_aggregate_lineage_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_LIVE_GONOGO_CONVERGENCE_BOUNDARY_GOVERNANCE_GATE_MARKERS: &[&str] = &[
@@ -79,7 +88,10 @@ const CHECKLIST_CONTAINS_LIVE_GONOGO_CONVERGENCE_BOUNDARY_GOVERNANCE_GATE_MARKER
 
 #[test]
 fn checklist_contains_live_gonogo_convergence_boundary_governance_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_LIVE_GONOGO_CONVERGENCE_BOUNDARY_GOVERNANCE_GATE_MARKERS, "checklist_contains_live_gonogo_convergence_boundary_governance_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_LIVE_GONOGO_CONVERGENCE_BOUNDARY_GOVERNANCE_GATE_MARKERS,
+        "checklist_contains_live_gonogo_convergence_boundary_governance_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_LOCAL_FULL_STACK_HARNESS_RUNBOOK_PARITY_GATE_MARKERS: &[&str] = &[
@@ -98,5 +110,8 @@ const CHECKLIST_CONTAINS_LOCAL_FULL_STACK_HARNESS_RUNBOOK_PARITY_GATE_MARKERS: &
 
 #[test]
 fn checklist_contains_local_full_stack_harness_runbook_parity_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_LOCAL_FULL_STACK_HARNESS_RUNBOOK_PARITY_GATE_MARKERS, "checklist_contains_local_full_stack_harness_runbook_parity_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_LOCAL_FULL_STACK_HARNESS_RUNBOOK_PARITY_GATE_MARKERS,
+        "checklist_contains_local_full_stack_harness_runbook_parity_gate",
+    );
 }

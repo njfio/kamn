@@ -11,7 +11,10 @@ from typing import Any
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE = ROOT_DIR / "fixtures/kolme_commit/signature_parity_vectors.json"
-VECTOR_TEST_NAME = "integration_kolme_live_signer_vector_probe_contract"
+VECTOR_TEST_NAME = (
+    "main_tests::signer_tests::signer_direct_profile_contract_tests::"
+    "direct_signature_contract_tests::integration_kolme_live_signer_vector_probe_contract"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -77,8 +80,11 @@ def run_vector_case(vector: dict[str, Any]) -> subprocess.CompletedProcess[str]:
         "test",
         "-p",
         "kamn-node",
+        "--bin",
+        "kamn-node",
         VECTOR_TEST_NAME,
         "--",
+        "--exact",
         "--nocapture",
     ]
     return subprocess.run(

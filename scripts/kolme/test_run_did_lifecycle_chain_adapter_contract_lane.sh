@@ -39,6 +39,15 @@ if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
   exit 1
 fi
 
+expect_impl_marker() {
+  local marker="$1"
+  local message="$2"
+  if ! grep -q "$marker" "$CONTRACT_IMPL"; then
+    echo "$message" >&2
+    exit 1
+  fi
+}
+
 resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
 if [ "$resolved_manifest" != "$MANIFEST" ]; then
   echo "expected did lifecycle chain adapter contract dispatcher to resolve deterministic manifest path" >&2
@@ -78,6 +87,14 @@ for marker in "${required_impl_markers[@]}"; do
     exit 1
   fi
 done
+
+expect_impl_marker '"--no-run"' "expected did lifecycle chain adapter lane to prebuild before timed execution"
+expect_impl_marker '"--message-format=json"' "expected did lifecycle chain adapter lane to resolve the prebuilt test executable"
+expect_impl_marker 'compiler-artifact' "expected did lifecycle chain adapter lane to parse Cargo artifact metadata"
+expect_impl_marker '"--test-threads=1"' "expected did lifecycle chain adapter lane to run tests serially"
+expect_impl_marker 'timeout=max_seconds' "expected did lifecycle chain adapter lane to enforce max runtime on test subprocess"
+expect_impl_marker 'subprocess.TimeoutExpired' "expected did lifecycle chain adapter lane to fail closed on timeout"
+expect_impl_marker 'CARGO_TARGET_DIR' "expected did lifecycle chain adapter lane to isolate Cargo target artifacts"
 
 run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$run_output" | grep -q '^status=pass$'; then

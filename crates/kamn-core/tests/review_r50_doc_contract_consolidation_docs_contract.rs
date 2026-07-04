@@ -84,7 +84,7 @@ fn integration_r50_doc_contract_non_regression_markers_are_consistent() {
         &markers,
         "r50_review_doc_contract_non_regression_max_test_file_count",
     );
-    assert!(baseline <= max);
+    assert_eq!(baseline, max);
     assert!(
         parse_marker_value(
             &markers,
@@ -105,8 +105,6 @@ fn regression_r50_doc_contract_non_regression_cap_is_not_breached() {
     let current = current_doc_contract_test_file_count();
     assert!(
         current <= cap,
-        "doc contract test count {} exceeds cap {}",
-        current,
-        cap
+        "doc contract test count {current} exceeds cap {cap}",
     );
 }

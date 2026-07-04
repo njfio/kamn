@@ -62,24 +62,28 @@ async fn run_policy_checks(
 pub(super) async fn internal_response(
     state: &Arc<ServiceApiRuntimeState>,
     request_started_at: Instant,
-    correlation_id: &str,
     parsed_request: &ParsedRequest,
-    reason_code: &'static str,
-    outcome: &str,
-    error_label: &str,
-    status_code: StatusCode,
-    message: &str,
+    response: InternalResponseProjection<'_>,
 ) -> Response {
     let error = middleware_error(
-        correlation_id,
+        response.correlation_id,
         parsed_request,
-        reason_code,
-        outcome,
-        error_label,
-        status_code,
-        message,
+        response.reason_code,
+        response.outcome,
+        response.error_label,
+        response.status_code,
+        response.message,
     );
     service_api_middleware_error_response(state, request_started_at, error).await
+}
+
+pub(super) struct InternalResponseProjection<'a> {
+    pub(super) correlation_id: &'a str,
+    pub(super) reason_code: &'static str,
+    pub(super) outcome: &'a str,
+    pub(super) error_label: &'a str,
+    pub(super) status_code: StatusCode,
+    pub(super) message: &'a str,
 }
 
 fn middleware_error<'a>(

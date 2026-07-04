@@ -20,15 +20,34 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected service api reason-code compatibility policy checker script to be executable" >&2
   exit 1
 fi
+if ! grep -Fq -- '--bin kamn-node' "$VALIDATION_SCRIPT"; then
+  echo "expected service api reason-code compatibility validation to target the kamn-node binary test harness" >&2
+  exit 1
+fi
 
 lane_report="$TMP_DIR/service-api-reason-code-compatibility-contract-lane-report.json"
 policy_report="$TMP_DIR/service-api-reason-code-compatibility-policy-report.json"
 
-lane_output="$(
-  bash "$CONTRACT_LANE" \
-    --output-json "$lane_report" \
-    --policy-output-json "$policy_report"
-)"
+lane_stdout="$TMP_DIR/service-api-reason-code-compatibility-contract-lane.stdout"
+lane_stderr="$TMP_DIR/service-api-reason-code-compatibility-contract-lane.stderr"
+set +e
+bash "$CONTRACT_LANE" \
+  --output-json "$lane_report" \
+  --policy-output-json "$policy_report" \
+  >"$lane_stdout" 2>"$lane_stderr"
+lane_code=$?
+set -e
+lane_output="$(cat "$lane_stdout")"
+if [ "$lane_code" -ne 0 ]; then
+  echo "service api reason-code compatibility contract lane failed: exit ${lane_code}" >&2
+  if [ -s "$lane_stdout" ]; then
+    cat "$lane_stdout" >&2
+  fi
+  if [ -s "$lane_stderr" ]; then
+    cat "$lane_stderr" >&2
+  fi
+  exit "$lane_code"
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^status=pass$'; then
   echo "expected service api reason-code compatibility contract lane status=pass marker" >&2
   exit 1

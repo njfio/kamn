@@ -11,7 +11,10 @@ fn spec_c01_mcp_initialize_framed_jsonrpc_response_contract() {
 
     let responses = process_stdio_input(&backend, request.as_str()).expect("input should parse");
     assert_eq!(responses.len(), 1, "initialize should return one response");
-    assert!(responses[0].starts_with("Content-Length: "), "response should be framed");
+    assert!(
+        responses[0].starts_with("Content-Length: "),
+        "response should be framed"
+    );
 
     let body = parse_framed_json(responses[0].as_str());
     assert!(body.contains(r#""jsonrpc":"2.0""#));
@@ -40,7 +43,7 @@ fn tools_list_body() -> String {
 fn assert_tools_inventory(body: &str) {
     assert!(body.contains(r#""tools""#));
     for name in tool_names() {
-        assert!(body.contains(&format!(r#""name":"{}""#, name)));
+        assert!(body.contains(&format!(r#""name":"{name}""#)));
     }
 }
 
@@ -84,7 +87,9 @@ fn assert_verify_proof_schema(tools: &[Value]) {
     let verify_proof = find_tool(tools, "verify_proof");
     let required = required_schema_fields(verify_proof, "verify_proof");
     assert_eq!(required.len(), 4);
-    assert!(required.iter().any(|field| field.as_str() == Some("block_height")));
+    assert!(required
+        .iter()
+        .any(|field| field.as_str() == Some("block_height")));
 }
 
 fn find_tool<'a>(tools: &'a [Value], name: &str) -> &'a Value {

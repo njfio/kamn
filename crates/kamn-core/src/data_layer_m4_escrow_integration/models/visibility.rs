@@ -13,7 +13,15 @@ pub struct DataLayerM4EscrowVisibilityRequest {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM4EscrowVisibilityDecision {
     /// Access allowed with reason code.
-    Allow { reason_code: &'static str },
+    /// Allow variant for this public contract enum.
+    Allow {
+        /// Reason code carried by this enum variant.
+        reason_code: &'static str,
+    },
     /// Access denied with reason code.
-    Deny { reason_code: &'static str },
+    /// Deny variant for this public contract enum.
+    Deny {
+        /// Reason code carried by this enum variant.
+        reason_code: &'static str,
+    },
 }

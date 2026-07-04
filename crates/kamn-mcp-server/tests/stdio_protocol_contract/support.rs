@@ -10,75 +10,105 @@ impl McpToolBackend for ProtocolBackend {
     }
 
     fn send_message(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"message_id":"msg-{}"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(r#"{{"message_id":"msg-{payload_len}"}}"#))
     }
 
     fn create_channel(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"channel_id":"channel-{}"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(r#"{{"channel_id":"channel-{payload_len}"}}"#))
     }
 
     fn list_messages(&self, channel_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"channel_id":"{}","messages":["msg-a","msg-b"]}}"#, channel_id))
+        Ok(format!(
+            r#"{{"channel_id":"{channel_id}","messages":["msg-a","msg-b"]}}"#
+        ))
     }
 
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"message_id":"{}","status":"created"}}"#, message_id))
+        Ok(format!(
+            r#"{{"message_id":"{message_id}","status":"created"}}"#
+        ))
     }
 
     fn query_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{}","state":"submitted"}}"#, task_id))
+        Ok(format!(r#"{{"task_id":"{task_id}","state":"submitted"}}"#))
     }
 
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"did":"{}","reputation_score":777}}"#, did))
+        Ok(format!(r#"{{"did":"{did}","reputation_score":777}}"#))
     }
 
     fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"content-{}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(
+            r#"{{"content_id":"content-{payload_len}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#
+        ))
     }
 
     fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"{}","lifecycle_state":"expired","redaction_status":"none"}}"#, content_id))
+        Ok(format!(
+            r#"{{"content_id":"{content_id}","lifecycle_state":"expired","redaction_status":"none"}}"#
+        ))
     }
 
     fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#, content_id))
+        Ok(format!(
+            r#"{{"content_id":"{content_id}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#
+        ))
     }
 
     fn query_content(&self, content_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#, content_id))
+        Ok(format!(
+            r#"{{"content_id":"{content_id}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#
+        ))
     }
 
     fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"bridge_id":"bridge-{}","source_message_id":"source-{}","bridge_status":"submitted"}}"#, payload.len(), payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(
+            r#"{{"bridge_id":"bridge-{payload_len}","source_message_id":"source-{payload_len}","bridge_status":"submitted"}}"#
+        ))
     }
 
     fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#, bridge_id, bridge_id, bridge_id))
+        Ok(format!(
+            r#"{{"bridge_id":"{bridge_id}","bridge_status":"forwarded","target_message_id":"target-{bridge_id}","forward_tx_hash":"sha256:bridge-{bridge_id}"}}"#
+        ))
     }
 
     fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#, bridge_id, bridge_id, bridge_id))
+        Ok(format!(
+            r#"{{"bridge_id":"{bridge_id}","bridge_status":"forwarded","target_message_id":"target-{bridge_id}","forward_tx_hash":"sha256:bridge-{bridge_id}"}}"#
+        ))
     }
 
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"task-{}","state":"created"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(
+            r#"{{"task_id":"task-{payload_len}","state":"created"}}"#
+        ))
     }
 
     fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{}","state":"accepted"}}"#, task_id))
+        Ok(format!(r#"{{"task_id":"{task_id}","state":"accepted"}}"#))
     }
 
     fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{}","state":"completed"}}"#, task_id))
+        Ok(format!(r#"{{"task_id":"{task_id}","state":"completed"}}"#))
     }
 
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"escrow_id":"escrow-{}","state":"funded"}}"#, payload.len()))
+        let payload_len = payload.len();
+        Ok(format!(
+            r#"{{"escrow_id":"escrow-{payload_len}","state":"funded"}}"#
+        ))
     }
 
     fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"escrow_id":"{}","state":"released"}}"#, escrow_id))
+        Ok(format!(
+            r#"{{"escrow_id":"{escrow_id}","state":"released"}}"#
+        ))
     }
 
     fn health(&self) -> Result<String, AgentLibError> {
@@ -93,14 +123,14 @@ impl McpToolBackend for ProtocolBackend {
         finality: &str,
     ) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"message_id":"{}","tx_hash":"{}","block_height":{},"finality":"{}","verified":true}}"#,
-            message_id, tx_hash, block_height, finality
+            r#"{{"message_id":"{message_id}","tx_hash":"{tx_hash}","block_height":{block_height},"finality":"{finality}","verified":true}}"#
         ))
     }
 }
 
 pub(crate) fn frame_request(body: &str) -> String {
-    format!("Content-Length: {}\r\n\r\n{}", body.len(), body)
+    let body_len = body.len();
+    format!("Content-Length: {body_len}\r\n\r\n{body}")
 }
 
 pub(crate) fn parse_framed_json(response: &str) -> String {

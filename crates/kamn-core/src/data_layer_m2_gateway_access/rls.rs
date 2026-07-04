@@ -3,9 +3,13 @@ use super::DATA_LAYER_M2_REQUESTER_DID_SETTING;
 /// RLS policy template projection for one table.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM2RlsPolicy {
+    /// Table name carried by this public contract model.
     pub table_name: String,
+    /// Policy name carried by this public contract model.
     pub policy_name: String,
+    /// Using clause carried by this public contract model.
     pub using_clause: String,
+    /// With check clause carried by this public contract model.
     pub with_check_clause: Option<String>,
 }
 

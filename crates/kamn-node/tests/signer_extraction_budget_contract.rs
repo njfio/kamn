@@ -31,8 +31,15 @@ fn signer_module_declares_required_extraction_ownership_markers() {
         "signer.rs must declare signer_policy module"
     );
     assert!(
-        SIGNER_MODULE_SOURCE.contains("pub(crate) use managed_backend::{"),
-        "signer.rs must re-export managed backend public API from extracted module"
+        SIGNER_MODULE_SOURCE.contains(
+            "pub(crate) use managed_backend::resolve_kolme_live_managed_signer_required_marker;"
+        ),
+        "signer.rs must re-export managed backend required-marker API from extracted module"
+    );
+    assert!(
+        SIGNER_MODULE_SOURCE
+            .contains("pub(crate) use managed_backend::sign_kolme_live_managed_external_message;"),
+        "signer.rs must re-export managed backend signing API from extracted module"
     );
     assert!(
         SIGNER_MODULE_SOURCE.contains("pub(crate) use nonce::resolve_kolme_live_nonce;"),

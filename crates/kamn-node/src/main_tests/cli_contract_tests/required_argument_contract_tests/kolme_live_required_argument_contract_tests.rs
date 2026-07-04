@@ -46,7 +46,10 @@ fn rejects_kolme_live_without_signer_key_source() {
 fn rejects_kolme_live_continuous_mode_without_tick_interval() {
     let args = with_pairs(
         kolme_live_declared_args(),
-        &[("--kolme-live-signer-key-source", "env-local"), ("--daemon-max-ticks", "2")],
+        &[
+            ("--kolme-live-signer-key-source", "env-local"),
+            ("--daemon-max-ticks", "2"),
+        ],
     );
     assert_parse_error(args, missing_arg("--daemon-tick-interval-ms"));
 }

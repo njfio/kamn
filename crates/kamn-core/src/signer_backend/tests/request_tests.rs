@@ -1,4 +1,6 @@
-use crate::signer_backend::provider_policy::{CanonicalSecureKeyReference, SecureSignerProvider, SignerKeyRole};
+use crate::signer_backend::provider_policy::{
+    CanonicalSecureKeyReference, SecureSignerProvider, SignerKeyRole,
+};
 use crate::signer_backend::request::SigningRequest;
 use crate::signer_backend::SignerBackendError;
 

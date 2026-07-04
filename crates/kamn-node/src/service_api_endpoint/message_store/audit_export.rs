@@ -1,4 +1,7 @@
-use kamn_core::{AuditDomain, AuditEventRecord, AuditExportEngine, AuditExportFilter, AuditExportFormat, AuditExportRequest};
+use kamn_core::{
+    AuditDomain, AuditEventRecord, AuditExportEngine, AuditExportFilter, AuditExportFormat,
+    AuditExportRequest,
+};
 use serde_json::{json, Value};
 use std::env;
 use std::fs;
@@ -19,12 +22,19 @@ pub(super) fn resolve_service_api_audit_export_file(
         Err(env::VarError::NotPresent) => {
             Ok(state_file.map(default_service_api_audit_export_file_path_from_state_file))
         }
-        Err(error) => Err(format!("service api audit export file env read failed: {error}")),
+        Err(error) => Err(format!(
+            "service api audit export file env read failed: {error}"
+        )),
     }
 }
 
 pub(super) fn service_api_task_created_audit_event(task_id: &str) -> AuditEventRecord {
-    build_event(AuditDomain::Tasks, task_id, SERVICE_API_RUNTIME_ACTOR_DID, "service_api_task_created")
+    build_event(
+        AuditDomain::Tasks,
+        task_id,
+        SERVICE_API_RUNTIME_ACTOR_DID,
+        "service_api_task_created",
+    )
 }
 
 pub(super) fn service_api_message_created_audit_event(
@@ -110,12 +120,18 @@ fn load_existing_records(path: &str) -> Result<Vec<AuditEventRecord>, String> {
     let payload = match fs::read_to_string(path) {
         Ok(payload) => payload,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(error) => return Err(format!("service api audit export read failed: {path}: {error}")),
+        Err(error) => {
+            return Err(format!(
+                "service api audit export read failed: {path}: {error}"
+            ))
+        }
     };
     let parsed: Value = serde_json::from_str(payload.as_str())
         .map_err(|error| format!("service api audit export parse failed: {path}: {error}"))?;
     let Some(records) = parsed.get("records").and_then(Value::as_array) else {
-        return Err(format!("service api audit export parse failed: {path}: missing records"));
+        return Err(format!(
+            "service api audit export parse failed: {path}: missing records"
+        ));
     };
     records.iter().map(parse_record).collect()
 }

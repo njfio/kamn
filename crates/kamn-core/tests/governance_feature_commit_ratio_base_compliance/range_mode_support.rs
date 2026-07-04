@@ -14,7 +14,10 @@ impl TempGitRepo {
         std::fs::create_dir_all(&root).expect("temp repo should be created");
         run_git(&root, &["init"]);
         run_git(&root, &["config", "user.name", "KAMN Test"]);
-        run_git(&root, &["config", "user.email", "kamn-test@example.invalid"]);
+        run_git(
+            &root,
+            &["config", "user.email", "kamn-test@example.invalid"],
+        );
         Self { root }
     }
 
@@ -38,7 +41,12 @@ impl TempGitRepo {
     }
 }
 
-pub fn run_range_checker(repo_root: &Path, base_sha: &str, head_sha: &str, name: &str) -> (Output, Value) {
+pub fn run_range_checker(
+    repo_root: &Path,
+    base_sha: &str,
+    head_sha: &str,
+    name: &str,
+) -> (Output, Value) {
     let report_path = temp_path(name, "json");
     let output = Command::new("python3")
         .arg("scripts/ci/check_governance_feature_commit_ratio.py")

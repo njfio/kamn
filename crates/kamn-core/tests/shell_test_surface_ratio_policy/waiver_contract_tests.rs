@@ -12,8 +12,7 @@ fn regression_waiver_mitigation_issue_marker_must_match_issue_format() {
     fs::write(
         &invalid_waiver,
         format!(
-            "schema_version={}\nmitigation_issue=not-an-issue-id\nmax_shell_test_file_delta=10\nmax_ratio_delta=0.05\n",
-            WAIVER_SCHEMA_VERSION
+            "schema_version={WAIVER_SCHEMA_VERSION}\nmitigation_issue=not-an-issue-id\nmax_shell_test_file_delta=10\nmax_ratio_delta=0.05\n"
         ),
     )
     .expect("failed to write invalid waiver fixture");
@@ -21,5 +20,8 @@ fn regression_waiver_mitigation_issue_marker_must_match_issue_format() {
     let panic_result = std::panic::catch_unwind(|| {
         let _ = load_waiver(&invalid_waiver);
     });
-    assert!(panic_result.is_err(), "invalid waiver mitigation issue format must fail closed");
+    assert!(
+        panic_result.is_err(),
+        "invalid waiver mitigation issue format must fail closed"
+    );
 }

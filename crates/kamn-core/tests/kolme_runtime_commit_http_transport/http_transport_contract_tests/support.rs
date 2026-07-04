@@ -4,17 +4,22 @@ pub(crate) fn submitted_response(commit_id: &str) -> String {
     format!("status=submitted\nprovider=kolme-local\ncommit_id={commit_id}\nfinality=final\n")
 }
 
-pub(crate) fn provider(base_url: &str, path: &str, timeout_seconds: u64) -> KolmeRuntimeCommitLiveProvider<KolmeRuntimeCommitHttpTransport> {
-    let transport = KolmeRuntimeCommitHttpTransport::new(timeout_seconds)
-        .expect("transport should build");
-    KolmeRuntimeCommitLiveProvider::new(base_url, path, transport)
-        .expect("provider should build")
+pub(crate) fn provider(
+    base_url: &str,
+    path: &str,
+    timeout_seconds: u64,
+) -> KolmeRuntimeCommitLiveProvider<KolmeRuntimeCommitHttpTransport> {
+    let transport =
+        KolmeRuntimeCommitHttpTransport::new(timeout_seconds).expect("transport should build");
+    KolmeRuntimeCommitLiveProvider::new(base_url, path, transport).expect("provider should build")
 }
 
-pub(crate) fn checker(base_url: &str, path: &str) -> KolmeRuntimeCommitFinalityChecker<KolmeRuntimeCommitHttpTransport> {
+pub(crate) fn checker(
+    base_url: &str,
+    path: &str,
+) -> KolmeRuntimeCommitFinalityChecker<KolmeRuntimeCommitHttpTransport> {
     let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-    KolmeRuntimeCommitFinalityChecker::new(base_url, path, transport)
-        .expect("checker should build")
+    KolmeRuntimeCommitFinalityChecker::new(base_url, path, transport).expect("checker should build")
 }
 
 pub(crate) fn assert_submitted_receipt(
@@ -49,6 +54,9 @@ pub(crate) fn timeout_listener_url(sleep: Duration) -> String {
     format!("http://{addr}")
 }
 
-pub(crate) fn status_server(base_url_body: String, matcher: impl Fn(String) + Send + 'static) -> String {
+pub(crate) fn status_server(
+    base_url_body: String,
+    matcher: impl Fn(String) + Send + 'static,
+) -> String {
     spawn_single_request_server(base_url_body, "HTTP/1.1 200 OK", matcher)
 }

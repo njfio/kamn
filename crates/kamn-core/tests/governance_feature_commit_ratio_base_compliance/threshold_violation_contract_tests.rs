@@ -4,7 +4,12 @@ use crate::support::{run_subject_checker, string_field, u64_field};
 fn checker_flags_threshold_violation_when_governance_exceeds_limit() {
     let (_output, report) = run_subject_checker(
         "6840-threshold-violation",
-        &["docs(1): spec", "feat(1): code", "docs(1): guide", "test(1): coverage"],
+        &[
+            "docs(1): spec",
+            "feat(1): code",
+            "docs(1): guide",
+            "test(1): coverage",
+        ],
         "50",
         "0.20",
     );

@@ -21,7 +21,10 @@ const CHECKLIST_CONTAINS_GONOGO_PROMOTION_CONVERGENCE_REASON_MAPPING_GATE_MARKER
 
 #[test]
 fn checklist_contains_gonogo_promotion_convergence_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_GONOGO_PROMOTION_CONVERGENCE_REASON_MAPPING_GATE_MARKERS, "checklist_contains_gonogo_promotion_convergence_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_GONOGO_PROMOTION_CONVERGENCE_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_gonogo_promotion_convergence_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_STAGING_REHEARSAL_CONTRACT_MARKERS: &[&str] = &[
@@ -42,7 +45,10 @@ const CHECKLIST_CONTAINS_STAGING_REHEARSAL_CONTRACT_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_staging_rehearsal_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_STAGING_REHEARSAL_CONTRACT_MARKERS, "checklist_contains_staging_rehearsal_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_STAGING_REHEARSAL_CONTRACT_MARKERS,
+        "checklist_contains_staging_rehearsal_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_DURABLE_GUARD_RECOVERY_EVIDENCE_MARKERS: &[&str] = &[
@@ -58,7 +64,10 @@ const CHECKLIST_CONTAINS_DURABLE_GUARD_RECOVERY_EVIDENCE_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_durable_guard_recovery_evidence() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_DURABLE_GUARD_RECOVERY_EVIDENCE_MARKERS, "checklist_contains_durable_guard_recovery_evidence");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_DURABLE_GUARD_RECOVERY_EVIDENCE_MARKERS,
+        "checklist_contains_durable_guard_recovery_evidence",
+    );
 }
 
 const CHECKLIST_CONTAINS_PERSISTENCE_EVIDENCE_TAMPER_FRESHNESS_GATE_MARKERS: &[&str] = &[
@@ -76,7 +85,10 @@ const CHECKLIST_CONTAINS_PERSISTENCE_EVIDENCE_TAMPER_FRESHNESS_GATE_MARKERS: &[&
 
 #[test]
 fn checklist_contains_persistence_evidence_tamper_freshness_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_PERSISTENCE_EVIDENCE_TAMPER_FRESHNESS_GATE_MARKERS, "checklist_contains_persistence_evidence_tamper_freshness_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_PERSISTENCE_EVIDENCE_TAMPER_FRESHNESS_GATE_MARKERS,
+        "checklist_contains_persistence_evidence_tamper_freshness_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_SIGNER_INCIDENT_RECOVERY_CONTRACT_AND_CADENCE_MARKERS: &[&str] = &[
@@ -93,7 +105,10 @@ const CHECKLIST_CONTAINS_SIGNER_INCIDENT_RECOVERY_CONTRACT_AND_CADENCE_MARKERS: 
 
 #[test]
 fn checklist_contains_signer_incident_recovery_contract_and_cadence() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SIGNER_INCIDENT_RECOVERY_CONTRACT_AND_CADENCE_MARKERS, "checklist_contains_signer_incident_recovery_contract_and_cadence");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SIGNER_INCIDENT_RECOVERY_CONTRACT_AND_CADENCE_MARKERS,
+        "checklist_contains_signer_incident_recovery_contract_and_cadence",
+    );
 }
 
 const CHECKLIST_CONTAINS_SETTLEMENT_RECONCILIATION_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -107,7 +122,10 @@ const CHECKLIST_CONTAINS_SETTLEMENT_RECONCILIATION_EVIDENCE_CONTRACT_MARKERS: &[
 
 #[test]
 fn checklist_contains_settlement_reconciliation_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SETTLEMENT_RECONCILIATION_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_settlement_reconciliation_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SETTLEMENT_RECONCILIATION_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_settlement_reconciliation_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_SOC2_CONTROL_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -122,5 +140,8 @@ const CHECKLIST_CONTAINS_SOC2_CONTROL_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_soc2_control_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_SOC2_CONTROL_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_soc2_control_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_SOC2_CONTROL_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_soc2_control_evidence_contract",
+    );
 }

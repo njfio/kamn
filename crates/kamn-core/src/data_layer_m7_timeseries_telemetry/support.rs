@@ -1,4 +1,7 @@
-use super::{DataLayerM7TimeseriesError, DATA_LAYER_M7_DAILY_BUCKET_SECONDS, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS};
+use super::{
+    DataLayerM7TimeseriesError, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+    DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+};
 
 pub(crate) fn validate_kamn_did(value: &str) -> Result<(), DataLayerM7TimeseriesError> {
     let trimmed = value.trim();

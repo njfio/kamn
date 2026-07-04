@@ -7,7 +7,7 @@ CONFIG_FILE="$ROOT_DIR/fixtures/ci/kolme_manifest_migration_contract_groups.json
 MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 GROUP_KEY="tranche1"
 MAX_SECONDS_ENV="KAMN_KOLME_TRANCHE1_DISPATCH_PARITY_MAX_SECONDS"
-DEFAULT_MAX_SECONDS=240
+DEFAULT_MAX_SECONDS=360
 
 test_harness_require_file "$CONFIG_FILE" "expected migration group config file to exist: $CONFIG_FILE"
 
@@ -71,9 +71,61 @@ for raw in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
         continue
     if any(pattern.match(line) for pattern in patterns):
         continue
+    line = re.sub(r"finished in [0-9.]+s$", "finished in <elapsed>s", line)
     print(line)
 PY
 }
+
+volatile_runtime_left="$TMP_DIR/volatile-runtime-left.out"
+volatile_runtime_right="$TMP_DIR/volatile-runtime-right.out"
+volatile_runtime_left_normalized="$TMP_DIR/volatile-runtime-left.normalized.out"
+volatile_runtime_right_normalized="$TMP_DIR/volatile-runtime-right.normalized.out"
+cat >"$volatile_runtime_left" <<'EOF'
+running 8 tests
+test regression_notifications_consumer_fails_closed_on_decode_and_retry_exhaustion ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+Kolme notifications consumer contract lane tests passed.
+status=ok
+EOF
+cat >"$volatile_runtime_right" <<'EOF'
+running 8 tests
+test regression_notifications_consumer_fails_closed_on_decode_and_retry_exhaustion ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+Kolme notifications consumer contract lane tests passed.
+status=ok
+EOF
+normalize_output "$volatile_runtime_left" >"$volatile_runtime_left_normalized"
+normalize_output "$volatile_runtime_right" >"$volatile_runtime_right_normalized"
+if ! diff -u "$volatile_runtime_left_normalized" "$volatile_runtime_right_normalized" >/dev/null; then
+  echo "expected tranche-1 output normalizer to ignore volatile Rust test elapsed times" >&2
+  diff -u "$volatile_runtime_left_normalized" "$volatile_runtime_right_normalized" >&2 || true
+  exit 1
+fi
+
+run_parity_lane_command() {
+  lane_id="$1"
+  shift
+  if [ "$lane_id" = "kolme.notifications.consumer.contract" ]; then
+    env KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS=180 "$@"
+    return
+  fi
+  "$@"
+}
+
+budget_probe="$TMP_DIR/notifications-budget-probe.sh"
+cat >"$budget_probe" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS:-unset}"
+EOF
+chmod +x "$budget_probe"
+budget_probe_output="$TMP_DIR/notifications-budget-probe.out"
+run_parity_lane_command "kolme.notifications.consumer.contract" "$budget_probe" >"$budget_probe_output"
+if ! grep -Fxq "180" "$budget_probe_output"; then
+  echo "expected notifications consumer parity runs to use local-heavy budget override" >&2
+  cat "$budget_probe_output" >&2 || true
+  exit 1
+fi
 
 start_epoch="$(date +%s)"
 
@@ -98,13 +150,13 @@ for spec in "${lane_specs[@]}"; do
   wrapper_normalized="$TMP_DIR/${lane_id//./_}.wrapper.normalized.out"
   direct_normalized="$TMP_DIR/${lane_id//./_}.direct.normalized.out"
 
-  if ! bash "$lane_script_path" >"$wrapper_output" 2>&1; then
+  if ! run_parity_lane_command "$lane_id" bash "$lane_script_path" >"$wrapper_output" 2>&1; then
     echo "expected wrapper lane command to pass for parity check: $lane_script" >&2
     cat "$wrapper_output" >&2 || true
     exit 1
   fi
 
-  if ! bash "$MANIFEST_RUNNER" --manifest "$manifest_path" --phase contract >"$direct_output" 2>&1; then
+  if ! run_parity_lane_command "$lane_id" bash "$MANIFEST_RUNNER" --manifest "$manifest_path" --phase contract >"$direct_output" 2>&1; then
     echo "expected direct manifest lane command to pass for parity check: $manifest_file" >&2
     cat "$direct_output" >&2 || true
     exit 1

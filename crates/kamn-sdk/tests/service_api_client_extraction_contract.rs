@@ -74,19 +74,15 @@ fn assert_moved_markers_removed(root: &str) {
 fn assert_module_files_exist_and_fit_budget() {
     for path in MODULE_FILES {
         let full = repo_path(path);
-        assert!(
-            full.exists(),
-            "missing extracted module: {}",
-            full.display()
-        );
+        let full_display = full.display();
+        assert!(full.exists(), "missing extracted module: {full_display}");
         let lines = fs::read_to_string(&full)
             .expect("read module")
             .lines()
             .count();
         assert!(
             lines <= MODULE_CAP,
-            "extracted module exceeds {MODULE_CAP} lines: {}",
-            full.display()
+            "extracted module exceeds {MODULE_CAP} lines: {full_display}"
         );
     }
 }

@@ -314,9 +314,12 @@ def run_key_source_policy_matrix_test(
         "test",
         "-p",
         "kamn-node",
+        "--bin",
+        "kamn-node",
         test_name,
         "--",
         "--exact",
+        "--nocapture",
     ]
     result = run_command(command)
     output = f"{result.stdout}{result.stderr}"

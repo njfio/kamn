@@ -24,8 +24,7 @@ macro_rules! scenario_tool_call {
                 agent_name,
                 key_file,
                 request_id,
-                tool_name,
-                arguments_json,
+                (tool_name, arguments_json),
             )
         }
     };
@@ -51,9 +50,9 @@ pub(crate) fn run_named_mcp_tool_call(
     agent_name: &str,
     key_file: &str,
     request_id: &str,
-    tool_name: &str,
-    arguments_json: &str,
+    tool_call: (&str, &str),
 ) -> Result<String, String> {
+    let (tool_name, arguments_json) = tool_call;
     let stdout = spawn_mcp_tool_call(
         step_prefix,
         binary,
@@ -61,14 +60,14 @@ pub(crate) fn run_named_mcp_tool_call(
         agent_name,
         key_file,
         request_id,
-        tool_name,
-        arguments_json,
+        (tool_name, arguments_json),
     )?;
     validate_tool_call_output(step_prefix, request_id, tool_name, stdout.as_str())
 }
 
 #[rustfmt::skip]
-pub(crate) fn spawn_mcp_tool_call(step_prefix: &str, binary: &str, endpoint: &str, agent_name: &str, key_file: &str, request_id: &str, tool_name: &str, arguments_json: &str) -> Result<String, String> {
+pub(crate) fn spawn_mcp_tool_call(step_prefix: &str, binary: &str, endpoint: &str, agent_name: &str, key_file: &str, request_id: &str, tool_call: (&str, &str)) -> Result<String, String> {
+    let (tool_name, arguments_json) = tool_call;
     let mut child = Command::new(binary)
         .arg("--endpoint").arg(endpoint)
         .arg("--agent-name").arg(agent_name)

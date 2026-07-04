@@ -4,9 +4,45 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOC_FILE="$ROOT_DIR/docs/foundation/runtime-network.md"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json"
+CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/notifications_consumer_contract_lane.py"
 
 if [ ! -f "$MANIFEST" ]; then
   echo "expected notifications consumer contract lane manifest to exist" >&2
+  exit 1
+fi
+
+if ! grep -q '"--no-run"' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to prebuild before timed execution" >&2
+  exit 1
+fi
+
+if ! grep -q '"--message-format=json"' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to resolve the prebuilt test executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'compiler-artifact' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to parse Cargo artifact metadata" >&2
+  exit 1
+fi
+
+if ! grep -q '"--test-threads=1"' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to run tests serially" >&2
+  exit 1
+fi
+
+if ! grep -q 'timeout=max_seconds' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to enforce max runtime on test subprocess" >&2
+  exit 1
+fi
+
+if ! grep -q 'subprocess.TimeoutExpired' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to fail closed on timeout" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR' "$CONTRACT_IMPL"; then
+  echo "expected notifications consumer contract lane to isolate Cargo target artifacts" >&2
   exit 1
 fi
 

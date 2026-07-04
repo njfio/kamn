@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 
 pub(crate) fn repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").to_path_buf()
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .to_path_buf()
 }
 
 pub(crate) fn read_relative(path: &str, message: &str) -> String {

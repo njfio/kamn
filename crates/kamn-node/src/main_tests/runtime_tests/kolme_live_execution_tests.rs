@@ -3,12 +3,7 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     let _lock = signer_env_lock()
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let _profile_env_guard =
-        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
-    let _env_guard = EnvVarGuard::set(
-        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
-        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
-    );
+    let _env_guards = primary_env_local_signer_guards();
     let (base_url, requests) = spawn_kolme_live_mock_server(vec![
         MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
         MockHttpReply::ok(
@@ -94,12 +89,20 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
         3,
         "live runtime should issue nonce, submit, and finality requests"
     );
-    assert!(recorded_requests[0].contains("GET /get-next-nonce?pubkey="));
-    assert!(recorded_requests[1].contains("PUT /broadcast HTTP/1.1"));
-    assert!(recorded_requests[1].contains("X-Idempotency-Key: "));
-    let signature =
-        extract_json_string_field(request_body(recorded_requests[1].as_str()), "signature")
-            .expect("submit request should contain signature JSON field");
+    let nonce_index = recorded_request_index(&recorded_requests, "GET /get-next-nonce?pubkey=");
+    let submit_index = recorded_request_index(&recorded_requests, "PUT /broadcast HTTP/1.1");
+    let finality_index = recorded_request_index(
+        &recorded_requests,
+        "GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1",
+    );
+    assert!(
+        nonce_index < submit_index && submit_index < finality_index,
+        "live runtime should issue nonce, submit, and finality requests in order"
+    );
+    let submit_request = recorded_requests[submit_index].as_str();
+    assert!(submit_request.contains("X-Idempotency-Key: "));
+    let signature = extract_json_string_field(request_body(submit_request), "signature")
+        .expect("submit request should contain signature JSON field");
     // Regression: #2197
     assert!(
         signature.len() == 128
@@ -109,8 +112,33 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
                 .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
         "live runtime submit must not fall back to synthetic idempotency-key signatures"
     );
-    assert!(recorded_requests[2]
-        .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
+}
+
+fn recorded_request_index(recorded_requests: &[String], marker: &str) -> usize {
+    recorded_requests
+        .iter()
+        .position(|request| request.contains(marker))
+        .unwrap_or_else(|| panic!("missing recorded request marker {marker}"))
+}
+
+fn primary_env_local_signer_guards() -> Vec<EnvVarGuard> {
+    [
+        ("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary")),
+        (
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        ),
+        ("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY", None),
+        ("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None),
+        ("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", None),
+        ("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", None),
+        ("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", None),
+        ("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", None),
+        ("KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS", None),
+    ]
+    .into_iter()
+    .map(|(key, value)| EnvVarGuard::set(key, value))
+    .collect()
 }
 
 #[test]

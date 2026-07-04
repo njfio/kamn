@@ -11,10 +11,18 @@ pub(crate) fn ensure_test_service_auth_private_key() {
 }
 
 pub(crate) fn reserve_loopback_addr() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let listener = bind_loopback_listener();
     let addr = listener.local_addr().expect("local addr should resolve");
     drop(listener);
     addr.to_string()
+}
+
+pub(crate) fn bind_loopback_listener() -> TcpListener {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    listener
+        .set_nonblocking(true)
+        .expect("listener nonblocking mode should configure");
+    listener
 }
 
 pub(crate) fn tls_env_lock() -> &'static Mutex<()> {
@@ -53,7 +61,8 @@ pub(crate) fn unique_temp_dir(prefix: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be after unix epoch")
         .as_nanos();
-    let path = env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
+    let process_id = std::process::id();
+    let path = env::temp_dir().join(format!("{prefix}-{process_id}-{nanos}"));
     fs::create_dir_all(&path).expect("temporary directory should be created");
     path
 }

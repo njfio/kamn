@@ -1,9 +1,11 @@
 use super::super::super::*;
 
+type PeerLifecycleSummary = (Option<String>, Option<String>, Option<Vec<String>>);
+
 pub(super) fn build_peer_lifecycle_summary(
     daemon_peer_id: Option<String>,
     daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
-) -> Result<(Option<String>, Option<String>, Option<Vec<String>>), ConfigError> {
+) -> Result<PeerLifecycleSummary, ConfigError> {
     match daemon_peer_id {
         Some(peer_id) => build_present_peer_summary(peer_id, daemon_lifecycle_events),
         None => Ok((None, None, None)),
@@ -13,7 +15,7 @@ pub(super) fn build_peer_lifecycle_summary(
 fn build_present_peer_summary(
     peer_id: String,
     daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
-) -> Result<(Option<String>, Option<String>, Option<Vec<String>>), ConfigError> {
+) -> Result<PeerLifecycleSummary, ConfigError> {
     let mut lifecycle = PeerLifecycle::new(&peer_id)
         .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
     let mut applied_events = Vec::with_capacity(daemon_lifecycle_events.len());

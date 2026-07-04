@@ -24,7 +24,12 @@ fn handle_single_response(
 ) {
     let (mut stream, request) = accept_request(listener);
     handler(request);
-    write_plain_response(&mut stream, status_line.as_str(), response_body.as_str(), false);
+    write_plain_response(
+        &mut stream,
+        status_line.as_str(),
+        response_body.as_str(),
+        false,
+    );
 }
 
 fn accept_request(listener: TcpListener) -> (std::net::TcpStream, String) {
@@ -60,11 +65,7 @@ pub(crate) fn spawn_server_with_raw_response(
     format!("http://{addr}")
 }
 
-fn handle_raw_response(
-    listener: TcpListener,
-    raw_response: String,
-    handler: impl Fn(String),
-) {
+fn handle_raw_response(listener: TcpListener, raw_response: String, handler: impl Fn(String)) {
     let (mut stream, request) = accept_request(listener);
     handler(request);
     stream
@@ -95,7 +96,12 @@ fn handle_chunked_response(
 ) {
     let (mut stream, request) = accept_request(listener);
     handler(request);
-    write_chunk(&mut stream, first_chunk.as_bytes(), true, "first response chunk should write");
+    write_chunk(
+        &mut stream,
+        first_chunk.as_bytes(),
+        true,
+        "first response chunk should write",
+    );
     thread::sleep(chunk_delay);
     write_chunk(
         &mut stream,
@@ -105,12 +111,7 @@ fn handle_chunked_response(
     );
 }
 
-fn write_chunk(
-    stream: &mut std::net::TcpStream,
-    bytes: &[u8],
-    flush: bool,
-    message: &str,
-) {
+fn write_chunk(stream: &mut std::net::TcpStream, bytes: &[u8], flush: bool, message: &str) {
     stream.write_all(bytes).expect(message);
     if flush {
         stream.flush().expect("response chunk should flush");

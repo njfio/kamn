@@ -14,6 +14,16 @@ test_harness_require_executable "$FAST_IMPL_SCRIPT" "expected bridge ingress rel
 
 test_harness_require_file "$MANIFEST_FILE" "expected bridge ingress relay contract lane manifest to exist"
 
+if ! grep -q "KAMN_BRIDGE_INGRESS_RELAY_TARGET_DIR" "$FAST_IMPL_SCRIPT"; then
+  echo "expected ingress relay lane to expose an isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR="$bridge_ingress_relay_target_dir"' "$FAST_IMPL_SCRIPT"; then
+  echo "expected ingress relay lane cargo tests to use isolated target dir" >&2
+  exit 1
+fi
+
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 

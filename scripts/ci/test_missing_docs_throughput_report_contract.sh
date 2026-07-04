@@ -29,7 +29,7 @@ fi
 
 BAD_REPORT_PATH="$TMP_DIR/missing-docs-throughput-report-bad.json"
 cp "$REPORT_PATH" "$BAD_REPORT_PATH"
-sed -i 's/"reason_key": "throughput_target_[^"]*"/"reason_key": "invalid_reason"/' "$BAD_REPORT_PATH"
+test_harness_sed_in_place 's/"reason_key": "throughput_target_[^"]*"/"reason_key": "invalid_reason"/' "$BAD_REPORT_PATH"
 if python3 "$SCRIPT" check --report-file "$BAD_REPORT_PATH" >"$TMP_DIR/bad.out" 2>"$TMP_DIR/bad.err"; then
   echo "expected policy checker failure for invalid reason key" >&2
   cat "$TMP_DIR/bad.out" >&2 || true

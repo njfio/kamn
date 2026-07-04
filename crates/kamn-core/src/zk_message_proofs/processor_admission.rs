@@ -3,13 +3,18 @@ use super::errors::{require_non_empty_artifact_field, ZkDesignError};
 /// Processor-side proof artifact accepted for admission checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofArtifact {
+    /// Artifact id carried by this public contract model.
     pub artifact_id: String,
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Payload commitment carried by this public contract model.
     pub payload_commitment: String,
+    /// Proof value carried by this public contract model.
     pub proof_value: String,
 }
 
 impl ProcessorProofArtifact {
+    /// Creates a new value for this public contract type.
     pub fn new(
         artifact_id: &str,
         message_id: &str,
@@ -34,12 +39,16 @@ impl ProcessorProofArtifact {
 /// Processor admission input combining the message and its proof artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofAdmissionInput {
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Expected payload commitment carried by this public contract model.
     pub expected_payload_commitment: String,
+    /// Artifact carried by this public contract model.
     pub artifact: ProcessorProofArtifact,
 }
 
 impl ProcessorProofAdmissionInput {
+    /// Creates a new value for this public contract type.
     pub fn new(
         message_id: &str,
         expected_payload_commitment: &str,
@@ -61,8 +70,11 @@ impl ProcessorProofAdmissionInput {
 /// Stable processor admission result returned after validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofAdmissionDecision {
+    /// Message id carried by this public contract model.
     pub message_id: String,
+    /// Artifact id carried by this public contract model.
     pub artifact_id: String,
+    /// Payload commitment carried by this public contract model.
     pub payload_commitment: String,
 }
 
@@ -73,10 +85,12 @@ pub struct ProcessorProofAdmissionEvaluator {
 }
 
 impl ProcessorProofAdmissionEvaluator {
+    /// Creates a new value for this public contract type.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Runs the evaluate contract operation.
     pub fn evaluate(
         &mut self,
         input: ProcessorProofAdmissionInput,

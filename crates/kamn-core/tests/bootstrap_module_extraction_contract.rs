@@ -26,7 +26,10 @@ fn assert_root_shell_markers(root_text: &str) {
         "mod error_mapping;",
         "mod tests;",
     ] {
-        assert!(root_text.contains(marker), "expected root shell marker `{marker}`");
+        assert!(
+            root_text.contains(marker),
+            "expected root shell marker `{marker}`"
+        );
     }
 }
 

@@ -62,9 +62,7 @@ pub(crate) fn run_live_postgres_matrix_repeated_run_projections() -> Option<(
         .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
-    let Some(database_url) = assert_live_postgres_gate_ready() else {
-        return None;
-    };
+    let database_url = assert_live_postgres_gate_ready()?;
     apply_live_postgres_migrations(database_url);
     let (applied_first, applied_second) = run_repeated_projection_pair(None);
     let (deferred_first, deferred_second) = run_repeated_projection_pair(Some(("3", "2", "4")));

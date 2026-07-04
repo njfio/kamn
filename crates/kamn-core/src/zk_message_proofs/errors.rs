@@ -8,7 +8,13 @@ pub enum ZkDesignError {
     /// The selected policy is semantically invalid.
     InvalidPolicy(String),
     /// One option field failed validation.
-    InvalidOption { option: String, reason: String },
+    /// Invalid option variant for this public contract enum.
+    InvalidOption {
+        /// Option carried by this enum variant.
+        option: String,
+        /// Reason carried by this enum variant.
+        reason: String,
+    },
     /// No options were provided for evaluation.
     EmptyOptionSet,
     /// Ranking produced an impossible or unstable result.
@@ -20,13 +26,31 @@ pub enum ZkDesignError {
     /// A proof artifact payload is malformed.
     InvalidProofArtifact(String),
     /// The proof artifact references a different message than expected.
-    ProofArtifactMessageMismatch { expected: String, found: String },
+    /// Proof artifact message mismatch variant for this public contract enum.
+    ProofArtifactMessageMismatch {
+        /// Expected carried by this enum variant.
+        expected: String,
+        /// Found carried by this enum variant.
+        found: String,
+    },
     /// The proof artifact commitment does not match the expected commitment.
-    ProofArtifactCommitmentMismatch { expected: String, found: String },
+    /// Proof artifact commitment mismatch variant for this public contract enum.
+    ProofArtifactCommitmentMismatch {
+        /// Expected carried by this enum variant.
+        expected: String,
+        /// Found carried by this enum variant.
+        found: String,
+    },
     /// The same proof artifact was replayed.
     ProofArtifactReplay(String),
     /// Proof verification failed for the supplied artifact.
-    ProofVerificationFailed { artifact_id: String, reason: String },
+    /// Proof verification failed variant for this public contract enum.
+    ProofVerificationFailed {
+        /// Artifact id carried by this enum variant.
+        artifact_id: String,
+        /// Reason carried by this enum variant.
+        reason: String,
+    },
     /// Canonical envelope parsing failed before proof evaluation.
     EnvelopeError(MessageEnvelopeError),
 }

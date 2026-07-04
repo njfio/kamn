@@ -10,14 +10,16 @@ mod fixtures;
 pub(crate) mod models;
 #[path = "support/modules.rs"]
 mod modules;
-#[path = "support/policy.rs"]
-mod policy;
 #[path = "support/paths.rs"]
 mod paths;
+#[path = "support/policy.rs"]
+mod policy;
 #[path = "support/render.rs"]
 mod render;
 #[path = "support/thresholds.rs"]
 mod thresholds;
 
 pub(crate) use compute::compute_report_with_policy;
+pub(crate) use modules::module_source_paths;
+pub(crate) use paths::repo_path;
 pub(crate) use render::maybe_write_report;

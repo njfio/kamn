@@ -3,8 +3,7 @@ use std::fs;
 pub(crate) fn read_repo_file(path: &str) -> String {
     let root = env!("CARGO_MANIFEST_DIR");
     let full_path = format!("{root}/{path}");
-    fs::read_to_string(&full_path)
-        .unwrap_or_else(|error| panic!("failed to read {path}: {error}"))
+    fs::read_to_string(&full_path).unwrap_or_else(|error| panic!("failed to read {path}: {error}"))
 }
 
 pub(crate) fn assert_contains_all(source: &str, checks: &[(&str, &str)]) {

@@ -6,5 +6,5 @@ mod guard;
 mod lease;
 
 pub use error::ConstructLockError;
-pub use guard::{ConstructLockGuard, execute_processor_daemon_tick};
+pub use guard::{execute_processor_daemon_tick, ConstructLockGuard};
 pub use lease::ConstructLockLease;

@@ -13,11 +13,9 @@ fn constructor_rejects_invalid_key_reference() {
 #[test]
 fn decrypt_rejects_algorithm_mismatch() {
     with_key_agreement_seed(Some(TEST_KEY_SEED_HEX), || {
-        let mut engine = DirectMessageCryptoEngine::new(
-            "did:alice#key-agreement-1",
-            "did:bob#key-agreement-1",
-        )
-        .expect("engine init failed");
+        let mut engine =
+            DirectMessageCryptoEngine::new("did:alice#key-agreement-1", "did:bob#key-agreement-1")
+                .expect("engine init failed");
         let mut sealed = engine.encrypt("payload", 1).expect("encrypt failed");
         sealed.cipher_algorithm = "AES-GCM".to_owned();
 
@@ -36,7 +34,9 @@ fn encrypt_decrypt_roundtrip_succeeds_for_valid_payload() {
             "kamn:did:agent:bob#key-agreement-1",
         )
         .expect("engine init failed");
-        let sealed = engine.encrypt("hello-secure-world", 7).expect("encrypt failed");
+        let sealed = engine
+            .encrypt("hello-secure-world", 7)
+            .expect("encrypt failed");
         let plaintext = engine.decrypt(&sealed).expect("decrypt failed");
         assert_eq!(plaintext, "hello-secure-world");
     });
@@ -50,7 +50,9 @@ fn encrypt_rejects_nonce_reuse_for_same_engine_instance() {
             "kamn:did:agent:bob#key-agreement-1",
         )
         .expect("engine init failed");
-        engine.encrypt("payload", 11).expect("initial encrypt failed unexpectedly");
+        engine
+            .encrypt("payload", 11)
+            .expect("initial encrypt failed unexpectedly");
 
         assert_eq!(
             engine.encrypt("payload-2", 11),

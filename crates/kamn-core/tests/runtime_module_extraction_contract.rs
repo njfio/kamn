@@ -134,12 +134,36 @@ fn runtime_module_extraction_contract_moves_phase_coordination_types_out_of_runt
 #[test]
 fn runtime_module_extraction_contract_keeps_phase_coordination_impls_in_new_module() {
     assert_markers(&[
-        ("runtime_phase_coordination.rs", "mod construct_lock;", "runtime_phase_coordination module should declare extracted construct_lock module"),
-        ("runtime_phase_coordination.rs", "mod listener_quorum;", "runtime_phase_coordination module should declare extracted listener_quorum module"),
-        ("runtime_phase_coordination.rs", "mod approver_quorum;", "runtime_phase_coordination module should declare extracted approver_quorum module"),
-        ("runtime_phase_coordination/construct_lock/guard.rs", "pub struct ConstructLockGuard {", "construct_lock guard module should own ConstructLockGuard"),
-        ("runtime_phase_coordination/listener_quorum/evaluator.rs", "pub struct ListenerQuorumEvaluator {", "listener_quorum evaluator module should own ListenerQuorumEvaluator"),
-        ("runtime_phase_coordination/approver_quorum/evaluator.rs", "pub struct ApproverQuorumEvaluator {", "approver_quorum evaluator module should own ApproverQuorumEvaluator"),
+        (
+            "runtime_phase_coordination.rs",
+            "mod construct_lock;",
+            "runtime_phase_coordination module should declare extracted construct_lock module",
+        ),
+        (
+            "runtime_phase_coordination.rs",
+            "mod listener_quorum;",
+            "runtime_phase_coordination module should declare extracted listener_quorum module",
+        ),
+        (
+            "runtime_phase_coordination.rs",
+            "mod approver_quorum;",
+            "runtime_phase_coordination module should declare extracted approver_quorum module",
+        ),
+        (
+            "runtime_phase_coordination/construct_lock/guard.rs",
+            "pub struct ConstructLockGuard {",
+            "construct_lock guard module should own ConstructLockGuard",
+        ),
+        (
+            "runtime_phase_coordination/listener_quorum/evaluator.rs",
+            "pub struct ListenerQuorumEvaluator {",
+            "listener_quorum evaluator module should own ListenerQuorumEvaluator",
+        ),
+        (
+            "runtime_phase_coordination/approver_quorum/evaluator.rs",
+            "pub struct ApproverQuorumEvaluator {",
+            "approver_quorum evaluator module should own ApproverQuorumEvaluator",
+        ),
     ]);
 }
 
@@ -326,23 +350,28 @@ fn runtime_module_extraction_contract_moves_peer_coordination_types_out_of_runti
 
 #[test]
 fn runtime_module_extraction_contract_keeps_peer_coordination_types_in_new_module() {
-    let runtime_peer_coordination_rs = read_repo_file("runtime_peer_coordination.rs");
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct PeerLifecycle {"),
-        "runtime_peer_coordination module should own PeerLifecycle"
-    );
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct AuthenticatedPeerFrame {"),
-        "runtime_peer_coordination module should own AuthenticatedPeerFrame"
-    );
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct DeterministicProposalPlanner {"),
-        "runtime_peer_coordination module should own DeterministicProposalPlanner"
-    );
-    assert!(
-        runtime_peer_coordination_rs.contains("pub struct RuntimeWiring {"),
-        "runtime_peer_coordination module should own RuntimeWiring"
-    );
+    assert_markers(&[
+        (
+            "runtime_peer_coordination/lifecycle_queue/lifecycle.rs",
+            "pub struct PeerLifecycle {",
+            "runtime_peer_coordination lifecycle queue should own PeerLifecycle",
+        ),
+        (
+            "runtime_peer_coordination/peer_frame/frame.rs",
+            "pub struct AuthenticatedPeerFrame {",
+            "runtime_peer_coordination peer frame should own AuthenticatedPeerFrame",
+        ),
+        (
+            "runtime_peer_coordination/proposal_planning.rs",
+            "pub struct DeterministicProposalPlanner {",
+            "runtime_peer_coordination proposal planner should own DeterministicProposalPlanner",
+        ),
+        (
+            "runtime_peer_coordination/runtime_wiring.rs",
+            "pub struct RuntimeWiring {",
+            "runtime_peer_coordination runtime wiring should own RuntimeWiring",
+        ),
+    ]);
 }
 
 #[test]

@@ -1,13 +1,15 @@
-use crate::{DeterministicBackpressureController, RuntimeBackpressureInput, RuntimeBackpressurePolicy};
+use crate::data_layer_m9_realtime_delivery::validation::{
+    authorize_owner_scope, map_runtime_backpressure_evaluation_error_to_m9_projection_error,
+    map_runtime_backpressure_input_error_to_m9_projection_error,
+    map_runtime_backpressure_policy_error_to_m9_projection_error, parse_agent_did,
+};
 use crate::data_layer_m9_realtime_delivery::{
     DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
     DataLayerM9RuntimeBackpressureProjection, DataLayerM9RuntimeBackpressureProjectionRequest,
     DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
 };
-use crate::data_layer_m9_realtime_delivery::validation::{
-    authorize_owner_scope, map_runtime_backpressure_evaluation_error_to_m9_projection_error,
-    map_runtime_backpressure_input_error_to_m9_projection_error,
-    map_runtime_backpressure_policy_error_to_m9_projection_error, parse_agent_did,
+use crate::{
+    DeterministicBackpressureController, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
 };
 
 impl DataLayerM9RealtimeDeliveryRegistry {
@@ -36,7 +38,10 @@ impl DataLayerM9RealtimeDeliveryRegistry {
 fn validate_projection_request(
     request: &DataLayerM9RuntimeBackpressureProjectionRequest,
 ) -> Result<crate::AgentDid, DataLayerM9RealtimeDeliveryError> {
-    authorize_owner_scope(request.requester_owner_did.as_str(), request.owner_did.as_str())?;
+    authorize_owner_scope(
+        request.requester_owner_did.as_str(),
+        request.owner_did.as_str(),
+    )?;
     parse_agent_did(
         request.recipient_agent_did.as_str(),
         "recipient_agent_did",

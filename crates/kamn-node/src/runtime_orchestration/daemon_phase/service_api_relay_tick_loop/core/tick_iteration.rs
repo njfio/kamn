@@ -70,13 +70,15 @@ fn forward_relay_spool_if_enabled(
     }
     super::process_relay_spool(
         runtime_processing,
-        tick_context.relay_p2p_context.as_ref(),
-        &tick_context.relay_route_map,
-        tick_context.relay_signing_private_key_hex.as_deref(),
-        &mut tick_context.relay_nonce_counter,
-        service_api_state_file,
-        service_api_relay_spool_file,
-        service_api_signature_state_hash,
+        super::RelaySpoolArgs {
+            relay_p2p_context: tick_context.relay_p2p_context.as_ref(),
+            relay_route_map: &tick_context.relay_route_map,
+            relay_signing_private_key_hex: tick_context.relay_signing_private_key_hex.as_deref(),
+            relay_nonce_counter: &mut tick_context.relay_nonce_counter,
+            service_api_state_file,
+            service_api_relay_spool_file,
+            service_api_signature_state_hash,
+        },
     )
 }
 

@@ -8,6 +8,7 @@ SCOPE_POLICY_FILE="$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
 HELPER_FILE="$ROOT_DIR/scripts/ci/ensure_advisory_report.py"
 
 for required in \
+  'aquasecurity/trivy-action@v0.31.0' \
   'name: Ensure advisory filesystem report exists' \
   'name: Ensure advisory image report exists' \
   'name: Ensure advisory SBOM report exists' \

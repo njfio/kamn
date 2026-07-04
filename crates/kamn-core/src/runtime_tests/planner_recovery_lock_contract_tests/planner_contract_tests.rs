@@ -18,9 +18,15 @@ fn functional_planner_orders_candidates_deterministically() {
 #[test]
 fn integration_queue_drains_into_planner_without_order_loss() {
     let mut queue = BoundedRuntimeQueue::new(3).expect("queue should build");
-    assert!(queue.enqueue(ProposalCandidate::new("tx-3", "kamn:did:agent:bbb", 2, "state-1").expect("valid")).is_ok());
-    assert!(queue.enqueue(ProposalCandidate::new("tx-1", "kamn:did:agent:aaa", 1, "state-1").expect("valid")).is_ok());
-    assert!(queue.enqueue(ProposalCandidate::new("tx-2", "kamn:did:agent:bbb", 1, "state-1").expect("valid")).is_ok());
+    assert!(queue
+        .enqueue(ProposalCandidate::new("tx-3", "kamn:did:agent:bbb", 2, "state-1").expect("valid"))
+        .is_ok());
+    assert!(queue
+        .enqueue(ProposalCandidate::new("tx-1", "kamn:did:agent:aaa", 1, "state-1").expect("valid"))
+        .is_ok());
+    assert!(queue
+        .enqueue(ProposalCandidate::new("tx-2", "kamn:did:agent:bbb", 1, "state-1").expect("valid"))
+        .is_ok());
     let mut drained = Vec::new();
     while let Some(candidate) = queue.dequeue() {
         drained.push(candidate);

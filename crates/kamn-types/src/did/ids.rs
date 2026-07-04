@@ -55,7 +55,9 @@ impl AgentDid {
             .chars()
             .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_')
         {
-            return Err(AgentDidError::InvalidCharacter(method_specific_id.to_owned()));
+            return Err(AgentDidError::InvalidCharacter(
+                method_specific_id.to_owned(),
+            ));
         }
         Ok(Self(value.to_owned()))
     }

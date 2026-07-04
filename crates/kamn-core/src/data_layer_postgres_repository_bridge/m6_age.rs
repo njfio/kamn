@@ -6,6 +6,7 @@ use super::{
     DataLayerPgOperationKind, DataLayerPgSqlOperation, DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT,
 };
 
+/// Runs the data layer pg project m6 age edge upsert operation contract helper.
 pub fn data_layer_pg_project_m6_age_edge_upsert_operation(
     edge: &DataLayerM6GraphEdgeRecord,
     requester_did: &str,
@@ -13,13 +14,14 @@ pub fn data_layer_pg_project_m6_age_edge_upsert_operation(
 ) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
     validate_age_config(&config)?;
     validate_edge(edge)?;
-    Ok(build_edge_upsert_operation(
+    build_edge_upsert_operation(
         requester_did,
         config.graph_name,
         map_age_supported_relation(edge.relation)?,
-    )?)
+    )
 }
 
+/// Runs the data layer pg project m6 age trust query operation contract helper.
 pub fn data_layer_pg_project_m6_age_trust_query_operation(
     request: DataLayerPgM6AgeTrustQueryRequest,
     config: DataLayerPgM6AgeConfig,
@@ -27,14 +29,12 @@ pub fn data_layer_pg_project_m6_age_trust_query_operation(
     validate_age_config(&config)?;
     validate_trust_query(&request)?;
     let limit = resolve_age_limit(request.query.limit)?;
-    Ok(build_trust_query_operation(
-        request.requester_did.as_str(),
-        config.graph_name,
-        limit,
-    )?)
+    build_trust_query_operation(request.requester_did.as_str(), config.graph_name, limit)
 }
 
-fn validate_edge(edge: &DataLayerM6GraphEdgeRecord) -> Result<(), DataLayerPgRepositoryBridgeError> {
+fn validate_edge(
+    edge: &DataLayerM6GraphEdgeRecord,
+) -> Result<(), DataLayerPgRepositoryBridgeError> {
     validate_non_empty(edge.owner_did.as_str(), "owner_did")?;
     validate_non_empty(edge.edge_id.as_str(), "edge_id")?;
     validate_non_empty(edge.from_node_id.as_str(), "from_node_id")?;
@@ -57,8 +57,7 @@ fn build_edge_upsert_operation(
 
 fn edge_upsert_sql(graph_name: &str, relation_marker: &str) -> String {
     format!(
-        "SELECT * FROM cypher('{}', $$ MERGE (from:Agent {{node_id: $4, owner_did: $1}}) MERGE (to:Agent {{node_id: $5, owner_did: $1}}) MERGE (from)-[r:{} {{edge_id: $2, owner_did: $1}}]->(to) SET r.weight = $6, r.observed_at_epoch_seconds = $7 RETURN r.edge_id $$) AS (edge_id agtype);",
-        graph_name, relation_marker
+        "SELECT * FROM cypher('{graph_name}', $$ MERGE (from:Agent {{node_id: $4, owner_did: $1}}) MERGE (to:Agent {{node_id: $5, owner_did: $1}}) MERGE (from)-[r:{relation_marker} {{edge_id: $2, owner_did: $1}}]->(to) SET r.weight = $6, r.observed_at_epoch_seconds = $7 RETURN r.edge_id $$) AS (edge_id agtype);"
     )
 }
 
@@ -78,7 +77,10 @@ fn validate_trust_query(
     request: &DataLayerPgM6AgeTrustQueryRequest,
 ) -> Result<(), DataLayerPgRepositoryBridgeError> {
     validate_non_empty(request.query.owner_did.as_str(), "owner_did")?;
-    validate_non_empty(request.query.source_agent_node_id.as_str(), "source_agent_node_id")?;
+    validate_non_empty(
+        request.query.source_agent_node_id.as_str(),
+        "source_agent_node_id",
+    )?;
     validate_owner_did(request.query.owner_did.as_str())?;
     validate_owner_did(request.query.requester_owner_did.as_str())?;
     if request.query.max_depth == 0 {
@@ -113,7 +115,6 @@ fn build_trust_query_operation(
 
 fn trust_query_sql(graph_name: &str) -> String {
     format!(
-        "SELECT * FROM cypher('{}', $$ MATCH (source:Agent {{node_id: $2, owner_did: $1}})-[:TRUSTS*1..$3]->(target:Agent {{owner_did: $1}}) RETURN target.node_id AS target_agent_node_id $$) AS (target_agent_node_id agtype) LIMIT $4;",
-        graph_name
+        "SELECT * FROM cypher('{graph_name}', $$ MATCH (source:Agent {{node_id: $2, owner_did: $1}})-[:TRUSTS*1..$3]->(target:Agent {{owner_did: $1}}) RETURN target.node_id AS target_agent_node_id $$) AS (target_agent_node_id agtype) LIMIT $4;"
     )
 }

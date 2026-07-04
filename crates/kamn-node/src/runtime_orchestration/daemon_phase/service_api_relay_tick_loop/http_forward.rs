@@ -112,9 +112,9 @@ fn serialize_relay_payload(
     .map_err(|error| format!("relay payload serialization failed: {error}"))
 }
 
-fn resolve_sender_did<'a>(
-    relay_entry: &'a crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
-) -> &'a str {
+fn resolve_sender_did(
+    relay_entry: &crate::service_api_endpoint::ServiceApiRelaySpoolEntry,
+) -> &str {
     relay_entry
         .sender_did
         .as_deref()

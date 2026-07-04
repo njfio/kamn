@@ -35,7 +35,10 @@ fn service_api_ops_configuration_contains_lifecycle_artifact_integrity_markers()
 #[test]
 fn service_api_ops_configuration_contains_lifecycle_ci_dry_run_governance_markers() {
     assert_doc_contains_all(LIFECYCLE_CI_DRY_RUN_MARKERS);
-    assert_doc_contains_prefixed_entries("lifecycle_ci_dry_run_remediation", LIFECYCLE_CI_DRY_RUN_REMEDIATION_CODES);
+    assert_doc_contains_prefixed_entries(
+        "lifecycle_ci_dry_run_remediation",
+        LIFECYCLE_CI_DRY_RUN_REMEDIATION_CODES,
+    );
 }
 #[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {

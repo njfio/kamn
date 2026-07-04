@@ -12,7 +12,10 @@ const CHECKLIST_CONTAINS_DSAR_LEGAL_HOLD_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_dsar_legal_hold_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_DSAR_LEGAL_HOLD_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_dsar_legal_hold_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_DSAR_LEGAL_HOLD_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_dsar_legal_hold_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_FEDERATED_DID_HANDSHAKE_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -32,7 +35,10 @@ const CHECKLIST_CONTAINS_FEDERATED_DID_HANDSHAKE_EVIDENCE_CONTRACT_MARKERS: &[&s
 
 #[test]
 fn checklist_contains_federated_did_handshake_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FEDERATED_DID_HANDSHAKE_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_federated_did_handshake_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FEDERATED_DID_HANDSHAKE_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_federated_did_handshake_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -47,7 +53,10 @@ const CHECKLIST_CONTAINS_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_CONTRACT_MARKE
 
 #[test]
 fn checklist_contains_federated_delegation_settlement_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_federated_delegation_settlement_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FEDERATED_DELEGATION_SETTLEMENT_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_federated_delegation_settlement_evidence_contract",
+    );
 }
 
 const CHECKLIST_CONTAINS_KOLME_VERSION_COMPATIBILITY_REPLAY_EVIDENCE_CONTRACT_MARKERS: &[&str] = &[
@@ -102,5 +111,8 @@ const CHECKLIST_CONTAINS_KOLME_VERSION_COMPATIBILITY_REPLAY_EVIDENCE_CONTRACT_MA
 
 #[test]
 fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_KOLME_VERSION_COMPATIBILITY_REPLAY_EVIDENCE_CONTRACT_MARKERS, "checklist_contains_kolme_version_compatibility_replay_evidence_contract");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_KOLME_VERSION_COMPATIBILITY_REPLAY_EVIDENCE_CONTRACT_MARKERS,
+        "checklist_contains_kolme_version_compatibility_replay_evidence_contract",
+    );
 }

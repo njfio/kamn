@@ -7,7 +7,10 @@ fn rejects_missing_role() {
 
 #[test]
 fn rejects_planning_without_expected_state_hash() {
-    let args = with_pairs(planning_args(), &[("--proposal", "tx-1|kamn:did:agent:aaa|1|state-1")]);
+    let args = with_pairs(
+        planning_args(),
+        &[("--proposal", "tx-1|kamn:did:agent:aaa|1|state-1")],
+    );
     assert_parse_error(args, missing_arg("--expected-state-hash"));
 }
 
@@ -45,7 +48,10 @@ fn rejects_recovery_check_without_expected_state_hash() {
 fn rejects_recovery_check_without_rejoin_attempt() {
     let args = with_pairs(
         recovery_args(),
-        &[("--expected-state-version", "42"), ("--expected-state-hash", "state-42")],
+        &[
+            ("--expected-state-version", "42"),
+            ("--expected-state-hash", "state-42"),
+        ],
     );
     assert_parse_error(args, missing_arg("--rejoin-attempt"));
 }

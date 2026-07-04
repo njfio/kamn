@@ -2,7 +2,9 @@ use super::wire_types::{
     ChannelPermissionsWire, ChannelPolicySnapshotChannelWire, ChannelPolicySnapshotWire,
     DeliveryGuardSnapshotWire, DeliveryNonceWire, DurableGuardSnapshotBundleWire,
 };
-use crate::{ChannelPermissions, ChannelPolicySnapshot, ChannelPolicySnapshotChannel, DeliveryGuardSnapshot};
+use crate::{
+    ChannelPermissions, ChannelPolicySnapshot, ChannelPolicySnapshotChannel, DeliveryGuardSnapshot,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::legacy_codec::deserialize_bundle_legacy;
@@ -62,8 +64,16 @@ fn encode_channel_policy(snapshot: &ChannelPolicySnapshot) -> ChannelPolicySnaps
 fn encode_channel(channel: &ChannelPolicySnapshotChannel) -> ChannelPolicySnapshotChannelWire {
     ChannelPolicySnapshotChannelWire {
         channel_id: encode_hex(&channel.channel_id),
-        members: channel.members.iter().map(|member| encode_hex(member)).collect(),
-        admins: channel.admins.iter().map(|admin| encode_hex(admin)).collect(),
+        members: channel
+            .members
+            .iter()
+            .map(|member| encode_hex(member))
+            .collect(),
+        admins: channel
+            .admins
+            .iter()
+            .map(|admin| encode_hex(admin))
+            .collect(),
         permissions: ChannelPermissionsWire {
             send: encode_permission_rule(&channel.permissions.send),
             read: encode_permission_rule(&channel.permissions.read),
@@ -147,9 +157,7 @@ fn decode_channel(
     })
 }
 
-fn decode_string_vec(
-    values: Vec<String>,
-) -> Result<Vec<String>, DurableGuardSnapshotStoreError> {
+fn decode_string_vec(values: Vec<String>) -> Result<Vec<String>, DurableGuardSnapshotStoreError> {
     values
         .into_iter()
         .map(|value| decode_hex(value.as_str()))

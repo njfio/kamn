@@ -10,14 +10,20 @@ fn get_artifact_status_returns_retained_status_for_known_artifact() {
 #[test]
 fn get_artifact_status_rejects_unknown_artifact() {
     let client = InMemoryKamnClient::new();
-    assert_not_found(client.get_artifact_status(&ArtifactId(42)), "artifact", "42");
+    assert_not_found(
+        client.get_artifact_status(&ArtifactId(42)),
+        "artifact",
+        "42",
+    );
 }
 
 #[test]
 fn expire_artifact_returns_expired_status_for_known_artifact() {
     let mut client = InMemoryKamnClient::new();
     let (_, artifact_id) = prepare_task_with_artifact(&mut client);
-    let status = client.expire_artifact(&artifact_id).expect("artifact expire should succeed");
+    let status = client
+        .expire_artifact(&artifact_id)
+        .expect("artifact expire should succeed");
     assert_eq!(status.lifecycle_state, "expired");
     assert_eq!(status.redaction_status, "none");
     assert_artifact_status(&client, &artifact_id, "expired", "none");

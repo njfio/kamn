@@ -14,13 +14,21 @@ impl ListenerQuorumEvaluator {
     /// Handles new.
     pub fn new(required_confirmations: usize) -> Result<Self, ListenerQuorumError> {
         if required_confirmations == 0 {
-            return Err(ListenerQuorumError::InvalidRequiredConfirmations { required: required_confirmations });
+            return Err(ListenerQuorumError::InvalidRequiredConfirmations {
+                required: required_confirmations,
+            });
         }
-        Ok(Self { required_confirmations, latest_sequence_by_event: BTreeMap::new() })
+        Ok(Self {
+            required_confirmations,
+            latest_sequence_by_event: BTreeMap::new(),
+        })
     }
 
     /// Handles evaluate.
-    pub fn evaluate(&mut self, input: ListenerQuorumInput) -> Result<ListenerQuorumDecision, ListenerQuorumError> {
+    pub fn evaluate(
+        &mut self,
+        input: ListenerQuorumInput,
+    ) -> Result<ListenerQuorumDecision, ListenerQuorumError> {
         reject_replayed_sequence(&self.latest_sequence_by_event, &input)?;
         let confirmed_listeners = collect_confirmed_listeners(&input)?;
         if confirmed_listeners.len() < self.required_confirmations {
@@ -29,7 +37,8 @@ impl ListenerQuorumEvaluator {
                 received: confirmed_listeners.len(),
             });
         }
-        self.latest_sequence_by_event.insert(input.event_id().to_owned(), input.event_sequence());
+        self.latest_sequence_by_event
+            .insert(input.event_id().to_owned(), input.event_sequence());
         Ok(ListenerQuorumDecision {
             event_id: input.event_id().to_owned(),
             event_sequence: input.event_sequence(),
@@ -64,7 +73,9 @@ fn reject_replayed_sequence(
     Ok(())
 }
 
-fn collect_confirmed_listeners(input: &ListenerQuorumInput) -> Result<Vec<String>, ListenerQuorumError> {
+fn collect_confirmed_listeners(
+    input: &ListenerQuorumInput,
+) -> Result<Vec<String>, ListenerQuorumError> {
     let mut confirmed = BTreeSet::new();
     for attestation in input.attestations() {
         parse_listener_did(attestation.listener_did(), "attestations[].listener_did")?;

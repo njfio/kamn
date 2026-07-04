@@ -1,7 +1,5 @@
 use super::super::models::*;
-use super::super::validation::{
-    validate_auditor_threshold, validate_kamn_did, validate_non_empty,
-};
+use super::super::validation::{validate_auditor_threshold, validate_kamn_did, validate_non_empty};
 
 impl DataLayerM4EscrowTransitionEngine {
     /// Creates an empty escrow transition engine.
@@ -17,7 +15,10 @@ impl DataLayerM4EscrowTransitionEngine {
         validate_non_empty(input.escrow_id.as_str(), "escrow_id")?;
         validate_kamn_did(input.initiator_did.as_str())?;
         validate_kamn_did(input.counterparty_did.as_str())?;
-        ensure_distinct_parties(input.initiator_did.as_str(), input.counterparty_did.as_str())?;
+        ensure_distinct_parties(
+            input.initiator_did.as_str(),
+            input.counterparty_did.as_str(),
+        )?;
         validate_optional_auditor(input.auditor_did.as_deref())?;
         validate_share_holders(&input.auditor_share_holders)?;
         validate_auditor_threshold(
@@ -43,9 +44,11 @@ fn ensure_distinct_parties(
     counterparty_did: &str,
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if initiator_did == counterparty_did {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowParties(
-            "initiator and counterparty must be distinct",
-        ));
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::InvalidEscrowParties(
+                "initiator and counterparty must be distinct",
+            ),
+        );
     }
     Ok(())
 }
@@ -84,9 +87,9 @@ fn ensure_unique_escrow_id(
     escrow_id: &str,
 ) -> Result<(), DataLayerM4SettlementEvidenceRegistryError> {
     if engine.escrows.contains_key(escrow_id) {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::DuplicateEscrowId(
-            escrow_id.to_owned(),
-        ));
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::DuplicateEscrowId(escrow_id.to_owned()),
+        );
     }
     Ok(())
 }

@@ -33,11 +33,7 @@ fn spec_c08_mcp_tools_call_content_lifecycle_dispatch_contract() {
 }
 
 fn assert_query_task_dispatch() {
-    let body = dispatch_tool_call_body(
-        "req-7",
-        "query_task",
-        r#"{"task_id":"task-1"}"#,
-    );
+    let body = dispatch_tool_call_body("req-7", "query_task", r#"{"task_id":"task-1"}"#);
     assert!(body.contains(r#""jsonrpc":"2.0""#));
     assert!(body.contains(r#""tool":"query_task""#));
     assert!(body.contains(r#""state":"submitted""#));
@@ -115,8 +111,7 @@ fn assert_query_bridge_dispatch() {
 fn dispatch_tool_call_body(request_id: &str, tool_name: &str, arguments: &str) -> String {
     let backend = ProtocolBackend;
     let request = frame_request(&format!(
-        r#"{{"jsonrpc":"2.0","id":"{}","method":"tools/call","params":{{"name":"{}","arguments":{}}}}}"#,
-        request_id, tool_name, arguments
+        r#"{{"jsonrpc":"2.0","id":"{request_id}","method":"tools/call","params":{{"name":"{tool_name}","arguments":{arguments}}}}}"#
     ));
     let responses = process_stdio_input(&backend, request.as_str()).expect("input should parse");
     parse_framed_json(responses[0].as_str())

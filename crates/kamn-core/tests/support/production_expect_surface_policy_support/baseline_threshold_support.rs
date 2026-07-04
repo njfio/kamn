@@ -62,44 +62,29 @@ pub fn load_thresholds(path: &Path) -> Thresholds {
 
 fn ensure_fixture_exists(path: &Path, reason_code: &str, label: &str) {
     if !path.is_file() {
-        fail(reason_code, &format!("{} is missing: {}", label, path.display()));
+        let display_path = path.display();
+        fail(reason_code, &format!("{label} is missing: {display_path}"));
     }
 }
 
-fn assert_schema(
-    actual: &str,
-    expected: &str,
-    reason_code: &str,
-    path: &Path,
-    label: &str,
-) {
+fn assert_schema(actual: &str, expected: &str, reason_code: &str, path: &Path, label: &str) {
     if actual != expected {
+        let display_path = path.display();
         fail(
             reason_code,
-            &format!(
-                "unexpected {} schema version {} in {}",
-                label,
-                actual,
-                path.display()
-            ),
+            &format!("unexpected {label} schema version {actual} in {display_path}",),
         );
     }
 }
 
-fn assert_reason_markers(
-    map: &std::collections::BTreeMap<String, String>,
-    path: &Path,
-) {
+fn assert_reason_markers(map: &std::collections::BTreeMap<String, String>, path: &Path) {
     let actual_taxonomy =
         required_value(map, "reason_taxonomy_version", "threshold_schema_invalid");
     if actual_taxonomy != REASON_TAXONOMY_VERSION {
+        let display_path = path.display();
         fail(
             "threshold_schema_invalid",
-            &format!(
-                "unexpected reason taxonomy version {} in {}",
-                actual_taxonomy,
-                path.display()
-            ),
+            &format!("unexpected reason taxonomy version {actual_taxonomy} in {display_path}",),
         );
     }
     let actual_csv = required_value(map, "reason_codes_csv", "threshold_schema_invalid");

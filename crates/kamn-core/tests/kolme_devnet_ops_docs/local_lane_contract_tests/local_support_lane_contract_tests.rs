@@ -10,7 +10,10 @@ const PLAN_CONTAINS_STAGED_REHEARSAL_SIGNOFF_ARTIFACT_CONTRACT_PLAN_MARKERS: &[&
 
 #[test]
 fn plan_contains_staged_rehearsal_signoff_artifact_contract() {
-    assert_plan_contains_all(PLAN_CONTAINS_STAGED_REHEARSAL_SIGNOFF_ARTIFACT_CONTRACT_PLAN_MARKERS, "plan_contains_staged_rehearsal_signoff_artifact_contract");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_STAGED_REHEARSAL_SIGNOFF_ARTIFACT_CONTRACT_PLAN_MARKERS,
+        "plan_contains_staged_rehearsal_signoff_artifact_contract",
+    );
 }
 
 const PLAN_CONTAINS_FAST_GATE_NATIVE_API_PARITY_LANE_PLAN_MARKERS: &[&str] = &[
@@ -24,7 +27,10 @@ const PLAN_CONTAINS_FAST_GATE_NATIVE_API_PARITY_LANE_PLAN_MARKERS: &[&str] = &[
 
 #[test]
 fn plan_contains_fast_gate_native_api_parity_lane() {
-    assert_plan_contains_all(PLAN_CONTAINS_FAST_GATE_NATIVE_API_PARITY_LANE_PLAN_MARKERS, "plan_contains_fast_gate_native_api_parity_lane");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_FAST_GATE_NATIVE_API_PARITY_LANE_PLAN_MARKERS,
+        "plan_contains_fast_gate_native_api_parity_lane",
+    );
 }
 
 const PLAN_CONTAINS_DETERMINISTIC_LOCAL_BOOTSTRAP_HEALTH_CHECKS_PLAN_MARKERS: &[&str] = &[
@@ -39,5 +45,8 @@ const PLAN_CONTAINS_DETERMINISTIC_LOCAL_BOOTSTRAP_HEALTH_CHECKS_PLAN_MARKERS: &[
 
 #[test]
 fn plan_contains_deterministic_local_bootstrap_health_checks() {
-    assert_plan_contains_all(PLAN_CONTAINS_DETERMINISTIC_LOCAL_BOOTSTRAP_HEALTH_CHECKS_PLAN_MARKERS, "plan_contains_deterministic_local_bootstrap_health_checks");
+    assert_plan_contains_all(
+        PLAN_CONTAINS_DETERMINISTIC_LOCAL_BOOTSTRAP_HEALTH_CHECKS_PLAN_MARKERS,
+        "plan_contains_deterministic_local_bootstrap_health_checks",
+    );
 }

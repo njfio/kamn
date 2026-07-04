@@ -46,5 +46,8 @@ fn service_api_ops_configuration_contains_signer_secret_zeroization_controls() {
 fn service_api_ops_configuration_contains_dependency_license_metadata_governance_remediation_markers(
 ) {
     assert_doc_contains_all(METADATA_GOVERNANCE_REMEDIATION_MARKERS);
-    assert_doc_contains_prefixed_entries("metadata_governance_remediation", METADATA_GOVERNANCE_REMEDIATION_CODES);
+    assert_doc_contains_prefixed_entries(
+        "metadata_governance_remediation",
+        METADATA_GOVERNANCE_REMEDIATION_CODES,
+    );
 }

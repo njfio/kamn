@@ -1,5 +1,5 @@
-use super::*;
 use super::service_api_policy_support::assert_reason_code_present_in_docs_and_ops;
+use super::*;
 
 #[test]
 fn doc_contains_runtime_request_response_schema_compatibility_contract_lane_ci_mode_markers() {
@@ -43,8 +43,11 @@ fn assert_request_response_doc_paths() {
     assert!(DOC.contains(&format!(
         "request_response_schema_compatibility_required_row_ids_csv={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REQUIRED_ROW_IDS_CSV}"
     )));
-    assert!(DOC.contains("request_response_schema_compatibility_ops_doc_path=docs/ops/configuration.md"));
-    assert!(DOC.contains("request_response_schema_compatibility_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC
+        .contains("request_response_schema_compatibility_ops_doc_path=docs/ops/configuration.md"));
+    assert!(
+        DOC.contains("request_response_schema_compatibility_strategy_doc_path=docs/ci/strategy.md")
+    );
 }
 
 fn assert_request_response_doc_command() {
@@ -57,7 +60,8 @@ fn assert_request_response_source_markers() {
     assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE.contains(
         "REASON_TAXONOMY_VERSION = \"kamn.runtime.request-response-schema-compatibility-reason-taxonomy.v1\""
     ));
-    assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE.contains("REASON_CODES_CSV = \",\".join("));
+    assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE
+        .contains("REASON_CODES_CSV = \",\".join("));
     assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE.contains(
         "FIXTURE_SCHEMA = \"kamn.runtime.request-response-schema-compatibility-fixture-matrix.v1\""
     ));

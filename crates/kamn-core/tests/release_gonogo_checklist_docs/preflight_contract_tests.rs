@@ -10,7 +10,10 @@ const CHECKLIST_CONTAINS_PREFLIGHT_GATES_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_preflight_gates() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_PREFLIGHT_GATES_MARKERS, "checklist_contains_preflight_gates");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_PREFLIGHT_GATES_MARKERS,
+        "checklist_contains_preflight_gates",
+    );
 }
 
 const CHECKLIST_CONTAINS_STALE_SCRIPT_REFERENCE_DELETION_WAVE_GATE_MARKERS: &[&str] = &[
@@ -32,7 +35,10 @@ const CHECKLIST_CONTAINS_STALE_SCRIPT_REFERENCE_DELETION_WAVE_GATE_MARKERS: &[&s
 
 #[test]
 fn checklist_contains_stale_script_reference_deletion_wave_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_STALE_SCRIPT_REFERENCE_DELETION_WAVE_GATE_MARKERS, "checklist_contains_stale_script_reference_deletion_wave_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_STALE_SCRIPT_REFERENCE_DELETION_WAVE_GATE_MARKERS,
+        "checklist_contains_stale_script_reference_deletion_wave_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_PRODUCTION_MODE_LIVE_PROVIDER_ENFORCEMENT_GATE_MARKERS: &[&str] = &[
@@ -47,7 +53,10 @@ const CHECKLIST_CONTAINS_PRODUCTION_MODE_LIVE_PROVIDER_ENFORCEMENT_GATE_MARKERS:
 
 #[test]
 fn checklist_contains_production_mode_live_provider_enforcement_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_PRODUCTION_MODE_LIVE_PROVIDER_ENFORCEMENT_GATE_MARKERS, "checklist_contains_production_mode_live_provider_enforcement_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_PRODUCTION_MODE_LIVE_PROVIDER_ENFORCEMENT_GATE_MARKERS,
+        "checklist_contains_production_mode_live_provider_enforcement_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_FULL_STACK_HARNESS_MARKER_CHECKER_REASON_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -67,7 +76,10 @@ const CHECKLIST_CONTAINS_FULL_STACK_HARNESS_MARKER_CHECKER_REASON_MAPPING_GATE_M
 
 #[test]
 fn checklist_contains_full_stack_harness_marker_checker_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_FULL_STACK_HARNESS_MARKER_CHECKER_REASON_MAPPING_GATE_MARKERS, "checklist_contains_full_stack_harness_marker_checker_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_FULL_STACK_HARNESS_MARKER_CHECKER_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_full_stack_harness_marker_checker_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_RUNTIME_SIGNER_KEY_SOURCE_REASON_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -81,7 +93,10 @@ const CHECKLIST_CONTAINS_RUNTIME_SIGNER_KEY_SOURCE_REASON_MAPPING_GATE_MARKERS: 
 
 #[test]
 fn checklist_contains_runtime_signer_key_source_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_RUNTIME_SIGNER_KEY_SOURCE_REASON_MAPPING_GATE_MARKERS, "checklist_contains_runtime_signer_key_source_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_RUNTIME_SIGNER_KEY_SOURCE_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_runtime_signer_key_source_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_ROTATION_PREFLIGHT_QUORUM_PARITY_AND_CUSTODY_REASON_MAPPING_GATE_MARKERS: &[&str] = &[
@@ -103,7 +118,10 @@ const CHECKLIST_CONTAINS_ROTATION_PREFLIGHT_QUORUM_PARITY_AND_CUSTODY_REASON_MAP
 
 #[test]
 fn checklist_contains_rotation_preflight_quorum_parity_and_custody_reason_mapping_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_ROTATION_PREFLIGHT_QUORUM_PARITY_AND_CUSTODY_REASON_MAPPING_GATE_MARKERS, "checklist_contains_rotation_preflight_quorum_parity_and_custody_reason_mapping_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_ROTATION_PREFLIGHT_QUORUM_PARITY_AND_CUSTODY_REASON_MAPPING_GATE_MARKERS,
+        "checklist_contains_rotation_preflight_quorum_parity_and_custody_reason_mapping_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_DEPLOYMENT_PREFLIGHT_MARKER_COMPLETENESS_SCHEMA_DRIFT_GATE_MARKERS: &[&str] = &[
@@ -126,7 +144,10 @@ const CHECKLIST_CONTAINS_DEPLOYMENT_PREFLIGHT_MARKER_COMPLETENESS_SCHEMA_DRIFT_G
 
 #[test]
 fn checklist_contains_deployment_preflight_marker_completeness_schema_drift_gate() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_DEPLOYMENT_PREFLIGHT_MARKER_COMPLETENESS_SCHEMA_DRIFT_GATE_MARKERS, "checklist_contains_deployment_preflight_marker_completeness_schema_drift_gate");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_DEPLOYMENT_PREFLIGHT_MARKER_COMPLETENESS_SCHEMA_DRIFT_GATE_MARKERS,
+        "checklist_contains_deployment_preflight_marker_completeness_schema_drift_gate",
+    );
 }
 
 const CHECKLIST_CONTAINS_DRY_RUN_WORKFLOW_MARKERS: &[&str] = &[
@@ -139,5 +160,8 @@ const CHECKLIST_CONTAINS_DRY_RUN_WORKFLOW_MARKERS: &[&str] = &[
 
 #[test]
 fn checklist_contains_dry_run_workflow() {
-    assert_checklist_contains_all(CHECKLIST_CONTAINS_DRY_RUN_WORKFLOW_MARKERS, "checklist_contains_dry_run_workflow");
+    assert_checklist_contains_all(
+        CHECKLIST_CONTAINS_DRY_RUN_WORKFLOW_MARKERS,
+        "checklist_contains_dry_run_workflow",
+    );
 }

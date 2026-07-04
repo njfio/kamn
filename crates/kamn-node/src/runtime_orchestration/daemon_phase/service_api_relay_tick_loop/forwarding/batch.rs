@@ -1,18 +1,10 @@
 use super::super::super::super::*;
 use super::super::spool_io::{drain_relay_entries, project_relayed_state, requeue_failed_entries};
 
+#[derive(Default)]
 pub(super) struct RelayBatchOutcome {
     pub(super) relay_message_ids: Vec<String>,
     pub(super) failed_entries: Vec<super::RelayEntry>,
-}
-
-impl Default for RelayBatchOutcome {
-    fn default() -> Self {
-        Self {
-            relay_message_ids: Vec::new(),
-            failed_entries: Vec::new(),
-        }
-    }
 }
 
 pub(super) fn build_relay_batch(

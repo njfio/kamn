@@ -12,8 +12,7 @@ fn repo_path(relative: &str) -> PathBuf {
 
 fn fail(reason_code: &str, detail: &str) -> ! {
     panic!(
-        "reason_taxonomy_version={} reason_codes_csv={} reason_code={} detail={}",
-        REASON_TAXONOMY_VERSION, REASON_CODES_CSV, reason_code, detail
+        "reason_taxonomy_version={REASON_TAXONOMY_VERSION} reason_codes_csv={REASON_CODES_CSV} reason_code={reason_code} detail={detail}"
     );
 }
 
@@ -21,7 +20,7 @@ fn read_file(path: &Path) -> String {
     fs::read_to_string(path).unwrap_or_else(|error| {
         fail(
             "budget_fixture_missing",
-            &format!("{}: {}", path.display(), error),
+            &format!("{path}: {error}", path = path.display()),
         )
     })
 }
@@ -34,13 +33,13 @@ fn required_u64(value: &Value, key: &str) -> u64 {
     let raw = value.get(key).unwrap_or_else(|| {
         fail(
             "budget_threshold_missing",
-            &format!("missing threshold key {}", key),
+            &format!("missing threshold key {key}"),
         )
     });
     raw.as_u64().unwrap_or_else(|| {
         fail(
             "budget_threshold_invalid",
-            &format!("threshold key {} must be a non-negative integer", key),
+            &format!("threshold key {key} must be a non-negative integer"),
         )
     })
 }
@@ -52,7 +51,10 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
     if !baseline_path.is_file() {
         fail(
             "budget_fixture_missing",
-            &format!("baseline fixture not found: {}", baseline_path.display()),
+            &format!(
+                "baseline fixture not found: {baseline_path}",
+                baseline_path = baseline_path.display()
+            ),
         );
     }
 
@@ -60,7 +62,7 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
     let baseline_json: Value = serde_json::from_str(&baseline_raw).unwrap_or_else(|error| {
         fail(
             "budget_fixture_json_invalid",
-            &format!("invalid baseline json: {}", error),
+            &format!("invalid baseline json: {error}"),
         )
     });
 
@@ -77,8 +79,7 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
         fail(
             "budget_fixture_schema_mismatch",
             &format!(
-                "unexpected baseline schema version {}, expected {}",
-                schema_version, BASELINE_SCHEMA_VERSION
+                "unexpected baseline schema version {schema_version}, expected {BASELINE_SCHEMA_VERSION}"
             ),
         );
     }
@@ -101,10 +102,8 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
         fail(
             "main_tests_shell_budget_exceeded",
             &format!(
-                "{} has {} lines; max is {}",
-                main_tests_shell_path.display(),
-                main_tests_lines,
-                main_tests_shell_max_lines
+                "{main_tests_shell_path} has {main_tests_lines} lines; max is {main_tests_shell_max_lines}",
+                main_tests_shell_path = main_tests_shell_path.display()
             ),
         );
     }
@@ -114,10 +113,8 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
         fail(
             "runtime_tests_shell_budget_exceeded",
             &format!(
-                "{} has {} lines; max is {}",
-                runtime_tests_shell_path.display(),
-                runtime_tests_shell_lines,
-                runtime_tests_shell_max_lines
+                "{runtime_tests_shell_path} has {runtime_tests_shell_lines} lines; max is {runtime_tests_shell_max_lines}",
+                runtime_tests_shell_path = runtime_tests_shell_path.display()
             ),
         );
     }
@@ -127,9 +124,8 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
             fail(
                 "runtime_tests_fragment_count_below_min",
                 &format!(
-                    "failed to read fragment directory {}: {}",
-                    runtime_tests_fragment_dir.display(),
-                    error
+                    "failed to read fragment directory {runtime_tests_fragment_dir}: {error}",
+                    runtime_tests_fragment_dir = runtime_tests_fragment_dir.display()
                 ),
             )
         })
@@ -138,7 +134,7 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
                 .unwrap_or_else(|error| {
                     fail(
                         "runtime_tests_fragment_count_below_min",
-                        &format!("failed to read fragment dir entry: {}", error),
+                        &format!("failed to read fragment dir entry: {error}"),
                     )
                 })
                 .path()
@@ -151,10 +147,9 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
         fail(
             "runtime_tests_fragment_count_below_min",
             &format!(
-                "{} fragment count {} is below min {}",
-                runtime_tests_fragment_dir.display(),
-                fragment_paths.len(),
-                runtime_tests_fragment_min_count
+                "{runtime_tests_fragment_dir} fragment count {fragment_count} is below min {runtime_tests_fragment_min_count}",
+                runtime_tests_fragment_dir = runtime_tests_fragment_dir.display(),
+                fragment_count = fragment_paths.len()
             ),
         );
     }
@@ -165,10 +160,8 @@ fn node_main_tests_surface_budget_baseline_contract_remains_within_thresholds() 
             fail(
                 "runtime_tests_fragment_budget_exceeded",
                 &format!(
-                    "{} has {} lines; max is {}",
-                    fragment_path.display(),
-                    fragment_lines,
-                    runtime_tests_fragment_max_lines
+                    "{fragment_path} has {fragment_lines} lines; max is {runtime_tests_fragment_max_lines}",
+                    fragment_path = fragment_path.display()
                 ),
             );
         }

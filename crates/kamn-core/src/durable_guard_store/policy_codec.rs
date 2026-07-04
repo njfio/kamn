@@ -49,9 +49,7 @@ pub(crate) fn encode_hex(value: &str) -> String {
     encoded
 }
 
-pub(crate) fn decode_hex(
-    value: &str,
-) -> Result<String, super::DurableGuardSnapshotStoreError> {
+pub(crate) fn decode_hex(value: &str) -> Result<String, super::DurableGuardSnapshotStoreError> {
     if !value.len().is_multiple_of(2) {
         return invalid_payload(value);
     }
@@ -68,9 +66,7 @@ fn format_allowlist(values: &BTreeSet<String>) -> String {
     format!("allowlist:{encoded_values}")
 }
 
-fn parse_allowlist(
-    value: &str,
-) -> Result<PermissionRule, super::DurableGuardSnapshotStoreError> {
+fn parse_allowlist(value: &str) -> Result<PermissionRule, super::DurableGuardSnapshotStoreError> {
     let encoded = value
         .strip_prefix("allowlist:")
         .ok_or_else(|| invalid_payload_err(value))?;
@@ -89,15 +85,15 @@ fn parse_numeric_retention(
         return Ok(RetentionPolicy::MaxAgeSeconds(parsed));
     }
     if let Some(raw) = value.strip_prefix("max_count:") {
-        let parsed = raw.parse::<usize>().map_err(|_| invalid_payload_err(value))?;
+        let parsed = raw
+            .parse::<usize>()
+            .map_err(|_| invalid_payload_err(value))?;
         return Ok(RetentionPolicy::MaxMessageCount(parsed));
     }
     invalid_payload(value)
 }
 
-fn decode_hex_bytes(
-    value: &str,
-) -> Result<Vec<u8>, super::DurableGuardSnapshotStoreError> {
+fn decode_hex_bytes(value: &str) -> Result<Vec<u8>, super::DurableGuardSnapshotStoreError> {
     let bytes = value.as_bytes();
     let mut decoded = Vec::with_capacity(bytes.len() / 2);
     let mut index = 0;
@@ -110,9 +106,7 @@ fn decode_hex_bytes(
     Ok(decoded)
 }
 
-fn decode_hex_nibble(
-    value: u8,
-) -> Result<u8, super::DurableGuardSnapshotStoreError> {
+fn decode_hex_nibble(value: u8) -> Result<u8, super::DurableGuardSnapshotStoreError> {
     match value {
         b'0'..=b'9' => Ok(value - b'0'),
         b'a'..=b'f' => Ok(value - b'a' + 10),

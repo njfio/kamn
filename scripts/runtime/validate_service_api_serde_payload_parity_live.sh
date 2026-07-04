@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
 PAYLOAD_SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint/payload.rs"
 TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs"
+SERDE_PAYLOAD_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/residual_root_contract_tests/serde_payload_contract_tests.rs"
+TRANSPORT_OBSERVABILITY_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/route_tls_contract_tests.rs"
+PAYLOAD_PARSE_TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests/residual_root_contract_tests/payload_parse_contract_tests.rs"
 
 output_json=""
 max_seconds=240
@@ -47,6 +50,15 @@ if [ ! -f "$TEST_FILE" ]; then
   echo "expected service api endpoint test file: $TEST_FILE" >&2
   exit 1
 fi
+for split_test_file in \
+  "$SERDE_PAYLOAD_TEST_FILE" \
+  "$TRANSPORT_OBSERVABILITY_TEST_FILE" \
+  "$PAYLOAD_PARSE_TEST_FILE"; do
+  if [ ! -f "$split_test_file" ]; then
+    echo "expected service api endpoint split test file: $split_test_file" >&2
+    exit 1
+  fi
+done
 
 start_epoch="$(date +%s)"
 TMP_DIR="$(mktemp -d)"
@@ -55,6 +67,14 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 source_has_marker() {
   local marker="$1"
   grep -Fq "$marker" "$SOURCE_FILE" || grep -Fq "$marker" "$PAYLOAD_SOURCE_FILE"
+}
+
+test_has_marker() {
+  local marker="$1"
+  grep -Fq "$marker" "$TEST_FILE" \
+    || grep -Fq "$marker" "$SERDE_PAYLOAD_TEST_FILE" \
+    || grep -Fq "$marker" "$TRANSPORT_OBSERVABILITY_TEST_FILE" \
+    || grep -Fq "$marker" "$PAYLOAD_PARSE_TEST_FILE"
 }
 
 for source_marker in \
@@ -102,18 +122,18 @@ for test_marker in \
   "unit_service_api_endpoint_serde_payload_roundtrip_contracts" \
   "integration_service_api_endpoint_http_response_bodies_match_serde_contracts" \
   "regression_service_api_payload_parse_reason_codes_fail_closed"; do
-  if ! grep -Fq "$test_marker" "$TEST_FILE"; then
+  if ! test_has_marker "$test_marker"; then
     echo "missing required serde test marker: $test_marker" >&2
     exit 1
   fi
 done
 
 pushd "$ROOT_DIR" >/dev/null
-cargo test -p kamn-node main_tests::unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::serde_payload_contract_tests::unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --exact \
   >"$TMP_DIR/service-api-serde-unit.log" 2>&1
-cargo test -p kamn-node main_tests::integration_service_api_endpoint_http_response_bodies_match_serde_contracts -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::transport_surface_observability_contract_tests::route_tls_contract_tests::integration_service_api_endpoint_http_response_bodies_match_serde_contracts -- --exact \
   >"$TMP_DIR/service-api-serde-integration.log" 2>&1
-cargo test -p kamn-node main_tests::regression_service_api_payload_parse_reason_codes_fail_closed -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::payload_parse_contract_tests::regression_service_api_payload_parse_reason_codes_fail_closed -- --exact \
   >"$TMP_DIR/service-api-serde-regression.log" 2>&1
 popd >/dev/null
 

@@ -32,7 +32,10 @@ async fn release_escrow_with_live_solana_settlement(
 ) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, String> {
     let mut store = state.message_store.lock().await;
     let existing = store.get_escrow_status(escrow_id)?;
-    if existing.as_ref().is_some_and(|payload| payload.state == "released") {
+    if existing
+        .as_ref()
+        .is_some_and(|payload| payload.state == "released")
+    {
         return Ok(Ok(existing));
     }
     let evidence =

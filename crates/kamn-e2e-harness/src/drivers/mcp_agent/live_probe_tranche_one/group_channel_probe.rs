@@ -66,8 +66,10 @@ fn send_channel_message(settings: &S03Settings) -> Result<String, String> {
         format!("{}-s03-send-message", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         "probe-send-message",
-        settings.message_payload.as_str(),
-        "mcp live s03 send_message",
+        (
+            settings.message_payload.as_str(),
+            "mcp live s03 send_message",
+        ),
     )
 }
 
@@ -79,8 +81,7 @@ fn query_message(settings: &S03Settings, message_id: &str) -> Result<(), String>
         format!("{}-s03-query-message", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         "probe-query-message",
-        message_id,
-        "mcp live s03 query_message",
+        (message_id, "mcp live s03 query_message"),
     )
 }
 

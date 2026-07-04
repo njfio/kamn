@@ -12,7 +12,9 @@ pub(crate) fn parse_public_modules(lib_rs: &str) -> Vec<String> {
 }
 
 pub(crate) fn module_source_paths(module: &str, src_root: &Path) -> Vec<PathBuf> {
-    let mut paths = root_rs_path(module, src_root).into_iter().collect::<Vec<_>>();
+    let mut paths = root_rs_path(module, src_root)
+        .into_iter()
+        .collect::<Vec<_>>();
     collect_nested_paths(&mut paths, &src_root.join(module));
     paths.sort();
     paths.dedup();
@@ -34,7 +36,7 @@ fn public_module_name(line: &str) -> Option<String> {
 }
 
 fn root_rs_path(module: &str, src_root: &Path) -> Option<PathBuf> {
-    let path = src_root.join(format!("{}.rs", module));
+    let path = src_root.join(format!("{module}.rs"));
     path.is_file().then_some(path)
 }
 
@@ -45,21 +47,52 @@ fn collect_nested_paths(paths: &mut Vec<PathBuf>, dir: &Path) {
     for entry in read_dir_entries(dir) {
         let path = entry.path();
         if path.is_dir() {
-            collect_nested_paths(paths, &path);
-        } else if path.extension().is_some_and(|ext| ext == "rs") {
+            if !is_test_only_source_path(&path) {
+                collect_nested_paths(paths, &path);
+            }
+        } else if is_counted_rust_source_path(&path) {
             paths.push(path);
         }
     }
 }
 
+fn is_counted_rust_source_path(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| ext == "rs") && !is_test_only_source_path(path)
+}
+
+fn is_test_only_source_path(path: &Path) -> bool {
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_str()
+            .is_some_and(is_test_only_module_name)
+    }) || path
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(is_test_only_module_name)
+}
+
+fn is_test_only_module_name(name: &str) -> bool {
+    name == "tests"
+        || name == "runtime_tests"
+        || name.starts_with("test_")
+        || name.ends_with("_tests")
+}
+
 fn read_dir_entries(dir: &Path) -> Vec<fs::DirEntry> {
+    let dir_display = dir.display();
     fs::read_dir(dir)
-        .unwrap_or_else(|error| fail("module_source_missing", &format!("failed to read {}: {}", dir.display(), error)))
+        .unwrap_or_else(|error| {
+            fail(
+                "module_source_missing",
+                &format!("failed to read {dir_display}: {error}"),
+            )
+        })
         .map(|entry| {
             entry.unwrap_or_else(|error| {
                 fail(
                     "module_source_missing",
-                    &format!("failed to read dir entry in {}: {}", dir.display(), error),
+                    &format!("failed to read dir entry in {dir_display}: {error}"),
                 )
             })
         })
@@ -88,7 +121,9 @@ fn is_non_public_prefix(trimmed: &str) -> bool {
 
 fn matches_public_tokens(first: Option<&str>, second: Option<&str>) -> bool {
     match first {
-        Some("fn" | "struct" | "enum" | "trait" | "type" | "const" | "static" | "mod" | "use") => true,
+        Some("fn" | "struct" | "enum" | "trait" | "type" | "const" | "static" | "mod" | "use") => {
+            true
+        }
         Some("async" | "unsafe") => second == Some("fn"),
         Some("extern") => true,
         _ => false,

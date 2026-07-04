@@ -1,7 +1,7 @@
 use kamn_types::did;
 use kamn_types::{
-    parse_agent_did_canonical, parse_kamn_did_canonical, AgentDid, AgentDidKeyBindingError,
-    AgentDidError, KamnDidError, SharedDidParseError,
+    parse_agent_did_canonical, parse_kamn_did_canonical, AgentDid, AgentDidError,
+    AgentDidKeyBindingError, KamnDidError, SharedDidParseError,
 };
 
 const PUBLIC_KEY_HEX: &str = "025f6ceceac37540cf6ef5f09d4f62c05f0b8f57fe6d8ae32a8f13f4a2eb6e940d";
@@ -10,7 +10,8 @@ const PUBLIC_KEY_HEX_ALT: &str =
 
 #[test]
 fn integration_plain_agent_did_reports_missing_key_binding() {
-    let did = AgentDid::parse("kamn:did:agent:plain-boundary").expect("plain agent did should parse");
+    let did =
+        AgentDid::parse("kamn:did:agent:plain-boundary").expect("plain agent did should parse");
     assert_eq!(
         did.ensure_public_key_hex_binding(PUBLIC_KEY_HEX),
         Err(AgentDidKeyBindingError::MissingKeyBinding)

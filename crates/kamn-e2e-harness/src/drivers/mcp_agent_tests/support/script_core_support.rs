@@ -42,7 +42,7 @@ pub(crate) fn write_mcp_tool_response_script(
     write_executable_python_script(script_path, script_source.as_str());
 }
 
-pub(crate) fn script_path_str<'a>(script_path: &'a Path) -> &'a str {
+pub(crate) fn script_path_str(script_path: &Path) -> &str {
     script_path
         .to_str()
         .expect("script path should be valid utf-8")

@@ -17,8 +17,8 @@ fn performance_tcp_adapter_local_relay_contract_stays_within_budget() {
     sender_adapter
         .send(&envelope)
         .unwrap_or_else(|error| panic!("sender adapter failed: {error}"));
-    let received = join_listener(listener_thread)
-        .unwrap_or_else(|error| panic!("listener failed: {error}"));
+    let received =
+        join_listener(listener_thread).unwrap_or_else(|error| panic!("listener failed: {error}"));
     assert_eq!(received.envelope, envelope);
     let elapsed_millis = started.elapsed().as_millis();
     assert!(

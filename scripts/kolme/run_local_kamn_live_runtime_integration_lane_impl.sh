@@ -62,6 +62,17 @@ shell_escape() {
   printf "%q" "$1"
 }
 
+resolve_path() {
+  python3 - "$1" <<'PY'
+from __future__ import annotations
+
+import pathlib
+import sys
+
+print(pathlib.Path(sys.argv[1]).resolve())
+PY
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --mode)
@@ -382,6 +393,15 @@ for numeric_value in "$MAX_SECONDS" "$BOOTSTRAP_MAX_SECONDS" "$CONFORMANCE_MAX_S
     exit 1
   fi
 done
+
+OUTPUT_JSON="$(resolve_path "$OUTPUT_JSON")"
+BOOTSTRAP_REPORT="$(resolve_path "$BOOTSTRAP_REPORT")"
+CONFORMANCE_REPORT="$(resolve_path "$CONFORMANCE_REPORT")"
+LOCALHOST_SIGNED_REPORT="$(resolve_path "$LOCALHOST_SIGNED_REPORT")"
+RUNTIME_COMMIT_OUTPUT_FILE="$(resolve_path "$RUNTIME_COMMIT_OUTPUT_FILE")"
+RUNTIME_COMMIT_LIVE_SUMMARY="$(resolve_path "$RUNTIME_COMMIT_LIVE_SUMMARY")"
+RUNTIME_COMMIT_LIVE_POLICY_REPORT="$(resolve_path "$RUNTIME_COMMIT_LIVE_POLICY_REPORT")"
+RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="$(resolve_path "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE")"
 
 if [ ! -x "$BOOTSTRAP_RUNNER" ]; then
   echo "expected local fork bootstrap/readiness runner to be executable" >&2

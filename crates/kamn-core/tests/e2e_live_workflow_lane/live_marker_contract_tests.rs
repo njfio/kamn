@@ -30,11 +30,7 @@ fn regression_e2e_live_workflow_lane_rejects_missing_centralized_service_auth_ke
 
 #[test]
 fn regression_e2e_live_workflow_lane_rejects_missing_live_job_timeout() {
-    assert_single_reason_failure(
-        "    timeout-minutes: 30\n",
-        "",
-        "live_job_timeout_missing",
-    );
+    assert_single_reason_failure("    timeout-minutes: 30\n", "", "live_job_timeout_missing");
 }
 
 fn assert_single_reason_failure(target: &str, replacement: &str, reason: &str) {

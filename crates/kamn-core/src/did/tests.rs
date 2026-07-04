@@ -1,7 +1,7 @@
 use super::{
     canonical_did_document, canonical_service_endpoint,
-    validate_did_verification_method_algorithms, AgentDid, AgentDidError,
-    AgentDidKeyBindingError, AgentDidMetadata, DidDocumentError, KamnDid, KamnDidError,
+    validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidKeyBindingError,
+    AgentDidMetadata, DidDocumentError, KamnDid, KamnDidError,
 };
 
 const SOURCE: &str = include_str!("../../../kamn-types/src/did/ids.rs");
@@ -90,7 +90,10 @@ fn canonical_service_endpoint_rejects_query_and_fragment() {
 #[test]
 fn validate_did_verification_method_algorithms_accepts_uniform_multikey_set() {
     let algorithms = vec!["Multikey".to_owned(), "Multikey".to_owned()];
-    assert_eq!(validate_did_verification_method_algorithms(&algorithms), Ok(()));
+    assert_eq!(
+        validate_did_verification_method_algorithms(&algorithms),
+        Ok(())
+    );
 }
 
 #[test]
@@ -109,7 +112,10 @@ fn unit_agent_did_with_public_key_hex_binding_embeds_fingerprint_suffix() {
     let did = AgentDid::with_public_key_hex_binding("agent-1", TEST_PUBLIC_KEY_HEX)
         .expect("bound did should render");
     assert!(did.as_str().starts_with("kamn:did:agent:agent-1--keyh-"));
-    assert_eq!(did.key_binding_fingerprint().expect("fingerprint").len(), 32);
+    assert_eq!(
+        did.key_binding_fingerprint().expect("fingerprint").len(),
+        32
+    );
 }
 
 #[test]

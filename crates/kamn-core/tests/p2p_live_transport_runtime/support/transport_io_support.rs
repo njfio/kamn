@@ -1,6 +1,7 @@
 use super::*;
 
-pub(crate) fn send_frame(
+#[cfg(not(feature = "libp2p-live-transport"))]
+fn send_frame(
     transport: &Libp2pLivePeerLifecycleTransport,
     sender_peer_id: &str,
     recipient_peer_id: &str,
@@ -11,6 +12,7 @@ pub(crate) fn send_frame(
     transport.send(frame)
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(crate) fn send_frames_until_error(
     transport: &Libp2pLivePeerLifecycleTransport,
     sender_peer_id: &str,
@@ -27,6 +29,7 @@ pub(crate) fn send_frames_until_error(
     None
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 pub(crate) fn send_frames_expect_success(
     transport: &Libp2pLivePeerLifecycleTransport,
     sender_peer_id: &str,
@@ -108,8 +111,7 @@ fn append_drained_frames(
 fn assert_drain_deadline(started: Instant, timeout: Duration, expected: usize, current: usize) {
     assert!(
         started.elapsed() < timeout,
-        "expected {expected} frames but only received {current} within {:?}",
-        timeout
+        "expected {expected} frames but only received {current} within {timeout:?}",
     );
     std::thread::sleep(Duration::from_millis(25));
 }

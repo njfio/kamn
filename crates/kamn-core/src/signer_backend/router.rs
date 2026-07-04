@@ -1,17 +1,19 @@
 use super::backends::{
-    deterministic_secure_provider_client_sign, LocalSignerBackend, SecureSignerBackend,
-    SecureSignerProviderClientSignFn, SignerBackend,
+    LocalSignerBackend, SecureSignerBackend, SecureSignerProviderClientSignFn, SignerBackend,
 };
 use super::env::{LOCAL_BACKEND_NAME, SECURE_AWS_KMS_BACKEND_NAME, SECURE_MOCK_BACKEND_NAME};
 use super::errors::SignerBackendError;
 use super::provider_policy::{SignerKeyRole, SignerProviderHandshakeMatrix};
 use super::request::SigningRequest;
+use super::signing_cache::SignerBackendSigningCache;
+use std::sync::Arc;
 
 /// Router that prefers secure signer paths and applies policy fallback to local backend.
 #[derive(Debug, Clone)]
 pub struct SignerBackendRouter {
     local: LocalSignerBackend,
     secure: SecureSignerBackend,
+    signing_cache: Arc<SignerBackendSigningCache>,
 }
 
 impl SignerBackendRouter {
@@ -26,10 +28,15 @@ impl SignerBackendRouter {
     pub fn with_provider_handshake_matrix(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
     ) -> Self {
-        Self::with_provider_client(
-            provider_handshake_matrix,
-            deterministic_secure_provider_client_sign,
-        )
+        let signing_cache = Arc::new(SignerBackendSigningCache::default());
+        Self {
+            local: LocalSignerBackend,
+            secure: SecureSignerBackend::with_deterministic_provider_client_and_cache(
+                provider_handshake_matrix,
+                Arc::clone(&signing_cache),
+            ),
+            signing_cache,
+        }
     }
 
     /// Construct router with explicit provider handshake matrix and provider-client callback.
@@ -37,12 +44,15 @@ impl SignerBackendRouter {
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
         provider_client_sign: SecureSignerProviderClientSignFn,
     ) -> Self {
+        let signing_cache = Arc::new(SignerBackendSigningCache::default());
         Self {
             local: LocalSignerBackend,
-            secure: SecureSignerBackend::with_provider_client(
+            secure: SecureSignerBackend::with_provider_client_and_cache(
                 provider_handshake_matrix,
                 provider_client_sign,
+                Arc::clone(&signing_cache),
             ),
+            signing_cache,
         }
     }
 
@@ -61,7 +71,9 @@ impl SignerBackendRouter {
                         key_id: request.key_id.clone(),
                     });
                 }
-                let signature = self.local.sign(request)?;
+                let signature = self
+                    .local
+                    .sign_with_cache(request, self.signing_cache.as_ref())?;
                 Ok(super::provider_policy::BackendSignature {
                     backend: self.local.backend_name().to_owned(),
                     signature,

@@ -1,4 +1,5 @@
-const SHARED_DOC_HARNESS_SOURCE: &str = include_str!("./node_runtime_cli_docs.rs");
+const SHARED_DOC_HARNESS_SOURCE: &str =
+    include_str!("./node_runtime_cli_docs/migrated_doc_contract_tests/migrated_doc_cases.rs");
 
 #[test]
 fn regression_signer_migration_parity_docs_migrated_into_shared_harness_matrix() {

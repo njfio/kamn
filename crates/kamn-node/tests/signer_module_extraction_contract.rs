@@ -11,7 +11,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn read(path: &Path) -> String {
-    fs::read_to_string(path).unwrap_or_else(|err| panic!("failed to read {}: {err}", path.display()))
+    let path_display = path.display();
+    fs::read_to_string(path).unwrap_or_else(|err| panic!("failed to read {path_display}: {err}"))
 }
 
 fn count_lines(path: &Path) -> usize {
@@ -35,12 +36,16 @@ fn signer_paths(root: &Path) -> (PathBuf, [PathBuf; 5]) {
 
 fn assert_required_modules(paths: &[PathBuf; 5]) {
     for path in paths {
-        assert!(path.exists(), "missing {}", path.display());
+        let path_display = path.display();
+        assert!(path.exists(), "missing {path_display}");
     }
 }
 
 fn assert_root_markers(root_source: &str) {
-    assert!(root_source.contains("mod models;"), "root missing models module marker");
+    assert!(
+        root_source.contains("mod models;"),
+        "root missing models module marker"
+    );
     assert!(
         root_source.contains("mod secret_provider;"),
         "root missing secret_provider module marker"
@@ -53,24 +58,28 @@ fn assert_root_markers(root_source: &str) {
         root_source.contains("mod direct_payload;"),
         "root missing direct_payload module marker"
     );
-    assert!(root_source.contains("#[cfg(test)]"), "root missing test module marker");
-    assert!(root_source.contains("mod tests;"), "root missing tests module marker");
+    assert!(
+        root_source.contains("#[cfg(test)]"),
+        "root missing test module marker"
+    );
+    assert!(
+        root_source.contains("mod tests;"),
+        "root missing tests module marker"
+    );
 }
 
 fn assert_budgets(signer_root: &Path, paths: &[PathBuf; 5]) {
     let signer_root_lines = count_lines(signer_root);
     assert!(
         signer_root_lines <= 180,
-        "signer root shell too large: {}",
-        signer_root_lines
+        "signer root shell too large: {signer_root_lines}"
     );
     for path in paths {
         let path_lines = count_lines(path);
         assert!(
             path_lines <= 200,
-            "{} exceeds file budget with {} lines",
-            path.display(),
-            path_lines
+            "{path} exceeds file budget with {path_lines} lines",
+            path = path.display()
         );
     }
 }

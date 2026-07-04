@@ -6,9 +6,7 @@ mod ids;
 mod key_binding;
 
 pub use document::{AgentDidMetadata, DidDocument, DidService, DidVerificationMethod};
-pub use errors::{
-    AgentDidError, AgentDidKeyBindingError, KamnDidError, SharedDidParseError,
-};
+pub use errors::{AgentDidError, AgentDidKeyBindingError, KamnDidError, SharedDidParseError};
 pub use ids::{AgentDid, KamnDid};
 
 fn normalize_non_empty(value: &str) -> Result<&str, SharedDidParseError> {

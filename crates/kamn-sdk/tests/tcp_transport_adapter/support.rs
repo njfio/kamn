@@ -99,14 +99,17 @@ pub(crate) fn limited_listener_sender_pair(
     addr: &str,
     max_wire_bytes: usize,
 ) -> (TcpTransportAdapter, TcpTransportAdapter) {
-    let listener = TcpTransportAdapter::new(tcp_config(addr).with_max_wire_bytes(max_wire_bytes).expect("listener max-wire config failed"));
+    let listener = TcpTransportAdapter::new(
+        tcp_config(addr)
+            .with_max_wire_bytes(max_wire_bytes)
+            .expect("listener max-wire config failed"),
+    );
     let sender = TcpTransportAdapter::new(tcp_config(addr));
     (listener, sender)
 }
 
 fn tcp_config(addr: &str) -> TcpTransportConfig {
-    TcpTransportConfig::new(addr)
-        .unwrap_or_else(|error| panic!("tcp config failed: {error}"))
+    TcpTransportConfig::new(addr).unwrap_or_else(|error| panic!("tcp config failed: {error}"))
 }
 
 pub(crate) fn listen_once_in_thread(
@@ -118,7 +121,9 @@ pub(crate) fn listen_once_in_thread(
 pub(crate) fn join_listener(
     handle: thread::JoinHandle<Result<kamn_sdk::TcpReceivedEnvelope, SdkError>>,
 ) -> Result<kamn_sdk::TcpReceivedEnvelope, SdkError> {
-    handle.join().unwrap_or_else(|_| panic!("listener thread panicked"))
+    handle
+        .join()
+        .unwrap_or_else(|_| panic!("listener thread panicked"))
 }
 
 pub(crate) fn wait_for_listener() {

@@ -10,30 +10,23 @@ use crate::{
 use super::super::{escape_json, ExternalRuntimeProbeSummary, ScenarioExecutionResult};
 use super::phase_model::compute_lifecycle_summary;
 
-pub(super) fn render_run_output(
-    config: &RunCommandConfig,
-    mode: ExecutionMode,
-    selected: &[crate::scenarios::ScenarioDefinition],
-    scenario_results: &[ScenarioExecutionResult],
-    scenario_totals: LifecycleStatusTotals,
-    phase_results: &[OrchestrationPhaseResult],
-    evidence_status: PhaseResultStatus,
-    external_runtime_probe: Option<ExternalRuntimeProbeSummary>,
-) -> String {
-    let lifecycle_summary = compute_lifecycle_summary(phase_results);
-    let runtime = runtime_payload(
-        config,
-        mode,
-        selected,
-        scenario_results,
-        scenario_totals.clone(),
-        phase_results,
-        evidence_status,
-        external_runtime_probe,
-    );
-    let scenario = scenario_payload(selected, scenario_results);
-    let phase = phase_payload(phase_results, &lifecycle_summary);
-    render_run_output_json(config, mode, runtime, scenario, phase)
+pub(super) struct RenderRunOutputInput<'a> {
+    pub(super) config: &'a RunCommandConfig,
+    pub(super) mode: ExecutionMode,
+    pub(super) selected: &'a [crate::scenarios::ScenarioDefinition],
+    pub(super) scenario_results: &'a [ScenarioExecutionResult],
+    pub(super) scenario_totals: LifecycleStatusTotals,
+    pub(super) phase_results: &'a [OrchestrationPhaseResult],
+    pub(super) evidence_status: PhaseResultStatus,
+    pub(super) external_runtime_probe: Option<ExternalRuntimeProbeSummary>,
+}
+
+pub(super) fn render_run_output(input: RenderRunOutputInput<'_>) -> String {
+    let lifecycle_summary = compute_lifecycle_summary(input.phase_results);
+    let runtime = runtime_payload(&input);
+    let scenario = scenario_payload(input.selected, input.scenario_results);
+    let phase = phase_payload(input.phase_results, &lifecycle_summary);
+    render_run_output_json(input.config, input.mode, runtime, scenario, phase)
 }
 
 struct RuntimePayload {
@@ -70,59 +63,50 @@ struct PhasePayload {
     step_totals: String,
 }
 
-fn runtime_payload(
-    config: &RunCommandConfig,
-    mode: ExecutionMode,
-    selected: &[crate::scenarios::ScenarioDefinition],
-    scenario_results: &[ScenarioExecutionResult],
-    scenario_totals: LifecycleStatusTotals,
-    phase_results: &[OrchestrationPhaseResult],
-    evidence_status: PhaseResultStatus,
-    external_runtime_probe: Option<ExternalRuntimeProbeSummary>,
-) -> RuntimePayload {
+fn runtime_payload(input: &RenderRunOutputInput<'_>) -> RuntimePayload {
     RuntimePayload {
-        integration_config: runtime_sections::integration_config_json(config, mode),
+        integration_config: runtime_sections::integration_config_json(input.config, input.mode),
         runtime_external_execution: runtime_sections::runtime_external_execution_json(
-            config.external_execution,
-            external_runtime_probe.as_ref(),
+            input.config.external_execution,
+            input.external_runtime_probe.as_ref(),
         ),
         runtime_orchestration: runtime_sections::runtime_orchestration_json(
-            config.external_execution,
-            external_runtime_probe.as_ref(),
+            input.config.external_execution,
+            input.external_runtime_probe.as_ref(),
         ),
         runtime_lifecycle_execution: runtime_sections::runtime_lifecycle_execution_json(
-            config.external_execution,
-            external_runtime_probe.as_ref(),
+            input.config.external_execution,
+            input.external_runtime_probe.as_ref(),
         ),
         runtime_validation_execution: runtime_sections::runtime_validation_execution_json(
-            config.external_execution,
-            external_runtime_probe.as_ref(),
-            scenario_totals.clone(),
-            evidence_status,
+            input.config.external_execution,
+            input.external_runtime_probe.as_ref(),
+            input.scenario_totals.clone(),
+            input.evidence_status,
         ),
         runtime_readiness: runtime_sections::runtime_readiness_json(
-            config,
-            mode,
-            selected.len() as u64,
+            input.config,
+            input.mode,
+            input.selected.len() as u64,
         ),
-        process_runtime: runtime_sections::process_runtime_json(mode),
+        process_runtime: runtime_sections::process_runtime_json(input.mode),
         process_lifecycle: runtime_sections::process_lifecycle_json(),
         spawn_timeline: runtime_sections::spawn_timeline_json(),
-        spawn_plan: runtime_sections::spawn_plan_json(mode),
+        spawn_plan: runtime_sections::spawn_plan_json(input.mode),
         spawn_execution: runtime_sections::spawn_execution_json(),
         live_process_execution: runtime_sections::live_process_execution_json(),
         mode_execution_contract: runtime_sections::mode_execution_contract_json(
-            mode,
-            selected.len() as u64,
-            scenario_results.len() as u64,
+            input.mode,
+            input.selected.len() as u64,
+            input.scenario_results.len() as u64,
         ),
-        evidence_contract: runtime_sections::evidence_contract_json(evidence_status),
+        evidence_contract: runtime_sections::evidence_contract_json(input.evidence_status),
         live_execution: runtime_sections::live_execution_json(
-            phase_results,
-            scenario_totals.clone(),
-            evidence_status,
+            input.phase_results,
+            input.scenario_totals.clone(),
+            input.evidence_status,
         ),
-        live_validation: runtime_sections::live_validation_json(scenario_totals),
+        live_validation: runtime_sections::live_validation_json(input.scenario_totals.clone()),
     }
 }
 

@@ -22,7 +22,9 @@ pub(super) fn release_escrow_record(
     record.settlement = settlement.cloned().unwrap_or_default();
 }
 
-pub(super) fn escrow_status_response(record: &ServiceApiPersistedEscrowRecord) -> ServiceApiEscrowStatusBody {
+pub(super) fn escrow_status_response(
+    record: &ServiceApiPersistedEscrowRecord,
+) -> ServiceApiEscrowStatusBody {
     ServiceApiEscrowStatusBody {
         escrow_id: record.escrow_id.clone(),
         state: record.state.clone(),

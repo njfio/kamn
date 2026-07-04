@@ -97,13 +97,11 @@ fn waiver_applied_evaluation() -> Evaluation {
 }
 
 fn waiver_cap_exceeded(shell_delta: i64, ratio_delta: f64, waiver_file: &std::path::Path) -> ! {
+    let waiver_display = waiver_file.display();
     fail(
         "waiver_cap_exceeded",
         &format!(
-            "shell_delta={} ratio_delta={:.6} exceeds waiver cap in {}",
-            shell_delta,
-            ratio_delta,
-            waiver_file.display()
+            "shell_delta={shell_delta} ratio_delta={ratio_delta:.6} exceeds waiver cap in {waiver_display}"
         ),
     )
 }

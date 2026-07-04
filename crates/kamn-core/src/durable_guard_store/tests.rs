@@ -4,8 +4,8 @@ use super::policy_codec::{
 };
 use super::wire_codec::{deserialize_bundle, serialize_bundle};
 use super::{
-    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle,
-    DurableGuardSnapshotStoreError, InMemoryDurableGuardSnapshotStore,
+    DurableGuardBundleSnapshotStore, DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError,
+    InMemoryDurableGuardSnapshotStore,
 };
 use crate::{
     ChannelPermissionEngine, ChannelPermissions, DeliveryGuardInput, DeliveryValidationResult,
@@ -27,7 +27,7 @@ fn delivery_input(message_id: &str, nonce: u64, received_at: &str) -> DeliveryGu
 
 fn seeded_bundle() -> DurableGuardSnapshotBundle {
     let mut guards = MessageDeliveryGuards::new();
-    let mut channels = seeded_channel_engine();
+    let channels = seeded_channel_engine();
     assert_delivery_acceptance(&mut guards);
     DurableGuardSnapshotBundle::capture(&guards, &channels)
 }
@@ -125,9 +125,11 @@ fn in_memory_store_rejects_invalid_bundle_schema() {
     let mut store = InMemoryDurableGuardSnapshotStore::default();
     assert_eq!(
         store.save_bundle(bundle),
-        Err(DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch {
-            expected: 1,
-            found: 2,
-        })
+        Err(
+            DurableGuardSnapshotStoreError::BundleSchemaVersionMismatch {
+                expected: 1,
+                found: 2,
+            }
+        )
     );
 }

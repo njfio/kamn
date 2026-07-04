@@ -1,5 +1,5 @@
-use super::*;
 use super::shared_support::*;
+use super::*;
 
 #[path = "integration_runtime_contract_tests/integration_config_contract_tests.rs"]
 mod integration_config_contract_tests;

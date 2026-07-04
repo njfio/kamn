@@ -1,6 +1,4 @@
-use kamn_core::{
-    ContentRetentionClass, DataLayerM5EmbeddingRecordInput,
-};
+use kamn_core::{ContentRetentionClass, DataLayerM5EmbeddingRecordInput};
 
 pub fn vector_input(
     embedding_id: &str,

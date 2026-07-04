@@ -80,7 +80,7 @@ fn regression_kolme_live_managed_external_rejects_raw_private_key_env_path() {
     );
     assert!(
         matches!(
-            build_kolme_live_signer_adapter(Some("ops-primary"), Some("managed-external")),
+            enforce_kolme_live_signer_preflight(Some("ops-primary"), Some("managed-external")),
             Err(ConfigError::RuntimeKolmeLive(message))
             if message.contains("managed_signer_raw_private_key_forbidden")
         ),

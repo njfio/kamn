@@ -1,9 +1,9 @@
 #[cfg(test)]
 use std::time::{Duration, Instant};
 
+use kamn_core::ConfigError;
 #[cfg(test)]
 use kamn_core::KolmeRuntimeCommitProviderError;
-use kamn_core::ConfigError;
 
 mod direct_payload;
 mod managed_backend;
@@ -16,9 +16,9 @@ mod signer_policy;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use managed_backend::resolve_kolme_live_managed_signer_required_marker;
 #[cfg(test)]
 pub(crate) use managed_backend::sign_kolme_live_managed_external_message;
-pub(crate) use managed_backend::resolve_kolme_live_managed_signer_required_marker;
 pub(crate) use nonce::resolve_kolme_live_nonce;
 #[cfg(test)]
 use nonce::{classify_nonce_retry_category, deterministic_nonce_retry_backoff_millis};
@@ -35,30 +35,31 @@ use signer_policy::{
     read_required_kolme_live_key_reference_from_env, resolve_kolme_live_signer_selection,
 };
 
+pub(crate) use super::KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL;
 pub(crate) use models::{
     KolmeLiveManagedKeySourceAdapter, KolmeLiveManagedKeySourceAdapterOutput,
     KolmeLiveManagedKeySourceProvenanceMarker, KolmeLiveSignerPreflightReadiness,
     KolmeLiveSignerSelection,
 };
-pub(crate) use super::KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL;
 pub(crate) use secret_provider::{
     ensure_kolme_live_managed_external_private_key_env_unset,
     ensure_kolme_live_strict_signer_secret_source_precedence,
 };
 
+#[cfg(test)]
 pub(crate) type ManagedExternalKeySourceAdapter = managed_backend::ManagedExternalKeySourceAdapter;
+#[cfg(test)]
 pub(crate) type KolmeForkSecp256k1SignerAdapter = signer_adapter::KolmeForkSecp256k1SignerAdapter;
 
+#[cfg(test)]
 pub(crate) fn build_kolme_live_signer_adapter(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
 ) -> Result<(KolmeForkSecp256k1SignerAdapter, KolmeLiveSignerSelection), ConfigError> {
-    direct_payload::build_kolme_live_signer_adapter(
-        strict_signer_profile,
-        strict_signer_key_source,
-    )
+    direct_payload::build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)
 }
 
+#[cfg(test)]
 pub(crate) fn read_kolme_live_signer_private_key_hex(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
@@ -69,6 +70,7 @@ pub(crate) fn read_kolme_live_signer_private_key_hex(
     )
 }
 
+#[cfg(test)]
 pub(crate) fn enforce_kolme_live_managed_key_source_provenance_marker_parity(
     signer_selection: &KolmeLiveSignerSelection,
     marker: &KolmeLiveManagedKeySourceProvenanceMarker,
@@ -79,6 +81,7 @@ pub(crate) fn enforce_kolme_live_managed_key_source_provenance_marker_parity(
     )
 }
 
+#[cfg(test)]
 pub(crate) fn ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize(
     strict_signer_profile: Option<&str>,
     signer_selection: &KolmeLiveSignerSelection,

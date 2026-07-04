@@ -29,9 +29,9 @@ pub(crate) fn send_message_with_receipt(
     agent_name: &str,
     key_file: &str,
     request_id: &str,
-    payload: &str,
-    step: &str,
+    message: (&str, &str),
 ) -> Result<String, String> {
+    let (payload, step) = message;
     let response = run_named_mcp_tool_call(
         step_prefix,
         binary,
@@ -39,8 +39,7 @@ pub(crate) fn send_message_with_receipt(
         agent_name,
         key_file,
         request_id,
-        "send_message",
-        payload_arguments(payload).as_str(),
+        ("send_message", payload_arguments(payload).as_str()),
     )?;
     validate_s08_mcp_message_receipt_fields(response.as_str(), step)
 }
@@ -52,9 +51,9 @@ pub(crate) fn query_message_with_validation(
     agent_name: &str,
     key_file: &str,
     request_id: &str,
-    message_id: &str,
-    step: &str,
+    query: (&str, &str),
 ) -> Result<(), String> {
+    let (message_id, step) = query;
     let response = run_named_mcp_tool_call(
         step_prefix,
         binary,
@@ -62,8 +61,7 @@ pub(crate) fn query_message_with_validation(
         agent_name,
         key_file,
         request_id,
-        "query_message",
-        message_id_arguments(message_id).as_str(),
+        ("query_message", message_id_arguments(message_id).as_str()),
     )?;
     validate_s08_mcp_query_message_response(response.as_str(), message_id, step)
 }
@@ -84,8 +82,7 @@ pub(crate) fn health_status(
         agent_name,
         key_file,
         request_id,
-        "health",
-        "{}",
+        ("health", "{}"),
     )?;
     let status = required_string_field(response.as_str(), "status", step)?;
     require_non_empty(status.as_str(), step, "status")?;

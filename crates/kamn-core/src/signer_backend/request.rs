@@ -1,5 +1,6 @@
 use super::env::resolve_signer_private_key_hex;
 use super::errors::SignerBackendError;
+use super::signing_cache::SignerBackendSigningCache;
 use crate::signature_profile::service_auth_sign_with_private_key_hex;
 use crate::transaction::BaselineTransaction;
 
@@ -54,6 +55,13 @@ impl SigningRequest {
         .map_err(|_| SignerBackendError::InvalidSigningKeyMaterial {
             key_id: self.key_id.clone(),
         })
+    }
+
+    pub(crate) fn expected_signature_with_cache(
+        &self,
+        signing_cache: &SignerBackendSigningCache,
+    ) -> Result<String, SignerBackendError> {
+        signing_cache.expected_signature(self)
     }
 }
 

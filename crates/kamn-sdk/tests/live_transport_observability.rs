@@ -139,10 +139,9 @@ fn write_http_response(
         200 => "200 OK",
         _ => "500 Internal Server Error",
     };
+    let body_len = body.len();
     let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(),
-        body
+        "HTTP/1.1 {status_text}\r\nContent-Type: text/plain\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n{body}"
     );
     stream
         .write_all(payload.as_bytes())

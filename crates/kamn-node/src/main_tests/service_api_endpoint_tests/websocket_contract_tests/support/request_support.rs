@@ -124,3 +124,26 @@ fn read_websocket_response(stream: &mut TcpStream) -> (Vec<u8>, bool) {
         }
     }
 }
+
+pub(crate) fn assert_websocket_bad_request(
+    response: Vec<u8>,
+    reason_code: &str,
+    message_fragment: Option<&str>,
+) {
+    let response_text = String::from_utf8(response).expect("websocket rejection should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(payload.reason_code, reason_code);
+    if let Some(fragment) = message_fragment {
+        assert!(payload.message.contains(fragment));
+    }
+}
+
+pub(crate) fn assert_websocket_forbidden(response: Vec<u8>, reason_code: &str) {
+    let response_text = String::from_utf8(response).expect("websocket rejection should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 403 Forbidden"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "forbidden");
+    assert_eq!(payload.reason_code, reason_code);
+}

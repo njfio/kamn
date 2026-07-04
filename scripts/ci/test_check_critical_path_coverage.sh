@@ -40,6 +40,13 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$NODE_JSON" <<'JSON'
     {
       "files": [
         {
+          "filename": "/workspace/crates/kamn-core/src/direct_message_crypto.rs",
+          "summary": {
+            "lines": { "percent": 0.0 },
+            "functions": { "percent": 0.0 }
+          }
+        },
+        {
           "filename": "/workspace/crates/kamn-node/src/runtime_orchestration.rs",
           "summary": {
             "lines": { "percent": 20.0 },

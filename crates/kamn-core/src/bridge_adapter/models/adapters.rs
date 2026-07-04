@@ -2,21 +2,25 @@ use super::{
     BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform,
     NormalizedInboundMessage,
 };
-use crate::AgentDid;
-use crate::bridge_adapter::BridgeAdapterError;
 use crate::bridge_adapter::support::{
-    BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE, escape_json, parse_agent_did,
-    validate_inbound_envelope, validate_outbound_request,
+    escape_json, parse_agent_did, validate_inbound_envelope, validate_outbound_request,
+    BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE,
 };
+use crate::bridge_adapter::BridgeAdapterError;
+use crate::AgentDid;
 
 /// Adapter contract for platform-specific ingress/egress translation.
 pub trait BridgeAdapter {
+    /// Runs the platform contract operation.
     fn platform(&self) -> BridgePlatform;
+    /// Runs the bridge agent did contract operation.
     fn bridge_agent_did(&self) -> &str;
+    /// Runs the normalize inbound contract operation.
     fn normalize_inbound(
         &self,
         inbound: &BridgeInboundEnvelope,
     ) -> Result<NormalizedInboundMessage, BridgeAdapterError>;
+    /// Runs the translate outbound contract operation.
     fn translate_outbound(
         &self,
         request: &BridgeOutboundRequest,
@@ -25,12 +29,14 @@ pub trait BridgeAdapter {
 
 /// Policy hook contract for inbound and outbound authorization checks.
 pub trait BridgePolicyHook {
+    /// Runs the authorize inbound contract operation.
     fn authorize_inbound(
         &self,
         normalized: &NormalizedInboundMessage,
     ) -> Result<(), BridgeAdapterError>;
+    /// Runs the authorize outbound contract operation.
     fn authorize_outbound(&self, request: &BridgeOutboundRequest)
-    -> Result<(), BridgeAdapterError>;
+        -> Result<(), BridgeAdapterError>;
 }
 
 /// Permissive policy hook that authorizes all bridge traffic.
@@ -38,6 +44,7 @@ pub trait BridgePolicyHook {
 pub struct AllowAllBridgePolicy;
 
 impl AllowAllBridgePolicy {
+    /// Creates a new value for this public contract type.
     pub fn new() -> Self {
         Self
     }
@@ -67,6 +74,7 @@ pub struct PassThroughBridgeAdapter {
 }
 
 impl PassThroughBridgeAdapter {
+    /// Creates a new value for this public contract type.
     pub fn new(
         platform: BridgePlatform,
         bridge_agent_did: &str,

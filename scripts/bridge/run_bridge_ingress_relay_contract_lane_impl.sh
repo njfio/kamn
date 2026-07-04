@@ -22,6 +22,9 @@ done
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+bridge_ingress_relay_target_dir="${KAMN_BRIDGE_INGRESS_RELAY_TARGET_DIR:-$ROOT_DIR/target/bridge-ingress-relay-contract}"
+mkdir -p "$bridge_ingress_relay_target_dir"
+
 start_epoch="$(date +%s)"
 
 if [ "$skip_replay" != true ]; then
@@ -31,7 +34,7 @@ if [ "$skip_replay" != true ]; then
     --output-json "$TMP_DIR/bridge-ingress-replay-report.json" >/dev/null
 fi
 
-cargo test -p kamn-core --test bridge_ingress_relay_harness >/dev/null
+CARGO_TARGET_DIR="$bridge_ingress_relay_target_dir" cargo test -p kamn-core --test bridge_ingress_relay_harness >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt 120 ]; then

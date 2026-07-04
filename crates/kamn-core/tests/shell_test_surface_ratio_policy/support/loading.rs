@@ -15,9 +15,10 @@ type FixtureMap = BTreeMap<String, String>;
 
 pub(crate) fn load_baseline(path: &Path) -> Baseline {
     if !path.is_file() {
+        let path_display = path.display();
         fail(
             "baseline_file_missing",
-            &format!("baseline fixture is missing: {}", path.display()),
+            &format!("baseline fixture is missing: {path_display}"),
         );
     }
     let map = load_fixture_map(path, "baseline_file_invalid");
@@ -34,9 +35,10 @@ pub(crate) fn load_baseline(path: &Path) -> Baseline {
 
 pub(crate) fn load_thresholds(path: &Path) -> Thresholds {
     if !path.is_file() {
+        let path_display = path.display();
         fail(
             "threshold_file_missing",
-            &format!("threshold fixture is missing: {}", path.display()),
+            &format!("threshold fixture is missing: {path_display}"),
         );
     }
     let map = load_fixture_map(path, "threshold_file_invalid");
@@ -48,6 +50,11 @@ pub(crate) fn load_thresholds(path: &Path) -> Thresholds {
     );
     assert_threshold_markers(&map);
     let thresholds = parse_thresholds(&map);
+    assert_threshold_values(&thresholds);
+    thresholds
+}
+
+fn assert_threshold_values(thresholds: &Thresholds) {
     if thresholds.allowed_shell_test_file_delta_max < 0 || thresholds.allowed_ratio_delta_max < 0.0
     {
         fail(
@@ -55,7 +62,6 @@ pub(crate) fn load_thresholds(path: &Path) -> Thresholds {
             "allowed deltas must be non-negative",
         );
     }
-    thresholds
 }
 
 pub(crate) fn load_waiver(path: &Path) -> Waiver {
@@ -119,9 +125,10 @@ fn parse_thresholds(map: &FixtureMap) -> Thresholds {
 fn assert_schema_marker(map: &FixtureMap, expected: &str, reason_code: &str, path: &Path) {
     let value = required_value(map, "schema_version", reason_code);
     if value != expected {
+        let path_display = path.display();
         fail(
             reason_code,
-            &format!("unexpected schema version {} in {}", value, path.display()),
+            &format!("unexpected schema version {value} in {path_display}"),
         );
     }
 }
@@ -169,10 +176,7 @@ fn assert_issue_marker(mitigation_issue: &str) {
     if !valid {
         fail(
             "waiver_invalid_mitigation_issue",
-            &format!(
-                "mitigation_issue must be #<digits>, found {}",
-                mitigation_issue
-            ),
+            &format!("mitigation_issue must be #<digits>, found {mitigation_issue}"),
         );
     }
 }

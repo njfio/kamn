@@ -1,7 +1,7 @@
 use super::super::models::*;
 use super::super::support::{
-    compute_embedding_record_hash, owner_vector_dimensions, parse_kamn_did,
-    validate_agent_did, validate_non_empty, validate_vector, DataLayerM5RecordHashMaterial,
+    compute_embedding_record_hash, owner_vector_dimensions, parse_kamn_did, validate_agent_did,
+    validate_non_empty, validate_vector, DataLayerM5RecordHashMaterial,
 };
 use crate::ContentRetentionClass;
 
@@ -14,17 +14,15 @@ impl DataLayerM5EmbeddingRegistry {
         let privacy_mode = self.privacy_mode();
         let append_input = prepare_append_input(input, &self.seen_embedding_ids, privacy_mode)?;
         let vector_dimensions = append_input.vector_plaintext.as_ref().map_or(0, Vec::len);
-        let owner_records = self.records_by_owner.entry(append_input.owner_did_key.clone()).or_default();
+        let owner_records = self
+            .records_by_owner
+            .entry(append_input.owner_did_key.clone())
+            .or_default();
         validate_owner_dimensions(owner_records, vector_dimensions)?;
 
         let sequence = owner_records.len() as u64 + 1;
         let hash_chain_prev = previous_hash(owner_records);
-        let record = build_record(
-            append_input,
-            vector_dimensions,
-            sequence,
-            hash_chain_prev,
-        );
+        let record = build_record(append_input, vector_dimensions, sequence, hash_chain_prev);
         owner_records.push(record.clone());
         self.seen_embedding_ids.insert(record.embedding_id.clone());
         Ok(record)
@@ -74,7 +72,9 @@ fn validate_ingest_input(
     validate_non_empty(input.message_id.as_str(), "message_id")?;
     validate_non_empty(input.model_id.as_str(), "model_id")?;
     if input.vector_encrypted.is_empty() {
-        return Err(DataLayerM5VectorIntegrationError::EmptyField("vector_encrypted"));
+        return Err(DataLayerM5VectorIntegrationError::EmptyField(
+            "vector_encrypted",
+        ));
     }
     if input.created_at_epoch_seconds == 0 {
         return Err(DataLayerM5VectorIntegrationError::EmptyField(
@@ -101,17 +101,17 @@ fn resolve_plaintext_vector(
     vector_plaintext: Option<Vec<f32>>,
 ) -> Result<Option<Vec<f32>>, DataLayerM5VectorIntegrationError> {
     match (privacy_mode, vector_plaintext) {
-        (DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted, Some(_)) => Err(
-            DataLayerM5VectorIntegrationError::PrivacyModeViolation {
+        (DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted, Some(_)) => {
+            Err(DataLayerM5VectorIntegrationError::PrivacyModeViolation {
                 reason_code: DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE,
-            },
-        ),
+            })
+        }
         (DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted, None) => Ok(None),
-        (DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn, None) => Err(
-            DataLayerM5VectorIntegrationError::PrivacyModeViolation {
+        (DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn, None) => {
+            Err(DataLayerM5VectorIntegrationError::PrivacyModeViolation {
                 reason_code: DATA_LAYER_M5_SERVER_SIDE_PLAINTEXT_REQUIRED_REASON_CODE,
-            },
-        ),
+            })
+        }
         (DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn, Some(vector)) => {
             Ok(Some(validate_vector(vector, "vector_plaintext")?))
         }
@@ -160,7 +160,13 @@ fn build_record(
         privacy_mode: append_input.privacy_mode,
     };
     let record_hash = compute_embedding_record_hash(sequence, &material, hash_chain_prev.as_str());
-    record_from_append_input(append_input, vector_dimensions, sequence, hash_chain_prev, record_hash)
+    record_from_append_input(
+        append_input,
+        vector_dimensions,
+        sequence,
+        hash_chain_prev,
+        record_hash,
+    )
 }
 
 fn record_from_append_input(

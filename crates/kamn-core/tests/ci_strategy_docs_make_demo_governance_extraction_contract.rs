@@ -13,7 +13,10 @@ const MODULE_FILES: &[&str] = &[
 ];
 
 fn line_count(path: &str) -> usize {
-    fs::read_to_string(repo_path(path)).unwrap().lines().count()
+    fs::read_to_string(repo_path(path))
+        .expect("extracted ci strategy docs fixture should be readable")
+        .lines()
+        .count()
 }
 
 fn read(path: &str) -> String {
@@ -52,25 +55,28 @@ fn assert_root_budget() {
     let lines = line_count(ROOT);
     assert!(
         lines <= ROOT_CAP,
-        "root line count {} exceeds staged cap {}",
-        lines,
-        ROOT_CAP
+        "root line count {lines} exceeds staged cap {ROOT_CAP}"
     );
 }
 
 fn assert_module_root_exists() {
     let path = repo_path(MODULE_ROOT);
-    assert!(path.exists(), "missing module root {}", path.display());
+    let path_display = path.display();
+    assert!(path.exists(), "missing module root {path_display}");
 }
 
 fn assert_extracted_files_fit_budget() {
     for path in MODULE_FILES {
         let full_path = repo_path(path);
-        assert!(full_path.exists(), "missing extracted file {}", full_path.display());
+        let full_path_display = full_path.display();
         assert!(
-            line_count(path) <= 200,
-            "extracted file {path} exceeds 200 lines with {}",
-            line_count(path)
+            full_path.exists(),
+            "missing extracted file {full_path_display}"
+        );
+        let lines = line_count(path);
+        assert!(
+            lines <= 200,
+            "extracted file {path} exceeds 200 lines with {lines}"
         );
     }
 }

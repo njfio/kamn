@@ -80,7 +80,7 @@ fn parse_task_line(
     })
 }
 
-fn split_task_fields<'a>(line: &'a str) -> Result<[&'a str; 7], TaskOperationSnapshotStoreError> {
+fn split_task_fields(line: &str) -> Result<[&str; 7], TaskOperationSnapshotStoreError> {
     let mut parts = line.split('|');
     if parts.next() != Some("task") {
         return invalid_payload(line);

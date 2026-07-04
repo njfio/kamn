@@ -84,8 +84,7 @@ fn send_message(
         format!("{}-{suffix}-send", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-send-message-{suffix}").as_str(),
-        payload,
-        format!("{step_prefix} send_message").as_str(),
+        (payload, format!("{step_prefix} send_message").as_str()),
     )
 }
 
@@ -103,8 +102,7 @@ fn query_message(
         format!("{}-{suffix}-query", settings.base_agent_name).as_str(),
         settings.key_file.as_str(),
         format!("probe-query-message-{suffix}").as_str(),
-        message_id,
-        format!("{step_prefix} query_message").as_str(),
+        (message_id, format!("{step_prefix} query_message").as_str()),
     )
 }
 

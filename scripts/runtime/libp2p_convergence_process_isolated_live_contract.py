@@ -68,6 +68,7 @@ EVIDENCE_CONVERGENCE_REASON_CODES_CSV = (
 DEFAULT_RUNBOOK_FILE = ROOT_DIR / "docs/deploy/kolme_devnet_ops.md"
 LEGACY_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN"
 DEEP_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN"
+CLEAN_SMOKE_TARGET_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_CLEAN_TARGET"
 EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE = (
     "p2p_transport_live_socket_send_failed"
 )
@@ -296,7 +297,7 @@ def _run_lane(args: argparse.Namespace) -> int:
 
     if mode == "run" and lane_profile == "smoke":
         smoke_target_dir = artifact_dir / SMOKE_TARGET_DIR_NAME
-        if smoke_target_dir.exists():
+        if os.environ.get(CLEAN_SMOKE_TARGET_ENV) == "1" and smoke_target_dir.exists():
             shutil.rmtree(smoke_target_dir)
         smoke_rustflags = os.environ.get("RUSTFLAGS", "").strip()
         if "-Cdebuginfo=0" not in smoke_rustflags:

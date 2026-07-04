@@ -1,6 +1,4 @@
 use super::{env_var_or_default, CLI_BINARY_ENV, DEFAULT_CLI_BINARY};
-use std::env;
-
 #[path = "live_probe_tranche_one/channel_task_probes.rs"]
 mod channel_task_probes;
 #[path = "live_probe_tranche_one/discovery_direct_message_probes.rs"]
@@ -17,7 +15,7 @@ pub(super) fn endpoint() -> String {
 }
 
 pub(super) fn env_payload(name: &str, default: &str) -> String {
-    env::var(name).unwrap_or_else(|_| default.to_owned())
+    super::env_var_or_default(name, default)
 }
 
 pub(super) fn agent_name(default: &str) -> String {

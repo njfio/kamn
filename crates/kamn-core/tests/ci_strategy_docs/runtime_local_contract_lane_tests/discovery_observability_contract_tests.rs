@@ -1,6 +1,6 @@
-use super::support::assert_runtime_local_contract_lane_markers;
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
+use super::support::assert_runtime_local_contract_lane_markers;
 
 #[test]
 fn doc_contains_runtime_libp2p_three_node_discovery_contract_lane_ci_mode_markers() {

@@ -1,5 +1,5 @@
-use super::super::DOC;
 use super::super::fairness_deletion_support::assert_contains_all;
+use super::super::DOC;
 
 #[test]
 fn doc_contains_transport_observability_tls_ci_smoke_convergence_governance() {

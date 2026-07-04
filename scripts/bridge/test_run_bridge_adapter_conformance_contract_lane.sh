@@ -22,6 +22,16 @@ test_harness_require_file "$MANIFEST_FILE" "expected bridge adapter conformance 
 
 test_harness_require_file "$FIXTURE_FILE" "expected bridge adapter conformance fixture file to exist"
 
+if ! grep -Fq "KAMN_BRIDGE_ADAPTER_CONFORMANCE_TARGET_DIR" "$LANE_IMPL_SCRIPT"; then
+  echo "expected bridge adapter conformance lane to expose an isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'CARGO_TARGET_DIR="$bridge_adapter_conformance_target_dir"' "$LANE_IMPL_SCRIPT"; then
+  echo "expected bridge adapter conformance lane to run Cargo tests in the isolated target dir" >&2
+  exit 1
+fi
+
 report_file="$TMP_DIR/bridge-adapter-conformance-contract-report.json"
 lane_output="$(bash "$LANE_SCRIPT" --output-json "$report_file")"
 if ! printf '%s\n' "$lane_output" | grep -q "bridge adapter conformance contract lane tests passed."; then

@@ -1,4 +1,5 @@
-const TARGET_GRAPH_DOC: &str = include_str!("../../../docs/architecture/kamn-core-target-crate-graph.md");
+const TARGET_GRAPH_DOC: &str =
+    include_str!("../../../docs/architecture/kamn-core-target-crate-graph.md");
 const ARCHITECTURE_INDEX_DOC: &str = include_str!("../../../docs/architecture/README.md");
 const KAMN_TYPES_DOC: &str = include_str!("../../../docs/architecture/kamn-types.md");
 

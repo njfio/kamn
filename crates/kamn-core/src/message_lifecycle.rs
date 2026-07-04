@@ -1,3 +1,8 @@
+//! Message lifecycle contracts, snapshot recovery, and proof admission surfaces.
+//!
+//! Snapshot persistence is implemented by `snapshot_codec` and `snapshot_file_store`, which
+//! consume the extracted `kamn_snapshot_journal` crate.
+
 mod domain;
 mod errors;
 mod lifecycle_store;

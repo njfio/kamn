@@ -27,8 +27,7 @@ fn regression_sdk_tcp_vertical_slice_doc_exists_with_required_markers() {
     for marker in DOC_MARKERS {
         assert!(
             doc.contains(marker),
-            "sdk tcp vertical-slice doc missing required marker: {}",
-            marker
+            "sdk tcp vertical-slice doc missing required marker: {marker}"
         );
     }
 }
@@ -39,17 +38,17 @@ fn regression_sdk_tcp_demo_script_retains_required_markers() {
     for marker in SCRIPT_MARKERS {
         assert!(
             script.contains(marker),
-            "sdk tcp demo script missing required marker: {}",
-            marker
+            "sdk tcp demo script missing required marker: {marker}"
         );
     }
 }
 
 fn read_workspace_file(relative_path: &str) -> String {
     let path = workspace_root().join(relative_path);
-    assert!(path.exists(), "expected path to exist: {}", path.display());
+    let path_display = path.display();
+    assert!(path.exists(), "expected path to exist: {path_display}");
     fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {}", path.display(), error))
+        .unwrap_or_else(|error| panic!("failed to read {path_display}: {error}"))
 }
 
 fn workspace_root() -> PathBuf {

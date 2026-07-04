@@ -4,9 +4,9 @@ mod crypto_helpers;
 mod engine;
 mod errors;
 mod models;
-mod validation;
 #[cfg(test)]
 mod tests;
+mod validation;
 
 pub use engine::GroupChannelCryptoEngine;
 pub use errors::GroupChannelCryptoError;
@@ -32,9 +32,11 @@ const GROUP_MESSAGE_AEAD_KDF_INFO_PREFIX_V2: &[u8] = b"kamn:group-message:aead-k
 const GROUP_MESSAGE_NONCE_INFO_V2: &[u8] = b"kamn:group-message:nonce:v2:";
 const GROUP_MESSAGE_NONCE_INFO_V1: &[u8] = b"kamn:group-message:nonce:v1:";
 /// Marker asserting HKDF derivation is backed by RustCrypto hkdf crate.
+/// Source marker: rustcrypto.hkdf.sha256.v1.
 pub const GROUP_MESSAGE_HKDF_BACKEND_MARKER: &str =
     kamn_crypto::hkdf_sha256::HKDF_SHA256_BACKEND_MARKER;
 /// Marker asserting HMAC backend semantics are provided by RustCrypto primitives.
+/// Source marker: rustcrypto.hmac.sha256.v1.
 pub const GROUP_MESSAGE_HMAC_BACKEND_MARKER: &str =
     kamn_crypto::hkdf_sha256::HMAC_SHA256_BACKEND_MARKER;
 const GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE: &str =

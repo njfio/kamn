@@ -33,12 +33,18 @@ fn spec_c01_orchestrator_tick_defers_when_scheduler_thresholds_are_not_met() {
 #[test]
 fn spec_c02_orchestrator_tick_projects_planned_persistence_metadata() {
     let mut orchestrator = memory_orchestrator("kamn:did:agent:m1-orchestrator-c02", 1);
-    let outcome = planned_tick(&mut orchestrator, "00000000-0000-0000-0000-000000000201", "sha256:c02a");
+    let outcome = planned_tick(
+        &mut orchestrator,
+        "00000000-0000-0000-0000-000000000201",
+        "sha256:c02a",
+    );
     assert_planned_persistence(outcome, "00000000-0000-0000-0000-000000000201");
 }
 
 fn planned_tick(
-    orchestrator: &mut kamn_core::DataLayerM1AnchoringOrchestrator<impl kamn_core::KolmeRuntimeCommitClient>,
+    orchestrator: &mut kamn_core::DataLayerM1AnchoringOrchestrator<
+        impl kamn_core::KolmeRuntimeCommitClient,
+    >,
     message_id: &str,
     content_hash: &str,
 ) -> DataLayerM1AnchoringTickOutcome {
@@ -63,7 +69,10 @@ fn assert_planned_persistence(outcome: DataLayerM1AnchoringTickOutcome, message_
     else {
         panic!("expected planned outcome");
     };
-    assert_eq!(reason_code, DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE);
+    assert_eq!(
+        reason_code,
+        DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE
+    );
     assert_planned_metadata(&persistence_plan, message_id);
     assert_pending_follow_up(follow_up_policy);
 }

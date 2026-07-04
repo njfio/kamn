@@ -11,6 +11,15 @@ DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 test_harness_require_executable "$SCRIPT" "expected channel policy contract lane script to be executable"
 test_harness_require_executable "$SHARED_CONTRACT" "expected channel policy shared contract-lane module to be executable"
 
+if ! grep -Fq "KAMN_CHANNEL_POLICY_CONTRACT_TARGET_DIR" "$SHARED_CONTRACT"; then
+  echo "expected channel policy shared contract-lane module to expose isolated target dir override" >&2
+  exit 1
+fi
+if ! grep -Fq '"CARGO_TARGET_DIR": str(channel_target_dir)' "$SHARED_CONTRACT"; then
+  echo "expected channel policy shared contract-lane module to isolate Cargo target artifacts" >&2
+  exit 1
+fi
+
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 

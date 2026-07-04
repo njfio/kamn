@@ -44,9 +44,12 @@ mapfile -t run_wrappers < <(
     ! -name 'run_*_contract_lane.sh' \
     ! -name 'run_lane_dispatch.sh' \
     ! -name 'run_contract_lane_dispatch.sh' \
-    -printf '%f\n' | sort
+    -exec sh -c 'for path do basename "$path"; done' sh {} + | sort
 )
-mapfile -t contract_wrappers < <(find "$ROOT_DIR/scripts/kolme" -maxdepth 1 -type l -name 'run_*_contract_lane.sh' -printf '%f\n' | sort)
+mapfile -t contract_wrappers < <(
+  find "$ROOT_DIR/scripts/kolme" -maxdepth 1 -type l -name 'run_*_contract_lane.sh' \
+    -exec sh -c 'for path do basename "$path"; done' sh {} + | sort
+)
 
 if [ "${#run_wrappers[@]}" -eq 0 ] || [ "${#contract_wrappers[@]}" -eq 0 ]; then
   echo "expected run and contract wrapper symlink inventory to be non-empty" >&2

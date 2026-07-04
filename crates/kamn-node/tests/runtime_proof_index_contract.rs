@@ -31,15 +31,19 @@ fn corrected_audit_response_links_runtime_proof_index() {
 
 fn assert_contains_all(doc: &str, markers: &[&str]) {
     for marker in markers {
-        assert!(doc.contains(marker), "runtime proof index missing marker: {}", marker);
+        assert!(
+            doc.contains(marker),
+            "runtime proof index missing marker: {marker}"
+        );
     }
 }
 
 fn read_workspace_file(relative_path: &str) -> String {
     let path = workspace_root().join(relative_path);
-    assert!(path.exists(), "expected path to exist: {}", path.display());
+    let path_display = path.display();
+    assert!(path.exists(), "expected path to exist: {path_display}");
     fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {}", path.display(), error))
+        .unwrap_or_else(|error| panic!("failed to read {path_display}: {error}"))
 }
 
 fn workspace_root() -> PathBuf {

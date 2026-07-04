@@ -1,12 +1,15 @@
+use super::status::consensus_status;
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Public contract model for Validator Proof Consensus Evaluator.
 pub struct ValidatorProofConsensusEvaluator {
     required_quorum: usize,
     consumed_attestation_ids: BTreeSet<String>,
 }
 
 impl ValidatorProofConsensusEvaluator {
+    /// Creates a new value for this public contract type.
     pub fn new(required_quorum: usize) -> Result<Self, ValidatorProofConsensusError> {
         if required_quorum == 0 {
             return Err(ValidatorProofConsensusError::InvalidRequiredQuorum(
@@ -19,10 +22,12 @@ impl ValidatorProofConsensusEvaluator {
         })
     }
 
+    /// Runs the required quorum contract operation.
     pub fn required_quorum(&self) -> usize {
         self.required_quorum
     }
 
+    /// Runs the evaluate contract operation.
     pub fn evaluate(
         &mut self,
         input: ValidatorProofConsensusInput,

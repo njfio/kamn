@@ -252,6 +252,10 @@ def run_command(command: list[str], env: dict[str, str]) -> int:
     return result.returncode
 
 
+def resolved_path(path: str) -> str:
+    return str(Path(path).resolve())
+
+
 def planned_checks(selected_serve_command: str) -> list[dict[str, str]]:
     return [
         {
@@ -330,6 +334,9 @@ def run_mode_checks(
         self_test_policy = temp_root / "self-test-policy.json"
         lifecycle_report = temp_root / "lifecycle-summary.json"
         lifecycle_policy = temp_root / "lifecycle-policy.json"
+        lifecycle_finality_output = resolved_path(args.lifecycle_runtime_commit_finality_output_file)
+        lifecycle_rollback_evidence = resolved_path(args.lifecycle_rollback_evidence_file)
+        lifecycle_recovery_evidence = resolved_path(args.lifecycle_recovery_evidence_file)
         artifact_paths = [
             str(bootstrap_report),
             str(bootstrap_policy),
@@ -339,11 +346,11 @@ def run_mode_checks(
             str(self_test_policy),
             str(lifecycle_report),
             str(lifecycle_policy),
-            str(Path(args.lifecycle_rollback_evidence_file).resolve()),
-            str(Path(args.lifecycle_recovery_evidence_file).resolve()),
+            lifecycle_rollback_evidence,
+            lifecycle_recovery_evidence,
         ]
         if args.lifecycle_runtime_commit_finality_command:
-            artifact_paths.append(str(Path(args.lifecycle_runtime_commit_finality_output_file).resolve()))
+            artifact_paths.append(lifecycle_finality_output)
 
         source_repo.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "-C", str(source_repo), "init", "-q"], check=True)
@@ -406,9 +413,9 @@ def run_mode_checks(
             "--integration-runtime-commit-max-seconds",
             args.lifecycle_runtime_commit_max_seconds,
             "--rollback-evidence-file",
-            args.lifecycle_rollback_evidence_file,
+            lifecycle_rollback_evidence,
             "--recovery-evidence-file",
-            args.lifecycle_recovery_evidence_file,
+            lifecycle_recovery_evidence,
             "--output-json",
             str(lifecycle_report),
         ]
@@ -427,7 +434,7 @@ def run_mode_checks(
                     "--integration-runtime-commit-finality-max-seconds",
                     args.lifecycle_runtime_commit_finality_max_seconds,
                     "--integration-runtime-commit-finality-output-file",
-                    args.lifecycle_runtime_commit_finality_output_file,
+                    lifecycle_finality_output,
                 ]
             )
 
@@ -670,8 +677,8 @@ def main() -> int:
         "/tmp/kolme-local-fork-self-test-policy.json",
         "/tmp/kolme-local-fork-process-lifecycle-summary.json",
         "/tmp/kolme-local-fork-process-lifecycle-policy.json",
-        str(Path(args.lifecycle_rollback_evidence_file).resolve()),
-        str(Path(args.lifecycle_recovery_evidence_file).resolve()),
+        resolved_path(args.lifecycle_rollback_evidence_file),
+        resolved_path(args.lifecycle_recovery_evidence_file),
     ]
 
     if args.mode == "run":
@@ -703,12 +710,12 @@ def main() -> int:
         "lifecycle_runtime_commit_finality_command": args.lifecycle_runtime_commit_finality_command,
         "lifecycle_runtime_commit_finality_max_seconds": int(args.lifecycle_runtime_commit_finality_max_seconds),
         "lifecycle_runtime_commit_finality_output_file": (
-            str(Path(args.lifecycle_runtime_commit_finality_output_file).resolve())
+            resolved_path(args.lifecycle_runtime_commit_finality_output_file)
             if args.lifecycle_runtime_commit_finality_command
             else ""
         ),
-        "lifecycle_rollback_evidence_file": str(Path(args.lifecycle_rollback_evidence_file).resolve()),
-        "lifecycle_recovery_evidence_file": str(Path(args.lifecycle_recovery_evidence_file).resolve()),
+        "lifecycle_rollback_evidence_file": resolved_path(args.lifecycle_rollback_evidence_file),
+        "lifecycle_recovery_evidence_file": resolved_path(args.lifecycle_recovery_evidence_file),
         "contracts": build_contracts(),
         "checks": checks,
         "artifact_paths": artifact_paths,

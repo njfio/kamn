@@ -6,15 +6,28 @@ impl DataLayerM4SettlementEvidenceRegistry {
     pub fn reconcile_against_escrow(
         &self,
         escrow: &DataLayerM4EscrowRecord,
-    ) -> Result<DataLayerM4SettlementEvidenceReconciliationReport, DataLayerM4SettlementEvidenceRegistryError> {
+    ) -> Result<
+        DataLayerM4SettlementEvidenceReconciliationReport,
+        DataLayerM4SettlementEvidenceRegistryError,
+    > {
         validate_terminal_escrow(escrow)?;
-        let escrow_settlement_receipt_hash = escrow.settlement_receipt_hash.as_ref().cloned().ok_or(
-            DataLayerM4SettlementEvidenceRegistryError::EmptyField("escrow_settlement_receipt_hash"),
-        )?;
+        let escrow_settlement_receipt_hash =
+            escrow.settlement_receipt_hash.as_ref().cloned().ok_or(
+                DataLayerM4SettlementEvidenceRegistryError::EmptyField(
+                    "escrow_settlement_receipt_hash",
+                ),
+            )?;
         if let Some(latest) = latest_record(self, escrow.escrow_id.as_str())? {
-            return Ok(build_reconciliation_report(escrow, escrow_settlement_receipt_hash, latest));
+            return Ok(build_reconciliation_report(
+                escrow,
+                escrow_settlement_receipt_hash,
+                latest,
+            ));
         }
-        Ok(missing_reconciliation_report(escrow, escrow_settlement_receipt_hash))
+        Ok(missing_reconciliation_report(
+            escrow,
+            escrow_settlement_receipt_hash,
+        ))
     }
 }
 
@@ -25,9 +38,9 @@ fn validate_terminal_escrow(
     if escrow.state != DataLayerM4EscrowState::Released
         && escrow.state != DataLayerM4EscrowState::Refunded
     {
-        return Err(DataLayerM4SettlementEvidenceRegistryError::UnsupportedSettlementState(
-            escrow.state,
-        ));
+        return Err(
+            DataLayerM4SettlementEvidenceRegistryError::UnsupportedSettlementState(escrow.state),
+        );
     }
     Ok(())
 }
@@ -35,12 +48,18 @@ fn validate_terminal_escrow(
 fn latest_record<'a>(
     registry: &'a DataLayerM4SettlementEvidenceRegistry,
     escrow_id: &str,
-) -> Result<Option<&'a DataLayerM4SettlementEvidenceRecord>, DataLayerM4SettlementEvidenceRegistryError> {
+) -> Result<
+    Option<&'a DataLayerM4SettlementEvidenceRecord>,
+    DataLayerM4SettlementEvidenceRegistryError,
+> {
     if !registry.records_by_escrow.contains_key(escrow_id) {
         return Ok(None);
     }
     registry.verify_escrow_integrity(escrow_id)?;
-    Ok(registry.records_by_escrow.get(escrow_id).and_then(|records| records.last()))
+    Ok(registry
+        .records_by_escrow
+        .get(escrow_id)
+        .and_then(|records| records.last()))
 }
 
 fn build_reconciliation_report(

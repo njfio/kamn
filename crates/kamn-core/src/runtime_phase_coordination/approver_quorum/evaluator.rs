@@ -13,13 +13,18 @@ impl ApproverQuorumEvaluator {
     /// Handles new.
     pub fn new(required_approvals: usize) -> Result<Self, ApproverQuorumError> {
         if required_approvals == 0 {
-            return Err(ApproverQuorumError::InvalidRequiredApprovals { required: required_approvals });
+            return Err(ApproverQuorumError::InvalidRequiredApprovals {
+                required: required_approvals,
+            });
         }
         Ok(Self { required_approvals })
     }
 
     /// Handles authorize.
-    pub fn authorize(&self, input: ApproverQuorumInput) -> Result<ApproverQuorumDecision, ApproverQuorumError> {
+    pub fn authorize(
+        &self,
+        input: ApproverQuorumInput,
+    ) -> Result<ApproverQuorumDecision, ApproverQuorumError> {
         let approved_by = collect_approvals(&input)?;
         if approved_by.len() < self.required_approvals {
             return Err(ApproverQuorumError::InsufficientApprovals {
@@ -58,7 +63,10 @@ fn collect_approvals(input: &ApproverQuorumInput) -> Result<Vec<String>, Approve
     Ok(approved.into_iter().collect())
 }
 
-fn validate_payload_digest(input: &ApproverQuorumInput, attestation_digest: &str) -> Result<(), ApproverQuorumError> {
+fn validate_payload_digest(
+    input: &ApproverQuorumInput,
+    attestation_digest: &str,
+) -> Result<(), ApproverQuorumError> {
     if attestation_digest != input.payload_digest() {
         return Err(ApproverQuorumError::PayloadDigestMismatch {
             expected: input.payload_digest().to_owned(),

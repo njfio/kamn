@@ -80,6 +80,9 @@ def main() -> int:
         runtime_policy_report = temp_path / "kolme_runtime_commit_live_policy.json"
         rollback_evidence_file = temp_path / "kolme_process_lifecycle_rollback_evidence.json"
         recovery_evidence_file = temp_path / "kolme_process_lifecycle_recovery_evidence.json"
+        runtime_policy_report_resolved = runtime_policy_report.resolve()
+        rollback_evidence_file_resolved = rollback_evidence_file.resolve()
+        recovery_evidence_file_resolved = recovery_evidence_file.resolve()
         checkout_path.mkdir(parents=True, exist_ok=True)
 
         subprocess.run(["git", "-C", str(checkout_path), "init", "-q"], check=True)
@@ -173,25 +176,25 @@ def main() -> int:
         )
 
         summary = json.loads(Path(args.output_json).read_text(encoding="utf-8"))
-        if summary.get("integration_runtime_commit_live_policy_report") != str(runtime_policy_report):
+        if summary.get("integration_runtime_commit_live_policy_report") != str(runtime_policy_report_resolved):
             print(
                 "expected process lifecycle summary to expose integration runtime policy report path",
                 file=sys.stderr,
             )
             return 1
-        if str(runtime_policy_report) not in summary.get("artifact_paths", []):
+        if str(runtime_policy_report_resolved) not in summary.get("artifact_paths", []):
             print(
                 "expected process lifecycle summary artifact paths to include integration runtime policy report",
                 file=sys.stderr,
             )
             return 1
-        if summary.get("rollback_evidence_file") != str(rollback_evidence_file):
+        if summary.get("rollback_evidence_file") != str(rollback_evidence_file_resolved):
             print(
                 "expected process lifecycle summary to expose rollback evidence file path",
                 file=sys.stderr,
             )
             return 1
-        if summary.get("recovery_evidence_file") != str(recovery_evidence_file):
+        if summary.get("recovery_evidence_file") != str(recovery_evidence_file_resolved):
             print(
                 "expected process lifecycle summary to expose recovery evidence file path",
                 file=sys.stderr,
@@ -209,13 +212,13 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        if str(rollback_evidence_file) not in summary.get("artifact_paths", []):
+        if str(rollback_evidence_file_resolved) not in summary.get("artifact_paths", []):
             print(
                 "expected process lifecycle summary artifact paths to include rollback evidence file",
                 file=sys.stderr,
             )
             return 1
-        if str(recovery_evidence_file) not in summary.get("artifact_paths", []):
+        if str(recovery_evidence_file_resolved) not in summary.get("artifact_paths", []):
             print(
                 "expected process lifecycle summary artifact paths to include recovery evidence file",
                 file=sys.stderr,

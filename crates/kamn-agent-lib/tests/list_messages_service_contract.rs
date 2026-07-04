@@ -38,11 +38,12 @@ impl Drop for EnvVarGuard {
     }
 }
 
-fn reserve_loopback_addr() -> String {
+fn bind_loopback_listener() -> TcpListener {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
-    let addr = listener.local_addr().expect("local addr should resolve");
-    drop(listener);
-    addr.to_string()
+    listener
+        .set_nonblocking(true)
+        .expect("listener nonblocking mode should configure");
+    listener
 }
 
 fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String> {
@@ -101,39 +102,20 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
     );
     stream
         .write_all(payload.as_bytes())
-        .map_err(|error| format!("service api write failed: {error}"))
+        .map_err(|error| format!("service api write failed: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("service api flush failed: {error}"))
 }
 
-fn run_list_messages_server(bind_addr: String) -> Result<(), String> {
-    let listener = TcpListener::bind(bind_addr.as_str())
-        .map_err(|error| format!("server bind failed: {error}"))?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| format!("server nonblocking mode failed: {error}"))?;
-
-    let deadline = Instant::now() + Duration::from_secs(2);
+fn run_list_messages_server(listener: TcpListener) -> Result<(), String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         if Instant::now() > deadline {
             return Err("server timed out before receiving request".to_owned());
         }
         match listener.accept() {
-            Ok((mut stream, _)) => {
-                let (method, path) = parse_http_request(&mut stream)?;
-                if method == "GET" && path == "/v1/channels/channel-contract-1/messages" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"channel_id":"channel-contract-1","messages":["msg-one","msg-two"]}"#,
-                    )?;
-                    return Ok(());
-                }
-                write_http_response(
-                    &mut stream,
-                    200,
-                    r#"{"channel_id":"unknown","messages":[]}"#,
-                )?;
-                return Ok(());
-            }
+            Ok((mut stream, _)) => return serve_list_messages_connection(&mut stream),
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(5));
             }
@@ -142,8 +124,14 @@ fn run_list_messages_server(bind_addr: String) -> Result<(), String> {
     }
 }
 
-fn wait_for_server_ready() {
-    thread::sleep(Duration::from_millis(40));
+fn serve_list_messages_connection(stream: &mut TcpStream) -> Result<(), String> {
+    let (method, path) = parse_http_request(stream)?;
+    let body = if method == "GET" && path == "/v1/channels/channel-contract-1/messages" {
+        r#"{"channel_id":"channel-contract-1","messages":["msg-one","msg-two"]}"#
+    } else {
+        r#"{"channel_id":"unknown","messages":[]}"#
+    };
+    write_http_response(stream, 200, body)
 }
 
 #[test]
@@ -152,10 +140,12 @@ fn spec_c02_agent_handle_list_messages_uses_service_route_contract() {
         SERVICE_AUTH_PRIVATE_KEY_ENV,
         TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
     );
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_list_messages_server(server_addr));
-    wait_for_server_ready();
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("listener address should resolve")
+        .to_string();
+    let server = thread::spawn(move || run_list_messages_server(listener));
 
     let identity = AgentIdentity::from_agent_name("alice").expect("identity");
     let handle = KamnAgentHandle::with_identity(

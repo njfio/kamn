@@ -8,10 +8,22 @@ pub(super) fn assert_runtime_orchestration_root_contracts(runtime_orchestration_
     assert_contains_all(
         runtime_orchestration_rs,
         &[
-            ("mod daemon_phase;", "runtime_orchestration.rs should declare daemon phase submodule"),
-            ("mod full_supervisor;", "runtime_orchestration.rs should declare full_supervisor submodule"),
-            ("mod runtime_policy_contracts;", "runtime_orchestration.rs should declare runtime_policy_contracts submodule"),
-            ("mod runtime_mode_handlers;", "runtime_orchestration.rs should declare runtime_mode_handlers submodule"),
+            (
+                "mod daemon_phase;",
+                "runtime_orchestration.rs should declare daemon phase submodule",
+            ),
+            (
+                "mod full_supervisor;",
+                "runtime_orchestration.rs should declare full_supervisor submodule",
+            ),
+            (
+                "mod runtime_policy_contracts;",
+                "runtime_orchestration.rs should declare runtime_policy_contracts submodule",
+            ),
+            (
+                "mod runtime_mode_handlers;",
+                "runtime_orchestration.rs should declare runtime_mode_handlers submodule",
+            ),
         ],
     );
     assert_runtime_orchestration_no_inline_helpers(runtime_orchestration_rs);
@@ -106,9 +118,18 @@ fn assert_runtime_orchestration_no_inline_branches(runtime_orchestration_rs: &st
     assert_not_contains_all(
         runtime_orchestration_rs,
         &[
-            ("RuntimeModeKind::Full => {", "runtime_orchestration.rs should not keep inline full runtime branch body"),
-            ("RuntimeModeKind::KolmeLive => {", "runtime_orchestration.rs should not keep inline kolme-live runtime branch body"),
-            ("node.runtime.full.bootstrap.start", "runtime_orchestration.rs should not keep inline full runtime bootstrap markers"),
+            (
+                "RuntimeModeKind::Full => {",
+                "runtime_orchestration.rs should not keep inline full runtime branch body",
+            ),
+            (
+                "RuntimeModeKind::KolmeLive => {",
+                "runtime_orchestration.rs should not keep inline kolme-live runtime branch body",
+            ),
+            (
+                "node.runtime.full.bootstrap.start",
+                "runtime_orchestration.rs should not keep inline full runtime bootstrap markers",
+            ),
         ],
     );
 }
@@ -158,26 +179,34 @@ fn assert_runtime_policy_shutdown_exports(runtime_policy_contracts_rs: &str) {
         "runtime_policy_contracts module should own os-signal shutdown selection policy helper"
     );
     assert!(
-        runtime_policy_contracts_rs.contains("pub(super) fn classify_production_transport_profile_violation(")
-            || runtime_policy_contracts_rs.contains("pub(crate) fn classify_production_transport_profile_violation("),
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn classify_production_transport_profile_violation(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn classify_production_transport_profile_violation("),
         "runtime_policy_contracts module should own transport profile violation classifier"
     );
 }
 
 fn assert_runtime_policy_validation_exports(runtime_policy_contracts_rs: &str) {
     assert!(
-        runtime_policy_contracts_rs.contains("pub(super) fn validate_full_supervisor_stop_contract(")
-            || runtime_policy_contracts_rs.contains("pub(crate) fn validate_full_supervisor_stop_contract("),
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn validate_full_supervisor_stop_contract(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn validate_full_supervisor_stop_contract("),
         "runtime_policy_contracts module should own full-supervisor stop contract validation"
     );
     assert!(
-        runtime_policy_contracts_rs.contains("pub(super) fn validate_shutdown_checkpoint_reconciliation(")
-            || runtime_policy_contracts_rs.contains("pub(crate) fn validate_shutdown_checkpoint_reconciliation("),
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn validate_shutdown_checkpoint_reconciliation(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn validate_shutdown_checkpoint_reconciliation("),
         "runtime_policy_contracts module should own shutdown checkpoint reconciliation validation"
     );
     assert!(
-        runtime_policy_contracts_rs.contains("pub(super) fn enforce_kolme_live_signer_key_source_policy(")
-            || runtime_policy_contracts_rs.contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
+        runtime_policy_contracts_rs
+            .contains("pub(super) fn enforce_kolme_live_signer_key_source_policy(")
+            || runtime_policy_contracts_rs
+                .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
         "runtime_policy_contracts module should own Kolme signer key-source policy enforcement"
     );
 }

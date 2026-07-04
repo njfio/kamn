@@ -2,8 +2,7 @@ mod lifecycle;
 mod sealing;
 
 use super::{
-    zeroize_sender_key_history, zeroize_u64_keyed_sender_history,
-    SenderKeyDistributionRecord,
+    zeroize_sender_key_history, zeroize_u64_keyed_sender_history, SenderKeyDistributionRecord,
 };
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -25,7 +24,10 @@ impl fmt::Debug for GroupChannelCryptoEngine {
         f.debug_struct("GroupChannelCryptoEngine")
             .field("channel_id", &self.channel_id)
             .field("sender_count", &self.sender_key_history.len())
-            .field("active_sender_count", &self.active_generation_by_sender.len())
+            .field(
+                "active_sender_count",
+                &self.active_generation_by_sender.len(),
+            )
             .field("used_nonce_count", &self.used_nonces.len())
             .finish()
     }

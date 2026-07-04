@@ -11,9 +11,7 @@ const REQUIRED_MODULES: &[&str] = &[
     "governance_advisory_tail_contract_tests/audit_lifecycle_retention_contract_tests.rs",
     "governance_advisory_tail_contract_tests/support.rs",
 ];
-const REQUIRED_MARKERS: &[&str] = &[
-    "mod governance_advisory_tail_contract_tests;",
-];
+const REQUIRED_MARKERS: &[&str] = &["mod governance_advisory_tail_contract_tests;"];
 const MOVED_TEST_MARKERS: &[&str] = &[
     "fn doc_contains_sbom_provenance_artifact_generator_contract_markers()",
     "fn doc_contains_sbom_provenance_release_gonogo_checker_contract_markers()",
@@ -40,11 +38,18 @@ fn ci_strategy_docs_governance_advisory_tail_is_extracted() {
         "expected {ROOT} <= {ROOT_MAX_LINES} lines after tranche extraction, found {lines}"
     );
     for marker in REQUIRED_MARKERS {
-        assert!(root.contains(marker), "missing root module marker: {marker}");
+        assert!(
+            root.contains(marker),
+            "missing root module marker: {marker}"
+        );
     }
     for name in REQUIRED_MODULES {
         let path = repo_path(MODULE_DIR).join(name);
-        assert!(path.exists(), "missing extracted module: {}", path.display());
+        assert!(
+            path.exists(),
+            "missing extracted module: {}",
+            path.display()
+        );
     }
     for marker in MOVED_TEST_MARKERS {
         assert!(

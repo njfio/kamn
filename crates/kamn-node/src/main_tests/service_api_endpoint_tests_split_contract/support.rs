@@ -47,6 +47,12 @@ pub(super) const BRIDGE_PERSISTENCE_RESTART_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/bridge_persistence_restart_contract_tests/bridge_persistence_restart_contract_tests.rs";
 pub(super) const MAILBOX_RELAY_DELIVERY_MODULE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests.rs";
+pub(super) const MAILBOX_RELAY_CROSS_NODE_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/cross_node_relay_support.rs";
+pub(super) const MAILBOX_RELAY_REQUEST_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/request_support.rs";
+pub(super) const MAILBOX_RELAY_RECEIVER_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/relay_receiver_support.rs";
 pub(super) const RECIPIENT_MAILBOX_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/mailbox_relay_delivery_contract_tests/recipient_mailbox_contract_tests.rs";
 pub(super) const RELAY_DELIVERY_FILE: &str =
@@ -69,16 +75,22 @@ pub(super) const REPLAY_GUARD_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/replay_guard_contract_tests.rs";
 pub(super) const CONCURRENCY_GUARD_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/concurrency_guard_contract_tests.rs";
+pub(super) const CONCURRENCY_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/concurrency_support.rs";
 pub(super) const LIFECYCLE_PROJECTION_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/ingress_guard_lifecycle_contract_tests/lifecycle_projection_contract_tests.rs";
 pub(super) const TRANSPORT_SURFACE_OBSERVABILITY_MODULE_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests.rs";
+pub(super) const TRANSPORT_ASYNC_ROUTE_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/async_route_support.rs";
 pub(super) const ROUTE_TLS_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/route_tls_contract_tests.rs";
 pub(super) const HTTP_CONNECTION_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/http_connection_contract_tests.rs";
 pub(super) const OBSERVABILITY_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/observability_contract_tests.rs";
+pub(super) const OBSERVABILITY_SUPPORT_FILE: &str =
+    "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/observability_support.rs";
 pub(super) const TRANSPORT_SUPPORT_FILE: &str =
     "src/main_tests/service_api_endpoint_tests/transport_surface_observability_contract_tests/support.rs";
 pub(super) const SHARED_SUPPORT_MODULE_FILE: &str =

@@ -1,4 +1,6 @@
-use super::decisions::{agent_decision, auditor_decision, deny_decision, owner_decision, validate_escrow_id};
+use super::decisions::{
+    agent_decision, auditor_decision, deny_decision, owner_decision, validate_escrow_id,
+};
 use super::matrix::{build_fixture, matrix_decision, validate_case, validate_cases};
 use super::models::{
     DataLayerM2ActorRole, DataLayerM2AuthorizationDecision, DataLayerM2MessageScope,
@@ -20,10 +22,12 @@ pub struct DataLayerM2AbacEngine {
 }
 
 impl DataLayerM2AbacEngine {
+    /// Creates a new value for this public contract type.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Runs the register escrow auditor contract operation.
     pub fn register_escrow_auditor(
         &mut self,
         escrow_id: &str,
@@ -42,6 +46,7 @@ impl DataLayerM2AbacEngine {
         Ok(())
     }
 
+    /// Runs the set escrow dispute active contract operation.
     pub fn set_escrow_dispute_active(&mut self, escrow_id: &str, active: bool) {
         if active {
             self.disputed_escrows.insert(escrow_id.to_owned());
@@ -50,6 +55,7 @@ impl DataLayerM2AbacEngine {
         }
     }
 
+    /// Runs the authorize message visibility contract operation.
     pub fn authorize_message_visibility(
         &self,
         requester_did: &str,
@@ -61,11 +67,14 @@ impl DataLayerM2AbacEngine {
         Ok(match requester_role {
             DataLayerM2ActorRole::Agent => agent_decision(requester.as_str(), &scope),
             DataLayerM2ActorRole::Owner => owner_decision(requester.as_str(), &scope),
-            DataLayerM2ActorRole::EscrowAuditor => auditor_decision(self, requester.as_str(), &scope),
+            DataLayerM2ActorRole::EscrowAuditor => {
+                auditor_decision(self, requester.as_str(), &scope)
+            }
             DataLayerM2ActorRole::PlatformOperator => deny_decision(),
         })
     }
 
+    /// Runs the evaluate negative authorization matrix contract operation.
     pub fn evaluate_negative_authorization_matrix(
         &self,
         cases: &[DataLayerM2NegativeAuthorizationCase],

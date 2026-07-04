@@ -113,10 +113,10 @@ impl MessageLifecycleStore {
     fn collect_overdue_ids(&self, observed_at: &str) -> Vec<String> {
         self.records
             .iter()
-            .filter_map(|(message_id, record)| {
-                (is_expirable_status(record.status) && observed_at > record.expires.as_str())
-                    .then(|| message_id.clone())
+            .filter(|&(_, record)| {
+                is_expirable_status(record.status) && observed_at > record.expires.as_str()
             })
+            .map(|(message_id, _)| message_id.clone())
             .collect()
     }
 

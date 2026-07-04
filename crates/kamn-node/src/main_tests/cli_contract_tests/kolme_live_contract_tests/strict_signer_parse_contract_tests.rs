@@ -3,7 +3,10 @@ use super::super::*;
 #[test]
 fn rejects_kolme_live_strict_signer_contracts_without_signer_profile_selector() {
     assert_parse_error(
-        with_pairs(strict_kolme_live_args(), &[("--kolme-live-signer-key-source", "env-local")]),
+        with_pairs(
+            strict_kolme_live_args(),
+            &[("--kolme-live-signer-key-source", "env-local")],
+        ),
         ConfigError::MissingArgumentValue("--kolme-live-signer-profile"),
     );
 }
@@ -11,7 +14,10 @@ fn rejects_kolme_live_strict_signer_contracts_without_signer_profile_selector() 
 #[test]
 fn rejects_kolme_live_strict_signer_contracts_without_key_source() {
     assert_parse_error(
-        with_pairs(strict_kolme_live_args(), &[("--kolme-live-signer-profile", "ops-primary")]),
+        with_pairs(
+            strict_kolme_live_args(),
+            &[("--kolme-live-signer-profile", "ops-primary")],
+        ),
         ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
     );
 }

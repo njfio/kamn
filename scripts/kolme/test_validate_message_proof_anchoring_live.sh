@@ -64,6 +64,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^performance_budget_status=ve
   echo "expected performance marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^max_seconds=360$'; then
+  echo "expected message proof anchoring live validation max-seconds marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -101,6 +105,8 @@ if payload.get("local_heavy_lane_execution_mode") != "opt_in":
     raise SystemExit("expected local_heavy_lane_execution_mode=opt_in")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+if payload.get("max_seconds") != 360:
+    raise SystemExit("expected max_seconds=360")
 PY
 
 set +e

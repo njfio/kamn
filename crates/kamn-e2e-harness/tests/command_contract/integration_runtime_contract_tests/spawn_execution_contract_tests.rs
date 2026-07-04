@@ -22,14 +22,26 @@ fn spec_c39_run_output_contains_spawn_plan_markers() {
 #[test]
 fn spec_c40_spawn_plan_markers_are_deterministic_and_mode_coherent() {
     assert_spawn_plan_markers(
-        &render_run(&run_config("sdk-direct", None, false, "/tmp/evidence", &["S-01"])),
+        &render_run(&run_config(
+            "sdk-direct",
+            None,
+            false,
+            "/tmp/evidence",
+            &["S-01"],
+        )),
         &[
             "\"postgres_cmd\":\"docker run --rm --name kamn-e2e-postgres postgres:15\"",
             "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode sdk-direct\"",
         ],
     );
     assert_spawn_plan_markers(
-        &render_run(&run_config("mcp-tau", Some("/tmp/tau"), false, "/tmp/evidence", &["S-01"])),
+        &render_run(&run_config(
+            "mcp-tau",
+            Some("/tmp/tau"),
+            false,
+            "/tmp/evidence",
+            &["S-01"],
+        )),
         &["\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode mcp-tau\""],
     );
 }

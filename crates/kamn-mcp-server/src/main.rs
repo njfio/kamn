@@ -76,8 +76,9 @@ fn build_identity_from_key_file(agent_name: &str, key_file: &str) -> Result<Agen
     let signing_key = load_signing_key_from_file(Path::new(key_file))?;
     let signer_public_key = service_public_key_for_private_key(signing_key.as_str())
         .map_err(|error| format!("failed to derive signer public key: {error}"))?;
-    let did = AgentDid::with_public_key_hex_binding(normalized.as_str(), signer_public_key.as_str())
-        .map_err(|error| format!("failed to bind did to signer public key: {error}"))?;
+    let did =
+        AgentDid::with_public_key_hex_binding(normalized.as_str(), signer_public_key.as_str())
+            .map_err(|error| format!("failed to bind did to signer public key: {error}"))?;
     AgentIdentity::from_did_and_signing_key(did.as_str(), signing_key.as_str())
         .map_err(|error| format!("failed to construct identity: {error}"))
 }
@@ -223,7 +224,7 @@ mod tests {
     };
     use kamn_sdk::{service_public_key_for_private_key, AgentDid};
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_file_path(suffix: &str) -> PathBuf {
@@ -237,9 +238,9 @@ mod tests {
         ))
     }
 
-    fn write_test_key_file(path: &PathBuf) {
+    fn write_test_key_file(path: &Path) {
         fs::write(
-            path.as_path(),
+            path,
             "1111111111111111111111111111111111111111111111111111111111111111\n",
         )
         .expect("key file should write");

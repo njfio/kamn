@@ -3,11 +3,11 @@ use std::collections::BTreeSet;
 use crate::{GovernanceWorkflow, VersionUpgradeOrchestrator};
 
 use crate::agent_upgrade_workflow::{
-    AgentDrivenUpgradeWorkflow, AgentUpgradeWorkflowConfig, AgentUpgradeWorkflowError,
     support::{
-        AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_PROPOSER_DID_REASON_CODE,
-        AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_VALIDATOR_DID_REASON_CODE, validate_did,
+        validate_did, AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_PROPOSER_DID_REASON_CODE,
+        AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_VALIDATOR_DID_REASON_CODE,
     },
+    AgentDrivenUpgradeWorkflow, AgentUpgradeWorkflowConfig, AgentUpgradeWorkflowError,
 };
 
 impl AgentDrivenUpgradeWorkflow {

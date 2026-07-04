@@ -32,8 +32,10 @@ fn repo_root() -> PathBuf {
 }
 
 fn load_env_map(path: &Path) -> HashMap<String, String> {
-    let content = fs::read_to_string(path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+    let content = fs::read_to_string(path).unwrap_or_else(|error| {
+        let path_display = path.display();
+        panic!("failed to read {path_display}: {error}");
+    });
     let mut map = HashMap::new();
     for (line_idx, line) in content.lines().enumerate() {
         let trimmed = line.trim();
@@ -41,12 +43,9 @@ fn load_env_map(path: &Path) -> HashMap<String, String> {
             continue;
         }
         let (key, value) = trimmed.split_once('=').unwrap_or_else(|| {
-            panic!(
-                "invalid env line in {} at {}: {}",
-                path.display(),
-                line_idx + 1,
-                line
-            )
+            let path_display = path.display();
+            let line_number = line_idx + 1;
+            panic!("invalid env line in {path_display} at {line_number}: {line}",)
         });
         map.insert(key.trim().to_owned(), value.trim().to_owned());
     }
@@ -109,8 +108,10 @@ fn load_baseline(root: &Path) -> Baseline {
 }
 
 fn collect_test_files(path: &Path, out: &mut Vec<PathBuf>) {
-    let entries = fs::read_dir(path)
-        .unwrap_or_else(|error| panic!("failed to list {}: {error}", path.display()));
+    let entries = fs::read_dir(path).unwrap_or_else(|error| {
+        let path_display = path.display();
+        panic!("failed to list {path_display}: {error}");
+    });
     for entry in entries {
         let entry = entry.unwrap_or_else(|error| panic!("failed to read dir entry: {error}"));
         let entry_path = entry.path();
@@ -134,22 +135,27 @@ fn all_test_file_lines(root: &Path) -> Vec<(String, usize)> {
     files.sort();
     files
         .into_iter()
-        .filter_map(|path| {
-            let relative = path
-                .strip_prefix(root)
-                .expect("file should be under repo root")
-                .to_string_lossy()
-                .replace('\\', "/");
-            if relative.contains("/tests/support/") {
-                return None;
-            }
-            let lines = fs::read_to_string(&path)
-                .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()))
-                .lines()
-                .count();
-            Some((relative, lines))
-        })
+        .filter_map(|path| test_file_line_count(root, &path))
         .collect()
+}
+
+fn test_file_line_count(root: &Path, path: &Path) -> Option<(String, usize)> {
+    let relative = path
+        .strip_prefix(root)
+        .expect("file should be under repo root")
+        .to_string_lossy()
+        .replace('\\', "/");
+    if relative.contains("/tests/support/") {
+        return None;
+    }
+    let lines = fs::read_to_string(path)
+        .unwrap_or_else(|error| {
+            let path_display = path.display();
+            panic!("failed to read {path_display}: {error}");
+        })
+        .lines()
+        .count();
+    Some((relative, lines))
 }
 
 fn offender_paths(files: &[(String, usize)], threshold: usize) -> Vec<String> {
@@ -175,20 +181,22 @@ fn spec_c02_first_wave_command_contract_monolith_is_below_severe_threshold() {
     let split_target = root.join("crates/kamn-e2e-harness/tests/command_contract_verify_matrix.rs");
 
     let command_lines = fs::read_to_string(&command_contract)
-        .unwrap_or_else(|error| panic!("failed to read {}: {error}", command_contract.display()))
+        .unwrap_or_else(|error| {
+            let command_contract_display = command_contract.display();
+            panic!("failed to read {command_contract_display}: {error}");
+        })
         .lines()
         .count();
+    let command_contract_display = command_contract.display();
+    let severe_refactor_lines = thresholds.severe_refactor_lines;
     assert!(
-        command_lines <= thresholds.severe_refactor_lines,
-        "first-wave severe threshold exceeded for {}: line_count={} threshold={}",
-        command_contract.display(),
-        command_lines,
-        thresholds.severe_refactor_lines
+        command_lines <= severe_refactor_lines,
+        "first-wave severe threshold exceeded for {command_contract_display}: line_count={command_lines} threshold={severe_refactor_lines}",
     );
+    let split_target_display = split_target.display();
     assert!(
         split_target.is_file(),
-        "missing split target {}",
-        split_target.display()
+        "missing split target {split_target_display}",
     );
 }
 
@@ -205,8 +213,7 @@ fn spec_c03_severe_offender_allowlist_matches_baseline() {
     allowlist.sort();
     assert_eq!(
         offenders, allowlist,
-        "severe offender allowlist drift: expected {:?} got {:?}",
-        allowlist, offenders
+        "severe offender allowlist drift: expected {allowlist:?} got {offenders:?}",
     );
 }
 
@@ -248,22 +255,19 @@ fn spec_c04_oversized_test_counts_are_within_budget() {
         "hard oversized count drift"
     );
 
+    let max_soft_warn_count = thresholds.max_soft_warn_count;
+    let max_severe_count = thresholds.max_severe_count;
+    let max_hard_fail_count = thresholds.max_hard_fail_count;
     assert!(
-        soft_count <= thresholds.max_soft_warn_count,
-        "soft oversized budget exceeded: count={} max={}",
-        soft_count,
-        thresholds.max_soft_warn_count
+        soft_count <= max_soft_warn_count,
+        "soft oversized budget exceeded: count={soft_count} max={max_soft_warn_count}",
     );
     assert!(
-        severe_count <= thresholds.max_severe_count,
-        "severe oversized budget exceeded: count={} max={}",
-        severe_count,
-        thresholds.max_severe_count
+        severe_count <= max_severe_count,
+        "severe oversized budget exceeded: count={severe_count} max={max_severe_count}",
     );
     assert!(
-        hard_count <= thresholds.max_hard_fail_count,
-        "hard oversized budget exceeded: count={} max={}",
-        hard_count,
-        thresholds.max_hard_fail_count
+        hard_count <= max_hard_fail_count,
+        "hard oversized budget exceeded: count={hard_count} max={max_hard_fail_count}",
     );
 }

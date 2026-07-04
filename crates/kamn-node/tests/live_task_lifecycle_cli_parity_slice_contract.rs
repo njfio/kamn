@@ -30,13 +30,21 @@ const REQUIRED_INDEX_MARKERS: &[&str] = &[
 #[test]
 fn live_task_lifecycle_cli_parity_doc_exists_and_stays_bounded() {
     let doc = read_workspace_file(DOC_PATH);
-    assert_contains_all(doc.as_str(), REQUIRED_DOC_MARKERS, "live task-lifecycle cli parity doc");
+    assert_contains_all(
+        doc.as_str(),
+        REQUIRED_DOC_MARKERS,
+        "live task-lifecycle cli parity doc",
+    );
 }
 
 #[test]
 fn runtime_proof_index_includes_live_task_lifecycle_cli_parity_slice() {
     let index = read_workspace_file(INDEX_PATH);
-    assert_contains_all(index.as_str(), REQUIRED_INDEX_MARKERS, "runtime proof index");
+    assert_contains_all(
+        index.as_str(),
+        REQUIRED_INDEX_MARKERS,
+        "runtime proof index",
+    );
 }
 
 fn assert_contains_all(doc: &str, markers: &[&str], label: &str) {

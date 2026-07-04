@@ -37,6 +37,8 @@ pub(crate) fn daemon_args_for_live_postgres_profile(
     shutdown: Option<ShutdownArgsSpec>,
 ) -> Vec<String> {
     let mut args = daemon_base_args(role, max_ticks, tick_interval_ms);
-    shutdown.map(|spec| extend_shutdown_args(&mut args, spec));
+    if let Some(spec) = shutdown {
+        extend_shutdown_args(&mut args, spec)
+    }
     args
 }

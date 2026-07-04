@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTBOUND_INTENT_CONTRACT_LANE="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh"
+bridge_outbound_quorum_target_dir="${KAMN_BRIDGE_OUTBOUND_QUORUM_TARGET_DIR:-$ROOT_DIR/target/bridge-outbound-quorum-contract}"
 
 skip_intent_lane=false
 while [[ $# -gt 0 ]]; do
@@ -19,12 +20,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 start_epoch="$(date +%s)"
+mkdir -p "$bridge_outbound_quorum_target_dir"
 
 if [ "$skip_intent_lane" != true ]; then
   bash "$OUTBOUND_INTENT_CONTRACT_LANE" >/dev/null
 fi
 
-cargo test -p kamn-core --test bridge_outbound_quorum_execution >/dev/null
+CARGO_TARGET_DIR="$bridge_outbound_quorum_target_dir" cargo test -p kamn-core --test bridge_outbound_quorum_execution >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt 120 ]; then

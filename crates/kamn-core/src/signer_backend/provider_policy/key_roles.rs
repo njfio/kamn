@@ -38,8 +38,7 @@ impl SignerKeyRole {
         if normalized_sender.starts_with("admin-") || normalized_sender.starts_with("admin:") {
             return Self::Admin;
         }
-        if normalized_sender.starts_with("treasury-")
-            || normalized_sender.starts_with("treasury:")
+        if normalized_sender.starts_with("treasury-") || normalized_sender.starts_with("treasury:")
         {
             return Self::Treasury;
         }

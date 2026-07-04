@@ -1,5 +1,7 @@
 use super::super::*;
 
+type ResponseError = Box<Response>;
+
 pub(super) async fn handle_post_route(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
@@ -40,7 +42,7 @@ async fn send_message(
     let channel_id = channel_id_from_context(context);
     let recipient_did = match recipient_did_from_context(context) {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let sender_did = sender_did_from_context(context);
     let result =
@@ -64,9 +66,9 @@ fn channel_id_from_context(context: &ServiceApiRequestContext) -> Option<String>
 
 fn recipient_did_from_context(
     context: &ServiceApiRequestContext,
-) -> Result<Option<String>, Response> {
+) -> Result<Option<String>, ResponseError> {
     extract_canonical_recipient_did_from_payload(context.parsed_request.body.as_str())
-        .map_err(bad_request)
+        .map_err(|error| Box::new(bad_request(error)))
 }
 
 fn sender_did_from_context(context: &ServiceApiRequestContext) -> Option<&str> {
@@ -120,7 +122,7 @@ fn publish_message_side_effects(
     if let Err(response) =
         append_recipient_relay_entry(state, context, payload, sender_did, recipient_did)
     {
-        return response;
+        return *response;
     }
     publish_message_event(state, payload, sender_did, recipient_did, channel_id);
     success_message_response(payload)
@@ -132,13 +134,13 @@ fn append_recipient_relay_entry(
     payload: &ServiceApiMessageCreateBody,
     sender_did: Option<&str>,
     recipient_did: Option<&str>,
-) -> Result<(), Response> {
+) -> Result<(), ResponseError> {
     let Some(recipient_did_value) = recipient_did else {
         return Ok(());
     };
     let relay_entry = relay_spool_entry(context, payload, sender_did, recipient_did_value);
     super::append_service_api_relay_spool_entry(state.relay_spool_file.as_deref(), &relay_entry)
-        .map_err(relay_spool_error_response)
+        .map_err(|error| Box::new(relay_spool_error_response(error)))
 }
 
 fn relay_spool_entry(
