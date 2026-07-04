@@ -1,5 +1,6 @@
 use kamn_e2e_harness::{
-    execute_run_contract, execute_verify_contract, parse_command_args, HarnessCommand,
+    execute_mvp_demo_contract, execute_run_contract, execute_verify_contract,
+    execute_verify_mvp_demo_contract, parse_command_args, HarnessCommand,
 };
 
 fn main() {
@@ -15,6 +16,8 @@ fn main() {
     let output = match command {
         HarnessCommand::Run(config) => execute_run_contract(&config),
         HarnessCommand::Verify(config) => execute_verify_contract(&config),
+        HarnessCommand::DemoMvp(config) => execute_mvp_demo_contract(&config),
+        HarnessCommand::VerifyMvpDemo(config) => execute_verify_mvp_demo_contract(&config),
     };
     match output {
         Ok(rendered) => println!("{rendered}"),
