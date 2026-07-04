@@ -4,6 +4,11 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+pub use mvp_demo::{
+    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, MvpDemoCommandConfig,
+    VerifyMvpDemoCommandConfig,
+};
+
 /// Driver implementations for each execution mode.
 pub mod drivers;
 /// Evidence manifest structures and schema constants.
@@ -14,6 +19,8 @@ pub mod identity;
 pub mod infrastructure;
 /// Kolme devnet configuration contracts.
 pub mod kolme_devnet;
+/// MVP evaluator demo report contracts.
+pub mod mvp_demo;
 mod run_contract;
 /// Scenario inventory and definitions.
 pub mod scenarios;
@@ -238,6 +245,10 @@ pub enum HarnessCommand {
     Run(RunCommandConfig),
     /// Verify an evidence bundle.
     Verify(VerifyCommandConfig),
+    /// Generate the MVP evaluator demo proof report.
+    DemoMvp(MvpDemoCommandConfig),
+    /// Verify an MVP evaluator demo proof report.
+    VerifyMvpDemo(VerifyMvpDemoCommandConfig),
 }
 
 /// Parses a comma-delimited list of scenario IDs.
@@ -296,6 +307,8 @@ where
         return Err("missing command; expected one of: run, verify".to_owned());
     }
     match args[0].as_str() {
+        "demo-mvp" => parse_demo_mvp_command(args.as_slice()),
+        "verify-mvp-demo" => parse_verify_mvp_demo_command(args.as_slice()),
         "run" => {
             let mut mode = None;
             let mut kolme_binary = None;
@@ -409,6 +422,72 @@ where
         }
         command => Err(format!("unsupported command: {command}")),
     }
+}
+
+fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
+    let mut output_root = None;
+    let mut index = 1;
+    while index < args.len() {
+        let (parsed_output_root, advanced) = parse_flag_value(args, index, "--output-root")?;
+        if let Some(value) = parsed_output_root {
+            output_root = Some(value);
+            index = advanced + 1;
+            continue;
+        }
+        return Err(format!("unknown demo-mvp flag: {}", args[index]));
+    }
+    Ok(HarnessCommand::DemoMvp(MvpDemoCommandConfig {
+        output_root: output_root
+            .unwrap_or_else(|| mvp_demo::DEFAULT_MVP_DEMO_OUTPUT_ROOT.to_owned()),
+        devnet_mode: mvp_devnet_mode_from_env(),
+        solana_rpc_url: mvp_solana_rpc_url_from_env(),
+        localhost_signed_demo_command: None,
+        service_api_vertical_slice_command: None,
+        service_api_websocket_command: None,
+    }))
+}
+
+fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, String> {
+    let mut report = None;
+    let mut index = 1;
+    while index < args.len() {
+        let (parsed_report, advanced) = parse_flag_value(args, index, "--report")?;
+        if let Some(value) = parsed_report {
+            report = Some(value);
+            index = advanced + 1;
+            continue;
+        }
+        return Err(format!("unknown verify-mvp-demo flag: {}", args[index]));
+    }
+    let report = report.ok_or_else(|| "missing required flag --report".to_owned())?;
+    Ok(HarnessCommand::VerifyMvpDemo(VerifyMvpDemoCommandConfig {
+        report,
+    }))
+}
+
+fn mvp_devnet_mode_from_env() -> String {
+    match std::env::var_os("KAMN_MVP_DEVNET_MODE") {
+        Some(value) => mvp_devnet_mode_from_os_value(value),
+        None => default_mvp_devnet_mode(),
+    }
+}
+
+fn mvp_devnet_mode_from_os_value(value: std::ffi::OsString) -> String {
+    match value.into_string() {
+        Ok(text) if !text.trim().is_empty() => text,
+        Ok(_) => default_mvp_devnet_mode(),
+        Err(_) => "invalid-nonunicode".to_owned(),
+    }
+}
+
+fn default_mvp_devnet_mode() -> String {
+    "optional".to_owned()
+}
+
+fn mvp_solana_rpc_url_from_env() -> Option<String> {
+    std::env::var("KAMN_MVP_SOLANA_RPC_URL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
 }
 
 pub use run_contract::execute_run_contract;

@@ -117,13 +117,16 @@ The MVP is not production readiness. The MVP is a locally runnable and locally p
 - `make demo-mvp` uses `target/mvp-demo-proof` internally to avoid the known stale/default-target cargo wedge observed during local verification.
 - The default local run produces `status=GO` with local-only runtime/auth/message/state/relay/websocket/audit claims and no settlement success claim.
 - Devnet-required mode currently produces explicit `status=NO-GO` evidence with `no_go.reason=devnet_keypair_not_configured` because no funded Solana devnet settlement keypair is configured.
-- Default-target `make check` wedged in stale `kamn_core` clippy workers at 0% CPU; the same gate was rerun and passed as `CARGO_TARGET_DIR=target/mvp-workspace-check make check`.
+- Default-target workspace checks wedged in stale `kamn_core` clippy workers at 0% CPU; equivalent gates were rerun with isolated target directories.
+- `make ci-tools` initially caught an unsafe env fallback in the MVP demo mode parser; the implementation now handles invalid/non-Unicode env values explicitly.
+- The touched Rust size policy initially caught oversize local helper functions; the report/verifier helpers were split and the existing test-file inventory baseline was updated only for the two new test files.
 
 Verification evidence:
 - `CARGO_TARGET_DIR=target/mvp-demo-contract cargo test -p kamn-e2e-harness --test mvp_demo_claim_contract -- --nocapture` passed, 10 tests.
 - `CARGO_TARGET_DIR=target/mvp-demo-command cargo test -p kamn-e2e-harness --test mvp_demo_command_contract -- --nocapture` passed, 5 tests.
 - `cargo fmt --check` passed.
-- `cargo clippy -p kamn-e2e-harness --all-targets --all-features -- -D warnings` passed.
+- `CARGO_TARGET_DIR=target/mvp-clippy cargo clippy -p kamn-e2e-harness --all-targets --all-features -- -D warnings` passed.
+- `CARGO_TARGET_DIR=target/mvp-ci-tools make ci-tools` passed.
 - `CARGO_TARGET_DIR=target/mvp-workspace-check make check` passed.
 - `make demo-mvp` passed and generated `.kamn/demo/latest/proof/report.json` plus `.kamn/demo/latest/proof/report.md`.
 - `CARGO_TARGET_DIR=target/mvp-demo-proof cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json` passed.
