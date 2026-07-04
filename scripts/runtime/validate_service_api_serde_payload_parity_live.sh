@@ -129,11 +129,11 @@ for test_marker in \
 done
 
 pushd "$ROOT_DIR" >/dev/null
-cargo test -p kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::serde_payload_contract_tests::unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::serde_payload_contract_tests::unit_service_api_endpoint_serde_payload_roundtrip_contracts -- --exact \
   >"$TMP_DIR/service-api-serde-unit.log" 2>&1
-cargo test -p kamn-node main_tests::service_api_endpoint_tests::transport_surface_observability_contract_tests::route_tls_contract_tests::integration_service_api_endpoint_http_response_bodies_match_serde_contracts -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::transport_surface_observability_contract_tests::route_tls_contract_tests::integration_service_api_endpoint_http_response_bodies_match_serde_contracts -- --exact \
   >"$TMP_DIR/service-api-serde-integration.log" 2>&1
-cargo test -p kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::payload_parse_contract_tests::regression_service_api_payload_parse_reason_codes_fail_closed -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::payload_parse_contract_tests::regression_service_api_payload_parse_reason_codes_fail_closed -- --exact \
   >"$TMP_DIR/service-api-serde-regression.log" 2>&1
 popd >/dev/null
 

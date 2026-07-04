@@ -66,8 +66,12 @@ fi
 
 cd "$ROOT_DIR"
 if [ "$skip_tests" != true ]; then
-  bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend integration_aws_kms_signed_transaction_passes_transaction_guards -- --exact
-  bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test key_lifecycle_audit_trails_docs
+  signer_key_lifecycle_target_dir="${KAMN_SIGNER_KEY_LIFECYCLE_CONTRACT_TARGET_DIR:-$ROOT_DIR/target/signer-key-lifecycle-contract}"
+  mkdir -p "$signer_key_lifecycle_target_dir"
+  CARGO_TARGET_DIR="$signer_key_lifecycle_target_dir" \
+    bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend integration_aws_kms_signed_transaction_passes_transaction_guards -- --exact
+  CARGO_TARGET_DIR="$signer_key_lifecycle_target_dir" \
+    bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test key_lifecycle_audit_trails_docs
 fi
 
 if [[ -z "$output_file" ]]; then

@@ -194,13 +194,30 @@ report = {
 report_file.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
-pushd "$ROOT_DIR" >/dev/null
-cargo build --quiet -p kamn-node
-NODE_BIN="$ROOT_DIR/target/debug/kamn-node"
-popd >/dev/null
+skip_build="${KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD:-0}"
+case "$skip_build" in
+  0 | false | no) ;;
+  1 | true | yes) ;;
+  *)
+    echo "KAMN_SERVICE_API_WEBSOCKET_SKIP_BUILD must be 0 or 1" >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$skip_build" != "1" && "$skip_build" != "true" && "$skip_build" != "yes" ]]; then
+  pushd "$ROOT_DIR" >/dev/null
+  cargo build --quiet -p kamn-node
+  popd >/dev/null
+fi
+
+NODE_BIN="${KAMN_SERVICE_API_WEBSOCKET_NODE_BIN:-$ROOT_DIR/target/debug/kamn-node}"
 
 if [ ! -x "$NODE_BIN" ]; then
-  echo "expected built kamn-node binary to be executable" >&2
+  if [[ "$skip_build" == "1" || "$skip_build" == "true" || "$skip_build" == "yes" ]]; then
+    echo "expected prebuilt kamn-node binary to be executable" >&2
+  else
+    echo "expected built kamn-node binary to be executable" >&2
+  fi
   exit 1
 fi
 
@@ -244,12 +261,15 @@ if [ -z "$auth_public_key_hex" ]; then
 fi
 
 api_stdout="$TMP_DIR/service-api-websocket.out"
+runtime_storage_dir="$TMP_DIR/service-api-websocket-storage"
+mkdir -p "$runtime_storage_dir"
 KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$auth_public_key_hex" \
 KAMN_SERVICE_API_TLS_MODE="disabled" \
 "$NODE_BIN" \
   --role processor \
   --chain-id kamn-devnet \
   --chain-version v0.1.0 \
+  --storage-dir "$runtime_storage_dir" \
   --runtime-mode api \
   --api-bind "$api_addr" \
   --api-max-requests 7 \

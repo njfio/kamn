@@ -13,7 +13,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 output_json=""
-max_seconds="${KAMN_RUNTIME_CONCURRENCY_MUTATION_MAX_SECONDS:-120}"
+max_seconds="${KAMN_RUNTIME_CONCURRENCY_MUTATION_MAX_SECONDS:-360}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

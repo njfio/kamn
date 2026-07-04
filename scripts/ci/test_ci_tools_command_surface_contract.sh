@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
+MAKEFILE="$ROOT_DIR/Makefile"
+README_CONTRACT_SCRIPT="$ROOT_DIR/scripts/ci/test_readme_contract.sh"
 
 required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"'
@@ -176,6 +178,53 @@ required_commands=(
 for command in "${required_commands[@]}"; do
   if ! grep -Fq "$command" "$CI_TOOLS_SCRIPT"; then
     echo "expected ci tools regression lane to include command: $command" >&2
+    exit 1
+  fi
+done
+
+required_failure_diagnostic_snippets=(
+  'ci_tools_failed_line=${LINENO}'
+  'ci_tools_failed_command=${BASH_COMMAND}'
+  'KAMN_CI_TOOLS_GUARDRAIL_TARGET_DIR'
+  'KAMN_CI_TOOLS_WAVE1_TARGET_DIR'
+  'KAMN_CI_TOOLS_WAVE2_TARGET_DIR'
+  'KAMN_CI_TOOLS_RUST_CONTRACT_TARGET_DIR'
+)
+
+for snippet in "${required_failure_diagnostic_snippets[@]}"; do
+  if ! grep -Fq "$snippet" "$CI_TOOLS_SCRIPT"; then
+    echo "expected ci tools regression lane to emit failure diagnostic snippet: $snippet" >&2
+    exit 1
+  fi
+done
+
+required_makefile_local_gate_snippets=(
+  'LOCAL_GATE_BASH_CANDIDATES'
+  'LOCAL_GATE_BASH ?= $(shell for shell_path in $(LOCAL_GATE_BASH_CANDIDATES); do'
+  '"$${BASH_VERSINFO[0]}" -ge 5'
+  'LOCAL_GATE_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(LOCAL_GATE_BASH_DIR):$(PATH)"'
+  'PRE_PUSH_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(LOCAL_GATE_BASH_DIR):$(PATH)"'
+  'make pre-push requires Bash 5+ for local shell contract lanes'
+  'make ci-tools requires Bash 5+ for local shell contract lanes'
+  'make ci-tools requires a python3 interpreter with cryptography and tomllib installed'
+  '$(LOCAL_GATE_ENV) "$(LOCAL_GATE_BASH)" scripts/ci/test_ci_tools.sh'
+)
+
+for snippet in "${required_makefile_local_gate_snippets[@]}"; do
+  if ! grep -Fq "$snippet" "$MAKEFILE"; then
+    echo "expected Makefile local gate Bash 5 selection snippet: $snippet" >&2
+    exit 1
+  fi
+done
+
+required_readme_contract_snippets=(
+  'KAMN_CI_TOOLS_README_CONTRACT_TARGET_DIR'
+  'CARGO_TARGET_DIR="$readme_contract_target_dir" cargo test -p kamn-core --test readme_contract_lane -- --nocapture'
+)
+
+for snippet in "${required_readme_contract_snippets[@]}"; do
+  if ! grep -Fq "$snippet" "$README_CONTRACT_SCRIPT"; then
+    echo "expected README contract wrapper isolation snippet: $snippet" >&2
     exit 1
   fi
 done

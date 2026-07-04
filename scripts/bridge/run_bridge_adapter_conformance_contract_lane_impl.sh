@@ -32,6 +32,8 @@ fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+bridge_adapter_conformance_target_dir="${KAMN_BRIDGE_ADAPTER_CONFORMANCE_TARGET_DIR:-$ROOT_DIR/target/bridge-adapter-conformance-contract}"
+mkdir -p "$bridge_adapter_conformance_target_dir"
 
 start_epoch="$(date +%s)"
 report_file="$TMP_DIR/bridge-adapter-conformance-contract-report.json"
@@ -47,8 +49,8 @@ if ! printf '%s\n' "$matrix_output" | grep -q '^status=pass;'; then
   exit 1
 fi
 
-cargo test -p kamn-core --test bridge_adapter -- regression_rejects_adapter_outbound_request_id_mutation --exact >/dev/null
-cargo test -p kamn-core --test docs_contract_wave3_harness cross_chain_bridge_adapters_docs:: >/dev/null
+CARGO_TARGET_DIR="$bridge_adapter_conformance_target_dir" cargo test -p kamn-core --test bridge_adapter -- regression_rejects_adapter_outbound_request_id_mutation --exact >/dev/null
+CARGO_TARGET_DIR="$bridge_adapter_conformance_target_dir" cargo test -p kamn-core --test docs_contract_wave3_harness cross_chain_bridge_adapters_docs:: >/dev/null
 
 if [[ -n "$output_json" ]]; then
   cp "$report_file" "$output_json"

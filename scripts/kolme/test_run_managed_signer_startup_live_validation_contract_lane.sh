@@ -130,6 +130,13 @@ for docs_file in "$ROADMAP_DOC" "$RUNBOOK_DOC"; do
   done
 done
 
+for marker in '"--bin",' '"kamn-node",' '"--exact",'; do
+  if ! grep -q -- "$marker" "$CONTRACT_IMPL"; then
+    echo "expected managed-signer startup live validation implementation marker: $marker" >&2
+    exit 1
+  fi
+done
+
 run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
 for marker in \
   "status=pass" \

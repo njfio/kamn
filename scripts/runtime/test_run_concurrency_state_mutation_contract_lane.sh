@@ -71,6 +71,10 @@ if ! grep -q "performance_escrow_dispute_refund_concurrency_lane_stays_within_bu
   echo "expected concurrency contract lane to include escrow dispute/refund performance budget coverage" >&2
   exit 1
 fi
+if ! grep -Fq 'max_seconds="${KAMN_RUNTIME_CONCURRENCY_MUTATION_MAX_SECONDS:-360}"' "$SHARED_CONTRACT"; then
+  echo "expected concurrency contract lane default budget to cover aggregate local-heavy mutation tests" >&2
+  exit 1
+fi
 
 report_file="$TMP_DIR/concurrency-mutation-contract-report.json"
 lane_output="$(bash "$FAST_SCRIPT" --output-json "$report_file")"

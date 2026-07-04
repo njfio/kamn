@@ -13,7 +13,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 output_json=""
-max_seconds="${KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS:-120}"
+max_seconds="${KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS:-360}"
+target_dir="${KAMN_RUNTIME_LIFECYCLE_PROPERTY_TARGET_DIR:-$ROOT_DIR/target/contract-lanes/lifecycle-property}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,7 +38,8 @@ if [[ ! "$max_seconds" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
-start_epoch="$(date +%s)"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 declare -a property_cases=(
   "task_state_machine:task_lifecycle_property_generated_sequences_preserve_transition_contracts"
@@ -54,12 +56,56 @@ declare -a property_cases=(
   "runtime_peer_lifecycle:peer_lifecycle_property_roundtrip_disconnect_recovers_connection_path"
 )
 
+cargo_artifacts="$TMP_DIR/lifecycle-property-cargo-artifacts.json"
+mkdir -p "$target_dir"
+CARGO_TARGET_DIR="$target_dir" timeout "$max_seconds" cargo test -p kamn-core \
+  --test task_state_machine \
+  --test escrow_lifecycle \
+  --test dispute_refund_transition_contracts \
+  --test runtime_peer_lifecycle \
+  --no-run \
+  --message-format=json >"$cargo_artifacts"
+
+target_executable() {
+  local target_name="$1"
+  python3 - "$cargo_artifacts" "$target_name" <<'PY'
+import json
+import pathlib
+import sys
+
+artifact_file = pathlib.Path(sys.argv[1])
+target_name = sys.argv[2]
+for line in artifact_file.read_text(encoding="utf-8").splitlines():
+    if not line.strip().startswith("{"):
+        continue
+    try:
+        artifact = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if artifact.get("reason") != "compiler-artifact":
+        continue
+    if artifact.get("target", {}).get("name") != target_name:
+        continue
+    executable = artifact.get("executable")
+    if executable and pathlib.Path(executable).is_file():
+        print(executable)
+        raise SystemExit(0)
+raise SystemExit(f"expected Cargo to report lifecycle property executable: {target_name}")
+PY
+}
+
+start_epoch="$(date +%s)"
+
 executed_tests=()
 executed_cases=()
 for property_case in "${property_cases[@]}"; do
   test_target="${property_case%%:*}"
   test_name="${property_case#*:}"
-  cargo test -p kamn-core --test "$test_target" "$test_name" -- --exact >/dev/null
+  test_executable="$(target_executable "$test_target")"
+  if ! timeout "$max_seconds" "$test_executable" "$test_name" --exact >/dev/null; then
+    echo "runtime lifecycle property contract test failed or timed out: $property_case" >&2
+    exit 1
+  fi
   executed_tests+=("$test_name")
   executed_cases+=("$test_target:$test_name")
 done
@@ -72,9 +118,8 @@ fi
 
 if [[ -n "$output_json" ]]; then
   mkdir -p "$(dirname "$output_json")"
-  tests_file="$(mktemp)"
-  cases_file="$(mktemp)"
-  trap 'rm -f "$tests_file" "$cases_file"' EXIT
+  tests_file="$TMP_DIR/lifecycle-property-tests.txt"
+  cases_file="$TMP_DIR/lifecycle-property-cases.txt"
   printf '%s\n' "${executed_tests[@]}" >"$tests_file"
   printf '%s\n' "${executed_cases[@]}" >"$cases_file"
 

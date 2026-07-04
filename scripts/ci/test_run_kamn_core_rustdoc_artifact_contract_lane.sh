@@ -23,6 +23,21 @@ test_harness_require_executable "$SHARED_IMPL" "expected rustdoc artifact shared
 
 test_harness_require_executable "$POLICY_SCRIPT" "expected rustdoc artifact policy checker script to be executable"
 
+if ! grep -Fq "KAMN_CORE_RUSTDOC_ARTIFACT_TARGET_DIR" "$SHARED_IMPL"; then
+  echo "expected rustdoc artifact impl to expose isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'CARGO_TARGET_DIR="$RUSTDOC_TARGET_DIR"' "$SHARED_IMPL"; then
+  echo "expected rustdoc artifact impl to run cargo doc in isolated target dir" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'tar -czf "$artifact_path" -C "$RUSTDOC_TARGET_DIR" doc' "$SHARED_IMPL"; then
+  echo "expected rustdoc artifact impl to package docs from isolated target dir" >&2
+  exit 1
+fi
+
 REPORT_FILE="$TMP_DIR/rustdoc-report.json"
 ARTIFACT_DIR="$TMP_DIR/artifacts"
 

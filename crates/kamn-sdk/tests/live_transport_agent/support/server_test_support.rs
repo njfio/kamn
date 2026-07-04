@@ -6,12 +6,15 @@ pub(crate) fn start_contract_server(
     expected_message_body: Option<String>,
 ) -> (String, thread::JoinHandle<Result<(), String>>) {
     ensure_live_test_env();
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("local addr should resolve")
+        .to_string();
     let expected_sender = expected_agent_sender_did.to_owned();
     let server = thread::spawn(move || {
-        run_live_transport_contract_server(
-            server_addr,
+        run_bound_live_transport_contract_server(
+            listener,
             request_budget,
             expected_sender.as_str(),
             expected_message_body,

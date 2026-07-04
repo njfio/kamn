@@ -191,7 +191,7 @@ fn spec_c02_makefile_command_surface_contract_parity() {
         "bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json",
         "bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name workflow_dispatch --output-json /tmp/live-network-pilot-report.json",
         "bash scripts/sdk/run_localhost_signed_demo.sh",
-        "bash scripts/ci/test_ci_tools.sh",
+        "$(LOCAL_GATE_ENV) \"$(LOCAL_GATE_BASH)\" scripts/ci/test_ci_tools.sh",
     ];
     assert_contains_all(
         &makefile,

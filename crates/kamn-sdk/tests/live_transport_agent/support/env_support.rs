@@ -50,8 +50,12 @@ pub(crate) fn with_env_lock<T>(callback: impl FnOnce() -> T) -> T {
     output
 }
 
+pub(crate) fn bind_loopback_listener() -> TcpListener {
+    TcpListener::bind("127.0.0.1:0").expect("listener should bind")
+}
+
 pub(crate) fn reserve_loopback_addr() -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let listener = bind_loopback_listener();
     let addr = listener.local_addr().expect("local addr should resolve");
     drop(listener);
     addr.to_string()

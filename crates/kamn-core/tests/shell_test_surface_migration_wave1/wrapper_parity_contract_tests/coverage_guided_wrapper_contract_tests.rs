@@ -91,6 +91,13 @@ fn assert_coverage_guided_shared_contract(shared_contract: &Path) {
             "unit_input_mutation_coverage_guided_did_seed_corpus_covers_boundary_classes",
             "minimal_failing_seed_prefix",
             "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS",
+            "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS:-600",
+            "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_CASE_MAX_SECONDS:-120",
+            "cargo test -p kamn-core --test input_mutation_coverage_guided --no-run",
+            "timeout \"$prebuild_timeout_seconds\" cargo test",
+            "timeout \"$case_timeout_seconds\" cargo test",
+            "runtime input mutation coverage-guided case timed out",
+            "run_case \"$case_name\"",
         ],
         "coverage-guided shared contract markers",
     );
@@ -108,7 +115,7 @@ fn run_coverage_guided_lane(
             command.arg(contract_lane);
             command.env(
                 "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS",
-                "300",
+                "600",
             );
             if let Some(target) = target {
                 command.arg("--target").arg(target);

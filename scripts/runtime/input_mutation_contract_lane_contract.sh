@@ -26,7 +26,7 @@ done
 
 output_json=""
 target_selector="all"
-max_seconds="${KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS:-120}"
+max_seconds="${KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS:-900}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

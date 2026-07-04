@@ -17,6 +17,16 @@ test_harness_require_file "$MANIFEST_FILE" "expected localhost bridge relay demo
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
+if ! grep -Fq "KAMN_LOCALHOST_BRIDGE_RELAY_DEMO_TARGET_DIR" "$FAST_IMPL_SCRIPT"; then
+  echo "expected localhost bridge relay demo lane to expose an isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'CARGO_TARGET_DIR="$localhost_bridge_relay_demo_target_dir"' "$FAST_IMPL_SCRIPT"; then
+  echo "expected localhost bridge relay demo lane cargo tests to use the isolated target dir" >&2
+  exit 1
+fi
+
 bash "$FAST_SCRIPT" >"$TMP_OUT"
 
 required_markers=(

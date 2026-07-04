@@ -32,6 +32,21 @@ if ! grep -Fq -- "--output-json" "$TMP_HELP"; then
   exit 1
 fi
 
+if grep -Fq 'KAMN_LOCALHOST_SIGNED_DEMO_ADDR:-127.0.0.1:17879' "$DEMO_SCRIPT"; then
+  echo "expected localhost signed demo to avoid fixed default port 17879" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'KAMN_LOCALHOST_SIGNED_DEMO_ADDR:-127.0.0.1:0' "$DEMO_SCRIPT"; then
+  echo "expected localhost signed demo default to ask the listener for an ephemeral port" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'extract_marker_value "addr" "$LISTENER_OUT"' "$DEMO_SCRIPT"; then
+  echo "expected localhost signed demo to reuse the listener-reported bound address" >&2
+  exit 1
+fi
+
 set +e
 bash "$DEMO_SCRIPT" --timeout-seconds 0 >"$TMP_ERR" 2>&1
 error_code=$?
@@ -85,6 +100,11 @@ if exchange.get("to") != "kamn:did:agent:listener-1":
     raise SystemExit("expected signed_exchange.to to match listener DID")
 if exchange.get("verified") is not True:
     raise SystemExit("expected signed_exchange.verified=true")
+addr = exchange.get("addr")
+if not isinstance(addr, str) or not addr.startswith("127.0.0.1:"):
+    raise SystemExit("expected signed_exchange.addr to use loopback")
+if addr.endswith(":0") or addr.endswith(":17879"):
+    raise SystemExit("expected signed_exchange.addr to be a dynamic bound port")
 receipt = payload.get("receipt_reconciliation", {})
 if receipt.get("final_decision") != "GO":
     raise SystemExit("expected receipt_reconciliation.final_decision=GO")

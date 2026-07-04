@@ -29,8 +29,6 @@ if [ ! -f "$MAKEFILE" ]; then
   exit 1
 fi
 
-start_epoch="$(date +%s)"
-
 set +e
 smoke_output="$(
   KAMN_LIVE_NETWORK_SMOKE_MAX_SECONDS=180 \
@@ -67,6 +65,10 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected live-network smoke report decision to be GO")
 if payload.get("command_count", 0) < 2:
     raise SystemExit("expected live-network smoke report to include at least two commands")
+if payload.get("max_seconds") != 180:
+    raise SystemExit("expected live-network smoke report max_seconds=180")
+if payload.get("elapsed_seconds", 181) > 180:
+    raise SystemExit("expected live-network smoke report elapsed_seconds within budget")
 PY
 
 set +e
@@ -111,12 +113,6 @@ fi
 
 if ! grep -q "smoke-live-network:" "$MAKEFILE"; then
   echo "expected Makefile to define smoke-live-network target" >&2
-  exit 1
-fi
-
-elapsed_seconds="$(( $(date +%s) - start_epoch ))"
-if [ "$elapsed_seconds" -gt 180 ]; then
-  echo "live-network smoke contract lane exceeded runtime budget: ${elapsed_seconds}s" >&2
   exit 1
 fi
 

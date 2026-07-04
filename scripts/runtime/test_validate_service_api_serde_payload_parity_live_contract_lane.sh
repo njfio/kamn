@@ -20,6 +20,14 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected service api serde payload parity policy checker script to be executable" >&2
   exit 1
 fi
+if ! grep -Fq -- '--bin kamn-node' "$VALIDATION_SCRIPT"; then
+  echo "expected service api serde payload parity validation to target the kamn-node binary test harness" >&2
+  exit 1
+fi
+if [ "$(grep -Fc -- '-- --exact' "$VALIDATION_SCRIPT")" -lt 3 ]; then
+  echo "expected service api serde payload parity validation to run targeted exact cargo tests" >&2
+  exit 1
+fi
 
 lane_report="$TMP_DIR/service-api-serde-payload-parity-contract-lane-report.json"
 policy_report="$TMP_DIR/service-api-serde-payload-parity-policy-report.json"

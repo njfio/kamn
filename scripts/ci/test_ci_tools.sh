@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+trap 'status=$?; echo "ci_tools_failed_line=${LINENO}" >&2; echo "ci_tools_failed_command=${BASH_COMMAND}" >&2; exit "$status"' ERR
 
 run_non_kolme_wave_wrapper_family_contracts() {
   for wave in {1..19}; do
@@ -40,16 +41,20 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
-  cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract
-  cargo test -p kamn-core --test shell_test_surface_migration_wave1
-  cargo test -p kamn-core --test shell_test_surface_migration_wave2
-  cargo test -p kamn-core --test shell_test_surface_ratio_policy
-  cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture
-  cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
+  guardrail_target_dir="${KAMN_CI_TOOLS_GUARDRAIL_TARGET_DIR:-$ROOT_DIR/target/ci-tools-guardrail}"
+  CARGO_TARGET_DIR="$guardrail_target_dir" cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract -- --test-threads=1
+  wave1_target_dir="${KAMN_CI_TOOLS_WAVE1_TARGET_DIR:-$ROOT_DIR/target/ci-tools-wave1}"
+  CARGO_TARGET_DIR="$wave1_target_dir" cargo test -p kamn-core --test shell_test_surface_migration_wave1 -- --test-threads=1
+  wave2_target_dir="${KAMN_CI_TOOLS_WAVE2_TARGET_DIR:-$ROOT_DIR/target/ci-tools-wave2}"
+  CARGO_TARGET_DIR="$wave2_target_dir" cargo test -p kamn-core --test shell_test_surface_migration_wave2 -- --test-threads=1
+  rust_contract_target_dir="${KAMN_CI_TOOLS_RUST_CONTRACT_TARGET_DIR:-$ROOT_DIR/target/ci-tools-rust-contracts}"
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test shell_test_surface_ratio_policy
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
   bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_cargo_audit_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_critical_path_coverage.sh"
@@ -113,7 +118,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_workflow_runtime_ceiling_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_local_pre_push_gate_policy.sh"
-  cargo test -p kamn-core --test e2e_live_workflow_lane
+  CARGO_TARGET_DIR="$rust_contract_target_dir" cargo test -p kamn-core --test e2e_live_workflow_lane
   bash "$ROOT_DIR/scripts/ci/test_local_signal_secret_hygiene_ci_exclusion_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh"

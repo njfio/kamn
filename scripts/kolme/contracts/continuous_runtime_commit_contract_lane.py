@@ -11,6 +11,16 @@ import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
+CONTINUOUS_RUNTIME_TESTS = (
+    "main_tests::cli_contract_tests::required_argument_contract_tests::"
+    "kolme_live_required_argument_contract_tests::"
+    "rejects_kolme_live_continuous_mode_without_tick_interval",
+    "main_tests::cli_contract_tests::required_argument_contract_tests::"
+    "kolme_live_required_argument_contract_tests::"
+    "rejects_kolme_live_continuous_mode_without_max_ticks",
+    "main_tests::core_behavior_tests::"
+    "functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles",
+)
 
 
 def parse_args(argv: list[str]) -> tuple[str, int]:
@@ -54,30 +64,36 @@ def main() -> int:
     output_json, max_seconds = parse_args(sys.argv[1:])
 
     start_epoch = time.monotonic()
-    command = [
-        "cargo",
-        "test",
-        "-p",
-        "kamn-node",
-        "--",
-        "rejects_kolme_live_continuous_mode_without_tick_interval",
-        "rejects_kolme_live_continuous_mode_without_max_ticks",
-        "functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles",
-    ]
-    result = subprocess.run(
-        command,
-        cwd=ROOT_DIR,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    outputs: list[str] = []
+    for test_name in CONTINUOUS_RUNTIME_TESTS:
+        command = [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-node",
+            "--bin",
+            "kamn-node",
+            test_name,
+            "--",
+            "--exact",
+            "--nocapture",
+        ]
+        result = subprocess.run(
+            command,
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        output = (result.stdout or "") + (result.stderr or "")
+        outputs.append(output)
+        if result.returncode != 0:
+            if output:
+                print(output, file=sys.stderr, end="")
+            print("continuous runtime commit contract lane failed", file=sys.stderr)
+            return 1
 
-    test_output = (result.stdout or "") + (result.stderr or "")
-    if result.returncode != 0:
-        if test_output:
-            print(test_output, file=sys.stderr, end="")
-        print("continuous runtime commit contract lane failed", file=sys.stderr)
-        return 1
+    test_output = "".join(outputs)
 
     required_test_markers = (
         "rejects_kolme_live_continuous_mode_without_tick_interval",
@@ -95,8 +111,11 @@ def main() -> int:
         )
         return 1
 
-    pass_count_match = re.search(r"test result: ok\. (\d+) passed; 0 failed;", test_output)
-    if pass_count_match is None:
+    pass_counts = [
+        int(count)
+        for count in re.findall(r"test result: ok\. (\d+) passed; 0 failed;", test_output)
+    ]
+    if not pass_counts:
         if test_output:
             print(test_output, file=sys.stderr, end="")
         print(
@@ -104,7 +123,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    if int(pass_count_match.group(1)) < 3:
+    if sum(pass_counts) < len(CONTINUOUS_RUNTIME_TESTS):
         if test_output:
             print(test_output, file=sys.stderr, end="")
         print(

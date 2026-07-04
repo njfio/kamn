@@ -7,6 +7,7 @@ fn spec_c19_async_runtime_live_validation_lane_parity() {
         validation_script.is_file(),
         "async runtime live validation script must exist"
     );
+    assert_async_runtime_prebuild_contract(&validation_script);
 
     let tmp = TempDir::new("async-runtime-live");
     let report_file = tmp.path().join("async-runtime-live-report.json");
@@ -14,6 +15,22 @@ fn spec_c19_async_runtime_live_validation_lane_parity() {
         run_validation_with_report(&validation_script, &report_file, &["--max-seconds", "600"]);
     assert_async_runtime_output(&lane_output);
     assert_async_runtime_report(&report_file);
+}
+
+fn assert_async_runtime_prebuild_contract(validation_script: &Path) {
+    let script_text =
+        fs::read_to_string(validation_script).expect("failed to read async runtime script");
+    assert_contains_all(
+        &script_text,
+        &[
+            "cargo build --quiet -p kamn-node --bin kamn-node",
+            "timeout \"$prebuild_timeout_seconds\" cargo build",
+            "async runtime live validation prebuild timed out",
+            "target/debug/kamn-node",
+            "command_timeout_seconds",
+        ],
+        "async runtime live validation prebuild markers",
+    );
 }
 
 #[test]

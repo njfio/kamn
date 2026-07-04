@@ -45,6 +45,66 @@ if ! grep -Fq 'websocket_signer = signer_context(2)' "$VALIDATION_SCRIPT"; then
   echo "expected service api axum ingress validation script to isolate websocket sender context" >&2
   exit 1
 fi
+if ! grep -Fq 'nonce_base = per_run_nonce_base()' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to derive per-run nonce base" >&2
+  exit 1
+fi
+if ! grep -Fq 'request_validation_nonce = nonce_base + 30' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress request-validation probe to avoid fixed replay-sensitive nonces" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_AXUM_INGRESS_SKIP_BUILD' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to support a prebuilt-node path" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_AXUM_INGRESS_NODE_BIN' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to support an explicit prebuilt node path" >&2
+  exit 1
+fi
+if ! grep -Fq 'expected prebuilt kamn-node binary' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to fail closed when prebuilt binary is missing" >&2
+  exit 1
+fi
+if ! grep -Fq 'cargo build --quiet -p kamn-node' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to prebuild kamn-node before timing live validation" >&2
+  exit 1
+fi
+if ! grep -Fq 'timeout "$prebuild_timeout_seconds" cargo build --quiet -p kamn-node' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to bound kamn-node prebuild" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_AXUM_INGRESS_PREBUILD_TARGET_DIR' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to isolate kamn-node prebuild target" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_AXUM_INGRESS_PREBUILD_MAX_SECONDS:-900' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to use a local-heavy prebuild timeout budget" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_AXUM_INGRESS_NODE_BIN="$prebuilt_node_bin"' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to pass explicit prebuilt node path" >&2
+  exit 1
+fi
+if ! grep -Fq 'service api axum ingress prebuild timed out' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to fail loud on prebuild timeout" >&2
+  exit 1
+fi
+if ! grep -Fq 'KAMN_SERVICE_API_AXUM_INGRESS_SKIP_BUILD=1' "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to run validation against the prebuilt node" >&2
+  exit 1
+fi
+if ! grep -Fq -- '--storage-dir "$runtime_storage_dir"' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation script to isolate runtime storage per run" >&2
+  exit 1
+fi
+if ! grep -Fq 'oversized_attempt' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress oversized-body probe to retry transient local connection startup races" >&2
+  exit 1
+fi
+if ! grep -Fq -- '--api-idle-timeout-ms 5000' "$VALIDATION_SCRIPT"; then
+  echo "expected service api axum ingress validation process idle window to cover local probe preparation" >&2
+  exit 1
+fi
 
 lane_report="$TMP_DIR/service-api-axum-ingress-contract-lane-report.json"
 policy_report="$TMP_DIR/service-api-axum-ingress-policy-report.json"
@@ -504,10 +564,14 @@ if [ "$invalid_ci_fast_gate_code" -eq 0 ]; then
   echo "expected service api axum ingress contract lane to reject invalid ci-fast-gate value" >&2
   exit 1
 fi
-if ! printf '%s\n' "$invalid_ci_fast_gate_output" | grep -q 'ci-fast-gate must be PASS or FAIL'; then
-  echo "expected deterministic invalid ci-fast-gate marker for service api axum ingress contract lane" >&2
-  exit 1
-fi
+case "$invalid_ci_fast_gate_output" in
+  *"ci-fast-gate must be PASS or FAIL"*) ;;
+  *)
+    printf '%s\n' "$invalid_ci_fast_gate_output" >&2
+    echo "expected deterministic invalid ci-fast-gate marker for service api axum ingress contract lane" >&2
+    exit 1
+    ;;
+esac
 
 set +e
 blocked_fast_gate_output="$(
@@ -520,10 +584,14 @@ if [ "$blocked_fast_gate_code" -eq 0 ]; then
   echo "expected service api axum ingress contract lane to fail closed when ci-fast-gate=FAIL" >&2
   exit 1
 fi
-if ! printf '%s\n' "$blocked_fast_gate_output" | grep -q 'ci_fast_gate_failed'; then
-  echo "expected deterministic ci_fast_gate_failed marker for service api axum ingress contract lane" >&2
-  exit 1
-fi
+case "$blocked_fast_gate_output" in
+  *"ci_fast_gate_failed"*) ;;
+  *)
+    printf '%s\n' "$blocked_fast_gate_output" >&2
+    echo "expected deterministic ci_fast_gate_failed marker for service api axum ingress contract lane" >&2
+    exit 1
+    ;;
+esac
 
 runbook_taxonomy_drift_file="$TMP_DIR/kolme_devnet_ops.taxonomy-drift.md"
 cp "$RUNBOOK_DOC" "$runbook_taxonomy_drift_file"
@@ -552,10 +620,14 @@ if [ "$runbook_taxonomy_drift_code" -eq 0 ]; then
   echo "expected runbook taxonomy drift fixture to fail service api axum ingress contract lane" >&2
   exit 1
 fi
-if ! printf '%s\n' "$runbook_taxonomy_drift_output" | grep -q 'protocol_taxonomy_mapping_drift_detected'; then
-  echo "expected deterministic protocol taxonomy drift reason output for service api axum ingress contract lane" >&2
-  exit 1
-fi
+case "$runbook_taxonomy_drift_output" in
+  *"protocol_taxonomy_mapping_drift_detected"*) ;;
+  *)
+    printf '%s\n' "$runbook_taxonomy_drift_output" >&2
+    echo "expected deterministic protocol taxonomy drift reason output for service api axum ingress contract lane" >&2
+    exit 1
+    ;;
+esac
 
 admission_runbook_taxonomy_drift_file="$TMP_DIR/kolme_devnet_ops.admission-taxonomy-drift.md"
 cp "$RUNBOOK_DOC" "$admission_runbook_taxonomy_drift_file"
@@ -584,10 +656,14 @@ if [ "$admission_runbook_taxonomy_drift_code" -eq 0 ]; then
   echo "expected admission runbook taxonomy drift fixture to fail service api axum ingress contract lane" >&2
   exit 1
 fi
-if ! printf '%s\n' "$admission_runbook_taxonomy_drift_output" | grep -q 'protocol_taxonomy_mapping_drift_detected'; then
-  echo "expected deterministic taxonomy drift reason output for admission runbook taxonomy drift fixture" >&2
-  exit 1
-fi
+case "$admission_runbook_taxonomy_drift_output" in
+  *"protocol_taxonomy_mapping_drift_detected"*) ;;
+  *)
+    printf '%s\n' "$admission_runbook_taxonomy_drift_output" >&2
+    echo "expected deterministic taxonomy drift reason output for admission runbook taxonomy drift fixture" >&2
+    exit 1
+    ;;
+esac
 
 runbook_marker_divergence_file="$TMP_DIR/kolme_devnet_ops.marker-divergence.md"
 cp "$RUNBOOK_DOC" "$runbook_marker_divergence_file"
@@ -616,10 +692,14 @@ if [ "$runbook_marker_divergence_code" -eq 0 ]; then
   echo "expected runbook marker divergence fixture to fail service api axum ingress contract lane" >&2
   exit 1
 fi
-if ! printf '%s\n' "$runbook_marker_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
-  echo "expected deterministic runbook marker parity mismatch reason output for service api axum ingress contract lane" >&2
-  exit 1
-fi
+case "$runbook_marker_divergence_output" in
+  *"runbook_marker_parity_mismatch"*) ;;
+  *)
+    printf '%s\n' "$runbook_marker_divergence_output" >&2
+    echo "expected deterministic runbook marker parity mismatch reason output for service api axum ingress contract lane" >&2
+    exit 1
+    ;;
+esac
 
 admission_runbook_marker_divergence_file="$TMP_DIR/kolme_devnet_ops.admission-marker-divergence.md"
 cp "$RUNBOOK_DOC" "$admission_runbook_marker_divergence_file"
@@ -648,9 +728,13 @@ if [ "$admission_runbook_marker_divergence_code" -eq 0 ]; then
   echo "expected admission runbook marker divergence fixture to fail service api axum ingress contract lane" >&2
   exit 1
 fi
-if ! printf '%s\n' "$admission_runbook_marker_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
-  echo "expected deterministic runbook marker parity mismatch reason output for admission runbook marker divergence fixture" >&2
-  exit 1
-fi
+case "$admission_runbook_marker_divergence_output" in
+  *"runbook_marker_parity_mismatch"*) ;;
+  *)
+    printf '%s\n' "$admission_runbook_marker_divergence_output" >&2
+    echo "expected deterministic runbook marker parity mismatch reason output for admission runbook marker divergence fixture" >&2
+    exit 1
+    ;;
+esac
 
 echo "service api axum ingress contract lane tests passed."

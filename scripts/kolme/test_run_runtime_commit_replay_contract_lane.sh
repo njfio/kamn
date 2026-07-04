@@ -74,8 +74,27 @@ for marker in "${required_markers[@]}"; do
   fi
 done
 
-lane_output="$(bash "$CONTRACT_LANE")"
-if ! printf '%s\n' "$lane_output" | grep -q "Kolme runtime commit replay contract lane tests passed."; then
+if ! grep -q "replay_status=\\$?" "$0"; then
+  echo "expected runtime commit replay wrapper test to capture child lane status explicitly" >&2
+  exit 1
+fi
+if ! grep -q 'cat "$TMP_OUT" >&2' "$0"; then
+  echo "expected runtime commit replay wrapper test to print child lane output on failure" >&2
+  exit 1
+fi
+
+TMP_OUT="$(mktemp)"
+trap 'rm -f "$TMP_OUT"' EXIT
+replay_status=0
+if ! bash "$CONTRACT_LANE" >"$TMP_OUT" 2>&1; then
+  replay_status=$?
+fi
+if [ "$replay_status" -ne 0 ]; then
+  cat "$TMP_OUT" >&2
+  exit "$replay_status"
+fi
+if ! grep -q "Kolme runtime commit replay contract lane tests passed." "$TMP_OUT"; then
+  cat "$TMP_OUT" >&2
   echo "expected runtime commit replay contract lane success marker" >&2
   exit 1
 fi

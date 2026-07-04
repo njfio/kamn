@@ -31,11 +31,77 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+prebuild_timeout_seconds="$max_seconds"
+if [ "$prebuild_timeout_seconds" -lt 1 ]; then
+  prebuild_timeout_seconds=1
+fi
+
+set +e
+timeout "$prebuild_timeout_seconds" cargo build --quiet -p kamn-node --bin kamn-node
+prebuild_exit=$?
+set -e
+if [ "$prebuild_exit" -ne 0 ]; then
+  if [ "$prebuild_exit" -eq 124 ]; then
+    echo "async runtime live validation prebuild timed out" >&2
+  else
+    echo "async runtime live validation prebuild failed" >&2
+  fi
+  exit "$prebuild_exit"
+fi
+
+node_binary="$ROOT_DIR/target/debug/kamn-node"
+if [ ! -x "$node_binary" ]; then
+  echo "expected prebuilt kamn-node binary at $node_binary" >&2
+  exit 1
+fi
+
+command_timeout_seconds="$max_seconds"
+if [ "$command_timeout_seconds" -lt 1 ]; then
+  command_timeout_seconds=1
+fi
+
+run_with_timeout() {
+  local output_file="$1"
+  local timeout_seconds="$2"
+  shift 2
+  python3 - "$output_file" "$timeout_seconds" "$ROOT_DIR" "$@" <<'PY'
+import pathlib
+import subprocess
+import sys
+
+output_file = pathlib.Path(sys.argv[1])
+timeout_seconds = int(sys.argv[2])
+root_dir = sys.argv[3]
+command = sys.argv[4:]
+
+try:
+    completed = subprocess.run(
+        command,
+        cwd=root_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=timeout_seconds,
+        check=False,
+    )
+except subprocess.TimeoutExpired as error:
+    output = error.stdout or ""
+    output_file.write_text(
+        f"{output}\ncommand timed out after {timeout_seconds}s\n",
+        encoding="utf-8",
+    )
+    raise SystemExit(124)
+
+output_file.write_text(completed.stdout, encoding="utf-8")
+raise SystemExit(completed.returncode)
+PY
+}
+
 start_epoch="$(date +%s)"
 
 success_stdout="$TMP_DIR/async-runtime-success.out"
 set +e
-cargo run --quiet -p kamn-node -- \
+run_with_timeout "$success_stdout" "$command_timeout_seconds" "$node_binary" \
   --role processor \
   --chain-id kamn-devnet \
   --chain-version v0.1.0 \
@@ -46,7 +112,7 @@ cargo run --quiet -p kamn-node -- \
   --daemon-shutdown-drain-ticks 1 \
   --daemon-shutdown-timeout-ticks 4 \
   --output json \
-  --diagnostics basic >"$success_stdout" 2>&1
+  --diagnostics basic
 success_code=$?
 set -e
 if [ "$success_code" -ne 0 ]; then
@@ -67,15 +133,17 @@ if ! grep -q '"daemon_completion_reason":"' "$success_stdout"; then
   exit 1
 fi
 
+failure_stdout_file="$TMP_DIR/async-runtime-failure.out"
 set +e
-failure_stdout="$(cargo run --quiet -p kamn-node -- \
+run_with_timeout "$failure_stdout_file" "$command_timeout_seconds" "$node_binary" \
   --role processor \
   --chain-id kamn-devnet \
   --chain-version v0.1.0 \
   --runtime-mode invalid \
-  --output json 2>&1)"
+  --output json
 failure_code=$?
 set -e
+failure_stdout="$(cat "$failure_stdout_file")"
 if [ "$failure_code" -eq 0 ]; then
   echo "expected invalid runtime-mode drill to fail closed" >&2
   exit 1

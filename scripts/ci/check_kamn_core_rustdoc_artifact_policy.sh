@@ -71,7 +71,10 @@ if crate != "kamn-core":
     errors.append("crate must be kamn-core")
 
 command = payload.get("command")
-expected_command = "RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps"
+expected_command = (
+    "CARGO_TARGET_DIR=target/ci-tools-rustdoc-artifact "
+    "RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps"
+)
 if command != expected_command:
     errors.append("command must match bounded rustdoc invocation")
 

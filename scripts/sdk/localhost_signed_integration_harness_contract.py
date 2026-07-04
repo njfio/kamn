@@ -29,6 +29,9 @@ UNAUTHORIZED_FROM_DID = "kamn:did:agent:rogue-1"
 STALE_STATE_HASH = "state:localhost-stale"
 SESSION_MAX_AGE_SECONDS = 300
 SESSION_EXPIRED_MAX_AGE_SECONDS = 1
+READY_TIMEOUT_SECONDS = int(
+    os.environ.get("KAMN_LOCALHOST_SIGNED_INTEGRATION_READY_TIMEOUT_SECONDS", "60")
+)
 
 
 class ScenarioFailure(Exception):
@@ -37,6 +40,19 @@ class ScenarioFailure(Exception):
     def __init__(self, reason_code: str) -> None:
         super().__init__(reason_code)
         self.reason_code = reason_code
+
+
+def _cargo_target_dir() -> Path:
+    raw_value = os.environ.get("KAMN_LOCALHOST_SIGNED_INTEGRATION_TARGET_DIR")
+    if raw_value:
+        return Path(raw_value)
+    return ROOT_DIR / "target/localhost-signed-integration-contract"
+
+
+def _cargo_env(target_dir: Path) -> dict[str, str]:
+    cargo_env = os.environ.copy()
+    cargo_env["CARGO_TARGET_DIR"] = str(target_dir)
+    return cargo_env
 
 
 class HarnessContext:
@@ -52,6 +68,10 @@ class HarnessContext:
         self.listener_out = self.tmp_dir / "listener.out"
         self.sender_out = self.tmp_dir / "sender.out"
         self.listener_proc: subprocess.Popen[str] | None = None
+        self.bound_addr: str | None = None
+        self.cargo_target_dir = _cargo_target_dir()
+        self.cargo_target_dir.mkdir(parents=True, exist_ok=True)
+        self.cargo_env = _cargo_env(self.cargo_target_dir)
 
     def elapsed_seconds(self) -> int:
         return int(time.time()) - self.start_epoch
@@ -81,7 +101,7 @@ class HarnessContext:
             "evidence_key": evidence_key,
             "reason_code": reason_code,
             "reason_key": reason_key,
-            "addr": self.addr,
+            "addr": self.bound_addr or self.addr,
             "timeout_seconds": self.timeout_seconds,
             "elapsed_seconds": elapsed,
         }
@@ -98,6 +118,31 @@ class HarnessContext:
 
     def fail_with_reason(self, reason_code: str) -> None:
         raise ScenarioFailure(reason_code)
+
+    def _read_listener_marker(self, marker: str) -> str | None:
+        if not self.listener_out.exists():
+            return None
+        for line in self.listener_out.read_text(encoding="utf-8").splitlines():
+            if line.startswith(f"{marker}="):
+                return line.split("=", 1)[1]
+        return None
+
+    def _wait_for_listener_ready(self) -> None:
+        deadline = time.time() + max(self.timeout_seconds, READY_TIMEOUT_SECONDS)
+        while time.time() < deadline:
+            bound_addr = self._read_listener_marker("addr")
+            if bound_addr and ":" in bound_addr:
+                self.bound_addr = bound_addr
+                return
+            if self.listener_proc is not None and self.listener_proc.poll() is not None:
+                self.fail_with_reason("listener_exited_before_ready")
+            time.sleep(0.1)
+        self.fail_with_reason("listener_addr_missing")
+
+    def _listener_addr(self) -> str:
+        if self.bound_addr is None:
+            self._wait_for_listener_ready()
+        return self.bound_addr or self.addr
 
     def start_listener(
         self,
@@ -134,14 +179,17 @@ class HarnessContext:
         if nonce_state_file is not None:
             args.extend(["--nonce-state-file", str(nonce_state_file)])
 
+        self.bound_addr = None
         with self.listener_out.open("w", encoding="utf-8") as listener_stream:
             self.listener_proc = subprocess.Popen(
                 args,
                 cwd=ROOT_DIR,
+                env=self.cargo_env,
                 stdout=listener_stream,
                 stderr=subprocess.STDOUT,
                 text=True,
             )
+        self._wait_for_listener_ready()
 
     def wait_for_listener(self) -> int:
         if self.listener_proc is None:
@@ -157,7 +205,7 @@ class HarnessContext:
         return self.listener_proc.returncode or 0
 
     def _send_payload(self, payload: str) -> bool:
-        host, port_raw = self.addr.rsplit(":", 1)
+        host, port_raw = self._listener_addr().rsplit(":", 1)
         port = int(port_raw)
         for _ in range(20):
             try:
@@ -253,6 +301,7 @@ class HarnessContext:
         body: str = BODY,
     ) -> int:
         epoch_value = session_epoch_seconds if session_epoch_seconds is not None else int(time.time())
+        listener_addr = self._listener_addr()
         with self.sender_out.open("w", encoding="utf-8") as sender_stream:
             sender_result = subprocess.run(
                 [
@@ -265,7 +314,7 @@ class HarnessContext:
                     "localhost_signed_sender",
                     "--",
                     "--addr",
-                    self.addr,
+                    listener_addr,
                     "--from",
                     from_did,
                     "--to",
@@ -282,6 +331,7 @@ class HarnessContext:
                     body,
                 ],
                 cwd=ROOT_DIR,
+                env=self.cargo_env,
                 stdout=sender_stream,
                 stderr=subprocess.STDOUT,
                 check=False,
@@ -552,7 +602,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--addr",
-        default=os.environ.get("KAMN_LOCALHOST_SIGNED_INTEGRATION_ADDR", "127.0.0.1:17883"),
+        default=os.environ.get("KAMN_LOCALHOST_SIGNED_INTEGRATION_ADDR", "127.0.0.1:0"),
     )
     parser.add_argument(
         "--timeout-seconds",

@@ -48,9 +48,35 @@ if ! grep -q "performance_dispute_refund_property_contract_lane_stays_within_bud
   echo "expected lifecycle property contract lane to enforce dispute/refund property runtime budget contract" >&2
   exit 1
 fi
+if ! grep -q -- "--no-run" "$SHARED_CONTRACT"; then
+  echo "expected lifecycle property contract lane to prebuild test executables before timing" >&2
+  exit 1
+fi
+if ! grep -q -- "--message-format=json" "$SHARED_CONTRACT"; then
+  echo "expected lifecycle property contract lane to resolve prebuilt test executables from Cargo JSON" >&2
+  exit 1
+fi
+if ! grep -q "compiler-artifact" "$SHARED_CONTRACT"; then
+  echo "expected lifecycle property contract lane to parse compiler-artifact executable paths" >&2
+  exit 1
+fi
+for marker in "KAMN_RUNTIME_LIFECYCLE_PROPERTY_TARGET_DIR" "CARGO_TARGET_DIR" "timeout"; do
+  grep -q "$marker" "$SHARED_CONTRACT" || { echo "expected lifecycle property contract lane isolation marker: $marker" >&2; exit 1; }
+done
+if ! grep -Fq 'max_seconds="${KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS:-360}"' "$SHARED_CONTRACT"; then
+  echo "expected lifecycle property contract lane default budget to cover aggregate local-heavy property tests" >&2
+  exit 1
+fi
 
 report_file="$TMP_DIR/lifecycle-property-contract-report.json"
-lane_output="$(bash "$CONTRACT_LANE" --output-json "$report_file")"
+set +e
+lane_output="$(bash "$CONTRACT_LANE" --output-json "$report_file" 2>&1)"
+lane_code=$?
+set -e
+if [ "$lane_code" -ne 0 ]; then
+  printf '%s\n' "$lane_output" >&2
+  exit "$lane_code"
+fi
 if ! printf '%s\n' "$lane_output" | grep -q "runtime lifecycle property contract lane tests passed."; then
   echo "expected runtime lifecycle property contract lane success marker" >&2
   exit 1

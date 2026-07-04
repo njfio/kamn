@@ -3,6 +3,7 @@
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import subprocess
 import sys
@@ -12,6 +13,8 @@ from pathlib import Path
 GOVERNANCE_RUNTIME_TEST_RATIO_CLASSIFICATION_VERSION = (
     "kamn.ci.governance-runtime-test-ratio-classification.v1"
 )
+LINE_METRIC_GIT_TIMEOUT_SECONDS = 30
+LINE_METRIC_IGNORED_DIRS = {".git", "__pycache__", "node_modules", "target"}
 
 
 def build_parser(root_dir: Path) -> argparse.ArgumentParser:
@@ -161,24 +164,47 @@ def parse_latest_governance_markers(docs_root: Path) -> dict:
     }
 
 
-def count_rust_lines(rust_root: Path) -> int:
-    rust_line_total = 0
-    for path in rust_root.rglob("*.rs"):
-        rel_parts = set(path.parts)
-        if ".git" in rel_parts or "target" in rel_parts:
-            continue
-        rust_line_total += sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore"))
-    return rust_line_total
+def count_lines(paths: list[Path]) -> int:
+    return sum(sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore")) for path in paths)
 
 
-def count_python_lines(scripts_root: Path) -> int:
-    python_line_total = 0
-    for path in scripts_root.rglob("*.py"):
-        rel_parts = set(path.parts)
-        if ".git" in rel_parts or "__pycache__" in rel_parts:
-            continue
-        python_line_total += sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore"))
-    return python_line_total
+def bounded_file_scan(base_path: Path, suffix: str) -> list[Path]:
+    collected: list[Path] = []
+    for current_root, dir_names, file_names in os.walk(base_path):
+        dir_names[:] = [name for name in dir_names if name not in LINE_METRIC_IGNORED_DIRS]
+        for file_name in file_names:
+            if file_name.endswith(suffix):
+                collected.append(Path(current_root) / file_name)
+    return collected
+
+
+def tracked_files(root_dir: Path, base_path: Path, suffix: str) -> list[Path]:
+    try:
+        relative_base = base_path.relative_to(root_dir)
+    except ValueError:
+        return bounded_file_scan(base_path, suffix)
+    pathspec = f"*.{suffix.lstrip('.')}" if relative_base == Path(".") else str(relative_base)
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root_dir), "ls-files", "--", pathspec],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=LINE_METRIC_GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise SystemExit("git ls-files timed out while collecting line metrics") from error
+    if completed.returncode != 0:
+        raise SystemExit(f"git ls-files failed while collecting line metrics: {completed.stderr.strip()}")
+    return [root_dir / line for line in completed.stdout.splitlines() if line.endswith(suffix)]
+
+
+def count_rust_lines(root_dir: Path, rust_root: Path) -> int:
+    return count_lines(tracked_files(root_dir, rust_root, ".rs"))
+
+
+def count_python_lines(root_dir: Path, scripts_root: Path) -> int:
+    return count_lines(tracked_files(root_dir, scripts_root, ".py"))
 
 
 def is_governance_doc_contract_test(path: Path, content: str) -> bool:
@@ -322,10 +348,10 @@ def main() -> int:
         script_count = int(metrics.get("script_count", 0))
         shell_line_total = int(metrics.get("shell_line_total", 0))
 
-        rust_line_total = count_rust_lines(rust_root)
+        rust_line_total = count_rust_lines(root_dir, rust_root)
         if rust_line_total <= 0:
             raise SystemExit("rust_line_total must be positive")
-        python_line_total = count_python_lines(scripts_root)
+        python_line_total = count_python_lines(root_dir, scripts_root)
         if python_line_total <= 0:
             raise SystemExit("python_line_total must be positive")
 

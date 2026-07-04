@@ -23,6 +23,16 @@ test_harness_require_file "$MANIFEST_FILE" "expected outbound intent contract la
 
 test_harness_require_file "$DEEP_MANIFEST_FILE" "expected outbound intent deep lane manifest to exist"
 
+if ! grep -Fq "KAMN_BRIDGE_OUTBOUND_INTENT_TARGET_DIR" "$CONTRACT_LANE_IMPL"; then
+  echo "expected outbound intent lane to expose an isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'CARGO_TARGET_DIR="$bridge_outbound_intent_target_dir"' "$CONTRACT_LANE_IMPL"; then
+  echo "expected outbound intent cargo tests to use the isolated target dir" >&2
+  exit 1
+fi
+
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "cross-chain outbound intent contract lane tests passed."; then
   echo "expected outbound intent contract lane success marker" >&2

@@ -41,12 +41,7 @@ fn regression_live_transport_whitespace_requester_did_falls_back_to_default() {
     with_env_lock(|| {
         ensure_live_test_env();
         std::env::set_var(LIVE_REQUESTER_DID_ENV, "   ");
-        let bind_addr = reserve_loopback_addr();
-        let server_addr = bind_addr.clone();
-        let server = thread::spawn(move || {
-            run_live_transport_contract_server(server_addr, 1, DEFAULT_LIVE_REQUESTER_DID, None)
-        });
-        wait_for_server_ready(bind_addr.as_str());
+        let (bind_addr, server) = start_default_requester_server_without_env_reset();
 
         let client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
             .expect("live client should use default requester did when env is whitespace");
@@ -59,4 +54,18 @@ fn regression_live_transport_whitespace_requester_did_falls_back_to_default() {
             "whitespace requester did env should fallback to default requester did",
         );
     });
+}
+
+fn start_default_requester_server_without_env_reset(
+) -> (String, thread::JoinHandle<Result<(), String>>) {
+    let listener = bind_loopback_listener();
+    let bind_addr = listener
+        .local_addr()
+        .expect("local addr should resolve")
+        .to_string();
+    let server = thread::spawn(move || {
+        run_bound_live_transport_contract_server(listener, 1, DEFAULT_LIVE_REQUESTER_DID, None)
+    });
+    wait_for_server_ready(bind_addr.as_str());
+    (bind_addr, server)
 }

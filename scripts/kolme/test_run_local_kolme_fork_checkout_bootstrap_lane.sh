@@ -4,6 +4,7 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
 ROOT_DIR="$KAMN_ROOT"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane_impl.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
@@ -17,6 +18,11 @@ trap 'rm -rf "$TMP_DIR"; rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local fork checkout bootstrap lane runner to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "core.hooksPath=/dev/null" "$RUNNER_IMPL"; then
+  echo "expected local fork checkout bootstrap runner to isolate synthetic checkouts from developer git hooks" >&2
   exit 1
 fi
 
@@ -59,15 +65,16 @@ SOURCE_REPO="$TMP_DIR/source_fork"
 CHECKOUT_PATH="$TMP_DIR/checkout_fork"
 
 mkdir -p "$SOURCE_REPO"
-git -C "$SOURCE_REPO" init -q
-git -C "$SOURCE_REPO" checkout -q -b main
+git -c core.hooksPath=/dev/null -C "$SOURCE_REPO" init -q
+git -C "$SOURCE_REPO" config core.hooksPath /dev/null
+git -c core.hooksPath=/dev/null -C "$SOURCE_REPO" checkout -q -b main
 git -C "$SOURCE_REPO" config user.email "ci@example.com"
 git -C "$SOURCE_REPO" config user.name "CI Runner"
 cat >"$SOURCE_REPO/README.md" <<'EOF'
 local fork bootstrap source fixture
 EOF
-git -C "$SOURCE_REPO" add README.md
-git -C "$SOURCE_REPO" commit -q -m "init source fixture"
+git -c core.hooksPath=/dev/null -C "$SOURCE_REPO" add README.md
+git -c core.hooksPath=/dev/null -C "$SOURCE_REPO" commit -q -m "init source fixture"
 
 dry_run_output="$(
   bash "$RUNNER" \
@@ -182,8 +189,8 @@ PY
 cat >"$SOURCE_REPO/CHANGELOG.md" <<'EOF'
 update from source fixture
 EOF
-git -C "$SOURCE_REPO" add CHANGELOG.md
-git -C "$SOURCE_REPO" commit -q -m "update source fixture"
+git -c core.hooksPath=/dev/null -C "$SOURCE_REPO" add CHANGELOG.md
+git -c core.hooksPath=/dev/null -C "$SOURCE_REPO" commit -q -m "update source fixture"
 
 run_update_output="$(
   KAMN_KOLME_LOCAL_HEAVY=1 \

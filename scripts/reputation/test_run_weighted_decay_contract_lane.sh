@@ -38,4 +38,14 @@ if ! grep -Fq "\"scripts/reputation/$(basename "$CONTRACT_MODULE")\"" "$manifest
   exit 1
 fi
 
+if ! grep -q "KAMN_REPUTATION_WEIGHTED_DECAY_TARGET_DIR" "$CONTRACT_MODULE"; then
+  echo "expected weighted decay contract module to expose isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR="$weighted_decay_target_dir"' "$CONTRACT_MODULE"; then
+  echo "expected weighted decay contract module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+
 echo "weighted decay contract lane wrapper tests passed."

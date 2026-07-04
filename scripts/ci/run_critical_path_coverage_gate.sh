@@ -21,6 +21,80 @@ core_json="ci-critical-path-core-coverage.json"
 node_json="ci-critical-path-node-coverage.json"
 output_json="ci-critical-path-coverage-policy.json"
 
+fail() {
+  echo "$1" >&2
+  exit 2
+}
+
+host_triple() {
+  rustc -vV | awk -F': ' '$1 == "host" { print $2 }'
+}
+
+rustc_release() {
+  rustc -V | awk '{ print $2 }'
+}
+
+require_executable() {
+  local path="$1"
+  local label="$2"
+
+  if [ -z "$path" ] || [ ! -x "$path" ]; then
+    fail "$label must point to an executable"
+  fi
+}
+
+try_configure_llvm_tools_from_dir() {
+  local dir="$1"
+
+  if [ -x "$dir/llvm-cov" ] && [ -x "$dir/llvm-profdata" ]; then
+    export LLVM_COV="$dir/llvm-cov"
+    export LLVM_PROFDATA="$dir/llvm-profdata"
+    return 0
+  fi
+
+  return 1
+}
+
+configure_llvm_tools() {
+  local host
+  local release
+  local rustup_home
+  local sysroot
+
+  if [ -n "${LLVM_COV:-}" ] || [ -n "${LLVM_PROFDATA:-}" ]; then
+    require_executable "${LLVM_COV:-}" "LLVM_COV"
+    require_executable "${LLVM_PROFDATA:-}" "LLVM_PROFDATA"
+    export LLVM_COV
+    export LLVM_PROFDATA
+    return
+  fi
+
+  host="$(host_triple)"
+  release="$(rustc_release)"
+  sysroot="$(rustc --print sysroot)"
+
+  if [ -n "$host" ] && [ -n "$sysroot" ]; then
+    try_configure_llvm_tools_from_dir "$sysroot/lib/rustlib/$host/bin" && return
+  fi
+
+  # Cover Homebrew rustc installs by falling back to .rustup/toolchains.
+  rustup_home="${RUSTUP_HOME:-$HOME/.rustup}"
+
+  if [ -n "$host" ] && [ -n "$release" ]; then
+    try_configure_llvm_tools_from_dir \
+      "$rustup_home/toolchains/$release-$host/lib/rustlib/$host/bin" && return
+  fi
+
+  if [ -n "$host" ]; then
+    try_configure_llvm_tools_from_dir \
+      "$rustup_home/toolchains/stable-$host/lib/rustlib/$host/bin" && return
+  fi
+
+  try_configure_llvm_tools_from_dir "/opt/homebrew/opt/llvm/bin" && return
+
+  fail "llvm-cov and llvm-profdata are required; install rustup llvm-tools-preview or export LLVM_COV and LLVM_PROFDATA"
+}
+
 while (($# > 0)); do
   case "$1" in
     --threshold-file)
@@ -59,6 +133,11 @@ if ! cargo llvm-cov --version >/dev/null 2>&1; then
   echo "cargo llvm-cov is required; install via cargo install cargo-llvm-cov --locked" >&2
   exit 2
 fi
+
+configure_llvm_tools
+
+echo "critical_path_coverage_llvm_cov=$LLVM_COV"
+echo "critical_path_coverage_llvm_profdata=$LLVM_PROFDATA"
 
 cargo llvm-cov clean --workspace
 

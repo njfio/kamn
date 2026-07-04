@@ -3,10 +3,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_matrix.sh"
+CASE_RUNNER="$ROOT_DIR/scripts/bridge/run_bridge_replay_case.sh"
 FIXTURE="$ROOT_DIR/fixtures/bridge_replay/replay_validation_cases.json"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+
+if ! grep -q "KAMN_BRIDGE_REPLAY_TARGET_DIR" "$CASE_RUNNER"; then
+  echo "expected bridge replay case runner to expose isolated target dir override" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR="$bridge_replay_target_dir"' "$CASE_RUNNER"; then
+  echo "expected bridge replay case runner to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
 
 PASS_REPORT="$TMP_DIR/pass-report.json"
 bash "$SCRIPT" --fixture "$FIXTURE" --output-json "$PASS_REPORT" >"$TMP_DIR/pass.out"

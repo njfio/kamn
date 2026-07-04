@@ -30,6 +30,7 @@ Environment defaults:
   KAMN_LOCALHOST_SIGNED_DEMO_NONCE
   KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS
   KAMN_LOCALHOST_SIGNED_DEMO_OUTPUT_JSON
+  KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD
 EOF_USAGE
 }
 
@@ -44,6 +45,10 @@ require_arg_value() {
 
 is_positive_integer() {
   [[ "$1" =~ ^[1-9][0-9]*$ ]]
+}
+
+is_boolean() {
+  [ "$1" = "true" ] || [ "$1" = "false" ]
 }
 
 validate_agent_did() {
@@ -67,7 +72,7 @@ extract_marker_value() {
   printf '%s' "${line#*=}"
 }
 
-ADDR="${KAMN_LOCALHOST_SIGNED_DEMO_ADDR:-127.0.0.1:17879}"
+ADDR="${KAMN_LOCALHOST_SIGNED_DEMO_ADDR:-127.0.0.1:0}"
 FROM_DID="${KAMN_LOCALHOST_SIGNED_DEMO_FROM:-kamn:did:agent:sender-1}"
 TO_DID="${KAMN_LOCALHOST_SIGNED_DEMO_TO:-kamn:did:agent:listener-1}"
 STATE_HASH="${KAMN_LOCALHOST_SIGNED_DEMO_STATE_HASH:-state:localhost-demo}"
@@ -75,6 +80,7 @@ BODY="${KAMN_LOCALHOST_SIGNED_DEMO_BODY:-hello-from-localhost-demo}"
 NONCE="${KAMN_LOCALHOST_SIGNED_DEMO_NONCE:-1}"
 TIMEOUT_SECONDS="${KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS:-60}"
 OUTPUT_JSON="${KAMN_LOCALHOST_SIGNED_DEMO_OUTPUT_JSON:-}"
+SKIP_BUILD="${KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD:-false}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -148,9 +154,27 @@ if ! is_positive_integer "$TIMEOUT_SECONDS"; then
   exit 1
 fi
 
+if ! is_boolean "$SKIP_BUILD"; then
+  echo "KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD must be true or false" >&2
+  exit 1
+fi
+
 if [ ! -x "$REPLAY_POLICY_CHECKER" ]; then
   echo "expected runtime commit replay policy checker to be executable" >&2
   exit 1
+fi
+
+LISTENER_COMMAND=(cargo run --quiet -p kamn-sdk --example localhost_signed_listener --)
+SENDER_COMMAND=(cargo run --quiet -p kamn-sdk --example localhost_signed_sender --)
+if [ "$SKIP_BUILD" = "true" ]; then
+  LISTENER_BIN="$ROOT_DIR/target/debug/examples/localhost_signed_listener"
+  SENDER_BIN="$ROOT_DIR/target/debug/examples/localhost_signed_sender"
+  if [ ! -x "$LISTENER_BIN" ] || [ ! -x "$SENDER_BIN" ]; then
+    echo "expected prebuilt localhost signed demo examples in target/debug/examples" >&2
+    exit 1
+  fi
+  LISTENER_COMMAND=("$LISTENER_BIN")
+  SENDER_COMMAND=("$SENDER_BIN")
 fi
 
 TMP_DIR="$(mktemp -d)"
@@ -229,7 +253,7 @@ wait_for_listener_ready() {
   done
 }
 
-cargo run --quiet -p kamn-sdk --example localhost_signed_listener -- \
+"${LISTENER_COMMAND[@]}" \
   --addr "$ADDR" \
   --expected-from "$FROM_DID" \
   --expected-to "$TO_DID" \
@@ -237,8 +261,14 @@ cargo run --quiet -p kamn-sdk --example localhost_signed_listener -- \
 LISTENER_PID=$!
 
 wait_for_listener_ready "$LISTENER_PID" "$TIMEOUT_SECONDS"
+LISTENER_ADDR="$(extract_marker_value "addr" "$LISTENER_OUT")"
+if [ -z "$LISTENER_ADDR" ] || [[ "$LISTENER_ADDR" != *:* ]]; then
+  fail_listener_not_ready "listener did not report a usable bound address"
+  exit 1
+fi
+ADDR="$LISTENER_ADDR"
 
-cargo run --quiet -p kamn-sdk --example localhost_signed_sender -- \
+"${SENDER_COMMAND[@]}" \
   --addr "$ADDR" \
   --from "$FROM_DID" \
   --to "$TO_DID" \

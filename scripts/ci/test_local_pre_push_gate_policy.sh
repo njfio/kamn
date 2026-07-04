@@ -40,9 +40,11 @@ fi
 
 for marker in \
   "PRE_PUSH_PYTHON3_CANDIDATES" \
+  "PRE_PUSH_WORKSPACE_TARGET_DIR" \
+  "PRE_PUSH_WORKSPACE_TIMEOUT_SECONDS" \
   "python@3.12/libexec/bin/python3"; do
   if ! grep -Fq "$marker" "$MAKEFILE"; then
-    fail "expected Makefile to include local pre-push python selector marker: $marker"
+    fail "expected Makefile to include local pre-push configuration marker: $marker"
   fi
 done
 
@@ -52,6 +54,8 @@ for marker in \
   "tomllib" \
   "\$(MAKE) check" \
   "\$(MAKE) ci-tools" \
+  'CARGO_TARGET_DIR="$(PRE_PUSH_WORKSPACE_TARGET_DIR)"' \
+  'timeout "$(PRE_PUSH_WORKSPACE_TIMEOUT_SECONDS)"' \
   "cargo test --workspace --locked --all-features --no-fail-fast" \
   "bash scripts/ci/check_touched_rust_size_policy.sh" \
   "bash scripts/ci/run_critical_path_coverage_gate.sh" \

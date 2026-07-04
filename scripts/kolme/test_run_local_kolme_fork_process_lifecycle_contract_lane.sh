@@ -103,6 +103,21 @@ for marker in "${required_integration_finality_markers[@]}"; do
   fi
 done
 
+if ! grep -q -- "--connect-timeout" "$RUN_WRAPPER_IMPL"; then
+  echo "expected local fork process lifecycle readiness curl probes to set a connect timeout" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--max-time" "$RUN_WRAPPER_IMPL"; then
+  echo "expected local fork process lifecycle readiness curl probes to set a max-time timeout" >&2
+  exit 1
+fi
+
+if ! grep -q "readiness_deadline_epoch" "$RUN_WRAPPER_IMPL"; then
+  echo "expected local fork process lifecycle readiness loop to use a wall-clock deadline" >&2
+  exit 1
+fi
+
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local fork process lifecycle contract lane manifest to exist" >&2
   exit 1

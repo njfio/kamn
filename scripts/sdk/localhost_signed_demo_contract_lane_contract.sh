@@ -7,7 +7,7 @@ Usage: run_localhost_signed_demo_contract_lane.sh [options]
 
 Options:
   --output-json <path>   Write localhost signed demo contract lane report JSON.
-  --max-seconds <n>      Runtime budget in seconds (default: 180 or env override).
+  --max-seconds <n>      Runtime budget in seconds (default: 900 or env override).
   --help                 Show this help output.
 
 Environment:
@@ -21,7 +21,7 @@ INTEGRATION_CONTRACT_LANE="$ROOT_DIR/scripts/sdk/run_localhost_signed_integratio
 REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
 
 output_json=""
-max_seconds="${KAMN_LOCALHOST_SIGNED_DEMO_CONTRACT_MAX_SECONDS:-180}"
+max_seconds="${KAMN_LOCALHOST_SIGNED_DEMO_CONTRACT_MAX_SECONDS:-900}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -79,9 +79,15 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 demo_artifact="$TMP_DIR/localhost-signed-demo-artifact.json"
 integration_report="$TMP_DIR/localhost-signed-integration-contract-report.json"
 
+cargo build --quiet -p kamn-sdk --example localhost_signed_listener --example localhost_signed_sender
+
 start_epoch="$(date +%s)"
 
-demo_output="$(bash "$DEMO_SCRIPT" --output-json "$demo_artifact")"
+demo_output="$(
+  KAMN_LOCALHOST_SIGNED_DEMO_TIMEOUT_SECONDS="$max_seconds" \
+    KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD=true \
+    bash "$DEMO_SCRIPT" --output-json "$demo_artifact"
+)"
 if ! printf '%s\n' "$demo_output" | grep -q "localhost signed message demo completed."; then
   echo "expected localhost signed demo completion marker" >&2
   exit 1

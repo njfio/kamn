@@ -3,13 +3,13 @@ use super::*;
 #[path = "contract_server_support/response_route_support.rs"]
 mod response_route_support;
 
-pub(crate) fn run_live_transport_contract_server(
-    bind_addr: String,
+pub(crate) fn run_bound_live_transport_contract_server(
+    listener: TcpListener,
     max_requests: u64,
     expected_agent_sender_did: &str,
     expected_message_body: Option<String>,
 ) -> Result<(), String> {
-    let listener = bind_listener(bind_addr.as_str())?;
+    configure_listener(&listener)?;
     let mut state = ContractServerState::new(expected_agent_sender_did, expected_message_body);
     serve_requests(listener, max_requests, &mut state)
 }
@@ -48,12 +48,11 @@ impl ContractServerState {
     }
 }
 
-fn bind_listener(bind_addr: &str) -> Result<TcpListener, String> {
-    let listener = TcpListener::bind(bind_addr).map_err(|error| format!("bind failed: {error}"))?;
+fn configure_listener(listener: &TcpListener) -> Result<(), String> {
     listener
         .set_nonblocking(true)
         .map_err(|error| format!("nonblocking setup failed: {error}"))?;
-    Ok(listener)
+    Ok(())
 }
 
 fn serve_requests(

@@ -6,9 +6,61 @@ RUNTIME_NETWORK_DOC="$ROOT_DIR/docs/foundation/runtime-network.md"
 DEVNET_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 ROADMAP_DOC="$ROOT_DIR/docs/planning/kolme-integration-roadmap.md"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json"
+BLOCK_FALLBACK_MAX_SECONDS="${KAMN_KOLME_BLOCK_FALLBACK_CONTRACT_TEST_MAX_SECONDS:-300}"
+
+case "$BLOCK_FALLBACK_MAX_SECONDS" in
+  ''|*[!0-9]*)
+    echo "KAMN_KOLME_BLOCK_FALLBACK_CONTRACT_TEST_MAX_SECONDS must be a positive integer" >&2
+    exit 1
+    ;;
+  0)
+    echo "KAMN_KOLME_BLOCK_FALLBACK_CONTRACT_TEST_MAX_SECONDS must be a positive integer" >&2
+    exit 1
+    ;;
+esac
 
 if [ ! -f "$MANIFEST" ]; then
   echo "expected block fallback reconciliation contract lane manifest to exist" >&2
+  exit 1
+fi
+
+if ! grep -Fq "DEFAULT_MAX_SECONDS = 300" "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation manifest lane to default to local pre-push budget" >&2
+  exit 1
+fi
+
+if ! grep -q '"--no-run"' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to prebuild before timed execution" >&2
+  exit 1
+fi
+
+if ! grep -q '"--message-format=json"' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to resolve the prebuilt test executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'compiler-artifact' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to parse Cargo artifact metadata" >&2
+  exit 1
+fi
+
+if ! grep -q '"--test-threads=1"' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to run tests serially" >&2
+  exit 1
+fi
+
+if ! grep -q 'timeout=max_seconds' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to enforce max runtime on test subprocess" >&2
+  exit 1
+fi
+
+if ! grep -q 'subprocess.TimeoutExpired' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to fail closed on timeout" >&2
+  exit 1
+fi
+
+if ! grep -q 'CARGO_TARGET_DIR' "$ROOT_DIR/scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"; then
+  echo "expected block fallback reconciliation lane to isolate Cargo target artifacts" >&2
   exit 1
 fi
 
@@ -58,7 +110,7 @@ if ! grep -q 'Regression: #1464' "$ROADMAP_DOC"; then
   exit 1
 fi
 
-KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75 \
+KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS="$BLOCK_FALLBACK_MAX_SECONDS" \
   bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" \
     --manifest "$MANIFEST" \
     --phase contract \

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ def fail(message: str) -> int:
     return 1
 
 
-def run_capture(command: list[str], *, cwd: Path) -> tuple[int, str]:
+def run_capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> tuple[int, str]:
     """Run command and return exit code + merged output."""
     result = subprocess.run(
         command,
@@ -27,6 +28,7 @@ def run_capture(command: list[str], *, cwd: Path) -> tuple[int, str]:
         text=True,
         check=False,
         cwd=str(cwd),
+        env=env,
     )
     return result.returncode, (result.stdout or "") + (result.stderr or "")
 
@@ -41,6 +43,14 @@ def main(argv: list[str]) -> int:
 
     root_dir = Path(__file__).resolve().parents[2]
     policy_lane = root_dir / "scripts/channel/run_channel_policy_contract_lane.sh"
+    target_override = os.environ.get("KAMN_CHANNEL_LIFECYCLE_CONTRACT_TARGET_DIR")
+    channel_target_dir = (
+        Path(target_override)
+        if target_override
+        else root_dir / "target/channel-lifecycle-contract"
+    )
+    channel_target_dir.mkdir(parents=True, exist_ok=True)
+    cargo_env = {**os.environ, "CARGO_TARGET_DIR": str(channel_target_dir)}
 
     commands = (
         ["cargo", "test", "-p", "kamn-core", "--lib", "channel_models::tests::"],
@@ -57,7 +67,7 @@ def main(argv: list[str]) -> int:
         ["bash", str(policy_lane)],
     )
     for command in commands:
-        exit_code, _output = run_capture(command, cwd=root_dir)
+        exit_code, _output = run_capture(command, cwd=root_dir, env=cargo_env)
         if exit_code != 0:
             return fail(f"expected {' '.join(command)} to pass")
 

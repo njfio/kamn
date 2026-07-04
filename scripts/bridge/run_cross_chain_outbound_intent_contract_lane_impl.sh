@@ -9,6 +9,9 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 cd "$ROOT_DIR"
 
+bridge_outbound_intent_target_dir="${KAMN_BRIDGE_OUTBOUND_INTENT_TARGET_DIR:-$ROOT_DIR/target/bridge-outbound-intent-contract}"
+mkdir -p "$bridge_outbound_intent_target_dir"
+
 if [ ! -x "$MATRIX_SCRIPT" ]; then
   echo "expected outbound intent matrix runner to be executable" >&2
   exit 1
@@ -33,9 +36,9 @@ if ! printf '%s\n' "$matrix_output" | grep -q '^status=pass;'; then
   exit 1
 fi
 
-cargo test -p kamn-core --test cross_chain_bridge -- outbound_rejects_unauthorized_approver --exact >/dev/null
-cargo test -p kamn-core --test cross_chain_receipt_finality >/dev/null
-cargo test -p kamn-core --test docs_contract_wave3_harness cross_chain_bridge_adapters_docs:: >/dev/null
+CARGO_TARGET_DIR="$bridge_outbound_intent_target_dir" cargo test -p kamn-core --test cross_chain_bridge -- outbound_rejects_unauthorized_approver --exact >/dev/null
+CARGO_TARGET_DIR="$bridge_outbound_intent_target_dir" cargo test -p kamn-core --test cross_chain_receipt_finality >/dev/null
+CARGO_TARGET_DIR="$bridge_outbound_intent_target_dir" cargo test -p kamn-core --test docs_contract_wave3_harness cross_chain_bridge_adapters_docs:: >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt 120 ]; then

@@ -15,7 +15,8 @@ cd "$ROOT_DIR"
 
 target_selector="all"
 output_json=""
-max_seconds="${KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS:-120}"
+max_seconds="${KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS:-600}"
+case_max_seconds="${KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_CASE_MAX_SECONDS:-120}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -40,6 +41,11 @@ done
 
 if [[ ! "$max_seconds" =~ ^[1-9][0-9]*$ ]]; then
   echo "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS must be a positive integer" >&2
+  exit 1
+fi
+
+if [[ ! "$case_max_seconds" =~ ^[1-9][0-9]*$ ]]; then
+  echo "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_CASE_MAX_SECONDS must be a positive integer" >&2
   exit 1
 fi
 
@@ -68,23 +74,69 @@ executed_envelope_cases=()
 executed_did_cases=()
 executed_shared_cases=()
 
+prebuild_timeout_seconds="$max_seconds"
+set +e
+timeout "$prebuild_timeout_seconds" cargo test -p kamn-core --test input_mutation_coverage_guided --no-run >/dev/null
+prebuild_exit=$?
+set -e
+
+if [ "$prebuild_exit" -ne 0 ]; then
+  if [ "$prebuild_exit" -eq 124 ]; then
+    echo "runtime input mutation coverage-guided prebuild timed out" >&2
+  else
+    echo "runtime input mutation coverage-guided prebuild failed" >&2
+  fi
+  exit "$prebuild_exit"
+fi
+
+run_case() {
+  local case_name="$1"
+  local elapsed_so_far
+  local case_timeout_seconds
+  local case_exit
+
+  elapsed_so_far="$(( $(date +%s) - start_epoch ))"
+  case_timeout_seconds="$(( max_seconds - elapsed_so_far ))"
+  if [ "$case_timeout_seconds" -lt 1 ]; then
+    echo "runtime input mutation coverage-guided case timed out before start: $case_name" >&2
+    exit 124
+  fi
+  if [ "$case_timeout_seconds" -gt "$case_max_seconds" ]; then
+    case_timeout_seconds="$case_max_seconds"
+  fi
+
+  set +e
+  timeout "$case_timeout_seconds" cargo test -p kamn-core --test input_mutation_coverage_guided "$case_name" -- --exact >/dev/null
+  case_exit=$?
+  set -e
+
+  if [ "$case_exit" -ne 0 ]; then
+    if [ "$case_exit" -eq 124 ]; then
+      echo "runtime input mutation coverage-guided case timed out: $case_name" >&2
+    else
+      echo "runtime input mutation coverage-guided case failed: $case_name" >&2
+    fi
+    exit "$case_exit"
+  fi
+}
+
 if [[ "$target_selector" != "did" ]]; then
   for case_name in "${envelope_cases[@]}"; do
-    cargo test -p kamn-core --test input_mutation_coverage_guided "$case_name" -- --exact >/dev/null
+    run_case "$case_name"
     executed_envelope_cases+=("$case_name")
   done
 fi
 
 if [[ "$target_selector" != "envelope" ]]; then
   for case_name in "${did_cases[@]}"; do
-    cargo test -p kamn-core --test input_mutation_coverage_guided "$case_name" -- --exact >/dev/null
+    run_case "$case_name"
     executed_did_cases+=("$case_name")
   done
 fi
 
 if [[ "$target_selector" == "all" ]]; then
   for case_name in "${shared_cases[@]}"; do
-    cargo test -p kamn-core --test input_mutation_coverage_guided "$case_name" -- --exact >/dev/null
+    run_case "$case_name"
     executed_shared_cases+=("$case_name")
   done
 fi

@@ -54,6 +54,16 @@ fn assert_live_network_shared_contract(shared_contract: &Path) {
         shared_contract_text.contains("run_live_network_smoke_lane.sh"),
         "live-network shared contract must execute smoke runner"
     );
+    let smoke_runner_text = fs::read_to_string(repo_path(
+        "scripts/runtime/live_network_smoke_lane_contract.py",
+    ))
+    .expect("failed to read live-network smoke runner");
+    assert!(
+        smoke_runner_text.contains("timeout=timeout_seconds")
+            && smoke_runner_text.contains("subprocess.TimeoutExpired")
+            && smoke_runner_text.contains("live-network smoke command timed out"),
+        "live-network smoke runner must enforce subprocess timeouts"
+    );
 }
 
 fn assert_live_network_lane_success(contract_lane: &Path) {

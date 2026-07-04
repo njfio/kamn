@@ -4,12 +4,27 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SMOKE_SCRIPT="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane.sh"
 SMOKE_SCRIPT_IMPL="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane_impl.sh"
+SMOKE_CONTRACT="$ROOT_DIR/scripts/runtime/live_network_smoke_lane_contract.py"
+SMOKE_SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/live_network_smoke_contract_lane_contract.sh"
+LOCALHOST_DEMO="$ROOT_DIR/scripts/sdk/run_localhost_signed_demo.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_smoke_lane.json"
 EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
 EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_REPORT="$(mktemp)"
+SMOKE_MAX_SECONDS="${KAMN_LIVE_NETWORK_SMOKE_CONTRACT_TEST_MAX_SECONDS:-180}"
 trap 'rm -f "$TMP_REPORT"' EXIT
+
+case "$SMOKE_MAX_SECONDS" in
+  ''|*[!0-9]*)
+    echo "KAMN_LIVE_NETWORK_SMOKE_CONTRACT_TEST_MAX_SECONDS must be a positive integer" >&2
+    exit 1
+    ;;
+  0)
+    echo "KAMN_LIVE_NETWORK_SMOKE_CONTRACT_TEST_MAX_SECONDS must be a positive integer" >&2
+    exit 1
+    ;;
+esac
 
 if [ ! -x "$SMOKE_SCRIPT" ]; then
   echo "expected live-network smoke lane runner to be executable" >&2
@@ -17,6 +32,14 @@ if [ ! -x "$SMOKE_SCRIPT" ]; then
 fi
 if [ ! -x "$SMOKE_SCRIPT_IMPL" ]; then
   echo "expected live-network smoke lane implementation runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$LOCALHOST_DEMO" ]; then
+  echo "expected localhost signed demo runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SMOKE_SHARED_CONTRACT" ]; then
+  echo "expected live-network smoke shared contract lane to be executable" >&2
   exit 1
 fi
 if [ ! -x "$DISPATCHER" ]; then
@@ -29,6 +52,34 @@ if [ ! -x "$EXEC_DISPATCHER" ]; then
 fi
 if [ ! -f "$EXEC_REGISTRY" ]; then
   echo "expected exec wrapper registry to exist" >&2
+  exit 1
+fi
+
+if ! grep -q 'KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD' "$LOCALHOST_DEMO"; then
+  echo "expected localhost signed demo to support prebuilt example execution" >&2
+  exit 1
+fi
+
+if ! grep -q 'KAMN_LOCALHOST_SIGNED_DEMO_SKIP_BUILD' "$SMOKE_CONTRACT"; then
+  echo "expected live-network smoke lane to use prebuilt localhost demo execution" >&2
+  exit 1
+fi
+
+if ! grep -q '"--message-format=json"' "$SMOKE_CONTRACT"; then
+  echo "expected live-network smoke lane to resolve prebuilt Rust test executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'compiler-artifact' "$SMOKE_CONTRACT"; then
+  echo "expected live-network smoke lane to parse Cargo artifact metadata" >&2
+  exit 1
+fi
+for marker in "KAMN_LIVE_NETWORK_SMOKE_TARGET_DIR" "CARGO_TARGET_DIR"; do
+  grep -q "$marker" "$SMOKE_CONTRACT" || { echo "expected live-network smoke lane target isolation marker: $marker" >&2; exit 1; }
+done
+
+if grep -q 'start_epoch="$(date +%s)"' "$SMOKE_SHARED_CONTRACT"; then
+  echo "expected live-network smoke shared contract lane to avoid double-counting prebuild time" >&2
   exit 1
 fi
 
@@ -82,10 +133,18 @@ if entry.get("passthrough") is not True:
     raise SystemExit("expected passthrough=true for live-network smoke lane implementation wrapper")
 PY
 
+set +e
 smoke_output="$(
-  bash "$SMOKE_SCRIPT" \
-    --output-json "$TMP_REPORT"
+  KAMN_LIVE_NETWORK_SMOKE_MAX_SECONDS="$SMOKE_MAX_SECONDS" \
+    bash "$SMOKE_SCRIPT" \
+      --output-json "$TMP_REPORT" 2>&1
 )"
+smoke_code=$?
+set -e
+if [ "$smoke_code" -ne 0 ]; then
+  printf '%s\n' "$smoke_output" >&2
+  exit "$smoke_code"
+fi
 if ! printf '%s\n' "$smoke_output" | grep -q '^status=pass$'; then
   echo "expected live-network smoke lane to report pass status" >&2
   exit 1
@@ -95,12 +154,13 @@ if ! printf '%s\n' "$smoke_output" | grep -q '^final_decision=GO$'; then
   exit 1
 fi
 
-python3 - "$TMP_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$SMOKE_MAX_SECONDS" <<'PY'
 import json
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text())
+expected_max_seconds = int(sys.argv[2])
 if payload.get("schema_version") != "kamn.runtime.live-network-smoke-report.v1":
     raise SystemExit("unexpected live-network smoke report schema")
 if payload.get("final_decision") != "GO":
@@ -109,6 +169,10 @@ if payload.get("status") != "pass":
     raise SystemExit("expected live-network smoke report status to be pass")
 if payload.get("command_count", 0) < 2:
     raise SystemExit("expected live-network smoke report to record at least two smoke commands")
+if payload.get("max_seconds") != expected_max_seconds:
+    raise SystemExit(f"expected live-network smoke report max_seconds={expected_max_seconds}")
+if payload.get("elapsed_seconds", expected_max_seconds + 1) > expected_max_seconds:
+    raise SystemExit("expected live-network smoke report elapsed_seconds within budget")
 PY
 
 set +e

@@ -234,14 +234,21 @@ report = {
 report_file.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
-pushd "$ROOT_DIR" >/dev/null
-cargo build --quiet -p kamn-node
-NODE_BIN="$ROOT_DIR/target/debug/kamn-node"
-popd >/dev/null
+NODE_BIN="${KAMN_SERVICE_API_AXUM_INGRESS_NODE_BIN:-$ROOT_DIR/target/debug/kamn-node}"
 
-if [ ! -x "$NODE_BIN" ]; then
-  echo "expected built kamn-node binary to be executable" >&2
-  exit 1
+if [[ "${KAMN_SERVICE_API_AXUM_INGRESS_SKIP_BUILD:-0}" == "1" ]]; then
+  if [ ! -x "$NODE_BIN" ]; then
+    echo "expected prebuilt kamn-node binary to be executable" >&2
+    exit 1
+  fi
+else
+  pushd "$ROOT_DIR" >/dev/null
+  cargo build --quiet -p kamn-node
+  popd >/dev/null
+  if [ ! -x "$NODE_BIN" ]; then
+    echo "expected built kamn-node binary to be executable" >&2
+    exit 1
+  fi
 fi
 
 api_port="$(python3 - <<'PY'
@@ -284,16 +291,19 @@ if [ -z "$auth_public_key_hex" ]; then
 fi
 
 api_stdout="$TMP_DIR/service-api-axum-ingress-live.out"
+runtime_storage_dir="$TMP_DIR/service-api-axum-ingress-storage"
+mkdir -p "$runtime_storage_dir"
 KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$auth_public_key_hex" \
 KAMN_SERVICE_API_TLS_MODE="disabled" \
 "$NODE_BIN" \
   --role processor \
   --chain-id kamn-devnet \
   --chain-version v0.1.0 \
+  --storage-dir "$runtime_storage_dir" \
   --runtime-mode api \
   --api-bind "$api_addr" \
   --api-max-requests 64 \
-  --api-idle-timeout-ms 1200 \
+  --api-idle-timeout-ms 5000 \
   --output json >"$api_stdout" 2>&1 &
 node_pid=$!
 
@@ -325,8 +335,10 @@ import concurrent.futures
 import hashlib
 import http.client
 import json
+import os
 import socket
 import sys
+import time
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
@@ -368,6 +380,15 @@ def signer_context(offset: int) -> dict[str, object]:
 
 request_validation_signer = signer_context(1)
 websocket_signer = signer_context(2)
+
+
+def per_run_nonce_base() -> int:
+    # Keep probe nonces monotonic across repeated local contract executions so
+    # replay protection cannot hide the request-shape validation under test.
+    return (time.time_ns() // 1000) + ((os.getpid() % 1000) * 1000)
+
+
+nonce_base = per_run_nonce_base()
 
 
 def signing_payload(nonce: int, payload: str, sender: str) -> str:
@@ -527,12 +548,13 @@ def parse_error_envelope(payload: str, status: int, expected_status: int) -> dic
 
 def run_request_validation_probe() -> None:
     request_validation_sender = request_validation_signer["sender_did"]
+    request_validation_nonce = nonce_base + 30
     websocket_status, websocket_body = request(
         "GET",
         "/v1/events/ws",
         "",
         auth_headers(
-            530,
+            request_validation_nonce,
             sender=request_validation_sender,
             scope="events:read",
             signer=request_validation_signer,
@@ -553,7 +575,7 @@ def run_request_validation_probe() -> None:
         "/v1/messages/send",
         "",
         auth_headers(
-            531,
+            request_validation_nonce + 1,
             sender=request_validation_sender,
             scope="protected:unknown",
             signer=request_validation_signer,
@@ -572,7 +594,7 @@ def run_request_validation_probe() -> None:
         "/v1/nope",
         "",
         auth_headers(
-            532,
+            request_validation_nonce + 2,
             sender=request_validation_sender,
             scope="protected:unknown",
             signer=request_validation_signer,
@@ -623,13 +645,14 @@ def run_websocket_probe() -> None:
         finally:
             ws_sock.close()
 
-    success_headers, _ = send_upgrade("13", 640)
+    websocket_nonce = nonce_base + 140
+    success_headers, _ = send_upgrade("13", websocket_nonce)
     if "HTTP/1.1 101 Switching Protocols" not in success_headers:
         raise SystemExit("websocket probe expected 101 Switching Protocols")
     if "x-kamn-websocket-contract: v1" not in success_headers.lower():
         raise SystemExit("websocket probe expected x-kamn-websocket-contract header")
 
-    invalid_headers, invalid_body = send_upgrade("12", 641)
+    invalid_headers, invalid_body = send_upgrade("12", websocket_nonce + 1)
     if "HTTP/1.1 400 Bad Request" not in invalid_headers:
         raise SystemExit("websocket fail-closed probe expected 400 for invalid version")
     if "invalid websocket version header" not in invalid_body:
@@ -639,7 +662,7 @@ def run_websocket_probe() -> None:
 def run_concurrency_probe() -> None:
     def post_message(index: int) -> None:
         payload = json.dumps({"message": f"concurrency-{index}"}, separators=(",", ":"))
-        nonce = 600 + index
+        nonce = nonce_base + 200 + index
         signer = signer_context(100 + index)
         sender = signer["sender_did"]
         status, body = request(
@@ -692,7 +715,14 @@ import sys
 pathlib.Path(sys.argv[1]).write_text("x" * (70 * 1024), encoding="utf-8")
 PY
 
-oversized_nonce=701
+oversized_nonce="$(
+  python3 - <<'PY'
+import os
+import time
+
+print((time.time_ns() // 1000) + ((os.getpid() % 1000) * 1000) + 701)
+PY
+)"
 oversized_signature="$(
   python3 - "$auth_private_key_hex" "$auth_sender_did" "$oversized_nonce" "$auth_state_hash" "$oversized_body_file" <<'PY'
 import hashlib
@@ -751,15 +781,38 @@ PY
 )"
 
 oversized_response_file="$TMP_DIR/service-api-axum-oversized-response.json"
-oversized_status="$(curl -sS -o "$oversized_response_file" -w '%{http_code}' \
-  -X POST "http://${api_addr}/v1/messages/send" \
-  -H 'content-type: application/json' \
-  -H "X-KAMN-Sender-DID: ${auth_sender_did}" \
-  -H "X-KAMN-Request-Nonce: ${oversized_nonce}" \
-  -H "X-KAMN-Request-Signature: ${oversized_signature}" \
-  -H "X-KAMN-Signer-Public-Key: ${auth_public_key_hex}" \
-  -H "X-KAMN-Authz-Scope: messages:write" \
-  --data-binary "@${oversized_body_file}")"
+oversized_curl_stderr="$TMP_DIR/service-api-axum-oversized-curl.err"
+oversized_curl_code=1
+oversized_status=""
+for oversized_attempt in $(seq 1 20); do
+  set +e
+  oversized_status="$(curl -sS -o "$oversized_response_file" -w '%{http_code}' \
+    -X POST "http://${api_addr}/v1/messages/send" \
+    -H 'content-type: application/json' \
+    -H "X-KAMN-Sender-DID: ${auth_sender_did}" \
+    -H "X-KAMN-Request-Nonce: ${oversized_nonce}" \
+    -H "X-KAMN-Request-Signature: ${oversized_signature}" \
+    -H "X-KAMN-Signer-Public-Key: ${auth_public_key_hex}" \
+    -H "X-KAMN-Authz-Scope: messages:write" \
+    --data-binary "@${oversized_body_file}" 2>"$oversized_curl_stderr")"
+  oversized_curl_code=$?
+  set -e
+  if [ "$oversized_curl_code" -eq 0 ]; then
+    break
+  fi
+  if ! kill -0 "$node_pid" 2>/dev/null; then
+    cat "$api_stdout" >&2
+    cat "$oversized_curl_stderr" >&2
+    echo "expected service api axum ingress process to stay live for oversized probe" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+if [ "$oversized_curl_code" -ne 0 ]; then
+  cat "$oversized_curl_stderr" >&2
+  echo "expected oversized service api request probe to connect" >&2
+  exit 1
+fi
 if [ "$oversized_status" != "400" ]; then
   cat "$oversized_response_file" >&2
   echo "expected oversized service api request to return 400" >&2

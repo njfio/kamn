@@ -25,9 +25,14 @@ fi
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
-bash "$FAST_SCRIPT" >"$TMP_OUT"
+if ! bash "$FAST_SCRIPT" >"$TMP_OUT" 2>&1; then
+  cat "$TMP_OUT" >&2 || true
+  exit 1
+fi
+
 if ! grep -q "rust sdk live transport contract lane tests passed." "$TMP_OUT"; then
   echo "expected rust sdk live transport contract lane success marker" >&2
+  cat "$TMP_OUT" >&2 || true
   exit 1
 fi
 
@@ -59,6 +64,16 @@ fi
 
 if ! grep -Fq "tcp_transport_adapter" "$SHARED_CONTRACT"; then
   echo "expected rust sdk live transport shared contract module to include tcp transport adapter tests" >&2
+  exit 1
+fi
+
+if ! grep -Fq "live_transport_agent -- --test-threads=1" "$SHARED_CONTRACT"; then
+  echo "expected rust sdk live transport agent tests to run serially" >&2
+  exit 1
+fi
+
+if ! grep -Fq "tcp_transport_adapter -- --test-threads=1" "$SHARED_CONTRACT"; then
+  echo "expected rust sdk tcp transport adapter tests to run serially" >&2
   exit 1
 fi
 

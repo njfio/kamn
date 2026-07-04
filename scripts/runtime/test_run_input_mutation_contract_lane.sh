@@ -59,6 +59,11 @@ if ! grep -q "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY" "$SHA
   exit 1
 fi
 
+if ! grep -q 'max_seconds="${KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS:-900}"' "$SHARED_CONTRACT"; then
+  echo "expected mutation lane default budget to cover aggregate local-heavy cargo compiles" >&2
+  exit 1
+fi
+
 if ! grep -q -- "--target" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to expose --target selector for bounded local envelope/did smoke runs" >&2
   exit 1

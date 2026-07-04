@@ -11,6 +11,15 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
   exit 1
 fi
 
+if ! grep -q 'KAMN_KOLME_DID_LIFECYCLE_CHAIN_TARGET_DIR' "$VALIDATION_SCRIPT"; then
+  echo "expected did lifecycle live validation to expose isolated target dir override" >&2
+  exit 1
+fi
+if ! grep -q 'CARGO_TARGET_DIR' "$VALIDATION_SCRIPT"; then
+  echo "expected did lifecycle live validation to isolate Cargo target artifacts" >&2
+  exit 1
+fi
+
 validation_output="$(bash "$VALIDATION_SCRIPT" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
   echo "expected did lifecycle live pass marker" >&2

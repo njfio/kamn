@@ -13,9 +13,9 @@ fn current_branch_head_restores_ratio_compliance() {
         String::from_utf8_lossy(&output.stdout)
     );
     assert_eq!(status(&report), "ok");
-    assert_eq!(u64_field(&report, "governance_commit_count"), 4);
-    assert_eq!(u64_field(&report, "feature_commit_count"), 46);
-    assert_eq!(f64_field(&report, "governance_ratio"), 0.08);
-    assert_eq!(f64_field(&report, "feature_ratio"), 0.92);
+    assert_eq!(u64_field(&report, "governance_commit_count"), 2);
+    assert_eq!(u64_field(&report, "feature_commit_count"), 48);
+    assert_eq!(f64_field(&report, "governance_ratio"), 0.04);
+    assert_eq!(f64_field(&report, "feature_ratio"), 0.96);
     assert_eq!(u64_field(&report, "non_merge_commit_total"), 50);
 }

@@ -12,7 +12,30 @@ fi
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
-bash "$DEMO_SCRIPT" >"$TMP_OUT"
+if grep -Fq 'KAMN_TCP_RELAY_DEMO_ADDR:-127.0.0.1:17881' "$DEMO_SCRIPT"; then
+  echo "expected tcp signed relay demo to allocate a free default loopback port" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'sock.bind(("127.0.0.1", 0))' "$DEMO_SCRIPT"; then
+  echo "expected tcp signed relay demo to ask the OS for a free loopback port" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'wait_for_listener_ready' "$DEMO_SCRIPT"; then
+  echo "expected tcp signed relay demo to wait for listener readiness" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'status=listening' "$DEMO_SCRIPT"; then
+  echo "expected tcp signed relay demo readiness wait to use listener status marker" >&2
+  exit 1
+fi
+
+if ! bash "$DEMO_SCRIPT" >"$TMP_OUT" 2>&1; then
+  cat "$TMP_OUT" >&2 || true
+  exit 1
+fi
 
 required_markers=(
   "--- sender ---"
@@ -28,6 +51,7 @@ required_markers=(
 for marker in "${required_markers[@]}"; do
   if ! grep -Fq -- "$marker" "$TMP_OUT"; then
     echo "expected tcp signed relay demo output marker '$marker'" >&2
+    cat "$TMP_OUT" >&2 || true
     exit 1
   fi
 done

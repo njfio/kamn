@@ -381,7 +381,7 @@ PY
 )"
 
 pushd "$ROOT_DIR" >/dev/null
-cargo test -p kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::error_envelope_contract_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts -- --exact \
+cargo test -p kamn-node --bin kamn-node main_tests::service_api_endpoint_tests::residual_root_contract_tests::error_envelope_contract_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts -- --exact \
   >"$TMP_DIR/service-api-envelope-unit.log" 2>&1
 selector_index=0
 while IFS= read -r selector; do
@@ -389,7 +389,7 @@ while IFS= read -r selector; do
     continue
   fi
   selector_index=$((selector_index + 1))
-  cargo test -p kamn-node "$selector" -- --exact \
+  cargo test -p kamn-node --bin kamn-node "$selector" -- --exact \
     >"$TMP_DIR/service-api-reason-code-corpus-${selector_index}.log" 2>&1
 done < "$corpus_selectors_file"
 if [ "$selector_index" -le 0 ]; then

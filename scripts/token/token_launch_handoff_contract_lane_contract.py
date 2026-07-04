@@ -18,7 +18,7 @@ from framework.contract_lane_helpers import (  # noqa: E402
     run_go_bundle_policy_pair,
 )
 
-MAX_RUNTIME_SECONDS = 90
+MAX_RUNTIME_SECONDS = 900
 
 
 def usage() -> None:

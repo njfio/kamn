@@ -124,6 +124,12 @@ fn spec_c01_ci_tools_fast_mode_routes_guardrail_regression_lane_to_rust() {
         "fast-mode CI tools selector must include Rust guardrail contract lane"
     );
     assert!(
+        ci_tools.contains(
+            "cargo test -p kamn-core --test ci_shell_rust_ratio_guardrail_contract -- --test-threads=1"
+        ),
+        "fast-mode CI tools selector must run Rust guardrail contract lane serially"
+    );
+    assert!(
         !ci_tools
             .contains("bash \"$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh\""),
         "fast-mode CI tools selector must not call retired shell guardrail regression wrapper"

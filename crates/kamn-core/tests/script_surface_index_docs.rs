@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 const README_DOC: &str = include_str!("../../../docs/developer/readme-contract-reference.md");
 const INDEX_PATH: &str = "docs/developer/script-surface-index.md";
 const TRACKED_TOTAL_PY_FILES: usize = 345;
-const TRACKED_CI_COUNTS: Counts = Counts { sh: 156, py: 59 };
+const TRACKED_CI_COUNTS: Counts = Counts { sh: 157, py: 59 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct Counts {

@@ -34,6 +34,9 @@ done
 [ -n "$suite" ] || usage
 [ -n "$test_name" ] || usage
 
+bridge_replay_target_dir="${KAMN_BRIDGE_REPLAY_TARGET_DIR:-$ROOT_DIR/target/bridge-replay-contract}"
+mkdir -p "$bridge_replay_target_dir"
+
 case "$suite" in
   bridge_adapter|telegram_bridge|discord_bridge|cross_chain_bridge)
     ;;
@@ -47,7 +50,7 @@ case "$suite" in
 esac
 
 set +e
-command_output="$(cargo test -p kamn-core --test "$suite" -- "$test_name" --exact 2>&1)"
+command_output="$(CARGO_TARGET_DIR="$bridge_replay_target_dir" cargo test -p kamn-core --test "$suite" -- "$test_name" --exact 2>&1)"
 command_code=$?
 set -e
 

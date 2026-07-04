@@ -20,6 +20,10 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected service api reason-code compatibility policy checker script to be executable" >&2
   exit 1
 fi
+if ! grep -Fq -- '--bin kamn-node' "$VALIDATION_SCRIPT"; then
+  echo "expected service api reason-code compatibility validation to target the kamn-node binary test harness" >&2
+  exit 1
+fi
 
 lane_report="$TMP_DIR/service-api-reason-code-compatibility-contract-lane-report.json"
 policy_report="$TMP_DIR/service-api-reason-code-compatibility-policy-report.json"

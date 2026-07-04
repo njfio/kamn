@@ -69,6 +69,21 @@ fn critical_path_coverage_thresholds_follow_extracted_group_channel_target() {
     );
 }
 
+#[test]
+fn critical_path_coverage_gate_resolves_llvm_tools_before_running_llvm_cov() {
+    let script = read_repo_file(COVERAGE_GATE);
+
+    for marker in [
+        "LLVM_COV",
+        "LLVM_PROFDATA",
+        "rustc --print sysroot",
+        ".rustup/toolchains",
+        "llvm-profdata",
+    ] {
+        assert_contains(&script, marker, "llvm tool resolution marker");
+    }
+}
+
 fn assert_contains(haystack: &str, needle: &str, label: &str) {
     assert!(haystack.contains(needle), "missing {label}: {needle}");
 }

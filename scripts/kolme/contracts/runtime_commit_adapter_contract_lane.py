@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -13,7 +14,14 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 POLICY_CHECKER = ROOT_DIR / "scripts/kolme/check_runtime_commit_replay_policy.py"
 GONOGO_DOC = ROOT_DIR / "docs/foundation/release-gonogo-checklist.md"
 DEVNET_PLAN_DOC = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
+TEST_TARGET = "kolme_runtime_commit_client"
 MAX_SECONDS = 60
+TARGET_DIR = ROOT_DIR / "target" / "contract-lanes" / "runtime-commit-adapter"
+TEST_FILTERS = [
+    "functional_adapter_maps_transport_provider_and_finality_failures_to_typed_errors",
+    "integration_runtime_pipeline_accepts_adapter_backed_final_receipts",
+    "regression_adapter_path_keeps_receipt_provider_mismatch_fail_closed",
+]
 
 
 def command_output(command: list[str]) -> tuple[int, str]:
@@ -25,6 +33,72 @@ def command_output(command: list[str]) -> tuple[int, str]:
         text=True,
     )
     return result.returncode, (result.stdout or "") + (result.stderr or "")
+
+
+def cargo_target_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["CARGO_TARGET_DIR"] = str(TARGET_DIR)
+    return env
+
+
+def artifact_executable(cargo_stdout: str) -> Path | None:
+    executable = None
+    for line in cargo_stdout.splitlines():
+        if not line.strip().startswith("{"):
+            continue
+        try:
+            artifact = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if artifact.get("reason") != "compiler-artifact":
+            continue
+        if artifact.get("target", {}).get("name") == TEST_TARGET and artifact.get("executable"):
+            executable = Path(artifact["executable"])
+    if executable is not None and executable.is_file():
+        return executable
+    return None
+
+
+def prebuild_test_executable() -> tuple[int, Path | None]:
+    TARGET_DIR.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        [
+            "cargo", "test", "-p", "kamn-core", "--test", TEST_TARGET, "--no-run", "--message-format=json",
+        ],
+        cwd=ROOT_DIR,
+        check=False,
+        env=cargo_target_env(),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print((result.stdout or "") + (result.stderr or ""), file=sys.stderr, end="")
+        return result.returncode, None
+    executable = artifact_executable(result.stdout)
+    if executable is None:
+        print("expected Cargo to report runtime commit adapter test executable", file=sys.stderr)
+        return 1, None
+    return 0, executable
+
+
+def run_adapter_tests(executable: Path, max_seconds: int) -> int:
+    for test_filter in TEST_FILTERS:
+        try:
+            result = subprocess.run(
+                [str(executable), test_filter, "--exact", "--test-threads=1", "--nocapture"],
+                cwd=ROOT_DIR,
+                check=False,
+                timeout=max_seconds,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                f"Kolme runtime commit adapter contract lane exceeded runtime budget: {max_seconds}s",
+                file=sys.stderr,
+            )
+            return 1
+        if result.returncode != 0:
+            return result.returncode
+    return 0
 
 
 def main() -> int:
@@ -39,45 +113,11 @@ def main() -> int:
     start_epoch = time.monotonic()
     tmp_report = Path(subprocess.check_output(["mktemp"], text=True).strip())
     try:
-        subprocess.run(
-            [
-                "cargo",
-                "test",
-                "-p",
-                "kamn-core",
-                "--test",
-                "kolme_runtime_commit_client",
-                "functional_adapter_maps_transport_provider_and_finality_failures_to_typed_errors",
-            ],
-            cwd=ROOT_DIR,
-            check=True,
-        )
-        subprocess.run(
-            [
-                "cargo",
-                "test",
-                "-p",
-                "kamn-core",
-                "--test",
-                "kolme_runtime_commit_client",
-                "integration_runtime_pipeline_accepts_adapter_backed_final_receipts",
-            ],
-            cwd=ROOT_DIR,
-            check=True,
-        )
-        subprocess.run(
-            [
-                "cargo",
-                "test",
-                "-p",
-                "kamn-core",
-                "--test",
-                "kolme_runtime_commit_client",
-                "regression_adapter_path_keeps_receipt_provider_mismatch_fail_closed",
-            ],
-            cwd=ROOT_DIR,
-            check=True,
-        )
+        compile_code, executable = prebuild_test_executable()
+        if compile_code != 0 or executable is None:
+            return compile_code or 1
+        if run_adapter_tests(executable, MAX_SECONDS) != 0:
+            return 1
 
         provider_mismatch_code, provider_mismatch_output = command_output(
             [

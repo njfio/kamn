@@ -5,7 +5,9 @@ FAST_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_emulator_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_provider_deep_lane.sh"
 DEEP_IMPL_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_provider_deep_lane_impl.sh"
 POLICY_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_policy_contract_lane.sh"
+POLICY_CONTRACT="$ROOT_DIR/scripts/signer/signer_policy_contract_lane_contract.sh"
 LIFECYCLE_SCRIPT="$ROOT_DIR/scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh"
+LIFECYCLE_CONTRACT="$ROOT_DIR/scripts/signer/secure_provider_key_lifecycle_contract_lane_contract.sh"
 INCIDENT_CONTRACT_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_contract_lane.sh"
 INCIDENT_DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/signer/signer_emulator_contract_lane_contract.sh"
@@ -28,8 +30,16 @@ if [ ! -x "$POLICY_SCRIPT" ]; then
   echo "expected signer policy contract lane runner to be executable" >&2
   exit 1
 fi
+if [ ! -x "$POLICY_CONTRACT" ]; then
+  echo "expected signer policy contract lane shared module to be executable" >&2
+  exit 1
+fi
 if [ ! -x "$LIFECYCLE_SCRIPT" ]; then
   echo "expected signer secure-provider key-lifecycle contract lane runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$LIFECYCLE_CONTRACT" ]; then
+  echo "expected signer secure-provider key-lifecycle shared contract module to be executable" >&2
   exit 1
 fi
 if [ ! -x "$INCIDENT_CONTRACT_SCRIPT" ]; then
@@ -46,6 +56,42 @@ if [ ! -x "$SHARED_CONTRACT" ]; then
 fi
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
+if [ "$(grep -c -- "-- --exact" "$SHARED_CONTRACT")" -lt 7 ]; then
+  echo "expected signer emulator shared contract module to run targeted cargo tests with --exact" >&2
+  exit 1
+fi
+if [ "$(grep -c -- "-- --exact" "$POLICY_CONTRACT")" -lt 4 ]; then
+  echo "expected signer policy contract module to run targeted cargo tests with --exact" >&2
+  exit 1
+fi
+if ! grep -Fq "KAMN_SIGNER_EMULATOR_CONTRACT_TARGET_DIR" "$SHARED_CONTRACT"; then
+  echo "expected signer emulator shared contract module to expose isolated target dir override" >&2
+  exit 1
+fi
+if ! grep -Fq 'CARGO_TARGET_DIR="$signer_emulator_target_dir"' "$SHARED_CONTRACT"; then
+  echo "expected signer emulator shared contract module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+if ! grep -Fq "KAMN_SIGNER_POLICY_CONTRACT_TARGET_DIR" "$POLICY_CONTRACT"; then
+  echo "expected signer policy shared contract module to expose isolated target dir override" >&2
+  exit 1
+fi
+if ! grep -Fq 'CARGO_TARGET_DIR="$signer_policy_target_dir"' "$POLICY_CONTRACT"; then
+  echo "expected signer policy shared contract module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+if ! grep -Fq "KAMN_SIGNER_KEY_LIFECYCLE_CONTRACT_TARGET_DIR" "$LIFECYCLE_CONTRACT"; then
+  echo "expected signer key-lifecycle shared contract module to expose isolated target dir override" >&2
+  exit 1
+fi
+if ! grep -Fq 'CARGO_TARGET_DIR="$signer_key_lifecycle_target_dir"' "$LIFECYCLE_CONTRACT"; then
+  echo "expected signer key-lifecycle shared contract module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+if ! grep -Fq "threat_control_matrix_docs -- --test-threads=1 --nocapture" "$POLICY_CONTRACT"; then
+  echo "expected signer policy contract module to run threat-control docs serially" >&2
+  exit 1
+fi
 bash "$FAST_SCRIPT" >"$TMP_OUT"
 if ! grep -q "signer emulator contract lane tests passed." "$TMP_OUT"; then
   echo "expected signer emulator contract lane success marker" >&2

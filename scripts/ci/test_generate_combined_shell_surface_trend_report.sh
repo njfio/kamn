@@ -10,6 +10,14 @@ if [[ ! -x "$GENERATOR" ]]; then
   echo "expected combined shell-surface trend report generator to be executable" >&2
   exit 1
 fi
+if grep -q 'rust_root.rglob("\*.rs")' "$ROOT_DIR/scripts/ci/generate_combined_shell_surface_trend_report.py"; then
+  echo "expected combined shell-surface trend generator to avoid unbounded Rust rglob scans" >&2
+  exit 1
+fi
+if ! grep -q "ls-files" "$ROOT_DIR/scripts/ci/generate_combined_shell_surface_trend_report.py"; then
+  echo "expected combined shell-surface trend generator to count tracked files via git ls-files" >&2
+  exit 1
+fi
 
 report_file="$TMP_DIR/combined-shell-surface-trend-report.json"
 output="$(bash "$GENERATOR" --output-json "$report_file")"

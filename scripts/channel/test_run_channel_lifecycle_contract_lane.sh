@@ -17,6 +17,15 @@ test_harness_require_executable "$SHARED_CONTRACT" "expected channel lifecycle s
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
+if ! grep -Fq "KAMN_CHANNEL_LIFECYCLE_CONTRACT_TARGET_DIR" "$SHARED_CONTRACT"; then
+  echo "expected channel lifecycle shared contract-lane module to expose isolated target dir override" >&2
+  exit 1
+fi
+if ! grep -Fq '"CARGO_TARGET_DIR": str(channel_target_dir)' "$SHARED_CONTRACT"; then
+  echo "expected channel lifecycle shared contract-lane module to run cargo tests in isolated target dir" >&2
+  exit 1
+fi
+
 bash "$FAST_SCRIPT" >"$TMP_OUT"
 if ! grep -q "channel lifecycle snapshot contract lane tests passed." "$TMP_OUT"; then
   echo "expected channel lifecycle contract lane success marker" >&2

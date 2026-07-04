@@ -207,8 +207,11 @@ fn run() -> Result<(), String> {
     let config = parse_args()?;
     let listener = TcpListener::bind(&config.addr)
         .map_err(|error| format!("failed to bind listener on {}: {error}", config.addr))?;
+    let bound_addr = listener
+        .local_addr()
+        .map_err(|error| format!("failed to read listener bound address: {error}"))?;
     println!("status=listening");
-    println!("addr={}", config.addr);
+    println!("addr={bound_addr}");
 
     let (mut stream, peer_addr) = listener
         .accept()

@@ -220,11 +220,37 @@ fn regression_read_response_bytes_allows_partial_payload_before_unexpected_eof()
 }
 
 #[test]
+fn regression_read_response_bytes_allows_partial_payload_before_connection_reset() {
+    // Regression: #7036
+    let payload = b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}";
+    let mut reader = ScriptedReader::new([
+        ReadStep::Bytes(payload.to_vec()),
+        ReadStep::Error(ErrorKind::ConnectionReset),
+        ReadStep::Eof,
+    ]);
+    let response =
+        read_response_bytes(&mut reader).expect("partial payload should survive reset after close");
+    assert_eq!(response, payload);
+}
+
+#[test]
 fn regression_read_response_bytes_rejects_unexpected_eof_without_payload() {
     // Regression: #5953
     let mut reader = ScriptedReader::new([ReadStep::Error(ErrorKind::UnexpectedEof)]);
     let error = read_response_bytes(&mut reader)
         .expect_err("unexpected eof without payload should fail closed");
+    assert_eq!(
+        error,
+        SdkError::TransportFailure("failed to read service response payload")
+    );
+}
+
+#[test]
+fn regression_read_response_bytes_rejects_connection_reset_without_payload() {
+    // Regression: #7036
+    let mut reader = ScriptedReader::new([ReadStep::Error(ErrorKind::ConnectionReset)]);
+    let error =
+        read_response_bytes(&mut reader).expect_err("connection reset without payload should fail");
     assert_eq!(
         error,
         SdkError::TransportFailure("failed to read service response payload")

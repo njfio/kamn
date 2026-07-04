@@ -21,11 +21,11 @@ mod request_parse_support;
 mod server_test_support;
 
 pub(crate) use auth_support::validate_auth;
-pub(crate) use contract_server_support::run_live_transport_contract_server;
+pub(crate) use contract_server_support::run_bound_live_transport_contract_server;
 pub(crate) use env_support::{
-    deterministic_message_id, did, ensure_live_test_env, metadata, reserve_loopback_addr,
-    wait_for_server_ready, with_env_lock, CHAIN_ID, CHAIN_VERSION, DEFAULT_LIVE_REQUESTER_DID,
-    LIVE_REQUESTER_DID_ENV, REQUEST_AUTH_SCOPE_HEADER,
+    bind_loopback_listener, deterministic_message_id, did, ensure_live_test_env, metadata,
+    reserve_loopback_addr, wait_for_server_ready, with_env_lock, CHAIN_ID, CHAIN_VERSION,
+    DEFAULT_LIVE_REQUESTER_DID, LIVE_REQUESTER_DID_ENV, REQUEST_AUTH_SCOPE_HEADER,
 };
 pub(crate) use request_parse_support::{parse_http_request, write_http_response};
 pub(crate) use server_test_support::{assert_server_result, start_contract_server};
