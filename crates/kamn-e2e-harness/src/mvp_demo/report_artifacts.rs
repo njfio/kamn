@@ -47,6 +47,10 @@ fn proof_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, Str
             "service_api_websocket_output",
             run_proof_path(input, "service-api-websocket-output.txt"),
         ),
+        (
+            "devnet_settlement_output",
+            run_proof_path(input, "devnet-settlement-output.txt"),
+        ),
     ]
 }
 
