@@ -43,14 +43,14 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] README opens with human-friendly what/where/why/current-capability content.
-- [ ] README includes `make demo-mvp` and the verifier command near the top.
-- [ ] README explicitly separates local-only proof, devnet-backed proof,
+- [x] README opens with human-friendly what/where/why/current-capability content.
+- [x] README includes `make demo-mvp` and the verifier command near the top.
+- [x] README explicitly separates local-only proof, devnet-backed proof,
   roadmap/not-claimed work, and production-readiness boundaries.
-- [ ] README links to `docs/validation/mvp-evaluator-demo.md`.
-- [ ] README preserves developer and AI-agent depth sections for repo map,
+- [x] README links to `docs/validation/mvp-evaluator-demo.md`.
+- [x] README preserves developer and AI-agent depth sections for repo map,
   workflow/process, validation gates, architecture, and contract references.
-- [ ] A docs contract test fails against the old README and passes against the
+- [x] A docs contract test fails against the old README and passes against the
   updated README.
 
 ## Files to Touch
