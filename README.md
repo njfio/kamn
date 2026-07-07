@@ -1,49 +1,106 @@
 # KAMN
 
-KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordination layer for autonomous agents.
+KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordination layer for autonomous agents. It is meant to let agents identify themselves, exchange signed work messages, leave durable proof trails, and make settlement claims only when there is evidence behind them.
 
-This repository contains the Rust runtime/core crates, live-node scaffolding, SDK surfaces, and CI/governance tooling used to evolve the protocol safely.
+This repository is the Rust implementation and validation workspace for that system. It contains the local runtime, service API, SDK and agent helpers, proof/report harnesses, live-provider integration surfaces, and process tooling used to evolve KAMN without overstating what is real.
 
-## What This Repository Contains
+The current MVP is not a production network. It is a locally runnable, evaluator-friendly demo that proves one coherent product story: local authenticated agent flow plus optional Solana devnet-backed settlement evidence when funded devnet keypairs are configured.
+
+## What KAMN Proves Today
+
+The canonical MVP demo can prove:
+
+- A local KAMN service API/runtime starts and produces proof artifacts.
+- Alice/Bob agent identities are authenticated in local proof output.
+- A signed message or task flow is recorded.
+- Durable state is written under the demo run directory.
+- Relay/projection state and websocket event visibility are captured.
+- An audit/proof export and human-readable proof report are generated.
+- Settlement or asset-movement success is claimed only as `devnet-backed`, using Solana devnet transaction, balance, and persisted KAMN state evidence.
+
+The demo does not prove production readiness, mainnet settlement, generalized exchange, broad bridge finality, arbitrary partition tolerance, or real economic value. Solana devnet tokens are developer-test tokens.
+
+## MVP Demo Quickstart
+
+Prerequisites:
+
+- Rust toolchain (`cargo`, `rustc`)
+- Bash
+- Python 3
+- Solana CLI only for independently confirming devnet transactions
+
+Run the local-only MVP demo:
+
+```bash
+make demo-mvp
+```
+
+Verify the generated proof report:
+
+```bash
+cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
+```
+
+Expected top-level artifacts:
+
+```text
+.kamn/demo/latest/proof/report.json
+.kamn/demo/latest/proof/report.md
+```
+
+The report links to the concrete run directory under `.kamn/demo/<run-id>/`, including local signed-flow, service API, websocket, audit, and settlement proof files where applicable.
+
+For the funded Solana devnet-backed path:
+
+```bash
+KAMN_MVP_DEVNET_MODE=required \
+KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com \
+KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/absolute/path/to/devnet-payer.json \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=<devnet-recipient-pubkey> \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized \
+make demo-mvp
+```
+
+If the devnet path is fully configured and funded, the report can return `GO` with a `devnet_settlement_asset_movement` claim labelled `devnet-backed`. If devnet evidence is unavailable, the honest result is `NO-GO`, not a local-only settlement pass.
+
+Detailed evaluator runbook:
+
+- `docs/validation/mvp-evaluator-demo.md`
+
+## Claim Boundaries
+
+KAMN proof reports use explicit claim labels:
+
+| Label | Meaning |
+| --- | --- |
+| `real` | Local runtime or proof behavior that actually ran. |
+| `local-only` | Real local behavior without external value movement. |
+| `devnet-backed` | Solana devnet-backed evidence exists for the settlement or asset-movement claim. |
+| `dry-run` | Intentional non-live execution that must not count as MVP success for required claims. |
+| `placeholder` | Unimplemented or illustrative output that must not count as MVP success. |
+| `roadmap` | Future work or non-MVP scope, including production readiness. |
+
+Required MVP success claims cannot be `dry-run` or `placeholder`.
+
+Any claim involving exchange, escrow, settlement, transfer, lamports, asset movement, or value movement must be `devnet-backed`. KAMN must not turn fake in-memory movement into a settlement success claim.
+
+## Repository Map
 
 - `crates/kamn-core`: protocol/domain logic and contract suites
 - `crates/kamn-node`: node runtime entrypoint and service API
 - `crates/kamn-sdk`: Rust SDK client surface
 - `crates/kamn-agent-lib`: agent-facing auth/identity helpers
 - `crates/kamn-kolme`: Kolme live provider integration layer
+- `crates/kamn-e2e-harness`: MVP demo, report verifier, and end-to-end proof harnesses
 - `scripts/`: CI, contract lanes, and deterministic validation utilities
-- `docs/`: architecture, operations, security, and planning references
+- `docs/`: architecture, operations, security, validation, and planning references
+- `specs/`: issue-scoped specs that precede implementation work
 
-## Quickstart
+## Validation Lanes
 
-Prerequisites:
-- Rust toolchain (`cargo`, `rustc`)
-- Bash
-- Python 3
-- Node.js/npm (for dashboard/TS-related lanes)
-
-Core validation:
-
-```bash
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test -p kamn-core
-cargo test -p kamn-node
-bash scripts/ci/test_ci_tools.sh
-```
-
-Live HTTPS dependency posture checks (`kamn-core`):
-- Dependencies:
-- `rustls`
-- `rustls-pemfile`
-- `webpki-roots`
-
-```bash
-cargo check -p kamn-core --features live-https
-cargo check -p kamn-core --no-default-features
-```
-
-Fast repository lanes:
+Fast local gates:
 
 ```bash
 make check
@@ -51,31 +108,60 @@ make test
 make ci-tools
 ```
 
-Live-network smoke entrypoints:
+Core validation commands:
 
 ```bash
+cargo fmt --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test
+```
+
+Evaluator and live-network lanes:
+
+```bash
+make demo-mvp
 make smoke-live-network
 make deep-live-network
 make demo-localhost-transport
 ```
 
-## Workflow
+Live HTTPS dependency posture checks for `kamn-core`:
 
-1. Open/confirm issue + milestone scope.
-2. Author `specs/<issue-id>/{spec,plan,tasks}.md`.
-3. Run RED -> GREEN -> REFACTOR for each task.
-4. Update docs/specs in the same PR when behavior changes.
-5. Keep `cargo fmt`, `clippy`, and scoped tests green before push.
+```bash
+cargo check -p kamn-core --features live-https
+cargo check -p kamn-core --no-default-features
+```
 
-Repository process contract:
-- `AGENTS.md`
+## For AI Agents And Maintainers
 
-## Architecture Map
+Start with `AGENTS.md`. The repository process is issue-first, spec-before-code, TDD, integration-wired, and proof-before-completion.
+
+Required change flow:
+
+1. Open or reuse a GitHub issue with problem statement, acceptance criteria, and non-goals.
+2. Write `specs/<issue>-<slug>.md` before implementation or test changes.
+3. Add red tests derived from the spec.
+4. Implement the smallest green path.
+5. Refactor deliberately; do not skip the refactor phase.
+6. Wire the behavior into real entrypoints; no floating code.
+7. Run focused tests, local gates, proof commands, and PR checks before merging.
+
+Agent guardrails:
+
+- Do not weaken tests, lint, clippy, formatting, proof semantics, or claim boundaries.
+- Do not claim exchange, escrow, settlement, or asset movement unless the evidence is devnet-backed.
+- Do not commit secrets, devnet keypairs, `.kamn/` proof artifacts, generated package metadata, or unrelated local files.
+- Prefer consolidating existing working surfaces over adding architecture.
+- Keep root README human-first; put exhaustive operational detail in linked docs.
+
+## Architecture And Deep References
 
 Start here for system navigation:
+
 - `docs/architecture/README.md`
 
 Core architecture references:
+
 - `docs/architecture/runtime-layout.md`
 - `docs/architecture/service-runtime.md`
 - `docs/architecture/kamn-core-module-map.md`
@@ -84,82 +170,22 @@ Core architecture references:
 - `docs/foundation/runtime-network.md`
 - `docs/architecture/adr-kamn-core-live-tls-transport.md`
 
+MVP and validation references:
+
+- `docs/validation/mvp-evaluator-demo.md`
+- `docs/developer/readme-contract-reference.md`
+- `docs/ci/strategy.md`
+- `docs/planning/engineering-hardening-wave.md`
+- `docs/planning/live-network-wave.md`
+- `docs/planning/kolme-devnet-ops.md`
+- `docs/developer/rustdoc-publishing.md`
+- `docs/security/secure-coding.md`
+- `docs/security/tls-hardening.md`
+
 ## Contract Reference
 
 Detailed command matrices, contract markers, policy snippets, and lane-specific references are maintained in:
 
 - `docs/developer/readme-contract-reference.md`
 
-This keeps the root README onboarding-focused while preserving deterministic contract markers in a stable docs location.
-
-Managed-signer backend SLO telemetry anchors:
-- `generate_managed_signer_backend_slo_telemetry_bundle.sh`
-- `run_managed_signer_backend_slo_telemetry_contract_lane.sh`
-- `kamn.kolme.managed-signer-backend-slo-telemetry.v1`
-- `managed_signer_backend_timeout_rate_threshold_exceeded`
-- `managed_signer_backend_unavailable_rate_threshold_exceeded`
-- `managed_signer_backend_error_rate_threshold_exceeded`
-- `managed_signer_backend_ci_fast_gate_failed`
-- `signer_key_source=managed-external`
-- `contracts.required_signer_key_source=managed-external`
-
-Managed-signer backend SLO policy anchors:
-- `check_managed_signer_backend_slo_policy.py`
-- `run_managed_signer_backend_slo_policy_contract_lane.sh`
-- `kamn.kolme.managed-signer-backend-slo-policy-report.v1`
-- `kamn.kolme.managed-signer-backend-slo-policy-contract-report.v1`
-- `managed_signer_backend_slo_within_threshold`
-- `managed_signer_backend_no_action_required`
-- `managed_signer_backend_reduce_timeout_burst`
-- `managed_signer_backend_failover_endpoint`
-- `managed_signer_backend_enable_circuit_breaker`
-- `managed_signer_backend_replay_ci_fast_gate`
-
-Managed-signer startup validation anchors:
-- `run_managed_signer_startup_live_validation_contract_lane.sh`
-- `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`
-- `deployment_preflight_passed`
-- `signer_rotation_promotion_stalled`
-- `quorum_evidence_custody_sha256_mismatch`
-- `checkpoint_failed_signer_profile_contract`
-- `checkpoint_failed_signer_provenance_contract`
-- `checkpoint_failed_signer_rotation_freshness_contract`
-- `signer_key_source_production_managed_external_required`
-- `signer_profile_mismatch`
-- `signer_rotation_epoch_stale`
-- `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`
-- `managed_signer_custody_audit_parity_fail_closed_status=verified`
-- `managed_signer_rotation_reason_taxonomy_status=verified`
-- `managed_signer_rehearsal_output_normalization_status=verified`
-- `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`
-- `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`
-- `ci_local_promotion_budget_boundary_status=verified`
-- `execution_scope=local-scheduled`
-
-Live-provider runtime integration anchors:
-- `run_local_live_provider_runtime_integration_contract_lane.sh`
-- `run_local_runtime_commit_live_lane.sh`
-- `check_local_runtime_commit_live_evidence_policy.py`
-- `provider_client_contract=KolmeRuntimeCommitLiveProvider`
-- `provider_client_contract_mismatch`
-- `provider_in_memory_reference_detected`
-- `provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter`
-- `provider_signer_adapter_contract_mismatch`
-- `live_preflight_failed`
-- `live_preflight_timeout`
-
-Localhost signed integration anchors:
-- `run_localhost_signed_integration_contract_lane.sh`
-- `check_localhost_signed_integration_evidence_policy.sh`
-- `/tmp/localhost-signed-integration-contract-report.json`
-
-## Key Links
-
-- CI strategy: `docs/ci/strategy.md`
-- Engineering hardening wave: `docs/planning/engineering-hardening-wave.md`
-- Runtime/live ops: `docs/planning/live-network-wave.md`
-- Kolme devnet ops: `docs/planning/kolme-devnet-ops.md`
-- Rustdoc publishing guide: `docs/developer/rustdoc-publishing.md`
-- Missing-docs policy checker: `scripts/ci/check_kamn_core_missing_docs_policy.sh`
-- Security guidance: `docs/security/secure-coding.md`
-- TLS hardening: `docs/security/tls-hardening.md`
+This keeps the root README useful as an onboarding front door while preserving deterministic contract markers in a stable docs location.
