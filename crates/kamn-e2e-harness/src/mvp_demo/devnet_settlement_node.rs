@@ -21,10 +21,14 @@ pub(super) fn launch_and_drive_service_api(
     let endpoint = format!("http://127.0.0.1:{port}");
     let mut child = spawn_node(run_dir, state_file, port, config)?;
     wait_for_tcp_ready(port, &mut child)?;
-    let result = drive_escrow_release(endpoint.as_str(), run_dir);
-    let wait_result = wait_for_child_success(&mut child);
-    let escrow_id = result?;
-    wait_result?;
+    let escrow_id = match drive_escrow_release(endpoint.as_str(), run_dir) {
+        Ok(value) => value,
+        Err(error) => {
+            terminate_child(&mut child);
+            return Err(error);
+        }
+    };
+    wait_for_child_success(&mut child)?;
     Ok(ServiceApiRun { escrow_id })
 }
 
@@ -155,4 +159,9 @@ fn wait_for_child_success(child: &mut Child) -> Result<(), String> {
     }
     let _ = child.kill();
     Err("service API node did not exit after request budget".to_owned())
+}
+
+fn terminate_child(child: &mut Child) {
+    let _ = child.kill();
+    let _ = child.wait();
 }
