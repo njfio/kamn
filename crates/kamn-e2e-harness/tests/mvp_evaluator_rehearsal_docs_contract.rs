@@ -1,30 +1,28 @@
 use std::path::PathBuf;
 
 const EVIDENCE_DOC: &str = "docs/validation/2026-07-07-mvp-evaluator-rehearsal.md";
+const REQUIRED_EVIDENCE: &[&str] = &[
+    "# MVP Evaluator Rehearsal Evidence - 2026-07-07",
+    "Issue: #7043",
+    "Clean Worktree",
+    "make demo-mvp",
+    "verify-mvp-demo",
+    "run-57898-1783463882414",
+    "run-73263-1783464071530",
+    "devnet-backed",
+    "2dWRAChLFzqAFxpNPYAb6ZGkP6Ms6yrLJm6ZGYXG7XmM8rXy2Emmy8myhva6gtCNbpkusCrCHfGa14oR7PamHGss",
+    "Secret Scan",
+    "Goose Harness",
+    "Pi Harness",
+    "Claim Boundaries",
+    "No private key, keypair JSON, env file, or private credential content was recorded",
+];
 
 #[test]
 fn spec_c01_evaluator_rehearsal_records_required_evidence() {
     let doc = read_evidence_doc();
 
-    require_all(
-        &doc,
-        &[
-            "# MVP Evaluator Rehearsal Evidence - 2026-07-07",
-            "Issue: #7043",
-            "Clean Worktree",
-            "make demo-mvp",
-            "verify-mvp-demo",
-            "run-57898-1783463882414",
-            "run-73263-1783464071530",
-            "devnet-backed",
-            "2dWRAChLFzqAFxpNPYAb6ZGkP6Ms6yrLJm6ZGYXG7XmM8rXy2Emmy8myhva6gtCNbpkusCrCHfGa14oR7PamHGss",
-            "Secret Scan",
-            "Goose Harness",
-            "Pi Harness",
-            "Claim Boundaries",
-            "No private key, keypair JSON, env file, or private credential content was recorded",
-        ],
-    );
+    require_all(&doc, REQUIRED_EVIDENCE);
 }
 
 #[test]
