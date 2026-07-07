@@ -15,6 +15,7 @@ fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
         output_root: "/tmp/kamn-demo".to_owned(),
         devnet_mode: "optional".to_owned(),
         solana_rpc_url: None,
+        devnet_settlement_command: None,
         localhost_signed_demo_command: None,
         service_api_vertical_slice_command: None,
         service_api_websocket_command: None,
@@ -48,6 +49,7 @@ fn spec_c04_demo_mvp_creates_run_directory_and_latest_report_paths() {
         output_root: temp.display().to_string(),
         devnet_mode: "optional".to_owned(),
         solana_rpc_url: None,
+        devnet_settlement_command: None,
         localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
         service_api_vertical_slice_command: Some(stub_service_api_command(
             "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
@@ -73,6 +75,7 @@ fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
         output_root: temp.display().to_string(),
         devnet_mode: "optional".to_owned(),
         solana_rpc_url: None,
+        devnet_settlement_command: None,
         localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
         service_api_vertical_slice_command: Some(stub_service_api_command(
             "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
@@ -88,6 +91,37 @@ fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
     let output = execute_verify_mvp_demo_contract(&verify_config)
         .expect("verify-mvp-demo should accept generated report");
     assert!(output.contains("\"status\":\"PASS\""));
+    let _ = std::fs::remove_dir_all(&temp);
+}
+
+#[test]
+fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
+    let temp = temp_dir("mvp-demo-devnet-settlement");
+    let config = MvpDemoCommandConfig {
+        output_root: temp.display().to_string(),
+        devnet_mode: "required".to_owned(),
+        solana_rpc_url: Some("https://api.devnet.solana.com".to_owned()),
+        devnet_settlement_command: Some(stub_devnet_settlement_command()),
+        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
+        service_api_vertical_slice_command: Some(stub_service_api_command(
+            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
+        )),
+        service_api_websocket_command: Some(stub_service_api_command(
+            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
+        )),
+    };
+    let report = execute_mvp_demo_contract(&config)
+        .expect("devnet-required demo should accept real settlement evidence");
+
+    assert!(report.contains(r#""status":"GO""#));
+    assert!(report.contains(r#""id":"devnet_settlement_asset_movement""#));
+    assert!(report.contains(r#""label":"devnet-backed""#));
+    assert!(report.contains(r#""settlement_tx_signature":"devnet-signature-111""#));
+    assert!(report.contains(r#""persisted_settlement_tx_signature":"devnet-signature-111""#));
+    assert!(report.contains(r#""payer_balance_before":2500000000"#));
+    assert!(report.contains(r#""payer_balance_after":2498995000"#));
+    assert!(report.contains(r#""recipient_balance_before":2500000000"#));
+    assert!(report.contains(r#""recipient_balance_after":2501000000"#));
     let _ = std::fs::remove_dir_all(&temp);
 }
 
@@ -110,6 +144,18 @@ fn stub_service_api_command(test_name: &str) -> Vec<String> {
         "sh".to_owned(),
         "-c".to_owned(),
         format!(r#"echo "test {test_name} ... ok""#),
+    ]
+}
+
+fn stub_devnet_settlement_command() -> Vec<String> {
+    vec![
+        "sh".to_owned(),
+        "-c".to_owned(),
+        r#"cat <<'JSON'
+{"network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","recipient_pubkey":"FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe","lamports":1000000,"settlement_tx_signature":"devnet-signature-111","settlement_commitment":"finalized","payer_balance_before":2500000000,"payer_balance_after":2498995000,"recipient_balance_before":2500000000,"recipient_balance_after":2501000000,"persisted_settlement_tx_signature":"devnet-signature-111"}
+JSON
+"#
+        .to_owned(),
     ]
 }
 
