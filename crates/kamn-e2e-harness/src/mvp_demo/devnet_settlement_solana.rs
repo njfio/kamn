@@ -72,8 +72,32 @@ fn parse_solana_lamports_output(output: &std::process::Output) -> Result<u64, St
             String::from_utf8_lossy(output.stderr.as_slice())
         ));
     }
-    String::from_utf8_lossy(output.stdout.as_slice())
-        .trim()
+    let stdout = String::from_utf8_lossy(output.stdout.as_slice());
+    stdout
+        .split_whitespace()
+        .next()
+        .ok_or_else(|| "solana balance output was empty".to_owned())?
         .parse::<u64>()
         .map_err(|error| format!("solana balance output was not lamports: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn unit_parse_solana_lamports_accepts_cli_suffix() {
+        let output = std::process::Output {
+            status: success_status(),
+            stdout: b"2498995000 lamports\n".to_vec(),
+            stderr: Vec::new(),
+        };
+        let parsed = super::parse_solana_lamports_output(&output)
+            .expect("lamport parser should accept solana CLI suffix");
+        assert_eq!(parsed, 2_498_995_000);
+    }
+
+    #[cfg(unix)]
+    fn success_status() -> std::process::ExitStatus {
+        use std::os::unix::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(0)
+    }
 }

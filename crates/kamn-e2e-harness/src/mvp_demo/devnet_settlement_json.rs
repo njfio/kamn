@@ -44,16 +44,37 @@ pub(crate) fn devnet_settlement_claim_json(evidence: &DevnetSettlementEvidence) 
 }
 
 pub(super) fn json_string_value(json: &str, key: &str) -> Result<String, String> {
-    let marker = format!("\"{key}\":\"");
-    let start = json
+    let value = json_value_after_key(json, key)?;
+    let value = value.trim_start();
+    let value = value
+        .strip_prefix('"')
+        .ok_or_else(|| format!("JSON field is not a string: {key}"))?;
+    let end = value
+        .find('"')
+        .ok_or_else(|| format!("unterminated JSON string field: {key}"))?;
+    Ok(value[..end].to_owned())
+}
+
+fn json_u64_value(json: &str, key: &str) -> Result<u64, String> {
+    let digits = json_value_after_key(json, key)?
+        .trim_start()
+        .chars()
+        .take_while(|item| item.is_ascii_digit())
+        .collect::<String>();
+    digits
+        .parse::<u64>()
+        .map_err(|error| format!("invalid JSON u64 field {key}: {error}"))
+}
+
+fn json_value_after_key<'a>(json: &'a str, key: &str) -> Result<&'a str, String> {
+    let marker = format!("\"{key}\"");
+    let key_start = json
         .find(marker.as_str())
         .ok_or_else(|| format!("missing JSON string field: {key}"))?
         + marker.len();
-    let tail = &json[start..];
-    let end = tail
-        .find('"')
-        .ok_or_else(|| format!("unterminated JSON string field: {key}"))?;
-    Ok(tail[..end].to_owned())
+    let tail = json[key_start..].trim_start();
+    tail.strip_prefix(':')
+        .ok_or_else(|| format!("missing JSON field separator: {key}"))
 }
 
 fn validate_devnet_settlement_evidence(evidence: &DevnetSettlementEvidence) -> Result<(), String> {
@@ -68,18 +89,25 @@ fn validate_devnet_settlement_evidence(evidence: &DevnetSettlementEvidence) -> R
     Ok(())
 }
 
-fn json_u64_value(json: &str, key: &str) -> Result<u64, String> {
-    let marker = format!("\"{key}\":");
-    let start = json
-        .find(marker.as_str())
-        .ok_or_else(|| format!("missing JSON u64 field: {key}"))?
-        + marker.len();
-    let digits = json[start..]
-        .trim_start()
-        .chars()
-        .take_while(|item| item.is_ascii_digit())
-        .collect::<String>();
-    digits
-        .parse::<u64>()
-        .map_err(|error| format!("invalid JSON u64 field {key}: {error}"))
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn unit_json_string_value_accepts_pretty_json_spacing() {
+        let value = super::json_string_value(
+            r#"{"settlement_network": "solana:devnet"}"#,
+            "settlement_network",
+        )
+        .expect("pretty JSON string field should parse");
+        assert_eq!(value, "solana:devnet");
+    }
+
+    #[test]
+    fn unit_json_u64_value_accepts_pretty_json_spacing() {
+        let value = super::json_u64_value(
+            r#"{"payer_balance_before": 2494975000}"#,
+            "payer_balance_before",
+        )
+        .expect("pretty JSON u64 field should parse");
+        assert_eq!(value, 2_494_975_000);
+    }
 }

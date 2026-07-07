@@ -76,7 +76,10 @@ fn collect_override_devnet_settlement(
 
 fn collect_live_attempt(rpc_url: &str, run_dir: &Path) -> Result<DevnetSettlementAttempt, String> {
     match collect_live_devnet_settlement(rpc_url, run_dir) {
-        Ok(evidence) => Ok(pass(evidence)),
+        Ok(evidence) => {
+            write_live_success_log(run_dir, &evidence)?;
+            Ok(pass(evidence))
+        }
         Err(error) => {
             write_live_no_go_log(run_dir, error.as_str())?;
             Ok(no_go(classify_no_go_reason(error.as_str())))
@@ -120,6 +123,28 @@ fn write_live_no_go_log(run_dir: &Path, error: &str) -> Result<(), String> {
     write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
 }
 
+fn write_live_success_log(
+    run_dir: &Path,
+    evidence: &DevnetSettlementEvidence,
+) -> Result<(), String> {
+    let content = format!(
+        "devnet_settlement_status=PASS\nnetwork={}\nrpc_url={}\npayer_pubkey={}\nrecipient_pubkey={}\nlamports={}\nsettlement_tx_signature={}\nsettlement_commitment={}\npayer_balance_before={}\npayer_balance_after={}\nrecipient_balance_before={}\nrecipient_balance_after={}\npersisted_settlement_tx_signature={}\n",
+        evidence.network,
+        evidence.rpc_url,
+        evidence.payer_pubkey,
+        evidence.recipient_pubkey,
+        evidence.lamports,
+        evidence.settlement_tx_signature,
+        evidence.settlement_commitment,
+        evidence.payer_balance_before,
+        evidence.payer_balance_after,
+        evidence.recipient_balance_before,
+        evidence.recipient_balance_after,
+        evidence.persisted_settlement_tx_signature,
+    );
+    write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
+}
+
 fn write_proof_file(run_dir: &Path, name: &str, content: &str) -> Result<(), String> {
     std::fs::write(run_dir.join("proof").join(name), content).map_err(|error| {
         format!(
@@ -144,3 +169,7 @@ fn classify_no_go_reason(error: &str) -> &str {
     }
     "devnet_settlement_evidence_unavailable"
 }
+
+#[cfg(test)]
+#[path = "devnet_settlement_tests.rs"]
+mod tests;
