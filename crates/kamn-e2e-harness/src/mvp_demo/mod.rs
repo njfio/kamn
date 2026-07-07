@@ -1,5 +1,13 @@
 //! MVP evaluator demo report generation and verification.
 
+mod devnet_settlement;
+mod devnet_settlement_build;
+mod devnet_settlement_json;
+mod devnet_settlement_live;
+mod devnet_settlement_node;
+mod devnet_settlement_service;
+mod devnet_settlement_solana;
+mod devnet_settlement_state;
 mod local_artifacts;
 mod localhost_signed;
 mod report;

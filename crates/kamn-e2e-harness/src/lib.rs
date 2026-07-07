@@ -441,6 +441,7 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
             .unwrap_or_else(|| mvp_demo::DEFAULT_MVP_DEMO_OUTPUT_ROOT.to_owned()),
         devnet_mode: mvp_devnet_mode_from_env(),
         solana_rpc_url: mvp_solana_rpc_url_from_env(),
+        devnet_settlement_command: None,
         localhost_signed_demo_command: None,
         service_api_vertical_slice_command: None,
         service_api_websocket_command: None,

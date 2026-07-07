@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::devnet_settlement::{
+    collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
+};
 use super::local_artifacts::create_demo_artifacts;
 use super::localhost_signed::{run_localhost_signed_demo, LocalhostSignedDemoInput};
 use super::report::{escape_json, render_report_json, render_report_markdown, DemoReportInput};
@@ -16,6 +19,8 @@ pub struct MvpDemoCommandConfig {
     pub devnet_mode: String,
     /// Optional Solana RPC URL for devnet-backed proof attempts.
     pub solana_rpc_url: Option<String>,
+    /// Optional command override for tests; production uses the service API live Solana lane.
+    pub devnet_settlement_command: Option<Vec<String>>,
     /// Optional command override for tests; production uses the SDK localhost signed demo.
     pub localhost_signed_demo_command: Option<Vec<String>>,
     /// Optional command override for tests; production uses the service API vertical slice test.
@@ -40,7 +45,8 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     create_demo_artifacts(&run_dir)?;
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
-    let input = report_input(config, output_root, run_id.as_str());
+    let devnet_settlement = create_devnet_settlement_artifact(config, &run_dir)?;
+    let input = report_input(config, output_root, run_id.as_str(), &devnet_settlement);
     let report_json = render_report_json(&input);
     verify_mvp_demo_report_json(report_json.as_str())?;
     write_reports(output_root, run_id.as_str(), report_json.as_str(), &input)?;
@@ -82,13 +88,45 @@ fn report_input<'a>(
     config: &'a MvpDemoCommandConfig,
     output_root: &'a Path,
     run_id: &'a str,
+    settlement: &'a DevnetSettlementAttempt,
 ) -> DemoReportInput<'a> {
     DemoReportInput {
         run_id,
         devnet_mode: config.devnet_mode.as_str(),
         solana_rpc_url: config.solana_rpc_url.as_deref(),
         output_root,
+        devnet_settlement: settlement.evidence.as_ref(),
+        devnet_no_go_reason: settlement.no_go_reason.as_deref(),
     }
+}
+
+fn create_devnet_settlement_artifact(
+    config: &MvpDemoCommandConfig,
+    run_dir: &Path,
+) -> Result<DevnetSettlementAttempt, String> {
+    if config.devnet_mode != "required" {
+        write_devnet_settlement_skipped_log(run_dir, "devnet_mode_optional")?;
+        return Ok(DevnetSettlementAttempt::default());
+    }
+    collect_devnet_settlement_evidence(&DevnetSettlementInput {
+        command: config.devnet_settlement_command.as_deref(),
+        solana_rpc_url: config.solana_rpc_url.as_deref(),
+        run_dir,
+    })
+}
+
+fn write_devnet_settlement_skipped_log(run_dir: &Path, reason: &str) -> Result<(), String> {
+    let path = run_dir.join("proof/devnet-settlement-output.txt");
+    std::fs::write(
+        &path,
+        format!("devnet_settlement_status=SKIP reason={reason}\n"),
+    )
+    .map_err(|error| {
+        format!(
+            "failed to write devnet settlement skip log {}: {error}",
+            path.display()
+        )
+    })
 }
 
 fn create_localhost_signed_artifact(

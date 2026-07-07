@@ -62,7 +62,7 @@ fn validate_artifact_markers(report_json: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn required_artifact_markers() -> [(&'static str, &'static str); 4] {
+fn required_artifact_markers() -> [(&'static str, &'static str); 5] {
     [
         (
             "\"localhost_signed_demo_artifact\":\"",
@@ -79,6 +79,10 @@ fn required_artifact_markers() -> [(&'static str, &'static str); 4] {
         (
             "\"service_api_websocket_output\":\"",
             "service API websocket output",
+        ),
+        (
+            "\"devnet_settlement_output\":\"",
+            "devnet settlement output",
         ),
     ]
 }
@@ -160,7 +164,7 @@ fn mentions_value_movement(raw: &str) -> bool {
     VALUE_TERMS.iter().any(|term| lowercase.contains(term))
 }
 
-fn devnet_success_markers() -> [&'static str; 11] {
+fn devnet_success_markers() -> [&'static str; 13] {
     [
         "\"network\":\"solana:devnet\"",
         "\"rpc_url\":\"",
@@ -169,6 +173,8 @@ fn devnet_success_markers() -> [&'static str; 11] {
         "\"lamports\":",
         "\"settlement_tx_signature\":\"",
         "\"settlement_commitment\":\"",
+        "\"payer_balance_before\":",
+        "\"payer_balance_after\":",
         "\"recipient_balance_before\":",
         "\"recipient_balance_after\":",
         "\"persisted_settlement_tx_signature\":\"",

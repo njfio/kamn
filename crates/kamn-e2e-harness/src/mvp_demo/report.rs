@@ -1,5 +1,8 @@
 use std::path::Path;
 
+use super::devnet_settlement::{
+    devnet_no_go_reason, devnet_settlement_claim_json, DevnetSettlementEvidence,
+};
 use super::report_artifacts::{artifact_path, artifacts_json};
 
 /// MVP demo proof report schema marker.
@@ -22,10 +25,12 @@ pub(crate) struct DemoReportInput<'a> {
     pub(crate) devnet_mode: &'a str,
     pub(crate) solana_rpc_url: Option<&'a str>,
     pub(crate) output_root: &'a Path,
+    pub(crate) devnet_settlement: Option<&'a DevnetSettlementEvidence>,
+    pub(crate) devnet_no_go_reason: Option<&'a str>,
 }
 
 pub(crate) fn render_report_json(input: &DemoReportInput<'_>) -> String {
-    let status = report_status(input.devnet_mode);
+    let status = report_status(input);
     format!(
         "{{\"schema_version\":\"{}\",\"run_id\":\"{}\",\"status\":\"{}\",\"devnet_mode\":\"{}\",\"artifacts\":{},\"claim_matrix\":[{}],\"no_go\":{}}}",
         MVP_DEMO_REPORT_SCHEMA_VERSION,
@@ -48,7 +53,7 @@ pub(crate) fn render_report_markdown(input: &DemoReportInput<'_>) -> String {
 }
 
 fn markdown_header(input: &DemoReportInput<'_>) -> String {
-    let status = report_status(input.devnet_mode);
+    let status = report_status(input);
     format!(
         "# KAMN MVP Demo Proof Report\n\n- Run ID: `{}`\n- Status: `{}`\n- Devnet mode: `{}`\n- Report JSON: `{}`\n",
         input.run_id,
@@ -60,7 +65,7 @@ fn markdown_header(input: &DemoReportInput<'_>) -> String {
 
 fn markdown_artifacts(input: &DemoReportInput<'_>) -> String {
     format!(
-        "## Proof Artifacts\n\n- SDK localhost signed artifact: `{}`\n- SDK localhost signed output: `{}`\n- Service API vertical slice output: `{}`\n- Service API websocket output: `{}`\n- Audit export: `{}`\n",
+        "## Proof Artifacts\n\n- SDK localhost signed artifact: `{}`\n- SDK localhost signed output: `{}`\n- Service API vertical slice output: `{}`\n- Service API websocket output: `{}`\n- Devnet settlement output: `{}`\n- Audit export: `{}`\n",
         artifact_path(input, &format!("{}/proof/localhost-signed-demo.json", input.run_id)),
         artifact_path(
             input,
@@ -74,6 +79,7 @@ fn markdown_artifacts(input: &DemoReportInput<'_>) -> String {
             ),
         ),
         artifact_path(input, &format!("{}/proof/service-api-websocket-output.txt", input.run_id)),
+        artifact_path(input, &format!("{}/proof/devnet-settlement-output.txt", input.run_id)),
         artifact_path(input, &format!("{}/proof/audit-export.json", input.run_id))
     )
 }
@@ -82,8 +88,8 @@ fn markdown_claim_boundaries() -> &'static str {
     "## Claim Boundaries\n\n- Local runtime, auth, message/task, state, relay, websocket, and audit proof are local-only MVP claims.\n- Settlement or asset movement is not claimed unless the JSON report carries `devnet-backed` evidence.\n- Devnet-required runs without configured settlement evidence are explicit `NO-GO`, not local-only success.\n- Devnet tokens are Solana devnet only and are not real economic value.\n- Production readiness, mainnet, consensus, broad bridge finality, and arbitrary partition tolerance remain roadmap.\n"
 }
 
-fn report_status(devnet_mode: &str) -> &'static str {
-    if devnet_mode == "required" {
+fn report_status(input: &DemoReportInput<'_>) -> &'static str {
+    if input.devnet_mode == "required" && input.devnet_settlement.is_none() {
         "NO-GO"
     } else {
         "GO"
@@ -92,10 +98,10 @@ fn report_status(devnet_mode: &str) -> &'static str {
 
 fn claim_matrix_json(input: &DemoReportInput<'_>) -> String {
     let mut claims = local_claims();
-    claims.push(roadmap_claim());
     if input.devnet_mode == "required" {
-        claims.push(devnet_no_go_claim(input.solana_rpc_url));
+        claims.push(devnet_required_claim(input));
     }
+    claims.push(roadmap_claim());
     claims.join(",")
 }
 
@@ -168,20 +174,10 @@ fn roadmap_claim() -> String {
     )
 }
 
-fn devnet_no_go_claim(solana_rpc_url: Option<&str>) -> String {
-    let reason = devnet_no_go_reason(solana_rpc_url);
-    format!(
-        "{{\"id\":\"devnet_settlement_no_go\",\"label\":\"{}\",\"required\":true,\"status\":\"NO-GO\",\"summary\":\"Solana devnet escrow settlement evidence unavailable\",\"network\":\"solana:devnet\",\"rpc_url\":\"{}\",\"no_go_reason\":\"{}\"}}",
-        CLAIM_LABEL_DEVNET_BACKED,
-        escape_json(solana_rpc_url.unwrap_or("")),
-        reason
-    )
-}
-
-fn devnet_no_go_reason(solana_rpc_url: Option<&str>) -> &'static str {
-    match solana_rpc_url {
-        Some(value) if !value.trim().is_empty() => "devnet_keypair_not_configured",
-        _ => "devnet_rpc_url_missing",
+fn devnet_required_claim(input: &DemoReportInput<'_>) -> String {
+    match input.devnet_settlement {
+        Some(evidence) => devnet_settlement_claim_json(evidence),
+        None => devnet_no_go_claim_with_reason(input),
     }
 }
 
@@ -189,10 +185,29 @@ fn no_go_json(input: &DemoReportInput<'_>) -> String {
     if input.devnet_mode != "required" {
         return "{\"active\":false,\"reason\":\"\"}".to_owned();
     }
+    if input.devnet_settlement.is_some() {
+        return "{\"active\":false,\"reason\":\"\"}".to_owned();
+    }
     format!(
         "{{\"active\":true,\"reason\":\"{}\"}}",
-        devnet_no_go_reason(input.solana_rpc_url)
+        effective_no_go_reason(input).as_str()
     )
+}
+
+fn devnet_no_go_claim_with_reason(input: &DemoReportInput<'_>) -> String {
+    format!(
+        "{{\"id\":\"devnet_settlement_no_go\",\"label\":\"{}\",\"required\":true,\"status\":\"NO-GO\",\"summary\":\"Solana devnet escrow settlement evidence unavailable\",\"network\":\"solana:devnet\",\"rpc_url\":\"{}\",\"no_go_reason\":\"{}\"}}",
+        CLAIM_LABEL_DEVNET_BACKED,
+        escape_json(input.solana_rpc_url.unwrap_or("")),
+        effective_no_go_reason(input).as_str()
+    )
+}
+
+fn effective_no_go_reason(input: &DemoReportInput<'_>) -> String {
+    input
+        .devnet_no_go_reason
+        .unwrap_or_else(|| devnet_no_go_reason(input.solana_rpc_url))
+        .to_owned()
 }
 
 pub(crate) fn escape_json(value: &str) -> String {
