@@ -6,9 +6,9 @@ This repository is the Rust implementation and validation workspace for that sys
 
 The current MVP is not a production network. It is a locally runnable, evaluator-friendly demo that proves one coherent product story: local authenticated agent flow plus optional Solana devnet-backed settlement evidence when funded devnet keypairs are configured.
 
-## What KAMN Proves Today
+## What This Repository Contains
 
-The canonical MVP demo can prove:
+The repository currently contains proof surfaces for:
 
 - A local KAMN service API/runtime starts and produces proof artifacts.
 - Alice/Bob agent identities are authenticated in local proof output.
@@ -20,7 +20,7 @@ The canonical MVP demo can prove:
 
 The demo does not prove production readiness, mainnet settlement, generalized exchange, broad bridge finality, arbitrary partition tolerance, or real economic value. Solana devnet tokens are developer-test tokens.
 
-## MVP Demo Quickstart
+## Quickstart
 
 Prerequisites:
 
@@ -86,7 +86,7 @@ Required MVP success claims cannot be `dry-run` or `placeholder`.
 
 Any claim involving exchange, escrow, settlement, transfer, lamports, asset movement, or value movement must be `devnet-backed`. KAMN must not turn fake in-memory movement into a settlement success claim.
 
-## Repository Map
+## Architecture Map
 
 - `crates/kamn-core`: protocol/domain logic and contract suites
 - `crates/kamn-node`: node runtime entrypoint and service API
@@ -132,7 +132,7 @@ cargo check -p kamn-core --features live-https
 cargo check -p kamn-core --no-default-features
 ```
 
-## For AI Agents And Maintainers
+## Workflow
 
 Start with `AGENTS.md`. The repository process is issue-first, spec-before-code, TDD, integration-wired, and proof-before-completion.
 
@@ -154,7 +154,7 @@ Agent guardrails:
 - Prefer consolidating existing working surfaces over adding architecture.
 - Keep root README human-first; put exhaustive operational detail in linked docs.
 
-## Architecture And Deep References
+## Key Links
 
 Start here for system navigation:
 

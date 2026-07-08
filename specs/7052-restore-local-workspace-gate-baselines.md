@@ -12,11 +12,14 @@ semantics.
   - `fixtures/ci/test_file_size_policy_baseline.env`.
   - `crates/kamn-core/tests/governance_feature_commit_ratio_base_compliance/current_head_status_contract_tests.rs`.
   - `scripts/ci/check_governance_feature_commit_ratio.py`.
+  - `README.md`.
 - Outputs:
   - Test file-size inventory baseline matches the current tracked test-file
     inventory.
   - Current-head governance ratio contract matches the real compliant 50-commit
     checker output.
+  - README front-door contract headers match the migrated human-friendly README
+    content.
   - The #7051 branch remains governance-ratio compliant.
 
 ## Boundaries/Non-goals
@@ -33,6 +36,8 @@ semantics.
   output.
 - The #7051 branch remains above the 0.20 governance-ratio cap.
 - A history repair loses the #7051 issue/spec/TDD evidence.
+- README content remains useful but drifts from the contracted onboarding
+  section names.
 
 ## Acceptance Criteria
 - [ ] Existing red gate evidence reproduces the test file inventory drift.
@@ -41,6 +46,8 @@ semantics.
 - [ ] `test_file_total` equals the tracked test-file inventory.
 - [ ] The current-head governance contract expects 10 governance, 40 feature,
       ratio 0.2, and feature ratio 0.8 for the current compliant window.
+- [ ] README exposes the contracted onboarding headers while staying within the
+      200-line cap.
 - [ ] The governance-ratio checker reports `status=ok` at the repaired #7051
       branch head.
 - [ ] Targeted `kamn-core` gate tests pass.
@@ -49,6 +56,7 @@ semantics.
 - `specs/7052-restore-local-workspace-gate-baselines.md`
 - `fixtures/ci/test_file_size_policy_baseline.env`
 - `crates/kamn-core/tests/governance_feature_commit_ratio_base_compliance/current_head_status_contract_tests.rs`
+- `README.md`
 
 ## Error Semantics
 - Baseline drift remains a hard test failure.
@@ -61,7 +69,8 @@ semantics.
   - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-core --test test_file_size_policy spec_c04_oversized_test_counts_are_within_budget -- --exact --nocapture`
   - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance current_head_status_contract_tests::current_branch_head_restores_ratio_compliance -- --exact --nocapture`
 - Green:
-  - Refresh only the baseline fixture and exact current-head expectations.
+  - Refresh only the baseline fixture, exact current-head expectations, and
+    README section names.
 - Verify:
   - Rerun both targeted red commands.
   - Run the governance-ratio checker against the repaired branch head.
