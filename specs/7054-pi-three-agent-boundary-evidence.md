@@ -54,31 +54,35 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Pi-generated evidence records `three_agent_boundary.claim_status` from the
+- [x] Pi-generated evidence records `three_agent_boundary.claim_status` from the
   report's `three_agent_escrow_verification` claim.
-- [ ] Pi-generated evidence records `three_agent_boundary.claim_label` from the
+- [x] Pi-generated evidence records `three_agent_boundary.claim_label` from the
   report's `three_agent_escrow_verification` claim.
-- [ ] Pi-generated evidence records Agent A and Agent B private field counts,
+- [x] Pi-generated evidence records Agent A and Agent B private field counts,
   verifier private field count, private payload redaction, and verifier private
   digest visibility.
-- [ ] `verify-mvp-demo` rejects agent-harness evidence that omits
+- [x] `verify-mvp-demo` rejects agent-harness evidence that omits
   `three_agent_boundary` when `mcp_agent_harness_verification` is present.
-- [ ] `verify-mvp-demo` rejects evidence where `claim_status` or `claim_label`
+- [x] `verify-mvp-demo` rejects evidence where `claim_status` or `claim_label`
   conflicts with the report's three-agent claim.
-- [ ] `verify-mvp-demo` rejects evidence where participant private counts are
+- [x] `verify-mvp-demo` rejects evidence where participant private counts are
   zero, verifier private count is nonzero, private payload redaction is false,
   or verifier private digest visibility is true.
-- [ ] Existing valid `mcp-tools` and `pi-extension-tools` evidence remains
+- [x] Existing valid `mcp-tools` and `pi-extension-tools` evidence remains
   accepted once it includes the three-agent boundary block.
-- [ ] The runbook explains the Pi proof boundary and still states this is not a
+- [x] The runbook explains the Pi proof boundary and still states this is not a
   generic Pi MCP protocol proof.
 
 ## Files to Touch
 
 - `.pi/extensions/kamn-mvp/index.ts`
 - `crates/kamn-e2e-harness/src/mvp_demo/agent_harness.rs`
+- `crates/kamn-e2e-harness/src/mvp_demo/agent_harness_three_agent.rs`
 - `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/artifact.rs`
 - `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/support.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/three_agent.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/three_agent_boundary_contract.rs`
 - `docs/validation/mvp-evaluator-demo.md`
 
 ## Error Semantics
@@ -133,6 +137,35 @@ Integration:
 - Pi extension smoke or explicit blocker evidence if local Pi auth/runtime is
   unavailable.
 
+Completed:
+- Red test evidence captured:
+  `mvp_demo_agent_harness_claim_contract` failed three tests because missing,
+  mismatched, and invalid private-boundary evidence was still accepted.
+- Targeted contracts passed:
+  `mvp_demo_agent_harness_claim_contract`,
+  `mvp_demo_three_agent_claim_contract`, and
+  `mvp_evaluator_demo_runbook_contract`.
+- `cargo fmt --check` passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed with `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0`.
+- `make check` passed with the same cargo environment.
+- Local `make demo-mvp` produced a GO local-only report and
+  `verify-mvp-demo` passed.
+- Pi `openai-codex/gpt-5.5` local smoke with project-local extension tools
+  passed, wrote `/tmp/kamn-pi-mcp-agent-harness-evidence.json`, and preserved
+  `three_agent_boundary.claim_status:"NOT_PRESENT"`.
+- Devnet-required `make demo-mvp` passed with Solana devnet finalized
+  signature
+  `3tLwasnDm3ei6KBLiCg4XSmpjmWmR9kTmm4h4wNWiGmEFBEmKQduPt1Er4F3JXqKwXJ3VBN1TSNQLXW9Mm4o2ANU`
+  and `verify-mvp-demo` passed.
+- Pi `openai-codex/gpt-5.5` devnet-report extraction wrote
+  `/tmp/kamn-pi-three-agent-boundary-evidence.json` with
+  `claim_status:"PASS"`, `claim_label:"devnet-backed"`,
+  Agent A/B private field counts of `3`, verifier private field count `0`,
+  `private_payload_redacted:true`, and
+  `verifier_private_view_digest_present:false`.
+
 ## Deviations
 
-- None yet.
+- None.
