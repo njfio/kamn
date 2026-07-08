@@ -14,6 +14,7 @@ mod report;
 mod report_artifacts;
 mod runner;
 mod service_api_proof;
+mod three_agent_claim;
 mod verify;
 mod verify_support;
 

@@ -4,6 +4,7 @@ use super::devnet_settlement::{
     devnet_no_go_reason, devnet_settlement_claim_json, DevnetSettlementEvidence,
 };
 use super::report_artifacts::{artifact_path, artifacts_json};
+use super::three_agent_claim::three_agent_escrow_claim_json;
 
 /// MVP demo proof report schema marker.
 pub const MVP_DEMO_REPORT_SCHEMA_VERSION: &str = "kamn.mvp.demo.proof-report.v1";
@@ -99,7 +100,7 @@ fn report_status(input: &DemoReportInput<'_>) -> &'static str {
 fn claim_matrix_json(input: &DemoReportInput<'_>) -> String {
     let mut claims = local_claims();
     if input.devnet_mode == "required" {
-        claims.push(devnet_required_claim(input));
+        claims.extend(devnet_required_claims(input));
     }
     claims.push(roadmap_claim());
     claims.join(",")
@@ -174,10 +175,13 @@ fn roadmap_claim() -> String {
     )
 }
 
-fn devnet_required_claim(input: &DemoReportInput<'_>) -> String {
+fn devnet_required_claims(input: &DemoReportInput<'_>) -> Vec<String> {
     match input.devnet_settlement {
-        Some(evidence) => devnet_settlement_claim_json(evidence),
-        None => devnet_no_go_claim_with_reason(input),
+        Some(evidence) => vec![
+            devnet_settlement_claim_json(evidence),
+            three_agent_escrow_claim_json(input.run_id, evidence),
+        ],
+        None => vec![devnet_no_go_claim_with_reason(input)],
     }
 }
 
