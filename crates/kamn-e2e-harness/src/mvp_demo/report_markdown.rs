@@ -1,13 +1,18 @@
+use super::agent_harness::agent_harness_execution_surface;
 use super::report::{report_status, DemoReportInput};
 use super::report_artifacts::artifact_path;
 
-pub(crate) fn render_report_markdown(input: &DemoReportInput<'_>) -> String {
-    [
+pub(crate) fn render_report_markdown(input: &DemoReportInput<'_>) -> Result<String, String> {
+    Ok([
         markdown_header(input),
         markdown_artifacts(input),
+        markdown_agent_harness(input)?,
         markdown_claim_boundaries().to_owned(),
     ]
-    .join("\n")
+    .into_iter()
+    .filter(|section| !section.is_empty())
+    .collect::<Vec<_>>()
+    .join("\n"))
 }
 
 fn markdown_header(input: &DemoReportInput<'_>) -> String {
@@ -32,6 +37,17 @@ fn markdown_artifacts(input: &DemoReportInput<'_>) -> String {
         artifact_path(input, &format!("{run_id}/proof/devnet-settlement-output.txt")),
         artifact_path(input, &format!("{run_id}/proof/audit-export.json"))
     )
+}
+
+fn markdown_agent_harness(input: &DemoReportInput<'_>) -> Result<String, String> {
+    let Some(path) = input.agent_harness_evidence_path else {
+        return Ok(String::new());
+    };
+    let execution_surface = agent_harness_execution_surface(path)?;
+    Ok(format!(
+        "## Agent Harness Evidence\n\n- Claim: `mcp_agent_harness_verification`\n- Agent harness evidence: `{}`\n- Execution surface: `{}`\n",
+        path, execution_surface
+    ))
 }
 
 fn markdown_claim_boundaries() -> &'static str {
