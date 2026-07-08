@@ -12,9 +12,12 @@ mod local_artifacts;
 mod localhost_signed;
 mod report;
 mod report_artifacts;
+mod report_markdown;
+mod report_writer;
 mod runner;
 mod service_api_proof;
 mod three_agent_claim;
+mod three_agent_verify;
 mod verify;
 mod verify_support;
 
