@@ -1,5 +1,7 @@
 #[path = "mvp_demo_agent_harness_claim_contract/support.rs"]
 mod support;
+#[path = "mvp_demo_agent_harness_claim_contract/three_agent_boundary_contract.rs"]
+mod three_agent_boundary_contract;
 
 use kamn_e2e_harness::{execute_mvp_demo_contract, execute_verify_mvp_demo_contract};
 use std::path::Path;
@@ -119,6 +121,7 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "kamn_inspect_mvp_report_boundaries",
         "kamn_write_agent_harness_evidence",
         "kamn_run_demo_mvp_with_agent_evidence",
+        "three_agent_boundary",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }

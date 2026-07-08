@@ -2,6 +2,11 @@ use std::path::{Path, PathBuf};
 
 use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 
+mod artifact;
+mod three_agent;
+
+pub(crate) use artifact::*;
+
 pub(crate) fn temp_root(stem: &str) -> PathBuf {
     let millis = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -66,40 +71,15 @@ pub(crate) fn report_with_agent_claim(root: &Path, artifact: Option<&Path>) -> S
     )
 }
 
-pub(crate) fn agent_artifact(root: &Path, private_visible: bool, settlement_label: &str) -> String {
-    agent_artifact_with_surface(root, private_visible, settlement_label, "mcp-tools")
-}
-
-pub(crate) fn agent_artifact_with_surface(
-    root: &Path,
-    private_visible: bool,
-    settlement_label: &str,
-    execution_surface: &str,
-) -> String {
-    agent_artifact_for_report_with_surface(
-        root.join("proof/report.json")
-            .display()
-            .to_string()
-            .as_str(),
-        private_visible,
-        settlement_label,
-        execution_surface,
-    )
-}
-
-pub(crate) fn agent_latest_artifact(root: &Path) -> String {
-    agent_latest_artifact_with_surface(root, "mcp-tools")
-}
-
-pub(crate) fn agent_latest_artifact_with_surface(root: &Path, execution_surface: &str) -> String {
-    agent_artifact_for_report_with_surface(
-        root.join("latest/proof/report.json")
-            .display()
-            .to_string()
-            .as_str(),
-        false,
-        "devnet-backed",
-        execution_surface,
+pub(crate) fn report_with_three_agent_claim(root: &Path, artifact: &Path) -> String {
+    format!(
+        r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"run-7047","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
+        artifacts_json(root, Some(artifact)),
+        local_claims(),
+        three_agent::devnet_settlement_claim(),
+        three_agent::three_agent_claim(),
+        agent_claim(),
+        roadmap_claim()
     )
 }
 
@@ -161,16 +141,4 @@ fn agent_claim() -> &'static str {
 
 fn roadmap_claim() -> &'static str {
     r#"{"id":"production_readiness","label":"roadmap","required":false,"status":"NOT_CLAIMED","summary":"production readiness is not claimed"}"#
-}
-
-fn agent_artifact_for_report_with_surface(
-    report_path: &str,
-    private_visible: bool,
-    settlement_label: &str,
-    execution_surface: &str,
-) -> String {
-    format!(
-        r#"{{"schema_version":"kamn.mvp.agent-harness-evidence.v1","harness":"mcp-agent","execution_surface":"{}","report_path":"{}","verifier_status":"PASS","participant_agents":["agent_a","agent_b","agent_c_verifier"],"tool_markers":["register","create_task","fund_escrow","release_escrow","verify_proof"],"claim_boundaries":{{"settlement_claim_label":"{}","dry_run_counted_as_success":false,"placeholder_counted_as_success":false,"verifier_private_view_visible":{}}}}}"#,
-        execution_surface, report_path, settlement_label, private_visible
-    )
 }

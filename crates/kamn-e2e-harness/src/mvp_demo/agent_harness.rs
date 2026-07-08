@@ -1,5 +1,8 @@
 use super::report::CLAIM_LABEL_LOCAL_ONLY;
-use super::verify_support::{extract_optional_string, require_marker, ClaimView};
+use super::{
+    agent_harness_three_agent::validate_agent_three_agent_boundary,
+    verify_support::{extract_optional_string, parse_claims, require_marker, ClaimView},
+};
 
 const AGENT_HARNESS_CLAIM_ID: &str = "mcp_agent_harness_verification";
 const AGENT_HARNESS_ARTIFACT_FIELD: &str = "agent_harness_evidence";
@@ -34,7 +37,7 @@ pub(crate) fn validate_agent_harness_evidence_file(
             artifact_path
         )
     })?;
-    validate_agent_harness_evidence(artifact.as_str(), report_path)
+    validate_agent_harness_evidence(artifact.as_str(), report_path, report_json)
 }
 
 pub(crate) fn agent_harness_execution_surface(path: &str) -> Result<String, String> {
@@ -60,12 +63,17 @@ fn validate_agent_harness_claim(claim: &ClaimView<'_>) -> Result<(), String> {
     require_marker(claim.raw, "\"harness\":\"mcp-agent\"", "agent harness kind")
 }
 
-fn validate_agent_harness_evidence(artifact: &str, report_path: &str) -> Result<(), String> {
+fn validate_agent_harness_evidence(
+    artifact: &str,
+    report_path: &str,
+    report_json: &str,
+) -> Result<(), String> {
     validate_evidence_markers(artifact)?;
     validate_execution_surface(artifact)?;
     validate_report_path(artifact, report_path)?;
     validate_private_boundary(artifact)?;
-    validate_settlement_boundary(artifact)
+    validate_settlement_boundary(artifact)?;
+    validate_agent_three_agent_boundary(artifact, parse_claims(report_json)?.as_slice())
 }
 
 fn validate_evidence_markers(artifact: &str) -> Result<(), String> {

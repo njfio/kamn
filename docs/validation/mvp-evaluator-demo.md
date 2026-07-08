@@ -79,8 +79,13 @@ pi --provider openai-codex \
 When the Pi tool path writes evidence, the proof artifact records
 `execution_surface:"pi-extension-tools"` and the final report may include
 `mcp_agent_harness_verification`. This proves that Pi extension tools can drive
-the KAMN MVP proof path. It does not prove generic Pi MCP protocol support, and
-it does not upgrade local-only or dry-run settlement into MVP success.
+the KAMN MVP proof path. The evidence also records a `three_agent_boundary`
+summary derived from the verified report: local-only reports are marked
+`NOT_PRESENT`, while reports with `three_agent_escrow_verification` must preserve
+the report's claim status, label, participant private-field counts, verifier
+zero-private-field count, redaction marker, and absence of a verifier private
+digest. This does not prove generic Pi MCP protocol support, and it does not
+upgrade local-only or dry-run settlement into MVP success.
 
 ## Devnet-Required Demo
 Run with the MVP and service API Solana settlement environment configured:
