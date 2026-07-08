@@ -103,7 +103,9 @@ fn validate_execution_surface(artifact: &str) -> Result<(), String> {
     if surface == MCP_TOOL_SURFACE || surface == PI_EXTENSION_TOOL_SURFACE {
         return Ok(());
     }
-    Err(format!("unsupported agent harness execution_surface: {surface}"))
+    Err(format!(
+        "unsupported agent harness execution_surface: {surface}"
+    ))
 }
 
 fn validate_report_path(artifact: &str, report_path: &str) -> Result<(), String> {

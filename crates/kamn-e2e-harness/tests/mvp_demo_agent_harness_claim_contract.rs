@@ -2,8 +2,8 @@
 mod support;
 
 use kamn_e2e_harness::{execute_mvp_demo_contract, execute_verify_mvp_demo_contract};
-use support::*;
 use std::path::Path;
+use support::*;
 
 #[test]
 fn spec_c01_direct_report_without_agent_harness_still_passes() {
