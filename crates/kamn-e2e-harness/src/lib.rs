@@ -426,11 +426,19 @@ where
 
 fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
     let mut output_root = None;
+    let mut agent_harness_evidence_path = None;
     let mut index = 1;
     while index < args.len() {
         let (parsed_output_root, advanced) = parse_flag_value(args, index, "--output-root")?;
         if let Some(value) = parsed_output_root {
             output_root = Some(value);
+            index = advanced + 1;
+            continue;
+        }
+        let (parsed_agent_harness, advanced) =
+            parse_flag_value(args, index, "--agent-harness-evidence")?;
+        if let Some(value) = parsed_agent_harness {
+            agent_harness_evidence_path = Some(value);
             index = advanced + 1;
             continue;
         }
@@ -445,6 +453,8 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
         localhost_signed_demo_command: None,
         service_api_vertical_slice_command: None,
         service_api_websocket_command: None,
+        agent_harness_evidence_path: agent_harness_evidence_path
+            .or_else(mvp_agent_harness_evidence_path_from_env),
     }))
 }
 
@@ -487,6 +497,12 @@ fn default_mvp_devnet_mode() -> String {
 
 fn mvp_solana_rpc_url_from_env() -> Option<String> {
     std::env::var("KAMN_MVP_SOLANA_RPC_URL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn mvp_agent_harness_evidence_path_from_env() -> Option<String> {
+    std::env::var("KAMN_MVP_AGENT_HARNESS_EVIDENCE")
         .ok()
         .filter(|value| !value.trim().is_empty())
 }

@@ -4,9 +4,13 @@ use super::verify_support::{extract_optional_string, require_marker, ClaimView};
 const AGENT_HARNESS_CLAIM_ID: &str = "mcp_agent_harness_verification";
 const AGENT_HARNESS_ARTIFACT_FIELD: &str = "agent_harness_evidence";
 
-pub(crate) fn validate_agent_harness_claim_shape(
-    claims: &[ClaimView<'_>],
-) -> Result<(), String> {
+pub(crate) fn agent_harness_claim_json() -> String {
+    format!(
+        "{{\"id\":\"{AGENT_HARNESS_CLAIM_ID}\",\"label\":\"{CLAIM_LABEL_LOCAL_ONLY}\",\"required\":false,\"status\":\"PASS\",\"summary\":\"MCP agent harness verified report boundaries\",\"harness\":\"mcp-agent\"}}"
+    )
+}
+
+pub(crate) fn validate_agent_harness_claim_shape(claims: &[ClaimView<'_>]) -> Result<(), String> {
     if let Some(claim) = agent_harness_claim(claims) {
         validate_agent_harness_claim(claim)?;
     }
@@ -32,7 +36,9 @@ pub(crate) fn validate_agent_harness_evidence_file(
 }
 
 fn agent_harness_claim<'a>(claims: &'a [ClaimView<'a>]) -> Option<&'a ClaimView<'a>> {
-    claims.iter().find(|claim| claim.id == AGENT_HARNESS_CLAIM_ID)
+    claims
+        .iter()
+        .find(|claim| claim.id == AGENT_HARNESS_CLAIM_ID)
 }
 
 fn validate_agent_harness_claim(claim: &ClaimView<'_>) -> Result<(), String> {
@@ -67,7 +73,10 @@ fn required_evidence_markers() -> [(&'static str, &'static str); 12] {
         ),
         ("\"harness\":\"mcp-agent\"", "agent harness kind"),
         ("\"execution_surface\":\"mcp-tools\"", "MCP tool surface"),
-        ("\"verifier_status\":\"PASS\"", "agent harness verifier status"),
+        (
+            "\"verifier_status\":\"PASS\"",
+            "agent harness verifier status",
+        ),
         ("\"agent_a\"", "agent A role"),
         ("\"agent_b\"", "agent B role"),
         ("\"agent_c_verifier\"", "agent C verifier role"),

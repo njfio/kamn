@@ -19,6 +19,7 @@ fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
         localhost_signed_demo_command: None,
         service_api_vertical_slice_command: None,
         service_api_websocket_command: None,
+        agent_harness_evidence_path: None,
     });
     assert_eq!(parsed, expected);
 }
@@ -57,6 +58,7 @@ fn spec_c04_demo_mvp_creates_run_directory_and_latest_report_paths() {
         service_api_websocket_command: Some(stub_service_api_command(
             "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
         )),
+        agent_harness_evidence_path: None,
     };
     execute_mvp_demo_contract(&config).expect("demo-mvp should generate local proof artifacts");
     assert!(temp.join("latest/proof/report.json").is_file());
@@ -83,6 +85,7 @@ fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
         service_api_websocket_command: Some(stub_service_api_command(
             "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
         )),
+        agent_harness_evidence_path: None,
     };
     execute_mvp_demo_contract(&demo_config).expect("demo should generate report");
     let verify_config = VerifyMvpDemoCommandConfig {
@@ -109,6 +112,7 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
         service_api_websocket_command: Some(stub_service_api_command(
             "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
         )),
+        agent_harness_evidence_path: None,
     };
     let report = execute_mvp_demo_contract(&config)
         .expect("devnet-required demo should accept real settlement evidence");
