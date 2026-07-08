@@ -178,8 +178,10 @@ Result: run id `run-30651-1783468978384`, status `GO`, devnet mode
 
 - `cargo fmt --check`: `PASS`.
 - `cargo test -p kamn-e2e-harness --test mvp_evaluator_rehearsal_docs_contract -- --nocapture`: `PASS`.
-- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: blocked locally. Two `kamn-core` clippy-driver processes repeatedly wedged with no diagnostics or CPU progress.
-- `make check`: blocked for the same strict clippy wedge; it was interrupted rather than weakened.
+- Targeted MVP contracts with `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0`: `PASS`.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` with the same target-dir env: `PASS`.
+- `make check` with the same target-dir env: `PASS`.
+- The default main target cache produced repeated idle `kamn-core` clippy-driver stalls; no gate was weakened.
 
 ## Remaining Risks
 
