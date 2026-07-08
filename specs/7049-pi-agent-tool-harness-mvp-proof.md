@@ -49,24 +49,24 @@ report without relying on an ad hoc bash-only prompt.
 
 ## Acceptance Criteria
 
-- [ ] A project-local Pi extension registers named KAMN MVP proof tools for
+- [x] A project-local Pi extension registers named KAMN MVP proof tools for
   report verification, claim-boundary inspection, evidence artifact writing, and
   local demo execution with an evidence artifact.
-- [ ] The Pi-generated artifact uses schema
+- [x] The Pi-generated artifact uses schema
   `kamn.mvp.agent-harness-evidence.v1`, participant markers for
   `agent_a`, `agent_b`, `agent_c_verifier`, and tool markers for `register`,
   `create_task`, `fund_escrow`, `release_escrow`, and `verify_proof`.
-- [ ] The artifact records `execution_surface:"pi-extension-tools"` or an
+- [x] The artifact records `execution_surface:"pi-extension-tools"` or an
   equally explicit Pi-tool marker, while the final report remains honest about
   what is local-only and what is devnet-backed.
-- [ ] `verify-mvp-demo` rejects missing, malformed, private-leaking, local-only
+- [x] `verify-mvp-demo` rejects missing, malformed, private-leaking, local-only
   settlement, or placeholder/dry-run-counting harness evidence.
-- [ ] The human-readable report includes the optional agent-harness artifact and
+- [x] The human-readable report includes the optional agent-harness artifact and
   claim when present.
-- [ ] A Pi non-interactive smoke using `openai-codex/gpt-5.5` loads the extension
+- [x] A Pi non-interactive smoke using `openai-codex/gpt-5.5` loads the extension
   and leaves a report that passes
   `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json`.
-- [ ] Documentation states this proves the Pi extension/tool path, not generic Pi
+- [x] Documentation states this proves the Pi extension/tool path, not generic Pi
   MCP protocol support.
 
 ## Files to Touch
@@ -91,9 +91,8 @@ report without relying on an ad hoc bash-only prompt.
 
 1. Red: add a contract test that a report generated with agent-harness evidence
    includes that evidence in `report.md`.
-2. Red: add a verifier contract that rejects `execution_surface:"mcp-tools"`
-   when the artifact is intended to be Pi-generated, then accept
-   `pi-extension-tools` explicitly.
+2. Red: add a verifier contract that accepts `pi-extension-tools` explicitly
+   while preserving the existing `mcp-tools` evidence surface from #7047.
 3. Red: add a file-existence/marker contract for
    `.pi/extensions/kamn-mvp/index.ts` requiring the named KAMN tools.
 4. Green: implement the minimal Pi extension and Rust verifier/report changes.
@@ -107,10 +106,23 @@ report without relying on an ad hoc bash-only prompt.
 ## Completion Evidence
 
 - Spec committed and linked to issue #7049 before implementation.
-- Red test output captured before implementation.
-- Targeted tests green after implementation.
+- Red test output captured:
+  `mvp_demo_agent_harness_claim_contract` failed on unsupported
+  `pi-extension-tools`, missing Markdown harness evidence, and missing
+  `.pi/extensions/kamn-mvp/index.ts`.
+- Red docs output captured:
+  `mvp_evaluator_demo_runbook_contract` failed on the missing
+  `## Optional Pi Agent Harness` section.
+- Targeted tests green after implementation:
+  `mvp_demo_agent_harness_claim_contract`,
+  `mvp_evaluator_demo_runbook_contract`, `mvp_demo_command_contract`,
+  `mvp_demo_claim_contract`, and `mvp_demo_three_agent_claim_contract`.
 - `cargo fmt --check` green.
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` green.
 - `make check` green.
-- Pi non-interactive smoke result recorded.
+- `make demo-mvp` green with local-only `GO` report.
+- Pi non-interactive smoke with `openai-codex/gpt-5.5` and only the project-local
+  KAMN extension tools enabled passed all five steps.
+- Final verifier passed:
+  `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json`.
 - PR links issue #7049 and includes test evidence.
