@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::agent_harness::validate_agent_harness_evidence_file;
 use super::devnet_settlement::{
     collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
 };
@@ -61,6 +62,7 @@ pub fn execute_verify_mvp_demo_contract(
     let report = std::fs::read_to_string(config.report.as_str())
         .map_err(|error| format!("failed to read MVP demo report {}: {error}", config.report))?;
     verify_mvp_demo_report_json(report.as_str())?;
+    validate_agent_harness_evidence_file(report.as_str(), config.report.as_str())?;
     Ok(format!(
         "{{\"status\":\"PASS\",\"report\":\"{}\"}}",
         escape_json(config.report.as_str())

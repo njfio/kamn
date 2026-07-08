@@ -102,16 +102,16 @@ fn claim_matrix_section(report_json: &str) -> Result<&str, String> {
 }
 
 pub(super) fn extract_string(raw: &str, field: &str) -> Result<String, String> {
+    extract_optional_string(raw, field).ok_or_else(|| format!("missing claim field: {field}"))
+}
+
+pub(super) fn extract_optional_string(raw: &str, field: &str) -> Option<String> {
     let marker = format!("\"{field}\":\"");
-    let start = raw
-        .find(marker.as_str())
-        .ok_or_else(|| format!("missing claim field: {field}"))?;
+    let start = raw.find(marker.as_str())?;
     let value_start = start + marker.len();
     let value = &raw[value_start..];
-    let end = value
-        .find('"')
-        .ok_or_else(|| format!("unterminated claim field: {field}"))?;
-    Ok(value[..end].to_owned())
+    let end = value.find('"')?;
+    Some(value[..end].to_owned())
 }
 
 pub(super) fn extract_bool(raw: &str, field: &str) -> Result<bool, String> {
