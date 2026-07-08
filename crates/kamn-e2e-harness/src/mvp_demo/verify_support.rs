@@ -101,7 +101,7 @@ fn claim_matrix_section(report_json: &str) -> Result<&str, String> {
     Ok(&rest[..end])
 }
 
-fn extract_string(raw: &str, field: &str) -> Result<String, String> {
+pub(super) fn extract_string(raw: &str, field: &str) -> Result<String, String> {
     let marker = format!("\"{field}\":\"");
     let start = raw
         .find(marker.as_str())
@@ -114,11 +114,26 @@ fn extract_string(raw: &str, field: &str) -> Result<String, String> {
     Ok(value[..end].to_owned())
 }
 
-fn extract_bool(raw: &str, field: &str) -> Result<bool, String> {
+pub(super) fn extract_bool(raw: &str, field: &str) -> Result<bool, String> {
     let marker = format!("\"{field}\":");
     let start = raw
         .find(marker.as_str())
         .ok_or_else(|| format!("missing claim field: {field}"))?;
     let value = &raw[start + marker.len()..];
     Ok(value.starts_with("true"))
+}
+
+pub(super) fn extract_u64(raw: &str, field: &str) -> Result<u64, String> {
+    let marker = format!("\"{field}\":");
+    let start = raw
+        .find(marker.as_str())
+        .ok_or_else(|| format!("missing claim field: {field}"))?;
+    let digits = raw[start + marker.len()..]
+        .chars()
+        .skip_while(|item| item.is_ascii_whitespace())
+        .take_while(|item| item.is_ascii_digit())
+        .collect::<String>();
+    digits
+        .parse::<u64>()
+        .map_err(|error| format!("invalid claim field {field}: {error}"))
 }

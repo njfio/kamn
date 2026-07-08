@@ -2,6 +2,7 @@ use super::report::{
     CLAIM_LABEL_DEVNET_BACKED, CLAIM_LABEL_DRY_RUN, CLAIM_LABEL_LOCAL_ONLY,
     CLAIM_LABEL_PLACEHOLDER, CLAIM_LABEL_REAL, CLAIM_LABEL_ROADMAP, MVP_DEMO_REPORT_SCHEMA_VERSION,
 };
+use super::three_agent_verify::validate_three_agent_escrow_verification;
 use super::verify_support::{parse_claims, require_marker, validate_json_delimiters, ClaimView};
 
 const REQUIRED_CLAIMS: &[&str] = &[
@@ -36,6 +37,7 @@ pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), S
         validate_value_movement_label(claim)?;
         validate_devnet_evidence(claim)?;
     }
+    validate_three_agent_escrow_verification(&claims)?;
     validate_no_go(report_json)
 }
 
