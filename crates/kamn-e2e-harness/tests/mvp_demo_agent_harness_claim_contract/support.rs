@@ -67,24 +67,39 @@ pub(crate) fn report_with_agent_claim(root: &Path, artifact: Option<&Path>) -> S
 }
 
 pub(crate) fn agent_artifact(root: &Path, private_visible: bool, settlement_label: &str) -> String {
-    agent_artifact_for_report(
+    agent_artifact_with_surface(root, private_visible, settlement_label, "mcp-tools")
+}
+
+pub(crate) fn agent_artifact_with_surface(
+    root: &Path,
+    private_visible: bool,
+    settlement_label: &str,
+    execution_surface: &str,
+) -> String {
+    agent_artifact_for_report_with_surface(
         root.join("proof/report.json")
             .display()
             .to_string()
             .as_str(),
         private_visible,
         settlement_label,
+        execution_surface,
     )
 }
 
 pub(crate) fn agent_latest_artifact(root: &Path) -> String {
-    agent_artifact_for_report(
+    agent_latest_artifact_with_surface(root, "mcp-tools")
+}
+
+pub(crate) fn agent_latest_artifact_with_surface(root: &Path, execution_surface: &str) -> String {
+    agent_artifact_for_report_with_surface(
         root.join("latest/proof/report.json")
             .display()
             .to_string()
             .as_str(),
         false,
         "devnet-backed",
+        execution_surface,
     )
 }
 
@@ -148,13 +163,14 @@ fn roadmap_claim() -> &'static str {
     r#"{"id":"production_readiness","label":"roadmap","required":false,"status":"NOT_CLAIMED","summary":"production readiness is not claimed"}"#
 }
 
-fn agent_artifact_for_report(
+fn agent_artifact_for_report_with_surface(
     report_path: &str,
     private_visible: bool,
     settlement_label: &str,
+    execution_surface: &str,
 ) -> String {
     format!(
-        r#"{{"schema_version":"kamn.mvp.agent-harness-evidence.v1","harness":"mcp-agent","execution_surface":"mcp-tools","report_path":"{}","verifier_status":"PASS","participant_agents":["agent_a","agent_b","agent_c_verifier"],"tool_markers":["register","create_task","fund_escrow","release_escrow","verify_proof"],"claim_boundaries":{{"settlement_claim_label":"{}","dry_run_counted_as_success":false,"placeholder_counted_as_success":false,"verifier_private_view_visible":{}}}}}"#,
-        report_path, settlement_label, private_visible
+        r#"{{"schema_version":"kamn.mvp.agent-harness-evidence.v1","harness":"mcp-agent","execution_surface":"{}","report_path":"{}","verifier_status":"PASS","participant_agents":["agent_a","agent_b","agent_c_verifier"],"tool_markers":["register","create_task","fund_escrow","release_escrow","verify_proof"],"claim_boundaries":{{"settlement_claim_label":"{}","dry_run_counted_as_success":false,"placeholder_counted_as_success":false,"verifier_private_view_visible":{}}}}}"#,
+        execution_surface, report_path, settlement_label, private_visible
     )
 }
