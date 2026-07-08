@@ -48,10 +48,8 @@ fn spec_c05_verifier_rejects_local_only_three_agent_settlement_claim() {
 
 #[test]
 fn spec_c06_verifier_rejects_missing_view_scope() {
-    let report = valid_three_agent_report().replace(
-        r#""agent_a_view_scope":"participant-private","#,
-        "",
-    );
+    let report =
+        valid_three_agent_report().replace(r#""agent_a_view_scope":"participant-private","#, "");
     let err = verify_mvp_demo_report_json(report)
         .expect_err("three-agent claim must expose participant view scopes");
     assert!(err.contains("missing claim field: agent_a_view_scope"));

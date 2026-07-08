@@ -9,12 +9,13 @@ pub(crate) fn three_agent_escrow_claim_json(
     let terms_digest = format!("terms-digest-{run_id}");
     let escrow_id = format!("escrow-three-agent-{run_id}");
     format!(
-        "{{{},{},{},{},{}}}",
+        "{{{},{},{},{},{},{}}}",
         claim_header(),
         digest_fields(transaction_id.as_str(), terms_digest.as_str()),
         escrow_fields(escrow_id.as_str()),
         settlement_fields(evidence),
-        privacy_fields()
+        privacy_fields(),
+        view_fields(run_id)
     )
 }
 
@@ -111,4 +112,32 @@ fn amount_fields(evidence: &DevnetSettlementEvidence) -> String {
 
 fn privacy_fields() -> &'static str {
     "\"agent_a_private_view_visible\":true,\"agent_b_private_view_visible\":true,\"verifier_private_view_visible\":false"
+}
+
+fn view_fields(run_id: &str) -> String {
+    let public_digest = format!("public-view-digest-{run_id}");
+    format!(
+        "\"agent_a_view_scope\":\"participant-private\",\"agent_b_view_scope\":\"participant-private\",\"verifier_view_scope\":\"restricted-public\",{},{}",
+        private_view_fields(run_id),
+        public_view_fields(public_digest.as_str())
+    )
+}
+
+fn private_view_fields(run_id: &str) -> String {
+    let agent_a_digest = format!("agent-a-private-digest-{run_id}");
+    let agent_b_digest = format!("agent-b-private-digest-{run_id}");
+    format!(
+        "\"agent_a_private_field_count\":3,\"agent_b_private_field_count\":3,\"verifier_private_field_count\":0,\"agent_a_private_view_digest\":\"{}\",\"agent_b_private_view_digest\":\"{}\",\"private_payload_redacted\":true",
+        escape_json(agent_a_digest.as_str()),
+        escape_json(agent_b_digest.as_str())
+    )
+}
+
+fn public_view_fields(public_digest: &str) -> String {
+    format!(
+        "\"agent_a_public_view_digest\":\"{}\",\"agent_b_public_view_digest\":\"{}\",\"verifier_public_view_digest\":\"{}\"",
+        escape_json(public_digest),
+        escape_json(public_digest),
+        escape_json(public_digest)
+    )
 }
