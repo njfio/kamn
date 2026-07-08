@@ -7,8 +7,6 @@ Base checked for rehearsal: `origin/main` at `afc507a4a9c5`
 
 ## Clean Worktree
 
-Fresh external worktree:
-
 ```text
 /tmp/kamn-mvp-evaluator-7043-20260707-183715
 ```
@@ -54,8 +52,6 @@ The local-only run did not claim settlement, escrow execution, asset movement,
 or value movement success.
 
 ## Devnet-Required Demo
-
-Command shape:
 
 ```bash
 set -a
@@ -131,8 +127,6 @@ Official sources checked:
 - `https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/providers.md`
 - `https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/usage.md`
 
-Local findings:
-
 - `pi` and `pi-acp` were not already installed on PATH.
 - `npx -y @earendil-works/pi-coding-agent --version` returned `0.80.3`.
 - `npx -y @earendil-works/pi-coding-agent --help` confirmed non-interactive
@@ -153,8 +147,6 @@ Official sources checked:
 - `https://goose-docs.ai/docs/guides/acp-providers/`
 - `https://github.com/aaif-goose/goose`
 
-Local findings:
-
 - `brew info block-goose-cli` reported stable `1.41.0`.
 - `brew install block-goose-cli` installed `/opt/homebrew/bin/goose`.
 - `npm install -g @agentclientprotocol/codex-acp` installed
@@ -171,6 +163,23 @@ Local findings:
   binary globally.
 
 Goose result: blocked by non-interactive approval/mode mismatch, not by KAMN.
+
+## Current-Branch Demo
+
+```bash
+make demo-mvp
+cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
+```
+
+Result: run id `run-30651-1783468978384`, status `GO`, devnet mode
+`optional`, verifier `PASS`.
+
+## Local Gate Status
+
+- `cargo fmt --check`: `PASS`.
+- `cargo test -p kamn-e2e-harness --test mvp_evaluator_rehearsal_docs_contract -- --nocapture`: `PASS`.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: blocked locally. Two `kamn-core` clippy-driver processes repeatedly wedged with no diagnostics or CPU progress.
+- `make check`: blocked for the same strict clippy wedge; it was interrupted rather than weakened.
 
 ## Remaining Risks
 
