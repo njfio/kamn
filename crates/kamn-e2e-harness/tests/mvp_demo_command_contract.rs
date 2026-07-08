@@ -19,6 +19,7 @@ fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
         localhost_signed_demo_command: None,
         service_api_vertical_slice_command: None,
         service_api_websocket_command: None,
+        agent_harness_evidence_path: None,
     });
     assert_eq!(parsed, expected);
 }
@@ -45,19 +46,7 @@ fn spec_c03_makefile_wires_demo_mvp_to_harness_command() {
 #[test]
 fn spec_c04_demo_mvp_creates_run_directory_and_latest_report_paths() {
     let temp = temp_dir("mvp-demo-command");
-    let config = MvpDemoCommandConfig {
-        output_root: temp.display().to_string(),
-        devnet_mode: "optional".to_owned(),
-        solana_rpc_url: None,
-        devnet_settlement_command: None,
-        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
-        service_api_vertical_slice_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
-        )),
-        service_api_websocket_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
-        )),
-    };
+    let config = local_demo_config(&temp);
     execute_mvp_demo_contract(&config).expect("demo-mvp should generate local proof artifacts");
     assert!(temp.join("latest/proof/report.json").is_file());
     assert!(temp.join("latest/proof/report.md").is_file());
@@ -71,19 +60,7 @@ fn spec_c04_demo_mvp_creates_run_directory_and_latest_report_paths() {
 #[test]
 fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
     let temp = temp_dir("mvp-demo-verify");
-    let demo_config = MvpDemoCommandConfig {
-        output_root: temp.display().to_string(),
-        devnet_mode: "optional".to_owned(),
-        solana_rpc_url: None,
-        devnet_settlement_command: None,
-        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
-        service_api_vertical_slice_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
-        )),
-        service_api_websocket_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
-        )),
-    };
+    let demo_config = local_demo_config(&temp);
     execute_mvp_demo_contract(&demo_config).expect("demo should generate report");
     let verify_config = VerifyMvpDemoCommandConfig {
         report: temp.join("latest/proof/report.json").display().to_string(),
@@ -109,6 +86,7 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
         service_api_websocket_command: Some(stub_service_api_command(
             "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
         )),
+        agent_harness_evidence_path: None,
     };
     let report = execute_mvp_demo_contract(&config)
         .expect("devnet-required demo should accept real settlement evidence");
@@ -157,6 +135,23 @@ JSON
 "#
         .to_owned(),
     ]
+}
+
+fn local_demo_config(temp: &Path) -> MvpDemoCommandConfig {
+    MvpDemoCommandConfig {
+        output_root: temp.display().to_string(),
+        devnet_mode: "optional".to_owned(),
+        solana_rpc_url: None,
+        devnet_settlement_command: None,
+        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
+        service_api_vertical_slice_command: Some(stub_service_api_command(
+            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
+        )),
+        service_api_websocket_command: Some(stub_service_api_command(
+            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
+        )),
+        agent_harness_evidence_path: None,
+    }
 }
 
 fn make_dry_run(target: &str) -> String {

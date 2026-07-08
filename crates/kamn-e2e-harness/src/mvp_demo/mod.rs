@@ -1,5 +1,6 @@
 //! MVP evaluator demo report generation and verification.
 
+mod agent_harness;
 mod devnet_settlement;
 mod devnet_settlement_build;
 mod devnet_settlement_json;

@@ -11,6 +11,9 @@ pub(super) fn artifacts_json(input: &DemoReportInput<'_>) -> String {
 fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> {
     let mut entries = base_artifact_entries(input);
     entries.extend(proof_artifact_entries(input));
+    if let Some(path) = input.agent_harness_evidence_path {
+        entries.push(("agent_harness_evidence", path.to_owned()));
+    }
     entries
 }
 

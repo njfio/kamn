@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use super::agent_harness::agent_harness_claim_json;
 use super::devnet_settlement::{
     devnet_no_go_reason, devnet_settlement_claim_json, DevnetSettlementEvidence,
 };
@@ -28,6 +29,7 @@ pub(crate) struct DemoReportInput<'a> {
     pub(crate) output_root: &'a Path,
     pub(crate) devnet_settlement: Option<&'a DevnetSettlementEvidence>,
     pub(crate) devnet_no_go_reason: Option<&'a str>,
+    pub(crate) agent_harness_evidence_path: Option<&'a str>,
 }
 
 pub(crate) fn render_report_json(input: &DemoReportInput<'_>) -> String {
@@ -54,6 +56,9 @@ pub(crate) fn report_status(input: &DemoReportInput<'_>) -> &'static str {
 
 fn claim_matrix_json(input: &DemoReportInput<'_>) -> String {
     let mut claims = local_claims();
+    if input.agent_harness_evidence_path.is_some() {
+        claims.push(agent_harness_claim_json());
+    }
     if input.devnet_mode == "required" {
         claims.extend(devnet_required_claims(input));
     }

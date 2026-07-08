@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::agent_harness::validate_agent_harness_evidence_file;
 use super::devnet_settlement::{
     collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
 };
@@ -28,6 +29,8 @@ pub struct MvpDemoCommandConfig {
     pub service_api_vertical_slice_command: Option<Vec<String>>,
     /// Optional command override for tests; production uses the service API websocket test.
     pub service_api_websocket_command: Option<Vec<String>>,
+    /// Optional MCP-agent harness evidence artifact path.
+    pub agent_harness_evidence_path: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,6 +53,8 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     let input = report_input(config, output_root, run_id.as_str(), &devnet_settlement);
     let report_json = render_report_json(&input);
     verify_mvp_demo_report_json(report_json.as_str())?;
+    let latest_report = latest_report_path(output_root);
+    validate_agent_harness_evidence_file(report_json.as_str(), latest_report.as_str())?;
     write_reports(output_root, run_id.as_str(), report_json.as_str(), &input)?;
     Ok(report_json)
 }
@@ -61,6 +66,7 @@ pub fn execute_verify_mvp_demo_contract(
     let report = std::fs::read_to_string(config.report.as_str())
         .map_err(|error| format!("failed to read MVP demo report {}: {error}", config.report))?;
     verify_mvp_demo_report_json(report.as_str())?;
+    validate_agent_harness_evidence_file(report.as_str(), config.report.as_str())?;
     Ok(format!(
         "{{\"status\":\"PASS\",\"report\":\"{}\"}}",
         escape_json(config.report.as_str())
@@ -98,7 +104,15 @@ fn report_input<'a>(
         output_root,
         devnet_settlement: settlement.evidence.as_ref(),
         devnet_no_go_reason: settlement.no_go_reason.as_deref(),
+        agent_harness_evidence_path: config.agent_harness_evidence_path.as_deref(),
     }
+}
+
+fn latest_report_path(output_root: &Path) -> String {
+    output_root
+        .join("latest/proof/report.json")
+        .display()
+        .to_string()
 }
 
 fn create_devnet_settlement_artifact(
