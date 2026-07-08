@@ -119,6 +119,7 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "kamn_inspect_mvp_report_boundaries",
         "kamn_write_agent_harness_evidence",
         "kamn_run_demo_mvp_with_agent_evidence",
+        "three_agent_boundary",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
@@ -139,7 +140,12 @@ fn spec_c09_command_rejects_agent_artifact_without_three_agent_boundary() {
 #[test]
 fn spec_c10_command_rejects_agent_artifact_with_mismatched_three_agent_claim() {
     for (stem, from, to, expected) in [
-        ("status", r#""claim_status":"PASS""#, r#""claim_status":"NO-GO""#, "claim_status"),
+        (
+            "status",
+            r#""claim_status":"PASS""#,
+            r#""claim_status":"NO-GO""#,
+            "claim_status",
+        ),
         (
             "label",
             r#""claim_label":"devnet-backed""#,

@@ -214,10 +214,6 @@ fn agent_artifact_for_report_with_surface(
 ) -> String {
     format!(
         r#"{{"schema_version":"kamn.mvp.agent-harness-evidence.v1","harness":"mcp-agent","execution_surface":"{}","report_path":"{}","verifier_status":"PASS","participant_agents":["agent_a","agent_b","agent_c_verifier"],"tool_markers":["register","create_task","fund_escrow","release_escrow","verify_proof"],"claim_boundaries":{{"settlement_claim_label":"{}","dry_run_counted_as_success":false,"placeholder_counted_as_success":false,"verifier_private_view_visible":{}}}{}}}"#,
-        execution_surface,
-        report_path,
-        settlement_label,
-        private_visible,
-        three_agent_boundary
+        execution_surface, report_path, settlement_label, private_visible, three_agent_boundary
     )
 }

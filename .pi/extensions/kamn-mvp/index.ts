@@ -148,6 +148,7 @@ function evidence(reportPath: string, report: Report) {
 		participant_agents: ["agent_a", "agent_b", "agent_c_verifier"],
 		tool_markers: agentToolMarkers(),
 		claim_boundaries: claimBoundaries(report),
+		three_agent_boundary: threeAgentBoundary(report),
 	};
 }
 function agentToolMarkers() {
@@ -172,9 +173,53 @@ function boundarySummary(report: Report) {
 		production_readiness: claimStatus(claims, "production_readiness"),
 	};
 }
+
+function threeAgentBoundary(report: Report) {
+	const claim = findClaim(report, "three_agent_escrow_verification");
+	if (!claim) {
+		return {
+			claim_status: "NOT_PRESENT",
+			claim_label: "NOT_PRESENT",
+			claim_present: false,
+		};
+	}
+	return {
+		claim_status: requireString(claim, "status"),
+		claim_label: requireString(claim, "label"),
+		claim_present: true,
+		agent_a_private_field_count: requireNumber(claim, "agent_a_private_field_count"),
+		agent_b_private_field_count: requireNumber(claim, "agent_b_private_field_count"),
+		verifier_private_field_count: requireNumber(claim, "verifier_private_field_count"),
+		private_payload_redacted: requireBoolean(claim, "private_payload_redacted"),
+		verifier_private_view_digest_present: typeof claim.verifier_private_view_digest === "string",
+	};
+}
+
 function claimStatus(claims: Array<Record<string, unknown>>, id: string) {
-	const claim = claims.find((entry) => entry.id === id);
+	const claim = findClaim({ claim_matrix: claims }, id);
 	return claim ? { label: claim.label, status: claim.status } : { status: "NOT_PRESENT" };
+}
+
+function findClaim(report: Report, id: string) {
+	return (report.claim_matrix ?? []).find((entry) => entry.id === id);
+}
+
+function requireString(claim: Record<string, unknown>, field: string): string {
+	const value = claim[field];
+	if (typeof value === "string") return value;
+	throw new Error(`KAMN report three-agent claim is missing string field: ${field}`);
+}
+
+function requireNumber(claim: Record<string, unknown>, field: string): number {
+	const value = claim[field];
+	if (typeof value === "number" && Number.isFinite(value)) return value;
+	throw new Error(`KAMN report three-agent claim is missing number field: ${field}`);
+}
+
+function requireBoolean(claim: Record<string, unknown>, field: string): boolean {
+	const value = claim[field];
+	if (typeof value === "boolean") return value;
+	throw new Error(`KAMN report three-agent claim is missing boolean field: ${field}`);
 }
 function assertSuccess(result: ExecResult, label: string) {
 	if (result.code === 0) return;
