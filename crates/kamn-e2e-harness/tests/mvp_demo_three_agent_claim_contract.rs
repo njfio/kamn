@@ -46,6 +46,72 @@ fn spec_c05_verifier_rejects_local_only_three_agent_settlement_claim() {
     assert!(err.contains("value movement claim must be devnet-backed"));
 }
 
+#[test]
+fn spec_c06_verifier_rejects_missing_view_scope() {
+    let report = valid_three_agent_report().replace(
+        r#""agent_a_view_scope":"participant-private","#,
+        "",
+    );
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("three-agent claim must expose participant view scopes");
+    assert!(err.contains("missing claim field: agent_a_view_scope"));
+}
+
+#[test]
+fn spec_c07_verifier_rejects_participant_without_private_evidence() {
+    let report = valid_three_agent_report().replace(
+        r#""agent_a_private_field_count":3"#,
+        r#""agent_a_private_field_count":0"#,
+    );
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("participant view must be richer than verifier view");
+    assert!(err.contains("participant views must include private evidence"));
+}
+
+#[test]
+fn spec_c08_verifier_rejects_verifier_private_evidence() {
+    let report = valid_three_agent_report().replace(
+        r#""verifier_private_field_count":0"#,
+        r#""verifier_private_field_count":1"#,
+    );
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("third-party verifier must not receive private evidence");
+    assert!(err.contains("verifier view must not expose private fields"));
+}
+
+#[test]
+fn spec_c09_verifier_rejects_verifier_private_digest_leak() {
+    let report = valid_three_agent_report().replace(
+        r#""private_payload_redacted":true"#,
+        r#""verifier_private_view_digest":"verifier-private-leak","private_payload_redacted":true"#,
+    );
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("third-party verifier must not receive a private digest");
+    assert!(err.contains("verifier view must not expose private digest"));
+}
+
+#[test]
+fn spec_c10_verifier_rejects_unredacted_private_payloads() {
+    let report = valid_three_agent_report().replace(
+        r#""private_payload_redacted":true"#,
+        r#""private_payload_redacted":false"#,
+    );
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("three-agent claim must explicitly redact private payloads");
+    assert!(err.contains("private payloads must be redacted"));
+}
+
+#[test]
+fn spec_c11_verifier_rejects_mismatched_public_view_digest() {
+    let report = valid_three_agent_report().replace(
+        r#""verifier_public_view_digest":"public-view-digest-7045""#,
+        r#""verifier_public_view_digest":"public-view-digest-mismatch""#,
+    );
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("verifier must validate the same public commitment");
+    assert!(err.contains("three-agent public view digest mismatch"));
+}
+
 fn valid_three_agent_report() -> String {
     report_with_claims(&[
         local_claims(),
@@ -80,7 +146,7 @@ fn devnet_settlement_claim() -> &'static str {
 }
 
 fn three_agent_claim() -> &'static str {
-    r#"{"id":"three_agent_escrow_verification","label":"devnet-backed","required":true,"status":"PASS","summary":"Agent C verifies escrow settlement from restricted proof view","transaction_id":"tx-three-agent-7045","terms_digest":"terms-digest-7045","agent_a_terms_digest":"terms-digest-7045","agent_b_terms_digest":"terms-digest-7045","verifier_terms_digest":"terms-digest-7045","escrow_id":"escrow-three-agent-7045","agent_a_escrow_id":"escrow-three-agent-7045","agent_b_escrow_id":"escrow-three-agent-7045","verifier_escrow_id":"escrow-three-agent-7045","network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_a_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_b_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","verifier_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","agent_a_settlement_commitment":"finalized","agent_b_settlement_commitment":"finalized","verifier_settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"agent_a_amount_lamports":1,"agent_b_amount_lamports":1,"verifier_amount_lamports":1,"agent_a_private_view_visible":true,"agent_b_private_view_visible":true,"verifier_private_view_visible":false}"#
+    r#"{"id":"three_agent_escrow_verification","label":"devnet-backed","required":true,"status":"PASS","summary":"Agent C verifies escrow settlement from restricted proof view","transaction_id":"tx-three-agent-7045","terms_digest":"terms-digest-7045","agent_a_terms_digest":"terms-digest-7045","agent_b_terms_digest":"terms-digest-7045","verifier_terms_digest":"terms-digest-7045","escrow_id":"escrow-three-agent-7045","agent_a_escrow_id":"escrow-three-agent-7045","agent_b_escrow_id":"escrow-three-agent-7045","verifier_escrow_id":"escrow-three-agent-7045","network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_a_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_b_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","verifier_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","agent_a_settlement_commitment":"finalized","agent_b_settlement_commitment":"finalized","verifier_settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"agent_a_amount_lamports":1,"agent_b_amount_lamports":1,"verifier_amount_lamports":1,"agent_a_private_view_visible":true,"agent_b_private_view_visible":true,"verifier_private_view_visible":false,"agent_a_view_scope":"participant-private","agent_b_view_scope":"participant-private","verifier_view_scope":"restricted-public","agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"agent_a_private_view_digest":"agent-a-private-digest-7045","agent_b_private_view_digest":"agent-b-private-digest-7045","agent_a_public_view_digest":"public-view-digest-7045","agent_b_public_view_digest":"public-view-digest-7045","verifier_public_view_digest":"public-view-digest-7045","private_payload_redacted":true}"#
 }
 
 fn roadmap_claim() -> &'static str {
