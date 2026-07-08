@@ -89,8 +89,9 @@ pub(crate) fn agent_latest_artifact(root: &Path) -> String {
 }
 
 fn write_file(path: &Path, content: String) {
-    std::fs::create_dir_all(path.parent().expect("parent should exist")).unwrap();
-    std::fs::write(path, content).unwrap();
+    std::fs::create_dir_all(path.parent().expect("parent should exist"))
+        .expect("fixture parent directory should be creatable");
+    std::fs::write(path, content).expect("fixture file should be writable");
 }
 
 fn stub_localhost_command() -> Vec<String> {
