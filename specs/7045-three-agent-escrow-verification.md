@@ -42,19 +42,19 @@ Outputs:
 - The claim uses placeholder settlement evidence or omits devnet-backed markers.
 
 ## Acceptance criteria
-- [ ] The verifier rejects reports without `three_agent_escrow_verification`.
-- [ ] The verifier rejects reports where `verifier_private_view_visible` is true.
-- [ ] The verifier rejects reports with mismatched shared commitments across
+- [x] The verifier rejects reports without `three_agent_escrow_verification`.
+- [x] The verifier rejects reports where `verifier_private_view_visible` is true.
+- [x] The verifier rejects reports with mismatched shared commitments across
   participant and verifier views.
-- [ ] The verifier rejects reports where the three-agent claim is not
+- [x] The verifier rejects reports where the three-agent claim is not
   `devnet-backed` when it references settlement/value movement.
-- [ ] The generated MVP report includes one passing
+- [x] The generated MVP report includes one passing
   `three_agent_escrow_verification` claim when devnet settlement evidence is
   present.
-- [ ] The generated MVP report includes participant views for `agent_a` and
+- [x] The generated MVP report includes participant views for `agent_a` and
   `agent_b`, a restricted `agent_c_verifier` view, and shared commitment fields.
-- [ ] `cargo test -p kamn-e2e-harness --test mvp_demo_claim_contract` passes.
-- [ ] `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report
+- [x] `cargo test -p kamn-e2e-harness --test mvp_demo_claim_contract` passes.
+- [x] `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report
   .kamn/demo/latest/proof/report.json` passes after `make demo-mvp`.
 
 ## Files to touch
@@ -92,3 +92,15 @@ Integration:
 - Run targeted claim-contract tests.
 - Run the canonical report verifier against the latest demo report.
 - Run `make demo-mvp` if the branch reaches integration wiring.
+
+## Completion evidence
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+- `make check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_claim_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_three_agent_claim_contract -- --nocapture`
+- `make demo-mvp`
+- `KAMN_MVP_DEVNET_MODE=required KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com make demo-mvp`
+- `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json`
+
+Deviations: none.
