@@ -1,5 +1,6 @@
 use super::report::CLAIM_LABEL_DEVNET_BACKED;
-use super::verify_support::{extract_bool, extract_string, extract_u64, ClaimView};
+use super::three_agent_view_verify::validate_three_agent_view_disclosure;
+use super::verify_support::{extract_string, extract_u64, ClaimView};
 
 pub(crate) fn validate_three_agent_escrow_verification(
     claims: &[ClaimView<'_>],
@@ -9,7 +10,7 @@ pub(crate) fn validate_three_agent_escrow_verification(
     }
     let claim = three_agent_claim(claims)?;
     validate_three_agent_status(claim)?;
-    validate_three_agent_privacy(claim)?;
+    validate_three_agent_view_disclosure(claim)?;
     validate_three_agent_commitments(claim)
 }
 
@@ -29,18 +30,6 @@ fn three_agent_claim<'a>(claims: &'a [ClaimView<'a>]) -> Result<&'a ClaimView<'a
 fn validate_three_agent_status(claim: &ClaimView<'_>) -> Result<(), String> {
     if claim.label != CLAIM_LABEL_DEVNET_BACKED || claim.status != "PASS" || !claim.required {
         return Err("three-agent escrow verification claim must be devnet-backed PASS".to_owned());
-    }
-    Ok(())
-}
-
-fn validate_three_agent_privacy(claim: &ClaimView<'_>) -> Result<(), String> {
-    if !extract_bool(claim.raw, "agent_a_private_view_visible")?
-        || !extract_bool(claim.raw, "agent_b_private_view_visible")?
-    {
-        return Err("participant private views must be visible to participants".to_owned());
-    }
-    if extract_bool(claim.raw, "verifier_private_view_visible")? {
-        return Err("verifier view must not expose private fields".to_owned());
     }
     Ok(())
 }

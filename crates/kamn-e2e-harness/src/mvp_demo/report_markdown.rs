@@ -7,6 +7,7 @@ pub(crate) fn render_report_markdown(input: &DemoReportInput<'_>) -> Result<Stri
         markdown_header(input),
         markdown_artifacts(input),
         markdown_agent_harness(input)?,
+        markdown_three_agent_boundary(input),
         markdown_claim_boundaries().to_owned(),
     ]
     .into_iter()
@@ -48,6 +49,13 @@ fn markdown_agent_harness(input: &DemoReportInput<'_>) -> Result<String, String>
         "## Agent Harness Evidence\n\n- Claim: `mcp_agent_harness_verification`\n- Agent harness evidence: `{}`\n- Execution surface: `{}`\n",
         path, execution_surface
     ))
+}
+
+fn markdown_three_agent_boundary(input: &DemoReportInput<'_>) -> String {
+    if input.devnet_settlement.is_none() {
+        return String::new();
+    }
+    "## Three-Agent View Boundary\n\n- Agent A and Agent B include participant-private proof digests and private field counts in the JSON report.\n- The third-party verifier uses a restricted public-view digest to validate shared transaction, escrow, and settlement commitments.\n- Raw private payloads are redacted, and no verifier private-view digest is emitted.\n".to_owned()
 }
 
 fn markdown_claim_boundaries() -> &'static str {

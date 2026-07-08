@@ -96,7 +96,10 @@ pub(crate) fn query_task(
             extra_headers: &[],
         },
     );
-    assert!(response.contains("HTTP/1.1 200 OK"));
+    assert!(
+        response.contains("HTTP/1.1 200 OK"),
+        "escrow release response should be 200 OK, got:\n{response}"
+    );
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("task query payload should deserialize")
 }
