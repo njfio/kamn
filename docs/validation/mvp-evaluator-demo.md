@@ -53,6 +53,35 @@ cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proo
 
 The default demo is local-only for runtime, auth, message/task, state, relay, websocket, and audit proof. It does not claim settlement or asset movement success.
 
+## Optional Pi Agent Harness
+KAMN includes a project-local Pi extension at `.pi/extensions/kamn-mvp/index.ts`.
+It registers named local proof tools:
+
+- `kamn_verify_mvp_report`
+- `kamn_inspect_mvp_report_boundaries`
+- `kamn_write_agent_harness_evidence`
+- `kamn_run_demo_mvp_with_agent_evidence`
+
+Run Pi with the extension and the Codex-backed model:
+
+```bash
+pi --provider openai-codex \
+  --model gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_verify_mvp_report,kamn_inspect_mvp_report_boundaries,kamn_write_agent_harness_evidence,kamn_run_demo_mvp_with_agent_evidence \
+  --approve \
+  --no-session \
+  -p "Use the KAMN tools to verify the current report, inspect claim boundaries, write /tmp/kamn-pi-mcp-agent-harness-evidence.json, run the MVP demo with that evidence, and verify the final report."
+```
+
+When the Pi tool path writes evidence, the proof artifact records
+`execution_surface:"pi-extension-tools"` and the final report may include
+`mcp_agent_harness_verification`. This proves that Pi extension tools can drive
+the KAMN MVP proof path. It does not prove generic Pi MCP protocol support, and
+it does not upgrade local-only or dry-run settlement into MVP success.
+
 ## Devnet-Required Demo
 Run with the MVP and service API Solana settlement environment configured:
 
