@@ -9,7 +9,7 @@ pub(crate) fn write_reports(
     report_json: &str,
     input: &DemoReportInput<'_>,
 ) -> Result<(), String> {
-    let report_md = render_report_markdown(input);
+    let report_md = render_report_markdown(input)?;
     write_report_pair(output_root.join(run_id), report_json, report_md.as_str())?;
     refresh_latest(output_root, run_id, report_json, report_md.as_str())
 }

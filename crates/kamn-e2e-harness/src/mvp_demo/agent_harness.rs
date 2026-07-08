@@ -3,6 +3,8 @@ use super::verify_support::{extract_optional_string, require_marker, ClaimView};
 
 const AGENT_HARNESS_CLAIM_ID: &str = "mcp_agent_harness_verification";
 const AGENT_HARNESS_ARTIFACT_FIELD: &str = "agent_harness_evidence";
+const MCP_TOOL_SURFACE: &str = "mcp-tools";
+const PI_EXTENSION_TOOL_SURFACE: &str = "pi-extension-tools";
 
 pub(crate) fn agent_harness_claim_json() -> String {
     format!(
@@ -35,6 +37,13 @@ pub(crate) fn validate_agent_harness_evidence_file(
     validate_agent_harness_evidence(artifact.as_str(), report_path)
 }
 
+pub(crate) fn agent_harness_execution_surface(path: &str) -> Result<String, String> {
+    let artifact = std::fs::read_to_string(path)
+        .map_err(|error| format!("failed to read agent harness evidence {path}: {error}"))?;
+    extract_optional_string(artifact.as_str(), "execution_surface")
+        .ok_or_else(|| "missing agent harness execution_surface".to_owned())
+}
+
 fn agent_harness_claim<'a>(claims: &'a [ClaimView<'a>]) -> Option<&'a ClaimView<'a>> {
     claims
         .iter()
@@ -53,6 +62,7 @@ fn validate_agent_harness_claim(claim: &ClaimView<'_>) -> Result<(), String> {
 
 fn validate_agent_harness_evidence(artifact: &str, report_path: &str) -> Result<(), String> {
     validate_evidence_markers(artifact)?;
+    validate_execution_surface(artifact)?;
     validate_report_path(artifact, report_path)?;
     validate_private_boundary(artifact)?;
     validate_settlement_boundary(artifact)
@@ -65,14 +75,13 @@ fn validate_evidence_markers(artifact: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn required_evidence_markers() -> [(&'static str, &'static str); 12] {
+fn required_evidence_markers() -> [(&'static str, &'static str); 11] {
     [
         (
             "\"schema_version\":\"kamn.mvp.agent-harness-evidence.v1\"",
             "agent harness schema",
         ),
         ("\"harness\":\"mcp-agent\"", "agent harness kind"),
-        ("\"execution_surface\":\"mcp-tools\"", "MCP tool surface"),
         (
             "\"verifier_status\":\"PASS\"",
             "agent harness verifier status",
@@ -86,6 +95,17 @@ fn required_evidence_markers() -> [(&'static str, &'static str); 12] {
         ("\"release_escrow\"", "release_escrow tool marker"),
         ("\"verify_proof\"", "verify_proof tool marker"),
     ]
+}
+
+fn validate_execution_surface(artifact: &str) -> Result<(), String> {
+    let surface = extract_optional_string(artifact, "execution_surface")
+        .ok_or_else(|| "missing agent harness execution_surface".to_owned())?;
+    if surface == MCP_TOOL_SURFACE || surface == PI_EXTENSION_TOOL_SURFACE {
+        return Ok(());
+    }
+    Err(format!(
+        "unsupported agent harness execution_surface: {surface}"
+    ))
 }
 
 fn validate_report_path(artifact: &str, report_path: &str) -> Result<(), String> {
