@@ -41,18 +41,18 @@ Outputs:
   semantics.
 
 ## Acceptance criteria
-- [ ] Direct local optional reports still verify without an agent-harness claim.
-- [ ] Reports with a passing `mcp_agent_harness_verification` claim include an
+- [x] Direct local optional reports still verify without an agent-harness claim.
+- [x] Reports with a passing `mcp_agent_harness_verification` claim include an
   `agent_harness_evidence` artifact path.
-- [ ] `verify-mvp-demo --report ...` rejects a passing agent-harness claim when
+- [x] `verify-mvp-demo --report ...` rejects a passing agent-harness claim when
   the artifact path is missing or unreadable.
-- [ ] `verify-mvp-demo --report ...` rejects agent-harness evidence where
+- [x] `verify-mvp-demo --report ...` rejects agent-harness evidence where
   `verifier_private_view_visible` is true.
-- [ ] `verify-mvp-demo --report ...` rejects agent-harness evidence that counts
+- [x] `verify-mvp-demo --report ...` rejects agent-harness evidence that counts
   settlement without `settlement_claim_label=devnet-backed`.
-- [ ] `verify-mvp-demo --report ...` accepts valid local MCP-agent evidence
+- [x] `verify-mvp-demo --report ...` accepts valid local MCP-agent evidence
   without adding any settlement claim to local-only reports.
-- [ ] Existing claim-contract tests pass.
+- [x] Existing claim-contract tests pass.
 
 ## Files to touch
 - `crates/kamn-e2e-harness/src/mvp_demo/runner.rs`
@@ -90,3 +90,20 @@ Integration:
 - Run targeted MVP claim-contract tests.
 - Run `make demo-mvp`.
 - Run the canonical report verifier against the latest report.
+
+## Completion evidence
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+- `make check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_command_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_claim_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_three_agent_claim_contract -- --nocapture`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract -- --nocapture`
+- `make demo-mvp`
+- `KAMN_MVP_AGENT_HARNESS_EVIDENCE=/tmp/kamn-7047-agent-harness-evidence.json make demo-mvp`
+- `KAMN_MVP_DEVNET_MODE=required KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com make demo-mvp`
+- `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json`
+
+Deviations: live Pi OAuth-driven execution remains outside this issue. This
+issue adds the repo verifier/report bridge that such a Pi run can satisfy
+without requiring local OAuth in deterministic tests.
