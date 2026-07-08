@@ -125,6 +125,35 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
     let _ = std::fs::remove_dir_all(&temp);
 }
 
+#[test]
+fn spec_c07_demo_mvp_can_include_agent_harness_evidence() {
+    let temp = temp_dir("mvp-demo-agent-harness");
+    let artifact = temp.join("agent-harness-evidence.json");
+    std::fs::create_dir_all(&temp).expect("temp root should be creatable");
+    std::fs::write(&artifact, agent_harness_artifact(&temp)).unwrap();
+    let config = MvpDemoCommandConfig {
+        output_root: temp.display().to_string(),
+        devnet_mode: "optional".to_owned(),
+        solana_rpc_url: None,
+        devnet_settlement_command: None,
+        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
+        service_api_vertical_slice_command: Some(stub_service_api_command(
+            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
+        )),
+        service_api_websocket_command: Some(stub_service_api_command(
+            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
+        )),
+        agent_harness_evidence_path: Some(artifact.display().to_string()),
+    };
+    let report = execute_mvp_demo_contract(&config).expect("demo should include harness proof");
+
+    assert!(report.contains(r#""agent_harness_evidence":""#));
+    assert!(report.contains(r#""id":"mcp_agent_harness_verification""#));
+    assert!(report.contains(r#""harness":"mcp-agent""#));
+    assert!(!report.contains(r#""id":"devnet_settlement_asset_movement""#));
+    let _ = std::fs::remove_dir_all(&temp);
+}
+
 fn stub_localhost_signed_demo_command() -> Vec<String> {
     vec![
         "sh".to_owned(),
@@ -157,6 +186,13 @@ JSON
 "#
         .to_owned(),
     ]
+}
+
+fn agent_harness_artifact(root: &Path) -> String {
+    format!(
+        r#"{{"schema_version":"kamn.mvp.agent-harness-evidence.v1","harness":"mcp-agent","execution_surface":"mcp-tools","report_path":"{}","verifier_status":"PASS","participant_agents":["agent_a","agent_b","agent_c_verifier"],"tool_markers":["register","create_task","fund_escrow","release_escrow","verify_proof"],"claim_boundaries":{{"settlement_claim_label":"devnet-backed","dry_run_counted_as_success":false,"placeholder_counted_as_success":false,"verifier_private_view_visible":false}}}}"#,
+        root.join("latest/proof/report.json").display()
+    )
 }
 
 fn make_dry_run(target: &str) -> String {
