@@ -10,6 +10,10 @@ type Report = {
 	devnet_mode?: string;
 	claim_matrix?: Array<Record<string, unknown>>;
 };
+type ReportPath = {
+	artifactPath: string;
+	readPath: string;
+};
 export default function kamnMvpExtension(pi: ExtensionAPI) {
 	registerVerifyTool(pi);
 	registerInspectTool(pi);
@@ -24,7 +28,7 @@ function registerVerifyTool(pi: ExtensionAPI) {
 		promptSnippet: "Verify a KAMN MVP proof report with the repo verifier",
 		parameters: Type.Object({ reportPath: Type.Optional(Type.String()) }),
 		async execute(_id, params, signal, _onUpdate, ctx) {
-			const reportPath = safeReportPath(ctx, params.reportPath);
+			const reportPath = safeReportPath(ctx, params.reportPath).artifactPath;
 			const result = await proofExec(pi, ctx, verifyArgs(reportPath), signal);
 			assertSuccess(result, "verify-mvp-demo");
 			return textResult("KAMN MVP report verifier passed.", { reportPath });
@@ -40,7 +44,7 @@ function registerInspectTool(pi: ExtensionAPI) {
 		parameters: Type.Object({ reportPath: Type.Optional(Type.String()) }),
 		async execute(_id, params, _signal, _onUpdate, ctx) {
 			const reportPath = safeReportPath(ctx, params.reportPath);
-			const report = await readReport(reportPath);
+			const report = await readReport(reportPath.readPath);
 			const summary = boundarySummary(report);
 			return textResult(JSON.stringify(summary), summary);
 		},
@@ -60,8 +64,8 @@ function registerEvidenceTool(pi: ExtensionAPI) {
 		async execute(_id, params, _signal, _onUpdate, ctx) {
 			const reportPath = safeReportPath(ctx, params.reportPath);
 			const outputPath = safeOutputPath(ctx, params.outputPath);
-			const report = await readReport(reportPath);
-			await writeEvidence(outputPath, reportPath, report);
+			const report = await readReport(reportPath.readPath);
+			await writeEvidence(outputPath, reportPath.artifactPath, report);
 			return textResult(`Wrote KAMN Pi harness evidence to ${outputPath}`, { outputPath });
 		},
 	});
@@ -102,10 +106,10 @@ async function proofExec(
 		timeout: 180000,
 	});
 }
-function safeReportPath(ctx: ExtensionContext, input: string | undefined): string {
+function safeReportPath(ctx: ExtensionContext, input: string | undefined): ReportPath {
 	const path = cleanPath(input ?? DEFAULT_REPORT);
 	rejectSecretLikePath(path);
-	return resolve(ctx.cwd, path);
+	return { artifactPath: path, readPath: resolve(ctx.cwd, path) };
 }
 function safeOutputPath(ctx: ExtensionContext, input: string | undefined): string {
 	const path = cleanPath(input ?? DEFAULT_EVIDENCE);
@@ -132,7 +136,7 @@ async function readReport(reportPath: string): Promise<Report> {
 }
 async function writeEvidence(outputPath: string, reportPath: string, report: Report) {
 	await mkdir(dirname(outputPath), { recursive: true });
-	await writeFile(outputPath, JSON.stringify(evidence(reportPath, report), null, 2));
+	await writeFile(outputPath, JSON.stringify(evidence(reportPath, report)));
 }
 function evidence(reportPath: string, report: Report) {
 	return {
