@@ -6,7 +6,7 @@ This repository is the Rust implementation and validation workspace for that sys
 
 The current MVP is not a production network. It is a locally runnable, evaluator-friendly demo that proves one coherent product story: local authenticated agent flow plus optional Solana devnet-backed settlement evidence when funded devnet keypairs are configured.
 
-## What This Repository Contains
+## What KAMN Proves Today <!-- ## What This Repository Contains -->
 
 The repository currently contains proof surfaces for:
 
@@ -20,7 +20,7 @@ The repository currently contains proof surfaces for:
 
 The demo does not prove production readiness, mainnet settlement, generalized exchange, broad bridge finality, arbitrary partition tolerance, or real economic value. Solana devnet tokens are developer-test tokens.
 
-## Quickstart
+## MVP Demo Quickstart <!-- ## Quickstart -->
 
 Prerequisites:
 
@@ -86,7 +86,7 @@ Required MVP success claims cannot be `dry-run` or `placeholder`.
 
 Any claim involving exchange, escrow, settlement, transfer, lamports, asset movement, or value movement must be `devnet-backed`. KAMN must not turn fake in-memory movement into a settlement success claim.
 
-## Architecture Map
+## Repository Map <!-- ## Architecture Map -->
 
 - `crates/kamn-core`: protocol/domain logic and contract suites
 - `crates/kamn-node`: node runtime entrypoint and service API
@@ -132,7 +132,7 @@ cargo check -p kamn-core --features live-https
 cargo check -p kamn-core --no-default-features
 ```
 
-## Workflow
+## For AI Agents And Maintainers <!-- ## Workflow -->
 
 Start with `AGENTS.md`. The repository process is issue-first, spec-before-code, TDD, integration-wired, and proof-before-completion.
 
