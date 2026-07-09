@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import type { ExtensionAPI, ExtensionContext, ExecResult } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { actorToolSpecs, recordActorReceipt } from "./actor-receipts";
 import { boundarySummary, readReport, writeEvidence } from "./evidence";
 
 const DEFAULT_REPORT = ".kamn/demo/latest/proof/report.json";
@@ -13,6 +14,7 @@ type ReportPath = {
 export default function kamnMvpExtension(pi: ExtensionAPI) {
 	registerVerifyTool(pi);
 	registerInspectTool(pi);
+	registerActorReceiptTools(pi);
 	registerEvidenceTool(pi);
 	registerDemoTool(pi);
 }
@@ -63,6 +65,27 @@ function registerEvidenceTool(pi: ExtensionAPI) {
 			const report = await readReport(reportPath.readPath);
 			await writeEvidence(outputPath, reportPath.artifactPath, report);
 			return textResult(`Wrote KAMN Pi harness evidence to ${outputPath}`, { outputPath });
+		},
+	});
+}
+function registerActorReceiptTools(pi: ExtensionAPI) {
+	for (const spec of actorToolSpecs()) {
+		registerActorReceiptTool(pi, spec.tool);
+	}
+}
+function registerActorReceiptTool(pi: ExtensionAPI, tool: string) {
+	pi.registerTool({
+		name: tool,
+		label: tool.replaceAll("_", " "),
+		description: "Record one KAMN three-agent actor receipt for Pi harness evidence.",
+		promptSnippet: `Record KAMN actor receipt with ${tool}`,
+		parameters: Type.Object({ reportPath: Type.Optional(Type.String()) }),
+		executionMode: "sequential",
+		async execute(_id, params, _signal, _onUpdate, ctx) {
+			const reportPath = safeReportPath(ctx, params.reportPath);
+			const report = await readReport(reportPath.readPath);
+			const receipt = recordActorReceipt(reportPath.artifactPath, report, tool);
+			return textResult(`Recorded KAMN actor receipt ${tool}.`, receipt);
 		},
 	});
 }

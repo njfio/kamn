@@ -47,3 +47,13 @@ fn spec_c17_command_rejects_agent_c_private_actor_tool_receipt_digest() {
 
     assert!(err.contains("agent_c_verifier"));
 }
+
+#[test]
+fn spec_c18_command_accepts_actor_tool_receipts_bound_to_report_views() {
+    let root = temp_root("valid-actor-tool-receipts");
+    let artifact = write_artifact(&root, agent_artifact_with_three_agent_actor_receipts(&root));
+    let report = write_report(&root, report_with_three_agent_claim(&root, &artifact));
+
+    execute_verify_mvp_demo_contract(&config(report.as_path()))
+        .expect("actor tool receipts bound to report views should verify");
+}

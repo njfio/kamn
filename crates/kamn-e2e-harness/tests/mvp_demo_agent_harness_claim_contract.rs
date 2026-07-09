@@ -143,6 +143,7 @@ fn pi_extension_source() -> String {
     [
         ".pi/extensions/kamn-mvp/index.ts",
         ".pi/extensions/kamn-mvp/evidence.ts",
+        ".pi/extensions/kamn-mvp/actor-receipts.ts",
     ]
     .map(|path| {
         std::fs::read_to_string(workspace_root().join(path))
