@@ -60,33 +60,42 @@ It registers named local proof tools:
 
 - `kamn_verify_mvp_report`
 - `kamn_inspect_mvp_report_boundaries`
+- `kamn_agent_a_register`
+- `kamn_agent_a_invoke_transaction`
+- `kamn_agent_b_register`
+- `kamn_agent_b_accept_task`
+- `kamn_agent_c_verify_three_agent_proof`
 - `kamn_write_agent_harness_evidence`
 - `kamn_run_demo_mvp_with_agent_evidence`
 
 Run Pi with the extension and the Codex-backed model:
 
 ```bash
-pi --provider openai-codex \
-  --model gpt-5.5 \
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
   --thinking medium \
   --extension .pi/extensions/kamn-mvp/index.ts \
   --no-builtin-tools \
-  --tools kamn_verify_mvp_report,kamn_inspect_mvp_report_boundaries,kamn_write_agent_harness_evidence,kamn_run_demo_mvp_with_agent_evidence \
+  --tools kamn_verify_mvp_report,kamn_inspect_mvp_report_boundaries,kamn_agent_a_register,kamn_agent_a_invoke_transaction,kamn_agent_b_register,kamn_agent_b_accept_task,kamn_agent_c_verify_three_agent_proof,kamn_write_agent_harness_evidence,kamn_run_demo_mvp_with_agent_evidence \
   --approve \
   --no-session \
-  -p "Use the KAMN tools to verify the current report, inspect claim boundaries, write /tmp/kamn-pi-mcp-agent-harness-evidence.json, run the MVP demo with that evidence, and verify the final report."
+  -p "Use only the KAMN tools. Verify the current report, inspect claim boundaries, call the Agent A register tool, Agent A invoke transaction tool, Agent B register tool, Agent B accept task tool, and Agent C verify proof tool against the current report, then write /tmp/kamn-pi-mcp-agent-harness-evidence.json and verify the report again."
 ```
 
 When the Pi tool path writes evidence, the proof artifact records
 `execution_surface:"pi-extension-tools"` and the final report may include
 `mcp_agent_harness_verification`. This proves that Pi extension tools can drive
-the KAMN MVP proof path. The evidence also records a `three_agent_boundary`
-summary derived from the verified report: local-only reports are marked
-`NOT_PRESENT`, while reports with `three_agent_escrow_verification` must preserve
-the report's claim status, label, participant private-field counts, verifier
-zero-private-field count, redaction marker, and absence of a verifier private
-digest. This does not prove generic Pi MCP protocol support, and it does not
-upgrade local-only or dry-run settlement into MVP success.
+the KAMN MVP proof path. For devnet-backed three-agent reports, Pi must call the
+actor tools before `kamn_write_agent_harness_evidence`; otherwise evidence
+writing fails loudly instead of manufacturing success. The resulting artifact
+includes `three_agent_actor_tool_receipts` bound to the report path, actor,
+action, sequence, view scope, view artifact, and view digest.
+
+The evidence also records a `three_agent_boundary` summary derived from the
+verified report: local-only reports are marked `NOT_PRESENT`, while reports with
+`three_agent_escrow_verification` must preserve the report's claim status, label,
+participant private-field counts, verifier zero-private-field count, redaction
+marker, and absence of a verifier private digest. This does not prove generic Pi MCP protocol support, and it does not upgrade local-only or dry-run settlement into MVP success.
 
 ## Devnet-Required Demo
 Run with the MVP and service API Solana settlement environment configured:
