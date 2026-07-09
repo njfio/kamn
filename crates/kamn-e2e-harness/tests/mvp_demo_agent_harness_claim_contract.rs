@@ -1,5 +1,7 @@
 #[path = "mvp_demo_agent_harness_claim_contract/support.rs"]
 mod support;
+#[path = "mvp_demo_agent_harness_claim_contract/three_agent_actor_receipts_contract.rs"]
+mod three_agent_actor_receipts_contract;
 #[path = "mvp_demo_agent_harness_claim_contract/three_agent_actor_rehearsal_contract.rs"]
 mod three_agent_actor_rehearsal_contract;
 #[path = "mvp_demo_agent_harness_claim_contract/three_agent_boundary_contract.rs"]
@@ -124,6 +126,12 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "kamn_run_demo_mvp_with_agent_evidence",
         "three_agent_boundary",
         "three_agent_actor_rehearsal",
+        "three_agent_actor_tool_receipts",
+        "kamn_agent_a_register",
+        "kamn_agent_a_invoke_transaction",
+        "kamn_agent_b_register",
+        "kamn_agent_b_accept_task",
+        "kamn_agent_c_verify_three_agent_proof",
         "invoke_transaction",
         "accept_task",
     ] {
