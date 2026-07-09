@@ -5,6 +5,10 @@ use std::path::{Path, PathBuf};
 #[path = "support/mvp_local_artifacts.rs"]
 mod mvp_local_artifacts;
 
+#[allow(dead_code)]
+#[path = "support/three_agent_view_artifacts.rs"]
+mod three_agent_view_artifacts;
+
 #[test]
 fn spec_c01_report_rejects_missing_transcript_fields() {
     let root = Path::new("/tmp/kamn-7056-unused");
@@ -71,6 +75,27 @@ fn spec_c04_command_rejects_raw_private_payload_transcript() {
         .expect_err("raw private payload transcript must fail");
 
     assert!(err.contains("raw private payload"));
+}
+
+#[test]
+fn spec_c05_command_rejects_stale_transcript_digest_after_content_tamper() {
+    let root = three_agent_view_artifacts::temp_root("stale-transcript-digest");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
+    three_agent_view_artifacts::write_view_artifacts(&root, None);
+    let tampered = append_json_marker(
+        three_agent_view_artifacts::transcript(Some(&root)),
+        "transcript-tampered",
+    );
+    three_agent_view_artifacts::write_transcript(&root, tampered);
+    let report = three_agent_view_artifacts::write_report(
+        &root,
+        three_agent_view_artifacts::report_json(&root, Some(&root)),
+    );
+
+    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+        .expect_err("stale transcript digest must fail");
+
+    assert!(err.contains("three-agent transcript digest"));
 }
 
 fn temp_root(stem: &str) -> PathBuf {
@@ -165,4 +190,11 @@ fn valid_transcript() -> String {
 
 fn roadmap_claim() -> &'static str {
     r#"{"id":"production_readiness","label":"roadmap","required":false,"status":"NOT_CLAIMED","summary":"production readiness is not claimed"}"#
+}
+
+fn append_json_marker(raw: String, marker: &str) -> String {
+    raw.strip_suffix(" }")
+        .or_else(|| raw.strip_suffix('}'))
+        .map(|prefix| format!("{prefix},\"tamper_marker\":\"{marker}\"}}"))
+        .expect("transcript fixture should be a JSON object")
 }

@@ -143,8 +143,83 @@ fn spec_c06_command_rejects_agent_c_short_identity() {
     assert!(err.contains("agent_c_verifier_view"));
 }
 
+#[test]
+fn spec_c07_command_rejects_stale_agent_a_view_digest_after_content_tamper() {
+    let root = three_agent_view_artifacts::temp_root("agent-a-stale-view-digest");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
+    three_agent_view_artifacts::write_view_artifacts(&root, None);
+    append_json_marker(&root.join("proof/agent-a-view.json"), "agent-a-tampered");
+    three_agent_view_artifacts::write_transcript(
+        &root,
+        three_agent_view_artifacts::transcript(Some(&root)),
+    );
+    let report = three_agent_view_artifacts::write_report(
+        &root,
+        three_agent_view_artifacts::report_json(&root, Some(&root)),
+    );
+
+    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+        .expect_err("stale Agent A view digest must fail");
+
+    assert!(err.contains("agent_a_view_digest"));
+}
+
+#[test]
+fn spec_c08_command_rejects_stale_agent_b_view_digest_after_content_tamper() {
+    let root = three_agent_view_artifacts::temp_root("agent-b-stale-view-digest");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
+    three_agent_view_artifacts::write_view_artifacts(&root, None);
+    append_json_marker(&root.join("proof/agent-b-view.json"), "agent-b-tampered");
+    three_agent_view_artifacts::write_transcript(
+        &root,
+        three_agent_view_artifacts::transcript(Some(&root)),
+    );
+    let report = three_agent_view_artifacts::write_report(
+        &root,
+        three_agent_view_artifacts::report_json(&root, Some(&root)),
+    );
+
+    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+        .expect_err("stale Agent B view digest must fail");
+
+    assert!(err.contains("agent_b_view_digest"));
+}
+
+#[test]
+fn spec_c09_command_rejects_stale_agent_c_view_digest_after_content_tamper() {
+    let root = three_agent_view_artifacts::temp_root("agent-c-stale-view-digest");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
+    three_agent_view_artifacts::write_view_artifacts(&root, None);
+    append_json_marker(
+        &root.join("proof/agent-c-verifier-view.json"),
+        "agent-c-tampered",
+    );
+    three_agent_view_artifacts::write_transcript(
+        &root,
+        three_agent_view_artifacts::transcript(Some(&root)),
+    );
+    let report = three_agent_view_artifacts::write_report(
+        &root,
+        three_agent_view_artifacts::report_json(&root, Some(&root)),
+    );
+
+    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+        .expect_err("stale Agent C verifier view digest must fail");
+
+    assert!(err.contains("agent_c_verifier_view_digest"));
+}
+
 fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
     }
+}
+
+fn append_json_marker(path: &Path, marker: &str) {
+    let raw = std::fs::read_to_string(path).expect("view fixture should be readable");
+    let tampered = raw
+        .strip_suffix('}')
+        .map(|prefix| format!("{prefix},\"tamper_marker\":\"{marker}\"}}"))
+        .expect("view fixture should be a JSON object");
+    std::fs::write(path, tampered).expect("tampered view fixture should be written");
 }

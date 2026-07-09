@@ -100,6 +100,10 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
     assert!(report.contains(r#""payer_balance_after":2498995000"#));
     assert!(report.contains(r#""recipient_balance_before":2500000000"#));
     assert!(report.contains(r#""recipient_balance_after":2501000000"#));
+    assert!(report.contains(r#""three_agent_transcript_digest":"sha256:"#));
+    assert!(report.contains(r#""agent_a_view_digest":"sha256:"#));
+    assert!(report.contains(r#""agent_b_view_digest":"sha256:"#));
+    assert!(report.contains(r#""agent_c_verifier_view_digest":"sha256:"#));
     let _ = std::fs::remove_dir_all(&temp);
 }
 
