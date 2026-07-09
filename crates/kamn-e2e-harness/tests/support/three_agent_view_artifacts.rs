@@ -50,6 +50,14 @@ pub(crate) fn write_view_artifacts(root: &Path, agent_c: Option<String>) {
     );
 }
 
+pub(crate) fn replace_agent_a_view(root: &Path, view: String) {
+    mvp_local_artifacts::write_file(root.join("proof/agent-a-view.json").as_path(), view.as_str());
+}
+
+pub(crate) fn replace_agent_b_view(root: &Path, view: String) {
+    mvp_local_artifacts::write_file(root.join("proof/agent-b-view.json").as_path(), view.as_str());
+}
+
 pub(crate) fn report_json(root: &Path, views_root: Option<&Path>) -> String {
     format!(
         r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"demo-three-agent-views","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
@@ -77,6 +85,22 @@ pub(crate) fn agent_c_private_view() -> String {
 
 pub(crate) fn agent_c_mismatched_signature_view() -> String {
     agent_c_public_view().replace(SIGNATURE, "mismatch")
+}
+
+pub(crate) fn agent_a_mismatched_identity_view() -> String {
+    participant_view(
+        "agent_b",
+        "agent-a-private-digest-7060",
+        "agent-a-view-digest-7060",
+    )
+}
+
+pub(crate) fn agent_b_mismatched_identity_view() -> String {
+    participant_view(
+        "agent_a",
+        "agent-b-private-digest-7060",
+        "agent-b-view-digest-7060",
+    )
 }
 
 fn artifacts_json(root: &Path, views_root: Option<&Path>) -> String {
