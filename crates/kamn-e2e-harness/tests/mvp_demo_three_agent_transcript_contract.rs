@@ -2,10 +2,18 @@ use kamn_e2e_harness::mvp_demo::verify_mvp_demo_report_json;
 use kamn_e2e_harness::{execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig};
 use std::path::{Path, PathBuf};
 
+#[path = "support/mvp_local_artifacts.rs"]
+mod mvp_local_artifacts;
+
 #[test]
 fn spec_c01_report_rejects_missing_transcript_fields() {
+    let root = Path::new("/tmp/kamn-7056-unused");
     let transcript = Path::new("/tmp/unused.json");
-    let report = report_with_claim(three_agent_claim_without_transcript(transcript), transcript);
+    let report = report_with_claim(
+        three_agent_claim_without_transcript(transcript),
+        root,
+        transcript,
+    );
 
     let err = verify_mvp_demo_report_json(report)
         .expect_err("three-agent claim must include transcript fields");
@@ -16,10 +24,11 @@ fn spec_c01_report_rejects_missing_transcript_fields() {
 #[test]
 fn spec_c02_command_rejects_missing_transcript_artifact() {
     let root = temp_root("missing-artifact");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
     let transcript = root.join("proof/three-agent-transcript.json");
     let report = write_report(
         &root,
-        report_with_claim(three_agent_claim(&transcript), &transcript),
+        report_with_claim(three_agent_claim(&transcript), &root, &transcript),
     );
 
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
@@ -31,10 +40,11 @@ fn spec_c02_command_rejects_missing_transcript_artifact() {
 #[test]
 fn spec_c03_command_rejects_mismatched_transcript_settlement() {
     let root = temp_root("mismatched-settlement");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
     let transcript = write_transcript(&root, valid_transcript().replace(SIGNATURE, "mismatch"));
     let report = write_report(
         &root,
-        report_with_claim(three_agent_claim(&transcript), &transcript),
+        report_with_claim(three_agent_claim(&transcript), &root, &transcript),
     );
 
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
@@ -46,6 +56,7 @@ fn spec_c03_command_rejects_mismatched_transcript_settlement() {
 #[test]
 fn spec_c04_command_rejects_raw_private_payload_transcript() {
     let root = temp_root("raw-private");
+    mvp_local_artifacts::write_valid_local_artifacts(&root);
     let leaked = valid_transcript().replace(
         r#""private_payload_redacted":true"#,
         r#""raw_private_payload":"secret","private_payload_redacted":true"#,
@@ -53,7 +64,7 @@ fn spec_c04_command_rejects_raw_private_payload_transcript() {
     let transcript = write_transcript(&root, leaked);
     let report = write_report(
         &root,
-        report_with_claim(three_agent_claim(&transcript), &transcript),
+        report_with_claim(three_agent_claim(&transcript), &root, &transcript),
     );
 
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
@@ -94,21 +105,14 @@ fn write_file(path: &Path, content: String) {
     std::fs::write(path, content).expect("fixture should be written");
 }
 
-fn report_with_claim(three_agent_claim: String, transcript_path: &Path) -> String {
+fn report_with_claim(three_agent_claim: String, root: &Path, transcript_path: &Path) -> String {
     format!(
         r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"demo-three-agent","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
-        artifacts_json(transcript_path),
+        mvp_local_artifacts::artifacts_json(root, Some(transcript_path)),
         local_claims(),
         devnet_settlement_claim(),
         three_agent_claim,
         roadmap_claim()
-    )
-}
-
-fn artifacts_json(transcript_path: &Path) -> String {
-    format!(
-        r#"{{"report_json":".kamn/demo/latest/proof/report.json","report_md":".kamn/demo/latest/proof/report.md","state_dir":".kamn/demo/demo-three-agent/state","audit_export":".kamn/demo/demo-three-agent/proof/audit-export.json","localhost_signed_demo_artifact":".kamn/demo/demo-three-agent/proof/localhost-signed-demo.json","localhost_signed_demo_output":".kamn/demo/demo-three-agent/proof/localhost-signed-demo-output.txt","service_api_vertical_slice_output":".kamn/demo/demo-three-agent/proof/service-api-vertical-slice-output.txt","service_api_websocket_output":".kamn/demo/demo-three-agent/proof/service-api-websocket-output.txt","devnet_settlement_output":".kamn/demo/demo-three-agent/proof/devnet-settlement-output.txt","three_agent_transcript":"{}"}}"#,
-        transcript_path.display()
     )
 }
 

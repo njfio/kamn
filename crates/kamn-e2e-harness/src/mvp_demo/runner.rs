@@ -5,6 +5,7 @@ use super::agent_harness::validate_agent_harness_evidence_file;
 use super::devnet_settlement::{
     collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
 };
+use super::local_artifact_verify::validate_local_artifact_files;
 use super::local_artifacts::create_demo_artifacts;
 use super::localhost_signed::{run_localhost_signed_demo, LocalhostSignedDemoInput};
 use super::report::{escape_json, render_report_json, DemoReportInput};
@@ -57,6 +58,7 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     let input = report_input(config, output_root, run_id.as_str(), &devnet_settlement);
     let report_json = render_report_json(&input);
     verify_mvp_demo_report_json(report_json.as_str())?;
+    validate_local_artifact_files(report_json.as_str())?;
     let latest_report = latest_report_path(output_root);
     validate_agent_harness_evidence_file(report_json.as_str(), latest_report.as_str())?;
     validate_three_agent_transcript_file(report_json.as_str())?;
@@ -71,6 +73,7 @@ pub fn execute_verify_mvp_demo_contract(
     let report = std::fs::read_to_string(config.report.as_str())
         .map_err(|error| format!("failed to read MVP demo report {}: {error}", config.report))?;
     verify_mvp_demo_report_json(report.as_str())?;
+    validate_local_artifact_files(report.as_str())?;
     validate_agent_harness_evidence_file(report.as_str(), config.report.as_str())?;
     validate_three_agent_transcript_file(report.as_str())?;
     Ok(format!(

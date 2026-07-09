@@ -32,17 +32,17 @@ fn write_file(path: PathBuf, content: &str) -> Result<(), String> {
 }
 
 fn runtime_state_json() -> &'static str {
-    r#"{"runtime":"kamn-local","alice":"kamn:did:agent:alice","bob":"kamn:did:agent:bob","signed_flow":"task"}"#
+    r#"{"runtime":"kamn-local","source":"localhost-signed-demo","alice":"kamn:did:agent:alice","bob":"kamn:did:agent:bob","signed_flow":"task"}"#
 }
 
 fn relay_json() -> &'static str {
-    r#"{"relay_state":"projected","message_status":"delivered","durable_state":"written"}"#
+    r#"{"relay_state":"projected","source":"service-api-vertical-slice","message_status":"delivered","durable_state":"written"}"#
 }
 
 fn events_json() -> &'static str {
-    r#"{"events":["service-api.message.created","service-api.task.completed"]}"#
+    r#"{"source":"service-api-websocket","events":["service-api.message.created","service-api.task.completed"]}"#
 }
 
 fn audit_json() -> &'static str {
-    r#"{"audit_export":"service-api-runtime-export","records":["service_api_task_created"]}"#
+    r#"{"audit_export":"service-api-runtime-export","source":"service-api-vertical-slice","records":["service_api_task_created"]}"#
 }

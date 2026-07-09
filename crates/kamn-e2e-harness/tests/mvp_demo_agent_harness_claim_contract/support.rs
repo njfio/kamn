@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 
 mod artifact;
+#[path = "../support/mvp_local_artifacts.rs"]
+mod mvp_local_artifacts;
 mod three_agent;
 
 pub(crate) use artifact::*;
@@ -23,6 +25,7 @@ pub(crate) fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
 
 pub(crate) fn write_report(root: &Path, report: String) -> PathBuf {
     let path = root.join("proof/report.json");
+    mvp_local_artifacts::write_valid_local_artifacts(root);
     write_file(path.as_path(), report);
     path
 }
@@ -96,8 +99,9 @@ fn stub_localhost_command() -> Vec<String> {
         "sh".to_owned(),
         "-c".to_owned(),
         r#"cat > "$2" <<'JSON'
-{"schema_version":"kamn.sdk.localhost-signed.demo-receipt-artifact.v1","status": "pass"}
+{"schema_version":"kamn.sdk.localhost-signed.demo-receipt-artifact.v1","status": "pass","signed_exchange":{"verified": true}}
 JSON
+echo "receipt_reconciliation=GO"
 echo "localhost signed message demo completed."
 "#
         .to_owned(),
@@ -109,28 +113,17 @@ fn stub_service_command(test_name: &str) -> Vec<String> {
     vec![
         "sh".to_owned(),
         "-c".to_owned(),
-        format!(r#"echo "test {test_name} ... ok""#),
+        format!(r#"echo "test {test_name} ... ok"; echo "test result: ok""#),
     ]
 }
 
 fn artifacts_json(root: &Path, agent_artifact: Option<&Path>) -> String {
-    let base = root.join("proof");
-    let mut fields = format!(
-        r#""report_json":"{}","report_md":"{}","state_dir":"{}","audit_export":"{}","localhost_signed_demo_artifact":"{}","localhost_signed_demo_output":"{}","service_api_vertical_slice_output":"{}","service_api_websocket_output":"{}","devnet_settlement_output":"{}""#,
-        base.join("report.json").display(),
-        base.join("report.md").display(),
-        root.join("state").display(),
-        base.join("audit-export.json").display(),
-        base.join("localhost-signed-demo.json").display(),
-        base.join("localhost-signed-demo-output.txt").display(),
-        base.join("service-api-vertical-slice-output.txt").display(),
-        base.join("service-api-websocket-output.txt").display(),
-        base.join("devnet-settlement-output.txt").display()
-    );
+    let mut artifacts = mvp_local_artifacts::artifacts_json(root, None);
     if let Some(path) = agent_artifact {
-        fields.push_str(format!(r#","agent_harness_evidence":"{}""#, path.display()).as_str());
+        artifacts.pop();
+        artifacts.push_str(format!(r#","agent_harness_evidence":"{}"}}"#, path.display()).as_str());
     }
-    format!("{{{fields}}}")
+    artifacts
 }
 
 fn artifacts_json_with_transcript(
