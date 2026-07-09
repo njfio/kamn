@@ -11,6 +11,8 @@ use super::three_agent_receipts::{
 };
 use super::three_agent_views::public_view_digest;
 
+const RECEIPT_DIGEST_FIELD: &str = "receipt_digest";
+
 pub(crate) fn write_three_agent_receipts(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
@@ -58,7 +60,7 @@ fn participant_receipt(
             spec.private_digest(run_id),
             public_view_digest(run_id),
         ),
-        "receipt_digest",
+        RECEIPT_DIGEST_FIELD,
     )
 }
 
@@ -76,7 +78,7 @@ fn verifier_receipt(
             views.agent_c_verifier,
             public_view_digest(run_id),
         ),
-        "receipt_digest",
+        RECEIPT_DIGEST_FIELD,
     )
 }
 
