@@ -51,11 +51,17 @@ pub(crate) fn write_view_artifacts(root: &Path, agent_c: Option<String>) {
 }
 
 pub(crate) fn replace_agent_a_view(root: &Path, view: String) {
-    mvp_local_artifacts::write_file(root.join("proof/agent-a-view.json").as_path(), view.as_str());
+    mvp_local_artifacts::write_file(
+        root.join("proof/agent-a-view.json").as_path(),
+        view.as_str(),
+    );
 }
 
 pub(crate) fn replace_agent_b_view(root: &Path, view: String) {
-    mvp_local_artifacts::write_file(root.join("proof/agent-b-view.json").as_path(), view.as_str());
+    mvp_local_artifacts::write_file(
+        root.join("proof/agent-b-view.json").as_path(),
+        view.as_str(),
+    );
 }
 
 pub(crate) fn report_json(root: &Path, views_root: Option<&Path>) -> String {
@@ -88,10 +94,7 @@ pub(crate) fn agent_c_mismatched_signature_view() -> String {
 }
 
 pub(crate) fn agent_c_short_identity_view() -> String {
-    agent_c_public_view().replace(
-        r#""agent":"agent_c_verifier""#,
-        r#""agent":"agent_c""#,
-    )
+    agent_c_public_view().replace(r#""agent":"agent_c_verifier""#, r#""agent":"agent_c""#)
 }
 
 pub(crate) fn agent_a_mismatched_identity_view() -> String {
