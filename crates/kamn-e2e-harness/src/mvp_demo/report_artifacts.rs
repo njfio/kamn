@@ -1,4 +1,8 @@
 use super::report::{escape_json, DemoReportInput};
+use super::three_agent_receipts::{
+    agent_a_observation_receipt_path, agent_b_observation_receipt_path,
+    agent_c_verifier_observation_receipt_path,
+};
 use super::three_agent_transcript::three_agent_transcript_path;
 use super::three_agent_views::{agent_a_view_path, agent_b_view_path, agent_c_verifier_view_path};
 
@@ -21,6 +25,18 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
         entries.push(("agent_a_view", agent_a_view_path(input)));
         entries.push(("agent_b_view", agent_b_view_path(input)));
         entries.push(("agent_c_verifier_view", agent_c_verifier_view_path(input)));
+        entries.push((
+            "agent_a_observation_receipt",
+            agent_a_observation_receipt_path(input),
+        ));
+        entries.push((
+            "agent_b_observation_receipt",
+            agent_b_observation_receipt_path(input),
+        ));
+        entries.push((
+            "agent_c_verifier_observation_receipt",
+            agent_c_verifier_observation_receipt_path(input),
+        ));
     }
     entries
 }

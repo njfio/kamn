@@ -33,7 +33,7 @@ fn spec_c01_command_rejects_missing_actor_observation_receipts() {
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
         .expect_err("three-agent proof must include actor observation receipts");
 
-    assert!(err.contains("agent_a_observation_receipt"));
+    assert!(err.contains("agent_a_observation_receipt"), "{err}");
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn spec_c02_command_rejects_stale_agent_a_observation_receipt_digest() {
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
         .expect_err("stale Agent A receipt digest must fail");
 
-    assert!(err.contains("agent_a_observation_receipt_digest"));
+    assert!(err.contains("agent_a_observation_receipt_digest"), "{err}");
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn spec_c03_command_rejects_agent_a_receipt_view_digest_mismatch() {
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
         .expect_err("Agent A receipt must bind to Agent A view digest");
 
-    assert!(err.contains("agent_a_observation_receipt"));
+    assert!(err.contains("agent_a_observation_receipt"), "{err}");
 }
 
 #[test]
@@ -91,7 +91,10 @@ fn spec_c04_command_rejects_agent_c_receipt_private_digest() {
     let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
         .expect_err("Agent C receipt must not expose participant private digest");
 
-    assert!(err.contains("agent_c_verifier_observation_receipt"));
+    assert!(
+        err.contains("agent_c_verifier_observation_receipt"),
+        "{err}"
+    );
 }
 
 #[test]

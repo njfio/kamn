@@ -7,6 +7,10 @@ use super::devnet_settlement::{
 };
 use super::report_artifacts::artifacts_json;
 use super::three_agent_claim::three_agent_escrow_claim_json;
+use super::three_agent_receipts::{
+    agent_a_observation_receipt_path, agent_b_observation_receipt_path,
+    agent_c_verifier_observation_receipt_path,
+};
 use super::three_agent_transcript::three_agent_transcript_path;
 use super::three_agent_views::{agent_a_view_path, agent_b_view_path, agent_c_verifier_view_path};
 
@@ -156,6 +160,9 @@ fn devnet_success_claims(
     let agent_a = agent_a_view_path(input);
     let agent_b = agent_b_view_path(input);
     let agent_c = agent_c_verifier_view_path(input);
+    let agent_a_receipt = agent_a_observation_receipt_path(input);
+    let agent_b_receipt = agent_b_observation_receipt_path(input);
+    let agent_c_receipt = agent_c_verifier_observation_receipt_path(input);
     Ok(vec![
         devnet_settlement_claim_json(evidence),
         three_agent_escrow_claim_json(
@@ -163,6 +170,11 @@ fn devnet_success_claims(
             evidence,
             transcript.as_str(),
             [agent_a.as_str(), agent_b.as_str(), agent_c.as_str()],
+            [
+                agent_a_receipt.as_str(),
+                agent_b_receipt.as_str(),
+                agent_c_receipt.as_str(),
+            ],
             digests,
         ),
     ])

@@ -14,13 +14,30 @@ pub(crate) fn base_fixture(stem: &str) -> PathBuf {
 }
 
 pub(crate) fn report_with_receipts(root: &Path, paths: &ReceiptPaths) -> String {
-    three_agent_view_artifacts::report_json(root, Some(root)).replace(
+    let with_claim_fields = three_agent_view_artifacts::report_json(root, Some(root)).replace(
         r#""private_payload_redacted":true"#,
         format!(
             r#""private_payload_redacted":true,{}"#,
             observation_receipt_fields(paths)
         )
         .as_str(),
+    );
+    let marker = format!(
+        r#""agent_c_verifier_view":"{}""#,
+        root.join("proof/agent-c-verifier-view.json").display()
+    );
+    with_claim_fields.replace(
+        marker.as_str(),
+        format!("{},{}", marker, observation_artifact_entries(paths)).as_str(),
+    )
+}
+
+fn observation_artifact_entries(paths: &ReceiptPaths) -> String {
+    format!(
+        r#""agent_a_observation_receipt":"{}","agent_b_observation_receipt":"{}","agent_c_verifier_observation_receipt":"{}""#,
+        paths.agent_a.display(),
+        paths.agent_b.display(),
+        paths.agent_c.display()
     )
 }
 
@@ -52,10 +69,7 @@ pub(crate) fn temp_root(stem: &str) -> PathBuf {
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock should be after epoch")
         .as_millis();
-    std::env::temp_dir().join(format!(
-        "kamn-7070-{stem}-{}-{millis}",
-        std::process::id()
-    ))
+    std::env::temp_dir().join(format!("kamn-7070-{stem}-{}-{millis}", std::process::id()))
 }
 
 fn observation_receipt_fields(paths: &ReceiptPaths) -> String {
@@ -109,7 +123,7 @@ fn agent_c_receipt(root: &Path, overrides: &ReceiptOverrides) -> String {
         ""
     };
     format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"agent_c_verifier","action":"verify_three_agent_proof","view_scope":"restricted-public","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"view_artifact":"{}","view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true{},"receipt_digest":""}}"#,
+        r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"agent_c_verifier","action":"verify_three_agent_proof","view_scope":"restricted-public","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","view_artifact":"{}","view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true{},"receipt_digest":""}}"#,
         root.join("proof/agent-c-verifier-view.json").display(),
         view_digest(root, "agent-c-verifier-view.json"),
         private
@@ -128,7 +142,7 @@ fn participant_receipt(
         .map(str::to_owned)
         .unwrap_or_else(|| view_digest(root, view_file));
     format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"{}","action":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"view_artifact":"{}","view_digest":"{}","participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"receipt_digest":""}}"#,
+        r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"{}","action":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","view_artifact":"{}","view_digest":"{}","participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"receipt_digest":""}}"#,
         agent,
         action,
         root.join("proof").join(view_file).display(),

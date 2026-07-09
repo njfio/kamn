@@ -10,16 +10,18 @@ pub(crate) fn three_agent_escrow_claim_json(
     evidence: &DevnetSettlementEvidence,
     transcript_path: &str,
     view_paths: [&str; 3],
+    receipt_paths: [&str; 3],
     artifact_digests: &ThreeAgentArtifactDigests,
 ) -> String {
     let transaction_id = format!("mvp-three-agent-{run_id}");
     let terms_digest = format!("terms-digest-{run_id}");
     let escrow_id = format!("escrow-three-agent-{run_id}");
     format!(
-        "{{{},{},{},{},{},{},{},{}}}",
+        "{{{},{},{},{},{},{},{},{},{}}}",
         claim_header(),
         transcript_fields(transcript_path, artifact_digests),
         view_artifact_fields(view_paths, artifact_digests),
+        receipt_artifact_fields(receipt_paths, artifact_digests),
         digest_fields(transaction_id.as_str(), terms_digest.as_str()),
         escrow_fields(escrow_id.as_str()),
         settlement_fields(evidence),
@@ -45,6 +47,21 @@ fn view_artifact_fields(paths: [&str; 3], artifact_digests: &ThreeAgentArtifactD
         escape_json(artifact_digests.views.agent_a.as_str()),
         escape_json(artifact_digests.views.agent_b.as_str()),
         escape_json(artifact_digests.views.agent_c_verifier.as_str())
+    )
+}
+
+fn receipt_artifact_fields(
+    paths: [&str; 3],
+    artifact_digests: &ThreeAgentArtifactDigests,
+) -> String {
+    format!(
+        "\"agent_a_observation_receipt_artifact\":\"{}\",\"agent_b_observation_receipt_artifact\":\"{}\",\"agent_c_verifier_observation_receipt_artifact\":\"{}\",\"agent_a_observation_receipt_digest\":\"{}\",\"agent_b_observation_receipt_digest\":\"{}\",\"agent_c_verifier_observation_receipt_digest\":\"{}\"",
+        escape_json(paths[0]),
+        escape_json(paths[1]),
+        escape_json(paths[2]),
+        escape_json(artifact_digests.receipts.agent_a.as_str()),
+        escape_json(artifact_digests.receipts.agent_b.as_str()),
+        escape_json(artifact_digests.receipts.agent_c_verifier.as_str())
     )
 }
 

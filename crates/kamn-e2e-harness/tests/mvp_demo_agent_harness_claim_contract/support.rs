@@ -4,6 +4,7 @@ use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 
 mod actor_receipts;
 mod artifact;
+mod canonical_receipts;
 #[path = "../support/mvp_local_artifacts.rs"]
 mod mvp_local_artifacts;
 mod three_agent;
@@ -82,6 +83,9 @@ pub(crate) fn report_with_three_agent_claim(root: &Path, artifact: &Path) -> Str
     for (path, content) in three_agent::valid_view_artifacts(root) {
         write_file(path.as_path(), content);
     }
+    for (path, content) in canonical_receipts::valid_receipt_artifacts(root) {
+        write_file(path.as_path(), content);
+    }
     format!(
         r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"run-7047","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
         artifacts_json_with_three_agent(root, Some(artifact), transcript.as_path()),
@@ -140,11 +144,12 @@ fn artifacts_json_with_three_agent(
     artifacts.pop();
     artifacts.push_str(
         format!(
-            r#","three_agent_transcript":"{}","agent_a_view":"{}","agent_b_view":"{}","agent_c_verifier_view":"{}"}}"#,
+            r#","three_agent_transcript":"{}","agent_a_view":"{}","agent_b_view":"{}","agent_c_verifier_view":"{}"{} }}"#,
             transcript.display(),
             root.join("proof/agent-a-view.json").display(),
             root.join("proof/agent-b-view.json").display(),
-            root.join("proof/agent-c-verifier-view.json").display()
+            root.join("proof/agent-c-verifier-view.json").display(),
+            canonical_receipts::artifact_entries(root)
         )
         .as_str(),
     );

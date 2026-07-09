@@ -13,6 +13,7 @@ use super::localhost_signed::{run_localhost_signed_demo, LocalhostSignedDemoInpu
 use super::report::{escape_json, render_report_json, DemoReportInput};
 use super::report_writer::write_reports;
 use super::service_api_proof::{run_service_api_proofs, ServiceApiProofInput};
+use super::three_agent_receipts::write_three_agent_receipts;
 use super::three_agent_transcript::{
     validate_three_agent_transcript_file, write_three_agent_transcript,
 };
@@ -69,8 +70,13 @@ fn create_three_agent_transcript(
         return Ok(None);
     };
     let views = write_three_agent_views(run_id, evidence, run_dir)?;
+    let receipts = write_three_agent_receipts(run_id, evidence, run_dir, &views)?;
     let transcript = write_three_agent_transcript(run_id, evidence, run_dir, &views)?;
-    Ok(Some(ThreeAgentArtifactDigests { transcript, views }))
+    Ok(Some(ThreeAgentArtifactDigests {
+        transcript,
+        views,
+        receipts,
+    }))
 }
 
 fn validate_generated_report(report_json: &str, output_root: &Path) -> Result<(), String> {

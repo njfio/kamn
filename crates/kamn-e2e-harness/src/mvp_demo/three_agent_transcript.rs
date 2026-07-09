@@ -3,6 +3,7 @@ use std::path::Path;
 use super::artifact_digest::{validate_json_digest, ThreeAgentViewDigests};
 use super::devnet_settlement::DevnetSettlementEvidence;
 use super::report::DemoReportInput;
+use super::three_agent_receipts::validate_three_agent_receipt_files;
 use super::three_agent_transcript_build::transcript_json;
 use super::three_agent_view_artifacts::validate_three_agent_view_files;
 use super::verify_support::{
@@ -49,7 +50,8 @@ pub(crate) fn validate_three_agent_transcript_file(report_json: &str) -> Result<
         format!("failed to read three-agent transcript artifact {artifact}: {error}")
     })?;
     validate_transcript(raw.as_str(), claim)?;
-    validate_three_agent_view_files(report_json, raw.as_str(), claim)
+    validate_three_agent_view_files(report_json, raw.as_str(), claim)?;
+    validate_three_agent_receipt_files(report_json, claim)
 }
 
 pub(crate) fn validate_three_agent_transcript_claim(claim: &ClaimView<'_>) -> Result<(), String> {

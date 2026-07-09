@@ -13,9 +13,17 @@ pub(crate) struct ThreeAgentViewDigests {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ThreeAgentReceiptDigests {
+    pub(crate) agent_a: String,
+    pub(crate) agent_b: String,
+    pub(crate) agent_c_verifier: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ThreeAgentArtifactDigests {
     pub(crate) transcript: String,
     pub(crate) views: ThreeAgentViewDigests,
+    pub(crate) receipts: ThreeAgentReceiptDigests,
 }
 
 pub(crate) fn attach_json_digest(raw: String, field: &str) -> Result<ArtifactJson, String> {
