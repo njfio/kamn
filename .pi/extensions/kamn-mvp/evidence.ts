@@ -7,6 +7,30 @@ export type Report = {
 	claim_matrix?: Array<Record<string, unknown>>;
 };
 
+const ACTORS: Record<string, ActorInput> = {
+	agent_a: {
+		agent: "agent_a",
+		actions: ["register", "invoke_transaction"],
+		scopeField: "agent_a_view_scope",
+		artifactField: "agent_a_view_artifact",
+		digestField: "agent_a_view_digest",
+	},
+	agent_b: {
+		agent: "agent_b",
+		actions: ["register", "accept_task"],
+		scopeField: "agent_b_view_scope",
+		artifactField: "agent_b_view_artifact",
+		digestField: "agent_b_view_digest",
+	},
+	agent_c_verifier: {
+		agent: "agent_c_verifier",
+		actions: ["verify_proof"],
+		scopeField: "verifier_view_scope",
+		artifactField: "agent_c_verifier_view_artifact",
+		digestField: "agent_c_verifier_view_digest",
+	},
+};
+
 export async function readReport(reportPath: string): Promise<Report> {
 	const raw = await readFile(reportPath, "utf8");
 	const report = JSON.parse(raw) as Report;
@@ -90,27 +114,15 @@ function threeAgentActorRehearsal(report: Report) {
 		settlement_claim_label: requireString(claim, "label"),
 		settlement_status: requireString(claim, "status"),
 		private_payload_redacted: requireBoolean(claim, "private_payload_redacted"),
-		agent_a: actorObservation(claim, {
-			agent: "agent_a",
-			actions: ["register", "invoke_transaction"],
-			scopeField: "agent_a_view_scope",
-			artifactField: "agent_a_view_artifact",
-			digestField: "agent_a_view_digest",
-		}),
-		agent_b: actorObservation(claim, {
-			agent: "agent_b",
-			actions: ["register", "accept_task"],
-			scopeField: "agent_b_view_scope",
-			artifactField: "agent_b_view_artifact",
-			digestField: "agent_b_view_digest",
-		}),
-		agent_c_verifier: actorObservation(claim, {
-			agent: "agent_c_verifier",
-			actions: ["verify_proof"],
-			scopeField: "verifier_view_scope",
-			artifactField: "agent_c_verifier_view_artifact",
-			digestField: "agent_c_verifier_view_digest",
-		}),
+		...actorObservations(claim),
+	};
+}
+
+function actorObservations(claim: Record<string, unknown>) {
+	return {
+		agent_a: actorObservation(claim, ACTORS.agent_a),
+		agent_b: actorObservation(claim, ACTORS.agent_b),
+		agent_c_verifier: actorObservation(claim, ACTORS.agent_c_verifier),
 	};
 }
 

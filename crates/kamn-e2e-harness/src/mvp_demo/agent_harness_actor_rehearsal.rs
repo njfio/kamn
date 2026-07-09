@@ -102,14 +102,16 @@ fn object_section<'a>(raw: &'a str, field: &str) -> Result<&'a str, String> {
 fn matching_object(raw: &str, start: usize) -> Result<&str, String> {
     let mut depth = 0_u64;
     for (offset, byte) in raw[start..].bytes().enumerate() {
-        if byte == b'{' {
-            depth += 1;
-        }
-        if byte == b'}' {
-            depth -= 1;
-            if depth == 0 {
-                return Ok(&raw[start..start + offset + 1]);
+        match byte {
+            b'{' => depth += 1,
+            b'}' if depth == 0 => break,
+            b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Ok(&raw[start..start + offset + 1]);
+                }
             }
+            _ => {}
         }
     }
     Err("malformed three_agent_actor_rehearsal object".to_owned())
