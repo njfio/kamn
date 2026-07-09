@@ -4,18 +4,28 @@ use super::report::{escape_json, CLAIM_LABEL_DEVNET_BACKED};
 pub(crate) fn three_agent_escrow_claim_json(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    transcript_path: &str,
 ) -> String {
     let transaction_id = format!("mvp-three-agent-{run_id}");
     let terms_digest = format!("terms-digest-{run_id}");
     let escrow_id = format!("escrow-three-agent-{run_id}");
     format!(
-        "{{{},{},{},{},{},{}}}",
+        "{{{},{},{},{},{},{},{}}}",
         claim_header(),
+        transcript_fields(run_id, transcript_path),
         digest_fields(transaction_id.as_str(), terms_digest.as_str()),
         escrow_fields(escrow_id.as_str()),
         settlement_fields(evidence),
         privacy_fields(),
         view_fields(run_id)
+    )
+}
+
+fn transcript_fields(run_id: &str, path: &str) -> String {
+    format!(
+        "\"three_agent_transcript_artifact\":\"{}\",\"three_agent_transcript_digest\":\"{}\"",
+        escape_json(path),
+        escape_json(format!("three-agent-transcript-digest-{run_id}").as_str())
     )
 }
 

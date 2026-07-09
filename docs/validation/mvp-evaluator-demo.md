@@ -43,6 +43,7 @@ service-api-vertical-slice-output.txt
 service-api-websocket-output.txt
 audit-export.json
 devnet-settlement-output.txt
+three-agent-transcript.json
 ```
 
 Verify the generated report:
@@ -109,6 +110,15 @@ network=solana:devnet
 settlement_tx_signature=<confirmed-devnet-signature>
 settlement_commitment=finalized
 ```
+
+Successful devnet-backed reports also include
+`three-agent-transcript.json`. That artifact records the local proof transcript
+for Agent A registration, Agent B registration, Agent A task or transaction
+invocation, Agent B acceptance, escrow funding and release, and Agent C
+restricted-public verification. It links those steps to the report's Solana
+devnet settlement signature, amount, payer, recipient, and finalized commitment.
+The transcript is local proof evidence; the settlement or asset-movement claim
+remains `devnet-backed`, and raw participant-private payloads stay redacted.
 
 If devnet-backed settlement evidence cannot be produced, the report must remain explicit:
 

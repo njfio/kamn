@@ -72,12 +72,14 @@ pub(crate) fn report_with_agent_claim(root: &Path, artifact: Option<&Path>) -> S
 }
 
 pub(crate) fn report_with_three_agent_claim(root: &Path, artifact: &Path) -> String {
+    let transcript = root.join("proof/three-agent-transcript.json");
+    write_file(transcript.as_path(), three_agent::valid_transcript());
     format!(
         r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"run-7047","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
-        artifacts_json(root, Some(artifact)),
+        artifacts_json_with_transcript(root, Some(artifact), transcript.as_path()),
         local_claims(),
         three_agent::devnet_settlement_claim(),
-        three_agent::three_agent_claim(),
+        three_agent::three_agent_claim(transcript.as_path()),
         agent_claim(),
         roadmap_claim()
     )
@@ -129,6 +131,18 @@ fn artifacts_json(root: &Path, agent_artifact: Option<&Path>) -> String {
         fields.push_str(format!(r#","agent_harness_evidence":"{}""#, path.display()).as_str());
     }
     format!("{{{fields}}}")
+}
+
+fn artifacts_json_with_transcript(
+    root: &Path,
+    agent_artifact: Option<&Path>,
+    transcript: &Path,
+) -> String {
+    let mut artifacts = artifacts_json(root, agent_artifact);
+    artifacts.pop();
+    artifacts
+        .push_str(format!(r#","three_agent_transcript":"{}"}}"#, transcript.display()).as_str());
+    artifacts
 }
 
 fn local_claims() -> &'static str {
