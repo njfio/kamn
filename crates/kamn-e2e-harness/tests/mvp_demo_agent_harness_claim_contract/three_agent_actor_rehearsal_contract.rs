@@ -33,7 +33,7 @@ fn spec_c13_command_rejects_actor_rehearsal_with_agent_c_private_scope() {
 fn spec_c14_command_rejects_actor_rehearsal_view_digest_mismatch() {
     let root = temp_root("actor-digest-mismatch");
     let artifact_json = agent_artifact_with_three_agent_actor_rehearsal(&root).replace(
-        r#""agent_a_view_digest":"agent-a-view-digest-7045""#,
+        format!(r#""agent_a_view_digest":"{}""#, view_digest_for("agent_a")).as_str(),
         r#""agent_a_view_digest":"mismatch""#,
     );
     let artifact = write_artifact(&root, artifact_json);

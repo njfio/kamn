@@ -9,6 +9,7 @@ mod mvp_local_artifacts;
 mod three_agent;
 
 pub(crate) use artifact::*;
+pub(crate) use three_agent::view_digest_for;
 
 pub(crate) fn temp_root(stem: &str) -> PathBuf {
     let millis = std::time::SystemTime::now()

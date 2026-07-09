@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use super::three_agent;
+
 pub(crate) fn valid_actor_receipts(root: &Path) -> String {
     format!(
         r#","three_agent_actor_tool_receipts":[{},{},{},{},{}]"#,
@@ -46,8 +48,16 @@ fn receipt(root: &Path, sequence: u64, tool: &str, agent: &str, action: &str) ->
 
 fn view_for(root: &Path, agent: &str) -> View {
     match agent {
-        "agent_a" => View::participant(root, "agent-a-view.json", "agent-a-view-digest-7045"),
-        "agent_b" => View::participant(root, "agent-b-view.json", "agent-b-view-digest-7045"),
+        "agent_a" => View::participant(
+            root,
+            "agent-a-view.json",
+            three_agent::view_digest_for(agent),
+        ),
+        "agent_b" => View::participant(
+            root,
+            "agent-b-view.json",
+            three_agent::view_digest_for(agent),
+        ),
         _ => View::verifier(root),
     }
 }
@@ -55,11 +65,11 @@ fn view_for(root: &Path, agent: &str) -> View {
 struct View {
     scope: &'static str,
     artifact: std::path::PathBuf,
-    digest: &'static str,
+    digest: String,
 }
 
 impl View {
-    fn participant(root: &Path, file: &str, digest: &'static str) -> Self {
+    fn participant(root: &Path, file: &str, digest: String) -> Self {
         Self {
             scope: "participant-private",
             artifact: root.join("proof").join(file),
@@ -71,7 +81,7 @@ impl View {
         Self {
             scope: "restricted-public",
             artifact: root.join("proof/agent-c-verifier-view.json"),
-            digest: "agent-c-view-digest-7045",
+            digest: three_agent::view_digest_for("agent_c_verifier"),
         }
     }
 }
