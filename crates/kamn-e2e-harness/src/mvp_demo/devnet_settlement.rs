@@ -65,12 +65,13 @@ fn collect_override_devnet_settlement(
     let output = build_command(command)?
         .output()
         .map_err(|error| format!("failed to run devnet settlement MVP proof command: {error}"))?;
-    write_override_log(run_dir, &output)?;
     if !output.status.success() {
+        write_override_log(run_dir, &output)?;
         return Err("devnet settlement MVP proof command failed".to_owned());
     }
     let stdout = String::from_utf8_lossy(output.stdout.as_slice());
     let evidence = parse_devnet_settlement_evidence(stdout.as_ref())?;
+    write_live_success_log(run_dir, &evidence)?;
     Ok(pass(evidence))
 }
 
