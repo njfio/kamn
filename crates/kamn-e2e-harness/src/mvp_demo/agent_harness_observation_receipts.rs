@@ -79,7 +79,9 @@ fn require_receipt_string(receipt: &str, field: &str, expected: &str) -> Result<
     if extract_string(receipt, field)? == expected {
         return Ok(());
     }
-    Err(format!("three_agent_actor_observation_receipts {field} mismatch"))
+    Err(format!(
+        "three_agent_actor_observation_receipts {field} mismatch"
+    ))
 }
 
 fn require_receipt_claim_match(
@@ -114,9 +116,9 @@ fn receipt_section<'a>(artifact: &'a str, agent: &str) -> Result<&'a str, String
         .ok_or_else(|| "missing three_agent_actor_observation_receipts".to_owned())?;
     let observation_section = &artifact[outer_index + outer.len()..];
     let marker = format!("\"{agent}\":{{");
-    let marker_index = observation_section.find(marker.as_str()).ok_or_else(|| {
-        format!("missing three_agent_actor_observation_receipts agent: {agent}")
-    })?;
+    let marker_index = observation_section
+        .find(marker.as_str())
+        .ok_or_else(|| format!("missing three_agent_actor_observation_receipts agent: {agent}"))?;
     let start = outer_index + outer.len() + marker_index + marker.len() - 1;
     matching_object(artifact, start, "three_agent_actor_observation_receipts")
 }

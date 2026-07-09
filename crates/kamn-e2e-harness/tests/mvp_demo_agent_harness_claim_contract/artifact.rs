@@ -88,6 +88,20 @@ pub(crate) fn agent_artifact_with_canonical_observation_receipts(root: &Path) ->
     )
 }
 
+pub(crate) fn agent_artifact_with_agent_a_observation_digest(root: &Path, digest: &str) -> String {
+    append_object_field(
+        agent_artifact_with_three_agent_actor_receipts(root),
+        canonical_receipts::observation_receipts_with_agent_a_digest(root, digest),
+    )
+}
+
+pub(crate) fn agent_artifact_with_agent_c_observation_private_marker(root: &Path) -> String {
+    append_object_field(
+        agent_artifact_with_three_agent_actor_receipts(root),
+        canonical_receipts::observation_receipts_with_agent_c_private_marker(root),
+    )
+}
+
 fn append_object_field(mut json: String, field: String) -> String {
     json.pop();
     json.push_str(field.as_str());

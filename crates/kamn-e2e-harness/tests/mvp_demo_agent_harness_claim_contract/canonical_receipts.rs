@@ -49,24 +49,58 @@ pub(crate) fn artifact_entries(root: &Path) -> String {
 pub(crate) fn observation_receipts(root: &Path) -> String {
     format!(
         r#","three_agent_actor_observation_receipts":{{"agent_a":{},"agent_b":{},"agent_c_verifier":{}}}"#,
-        observation_receipt(root, "agent_a", "participant-private"),
-        observation_receipt(root, "agent_b", "participant-private"),
-        observation_receipt(root, "agent_c_verifier", "restricted-public")
+        observation_receipt(root, "agent_a", "participant-private", None, ""),
+        observation_receipt(root, "agent_b", "participant-private", None, ""),
+        observation_receipt(root, "agent_c_verifier", "restricted-public", None, "")
     )
 }
 
-pub(crate) fn observation_receipt(root: &Path, agent: &str, scope: &str) -> String {
+pub(crate) fn observation_receipts_with_agent_a_digest(root: &Path, digest: &str) -> String {
+    format!(
+        r#","three_agent_actor_observation_receipts":{{"agent_a":{},"agent_b":{},"agent_c_verifier":{}}}"#,
+        observation_receipt(root, "agent_a", "participant-private", Some(digest), ""),
+        observation_receipt(root, "agent_b", "participant-private", None, ""),
+        observation_receipt(root, "agent_c_verifier", "restricted-public", None, "")
+    )
+}
+
+pub(crate) fn observation_receipts_with_agent_c_private_marker(root: &Path) -> String {
+    format!(
+        r#","three_agent_actor_observation_receipts":{{"agent_a":{},"agent_b":{},"agent_c_verifier":{}}}"#,
+        observation_receipt(root, "agent_a", "participant-private", None, ""),
+        observation_receipt(root, "agent_b", "participant-private", None, ""),
+        observation_receipt(
+            root,
+            "agent_c_verifier",
+            "restricted-public",
+            None,
+            r#","participant_private_view_digest":"leak""#,
+        )
+    )
+}
+
+fn observation_receipt(
+    root: &Path,
+    agent: &str,
+    scope: &str,
+    digest: Option<&str>,
+    extra: &str,
+) -> String {
     let artifact = match agent {
         "agent_a" => root.join("proof/agent-a-observation-receipt.json"),
         "agent_b" => root.join("proof/agent-b-observation-receipt.json"),
         _ => root.join("proof/agent-c-verifier-observation-receipt.json"),
     };
+    let digest = digest
+        .map(str::to_owned)
+        .unwrap_or_else(|| receipt_digest_for(root, agent));
     format!(
-        r#"{{"agent":"{}","view_scope":"{}","artifact":"{}","digest":"{}"}}"#,
+        r#"{{"agent":"{}","view_scope":"{}","artifact":"{}","digest":"{}"{} }}"#,
         agent,
         scope,
         artifact.display(),
-        receipt_digest_for(root, agent)
+        digest,
+        extra
     )
 }
 
