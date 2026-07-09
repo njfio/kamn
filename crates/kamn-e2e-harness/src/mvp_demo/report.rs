@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::agent_harness::agent_harness_claim_json;
+use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::devnet_settlement::{
     devnet_no_go_reason, devnet_settlement_claim_json, DevnetSettlementEvidence,
 };
@@ -32,20 +33,21 @@ pub(crate) struct DemoReportInput<'a> {
     pub(crate) devnet_settlement: Option<&'a DevnetSettlementEvidence>,
     pub(crate) devnet_no_go_reason: Option<&'a str>,
     pub(crate) agent_harness_evidence_path: Option<&'a str>,
+    pub(crate) three_agent_artifact_digests: Option<&'a ThreeAgentArtifactDigests>,
 }
 
-pub(crate) fn render_report_json(input: &DemoReportInput<'_>) -> String {
+pub(crate) fn render_report_json(input: &DemoReportInput<'_>) -> Result<String, String> {
     let status = report_status(input);
-    format!(
+    Ok(format!(
         "{{\"schema_version\":\"{}\",\"run_id\":\"{}\",\"status\":\"{}\",\"devnet_mode\":\"{}\",\"artifacts\":{},\"claim_matrix\":[{}],\"no_go\":{}}}",
         MVP_DEMO_REPORT_SCHEMA_VERSION,
         escape_json(input.run_id),
         status,
         escape_json(input.devnet_mode),
         artifacts_json(input),
-        claim_matrix_json(input),
+        claim_matrix_json(input)?,
         no_go_json(input)
-    )
+    ))
 }
 
 pub(crate) fn report_status(input: &DemoReportInput<'_>) -> &'static str {
@@ -56,16 +58,16 @@ pub(crate) fn report_status(input: &DemoReportInput<'_>) -> &'static str {
     }
 }
 
-fn claim_matrix_json(input: &DemoReportInput<'_>) -> String {
+fn claim_matrix_json(input: &DemoReportInput<'_>) -> Result<String, String> {
     let mut claims = local_claims();
     if input.agent_harness_evidence_path.is_some() {
         claims.push(agent_harness_claim_json());
     }
     if input.devnet_mode == "required" {
-        claims.extend(devnet_required_claims(input));
+        claims.extend(devnet_required_claims(input)?);
     }
     claims.push(roadmap_claim());
-    claims.join(",")
+    Ok(claims.join(","))
 }
 
 fn local_claims() -> Vec<String> {
@@ -137,30 +139,34 @@ fn roadmap_claim() -> String {
     )
 }
 
-fn devnet_required_claims(input: &DemoReportInput<'_>) -> Vec<String> {
+fn devnet_required_claims(input: &DemoReportInput<'_>) -> Result<Vec<String>, String> {
     match input.devnet_settlement {
         Some(evidence) => devnet_success_claims(input, evidence),
-        None => vec![devnet_no_go_claim_with_reason(input)],
+        None => Ok(vec![devnet_no_go_claim_with_reason(input)]),
     }
 }
 
 fn devnet_success_claims(
     input: &DemoReportInput<'_>,
     evidence: &DevnetSettlementEvidence,
-) -> Vec<String> {
+) -> Result<Vec<String>, String> {
+    let digests = input
+        .three_agent_artifact_digests
+        .ok_or_else(|| "missing three-agent artifact digests".to_owned())?;
     let transcript = three_agent_transcript_path(input);
     let agent_a = agent_a_view_path(input);
     let agent_b = agent_b_view_path(input);
     let agent_c = agent_c_verifier_view_path(input);
-    vec![
+    Ok(vec![
         devnet_settlement_claim_json(evidence),
         three_agent_escrow_claim_json(
             input.run_id,
             evidence,
             transcript.as_str(),
             [agent_a.as_str(), agent_b.as_str(), agent_c.as_str()],
+            digests,
         ),
-    ]
+    ])
 }
 
 fn no_go_json(input: &DemoReportInput<'_>) -> String {

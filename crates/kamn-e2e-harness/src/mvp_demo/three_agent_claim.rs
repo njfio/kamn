@@ -1,8 +1,8 @@
+use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::devnet_settlement::DevnetSettlementEvidence;
 use super::report::{escape_json, CLAIM_LABEL_DEVNET_BACKED};
 use super::three_agent_views::{
-    agent_a_private_view_digest, agent_a_view_digest, agent_b_private_view_digest,
-    agent_b_view_digest, agent_c_verifier_view_digest, public_view_digest,
+    agent_a_private_view_digest, agent_b_private_view_digest, public_view_digest,
 };
 
 pub(crate) fn three_agent_escrow_claim_json(
@@ -10,6 +10,7 @@ pub(crate) fn three_agent_escrow_claim_json(
     evidence: &DevnetSettlementEvidence,
     transcript_path: &str,
     view_paths: [&str; 3],
+    artifact_digests: &ThreeAgentArtifactDigests,
 ) -> String {
     let transaction_id = format!("mvp-three-agent-{run_id}");
     let terms_digest = format!("terms-digest-{run_id}");
@@ -17,8 +18,8 @@ pub(crate) fn three_agent_escrow_claim_json(
     format!(
         "{{{},{},{},{},{},{},{},{}}}",
         claim_header(),
-        transcript_fields(run_id, transcript_path),
-        view_artifact_fields(run_id, view_paths),
+        transcript_fields(transcript_path, artifact_digests),
+        view_artifact_fields(view_paths, artifact_digests),
         digest_fields(transaction_id.as_str(), terms_digest.as_str()),
         escrow_fields(escrow_id.as_str()),
         settlement_fields(evidence),
@@ -27,23 +28,23 @@ pub(crate) fn three_agent_escrow_claim_json(
     )
 }
 
-fn transcript_fields(run_id: &str, path: &str) -> String {
+fn transcript_fields(path: &str, artifact_digests: &ThreeAgentArtifactDigests) -> String {
     format!(
         "\"three_agent_transcript_artifact\":\"{}\",\"three_agent_transcript_digest\":\"{}\"",
         escape_json(path),
-        escape_json(format!("three-agent-transcript-digest-{run_id}").as_str())
+        escape_json(artifact_digests.transcript.as_str())
     )
 }
 
-fn view_artifact_fields(run_id: &str, paths: [&str; 3]) -> String {
+fn view_artifact_fields(paths: [&str; 3], artifact_digests: &ThreeAgentArtifactDigests) -> String {
     format!(
         "\"agent_a_view_artifact\":\"{}\",\"agent_b_view_artifact\":\"{}\",\"agent_c_verifier_view_artifact\":\"{}\",\"agent_a_view_digest\":\"{}\",\"agent_b_view_digest\":\"{}\",\"agent_c_verifier_view_digest\":\"{}\"",
         escape_json(paths[0]),
         escape_json(paths[1]),
         escape_json(paths[2]),
-        escape_json(agent_a_view_digest(run_id).as_str()),
-        escape_json(agent_b_view_digest(run_id).as_str()),
-        escape_json(agent_c_verifier_view_digest(run_id).as_str())
+        escape_json(artifact_digests.views.agent_a.as_str()),
+        escape_json(artifact_digests.views.agent_b.as_str()),
+        escape_json(artifact_digests.views.agent_c_verifier.as_str())
     )
 }
 

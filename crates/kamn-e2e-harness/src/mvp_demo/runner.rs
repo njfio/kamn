@@ -2,6 +2,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::agent_harness::validate_agent_harness_evidence_file;
+use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::devnet_settlement::{
     collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
 };
@@ -55,9 +56,16 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
     let devnet_settlement = create_devnet_settlement_artifact(config, &run_dir)?;
-    create_three_agent_transcript(run_id.as_str(), &devnet_settlement, &run_dir)?;
-    let input = report_input(config, output_root, run_id.as_str(), &devnet_settlement);
-    let report_json = render_report_json(&input);
+    let three_agent_artifact_digests =
+        create_three_agent_transcript(run_id.as_str(), &devnet_settlement, &run_dir)?;
+    let input = report_input(
+        config,
+        output_root,
+        run_id.as_str(),
+        &devnet_settlement,
+        three_agent_artifact_digests.as_ref(),
+    );
+    let report_json = render_report_json(&input)?;
     verify_mvp_demo_report_json(report_json.as_str())?;
     validate_local_artifact_files(report_json.as_str())?;
     let latest_report = latest_report_path(output_root);
@@ -87,12 +95,13 @@ fn create_three_agent_transcript(
     run_id: &str,
     settlement: &DevnetSettlementAttempt,
     run_dir: &Path,
-) -> Result<(), String> {
+) -> Result<Option<ThreeAgentArtifactDigests>, String> {
     let Some(evidence) = settlement.evidence.as_ref() else {
-        return Ok(());
+        return Ok(None);
     };
-    write_three_agent_views(run_id, evidence, run_dir)?;
-    write_three_agent_transcript(run_id, evidence, run_dir)
+    let views = write_three_agent_views(run_id, evidence, run_dir)?;
+    let transcript = write_three_agent_transcript(run_id, evidence, run_dir, &views)?;
+    Ok(Some(ThreeAgentArtifactDigests { transcript, views }))
 }
 
 fn validate_devnet_mode(devnet_mode: &str) -> Result<(), String> {
@@ -118,6 +127,7 @@ fn report_input<'a>(
     output_root: &'a Path,
     run_id: &'a str,
     settlement: &'a DevnetSettlementAttempt,
+    three_agent_artifact_digests: Option<&'a ThreeAgentArtifactDigests>,
 ) -> DemoReportInput<'a> {
     DemoReportInput {
         run_id,
@@ -127,6 +137,7 @@ fn report_input<'a>(
         devnet_settlement: settlement.evidence.as_ref(),
         devnet_no_go_reason: settlement.no_go_reason.as_deref(),
         agent_harness_evidence_path: config.agent_harness_evidence_path.as_deref(),
+        three_agent_artifact_digests,
     }
 }
 

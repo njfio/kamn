@@ -1,3 +1,4 @@
+use super::artifact_digest::validate_json_digest;
 use super::verify_support::{
     extract_bool, extract_optional_string, extract_string, extract_u64, require_marker,
     validate_json_delimiters, ClaimView,
@@ -150,7 +151,13 @@ fn reject_private_payload(raw: &str) -> Result<(), String> {
 }
 
 fn validate_view_digest(raw: &str, claim: &ClaimView<'_>, claim_field: &str) -> Result<(), String> {
-    validate_artifact_digest(raw, claim, "view_digest", claim_field)
+    validate_artifact_digest(raw, claim, "view_digest", claim_field)?;
+    validate_json_digest(
+        raw,
+        "view_digest",
+        extract_string(claim.raw, claim_field)?.as_str(),
+        format!("three-agent view {claim_field}").as_str(),
+    )
 }
 
 fn validate_artifact_digest(

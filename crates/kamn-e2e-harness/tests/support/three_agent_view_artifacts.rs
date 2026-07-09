@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::mvp_local_artifacts;
+use sha2::{Digest, Sha256};
 
 const SIGNATURE: &str = "5nSgnDevnetSignature111111111111111111111111111";
 
@@ -76,25 +77,30 @@ pub(crate) fn report_json(root: &Path, views_root: Option<&Path>) -> String {
 }
 
 pub(crate) fn transcript(views_root: Option<&Path>) -> String {
-    format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-transcript.v1","proof_label":"local-only","devnet_settlement_linked":true,"transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","steps":["agent_a_registered","agent_b_registered","agent_a_invoked_transaction","agent_b_accepted_task","escrow_funded","escrow_released","agent_c_verifier_verified"],"views":{{"agent_a":"participant-private","agent_b":"participant-private","agent_c_verifier":"restricted-public"}},"agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"private_payload_redacted":true,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","transcript_digest":"three-agent-transcript-digest-7060"{} }}"#,
-        views_root.map(shared_view_fields).unwrap_or_default()
+    with_digest(
+        format!(
+            r#"{{"schema_version":"kamn.mvp.three-agent-transcript.v1","proof_label":"local-only","devnet_settlement_linked":true,"transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","steps":["agent_a_registered","agent_b_registered","agent_a_invoked_transaction","agent_b_accepted_task","escrow_funded","escrow_released","agent_c_verifier_verified"],"views":{{"agent_a":"participant-private","agent_b":"participant-private","agent_c_verifier":"restricted-public"}},"agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"private_payload_redacted":true,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","transcript_digest":""{} }}"#,
+            views_root.map(shared_view_fields).unwrap_or_default()
+        ),
+        "transcript_digest",
     )
 }
 
 pub(crate) fn agent_c_private_view() -> String {
-    agent_c_public_view().replace(
+    refresh_digest(agent_c_public_view().replace(
         r#""view_scope":"restricted-public""#,
         r#""view_scope":"participant-private","participant_private_view_digest":"leaked""#,
-    )
+    ))
 }
 
 pub(crate) fn agent_c_mismatched_signature_view() -> String {
-    agent_c_public_view().replace(SIGNATURE, "mismatch")
+    refresh_digest(agent_c_public_view().replace(SIGNATURE, "mismatch"))
 }
 
 pub(crate) fn agent_c_short_identity_view() -> String {
-    agent_c_public_view().replace(r#""agent":"agent_c_verifier""#, r#""agent":"agent_c""#)
+    refresh_digest(
+        agent_c_public_view().replace(r#""agent":"agent_c_verifier""#, r#""agent":"agent_c""#),
+    )
 }
 
 pub(crate) fn agent_a_mismatched_identity_view() -> String {
@@ -137,32 +143,53 @@ fn devnet_settlement_claim() -> &'static str {
 
 fn three_agent_claim(root: &Path, views_root: Option<&Path>) -> String {
     format!(
-        r#"{{"id":"three_agent_escrow_verification","label":"devnet-backed","required":true,"status":"PASS","summary":"Agent C verifies escrow settlement from restricted proof view","three_agent_transcript_artifact":"{}","three_agent_transcript_digest":"three-agent-transcript-digest-7060","transaction_id":"tx-three-agent-7060","terms_digest":"terms-digest-7060","agent_a_terms_digest":"terms-digest-7060","agent_b_terms_digest":"terms-digest-7060","verifier_terms_digest":"terms-digest-7060","escrow_id":"escrow-three-agent-7060","agent_a_escrow_id":"escrow-three-agent-7060","agent_b_escrow_id":"escrow-three-agent-7060","verifier_escrow_id":"escrow-three-agent-7060","network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_a_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_b_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","verifier_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","agent_a_settlement_commitment":"finalized","agent_b_settlement_commitment":"finalized","verifier_settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"agent_a_amount_lamports":1,"agent_b_amount_lamports":1,"verifier_amount_lamports":1,"agent_a_private_view_visible":true,"agent_b_private_view_visible":true,"verifier_private_view_visible":false,"agent_a_view_scope":"participant-private","agent_b_view_scope":"participant-private","verifier_view_scope":"restricted-public","agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"agent_a_private_view_digest":"agent-a-private-digest-7060","agent_b_private_view_digest":"agent-b-private-digest-7060","agent_a_public_view_digest":"public-view-digest-7060","agent_b_public_view_digest":"public-view-digest-7060","verifier_public_view_digest":"public-view-digest-7060","private_payload_redacted":true{}}}"#,
+        r#"{{"id":"three_agent_escrow_verification","label":"devnet-backed","required":true,"status":"PASS","summary":"Agent C verifies escrow settlement from restricted proof view","three_agent_transcript_artifact":"{}","three_agent_transcript_digest":"{}","transaction_id":"tx-three-agent-7060","terms_digest":"terms-digest-7060","agent_a_terms_digest":"terms-digest-7060","agent_b_terms_digest":"terms-digest-7060","verifier_terms_digest":"terms-digest-7060","escrow_id":"escrow-three-agent-7060","agent_a_escrow_id":"escrow-three-agent-7060","agent_b_escrow_id":"escrow-three-agent-7060","verifier_escrow_id":"escrow-three-agent-7060","network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_a_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_b_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","verifier_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","agent_a_settlement_commitment":"finalized","agent_b_settlement_commitment":"finalized","verifier_settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"agent_a_amount_lamports":1,"agent_b_amount_lamports":1,"verifier_amount_lamports":1,"agent_a_private_view_visible":true,"agent_b_private_view_visible":true,"verifier_private_view_visible":false,"agent_a_view_scope":"participant-private","agent_b_view_scope":"participant-private","verifier_view_scope":"restricted-public","agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"agent_a_private_view_digest":"agent-a-private-digest-7060","agent_b_private_view_digest":"agent-b-private-digest-7060","agent_a_public_view_digest":"public-view-digest-7060","agent_b_public_view_digest":"public-view-digest-7060","verifier_public_view_digest":"public-view-digest-7060","private_payload_redacted":true{}}}"#,
         root.join("proof/three-agent-transcript.json").display(),
+        transcript_digest(views_root),
         views_root.map(shared_view_fields).unwrap_or_default()
     )
 }
 
 fn shared_view_fields(root: &Path) -> String {
+    let agent_a = participant_view(
+        "agent_a",
+        "agent-a-private-digest-7060",
+        "agent-a-view-digest-7060",
+    );
+    let agent_b = participant_view(
+        "agent_b",
+        "agent-b-private-digest-7060",
+        "agent-b-view-digest-7060",
+    );
+    let agent_c = agent_c_public_view();
     format!(
-        r#","agent_a_view_artifact":"{}","agent_b_view_artifact":"{}","agent_c_verifier_view_artifact":"{}","agent_a_view_digest":"agent-a-view-digest-7060","agent_b_view_digest":"agent-b-view-digest-7060","agent_c_verifier_view_digest":"agent-c-view-digest-7060""#,
+        r#","agent_a_view_artifact":"{}","agent_b_view_artifact":"{}","agent_c_verifier_view_artifact":"{}","agent_a_view_digest":"{}","agent_b_view_digest":"{}","agent_c_verifier_view_digest":"{}""#,
         root.join("proof/agent-a-view.json").display(),
         root.join("proof/agent-b-view.json").display(),
-        root.join("proof/agent-c-verifier-view.json").display()
+        root.join("proof/agent-c-verifier-view.json").display(),
+        digest_field(agent_a.as_str(), "view_digest"),
+        digest_field(agent_b.as_str(), "view_digest"),
+        digest_field(agent_c.as_str(), "view_digest"),
     )
 }
 
-fn participant_view(agent: &str, private_digest: &str, view_digest: &str) -> String {
-    format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":3,"participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":"{}"}}"#,
-        agent, SIGNATURE, private_digest, view_digest
+fn participant_view(agent: &str, private_digest: &str, _view_digest: &str) -> String {
+    with_digest(
+        format!(
+            r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":3,"participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":""}}"#,
+            agent, SIGNATURE, private_digest
+        ),
+        "view_digest",
     )
 }
 
 fn agent_c_public_view() -> String {
-    format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"agent_c_verifier","view_scope":"restricted-public","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":0,"public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":"agent-c-view-digest-7060"}}"#,
-        SIGNATURE
+    with_digest(
+        format!(
+            r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"agent_c_verifier","view_scope":"restricted-public","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":0,"public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":""}}"#,
+            SIGNATURE
+        ),
+        "view_digest",
     )
 }
 
@@ -172,4 +199,75 @@ fn local_claims() -> &'static str {
 
 fn roadmap_claim() -> &'static str {
     r#"{"id":"production_readiness","label":"roadmap","required":false,"status":"NOT_CLAIMED","summary":"production readiness is not claimed"}"#
+}
+
+fn transcript_digest(views_root: Option<&Path>) -> String {
+    digest_field(transcript(views_root).as_str(), "transcript_digest")
+}
+
+fn refresh_digest(raw: String) -> String {
+    let without_digest = without_string_field(raw.as_str(), "view_digest");
+    let digest = tagged_sha256(without_digest.as_str());
+    replace_string_field(raw.as_str(), "view_digest", digest.as_str())
+}
+
+fn with_digest(raw: String, field: &str) -> String {
+    let digest = tagged_sha256(without_string_field(raw.as_str(), field).as_str());
+    replace_string_field(raw.as_str(), field, digest.as_str())
+}
+
+fn digest_field(raw: &str, field: &str) -> String {
+    let marker = format!("\"{field}\":\"");
+    let start = raw
+        .find(marker.as_str())
+        .expect("digest field should exist")
+        + marker.len();
+    let end = raw[start..].find('"').expect("digest field should end");
+    raw[start..start + end].to_owned()
+}
+
+fn replace_string_field(raw: &str, field: &str, value: &str) -> String {
+    let marker = format!("\"{field}\":\"");
+    let start = raw
+        .find(marker.as_str())
+        .expect("digest field should exist")
+        + marker.len();
+    let end = raw[start..].find('"').expect("digest field should end");
+    format!("{}{}{}", &raw[..start], value, &raw[start + end..])
+}
+
+fn without_string_field(raw: &str, field: &str) -> String {
+    let marker = format!("\"{field}\":\"");
+    let start = raw
+        .find(marker.as_str())
+        .expect("digest field should exist");
+    let value_start = start + marker.len();
+    let end = value_start
+        + raw[value_start..]
+            .find('"')
+            .expect("digest field should end")
+        + 1;
+    remove_pair(raw, start, end)
+}
+
+fn remove_pair(raw: &str, start: usize, end: usize) -> String {
+    if raw[end..].starts_with(',') {
+        return format!("{}{}", &raw[..start], &raw[end + 1..]);
+    }
+    format!("{}{}", &raw[..start - 1], &raw[end..])
+}
+
+fn tagged_sha256(value: &str) -> String {
+    format!("sha256:{}", sha256_hex(value))
+}
+
+fn sha256_hex(value: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let digest = Sha256::digest(value.as_bytes());
+    let mut output = String::with_capacity(64);
+    for byte in digest {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
 }

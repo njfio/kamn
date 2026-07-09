@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use super::artifact_digest::{validate_json_digest, ThreeAgentViewDigests};
 use super::devnet_settlement::DevnetSettlementEvidence;
 use super::report::DemoReportInput;
 use super::three_agent_transcript_build::transcript_json;
@@ -24,15 +25,17 @@ pub(crate) fn write_three_agent_transcript(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
     run_dir: &Path,
-) -> Result<(), String> {
+    view_digests: &ThreeAgentViewDigests,
+) -> Result<String, String> {
     let path = run_dir.join("proof").join(TRANSCRIPT_FILE);
-    let json = transcript_json(run_id, evidence, run_dir);
-    std::fs::write(path.as_path(), json).map_err(|error| {
+    let artifact = transcript_json(run_id, evidence, run_dir, view_digests)?;
+    std::fs::write(path.as_path(), artifact.json.as_str()).map_err(|error| {
         format!(
             "failed to write three-agent transcript artifact {}: {error}",
             path.display()
         )
-    })
+    })?;
+    Ok(artifact.digest)
 }
 
 pub(crate) fn validate_three_agent_transcript_file(report_json: &str) -> Result<(), String> {
@@ -129,10 +132,15 @@ fn validate_transcript_fields(raw: &str, claim: &ClaimView<'_>) -> Result<(), St
 fn validate_digest(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> {
     let artifact_digest = extract_string(raw, "transcript_digest")?;
     let claim_digest = extract_string(claim.raw, "three_agent_transcript_digest")?;
-    if artifact_digest == claim_digest {
-        return Ok(());
+    if artifact_digest != claim_digest {
+        return Err("three-agent transcript digest mismatch".to_owned());
     }
-    Err("three-agent transcript digest mismatch".to_owned())
+    validate_json_digest(
+        raw,
+        "transcript_digest",
+        claim_digest.as_str(),
+        "three-agent transcript",
+    )
 }
 
 fn require_matching_string(raw: &str, claim: &ClaimView<'_>, field: &str) -> Result<(), String> {

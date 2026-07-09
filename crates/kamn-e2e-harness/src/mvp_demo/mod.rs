@@ -5,6 +5,7 @@ mod agent_harness_actor_receipts;
 mod agent_harness_actor_rehearsal;
 mod agent_harness_json;
 mod agent_harness_three_agent;
+mod artifact_digest;
 mod devnet_settlement;
 mod devnet_settlement_build;
 mod devnet_settlement_json;
