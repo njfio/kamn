@@ -52,19 +52,19 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Pi extension evidence can include `three_agent_actor_rehearsal` with
+- [x] Pi extension evidence can include `three_agent_actor_rehearsal` with
   explicit Agent A, Agent B, and Agent C verifier observations.
-- [ ] Agent A observation proves `register` plus `invoke_transaction` and binds
+- [x] Agent A observation proves `register` plus `invoke_transaction` and binds
   to the Agent A view artifact path and digest.
-- [ ] Agent B observation proves `register` plus `accept_task` and binds to the
+- [x] Agent B observation proves `register` plus `accept_task` and binds to the
   Agent B view artifact path and digest.
-- [ ] Agent C observation proves `verify_proof`, binds to the Agent C verifier
+- [x] Agent C observation proves `verify_proof`, binds to the Agent C verifier
   view artifact path and digest, and preserves `restricted-public` scope.
-- [ ] `verify-mvp-demo` rejects missing, mismatched, dry-run/placeholder,
+- [x] `verify-mvp-demo` rejects missing, mismatched, dry-run/placeholder,
   local-only settlement, raw-private-leaking, or over-disclosing actor
   rehearsal evidence.
-- [ ] Local-only reports remain valid with no actor rehearsal object.
-- [ ] Existing MVP demo, devnet settlement, view artifact, Pi extension,
+- [x] Local-only reports remain valid with no actor rehearsal object.
+- [x] Existing MVP demo, devnet settlement, view artifact, Pi extension,
   formatting, strict clippy, and `make check` gates remain green.
 
 ## Files To Touch
@@ -74,7 +74,8 @@ Outputs:
 - `crates/kamn-e2e-harness/src/mvp_demo/agent_harness_three_agent.rs`
 - `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract.rs`
 - `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/*.rs`
-- `docs/validation/mvp-evaluator-demo.md`
+- `docs/validation/mvp-evaluator-demo.md` only if the implementation changes
+  the published runbook commands or boundaries.
 
 ## Error Semantics
 
@@ -122,3 +123,35 @@ Integration:
 - Run local `make demo-mvp` and canonical verifier.
 - Run devnet-required `make demo-mvp` and canonical verifier, or record explicit
   external NO-GO evidence if devnet is unavailable.
+
+## Completion Evidence
+
+- Red tests were committed before implementation:
+  - missing actor rehearsal was accepted before the verifier change.
+  - Agent C participant-private scope was accepted before the verifier change.
+  - Agent A view digest mismatch was accepted before the verifier change.
+  - Pi extension source lacked required actor rehearsal markers.
+- Focused contract:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract -- --nocapture`
+  - Result: 14 passed.
+- Broader MVP contract matrix:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract --test mvp_demo_three_agent_view_artifact_contract --test mvp_demo_three_agent_claim_contract --test mvp_demo_three_agent_transcript_contract --test mvp_demo_claim_contract --test mvp_demo_command_contract --test mvp_evaluator_demo_runbook_contract -- --nocapture`
+  - Result: 50 passed.
+- Local gates:
+  - `cargo fmt --check`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make check`
+- Local demo:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make demo-mvp`
+  - Result: `GO`, `devnet_mode=optional`, no settlement success claimed.
+  - Canonical verifier passed for `.kamn/demo/latest/proof/report.json`.
+- Devnet-backed demo:
+  - `KAMN_MVP_DEVNET_MODE=required KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/Users/n/.config/solana/ted-dev.json KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=BSN17KC1c5kUuA7ZaTXvMUnFbZUhizeaisYcAFeTsbEb KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make demo-mvp`
+  - Result: `GO`, `devnet_settlement_asset_movement=devnet-backed`, `three_agent_escrow_verification=devnet-backed`.
+  - Settlement signature: `wV1YY7VTzgHCEem8rUCPAoxRqR8sViivFFTB6LhEqKvJRYRigwtCpTDkV3wjoJFXRp4msN7Mbto8w62ZGKKt628`.
+  - `solana confirm -v --url https://api.devnet.solana.com wV1YY7VTzgHCEem8rUCPAoxRqR8sViivFFTB6LhEqKvJRYRigwtCpTDkV3wjoJFXRp4msN7Mbto8w62ZGKKt628`
+  - Result: finalized transfer of 1,000,000 lamports.
+- Pi agent harness:
+  - `env -u OPENAI_API_KEY pi --model openai-codex/gpt-5.5 --extension .pi/extensions/kamn-mvp/index.ts --no-builtin-tools --tools kamn_inspect_mvp_report_boundaries,kamn_write_agent_harness_evidence,kamn_verify_mvp_report --no-session -p "..."`
+  - Result: Pi inspected the devnet report, wrote `/tmp/kamn-pi-7062-devnet-evidence.json`, and verified the report through the KAMN extension tools.
+  - A compact augmented temp report at `/tmp/kamn-7062-pi-augmented-report.json` consumed Pi-written `/tmp/kamn-pi-7062-augmented-evidence.json` through the canonical verifier and passed.
