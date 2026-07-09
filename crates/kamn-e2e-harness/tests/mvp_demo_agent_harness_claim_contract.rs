@@ -1,5 +1,7 @@
 #[path = "mvp_demo_agent_harness_claim_contract/support.rs"]
 mod support;
+#[path = "mvp_demo_agent_harness_claim_contract/three_agent_actor_rehearsal_contract.rs"]
+mod three_agent_actor_rehearsal_contract;
 #[path = "mvp_demo_agent_harness_claim_contract/three_agent_boundary_contract.rs"]
 mod three_agent_boundary_contract;
 
@@ -113,8 +115,7 @@ fn spec_c07_markdown_report_surfaces_agent_harness_evidence() {
 
 #[test]
 fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
-    let extension = workspace_root().join(".pi/extensions/kamn-mvp/index.ts");
-    let source = std::fs::read_to_string(extension).expect("KAMN Pi extension should exist");
+    let source = pi_extension_source();
 
     for marker in [
         "kamn_verify_mvp_report",
@@ -122,9 +123,24 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "kamn_write_agent_harness_evidence",
         "kamn_run_demo_mvp_with_agent_evidence",
         "three_agent_boundary",
+        "three_agent_actor_rehearsal",
+        "invoke_transaction",
+        "accept_task",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
+}
+
+fn pi_extension_source() -> String {
+    [
+        ".pi/extensions/kamn-mvp/index.ts",
+        ".pi/extensions/kamn-mvp/evidence.ts",
+    ]
+    .map(|path| {
+        std::fs::read_to_string(workspace_root().join(path))
+            .unwrap_or_else(|_| panic!("KAMN Pi extension file should exist: {path}"))
+    })
+    .join("\n")
 }
 
 fn workspace_root() -> &'static Path {

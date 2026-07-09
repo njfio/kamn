@@ -54,6 +54,55 @@ pub(crate) fn valid_view_artifacts(root: &Path) -> Vec<(PathBuf, String)> {
     ]
 }
 
+pub(crate) fn valid_actor_rehearsal(root: &Path) -> String {
+    format!(
+        r#","three_agent_actor_rehearsal":{{"settlement_claim_label":"devnet-backed","settlement_status":"PASS","private_payload_redacted":true,"agent_a":{},"agent_b":{},"agent_c_verifier":{}}}"#,
+        actor_observation(
+            root,
+            "agent_a",
+            "participant-private",
+            r#"["register","invoke_transaction"]"#,
+            "agent-a-view-digest-7045",
+            "agent-a-view.json"
+        ),
+        actor_observation(
+            root,
+            "agent_b",
+            "participant-private",
+            r#"["register","accept_task"]"#,
+            "agent-b-view-digest-7045",
+            "agent-b-view.json"
+        ),
+        actor_observation(
+            root,
+            "agent_c_verifier",
+            "restricted-public",
+            r#"["verify_proof"]"#,
+            "agent-c-view-digest-7045",
+            "agent-c-verifier-view.json"
+        )
+    )
+}
+
+fn actor_observation(
+    root: &Path,
+    agent: &str,
+    view_scope: &str,
+    actions: &str,
+    view_digest: &str,
+    view_file: &str,
+) -> String {
+    format!(
+        r#"{{"agent":"{}","actions":{},"view_scope":"{}","view_artifact":"{}","{}_view_digest":"{}"}}"#,
+        agent,
+        actions,
+        view_scope,
+        root.join("proof").join(view_file).display(),
+        agent,
+        view_digest
+    )
+}
+
 fn view_fields(root: &Path) -> String {
     format!(
         r#","agent_a_view_artifact":"{}","agent_b_view_artifact":"{}","agent_c_verifier_view_artifact":"{}","agent_a_view_digest":"agent-a-view-digest-7045","agent_b_view_digest":"agent-b-view-digest-7045","agent_c_verifier_view_digest":"agent-c-view-digest-7045""#,
