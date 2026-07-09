@@ -124,6 +124,9 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "kamn_write_agent_harness_evidence",
         "kamn_run_demo_mvp_with_agent_evidence",
         "three_agent_boundary",
+        "three_agent_actor_rehearsal",
+        "invoke_transaction",
+        "accept_task",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
