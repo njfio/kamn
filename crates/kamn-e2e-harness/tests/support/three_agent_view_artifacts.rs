@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 mod artifact_digest;
 
 use crate::mvp_local_artifacts;
-use artifact_digest::{digest_field, refresh_digest, with_digest};
+use artifact_digest::refresh_digest;
+pub(crate) use artifact_digest::{digest_field, with_digest};
 
 const SIGNATURE: &str = "5nSgnDevnetSignature111111111111111111111111111";
 

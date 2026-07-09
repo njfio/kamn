@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 #[path = "../support/artifact_digest.rs"]
 mod artifact_digest;
 
-use artifact_digest::{digest_field, with_digest};
+pub(crate) use artifact_digest::{digest_field, with_digest};
 
 pub(crate) const NO_THREE_AGENT_BOUNDARY: &str = "";
 
@@ -25,7 +25,7 @@ pub(crate) fn three_agent_claim(root: &Path, transcript: &Path) -> String {
         r#"{{"id":"three_agent_escrow_verification","label":"devnet-backed","required":true,"status":"PASS","summary":"Agent C verifies escrow settlement from restricted proof view","three_agent_transcript_artifact":"{}","three_agent_transcript_digest":"{}","transaction_id":"tx-three-agent-7045","terms_digest":"terms-digest-7045","agent_a_terms_digest":"terms-digest-7045","agent_b_terms_digest":"terms-digest-7045","verifier_terms_digest":"terms-digest-7045","escrow_id":"escrow-three-agent-7045","agent_a_escrow_id":"escrow-three-agent-7045","agent_b_escrow_id":"escrow-three-agent-7045","verifier_escrow_id":"escrow-three-agent-7045","network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_a_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_b_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","verifier_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","agent_a_settlement_commitment":"finalized","agent_b_settlement_commitment":"finalized","verifier_settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"agent_a_amount_lamports":1,"agent_b_amount_lamports":1,"verifier_amount_lamports":1,"agent_a_private_view_visible":true,"agent_b_private_view_visible":true,"verifier_private_view_visible":false,"agent_a_view_scope":"participant-private","agent_b_view_scope":"participant-private","verifier_view_scope":"restricted-public","agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"agent_a_private_view_digest":"agent-a-private-digest-7045","agent_b_private_view_digest":"agent-b-private-digest-7045","agent_a_public_view_digest":"public-view-digest-7045","agent_b_public_view_digest":"public-view-digest-7045","verifier_public_view_digest":"public-view-digest-7045","private_payload_redacted":true{}}}"#,
         transcript.display(),
         transcript_digest(root),
-        view_fields(root)
+        artifact_fields(root)
     )
 }
 
@@ -114,6 +114,14 @@ fn view_fields(root: &Path) -> String {
         view_digest_for("agent_a"),
         view_digest_for("agent_b"),
         view_digest_for("agent_c_verifier"),
+    )
+}
+
+fn artifact_fields(root: &Path) -> String {
+    format!(
+        "{}{}",
+        view_fields(root),
+        super::canonical_receipts::receipt_fields(root)
     )
 }
 
