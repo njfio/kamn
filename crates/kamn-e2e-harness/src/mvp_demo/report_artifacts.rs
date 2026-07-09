@@ -1,5 +1,6 @@
 use super::report::{escape_json, DemoReportInput};
 use super::three_agent_transcript::three_agent_transcript_path;
+use super::three_agent_views::{agent_a_view_path, agent_b_view_path, agent_c_verifier_view_path};
 
 pub(super) fn artifacts_json(input: &DemoReportInput<'_>) -> String {
     let entries = artifact_entries(input)
@@ -17,6 +18,9 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
     }
     if input.devnet_settlement.is_some() {
         entries.push(("three_agent_transcript", three_agent_transcript_path(input)));
+        entries.push(("agent_a_view", agent_a_view_path(input)));
+        entries.push(("agent_b_view", agent_b_view_path(input)));
+        entries.push(("agent_c_verifier_view", agent_c_verifier_view_path(input)));
     }
     entries
 }

@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use super::devnet_settlement::DevnetSettlementEvidence;
-use super::report::{escape_json, DemoReportInput};
+use super::report::DemoReportInput;
+use super::three_agent_transcript_build::transcript_json;
+use super::three_agent_view_artifacts::validate_three_agent_view_files;
 use super::verify_support::{
     extract_bool, extract_string, extract_u64, parse_claims, require_marker,
     validate_json_delimiters, ClaimView,
@@ -24,7 +26,7 @@ pub(crate) fn write_three_agent_transcript(
     run_dir: &Path,
 ) -> Result<(), String> {
     let path = run_dir.join("proof").join(TRANSCRIPT_FILE);
-    let json = transcript_json(run_id, evidence);
+    let json = transcript_json(run_id, evidence, run_dir);
     std::fs::write(path.as_path(), json).map_err(|error| {
         format!(
             "failed to write three-agent transcript artifact {}: {error}",
@@ -43,44 +45,15 @@ pub(crate) fn validate_three_agent_transcript_file(report_json: &str) -> Result<
     let raw = std::fs::read_to_string(artifact.as_str()).map_err(|error| {
         format!("failed to read three-agent transcript artifact {artifact}: {error}")
     })?;
-    validate_transcript(raw.as_str(), claim)
+    validate_transcript(raw.as_str(), claim)?;
+    validate_three_agent_view_files(report_json, raw.as_str(), claim)
 }
 
 pub(crate) fn validate_three_agent_transcript_claim(claim: &ClaimView<'_>) -> Result<(), String> {
     extract_string(claim.raw, "three_agent_transcript_artifact")?;
     extract_string(claim.raw, "three_agent_transcript_digest")?;
+    super::three_agent_view_artifacts::validate_three_agent_view_claim(claim)?;
     Ok(())
-}
-
-fn transcript_json(run_id: &str, evidence: &DevnetSettlementEvidence) -> String {
-    format!(
-        "{{\"schema_version\":\"kamn.mvp.three-agent-transcript.v1\",\"proof_label\":\"local-only\",\"devnet_settlement_linked\":true,\"transaction_id\":\"mvp-three-agent-{}\",\"escrow_id\":\"escrow-three-agent-{}\",{},\"views\":{},\"agent_a_private_field_count\":3,\"agent_b_private_field_count\":3,\"verifier_private_field_count\":0,\"private_payload_redacted\":true,{},\"transcript_digest\":\"{}\"}}",
-        escape_json(run_id),
-        escape_json(run_id),
-        steps_json(),
-        views_json(),
-        settlement_json(evidence),
-        escape_json(format!("three-agent-transcript-digest-{run_id}").as_str())
-    )
-}
-
-fn steps_json() -> &'static str {
-    "\"steps\":[\"agent_a_registered\",\"agent_b_registered\",\"agent_a_invoked_transaction\",\"agent_b_accepted_task\",\"escrow_funded\",\"escrow_released\",\"agent_c_verified\"]"
-}
-
-fn views_json() -> &'static str {
-    "{\"agent_a\":\"participant-private\",\"agent_b\":\"participant-private\",\"agent_c\":\"restricted-public\"}"
-}
-
-fn settlement_json(evidence: &DevnetSettlementEvidence) -> String {
-    format!(
-        "\"settlement_tx_signature\":\"{}\",\"amount_lamports\":{},\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"settlement_commitment\":\"{}\"",
-        escape_json(evidence.settlement_tx_signature.as_str()),
-        evidence.lamports,
-        escape_json(evidence.payer_pubkey.as_str()),
-        escape_json(evidence.recipient_pubkey.as_str()),
-        escape_json(evidence.settlement_commitment.as_str())
-    )
 }
 
 fn three_agent_claim<'a>(claims: &'a [ClaimView<'a>]) -> Option<&'a ClaimView<'a>> {
@@ -147,7 +120,10 @@ fn validate_transcript_fields(raw: &str, claim: &ClaimView<'_>) -> Result<(), St
     require_matching_u64(raw, claim, "agent_a_private_field_count")?;
     require_matching_u64(raw, claim, "agent_b_private_field_count")?;
     require_matching_u64(raw, claim, "verifier_private_field_count")?;
-    require_matching_bool(raw, claim, "private_payload_redacted")
+    require_matching_bool(raw, claim, "private_payload_redacted")?;
+    require_matching_string(raw, claim, "agent_a_view_digest")?;
+    require_matching_string(raw, claim, "agent_b_view_digest")?;
+    require_matching_string(raw, claim, "agent_c_verifier_view_digest")
 }
 
 fn validate_digest(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> {

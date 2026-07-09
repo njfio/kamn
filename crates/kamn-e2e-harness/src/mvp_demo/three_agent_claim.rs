@@ -1,18 +1,24 @@
 use super::devnet_settlement::DevnetSettlementEvidence;
 use super::report::{escape_json, CLAIM_LABEL_DEVNET_BACKED};
+use super::three_agent_views::{
+    agent_a_private_view_digest, agent_a_view_digest, agent_b_private_view_digest,
+    agent_b_view_digest, agent_c_verifier_view_digest, public_view_digest,
+};
 
 pub(crate) fn three_agent_escrow_claim_json(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
     transcript_path: &str,
+    view_paths: [&str; 3],
 ) -> String {
     let transaction_id = format!("mvp-three-agent-{run_id}");
     let terms_digest = format!("terms-digest-{run_id}");
     let escrow_id = format!("escrow-three-agent-{run_id}");
     format!(
-        "{{{},{},{},{},{},{},{}}}",
+        "{{{},{},{},{},{},{},{},{}}}",
         claim_header(),
         transcript_fields(run_id, transcript_path),
+        view_artifact_fields(run_id, view_paths),
         digest_fields(transaction_id.as_str(), terms_digest.as_str()),
         escrow_fields(escrow_id.as_str()),
         settlement_fields(evidence),
@@ -26,6 +32,18 @@ fn transcript_fields(run_id: &str, path: &str) -> String {
         "\"three_agent_transcript_artifact\":\"{}\",\"three_agent_transcript_digest\":\"{}\"",
         escape_json(path),
         escape_json(format!("three-agent-transcript-digest-{run_id}").as_str())
+    )
+}
+
+fn view_artifact_fields(run_id: &str, paths: [&str; 3]) -> String {
+    format!(
+        "\"agent_a_view_artifact\":\"{}\",\"agent_b_view_artifact\":\"{}\",\"agent_c_verifier_view_artifact\":\"{}\",\"agent_a_view_digest\":\"{}\",\"agent_b_view_digest\":\"{}\",\"agent_c_verifier_view_digest\":\"{}\"",
+        escape_json(paths[0]),
+        escape_json(paths[1]),
+        escape_json(paths[2]),
+        escape_json(agent_a_view_digest(run_id).as_str()),
+        escape_json(agent_b_view_digest(run_id).as_str()),
+        escape_json(agent_c_verifier_view_digest(run_id).as_str())
     )
 }
 
@@ -125,21 +143,18 @@ fn privacy_fields() -> &'static str {
 }
 
 fn view_fields(run_id: &str) -> String {
-    let public_digest = format!("public-view-digest-{run_id}");
     format!(
         "\"agent_a_view_scope\":\"participant-private\",\"agent_b_view_scope\":\"participant-private\",\"verifier_view_scope\":\"restricted-public\",{},{}",
         private_view_fields(run_id),
-        public_view_fields(public_digest.as_str())
+        public_view_fields(public_view_digest(run_id).as_str())
     )
 }
 
 fn private_view_fields(run_id: &str) -> String {
-    let agent_a_digest = format!("agent-a-private-digest-{run_id}");
-    let agent_b_digest = format!("agent-b-private-digest-{run_id}");
     format!(
         "\"agent_a_private_field_count\":3,\"agent_b_private_field_count\":3,\"verifier_private_field_count\":0,\"agent_a_private_view_digest\":\"{}\",\"agent_b_private_view_digest\":\"{}\",\"private_payload_redacted\":true",
-        escape_json(agent_a_digest.as_str()),
-        escape_json(agent_b_digest.as_str())
+        escape_json(agent_a_private_view_digest(run_id).as_str()),
+        escape_json(agent_b_private_view_digest(run_id).as_str())
     )
 }
 
