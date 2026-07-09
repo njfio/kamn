@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::{artifact_digest, mvp_local_artifacts, three_agent_view_artifacts};
+use crate::{mvp_local_artifacts, three_agent_view_artifacts};
 
 pub(crate) fn base_fixture(stem: &str) -> PathBuf {
     let root = temp_root(stem);
@@ -90,7 +90,7 @@ fn write_receipt(
     receipt: fn(&Path, &ReceiptOverrides) -> String,
     overrides: &ReceiptOverrides,
 ) {
-    let raw = artifact_digest::with_digest(receipt(root, overrides), "receipt_digest");
+    let raw = three_agent_view_artifacts::with_digest(receipt(root, overrides), "receipt_digest");
     mvp_local_artifacts::write_file(path, raw.as_str());
 }
 
@@ -154,12 +154,12 @@ fn participant_receipt(
 fn view_digest(root: &Path, file: &str) -> String {
     let view = std::fs::read_to_string(root.join("proof").join(file))
         .expect("view artifact should be readable");
-    artifact_digest::digest_field(view.as_str(), "view_digest")
+    three_agent_view_artifacts::digest_field(view.as_str(), "view_digest")
 }
 
 fn receipt_digest(path: &Path) -> String {
     let receipt = std::fs::read_to_string(path).expect("receipt should be readable");
-    artifact_digest::digest_field(receipt.as_str(), "receipt_digest")
+    three_agent_view_artifacts::digest_field(receipt.as_str(), "receipt_digest")
 }
 
 pub(crate) struct ReceiptPaths {

@@ -1,12 +1,6 @@
 use std::path::{Path, PathBuf};
 
-#[allow(dead_code)]
-#[path = "../support/artifact_digest.rs"]
-mod artifact_digest;
-
-use artifact_digest::{digest_field, with_digest};
-
-use super::three_agent::view_digest_for;
+use super::three_agent::{digest_field, view_digest_for, with_digest};
 
 pub(crate) fn valid_receipt_artifacts(root: &Path) -> Vec<(PathBuf, String)> {
     vec![

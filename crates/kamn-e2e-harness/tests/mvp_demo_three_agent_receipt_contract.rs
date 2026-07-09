@@ -3,10 +3,6 @@ use kamn_e2e_harness::{
 };
 use std::path::Path;
 
-#[allow(dead_code)]
-#[path = "support/artifact_digest.rs"]
-mod artifact_digest;
-
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 

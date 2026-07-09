@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 #[path = "../support/artifact_digest.rs"]
 mod artifact_digest;
 
-use artifact_digest::{digest_field, with_digest};
+pub(crate) use artifact_digest::{digest_field, with_digest};
 
 pub(crate) const NO_THREE_AGENT_BOUNDARY: &str = "";
 
