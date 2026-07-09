@@ -89,3 +89,39 @@ verifier already enforces for devnet-backed three-agent escrow verification.
 - Integration: run the focused agent-harness contract, the receipt contract, the
   broader MVP contract matrix, `cargo fmt --check`, strict clippy, `make check`,
   and the canonical local/devnet demo verifier paths.
+
+## Deviations
+
+- None. The slice reused the existing Pi extension and MVP report/verifier
+  surfaces. No new dependency, settlement architecture, or claim label was
+  added.
+
+## Completion Evidence
+
+- Red test run:
+  `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract --test mvp_evaluator_demo_runbook_contract -- --nocapture`
+  failed as expected with 17 passing and 4 failing tests.
+- Green/focused run:
+  `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract --test mvp_evaluator_demo_runbook_contract -- --nocapture`
+  passed with 22 tests.
+- MVP proof matrix:
+  `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_three_agent_receipt_contract --test mvp_demo_three_agent_view_artifact_contract --test mvp_demo_three_agent_view_digest_contract --test mvp_demo_three_agent_claim_contract --test mvp_demo_three_agent_transcript_contract --test mvp_demo_agent_harness_claim_contract --test mvp_demo_local_artifact_contract --test mvp_demo_claim_contract --test mvp_demo_command_contract --test mvp_evaluator_demo_runbook_contract -- --nocapture`
+  passed with 72 tests.
+- `cargo fmt --check` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make check`
+  passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make demo-mvp`
+  returned `GO` in optional mode and the verifier returned `PASS`.
+- Devnet-required `make demo-mvp` returned `GO` with Solana devnet signature
+  `3TPPHG7Q52CFZAuXfhuwRSah2Ymwx7f4MEPfAvk13jdX1R3hCB6CCiMiTJB3K9pqc6mGoCgpA3HHuSeuY7ekiGte`.
+- `solana confirm -v --url https://api.devnet.solana.com 3TPPHG7Q52CFZAuXfhuwRSah2Ymwx7f4MEPfAvk13jdX1R3hCB6CCiMiTJB3K9pqc6mGoCgpA3HHuSeuY7ekiGte`
+  showed a finalized 1,000,000 lamport transfer in slot `475109639`.
+- Pi `0.80.3` with `openai-codex/gpt-5.5` verified the devnet report, recorded
+  all five actor tool receipts, and wrote
+  `/tmp/kamn-pi-7072-canonical-receipts.json` with
+  `three_agent_actor_observation_receipts`.
+- Temporarily attaching `/tmp/kamn-pi-7072-canonical-receipts.json` to the
+  generated latest report and running `verify-mvp-demo` returned `PASS`; the
+  generated report was restored afterward.
