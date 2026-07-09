@@ -64,7 +64,7 @@ pub(crate) fn report_json(root: &Path, views_root: Option<&Path>) -> String {
 pub(crate) fn transcript(views_root: Option<&Path>) -> String {
     format!(
         r#"{{"schema_version":"kamn.mvp.three-agent-transcript.v1","proof_label":"local-only","devnet_settlement_linked":true,"transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","steps":["agent_a_registered","agent_b_registered","agent_a_invoked_transaction","agent_b_accepted_task","escrow_funded","escrow_released","agent_c_verified"],"views":{{"agent_a":"participant-private","agent_b":"participant-private","agent_c":"restricted-public"}},"agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"private_payload_redacted":true,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","transcript_digest":"three-agent-transcript-digest-7060"{} }}"#,
-        views_root.map(transcript_view_fields).unwrap_or_default()
+        views_root.map(shared_view_fields).unwrap_or_default()
     )
 }
 
@@ -105,21 +105,17 @@ fn three_agent_claim(root: &Path, views_root: Option<&Path>) -> String {
     format!(
         r#"{{"id":"three_agent_escrow_verification","label":"devnet-backed","required":true,"status":"PASS","summary":"Agent C verifies escrow settlement from restricted proof view","three_agent_transcript_artifact":"{}","three_agent_transcript_digest":"three-agent-transcript-digest-7060","transaction_id":"tx-three-agent-7060","terms_digest":"terms-digest-7060","agent_a_terms_digest":"terms-digest-7060","agent_b_terms_digest":"terms-digest-7060","verifier_terms_digest":"terms-digest-7060","escrow_id":"escrow-three-agent-7060","agent_a_escrow_id":"escrow-three-agent-7060","agent_b_escrow_id":"escrow-three-agent-7060","verifier_escrow_id":"escrow-three-agent-7060","network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_a_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","agent_b_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","verifier_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","agent_a_settlement_commitment":"finalized","agent_b_settlement_commitment":"finalized","verifier_settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"agent_a_amount_lamports":1,"agent_b_amount_lamports":1,"verifier_amount_lamports":1,"agent_a_private_view_visible":true,"agent_b_private_view_visible":true,"verifier_private_view_visible":false,"agent_a_view_scope":"participant-private","agent_b_view_scope":"participant-private","verifier_view_scope":"restricted-public","agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"agent_a_private_view_digest":"agent-a-private-digest-7060","agent_b_private_view_digest":"agent-b-private-digest-7060","agent_a_public_view_digest":"public-view-digest-7060","agent_b_public_view_digest":"public-view-digest-7060","verifier_public_view_digest":"public-view-digest-7060","private_payload_redacted":true{}}}"#,
         root.join("proof/three-agent-transcript.json").display(),
-        views_root.map(view_claim_fields).unwrap_or_default()
+        views_root.map(shared_view_fields).unwrap_or_default()
     )
 }
 
-fn view_claim_fields(root: &Path) -> String {
+fn shared_view_fields(root: &Path) -> String {
     format!(
         r#","agent_a_view_artifact":"{}","agent_b_view_artifact":"{}","agent_c_verifier_view_artifact":"{}","agent_a_view_digest":"agent-a-view-digest-7060","agent_b_view_digest":"agent-b-view-digest-7060","agent_c_verifier_view_digest":"agent-c-view-digest-7060""#,
         root.join("proof/agent-a-view.json").display(),
         root.join("proof/agent-b-view.json").display(),
         root.join("proof/agent-c-verifier-view.json").display()
     )
-}
-
-fn transcript_view_fields(root: &Path) -> String {
-    view_claim_fields(root)
 }
 
 fn participant_view(agent: &str, private_digest: &str, view_digest: &str) -> String {
