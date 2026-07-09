@@ -31,38 +31,23 @@ pub(crate) fn validate_local_artifact_files(report_json: &str) -> Result<(), Str
 
 fn validate_localhost_artifact(path: &Path) -> Result<(), String> {
     let content = read_file(path, "localhost signed demo artifact")?;
-    require_marker(
+    require_markers(
         content.as_str(),
-        LOCALHOST_SCHEMA,
-        "localhost signed demo artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"status\": \"pass\"",
-        "localhost signed demo artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"signed_exchange\"",
-        "localhost signed demo artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"verified\": true",
+        &[
+            LOCALHOST_SCHEMA,
+            "\"status\": \"pass\"",
+            "\"signed_exchange\"",
+            "\"verified\": true",
+        ],
         "localhost signed demo artifact",
     )
 }
 
 fn validate_localhost_output(path: &Path) -> Result<(), String> {
     let content = read_file(path, "localhost signed demo output")?;
-    require_marker(
+    require_markers(
         content.as_str(),
-        LOCALHOST_SUCCESS,
-        "localhost signed demo output",
-    )?;
-    require_marker(
-        content.as_str(),
-        "receipt_reconciliation=GO",
+        &[LOCALHOST_SUCCESS, "receipt_reconciliation=GO"],
         "localhost signed demo output",
     )
 }
@@ -87,81 +72,53 @@ fn validate_state_dir(path: &Path) -> Result<(), String> {
 
 fn validate_runtime_state(path: &Path) -> Result<(), String> {
     let content = read_file(path, "runtime state artifact")?;
-    require_marker(
+    require_markers(
         content.as_str(),
-        "\"runtime\":\"kamn-local\"",
-        "runtime state artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"source\":\"localhost-signed-demo\"",
-        "runtime state artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "kamn:did:agent:alice",
-        "runtime state artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "kamn:did:agent:bob",
+        &[
+            "\"runtime\":\"kamn-local\"",
+            "\"source\":\"localhost-signed-demo\"",
+            "kamn:did:agent:alice",
+            "kamn:did:agent:bob",
+        ],
         "runtime state artifact",
     )
 }
 
 fn validate_relay_projection(path: &Path) -> Result<(), String> {
     let content = read_file(path, "relay projection artifact")?;
-    require_marker(
+    require_markers(
         content.as_str(),
-        "\"relay_state\":\"projected\"",
-        "relay projection artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"source\":\"service-api-vertical-slice\"",
-        "relay projection artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"message_status\":\"delivered\"",
+        &[
+            "\"relay_state\":\"projected\"",
+            "\"source\":\"service-api-vertical-slice\"",
+            "\"message_status\":\"delivered\"",
+        ],
         "relay projection artifact",
     )
 }
 
 fn validate_websocket_events(path: &Path) -> Result<(), String> {
     let content = read_file(path, "websocket events artifact")?;
-    require_marker(
+    require_markers(
         content.as_str(),
-        "\"source\":\"service-api-websocket\"",
-        "websocket events artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "service-api.message.created",
-        "websocket events artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "service-api.task.completed",
+        &[
+            "\"source\":\"service-api-websocket\"",
+            "service-api.message.created",
+            "service-api.task.completed",
+        ],
         "websocket events artifact",
     )
 }
 
 fn validate_audit_export(path: &Path) -> Result<(), String> {
     let content = read_file(path, "audit export artifact")?;
-    require_marker(
+    require_markers(
         content.as_str(),
-        "\"audit_export\":\"service-api-runtime-export\"",
-        "audit export artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "\"source\":\"service-api-vertical-slice\"",
-        "audit export artifact",
-    )?;
-    require_marker(
-        content.as_str(),
-        "service_api_task_created",
+        &[
+            "\"audit_export\":\"service-api-runtime-export\"",
+            "\"source\":\"service-api-vertical-slice\"",
+            "service_api_task_created",
+        ],
         "audit export artifact",
     )
 }
@@ -187,4 +144,11 @@ fn events_path(state_dir: &Path) -> PathBuf {
 fn read_file(path: &Path, label: &str) -> Result<String, String> {
     std::fs::read_to_string(path)
         .map_err(|error| format!("failed to read {label} {}: {error}", path.display()))
+}
+
+fn require_markers(content: &str, markers: &[&str], label: &str) -> Result<(), String> {
+    for marker in markers {
+        require_marker(content, marker, label)?;
+    }
+    Ok(())
 }
