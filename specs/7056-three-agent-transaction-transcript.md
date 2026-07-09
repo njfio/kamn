@@ -50,24 +50,24 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Successful devnet-backed reports include an artifact entry named
+- [x] Successful devnet-backed reports include an artifact entry named
   `three_agent_transcript`.
-- [ ] Successful `three_agent_escrow_verification` claims include
+- [x] Successful `three_agent_escrow_verification` claims include
   `three_agent_transcript_artifact` and `three_agent_transcript_digest`.
-- [ ] `three-agent-transcript.json` records Agent A registration, Agent B
+- [x] `three-agent-transcript.json` records Agent A registration, Agent B
   registration, Agent A invocation, Agent B acceptance, escrow fund, escrow
   release, and Agent C verification steps.
-- [ ] The transcript records Agent A and Agent B participant-private views and
+- [x] The transcript records Agent A and Agent B participant-private views and
   Agent C restricted-public verifier view.
-- [ ] The transcript records the devnet settlement signature, amount, payer,
+- [x] The transcript records the devnet settlement signature, amount, payer,
   recipient, and finalized commitment from the report's devnet-backed evidence.
-- [ ] `verify-mvp-demo` rejects devnet-backed reports missing transcript fields.
-- [ ] `verify-mvp-demo` rejects report-file verification when the transcript
+- [x] `verify-mvp-demo` rejects devnet-backed reports missing transcript fields.
+- [x] `verify-mvp-demo` rejects report-file verification when the transcript
   artifact is missing, malformed, raw-private-leaking, or mismatched with the
   report claim.
-- [ ] Local-only reports do not include the transcript artifact entry and remain
+- [x] Local-only reports do not include the transcript artifact entry and remain
   valid without a three-agent transcript.
-- [ ] Report Markdown surfaces the transcript artifact and reiterates that raw
+- [x] Report Markdown surfaces the transcript artifact and reiterates that raw
   private payloads are redacted.
 
 ## Files to Touch
@@ -77,8 +77,14 @@ Outputs:
 - `crates/kamn-e2e-harness/src/mvp_demo/report_markdown.rs`
 - `crates/kamn-e2e-harness/src/mvp_demo/runner.rs`
 - `crates/kamn-e2e-harness/src/mvp_demo/three_agent_claim.rs`
+- `crates/kamn-e2e-harness/src/mvp_demo/three_agent_transcript.rs`
 - `crates/kamn-e2e-harness/src/mvp_demo/three_agent_verify.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/support.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/three_agent.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_claim_contract.rs`
 - `crates/kamn-e2e-harness/tests/mvp_demo_three_agent_claim_contract.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_three_agent_transcript_contract.rs`
+- `crates/kamn-e2e-harness/tests/mvp_evaluator_demo_runbook_contract.rs`
 - `docs/validation/mvp-evaluator-demo.md`
 
 ## Error Semantics
@@ -132,6 +138,40 @@ Integration:
 - `cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json`
 - Pi extension smoke or extraction against the generated report.
 
+Completed:
+- Red evidence captured:
+  `mvp_demo_three_agent_transcript_contract` failed 4 expected cases because
+  current verification accepted missing transcript fields, missing artifacts,
+  mismatched settlement signatures, and raw-private-leaking transcript artifacts.
+- Targeted contracts passed:
+  `mvp_demo_three_agent_transcript_contract`,
+  `mvp_demo_three_agent_claim_contract`,
+  `mvp_demo_agent_harness_claim_contract`, `mvp_demo_claim_contract`, and
+  `mvp_evaluator_demo_runbook_contract`.
+- `cargo fmt --check` passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed with `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0`.
+- `make check` passed with the same cargo environment.
+- Local `make demo-mvp` passed, canonical verifier passed, and the report had
+  no `three_agent_transcript`, settlement claim, or three-agent claim in
+  local-only mode.
+- Devnet-required `make demo-mvp` passed with run
+  `run-44206-1783563177548`, finalized Solana devnet signature
+  `3e4VsMq6oUAwQMeFMw3N9zzyprkDtMZDNhT8BSybmzsnTAfnP3k1zUYjSfodmVV4eW891siPXyPTapQ62vJbEzx6`,
+  and `three_agent_transcript` at
+  `.kamn/demo/run-44206-1783563177548/proof/three-agent-transcript.json`.
+- The transcript artifact recorded Agent A/B/C steps, participant-private versus
+  restricted-public views, the devnet signature, `1000000` lamports, payer,
+  recipient, finalized commitment, matching transcript digest, and no
+  `raw_private_payload`.
+- Report Markdown included `## Three-Agent View Boundary`, the transcript
+  artifact path, and raw-private-payload redaction text.
+- Pi `openai-codex/gpt-5.5` extraction passed and wrote
+  `/tmp/kamn-pi-three-agent-transcript-evidence.json` with
+  `three_agent_boundary.claim_status:"PASS"` and
+  `claim_label:"devnet-backed"`.
+
 ## Deviations
 
-- None yet.
+- None.
