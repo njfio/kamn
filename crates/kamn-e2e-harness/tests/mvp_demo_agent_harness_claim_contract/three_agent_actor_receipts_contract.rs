@@ -20,7 +20,7 @@ fn spec_c15_command_rejects_three_agent_harness_without_actor_tool_receipts() {
 fn spec_c16_command_rejects_actor_tool_receipt_view_digest_mismatch() {
     let root = temp_root("receipt-digest-mismatch");
     let artifact_json = agent_artifact_with_three_agent_actor_receipts(&root).replace(
-        r#""view_digest":"agent-a-view-digest-7045""#,
+        format!(r#""view_digest":"{}""#, view_digest_for("agent_a")).as_str(),
         r#""view_digest":"mismatch""#,
     );
     let artifact = write_artifact(&root, artifact_json);
