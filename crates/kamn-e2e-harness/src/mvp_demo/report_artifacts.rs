@@ -1,4 +1,5 @@
 use super::report::{escape_json, DemoReportInput};
+use super::three_agent_transcript::three_agent_transcript_path;
 
 pub(super) fn artifacts_json(input: &DemoReportInput<'_>) -> String {
     let entries = artifact_entries(input)
@@ -13,6 +14,9 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
     entries.extend(proof_artifact_entries(input));
     if let Some(path) = input.agent_harness_evidence_path {
         entries.push(("agent_harness_evidence", path.to_owned()));
+    }
+    if input.devnet_settlement.is_some() {
+        entries.push(("three_agent_transcript", three_agent_transcript_path(input)));
     }
     entries
 }

@@ -10,6 +10,9 @@ use super::localhost_signed::{run_localhost_signed_demo, LocalhostSignedDemoInpu
 use super::report::{escape_json, render_report_json, DemoReportInput};
 use super::report_writer::write_reports;
 use super::service_api_proof::{run_service_api_proofs, ServiceApiProofInput};
+use super::three_agent_transcript::{
+    validate_three_agent_transcript_file, write_three_agent_transcript,
+};
 use super::verify::verify_mvp_demo_report_json;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,11 +53,13 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
     let devnet_settlement = create_devnet_settlement_artifact(config, &run_dir)?;
+    create_three_agent_transcript(run_id.as_str(), &devnet_settlement, &run_dir)?;
     let input = report_input(config, output_root, run_id.as_str(), &devnet_settlement);
     let report_json = render_report_json(&input);
     verify_mvp_demo_report_json(report_json.as_str())?;
     let latest_report = latest_report_path(output_root);
     validate_agent_harness_evidence_file(report_json.as_str(), latest_report.as_str())?;
+    validate_three_agent_transcript_file(report_json.as_str())?;
     write_reports(output_root, run_id.as_str(), report_json.as_str(), &input)?;
     Ok(report_json)
 }
@@ -67,10 +72,22 @@ pub fn execute_verify_mvp_demo_contract(
         .map_err(|error| format!("failed to read MVP demo report {}: {error}", config.report))?;
     verify_mvp_demo_report_json(report.as_str())?;
     validate_agent_harness_evidence_file(report.as_str(), config.report.as_str())?;
+    validate_three_agent_transcript_file(report.as_str())?;
     Ok(format!(
         "{{\"status\":\"PASS\",\"report\":\"{}\"}}",
         escape_json(config.report.as_str())
     ))
+}
+
+fn create_three_agent_transcript(
+    run_id: &str,
+    settlement: &DevnetSettlementAttempt,
+    run_dir: &Path,
+) -> Result<(), String> {
+    let Some(evidence) = settlement.evidence.as_ref() else {
+        return Ok(());
+    };
+    write_three_agent_transcript(run_id, evidence, run_dir)
 }
 
 fn validate_devnet_mode(devnet_mode: &str) -> Result<(), String> {

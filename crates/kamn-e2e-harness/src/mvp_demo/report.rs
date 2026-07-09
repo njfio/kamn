@@ -6,6 +6,7 @@ use super::devnet_settlement::{
 };
 use super::report_artifacts::artifacts_json;
 use super::three_agent_claim::three_agent_escrow_claim_json;
+use super::three_agent_transcript::three_agent_transcript_path;
 
 /// MVP demo proof report schema marker.
 pub const MVP_DEMO_REPORT_SCHEMA_VERSION: &str = "kamn.mvp.demo.proof-report.v1";
@@ -139,7 +140,11 @@ fn devnet_required_claims(input: &DemoReportInput<'_>) -> Vec<String> {
     match input.devnet_settlement {
         Some(evidence) => vec![
             devnet_settlement_claim_json(evidence),
-            three_agent_escrow_claim_json(input.run_id, evidence),
+            three_agent_escrow_claim_json(
+                input.run_id,
+                evidence,
+                three_agent_transcript_path(input).as_str(),
+            ),
         ],
         None => vec![devnet_no_go_claim_with_reason(input)],
     }

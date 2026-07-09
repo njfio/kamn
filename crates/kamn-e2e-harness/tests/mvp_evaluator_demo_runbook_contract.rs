@@ -12,6 +12,8 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "kamn_write_agent_harness_evidence",
         "kamn_run_demo_mvp_with_agent_evidence",
         "pi-extension-tools",
+        "three-agent-transcript.json",
+        "raw participant-private payloads stay redacted",
         "does not prove generic Pi MCP protocol support",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");

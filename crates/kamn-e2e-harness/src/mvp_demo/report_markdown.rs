@@ -1,6 +1,7 @@
 use super::agent_harness::agent_harness_execution_surface;
 use super::report::{report_status, DemoReportInput};
 use super::report_artifacts::artifact_path;
+use super::three_agent_transcript::three_agent_transcript_path;
 
 pub(crate) fn render_report_markdown(input: &DemoReportInput<'_>) -> Result<String, String> {
     Ok([
@@ -55,7 +56,10 @@ fn markdown_three_agent_boundary(input: &DemoReportInput<'_>) -> String {
     if input.devnet_settlement.is_none() {
         return String::new();
     }
-    "## Three-Agent View Boundary\n\n- Agent A and Agent B include participant-private proof digests and private field counts in the JSON report.\n- The third-party verifier uses a restricted public-view digest to validate shared transaction, escrow, and settlement commitments.\n- Raw private payloads are redacted, and no verifier private-view digest is emitted.\n".to_owned()
+    let transcript = three_agent_transcript_path(input);
+    format!(
+        "## Three-Agent View Boundary\n\n- Transcript artifact: `{transcript}`\n- Agent A and Agent B include participant-private proof digests and private field counts in the JSON report and transcript.\n- The third-party verifier uses a restricted public-view digest to validate shared transaction, escrow, and settlement commitments.\n- Raw private payloads are redacted, and no verifier private-view digest is emitted.\n"
+    )
 }
 
 fn markdown_claim_boundaries() -> &'static str {

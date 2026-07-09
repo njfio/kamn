@@ -1,4 +1,5 @@
 use super::report::CLAIM_LABEL_DEVNET_BACKED;
+use super::three_agent_transcript::validate_three_agent_transcript_claim;
 use super::three_agent_view_verify::validate_three_agent_view_disclosure;
 use super::verify_support::{extract_string, extract_u64, ClaimView};
 
@@ -10,6 +11,7 @@ pub(crate) fn validate_three_agent_escrow_verification(
     }
     let claim = three_agent_claim(claims)?;
     validate_three_agent_status(claim)?;
+    validate_three_agent_transcript_claim(claim)?;
     validate_three_agent_view_disclosure(claim)?;
     validate_three_agent_commitments(claim)
 }
