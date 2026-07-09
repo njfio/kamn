@@ -57,23 +57,23 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Pi extension registers actor-specific tools for Agent A register, Agent A
+- [x] Pi extension registers actor-specific tools for Agent A register, Agent A
   invoke transaction, Agent B register, Agent B accept task, and Agent C verify
   proof.
-- [ ] Each actor tool appends an in-process receipt with tool name, agent,
+- [x] Each actor tool appends an in-process receipt with tool name, agent,
   action, sequence, report path, view scope, view artifact, view digest, and
   PASS outcome.
-- [ ] `kamn_write_agent_harness_evidence` fails loudly for devnet-backed
+- [x] `kamn_write_agent_harness_evidence` fails loudly for devnet-backed
   `three_agent_escrow_verification` reports when required actor receipts were
   not collected first.
-- [ ] Pi-written harness evidence includes `three_agent_actor_tool_receipts`
+- [x] Pi-written harness evidence includes `three_agent_actor_tool_receipts`
   when required receipts exist.
-- [ ] `verify-mvp-demo` rejects missing, mismatched, over-disclosing,
+- [x] `verify-mvp-demo` rejects missing, mismatched, over-disclosing,
   non-devnet, or raw-private-leaking receipt evidence.
-- [ ] Local-only reports remain valid with no actor receipts.
-- [ ] Evaluator docs describe the actor-tool Pi sequence and keep claim
+- [x] Local-only reports remain valid with no actor receipts.
+- [x] Evaluator docs describe the actor-tool Pi sequence and keep claim
   boundaries explicit.
-- [ ] Formatting, strict clippy, `make check`, targeted MVP contracts, local
+- [x] Formatting, strict clippy, `make check`, targeted MVP contracts, local
   demo verifier, and devnet-required demo verifier remain green.
 
 ## Files To Touch
@@ -129,3 +129,41 @@ Integration:
   external NO-GO evidence if devnet is unavailable.
 - Run Pi with `openai-codex/gpt-5.5`, actor tools, evidence writing, and
   verifier tool against a devnet-backed report.
+
+## Completion Evidence
+
+- Red tests were committed before implementation:
+  - verifier accepted three-agent harness evidence with no
+    `three_agent_actor_tool_receipts`.
+  - verifier accepted actor receipt view-digest mismatch.
+  - verifier accepted Agent C receipt private-digest leakage.
+  - Pi extension source lacked actor-specific tool names and receipt marker.
+- Focused contract:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract -- --nocapture`
+  - Result: 18 passed.
+- Broader MVP contract matrix:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract --test mvp_demo_three_agent_view_artifact_contract --test mvp_demo_three_agent_claim_contract --test mvp_demo_three_agent_transcript_contract --test mvp_demo_claim_contract --test mvp_demo_command_contract --test mvp_evaluator_demo_runbook_contract -- --nocapture`
+  - Result: 54 passed.
+- Local gates:
+  - `cargo fmt --check`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make check`
+- Local demo:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make demo-mvp`
+  - Result: `GO`, `devnet_mode=optional`, no settlement success claimed.
+  - Canonical verifier passed for `.kamn/demo/latest/proof/report.json`.
+- Devnet-backed demo:
+  - `KAMN_MVP_DEVNET_MODE=required KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/Users/n/.config/solana/ted-dev.json KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=BSN17KC1c5kUuA7ZaTXvMUnFbZUhizeaisYcAFeTsbEb KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make demo-mvp`
+  - Result: `GO`, `devnet_settlement_asset_movement=devnet-backed`, `three_agent_escrow_verification=devnet-backed`.
+  - Settlement signature: `2AcM7EGqVxkNkJQwxcG9AZv1weHWXdNHhjBomFUjAP5zCVu45bEsUaxJa1pnCZBrEc825nQVUe4s8G8aFXNa9Ere`.
+  - `solana confirm -v --url https://api.devnet.solana.com 2AcM7EGqVxkNkJQwxcG9AZv1weHWXdNHhjBomFUjAP5zCVu45bEsUaxJa1pnCZBrEc825nQVUe4s8G8aFXNa9Ere`
+  - Result: finalized transfer of 1,000,000 lamports.
+- Pi actor-tool harness:
+  - compact temp report: `/tmp/kamn-7064-pi-actor-receipt-report.json`.
+  - evidence artifact: `/tmp/kamn-pi-7064-actor-receipt-evidence.json`.
+  - `env -u OPENAI_API_KEY pi --model openai-codex/gpt-5.5 --extension .pi/extensions/kamn-mvp/index.ts --no-builtin-tools --tools kamn_inspect_mvp_report_boundaries,kamn_agent_a_register,kamn_agent_a_invoke_transaction,kamn_agent_b_register,kamn_agent_b_accept_task,kamn_agent_c_verify_three_agent_proof,kamn_write_agent_harness_evidence,kamn_verify_mvp_report --no-session -p "..."`
+  - Result: Pi called all five actor tools in order, wrote receipt evidence, and `kamn_verify_mvp_report` passed.
+  - Evidence inspection showed five ordered receipts: Agent A register,
+    Agent A invoke transaction, Agent B register, Agent B accept task, and
+    Agent C verify proof. Agent A/B receipts were `participant-private`; Agent C
+    receipt was `restricted-public`.
