@@ -50,6 +50,20 @@ pub(crate) fn write_view_artifacts(root: &Path, agent_c: Option<String>) {
     );
 }
 
+pub(crate) fn replace_agent_a_view(root: &Path, view: String) {
+    mvp_local_artifacts::write_file(
+        root.join("proof/agent-a-view.json").as_path(),
+        view.as_str(),
+    );
+}
+
+pub(crate) fn replace_agent_b_view(root: &Path, view: String) {
+    mvp_local_artifacts::write_file(
+        root.join("proof/agent-b-view.json").as_path(),
+        view.as_str(),
+    );
+}
+
 pub(crate) fn report_json(root: &Path, views_root: Option<&Path>) -> String {
     format!(
         r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"demo-three-agent-views","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
@@ -63,7 +77,7 @@ pub(crate) fn report_json(root: &Path, views_root: Option<&Path>) -> String {
 
 pub(crate) fn transcript(views_root: Option<&Path>) -> String {
     format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-transcript.v1","proof_label":"local-only","devnet_settlement_linked":true,"transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","steps":["agent_a_registered","agent_b_registered","agent_a_invoked_transaction","agent_b_accepted_task","escrow_funded","escrow_released","agent_c_verified"],"views":{{"agent_a":"participant-private","agent_b":"participant-private","agent_c":"restricted-public"}},"agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"private_payload_redacted":true,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","transcript_digest":"three-agent-transcript-digest-7060"{} }}"#,
+        r#"{{"schema_version":"kamn.mvp.three-agent-transcript.v1","proof_label":"local-only","devnet_settlement_linked":true,"transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","steps":["agent_a_registered","agent_b_registered","agent_a_invoked_transaction","agent_b_accepted_task","escrow_funded","escrow_released","agent_c_verifier_verified"],"views":{{"agent_a":"participant-private","agent_b":"participant-private","agent_c_verifier":"restricted-public"}},"agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"private_payload_redacted":true,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","transcript_digest":"three-agent-transcript-digest-7060"{} }}"#,
         views_root.map(shared_view_fields).unwrap_or_default()
     )
 }
@@ -77,6 +91,26 @@ pub(crate) fn agent_c_private_view() -> String {
 
 pub(crate) fn agent_c_mismatched_signature_view() -> String {
     agent_c_public_view().replace(SIGNATURE, "mismatch")
+}
+
+pub(crate) fn agent_c_short_identity_view() -> String {
+    agent_c_public_view().replace(r#""agent":"agent_c_verifier""#, r#""agent":"agent_c""#)
+}
+
+pub(crate) fn agent_a_mismatched_identity_view() -> String {
+    participant_view(
+        "agent_b",
+        "agent-a-private-digest-7060",
+        "agent-a-view-digest-7060",
+    )
+}
+
+pub(crate) fn agent_b_mismatched_identity_view() -> String {
+    participant_view(
+        "agent_a",
+        "agent-b-private-digest-7060",
+        "agent-b-view-digest-7060",
+    )
 }
 
 fn artifacts_json(root: &Path, views_root: Option<&Path>) -> String {
@@ -127,7 +161,7 @@ fn participant_view(agent: &str, private_digest: &str, view_digest: &str) -> Str
 
 fn agent_c_public_view() -> String {
     format!(
-        r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"agent_c","view_scope":"restricted-public","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":0,"public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":"agent-c-view-digest-7060"}}"#,
+        r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"agent_c_verifier","view_scope":"restricted-public","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":0,"public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":"agent-c-view-digest-7060"}}"#,
         SIGNATURE
     )
 }

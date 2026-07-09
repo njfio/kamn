@@ -102,10 +102,10 @@ fn required_markers() -> [&'static str; 13] {
         "\"agent_b_accepted_task\"",
         "\"escrow_funded\"",
         "\"escrow_released\"",
-        "\"agent_c_verified\"",
+        "\"agent_c_verifier_verified\"",
         "\"agent_a\":\"participant-private\"",
         "\"agent_b\":\"participant-private\"",
-        "\"agent_c\":\"restricted-public\"",
+        "\"agent_c_verifier\":\"restricted-public\"",
     ]
 }
 
