@@ -90,6 +90,12 @@ actor tools before `kamn_write_agent_harness_evidence`; otherwise evidence
 writing fails loudly instead of manufacturing success. The resulting artifact
 includes `three_agent_actor_tool_receipts` bound to the report path, actor,
 action, sequence, view scope, view artifact, and view digest.
+It also includes `three_agent_actor_observation_receipts` that name the
+canonical `agent_a_observation_receipt_digest`,
+`agent_b_observation_receipt_digest`, and
+`agent_c_verifier_observation_receipt_digest` references from the verified
+report. Agent C's verifier receipt evidence remains restricted-public and must
+not expose participant-private digest or raw private payload markers.
 
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with

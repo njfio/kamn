@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { requiredActorReceipts } from "./actor-receipts";
+import { canonicalObservationReceipts } from "./observation-receipts";
 
 export type Report = {
 	status?: string;
@@ -61,6 +62,7 @@ export function boundarySummary(report: Report) {
 function evidence(reportPath: string, report: Report) {
 	const actorRehearsal = threeAgentActorRehearsal(report);
 	const actorReceipts = requiredActorReceipts(reportPath, report);
+	const observationReceipts = canonicalObservationReceipts(report);
 	return {
 		schema_version: "kamn.mvp.agent-harness-evidence.v1",
 		harness: "mcp-agent",
@@ -73,6 +75,9 @@ function evidence(reportPath: string, report: Report) {
 		three_agent_boundary: threeAgentBoundary(report),
 		...(actorRehearsal ? { three_agent_actor_rehearsal: actorRehearsal } : {}),
 		...(actorReceipts ? { three_agent_actor_tool_receipts: actorReceipts } : {}),
+		...(observationReceipts
+			? { three_agent_actor_observation_receipts: observationReceipts }
+			: {}),
 	};
 }
 
