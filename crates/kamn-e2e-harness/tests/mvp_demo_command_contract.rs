@@ -7,6 +7,9 @@ use kamn_e2e_harness::{
     HarnessCommand, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
+#[path = "support/mvp_demo_command.rs"]
+mod mvp_demo_command;
+
 #[test]
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
     let parsed = parse_command_args(["demo-mvp", "--output-root", "/tmp/kamn-demo"])
@@ -46,7 +49,7 @@ fn spec_c03_makefile_wires_demo_mvp_to_harness_command() {
 #[test]
 fn spec_c04_demo_mvp_creates_run_directory_and_latest_report_paths() {
     let temp = temp_dir("mvp-demo-command");
-    let config = local_demo_config(&temp);
+    let config = mvp_demo_command::local_demo_config(&temp);
     execute_mvp_demo_contract(&config).expect("demo-mvp should generate local proof artifacts");
     assert!(temp.join("latest/proof/report.json").is_file());
     assert!(temp.join("latest/proof/report.md").is_file());
@@ -60,7 +63,7 @@ fn spec_c04_demo_mvp_creates_run_directory_and_latest_report_paths() {
 #[test]
 fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
     let temp = temp_dir("mvp-demo-verify");
-    let demo_config = local_demo_config(&temp);
+    let demo_config = mvp_demo_command::local_demo_config(&temp);
     execute_mvp_demo_contract(&demo_config).expect("demo should generate report");
     let verify_config = VerifyMvpDemoCommandConfig {
         report: temp.join("latest/proof/report.json").display().to_string(),
@@ -74,89 +77,40 @@ fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
 #[test]
 fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
     let temp = temp_dir("mvp-demo-devnet-settlement");
-    let config = MvpDemoCommandConfig {
-        output_root: temp.display().to_string(),
-        devnet_mode: "required".to_owned(),
-        solana_rpc_url: Some("https://api.devnet.solana.com".to_owned()),
-        devnet_settlement_command: Some(stub_devnet_settlement_command()),
-        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
-        service_api_vertical_slice_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
-        )),
-        service_api_websocket_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
-        )),
-        agent_harness_evidence_path: None,
-    };
+    let config = mvp_demo_command::devnet_required_demo_config(&temp);
     let report = execute_mvp_demo_contract(&config)
         .expect("devnet-required demo should accept real settlement evidence");
 
     assert!(report.contains(r#""status":"GO""#));
     assert!(report.contains(r#""id":"devnet_settlement_asset_movement""#));
     assert!(report.contains(r#""label":"devnet-backed""#));
-    assert!(report.contains(r#""settlement_tx_signature":"devnet-signature-111""#));
-    assert!(report.contains(r#""persisted_settlement_tx_signature":"devnet-signature-111""#));
-    assert!(report.contains(r#""payer_balance_before":2500000000"#));
-    assert!(report.contains(r#""payer_balance_after":2498995000"#));
-    assert!(report.contains(r#""recipient_balance_before":2500000000"#));
-    assert!(report.contains(r#""recipient_balance_after":2501000000"#));
-    assert!(report.contains(r#""three_agent_transcript_digest":"sha256:"#));
-    assert!(report.contains(r#""agent_a_view_digest":"sha256:"#));
-    assert!(report.contains(r#""agent_b_view_digest":"sha256:"#));
-    assert!(report.contains(r#""agent_c_verifier_view_digest":"sha256:"#));
+    for marker in devnet_settlement_markers() {
+        assert!(report.contains(marker), "missing report marker: {marker}");
+    }
+    for marker in three_agent_digest_markers() {
+        assert!(report.contains(marker), "missing report marker: {marker}");
+    }
     let _ = std::fs::remove_dir_all(&temp);
 }
 
-fn stub_localhost_signed_demo_command() -> Vec<String> {
-    vec![
-        "sh".to_owned(),
-        "-c".to_owned(),
-        r#"cat > "$2" <<'JSON'
-{"schema_version":"kamn.sdk.localhost-signed.demo-receipt-artifact.v1","status": "pass","signed_exchange":{"from":"kamn:did:agent:alice","to":"kamn:did:agent:bob","verified": true},"signed_flow":"task"}
-JSON
-echo "receipt_reconciliation=GO"
-echo "localhost signed message demo completed."
-"#
-        .to_owned(),
-        "kamn-mvp-stub".to_owned(),
+fn devnet_settlement_markers() -> [&'static str; 6] {
+    [
+        r#""settlement_tx_signature":"devnet-signature-111""#,
+        r#""persisted_settlement_tx_signature":"devnet-signature-111""#,
+        r#""payer_balance_before":2500000000"#,
+        r#""payer_balance_after":2498995000"#,
+        r#""recipient_balance_before":2500000000"#,
+        r#""recipient_balance_after":2501000000"#,
     ]
 }
 
-fn stub_service_api_command(test_name: &str) -> Vec<String> {
-    vec![
-        "sh".to_owned(),
-        "-c".to_owned(),
-        format!(r#"echo "test {test_name} ... ok"; echo "test result: ok""#),
+fn three_agent_digest_markers() -> [&'static str; 4] {
+    [
+        r#""three_agent_transcript_digest":"sha256:"#,
+        r#""agent_a_view_digest":"sha256:"#,
+        r#""agent_b_view_digest":"sha256:"#,
+        r#""agent_c_verifier_view_digest":"sha256:"#,
     ]
-}
-
-fn stub_devnet_settlement_command() -> Vec<String> {
-    vec![
-        "sh".to_owned(),
-        "-c".to_owned(),
-        r#"cat <<'JSON'
-{"network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","recipient_pubkey":"FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe","lamports":1000000,"settlement_tx_signature":"devnet-signature-111","settlement_commitment":"finalized","payer_balance_before":2500000000,"payer_balance_after":2498995000,"recipient_balance_before":2500000000,"recipient_balance_after":2501000000,"persisted_settlement_tx_signature":"devnet-signature-111"}
-JSON
-"#
-        .to_owned(),
-    ]
-}
-
-fn local_demo_config(temp: &Path) -> MvpDemoCommandConfig {
-    MvpDemoCommandConfig {
-        output_root: temp.display().to_string(),
-        devnet_mode: "optional".to_owned(),
-        solana_rpc_url: None,
-        devnet_settlement_command: None,
-        localhost_signed_demo_command: Some(stub_localhost_signed_demo_command()),
-        service_api_vertical_slice_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence",
-        )),
-        service_api_websocket_command: Some(stub_service_api_command(
-            "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
-        )),
-        agent_harness_evidence_path: None,
-    }
 }
 
 fn make_dry_run(target: &str) -> String {

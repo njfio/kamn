@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 
+#[path = "artifact_digest.rs"]
+mod artifact_digest;
+
 use crate::mvp_local_artifacts;
-use sha2::{Digest, Sha256};
+use artifact_digest::{digest_field, refresh_digest, with_digest};
 
 const SIGNATURE: &str = "5nSgnDevnetSignature111111111111111111111111111";
 
@@ -29,21 +32,11 @@ pub(crate) fn write_transcript(root: &Path, transcript: String) {
 pub(crate) fn write_view_artifacts(root: &Path, agent_c: Option<String>) {
     mvp_local_artifacts::write_file(
         root.join("proof/agent-a-view.json").as_path(),
-        participant_view(
-            "agent_a",
-            "agent-a-private-digest-7060",
-            "agent-a-view-digest-7060",
-        )
-        .as_str(),
+        participant_view("agent_a", "agent-a-private-digest-7060").as_str(),
     );
     mvp_local_artifacts::write_file(
         root.join("proof/agent-b-view.json").as_path(),
-        participant_view(
-            "agent_b",
-            "agent-b-private-digest-7060",
-            "agent-b-view-digest-7060",
-        )
-        .as_str(),
+        participant_view("agent_b", "agent-b-private-digest-7060").as_str(),
     );
     mvp_local_artifacts::write_file(
         root.join("proof/agent-c-verifier-view.json").as_path(),
@@ -104,19 +97,11 @@ pub(crate) fn agent_c_short_identity_view() -> String {
 }
 
 pub(crate) fn agent_a_mismatched_identity_view() -> String {
-    participant_view(
-        "agent_b",
-        "agent-a-private-digest-7060",
-        "agent-a-view-digest-7060",
-    )
+    participant_view("agent_b", "agent-a-private-digest-7060")
 }
 
 pub(crate) fn agent_b_mismatched_identity_view() -> String {
-    participant_view(
-        "agent_a",
-        "agent-b-private-digest-7060",
-        "agent-b-view-digest-7060",
-    )
+    participant_view("agent_a", "agent-b-private-digest-7060")
 }
 
 fn artifacts_json(root: &Path, views_root: Option<&Path>) -> String {
@@ -151,16 +136,8 @@ fn three_agent_claim(root: &Path, views_root: Option<&Path>) -> String {
 }
 
 fn shared_view_fields(root: &Path) -> String {
-    let agent_a = participant_view(
-        "agent_a",
-        "agent-a-private-digest-7060",
-        "agent-a-view-digest-7060",
-    );
-    let agent_b = participant_view(
-        "agent_b",
-        "agent-b-private-digest-7060",
-        "agent-b-view-digest-7060",
-    );
+    let agent_a = participant_view("agent_a", "agent-a-private-digest-7060");
+    let agent_b = participant_view("agent_b", "agent-b-private-digest-7060");
     let agent_c = agent_c_public_view();
     format!(
         r#","agent_a_view_artifact":"{}","agent_b_view_artifact":"{}","agent_c_verifier_view_artifact":"{}","agent_a_view_digest":"{}","agent_b_view_digest":"{}","agent_c_verifier_view_digest":"{}""#,
@@ -173,7 +150,7 @@ fn shared_view_fields(root: &Path) -> String {
     )
 }
 
-fn participant_view(agent: &str, private_digest: &str, _view_digest: &str) -> String {
+fn participant_view(agent: &str, private_digest: &str) -> String {
     with_digest(
         format!(
             r#"{{"schema_version":"kamn.mvp.three-agent-view.v1","agent":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7060","escrow_id":"escrow-three-agent-7060","settlement_tx_signature":"{}","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","private_field_count":3,"participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7060","private_payload_redacted":true,"view_digest":""}}"#,
@@ -203,71 +180,4 @@ fn roadmap_claim() -> &'static str {
 
 fn transcript_digest(views_root: Option<&Path>) -> String {
     digest_field(transcript(views_root).as_str(), "transcript_digest")
-}
-
-fn refresh_digest(raw: String) -> String {
-    let without_digest = without_string_field(raw.as_str(), "view_digest");
-    let digest = tagged_sha256(without_digest.as_str());
-    replace_string_field(raw.as_str(), "view_digest", digest.as_str())
-}
-
-fn with_digest(raw: String, field: &str) -> String {
-    let digest = tagged_sha256(without_string_field(raw.as_str(), field).as_str());
-    replace_string_field(raw.as_str(), field, digest.as_str())
-}
-
-fn digest_field(raw: &str, field: &str) -> String {
-    let marker = format!("\"{field}\":\"");
-    let start = raw
-        .find(marker.as_str())
-        .expect("digest field should exist")
-        + marker.len();
-    let end = raw[start..].find('"').expect("digest field should end");
-    raw[start..start + end].to_owned()
-}
-
-fn replace_string_field(raw: &str, field: &str, value: &str) -> String {
-    let marker = format!("\"{field}\":\"");
-    let start = raw
-        .find(marker.as_str())
-        .expect("digest field should exist")
-        + marker.len();
-    let end = raw[start..].find('"').expect("digest field should end");
-    format!("{}{}{}", &raw[..start], value, &raw[start + end..])
-}
-
-fn without_string_field(raw: &str, field: &str) -> String {
-    let marker = format!("\"{field}\":\"");
-    let start = raw
-        .find(marker.as_str())
-        .expect("digest field should exist");
-    let value_start = start + marker.len();
-    let end = value_start
-        + raw[value_start..]
-            .find('"')
-            .expect("digest field should end")
-        + 1;
-    remove_pair(raw, start, end)
-}
-
-fn remove_pair(raw: &str, start: usize, end: usize) -> String {
-    if raw[end..].starts_with(',') {
-        return format!("{}{}", &raw[..start], &raw[end + 1..]);
-    }
-    format!("{}{}", &raw[..start - 1], &raw[end..])
-}
-
-fn tagged_sha256(value: &str) -> String {
-    format!("sha256:{}", sha256_hex(value))
-}
-
-fn sha256_hex(value: &str) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let digest = Sha256::digest(value.as_bytes());
-    let mut output = String::with_capacity(64);
-    for byte in digest {
-        output.push(HEX[(byte >> 4) as usize] as char);
-        output.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    output
 }

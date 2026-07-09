@@ -10,19 +10,19 @@ use super::three_agent_claim::three_agent_escrow_claim_json;
 use super::three_agent_transcript::three_agent_transcript_path;
 use super::three_agent_views::{agent_a_view_path, agent_b_view_path, agent_c_verifier_view_path};
 
-/// MVP demo proof report schema marker.
+#[doc = "MVP demo proof report schema marker."]
 pub const MVP_DEMO_REPORT_SCHEMA_VERSION: &str = "kamn.mvp.demo.proof-report.v1";
-/// Claim label for actual local KAMN execution.
+#[doc = "Claim label for actual local KAMN execution."]
 pub const CLAIM_LABEL_REAL: &str = "real";
-/// Claim label for Solana devnet-backed execution or evidence.
+#[doc = "Claim label for Solana devnet-backed execution or evidence."]
 pub const CLAIM_LABEL_DEVNET_BACKED: &str = "devnet-backed";
-/// Claim label for local-only KAMN execution.
+#[doc = "Claim label for local-only KAMN execution."]
 pub const CLAIM_LABEL_LOCAL_ONLY: &str = "local-only";
-/// Claim label for dry-run-only behavior.
+#[doc = "Claim label for dry-run-only behavior."]
 pub const CLAIM_LABEL_DRY_RUN: &str = "dry-run";
-/// Claim label for placeholder behavior.
+#[doc = "Claim label for placeholder behavior."]
 pub const CLAIM_LABEL_PLACEHOLDER: &str = "placeholder";
-/// Claim label for explicit non-MVP roadmap behavior.
+#[doc = "Claim label for explicit non-MVP roadmap behavior."]
 pub const CLAIM_LABEL_ROADMAP: &str = "roadmap";
 
 pub(crate) struct DemoReportInput<'a> {
@@ -52,10 +52,9 @@ pub(crate) fn render_report_json(input: &DemoReportInput<'_>) -> Result<String, 
 
 pub(crate) fn report_status(input: &DemoReportInput<'_>) -> &'static str {
     if input.devnet_mode == "required" && input.devnet_settlement.is_none() {
-        "NO-GO"
-    } else {
-        "GO"
+        return "NO-GO";
     }
+    "GO"
 }
 
 fn claim_matrix_json(input: &DemoReportInput<'_>) -> Result<String, String> {
@@ -170,10 +169,7 @@ fn devnet_success_claims(
 }
 
 fn no_go_json(input: &DemoReportInput<'_>) -> String {
-    if input.devnet_mode != "required" {
-        return "{\"active\":false,\"reason\":\"\"}".to_owned();
-    }
-    if input.devnet_settlement.is_some() {
+    if input.devnet_mode != "required" || input.devnet_settlement.is_some() {
         return "{\"active\":false,\"reason\":\"\"}".to_owned();
     }
     format!(

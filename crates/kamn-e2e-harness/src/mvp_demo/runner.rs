@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::agent_harness::validate_agent_harness_evidence_file;
 use super::artifact_digest::ThreeAgentArtifactDigests;
+use super::command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 use super::devnet_settlement::{
     collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
 };
@@ -17,34 +18,6 @@ use super::three_agent_transcript::{
 };
 use super::three_agent_views::write_three_agent_views;
 use super::verify::verify_mvp_demo_report_json;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Parsed `demo-mvp` command configuration.
-pub struct MvpDemoCommandConfig {
-    /// Demo output root directory.
-    pub output_root: String,
-    /// Devnet execution mode (`optional` or `required`).
-    pub devnet_mode: String,
-    /// Optional Solana RPC URL for devnet-backed proof attempts.
-    pub solana_rpc_url: Option<String>,
-    /// Optional command override for tests; production uses the service API live Solana lane.
-    pub devnet_settlement_command: Option<Vec<String>>,
-    /// Optional command override for tests; production uses the SDK localhost signed demo.
-    pub localhost_signed_demo_command: Option<Vec<String>>,
-    /// Optional command override for tests; production uses the service API vertical slice test.
-    pub service_api_vertical_slice_command: Option<Vec<String>>,
-    /// Optional command override for tests; production uses the service API websocket test.
-    pub service_api_websocket_command: Option<Vec<String>>,
-    /// Optional MCP-agent harness evidence artifact path.
-    pub agent_harness_evidence_path: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Parsed `verify-mvp-demo` command configuration.
-pub struct VerifyMvpDemoCommandConfig {
-    /// Proof report JSON path.
-    pub report: String,
-}
 
 /// Executes the MVP demo command and writes proof artifacts.
 pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String, String> {
@@ -66,11 +39,7 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
         three_agent_artifact_digests.as_ref(),
     );
     let report_json = render_report_json(&input)?;
-    verify_mvp_demo_report_json(report_json.as_str())?;
-    validate_local_artifact_files(report_json.as_str())?;
-    let latest_report = latest_report_path(output_root);
-    validate_agent_harness_evidence_file(report_json.as_str(), latest_report.as_str())?;
-    validate_three_agent_transcript_file(report_json.as_str())?;
+    validate_generated_report(report_json.as_str(), output_root)?;
     write_reports(output_root, run_id.as_str(), report_json.as_str(), &input)?;
     Ok(report_json)
 }
@@ -102,6 +71,13 @@ fn create_three_agent_transcript(
     let views = write_three_agent_views(run_id, evidence, run_dir)?;
     let transcript = write_three_agent_transcript(run_id, evidence, run_dir, &views)?;
     Ok(Some(ThreeAgentArtifactDigests { transcript, views }))
+}
+
+fn validate_generated_report(report_json: &str, output_root: &Path) -> Result<(), String> {
+    verify_mvp_demo_report_json(report_json)?;
+    validate_local_artifact_files(report_json)?;
+    validate_agent_harness_evidence_file(report_json, latest_report_path(output_root).as_str())?;
+    validate_three_agent_transcript_file(report_json)
 }
 
 fn validate_devnet_mode(devnet_mode: &str) -> Result<(), String> {
