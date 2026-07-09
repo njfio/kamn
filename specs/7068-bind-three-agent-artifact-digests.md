@@ -49,19 +49,19 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] `verify-mvp-demo` rejects transcript content tampering when the report's
+- [x] `verify-mvp-demo` rejects transcript content tampering when the report's
   `three_agent_transcript_digest` remains stale.
-- [ ] `verify-mvp-demo` rejects Agent A view content tampering when
+- [x] `verify-mvp-demo` rejects Agent A view content tampering when
   `agent_a_view_digest` remains stale.
-- [ ] `verify-mvp-demo` rejects Agent B view content tampering when
+- [x] `verify-mvp-demo` rejects Agent B view content tampering when
   `agent_b_view_digest` remains stale.
-- [ ] `verify-mvp-demo` rejects Agent C verifier view content tampering when
+- [x] `verify-mvp-demo` rejects Agent C verifier view content tampering when
   `agent_c_verifier_view_digest` remains stale.
-- [ ] Generated MVP reports write `sha256:<hex>` values for transcript and
+- [x] Generated MVP reports write `sha256:<hex>` values for transcript and
   per-agent view digest claims.
-- [ ] Embedded transcript/view digest fields match the same recomputed digest
+- [x] Embedded transcript/view digest fields match the same recomputed digest
   values expected by the report claim.
-- [ ] Existing three-agent disclosure boundaries, devnet settlement evidence,
+- [x] Existing three-agent disclosure boundaries, devnet settlement evidence,
   Pi actor receipt evidence, local artifact binding, formatting, strict clippy,
   and `make check` remain green.
 
@@ -133,3 +133,82 @@ Integration:
 - Run local `make demo-mvp` and canonical `verify-mvp-demo`.
 - Run the devnet-required demo and canonical verifier, or record explicit
   external NO-GO evidence if Solana devnet is unavailable.
+
+## Completion Evidence
+
+- Spec checkpoint:
+  - Issue: #7068.
+  - Spec: `specs/7068-bind-three-agent-artifact-digests.md`.
+- Red tests:
+  - `mvp_demo_command_contract::spec_c06_demo_mvp_devnet_required_records_settlement_evidence`
+    failed because generated digest claims were not `sha256:` values.
+  - `mvp_demo_three_agent_view_artifact_contract` failed stale digest tests for
+    Agent A, Agent B, and Agent C verifier views because tampered artifacts
+    still verified.
+  - `mvp_demo_three_agent_transcript_contract::spec_c05_command_rejects_stale_transcript_digest_after_content_tamper`
+    failed because a tampered transcript still verified.
+- Green/refactor focused tests:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+    CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test
+    mvp_demo_three_agent_view_artifact_contract --test
+    mvp_demo_three_agent_view_digest_contract --test
+    mvp_demo_three_agent_transcript_contract --test
+    mvp_demo_command_contract -- --nocapture`
+  - Result: 20 passed.
+- Broader MVP proof matrix:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+    CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test
+    mvp_demo_three_agent_view_artifact_contract --test
+    mvp_demo_three_agent_view_digest_contract --test
+    mvp_demo_three_agent_claim_contract --test
+    mvp_demo_three_agent_transcript_contract --test
+    mvp_demo_agent_harness_claim_contract --test
+    mvp_demo_local_artifact_contract --test mvp_demo_claim_contract --test
+    mvp_demo_command_contract --test mvp_evaluator_demo_runbook_contract --
+    --nocapture`
+  - Result: 64 passed.
+- Local quality gates:
+  - `cargo fmt --check`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+    CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets
+    --all-features -- -D warnings`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+    CARGO_INCREMENTAL=0 make check`
+- Local optional demo:
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+    CARGO_INCREMENTAL=0 make demo-mvp`
+  - Result: `GO`, `devnet_mode=optional`, local-only MVP claims passed, and
+    no devnet settlement or three-agent settlement claim was made.
+  - Canonical verifier passed for `.kamn/demo/latest/proof/report.json`.
+- Devnet-backed demo:
+  - `KAMN_MVP_DEVNET_MODE=required
+    KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com
+    KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com
+    KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/Users/n/.config/solana/ted-dev.json
+    KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=BSN17KC1c5kUuA7ZaTXvMUnFbZUhizeaisYcAFeTsbEb
+    KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000
+    KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized
+    CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+    CARGO_INCREMENTAL=0 make demo-mvp`
+  - Result: `GO`, `devnet_settlement_asset_movement=devnet-backed`, and
+    `three_agent_escrow_verification=devnet-backed`.
+  - Settlement signature:
+    `2NrcVDZpuSSjveRdqbwnGj6SWCEUkzS8hZhNikSq5LNty882ydoK4Sa2ZWC99CYDfeTaXxXVGQjX24zWt9etnLsr`.
+  - `solana confirm -v --url https://api.devnet.solana.com
+    2NrcVDZpuSSjveRdqbwnGj6SWCEUkzS8hZhNikSq5LNty882ydoK4Sa2ZWC99CYDfeTaXxXVGQjX24zWt9etnLsr`
+  - Result: finalized transfer of 1,000,000 lamports from
+    `Ew2NpaFAK2TbUkbUMV54JN1gURSKkLWEypk5v9kJR7XU` to
+    `BSN17KC1c5kUuA7ZaTXvMUnFbZUhizeaisYcAFeTsbEb`.
+  - Canonical verifier passed for `.kamn/demo/latest/proof/report.json`.
+  - Generated transcript and Agent A/B/C verifier view digest claims were
+    `sha256:<hex>` values.
+  - Generated Agent C verifier view reported `agent=agent_c_verifier`,
+    `view_scope=restricted-public`, `private_field_count=0`, and no
+    `participant_private_view_digest`.
+
+## Deviations
+
+- The spec focused on report, transcript, and view artifacts. During
+  integration, the Pi/agent-harness actor rehearsal and actor receipt fixtures
+  also had to move from marker digests to computed artifact digests so the
+  broader MVP proof matrix stayed wired to the same verifier semantics.
