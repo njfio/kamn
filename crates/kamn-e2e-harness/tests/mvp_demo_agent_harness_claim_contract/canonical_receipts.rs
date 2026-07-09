@@ -46,6 +46,30 @@ pub(crate) fn artifact_entries(root: &Path) -> String {
     )
 }
 
+pub(crate) fn observation_receipts(root: &Path) -> String {
+    format!(
+        r#","three_agent_actor_observation_receipts":{{"agent_a":{},"agent_b":{},"agent_c_verifier":{}}}"#,
+        observation_receipt(root, "agent_a", "participant-private"),
+        observation_receipt(root, "agent_b", "participant-private"),
+        observation_receipt(root, "agent_c_verifier", "restricted-public")
+    )
+}
+
+pub(crate) fn observation_receipt(root: &Path, agent: &str, scope: &str) -> String {
+    let artifact = match agent {
+        "agent_a" => root.join("proof/agent-a-observation-receipt.json"),
+        "agent_b" => root.join("proof/agent-b-observation-receipt.json"),
+        _ => root.join("proof/agent-c-verifier-observation-receipt.json"),
+    };
+    format!(
+        r#"{{"agent":"{}","view_scope":"{}","artifact":"{}","digest":"{}"}}"#,
+        agent,
+        scope,
+        artifact.display(),
+        receipt_digest_for(root, agent)
+    )
+}
+
 fn participant_receipt(root: &Path, agent: &str, action: &str) -> String {
     let (file, private_digest) = match agent {
         "agent_a" => ("agent-a-view.json", "agent-a-private-digest-7045"),

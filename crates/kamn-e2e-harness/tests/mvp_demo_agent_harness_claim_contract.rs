@@ -6,6 +6,8 @@ mod three_agent_actor_receipts_contract;
 mod three_agent_actor_rehearsal_contract;
 #[path = "mvp_demo_agent_harness_claim_contract/three_agent_boundary_contract.rs"]
 mod three_agent_boundary_contract;
+#[path = "mvp_demo_agent_harness_claim_contract/canonical_observation_receipts_contract.rs"]
+mod canonical_observation_receipts_contract;
 
 use kamn_e2e_harness::{execute_mvp_demo_contract, execute_verify_mvp_demo_contract};
 use std::path::Path;
@@ -127,6 +129,7 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "three_agent_boundary",
         "three_agent_actor_rehearsal",
         "three_agent_actor_tool_receipts",
+        "three_agent_actor_observation_receipts",
         "kamn_agent_a_register",
         "kamn_agent_a_invoke_transaction",
         "kamn_agent_b_register",

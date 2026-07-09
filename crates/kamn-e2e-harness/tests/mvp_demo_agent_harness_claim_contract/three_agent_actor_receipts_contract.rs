@@ -19,7 +19,7 @@ fn spec_c15_command_rejects_three_agent_harness_without_actor_tool_receipts() {
 #[test]
 fn spec_c16_command_rejects_actor_tool_receipt_view_digest_mismatch() {
     let root = temp_root("receipt-digest-mismatch");
-    let artifact_json = agent_artifact_with_three_agent_actor_receipts(&root).replace(
+    let artifact_json = agent_artifact_with_canonical_observation_receipts(&root).replace(
         format!(r#""view_digest":"{}""#, view_digest_for("agent_a")).as_str(),
         r#""view_digest":"mismatch""#,
     );
@@ -35,7 +35,7 @@ fn spec_c16_command_rejects_actor_tool_receipt_view_digest_mismatch() {
 #[test]
 fn spec_c17_command_rejects_agent_c_private_actor_tool_receipt_digest() {
     let root = temp_root("receipt-agent-c-private");
-    let artifact_json = agent_artifact_with_three_agent_actor_receipts(&root).replace(
+    let artifact_json = agent_artifact_with_canonical_observation_receipts(&root).replace(
         r#""sequence":5,"tool":"kamn_agent_c_verify_three_agent_proof""#,
         r#""sequence":5,"tool":"kamn_agent_c_verify_three_agent_proof","participant_private_view_digest":"leak""#,
     );
@@ -51,7 +51,10 @@ fn spec_c17_command_rejects_agent_c_private_actor_tool_receipt_digest() {
 #[test]
 fn spec_c18_command_accepts_actor_tool_receipts_bound_to_report_views() {
     let root = temp_root("valid-actor-tool-receipts");
-    let artifact = write_artifact(&root, agent_artifact_with_three_agent_actor_receipts(&root));
+    let artifact = write_artifact(
+        &root,
+        agent_artifact_with_canonical_observation_receipts(&root),
+    );
     let report = write_report(&root, report_with_three_agent_claim(&root, &artifact));
 
     execute_verify_mvp_demo_contract(&config(report.as_path()))
