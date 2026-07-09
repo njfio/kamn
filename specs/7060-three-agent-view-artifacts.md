@@ -50,21 +50,21 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Devnet-backed reports include `agent_a_view`, `agent_b_view`, and
+- [x] Devnet-backed reports include `agent_a_view`, `agent_b_view`, and
   `agent_c_verifier_view` artifact entries.
-- [ ] `three_agent_escrow_verification` includes per-agent view artifact paths
+- [x] `three_agent_escrow_verification` includes per-agent view artifact paths
   and view digests.
-- [ ] `three-agent-transcript.json` includes the same per-agent view digests.
-- [ ] Agent A and Agent B view artifacts are labelled `participant-private`,
+- [x] `three-agent-transcript.json` includes the same per-agent view digests.
+- [x] Agent A and Agent B view artifacts are labelled `participant-private`,
   include nonzero participant-private field counts, and do not include raw
   private payloads.
-- [ ] Agent C view artifact is labelled `restricted-public`, includes the
+- [x] Agent C view artifact is labelled `restricted-public`, includes the
   shared public verification digest and devnet settlement evidence, and includes
   no private payloads or participant-private view digests.
-- [ ] `verify-mvp-demo` rejects missing, mismatched, raw-private-leaking, or
+- [x] `verify-mvp-demo` rejects missing, mismatched, raw-private-leaking, or
   over-disclosing view artifacts.
-- [ ] Local-only reports remain valid without three-agent view artifacts.
-- [ ] Existing devnet-backed settlement, transcript, Pi/agent harness boundary,
+- [x] Local-only reports remain valid without three-agent view artifacts.
+- [x] Existing devnet-backed settlement, transcript, Pi/agent harness boundary,
   local artifact binding, formatting, clippy, and `make check` gates remain
   green.
 
@@ -122,3 +122,34 @@ Integration:
 - Run local `make demo-mvp` plus canonical verifier.
 - Run devnet-required `make demo-mvp` plus canonical verifier, or record an
   explicit Solana devnet NO-GO if external devnet is unavailable.
+
+## Completion Evidence
+
+- Red test evidence:
+  `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --test mvp_demo_three_agent_view_artifact_contract -- --nocapture`
+  initially failed three cases because missing views, Agent C over-disclosure,
+  and mismatched view settlement signatures were not rejected.
+- Green/refactor/integration evidence:
+  - `cargo fmt --check`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make check`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo test -p kamn-e2e-harness --tests`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 make demo-mvp`
+  - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json`
+- Devnet-backed evidence:
+  - Command used a funded devnet payer keypair and recipient pubkey via env,
+    without committing key material.
+  - Latest devnet run id: `run-75163-1783592271247`.
+  - Settlement signature:
+    `21d8UkiKwBuBEkqjeRxGWMoZxFHao4TBEKSnu5Dksim2cheJFiwJYbbTU5YE42NkhAANPgvo3LssNdMP52uLmQE3`.
+  - Payer balance moved from `9993279840` to `9992274840` lamports.
+  - Recipient balance moved from `1000000` to `2000000` lamports.
+  - Report contained `three-agent-transcript.json`, `agent-a-view.json`,
+    `agent-b-view.json`, and `agent-c-verifier-view.json` artifact paths.
+  - Canonical verifier returned
+    `{"status":"PASS","report":".kamn/demo/latest/proof/report.json"}`.
+
+## Deviations
+
+- None. The implementation stayed inside the existing MVP demo/report/verifier
+  surfaces and did not add dependencies or broaden settlement semantics.
