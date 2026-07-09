@@ -124,7 +124,10 @@ fn spec_c05_command_rejects_agent_b_view_identity_mismatch() {
 fn spec_c06_command_rejects_agent_c_short_identity() {
     let root = three_agent_view_artifacts::temp_root("agent-c-short-identity");
     mvp_local_artifacts::write_valid_local_artifacts(&root);
-    three_agent_view_artifacts::write_view_artifacts(&root, None);
+    three_agent_view_artifacts::write_view_artifacts(
+        &root,
+        Some(three_agent_view_artifacts::agent_c_short_identity_view()),
+    );
     three_agent_view_artifacts::write_transcript(
         &root,
         three_agent_view_artifacts::transcript(Some(&root)),

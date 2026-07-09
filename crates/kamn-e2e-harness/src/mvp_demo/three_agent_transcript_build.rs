@@ -24,11 +24,11 @@ pub(crate) fn transcript_json(
 }
 
 fn steps_json() -> &'static str {
-    "\"steps\":[\"agent_a_registered\",\"agent_b_registered\",\"agent_a_invoked_transaction\",\"agent_b_accepted_task\",\"escrow_funded\",\"escrow_released\",\"agent_c_verified\"]"
+    "\"steps\":[\"agent_a_registered\",\"agent_b_registered\",\"agent_a_invoked_transaction\",\"agent_b_accepted_task\",\"escrow_funded\",\"escrow_released\",\"agent_c_verifier_verified\"]"
 }
 
 fn views_json() -> &'static str {
-    "{\"agent_a\":\"participant-private\",\"agent_b\":\"participant-private\",\"agent_c\":\"restricted-public\"}"
+    "{\"agent_a\":\"participant-private\",\"agent_b\":\"participant-private\",\"agent_c_verifier\":\"restricted-public\"}"
 }
 
 fn settlement_json(evidence: &DevnetSettlementEvidence) -> String {

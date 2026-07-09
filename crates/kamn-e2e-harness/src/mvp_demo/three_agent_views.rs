@@ -115,7 +115,7 @@ fn participant_view_json(
 
 fn verifier_view_json(run_id: &str, evidence: &DevnetSettlementEvidence) -> String {
     format!(
-        "{{\"schema_version\":\"kamn.mvp.three-agent-view.v1\",\"agent\":\"agent_c\",\"view_scope\":\"restricted-public\",{},\"private_field_count\":0,\"public_view_digest\":\"{}\",\"private_payload_redacted\":true,\"view_digest\":\"{}\"}}",
+        "{{\"schema_version\":\"kamn.mvp.three-agent-view.v1\",\"agent\":\"agent_c_verifier\",\"view_scope\":\"restricted-public\",{},\"private_field_count\":0,\"public_view_digest\":\"{}\",\"private_payload_redacted\":true,\"view_digest\":\"{}\"}}",
         shared_view_fields(run_id, evidence),
         escape_json(public_view_digest(run_id).as_str()),
         escape_json(agent_c_verifier_view_digest(run_id).as_str())

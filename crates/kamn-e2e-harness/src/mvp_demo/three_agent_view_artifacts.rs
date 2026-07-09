@@ -67,6 +67,7 @@ fn validate_transcript_bindings(transcript: &str, claim: &ClaimView<'_>) -> Resu
 
 fn validate_participant_view(raw: &str, claim: &ClaimView<'_>, agent: &str) -> Result<(), String> {
     validate_common_view(raw, claim)?;
+    require_agent_identity(raw, agent, format!("{agent}_view").as_str())?;
     require_marker(raw, "\"view_scope\":\"participant-private\"", agent)?;
     require_marker(raw, "\"participant_private_view_digest\":\"", agent)?;
     if extract_u64(raw, "private_field_count")? == 0 {
@@ -89,7 +90,7 @@ fn validate_participant_view(raw: &str, claim: &ClaimView<'_>, agent: &str) -> R
 
 fn validate_verifier_view(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> {
     validate_common_view(raw, claim)?;
-    require_marker(raw, "\"agent\":\"agent_c\"", "agent_c_verifier_view")?;
+    require_agent_identity(raw, "agent_c_verifier", "agent_c_verifier_view")?;
     require_marker(
         raw,
         "\"view_scope\":\"restricted-public\"",
@@ -126,6 +127,14 @@ fn validate_common_view(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> 
     require_matching_string(raw, claim, "recipient_pubkey")?;
     require_matching_string(raw, claim, "settlement_commitment")?;
     require_matching_bool(raw, claim, "private_payload_redacted")
+}
+
+fn require_agent_identity(raw: &str, expected: &str, artifact: &str) -> Result<(), String> {
+    let actual = extract_string(raw, "agent")?;
+    if actual == expected {
+        return Ok(());
+    }
+    Err(format!("{artifact} agent identity mismatch"))
 }
 
 fn reject_private_payload(raw: &str) -> Result<(), String> {
