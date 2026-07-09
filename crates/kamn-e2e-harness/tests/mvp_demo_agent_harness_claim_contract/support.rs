@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 
+mod actor_receipts;
 mod artifact;
 #[path = "../support/mvp_local_artifacts.rs"]
 mod mvp_local_artifacts;

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::three_agent;
+use super::{actor_receipts, three_agent};
 
 pub(crate) fn agent_artifact(root: &Path, private_visible: bool, settlement_label: &str) -> String {
     agent_artifact_with_surface(root, private_visible, settlement_label, "mcp-tools")
@@ -71,6 +71,13 @@ pub(crate) fn agent_artifact_with_three_agent_actor_rehearsal(root: &Path) -> St
     append_object_field(
         agent_artifact_with_three_agent_boundary(root),
         three_agent::valid_actor_rehearsal(root),
+    )
+}
+
+pub(crate) fn agent_artifact_with_three_agent_actor_receipts(root: &Path) -> String {
+    append_object_field(
+        agent_artifact_with_three_agent_actor_rehearsal(root),
+        actor_receipts::valid_actor_receipts(root),
     )
 }
 

@@ -1,7 +1,9 @@
 //! MVP evaluator demo report generation and verification.
 
 mod agent_harness;
+mod agent_harness_actor_receipts;
 mod agent_harness_actor_rehearsal;
+mod agent_harness_json;
 mod agent_harness_three_agent;
 mod devnet_settlement;
 mod devnet_settlement_build;

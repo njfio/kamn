@@ -1,3 +1,4 @@
+use super::agent_harness_actor_receipts::validate_actor_receipts;
 use super::agent_harness_actor_rehearsal::validate_actor_rehearsal;
 use super::verify_support::{
     extract_bool, extract_optional_string, extract_string, extract_u64, require_marker, ClaimView,
@@ -38,7 +39,8 @@ fn validate_present_boundary(artifact: &str, claim: &ClaimView<'_>) -> Result<()
     )?;
     validate_private_counts(artifact)?;
     validate_verifier_private_digest(artifact, claim)?;
-    validate_actor_rehearsal(artifact, claim)
+    validate_actor_rehearsal(artifact, claim)?;
+    validate_actor_receipts(artifact, claim)
 }
 
 fn validate_absent_boundary(artifact: &str) -> Result<(), String> {

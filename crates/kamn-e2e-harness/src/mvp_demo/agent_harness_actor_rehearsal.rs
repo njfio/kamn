@@ -1,3 +1,4 @@
+use super::agent_harness_json::matching_object;
 use super::verify_support::{extract_string, require_marker, ClaimView};
 
 pub(crate) fn validate_actor_rehearsal(
@@ -96,25 +97,7 @@ fn object_section<'a>(raw: &'a str, field: &str) -> Result<&'a str, String> {
         .ok_or_else(|| format!("missing three_agent_actor_rehearsal field: {field}"))?
         + marker.len()
         - 1;
-    matching_object(raw, start)
-}
-
-fn matching_object(raw: &str, start: usize) -> Result<&str, String> {
-    let mut depth = 0_u64;
-    for (offset, byte) in raw[start..].bytes().enumerate() {
-        match byte {
-            b'{' => depth += 1,
-            b'}' if depth == 0 => break,
-            b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Ok(&raw[start..start + offset + 1]);
-                }
-            }
-            _ => {}
-        }
-    }
-    Err("malformed three_agent_actor_rehearsal object".to_owned())
+    matching_object(raw, start, "three_agent_actor_rehearsal")
 }
 
 fn reject_private_payload(raw: &str) -> Result<(), String> {
