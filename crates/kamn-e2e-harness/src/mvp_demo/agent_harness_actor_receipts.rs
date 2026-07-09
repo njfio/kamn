@@ -1,3 +1,4 @@
+use super::agent_harness_json::matching_object;
 use super::verify_support::{extract_string, extract_u64, require_marker, ClaimView};
 
 pub(crate) fn validate_actor_receipts(artifact: &str, claim: &ClaimView<'_>) -> Result<(), String> {
@@ -165,23 +166,5 @@ fn receipt_section<'a>(artifact: &'a str, tool: &str) -> Result<&'a str, String>
     let start = artifact[..marker_index]
         .rfind('{')
         .ok_or_else(|| format!("malformed three_agent_actor_tool_receipts tool: {tool}"))?;
-    matching_object(artifact, start)
-}
-
-fn matching_object(raw: &str, start: usize) -> Result<&str, String> {
-    let mut depth = 0_u64;
-    for (offset, byte) in raw[start..].bytes().enumerate() {
-        match byte {
-            b'{' => depth += 1,
-            b'}' if depth == 0 => break,
-            b'}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Ok(&raw[start..start + offset + 1]);
-                }
-            }
-            _ => {}
-        }
-    }
-    Err("malformed three_agent_actor_tool_receipts object".to_owned())
+    matching_object(artifact, start, "three_agent_actor_tool_receipts")
 }
