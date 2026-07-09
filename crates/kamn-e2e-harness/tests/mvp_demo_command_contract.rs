@@ -108,8 +108,9 @@ fn stub_localhost_signed_demo_command() -> Vec<String> {
         "sh".to_owned(),
         "-c".to_owned(),
         r#"cat > "$2" <<'JSON'
-{"schema_version":"kamn.sdk.localhost-signed.demo-receipt-artifact.v1","status": "pass"}
+{"schema_version":"kamn.sdk.localhost-signed.demo-receipt-artifact.v1","status": "pass","signed_exchange":{"from":"kamn:did:agent:alice","to":"kamn:did:agent:bob","verified": true},"signed_flow":"task"}
 JSON
+echo "receipt_reconciliation=GO"
 echo "localhost signed message demo completed."
 "#
         .to_owned(),
@@ -121,7 +122,7 @@ fn stub_service_api_command(test_name: &str) -> Vec<String> {
     vec![
         "sh".to_owned(),
         "-c".to_owned(),
-        format!(r#"echo "test {test_name} ... ok""#),
+        format!(r#"echo "test {test_name} ... ok"; echo "test result: ok""#),
     ]
 }
 

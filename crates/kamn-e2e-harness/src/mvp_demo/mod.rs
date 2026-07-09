@@ -22,8 +22,11 @@ mod runner;
 mod service_api_proof;
 mod three_agent_claim;
 mod three_agent_transcript;
+mod three_agent_transcript_build;
 mod three_agent_verify;
+mod three_agent_view_artifacts;
 mod three_agent_view_verify;
+mod three_agent_views;
 mod verify;
 mod verify_support;
 

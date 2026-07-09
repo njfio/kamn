@@ -14,6 +14,7 @@ use super::service_api_proof::{run_service_api_proofs, ServiceApiProofInput};
 use super::three_agent_transcript::{
     validate_three_agent_transcript_file, write_three_agent_transcript,
 };
+use super::three_agent_views::write_three_agent_views;
 use super::verify::verify_mvp_demo_report_json;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,6 +91,7 @@ fn create_three_agent_transcript(
     let Some(evidence) = settlement.evidence.as_ref() else {
         return Ok(());
     };
+    write_three_agent_views(run_id, evidence, run_dir)?;
     write_three_agent_transcript(run_id, evidence, run_dir)
 }
 
