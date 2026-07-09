@@ -67,6 +67,20 @@ pub(crate) fn agent_artifact_with_three_agent_boundary(root: &Path) -> String {
     )
 }
 
+pub(crate) fn agent_artifact_with_three_agent_actor_rehearsal(root: &Path) -> String {
+    append_object_field(
+        agent_artifact_with_three_agent_boundary(root),
+        three_agent::valid_actor_rehearsal(root),
+    )
+}
+
+fn append_object_field(mut json: String, field: String) -> String {
+    json.pop();
+    json.push_str(field.as_str());
+    json.push('}');
+    json
+}
+
 fn agent_artifact_for_report_with_surface(
     report_path: &str,
     private_visible: bool,

@@ -1,5 +1,7 @@
 #[path = "mvp_demo_agent_harness_claim_contract/support.rs"]
 mod support;
+#[path = "mvp_demo_agent_harness_claim_contract/three_agent_actor_rehearsal_contract.rs"]
+mod three_agent_actor_rehearsal_contract;
 #[path = "mvp_demo_agent_harness_claim_contract/three_agent_boundary_contract.rs"]
 mod three_agent_boundary_contract;
 
