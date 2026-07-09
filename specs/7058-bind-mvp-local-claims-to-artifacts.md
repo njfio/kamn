@@ -58,18 +58,18 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] `verify-mvp-demo` rejects reports whose required local artifact files are
+- [x] `verify-mvp-demo` rejects reports whose required local artifact files are
   missing.
-- [ ] `verify-mvp-demo` rejects local artifacts that lack the expected
+- [x] `verify-mvp-demo` rejects local artifacts that lack the expected
   runtime/auth/signed-flow/state/relay/websocket/audit proof markers.
-- [ ] `make demo-mvp` writes local artifacts whose contents are derived from or
+- [x] `make demo-mvp` writes local artifacts whose contents are derived from or
   explicitly bound to the real localhost signed demo and service API proof
   outputs.
-- [ ] Local-only reports remain valid when all required local artifacts are
+- [x] Local-only reports remain valid when all required local artifacts are
   present and settlement/three-agent claims are absent.
-- [ ] Devnet-backed reports continue to validate existing devnet settlement and
+- [x] Devnet-backed reports continue to validate existing devnet settlement and
   three-agent transcript boundaries.
-- [ ] No dry-run, placeholder, in-memory-only settlement, or fake
+- [x] No dry-run, placeholder, in-memory-only settlement, or fake
   value-movement path is counted as MVP success.
 
 ## Files To Touch
@@ -120,3 +120,40 @@ Integration:
   runbook tests.
 - Run `cargo fmt --check`, strict workspace clippy, and `make check`.
 - Run `make demo-mvp` and canonical `verify-mvp-demo`.
+
+## Completion Evidence
+
+- Red evidence captured:
+  `mvp_demo_local_artifact_contract` failed 2 expected cases because
+  command-level verification accepted reports with missing local artifacts and
+  tampered service API proof logs.
+- Targeted contracts passed:
+  `mvp_demo_local_artifact_contract`,
+  `mvp_demo_three_agent_transcript_contract`,
+  `mvp_demo_agent_harness_claim_contract`, `mvp_demo_claim_contract`,
+  `mvp_demo_three_agent_claim_contract`, and
+  `mvp_evaluator_demo_runbook_contract`.
+- `cargo fmt --check` passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  passed with `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0`.
+- `make check` passed with the same cargo environment.
+- Local `make demo-mvp` passed with run `run-97346-1783566389296`; canonical
+  `verify-mvp-demo` returned `{"status":"PASS"}`.
+- The local run's generated artifacts now include explicit bindings:
+  `runtime-state.json` has `source:"localhost-signed-demo"`,
+  `relay-projection.json` and `audit-export.json` have
+  `source:"service-api-vertical-slice"`, and `websocket-events.json` has
+  `source:"service-api-websocket"`.
+- Devnet-required `make demo-mvp` passed with run
+  `run-17119-1783566532057`, finalized Solana devnet signature
+  `2uQqBgSdGdwfowsQtNu7NEyv6h2ghPB84oVPitTSTa2NT76FNAP9P9S337Ft2oSc6rD5gEnFz8do7U6U7XWcdVHE`,
+  `1000000` lamports, and canonical verifier `PASS`.
+- The devnet run retained `devnet-backed` settlement and three-agent claims;
+  the transcript linked the same signature, preserved participant-private
+  Agent A/B views, kept Agent C restricted-public, and kept raw private payloads
+  redacted.
+
+## Deviations
+
+- None.
