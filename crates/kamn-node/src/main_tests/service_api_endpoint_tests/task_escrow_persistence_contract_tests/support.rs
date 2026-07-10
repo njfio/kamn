@@ -24,7 +24,8 @@ pub(super) use solana_asset_movement_support::{
     settlement_tx_signature, LiveSolanaAssetMovementParams,
 };
 pub(super) use state_support::{
-    build_task_escrow_snapshot, set_state_file_env, unique_named_state_file,
+    build_task_escrow_snapshot, set_state_file_env, state_hash, unique_named_state_file,
+    with_api_server,
 };
 
 use crate::service_api_endpoint::ServiceApiSnapshot;
