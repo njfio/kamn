@@ -96,3 +96,15 @@ fn service_api_auth_root_is_extracted() {
         "crates/kamn-node/src/service_api_endpoint/auth",
     ));
 }
+
+#[test]
+fn escrow_release_revalidation_preserves_authorization_response() {
+    let source = std::fs::read_to_string(source_path(
+        "crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/mutations/\
+             update_routes/state_routes_release.rs",
+    ))
+    .expect("escrow release route source should exist");
+
+    assert!(source.contains("Err(response) => return *response"));
+    assert!(!source.contains(".map_err(|_| \"escrow release authorization changed"));
+}

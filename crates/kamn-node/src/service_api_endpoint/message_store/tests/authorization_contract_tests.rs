@@ -23,6 +23,23 @@ fn unit_agent_grant_provisioning_is_idempotent_and_rejects_conflicts() {
 }
 
 #[test]
+fn unit_agent_grant_provisioning_rejects_duplicate_semantic_authority() {
+    let mut store = registered_store();
+    store
+        .provision_agent_grant(task_create_grant())
+        .expect("first grant should persist");
+    let mut duplicate = task_create_grant();
+    duplicate.idempotency_key = "grant-contract-create-duplicate".to_owned();
+
+    let error = store
+        .provision_agent_grant(duplicate)
+        .expect_err("duplicate semantic grant must fail");
+
+    assert_eq!(store.snapshot.agent_grants.len(), 1);
+    assert!(error.contains("duplicate semantic grant"));
+}
+
+#[test]
 fn unit_revoked_grant_revalidation_fails_closed_and_is_idempotent() {
     let mut store = registered_store();
     store
