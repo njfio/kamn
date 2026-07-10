@@ -40,6 +40,18 @@ test("configuration does not forward unrelated Pi credentials", async () => {
 	assert.equal(config.env.KAMN_MVP_LIVE_MCP_AGENT_A_NAME, "agent-a");
 });
 
+test("configuration selects independent Agent B identity inputs", async () => {
+	const paths = await testPaths();
+	const env = configEnv(paths.keyFile, {
+		KAMN_MVP_LIVE_MCP_AGENT_B_NAME: "agent-b",
+		KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE: paths.keyFile,
+	});
+	const config = readLiveMcpConfig("AGENT_B", env, process.cwd());
+
+	assert.equal(config.agentName, "agent-b");
+	assert.equal(config.keyFile, paths.keyFile);
+});
+
 for (const [mode, expected] of [
 	["error", /backend_error.*forced backend failure/],
 	["malformed", /invalid JSON/],
