@@ -3,6 +3,7 @@ import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 const mode = process.env.KAMN_MVP_FAKE_MCP_MODE ?? "success";
+const resultMode = process.env.KAMN_MVP_FAKE_MCP_RESULT_MODE ?? "success";
 const startFile = process.env.KAMN_MVP_FAKE_MCP_START_FILE;
 const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
 const agentName = argumentValue("--agent-name") ?? "agent-a";
@@ -33,14 +34,23 @@ function successResponse(request) {
 }
 
 function toolResult(request) {
-	if (request.tool === "register") return { did: `kamn:did:${agentName}` };
+	if (request.tool === "register") {
+		return { did: resultMode === "same-did" ? "kamn:did:shared" : `kamn:did:${agentName}` };
+	}
 	if (request.tool === "query_agent_profile") return { did: request.did };
 	if (request.tool === "create_task") {
 		const payload = JSON.parse(request.payload);
-		return { task_id: "task-live-1", state: "submitted", ...payload };
+		if (resultMode === "missing-task-id") return { state: "submitted", ...payload };
+		const state = resultMode === "wrong-create-state" ? "queued" : "submitted";
+		return { task_id: "task-live-1", state, ...payload };
 	}
-	if (["accept_task", "query_task"].includes(request.tool)) {
-		return { task_id: request.task_id, state: "accepted" };
+	if (request.tool === "accept_task") {
+		const taskId = resultMode === "wrong-accept-id" ? "task-other" : request.task_id;
+		return { task_id: taskId, state: "accepted" };
+	}
+	if (request.tool === "query_task") {
+		const state = resultMode === "wrong-query-state" ? "submitted" : "accepted";
+		return { task_id: request.task_id, state };
 	}
 	return {};
 }

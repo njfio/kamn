@@ -47,7 +47,53 @@ test("workflow rejects calls that violate registration and task order", async ()
 	await workflow.shutdown();
 });
 
-async function testSetup() {
+test("workflow rejects duplicate participant DIDs", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "same-did" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+
+	await assert.rejects(workflow.register("agent_b"), /must be distinct/);
+	await workflow.shutdown();
+});
+
+for (const [mode, expected] of [
+	["missing-task-id", /omitted task_id/],
+	["wrong-create-state", /expected submitted/],
+] as const) {
+	test(`workflow rejects ${mode} creation result`, async () => {
+		const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: mode });
+		const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+		await workflow.register("agent_a");
+
+		await assert.rejects(workflow.createTask("title", "description"), expected);
+		await workflow.shutdown();
+	});
+}
+
+test("workflow rejects a mismatched acceptance task ID", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "wrong-accept-id" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+	await workflow.register("agent_b");
+	await workflow.createTask("title", "description");
+
+	await assert.rejects(workflow.acceptTask(), /different task ID/);
+	await workflow.shutdown();
+});
+
+test("workflow rejects a non-accepted query projection", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "wrong-query-state" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+	await workflow.register("agent_b");
+	await workflow.createTask("title", "description");
+	await workflow.acceptTask();
+
+	await assert.rejects(workflow.queryTask("agent_a"), /expected accepted/);
+	await workflow.shutdown();
+});
+
+async function testSetup(extra: Record<string, string> = {}) {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-live-task-"));
 	const agentAKey = resolve(root, "agent-a.key");
 	const agentBKey = resolve(root, "agent-b.key");
@@ -65,6 +111,7 @@ async function testSetup() {
 			KAMN_MVP_LIVE_MCP_AGENT_B_NAME: "agent-b",
 			KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE: agentBKey,
 			KAMN_MVP_FAKE_MCP_STOP_FILE: stopFile,
+			...extra,
 		},
 	};
 }
