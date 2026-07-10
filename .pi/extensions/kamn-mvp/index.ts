@@ -23,13 +23,19 @@ function registerVerifyTool(pi: ExtensionAPI) {
 		name: "kamn_verify_mvp_report",
 		label: "KAMN Verify MVP",
 		description: "Run KAMN verify-mvp-demo against a local proof report.",
-		promptSnippet: "Verify a KAMN MVP proof report with the repo verifier",
-		parameters: Type.Object({ reportPath: Type.Optional(Type.String()) }),
+		promptSnippet: "Verify a KAMN MVP proof report and optional Pi evidence with the repo verifier",
+		parameters: Type.Object({
+			reportPath: Type.Optional(Type.String()),
+			agentHarnessEvidencePath: Type.Optional(Type.String()),
+		}),
 		async execute(_id, params, signal, _onUpdate, ctx) {
 			const reportPath = safeReportPath(ctx, params.reportPath).artifactPath;
-			const result = await proofExec(pi, ctx, verifyArgs(reportPath), signal);
+			const evidencePath = params.agentHarnessEvidencePath
+				? safeOutputPath(ctx, params.agentHarnessEvidencePath)
+				: undefined;
+			const result = await proofExec(pi, ctx, verifyArgs(reportPath, evidencePath), signal);
 			assertSuccess(result, "verify-mvp-demo");
-			return textResult("KAMN MVP report verifier passed.", { reportPath });
+			return textResult("KAMN MVP report verifier passed.", { reportPath, evidencePath });
 		},
 	});
 }
@@ -107,8 +113,9 @@ function registerDemoTool(pi: ExtensionAPI) {
 		},
 	});
 }
-function verifyArgs(reportPath: string): string[] {
-	return ["cargo", "run", "-p", "kamn-e2e-harness", "--", "verify-mvp-demo", "--report", reportPath];
+function verifyArgs(reportPath: string, evidencePath?: string): string[] {
+	const args = ["cargo", "run", "-p", "kamn-e2e-harness", "--", "verify-mvp-demo", "--report", reportPath];
+	return evidencePath ? [...args, "--agent-harness-evidence", evidencePath] : args;
 }
 function demoArgs(evidencePath: string): string[] {
 	return [`KAMN_MVP_AGENT_HARNESS_EVIDENCE=${evidencePath}`, "make", "demo-mvp"];

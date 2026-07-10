@@ -79,8 +79,21 @@ env -u OPENAI_API_KEY pi \
   --tools kamn_verify_mvp_report,kamn_inspect_mvp_report_boundaries,kamn_agent_a_register,kamn_agent_a_invoke_transaction,kamn_agent_b_register,kamn_agent_b_accept_task,kamn_agent_c_verify_three_agent_proof,kamn_write_agent_harness_evidence,kamn_run_demo_mvp_with_agent_evidence \
   --approve \
   --no-session \
-  -p "Use only the KAMN tools. Verify the current report, inspect claim boundaries, call the Agent A register tool, Agent A invoke transaction tool, Agent B register tool, Agent B accept task tool, and Agent C verify proof tool against the current report, then write /tmp/kamn-pi-mcp-agent-harness-evidence.json and verify the report again."
+  -p "Use only the KAMN tools. Verify the current report, inspect claim boundaries, call the Agent A register tool, Agent A invoke transaction tool, Agent B register tool, Agent B accept task tool, and Agent C verify proof tool against the current report, then write /tmp/kamn-pi-mcp-agent-harness-evidence.json and verify the same report with agentHarnessEvidencePath set to that evidence path."
 ```
+
+The final Pi verifier tool call executes the equivalent canonical command:
+
+```bash
+cargo run -p kamn-e2e-harness -- verify-mvp-demo \
+  --report .kamn/demo/latest/proof/report.json \
+  --agent-harness-evidence /tmp/kamn-pi-mcp-agent-harness-evidence.json
+```
+
+In this flow one canonical report remains unchanged. The verifier reads the Pi
+artifact separately and fails if its report path, claim boundaries, actor tool
+receipts, or canonical observation receipt artifacts/digests disagree with that
+report. This does not rerun settlement or submit another devnet transaction.
 
 When the Pi tool path writes evidence, the proof artifact records
 `execution_surface:"pi-extension-tools"` and the final report may include
@@ -96,6 +109,10 @@ canonical `agent_a_observation_receipt_digest`,
 `agent_c_verifier_observation_receipt_digest` references from the verified
 report. Agent C's verifier receipt evidence remains restricted-public and must
 not expose participant-private digest or raw private payload markers.
+
+When `--agent-harness-evidence` is supplied directly to `verify-mvp-demo`, the
+same checks run without adding `mcp_agent_harness_verification` to the report.
+The verifier result names the separately validated evidence artifact instead.
 
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with

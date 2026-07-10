@@ -11,6 +11,7 @@ mod three_agent_boundary_contract;
 
 use kamn_e2e_harness::{execute_mvp_demo_contract, execute_verify_mvp_demo_contract};
 use std::path::Path;
+use std::process::Command;
 use support::*;
 
 #[test]
@@ -123,6 +124,8 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
 
     for marker in [
         "kamn_verify_mvp_report",
+        "agentHarnessEvidencePath",
+        "--agent-harness-evidence",
         "kamn_inspect_mvp_report_boundaries",
         "kamn_write_agent_harness_evidence",
         "kamn_run_demo_mvp_with_agent_evidence",
@@ -140,6 +143,64 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
+}
+
+#[test]
+fn spec_c22_cli_verifies_direct_pi_evidence_without_mutating_report() {
+    let root = temp_root("direct-pi-evidence");
+    let report = write_report(&root, direct_report_with_three_agent_claim(&root));
+    let artifact = write_artifact(
+        &root,
+        agent_artifact_with_canonical_observation_receipts(&root),
+    );
+    let before = std::fs::read(&report).expect("report should be readable");
+
+    let output = verify_with_direct_evidence(report.as_path(), artifact.as_path());
+
+    assert!(output.status.success(), "{}", command_output(&output));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("\"status\":\"PASS\""));
+    assert_eq!(
+        before,
+        std::fs::read(&report).expect("report should remain readable")
+    );
+}
+
+#[test]
+fn spec_c23_cli_rejects_direct_pi_evidence_for_a_different_report() {
+    let root = temp_root("direct-pi-evidence-report-mismatch");
+    let report = write_report(&root, direct_report_with_three_agent_claim(&root));
+    let artifact_json = agent_artifact_with_canonical_observation_receipts(&root)
+        .replace("proof/report.json", "proof/other-report.json");
+    let artifact = write_artifact(&root, artifact_json);
+
+    let output = verify_with_direct_evidence(report.as_path(), artifact.as_path());
+
+    assert!(
+        !output.status.success(),
+        "mismatched report evidence must fail"
+    );
+    assert!(command_output(&output).contains("report_path does not match"));
+}
+
+fn verify_with_direct_evidence(report: &Path, artifact: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_kamn-e2e-harness"))
+        .args([
+            "verify-mvp-demo",
+            "--report",
+            report.to_str().expect("report path should be UTF-8"),
+            "--agent-harness-evidence",
+            artifact.to_str().expect("artifact path should be UTF-8"),
+        ])
+        .output()
+        .expect("verifier binary should execute")
+}
+
+fn command_output(output: &std::process::Output) -> String {
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    )
 }
 
 fn pi_extension_source() -> String {

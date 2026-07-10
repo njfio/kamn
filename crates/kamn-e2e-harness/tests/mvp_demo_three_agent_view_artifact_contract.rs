@@ -146,5 +146,6 @@ fn spec_c06_command_rejects_agent_c_short_identity() {
 fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
+        agent_harness_evidence_path: None,
     }
 }

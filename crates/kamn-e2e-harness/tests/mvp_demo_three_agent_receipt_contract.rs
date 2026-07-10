@@ -109,6 +109,7 @@ fn spec_c05_demo_mvp_devnet_required_writes_observation_receipt_digests() {
 fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
+        agent_harness_evidence_path: None,
     }
 }
 

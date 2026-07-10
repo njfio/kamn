@@ -22,7 +22,7 @@ pub(crate) fn validate_agent_harness_claim_shape(claims: &[ClaimView<'_>]) -> Re
     Ok(())
 }
 
-pub(crate) fn validate_agent_harness_evidence_file(
+pub(crate) fn validate_embedded_agent_harness_evidence(
     report_json: &str,
     report_path: &str,
 ) -> Result<(), String> {
@@ -31,7 +31,15 @@ pub(crate) fn validate_agent_harness_evidence_file(
     }
     let artifact_path = extract_optional_string(report_json, AGENT_HARNESS_ARTIFACT_FIELD)
         .ok_or_else(|| "missing agent harness evidence artifact path".to_owned())?;
-    let artifact = std::fs::read_to_string(artifact_path.as_str()).map_err(|error| {
+    validate_agent_harness_evidence_path(report_json, report_path, artifact_path.as_str())
+}
+
+pub(crate) fn validate_agent_harness_evidence_path(
+    report_json: &str,
+    report_path: &str,
+    artifact_path: &str,
+) -> Result<(), String> {
+    let artifact = std::fs::read_to_string(artifact_path).map_err(|error| {
         format!(
             "failed to read agent harness evidence {}: {error}",
             artifact_path

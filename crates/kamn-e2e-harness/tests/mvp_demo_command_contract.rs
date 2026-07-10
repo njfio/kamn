@@ -33,8 +33,25 @@ fn spec_c02_parser_accepts_verify_mvp_demo_with_report() {
         .expect("verify-mvp-demo command should parse");
     let expected = HarnessCommand::VerifyMvpDemo(VerifyMvpDemoCommandConfig {
         report: "/tmp/report.json".to_owned(),
+        agent_harness_evidence_path: None,
     });
     assert_eq!(parsed, expected);
+}
+
+#[test]
+fn spec_c07_parser_accepts_verify_mvp_demo_with_agent_harness_evidence() {
+    let parsed = parse_command_args([
+        "verify-mvp-demo",
+        "--agent-harness-evidence",
+        "/tmp/pi-evidence.json",
+        "--report",
+        "/tmp/report.json",
+    ])
+    .expect("verify-mvp-demo should accept direct Pi evidence");
+
+    let debug = format!("{parsed:?}");
+    assert!(debug.contains("/tmp/report.json"));
+    assert!(debug.contains("/tmp/pi-evidence.json"));
 }
 
 #[test]
@@ -67,6 +84,7 @@ fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
     execute_mvp_demo_contract(&demo_config).expect("demo should generate report");
     let verify_config = VerifyMvpDemoCommandConfig {
         report: temp.join("latest/proof/report.json").display().to_string(),
+        agent_harness_evidence_path: None,
     };
     let output = execute_verify_mvp_demo_contract(&verify_config)
         .expect("verify-mvp-demo should accept generated report");
