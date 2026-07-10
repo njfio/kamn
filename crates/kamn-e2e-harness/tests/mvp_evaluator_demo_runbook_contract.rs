@@ -51,6 +51,16 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "does not prove escrow, settlement, asset movement, third-party verification, or restart durability",
         "Both registrations and task creation return `201`",
         "acceptance and both task queries return `200`",
+        "kamn_live_agent_a_publish_task_handoff",
+        "kamn_live_agent_b_receive_task_handoff",
+        "kamn_live_agent_a_wait_for_task_acceptance",
+        "kamn_live_agent_b_write_task_receipt",
+        "kamn_live_verify_independent_actor_receipts",
+        "KAMN_MVP_LIVE_TASK_HANDOFF_FILE",
+        "KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE",
+        "KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE",
+        "real local-only independent Pi actors",
+        "separate Pi processes",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }

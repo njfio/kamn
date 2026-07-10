@@ -154,6 +154,15 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "KAMN_MVP_LIVE_MCP_AGENT_B_NAME",
         "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE",
         "real local-only task lifecycle",
+        "kamn_live_agent_a_publish_task_handoff",
+        "kamn_live_agent_b_receive_task_handoff",
+        "kamn_live_agent_a_wait_for_task_acceptance",
+        "kamn_live_agent_b_write_task_receipt",
+        "kamn_live_verify_independent_actor_receipts",
+        "KAMN_MVP_LIVE_TASK_HANDOFF_FILE",
+        "KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE",
+        "KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE",
+        "real local-only independent Pi actors",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
@@ -225,6 +234,7 @@ fn pi_extension_source() -> String {
         ".pi/extensions/kamn-mvp/live-mcp-tools.ts",
         ".pi/extensions/kamn-mvp/mcp-session.ts",
         ".pi/extensions/kamn-mvp/live-task-workflow.ts",
+        ".pi/extensions/kamn-mvp/live-task-coordination.ts",
     ]
     .map(|path| {
         std::fs::read_to_string(workspace_root().join(path))
