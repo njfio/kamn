@@ -163,6 +163,9 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE",
         "KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE",
         "real local-only independent Pi actors",
+        "kamn_live_agent_c_verify_restricted_task_observation",
+        "KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE",
+        "real local-only independent Agent C artifact observation",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
