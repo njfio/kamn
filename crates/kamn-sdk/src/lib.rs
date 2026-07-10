@@ -5,6 +5,7 @@ mod bridge;
 mod channel_create;
 mod events;
 mod observability;
+mod service_agent_registration;
 
 /// Agent-facing traits and transport mode primitives.
 pub mod agent;
@@ -45,6 +46,8 @@ pub use service::{
     ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth,
     ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
 };
+/// Re-exported canonical service-backed agent registration payload helper.
+pub use service_agent_registration::service_agent_registration_payload;
 /// Re-exported TCP relay adapter and envelope helpers.
 pub use tcp::{
     signature_for_fields, TcpReceivedEnvelope, TcpSignedEnvelope, TcpTransportAdapter,

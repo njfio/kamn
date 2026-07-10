@@ -1,4 +1,5 @@
 use crate::json_helpers::{escape_json, json_optional_string_field, json_required_string_field};
+use crate::registration::register_mcp_agent;
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
 
 /// Backend abstraction used by MCP tool dispatch.
@@ -55,10 +56,7 @@ pub trait McpToolBackend {
 
 impl McpToolBackend for KamnAgentHandle {
     fn register(&self) -> Result<String, AgentLibError> {
-        Ok(format!(
-            r#"{{"did":"{}"}}"#,
-            escape_json(self.identity().did().as_str())
-        ))
+        register_mcp_agent(self)
     }
 
     fn send_message(&self, payload: &str) -> Result<String, AgentLibError> {

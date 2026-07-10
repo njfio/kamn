@@ -2,8 +2,8 @@ use super::task_escrow::escape_json;
 use crate::channel_create::payload as channel_create_json_payload;
 use crate::service::ServiceMessageDelivery;
 use crate::{
-    AgentDid, AgentMetadata, AgentReputation, AgentSummary, DidDocument, Message, MessageId,
-    MessageRecord, SdkError, ServiceAgentProfile,
+    service_agent_registration_payload, AgentDid, AgentMetadata, AgentReputation, AgentSummary,
+    DidDocument, Message, MessageId, MessageRecord, SdkError, ServiceAgentProfile,
 };
 
 pub(crate) fn service_message_payload(message: &Message) -> String {
@@ -24,13 +24,7 @@ pub(crate) fn service_message_payload(message: &Message) -> String {
 }
 
 pub(crate) fn agent_registration_payload(metadata: &AgentMetadata) -> Result<String, SdkError> {
-    validate_agent_metadata(metadata)?;
-    Ok(serde_json::json!({
-        "agent_type": metadata.agent_type,
-        "model_family": metadata.model_family,
-        "capabilities": metadata.capabilities,
-    })
-    .to_string())
+    service_agent_registration_payload(metadata)
 }
 
 pub(crate) fn channel_create_payload(name: &str) -> Result<String, SdkError> {
@@ -114,36 +108,4 @@ pub(crate) fn agent_profile_to_summary(
 
 fn parse_service_agent_did(raw: &str, error_message: &'static str) -> Result<AgentDid, SdkError> {
     AgentDid::parse(raw).map_err(|_| SdkError::TransportFailure(error_message))
-}
-
-fn validate_agent_metadata(metadata: &AgentMetadata) -> Result<(), SdkError> {
-    if metadata.agent_type.trim().is_empty() {
-        return Err(SdkError::InvalidInput {
-            field: "agent_type",
-            reason: "must not be empty",
-        });
-    }
-    if metadata.model_family.trim().is_empty() {
-        return Err(SdkError::InvalidInput {
-            field: "model_family",
-            reason: "must not be empty",
-        });
-    }
-    if metadata.capabilities.is_empty() {
-        return Err(SdkError::InvalidInput {
-            field: "capabilities",
-            reason: "must include at least one capability",
-        });
-    }
-    if metadata
-        .capabilities
-        .iter()
-        .any(|value| value.trim().is_empty())
-    {
-        return Err(SdkError::InvalidInput {
-            field: "capabilities",
-            reason: "must not include empty capability entries",
-        });
-    }
-    Ok(())
 }

@@ -8,6 +8,7 @@ pub mod dispatch;
 mod json_helpers;
 /// MCP stdio framing + JSON-RPC protocol handling.
 pub mod protocol;
+mod registration;
 /// MCP tool registry scaffold.
 pub mod tools;
 

@@ -1,10 +1,11 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
     service_public_key_for_private_key, service_signature_for_state_hash_with_private_key,
-    AgentDid, ServiceAgentProfile, ServiceApiClient, ServiceBridgeStatus, ServiceBridgeSubmission,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
-    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
+    AgentDid, AgentMetadata, ServiceAgentProfile, ServiceApiClient, ServiceBridgeStatus,
+    ServiceBridgeSubmission, ServiceChannelMessages, ServiceChannelReceipt,
+    ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus,
+    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
+    ServiceTaskStatus,
 };
 use std::env;
 
@@ -248,6 +249,15 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceAgentProfile, AgentLibError> {
         Ok(self.inner.get_agent_profile(did, auth)?)
+    }
+
+    /// Registers the authenticated sender through `POST /v1/agents/register`.
+    pub fn register_agent(
+        &self,
+        metadata: &AgentMetadata,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceAgentProfile, AgentLibError> {
+        Ok(self.inner.register_agent(metadata, auth)?)
     }
 
     /// Queries service health via `GET /healthz`.
