@@ -60,7 +60,7 @@ Outputs:
 - [x] Node and Rust contracts pin the artifact fields, tool, configuration,
   three-process runbook, and exact claim limitation.
 - [x] A live three-process Pi rehearsal produces matching task evidence.
-- [ ] Existing targeted tests, formatter, strict clippy, `make check`, canonical
+- [x] Existing targeted tests, formatter, strict clippy, `make check`, canonical
   demo, and canonical report verifier remain green.
 
 ## Files To Touch
@@ -118,3 +118,8 @@ INTEGRATION:
   fields, a redaction marker, source digests, and a public commitment.
 - The evidence remains artifact-level and does not claim server-side
   authorization, settlement, asset movement, or devnet execution.
+- `cargo fmt --check`, strict workspace clippy, and `make check` passed.
+- All 29 Pi extension tests, 23 harness claim contracts, and the runbook
+  contract passed.
+- `make demo-mvp` returned `GO` in optional-devnet local mode, with no value
+  movement claim, and the canonical report verifier returned `PASS`.
