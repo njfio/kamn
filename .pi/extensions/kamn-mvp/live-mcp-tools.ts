@@ -6,6 +6,12 @@ type LiveAgentState = { session?: McpSession; did?: string };
 
 export function registerLiveMcpTools(pi: ExtensionAPI) {
 	const state: LiveAgentState = {};
+	registerLiveAgentA(pi, state);
+	registerLiveAgentAQuery(pi, state);
+	pi.on("session_shutdown", async () => state.session?.shutdown());
+}
+
+function registerLiveAgentA(pi: ExtensionAPI, state: LiveAgentState) {
 	pi.registerTool({
 		name: "kamn_live_agent_a_register",
 		label: "KAMN Live Agent A Register",
@@ -19,6 +25,9 @@ export function registerLiveMcpTools(pi: ExtensionAPI) {
 			return textResult("Agent A registration persisted through the local KAMN service.", result);
 		},
 	});
+}
+
+function registerLiveAgentAQuery(pi: ExtensionAPI, state: LiveAgentState) {
 	pi.registerTool({
 		name: "kamn_live_agent_a_query_profile",
 		label: "KAMN Live Agent A Query Profile",
@@ -32,7 +41,6 @@ export function registerLiveMcpTools(pi: ExtensionAPI) {
 			return textResult("Agent A durable profile query passed through the same local MCP process.", result);
 		},
 	});
-	pi.on("session_shutdown", async () => state.session?.shutdown());
 }
 
 function session(state: LiveAgentState, cwd: string): McpSession {

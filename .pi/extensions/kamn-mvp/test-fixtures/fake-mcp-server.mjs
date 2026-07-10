@@ -25,7 +25,7 @@ function successResponse(request) {
 	const did = request.did ?? "kamn:did:agent-a";
 	return {
 		ok: true,
-		id: request.id,
+		id: mode === "mismatch" ? "wrong-id" : request.id,
 		tool: request.tool,
 		result: { did, pid: process.pid, request_id: request.id },
 	};

@@ -35,6 +35,7 @@ test("configuration rejects missing values and key files", () => {
 for (const [mode, expected] of [
 	["error", /backend_error.*forced backend failure/],
 	["malformed", /invalid JSON/],
+	["mismatch", /response ID mismatch/],
 	["exit", /exited.*7/],
 	["hang", /timed out/],
 ] as const) {
@@ -45,6 +46,16 @@ for (const [mode, expected] of [
 		await session.shutdown();
 	});
 }
+
+test("an already aborted call rejects without starting the child", async () => {
+	const paths = await testPaths();
+	const session = sessionFor(paths, "success");
+	const controller = new AbortController();
+	controller.abort();
+
+	await assert.rejects(session.call("register", {}, controller.signal), /aborted/);
+	await assert.rejects(readFile(paths.startFile), { code: "ENOENT" });
+});
 
 async function testPaths() {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-mcp-session-"));

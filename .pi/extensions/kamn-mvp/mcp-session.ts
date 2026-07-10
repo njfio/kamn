@@ -32,6 +32,7 @@ export class McpSession {
 		this.options = options;
 	}
 	async call(tool: string, fields: JsonObject = {}, signal?: AbortSignal): Promise<JsonObject> {
+		if (signal?.aborted) throw new Error("KAMN live MCP request aborted before start");
 		if (this.terminalError) throw this.terminalError;
 		if (this.pending) throw new Error("KAMN live MCP session already has an active request");
 		const child = this.start();
@@ -63,7 +64,6 @@ export class McpSession {
 		const timer = setTimeout(() => this.failSession(new Error(`KAMN live MCP request ${id} timed out`)), this.options.timeoutMs);
 		const abort = () => this.failSession(new Error(`KAMN live MCP request ${id} aborted`));
 		signal?.addEventListener("abort", abort, { once: true });
-		if (signal?.aborted) abort();
 		return { id, resolve: resolveRequest, reject, timer, removeAbort: () => signal?.removeEventListener("abort", abort) };
 	}
 	private consumeStdout(chunk: string) {
@@ -90,13 +90,14 @@ export class McpSession {
 	}
 	private handleExit(code: number | null, signal: NodeJS.Signals | null) {
 		if (this.shutdownPromise) return;
+		if (this.terminalError) return;
 		this.failSession(new Error(`KAMN live MCP exited with code ${code ?? "none"} signal ${signal ?? "none"}`), false);
 	}
 	private failSession(error: Error, kill = true) {
-		this.terminalError = error;
+		this.terminalError ??= error;
 		const pending = this.pending;
 		this.clearPending();
-		pending?.reject(error);
+		pending?.reject(this.terminalError);
 		if (kill) this.child?.kill("SIGTERM");
 	}
 	private clearPending() {
