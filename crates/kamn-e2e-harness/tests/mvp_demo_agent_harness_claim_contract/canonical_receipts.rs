@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use super::live_binding_fixture::binding_fixture;
 use super::three_agent::{digest_field, view_digest_for, with_digest};
 
 pub(crate) fn valid_receipt_artifacts(root: &Path) -> Vec<(PathBuf, String)> {
@@ -111,9 +112,10 @@ fn participant_receipt(root: &Path, agent: &str, action: &str) -> String {
     };
     with_digest(
         format!(
-            r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"{}","action":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7045","escrow_id":"escrow-three-agent-7045","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","view_artifact":"{}","view_digest":"{}","participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7045","private_payload_redacted":true,"receipt_digest":""}}"#,
+            r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"{}","action":"{}","view_scope":"participant-private","transaction_id":"tx-three-agent-7045","escrow_id":"escrow-three-agent-7045","task_binding_digest":"{}","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","view_artifact":"{}","view_digest":"{}","participant_private_view_digest":"{}","public_view_digest":"public-view-digest-7045","private_payload_redacted":true,"receipt_digest":""}}"#,
             agent,
             action,
+            binding_fixture().digest,
             root.join("proof").join(file).display(),
             view_digest_for(agent),
             private_digest
@@ -125,7 +127,8 @@ fn participant_receipt(root: &Path, agent: &str, action: &str) -> String {
 fn verifier_receipt(root: &Path) -> String {
     with_digest(
         format!(
-            r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"agent_c_verifier","action":"verify_three_agent_proof","view_scope":"restricted-public","transaction_id":"tx-three-agent-7045","escrow_id":"escrow-three-agent-7045","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","view_artifact":"{}","view_digest":"{}","public_view_digest":"public-view-digest-7045","private_payload_redacted":true,"receipt_digest":""}}"#,
+            r#"{{"schema_version":"kamn.mvp.three-agent-observation-receipt.v1","agent":"agent_c_verifier","action":"verify_three_agent_proof","view_scope":"restricted-public","transaction_id":"tx-three-agent-7045","escrow_id":"escrow-three-agent-7045","task_binding_digest":"{}","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","view_artifact":"{}","view_digest":"{}","public_view_digest":"public-view-digest-7045","private_payload_redacted":true,"receipt_digest":""}}"#,
+            binding_fixture().digest,
             root.join("proof/agent-c-verifier-view.json").display(),
             view_digest_for("agent_c_verifier")
         ),

@@ -16,6 +16,8 @@ mod devnet_settlement_node;
 mod devnet_settlement_service;
 mod devnet_settlement_solana;
 mod devnet_settlement_state;
+mod live_task_binding;
+mod live_task_binding_verify;
 mod local_artifact_paths;
 mod local_artifact_verify;
 mod local_artifacts;
@@ -41,7 +43,7 @@ mod three_agent_views;
 mod verify;
 mod verify_support;
 
-pub use command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
+pub use command_config::{LiveTaskEvidencePaths, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 pub use report::{
     CLAIM_LABEL_DEVNET_BACKED, CLAIM_LABEL_DRY_RUN, CLAIM_LABEL_LOCAL_ONLY,
     CLAIM_LABEL_PLACEHOLDER, CLAIM_LABEL_REAL, CLAIM_LABEL_ROADMAP, MVP_DEMO_REPORT_SCHEMA_VERSION,

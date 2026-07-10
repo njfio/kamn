@@ -168,13 +168,15 @@ fn mentions_value_movement(raw: &str) -> bool {
     VALUE_TERMS.iter().any(|term| lowercase.contains(term))
 }
 
-fn devnet_success_markers() -> [&'static str; 13] {
+fn devnet_success_markers() -> [&'static str; 15] {
     [
         "\"network\":\"solana:devnet\"",
+        "\"execution_surface\":\"",
         "\"rpc_url\":\"",
         "\"payer_pubkey\":\"",
         "\"recipient_pubkey\":\"",
         "\"lamports\":",
+        "\"escrow_id\":\"",
         "\"settlement_tx_signature\":\"",
         "\"settlement_commitment\":\"",
         "\"payer_balance_before\":",

@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use super::devnet_settlement_build::node_binary_path;
 use super::devnet_settlement_live::LiveSettlementConfig;
 use super::devnet_settlement_service::drive_escrow_release;
+use super::live_task_binding::LiveTaskBinding;
 
 pub(super) struct ServiceApiRun {
     pub(super) escrow_id: String,
@@ -16,12 +17,13 @@ pub(super) fn launch_and_drive_service_api(
     run_dir: &Path,
     state_file: &Path,
     config: &LiveSettlementConfig,
+    binding: Option<&LiveTaskBinding>,
 ) -> Result<ServiceApiRun, String> {
     let port = reserve_local_port()?;
     let endpoint = format!("http://127.0.0.1:{port}");
     let mut child = spawn_node(run_dir, state_file, port, config)?;
     wait_for_tcp_ready(port, &mut child)?;
-    let escrow_id = match drive_escrow_release(endpoint.as_str(), run_dir) {
+    let escrow_id = match drive_escrow_release(endpoint.as_str(), run_dir, binding) {
         Ok(value) => value,
         Err(error) => {
             terminate_child(&mut child);

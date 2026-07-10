@@ -5,6 +5,9 @@ use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 mod actor_receipts;
 mod artifact;
 mod canonical_receipts;
+mod live_binding_fixture;
+#[path = "../support/live_task_evidence.rs"]
+mod live_task_evidence;
 #[path = "../support/mvp_local_artifacts.rs"]
 mod mvp_local_artifacts;
 mod three_agent;
@@ -56,6 +59,7 @@ pub(crate) fn demo_config(root: &Path, artifact: &Path) -> MvpDemoCommandConfig 
         service_api_vertical_slice_command: Some(stub_service_command("integration_service_api_endpoint_working_vertical_slice_proves_delivery_dispatch_and_audit_evidence")),
         service_api_websocket_command: Some(stub_service_command("integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event")),
         agent_harness_evidence_path: Some(artifact.display().to_string()),
+        live_task_evidence: None,
     }
 }
 
@@ -162,9 +166,11 @@ fn artifacts_json_with_three_agent(
 ) -> String {
     let mut artifacts = artifacts_json(root, agent_artifact);
     artifacts.pop();
+    let binding = live_binding_fixture::binding_fixture();
     artifacts.push_str(
         format!(
-            r#","three_agent_transcript":"{}","agent_a_view":"{}","agent_b_view":"{}","agent_c_verifier_view":"{}"{} }}"#,
+            r#","live_task_settlement_binding":"{}","three_agent_transcript":"{}","agent_a_view":"{}","agent_b_view":"{}","agent_c_verifier_view":"{}"{} }}"#,
+            binding.path.display(),
             transcript.display(),
             root.join("proof/agent-a-view.json").display(),
             root.join("proof/agent-b-view.json").display(),

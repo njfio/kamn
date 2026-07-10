@@ -5,6 +5,7 @@ use super::devnet_settlement_build::build_node_binary;
 use super::devnet_settlement_node::launch_and_drive_service_api;
 use super::devnet_settlement_solana::{balance_pair, solana_pubkey, validate_balance_movement};
 use super::devnet_settlement_state::persisted_signature;
+use super::live_task_binding::LiveTaskBinding;
 
 const SETTLEMENT_KEYPAIR_FILE_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE";
 const SETTLEMENT_RECIPIENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY";
@@ -14,17 +15,26 @@ const SETTLEMENT_COMMITMENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT
 pub(super) fn collect_live_devnet_settlement(
     rpc_url: &str,
     run_dir: &Path,
+    binding: Option<&LiveTaskBinding>,
 ) -> Result<DevnetSettlementEvidence, String> {
     let config = LiveSettlementConfig::from_env(rpc_url)?;
     build_node_binary(run_dir)?;
     let payer = solana_pubkey(config.keypair_file.as_str())?;
     let before = balance_pair(config.rpc_url.as_str(), payer.as_str(), &config)?;
     let state_file = run_dir.join("state/service-api-state.json");
-    let service_api = launch_and_drive_service_api(run_dir, &state_file, &config)?;
+    let service_api = launch_and_drive_service_api(run_dir, &state_file, &config, binding)?;
     let persisted = persisted_signature(state_file.as_path(), service_api.escrow_id.as_str())?;
     let after = balance_pair(config.rpc_url.as_str(), payer.as_str(), &config)?;
     validate_balance_movement(&before, &after, &config)?;
-    Ok(evidence(config, payer, before, after, persisted))
+    Ok(evidence(
+        config,
+        payer,
+        before,
+        after,
+        persisted,
+        service_api.escrow_id,
+        binding,
+    ))
 }
 
 pub(super) struct LiveSettlementConfig {
@@ -53,13 +63,19 @@ fn evidence(
     before: super::devnet_settlement_solana::BalancePair,
     after: super::devnet_settlement_solana::BalancePair,
     persisted: String,
+    escrow_id: String,
+    binding: Option<&LiveTaskBinding>,
 ) -> DevnetSettlementEvidence {
     DevnetSettlementEvidence {
         network: "solana:devnet".to_owned(),
+        execution_surface: "live-service-api".to_owned(),
         rpc_url: config.rpc_url,
         payer_pubkey: payer,
         recipient_pubkey: config.recipient_pubkey,
         lamports: config.lamports,
+        escrow_id,
+        task_id: binding.map(|value| value.task_id.clone()),
+        task_binding_digest: binding.map(|value| value.digest.clone()),
         settlement_tx_signature: persisted.clone(),
         settlement_commitment: config.commitment,
         payer_balance_before: before.payer,

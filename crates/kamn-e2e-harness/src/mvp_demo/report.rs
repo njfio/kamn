@@ -5,6 +5,7 @@ use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::devnet_settlement::{
     devnet_no_go_reason, devnet_settlement_claim_json, DevnetSettlementEvidence,
 };
+use super::live_task_binding::LiveTaskBinding;
 use super::report_artifacts::artifacts_json;
 use super::three_agent_claim::three_agent_escrow_claim_json;
 use super::three_agent_receipts::{
@@ -35,6 +36,7 @@ pub(crate) struct DemoReportInput<'a> {
     pub(crate) solana_rpc_url: Option<&'a str>,
     pub(crate) output_root: &'a Path,
     pub(crate) devnet_settlement: Option<&'a DevnetSettlementEvidence>,
+    pub(crate) live_task_binding: Option<&'a LiveTaskBinding>,
     pub(crate) devnet_no_go_reason: Option<&'a str>,
     pub(crate) agent_harness_evidence_path: Option<&'a str>,
     pub(crate) three_agent_artifact_digests: Option<&'a ThreeAgentArtifactDigests>,
@@ -153,6 +155,10 @@ fn devnet_success_claims(
     input: &DemoReportInput<'_>,
     evidence: &DevnetSettlementEvidence,
 ) -> Result<Vec<String>, String> {
+    let settlement_claim = devnet_settlement_claim_json(evidence);
+    let Some(binding) = input.live_task_binding else {
+        return Ok(vec![settlement_claim]);
+    };
     let digests = input
         .three_agent_artifact_digests
         .ok_or_else(|| "missing three-agent artifact digests".to_owned())?;
@@ -164,10 +170,11 @@ fn devnet_success_claims(
     let agent_b_receipt = agent_b_observation_receipt_path(input);
     let agent_c_receipt = agent_c_verifier_observation_receipt_path(input);
     Ok(vec![
-        devnet_settlement_claim_json(evidence),
+        settlement_claim,
         three_agent_escrow_claim_json(
             input.run_id,
             evidence,
+            binding,
             transcript.as_str(),
             [agent_a.as_str(), agent_b.as_str(), agent_c.as_str()],
             [

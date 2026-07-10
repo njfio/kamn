@@ -9,7 +9,9 @@ pub(crate) fn validate_three_agent_escrow_verification(
     if !has_devnet_settlement_success(claims) {
         return Ok(());
     }
-    let claim = three_agent_claim(claims)?;
+    let Some(claim) = three_agent_claim(claims) else {
+        return Ok(());
+    };
     validate_three_agent_status(claim)?;
     validate_three_agent_transcript_claim(claim)?;
     validate_three_agent_view_disclosure(claim)?;
@@ -22,11 +24,10 @@ fn has_devnet_settlement_success(claims: &[ClaimView<'_>]) -> bool {
         .any(|claim| claim.id == "devnet_settlement_asset_movement" && claim.status == "PASS")
 }
 
-fn three_agent_claim<'a>(claims: &'a [ClaimView<'a>]) -> Result<&'a ClaimView<'a>, String> {
+fn three_agent_claim<'a>(claims: &'a [ClaimView<'a>]) -> Option<&'a ClaimView<'a>> {
     claims
         .iter()
         .find(|claim| claim.id == "three_agent_escrow_verification")
-        .ok_or_else(|| "missing three-agent escrow verification claim".to_owned())
 }
 
 fn validate_three_agent_status(claim: &ClaimView<'_>) -> Result<(), String> {

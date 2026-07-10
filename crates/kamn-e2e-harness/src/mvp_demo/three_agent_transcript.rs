@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::artifact_digest::{validate_json_digest, ThreeAgentViewDigests};
 use super::devnet_settlement::DevnetSettlementEvidence;
+use super::live_task_binding::LiveTaskBinding;
 use super::report::DemoReportInput;
 use super::three_agent_receipts::validate_three_agent_receipt_files;
 use super::three_agent_transcript_build::transcript_json;
@@ -25,11 +26,12 @@ pub(crate) fn three_agent_transcript_path(input: &DemoReportInput<'_>) -> String
 pub(crate) fn write_three_agent_transcript(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     run_dir: &Path,
     view_digests: &ThreeAgentViewDigests,
 ) -> Result<String, String> {
     let path = run_dir.join("proof").join(TRANSCRIPT_FILE);
-    let artifact = transcript_json(run_id, evidence, run_dir, view_digests)?;
+    let artifact = transcript_json(run_id, evidence, binding, run_dir, view_digests)?;
     std::fs::write(path.as_path(), artifact.json.as_str()).map_err(|error| {
         format!(
             "failed to write three-agent transcript artifact {}: {error}",
@@ -117,6 +119,9 @@ fn required_markers() -> [&'static str; 13] {
 fn validate_transcript_fields(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> {
     require_matching_string(raw, claim, "transaction_id")?;
     require_matching_string(raw, claim, "escrow_id")?;
+    if claim.raw.contains("\"task_binding_digest\":") {
+        require_matching_string(raw, claim, "task_binding_digest")?;
+    }
     require_matching_string(raw, claim, "settlement_tx_signature")?;
     require_matching_u64(raw, claim, "amount_lamports")?;
     require_matching_string(raw, claim, "payer_pubkey")?;

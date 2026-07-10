@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub use mvp_demo::{
-    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, MvpDemoCommandConfig,
-    VerifyMvpDemoCommandConfig,
+    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, LiveTaskEvidencePaths,
+    MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
 /// Driver implementations for each execution mode.
@@ -455,6 +455,7 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
         service_api_websocket_command: None,
         agent_harness_evidence_path: agent_harness_evidence_path
             .or_else(mvp_agent_harness_evidence_path_from_env),
+        live_task_evidence: mvp_live_task_evidence_from_env()?,
     }))
 }
 
@@ -514,6 +515,36 @@ fn mvp_agent_harness_evidence_path_from_env() -> Option<String> {
     std::env::var("KAMN_MVP_AGENT_HARNESS_EVIDENCE")
         .ok()
         .filter(|value| !value.trim().is_empty())
+}
+
+fn mvp_live_task_evidence_from_env() -> Result<Option<LiveTaskEvidencePaths>, String> {
+    let values = [
+        env_value("KAMN_MVP_LIVE_TASK_HANDOFF_FILE"),
+        env_value("KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE"),
+        env_value("KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE"),
+        env_value("KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE"),
+    ];
+    if values.iter().all(Option::is_none) {
+        return Ok(None);
+    }
+    if values.iter().any(Option::is_none) {
+        return Err(
+            "live task evidence configuration must provide all four artifact paths".to_owned(),
+        );
+    }
+    Ok(Some(LiveTaskEvidencePaths {
+        handoff: values[0].clone().expect("all values checked"),
+        agent_a_receipt: values[1].clone().expect("all values checked"),
+        agent_b_receipt: values[2].clone().expect("all values checked"),
+        agent_c_observation: values[3].clone().expect("all values checked"),
+    }))
+}
+
+fn env_value(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
 }
 
 pub use run_contract::execute_run_contract;

@@ -32,6 +32,9 @@ pub(super) fn validate_common_receipt(
     )?;
     require_matching_string(raw, claim, "transaction_id", context)?;
     require_matching_string(raw, claim, "escrow_id", context)?;
+    if claim.raw.contains("\"task_binding_digest\":") {
+        require_matching_string(raw, claim, "task_binding_digest", context)?;
+    }
     require_matching_string(raw, claim, "settlement_tx_signature", context)?;
     require_matching_u64(raw, claim, "amount_lamports", context)?;
     require_matching_string(raw, claim, "payer_pubkey", context)?;

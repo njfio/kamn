@@ -23,6 +23,7 @@ fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
         service_api_vertical_slice_command: None,
         service_api_websocket_command: None,
         agent_harness_evidence_path: None,
+        live_task_evidence: None,
     });
     assert_eq!(parsed, expected);
 }

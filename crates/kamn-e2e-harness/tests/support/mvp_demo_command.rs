@@ -32,6 +32,7 @@ pub(crate) fn devnet_required_demo_config(temp: &Path) -> MvpDemoCommandConfig {
     config
 }
 
+#[allow(dead_code)]
 pub(crate) fn devnet_required_without_task_binding(temp: &Path) -> MvpDemoCommandConfig {
     let mut config = devnet_required_demo_config(temp);
     config.live_task_evidence = None;
