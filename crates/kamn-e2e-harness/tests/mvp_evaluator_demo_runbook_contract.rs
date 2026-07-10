@@ -10,6 +10,8 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "## Optional Pi Agent Harness",
         ".pi/extensions/kamn-mvp/index.ts",
         "kamn_write_agent_harness_evidence",
+        "--agent-harness-evidence /tmp/kamn-pi-mcp-agent-harness-evidence.json",
+        "one canonical report remains unchanged",
         "kamn_run_demo_mvp_with_agent_evidence",
         "kamn_agent_a_register",
         "kamn_agent_a_invoke_transaction",

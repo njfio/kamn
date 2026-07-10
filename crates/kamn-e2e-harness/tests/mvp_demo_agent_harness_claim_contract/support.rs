@@ -97,6 +97,25 @@ pub(crate) fn report_with_three_agent_claim(root: &Path, artifact: &Path) -> Str
     )
 }
 
+pub(crate) fn direct_report_with_three_agent_claim(root: &Path) -> String {
+    let transcript = root.join("proof/three-agent-transcript.json");
+    write_file(transcript.as_path(), three_agent::valid_transcript(root));
+    for (path, content) in three_agent::valid_view_artifacts(root) {
+        write_file(path.as_path(), content);
+    }
+    for (path, content) in canonical_receipts::valid_receipt_artifacts(root) {
+        write_file(path.as_path(), content);
+    }
+    format!(
+        r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"run-7074","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{},{},{},{}],"no_go":{{"active":false,"reason":""}}}}"#,
+        artifacts_json_with_three_agent(root, None, transcript.as_path()),
+        local_claims(),
+        three_agent::devnet_settlement_claim(),
+        three_agent::three_agent_claim(root, transcript.as_path()),
+        roadmap_claim()
+    )
+}
+
 fn write_file(path: &Path, content: String) {
     std::fs::create_dir_all(path.parent().expect("parent should exist"))
         .expect("fixture parent directory should be creatable");

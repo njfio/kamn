@@ -38,6 +38,22 @@ fn spec_c02_parser_accepts_verify_mvp_demo_with_report() {
 }
 
 #[test]
+fn spec_c07_parser_accepts_verify_mvp_demo_with_agent_harness_evidence() {
+    let parsed = parse_command_args([
+        "verify-mvp-demo",
+        "--agent-harness-evidence",
+        "/tmp/pi-evidence.json",
+        "--report",
+        "/tmp/report.json",
+    ])
+    .expect("verify-mvp-demo should accept direct Pi evidence");
+
+    let debug = format!("{parsed:?}");
+    assert!(debug.contains("/tmp/report.json"));
+    assert!(debug.contains("/tmp/pi-evidence.json"));
+}
+
+#[test]
 fn spec_c03_makefile_wires_demo_mvp_to_harness_command() {
     let output = make_dry_run("demo-mvp");
     assert!(
