@@ -6,20 +6,17 @@ use super::agent_harness::{
 };
 use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
-use super::devnet_settlement::{
-    collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
-};
+use super::devnet_settlement::DevnetSettlementAttempt;
+use super::live_task_binding::LiveTaskBinding;
+use super::live_task_binding_verify::validate_live_task_binding_file;
 use super::local_artifact_verify::validate_local_artifact_files;
 use super::local_artifacts::create_demo_artifacts;
 use super::localhost_signed::{run_localhost_signed_demo, LocalhostSignedDemoInput};
 use super::report::{escape_json, render_report_json, DemoReportInput};
 use super::report_writer::write_reports;
+use super::runner_settlement::create_bound_settlement;
 use super::service_api_proof::{run_service_api_proofs, ServiceApiProofInput};
-use super::three_agent_receipts::write_three_agent_receipts;
-use super::three_agent_transcript::{
-    validate_three_agent_transcript_file, write_three_agent_transcript,
-};
-use super::three_agent_views::write_three_agent_views;
+use super::three_agent_transcript::validate_three_agent_transcript_file;
 use super::verify::verify_mvp_demo_report_json;
 
 /// Executes the MVP demo command and writes proof artifacts.
@@ -31,15 +28,14 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     create_demo_artifacts(&run_dir)?;
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
-    let devnet_settlement = create_devnet_settlement_artifact(config, &run_dir)?;
-    let three_agent_artifact_digests =
-        create_three_agent_transcript(run_id.as_str(), &devnet_settlement, &run_dir)?;
+    let bound = create_bound_settlement(config, run_id.as_str(), &run_dir)?;
     let input = report_input(
         config,
         output_root,
         run_id.as_str(),
-        &devnet_settlement,
-        three_agent_artifact_digests.as_ref(),
+        &bound.settlement,
+        bound.binding.as_ref(),
+        bound.artifact_digests.as_ref(),
     );
     let report_json = render_report_json(&input)?;
     validate_generated_report(report_json.as_str(), output_root)?;
@@ -60,30 +56,13 @@ pub fn execute_verify_mvp_demo_contract(
         validate_agent_harness_evidence_path(report.as_str(), config.report.as_str(), path)?;
     }
     validate_three_agent_transcript_file(report.as_str())?;
+    validate_live_task_binding_file(report.as_str())?;
     let evidence_path = config.agent_harness_evidence_path.as_deref().unwrap_or("");
     Ok(format!(
         "{{\"status\":\"PASS\",\"report\":\"{}\",\"agent_harness_evidence\":\"{}\"}}",
         escape_json(config.report.as_str()),
         escape_json(evidence_path)
     ))
-}
-
-fn create_three_agent_transcript(
-    run_id: &str,
-    settlement: &DevnetSettlementAttempt,
-    run_dir: &Path,
-) -> Result<Option<ThreeAgentArtifactDigests>, String> {
-    let Some(evidence) = settlement.evidence.as_ref() else {
-        return Ok(None);
-    };
-    let views = write_three_agent_views(run_id, evidence, run_dir)?;
-    let receipts = write_three_agent_receipts(run_id, evidence, run_dir, &views)?;
-    let transcript = write_three_agent_transcript(run_id, evidence, run_dir, &views)?;
-    Ok(Some(ThreeAgentArtifactDigests {
-        transcript,
-        views,
-        receipts,
-    }))
 }
 
 fn validate_generated_report(report_json: &str, output_root: &Path) -> Result<(), String> {
@@ -93,7 +72,8 @@ fn validate_generated_report(report_json: &str, output_root: &Path) -> Result<()
         report_json,
         latest_report_path(output_root).as_str(),
     )?;
-    validate_three_agent_transcript_file(report_json)
+    validate_three_agent_transcript_file(report_json)?;
+    validate_live_task_binding_file(report_json)
 }
 
 fn validate_devnet_mode(devnet_mode: &str) -> Result<(), String> {
@@ -119,6 +99,7 @@ fn report_input<'a>(
     output_root: &'a Path,
     run_id: &'a str,
     settlement: &'a DevnetSettlementAttempt,
+    binding: Option<&'a LiveTaskBinding>,
     three_agent_artifact_digests: Option<&'a ThreeAgentArtifactDigests>,
 ) -> DemoReportInput<'a> {
     DemoReportInput {
@@ -127,6 +108,7 @@ fn report_input<'a>(
         solana_rpc_url: config.solana_rpc_url.as_deref(),
         output_root,
         devnet_settlement: settlement.evidence.as_ref(),
+        live_task_binding: binding,
         devnet_no_go_reason: settlement.no_go_reason.as_deref(),
         agent_harness_evidence_path: config.agent_harness_evidence_path.as_deref(),
         three_agent_artifact_digests,
@@ -138,35 +120,6 @@ fn latest_report_path(output_root: &Path) -> String {
         .join("latest/proof/report.json")
         .display()
         .to_string()
-}
-
-fn create_devnet_settlement_artifact(
-    config: &MvpDemoCommandConfig,
-    run_dir: &Path,
-) -> Result<DevnetSettlementAttempt, String> {
-    if config.devnet_mode != "required" {
-        write_devnet_settlement_skipped_log(run_dir, "devnet_mode_optional")?;
-        return Ok(DevnetSettlementAttempt::default());
-    }
-    collect_devnet_settlement_evidence(&DevnetSettlementInput {
-        command: config.devnet_settlement_command.as_deref(),
-        solana_rpc_url: config.solana_rpc_url.as_deref(),
-        run_dir,
-    })
-}
-
-fn write_devnet_settlement_skipped_log(run_dir: &Path, reason: &str) -> Result<(), String> {
-    let path = run_dir.join("proof/devnet-settlement-output.txt");
-    std::fs::write(
-        &path,
-        format!("devnet_settlement_status=SKIP reason={reason}\n"),
-    )
-    .map_err(|error| {
-        format!(
-            "failed to write devnet settlement skip log {}: {error}",
-            path.display()
-        )
-    })
 }
 
 fn create_localhost_signed_artifact(

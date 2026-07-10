@@ -6,10 +6,14 @@ pub(crate) fn parse_devnet_settlement_evidence(
 ) -> Result<DevnetSettlementEvidence, String> {
     let evidence = DevnetSettlementEvidence {
         network: json_string_value(json, "network")?,
+        execution_surface: "command-override".to_owned(),
         rpc_url: json_string_value(json, "rpc_url")?,
         payer_pubkey: json_string_value(json, "payer_pubkey")?,
         recipient_pubkey: json_string_value(json, "recipient_pubkey")?,
         lamports: json_u64_value(json, "lamports")?,
+        escrow_id: json_string_value(json, "escrow_id")?,
+        task_id: None,
+        task_binding_digest: None,
         settlement_tx_signature: json_string_value(json, "settlement_tx_signature")?,
         settlement_commitment: json_string_value(json, "settlement_commitment")?,
         payer_balance_before: json_u64_value(json, "payer_balance_before")?,
@@ -26,21 +30,36 @@ pub(crate) fn parse_devnet_settlement_evidence(
 }
 
 pub(crate) fn devnet_settlement_claim_json(evidence: &DevnetSettlementEvidence) -> String {
+    let binding = binding_fields(evidence);
     format!(
-        "{{\"id\":\"devnet_settlement_asset_movement\",\"label\":\"devnet-backed\",\"required\":true,\"status\":\"PASS\",\"summary\":\"Solana devnet escrow settlement transfer observed\",\"network\":\"{}\",\"rpc_url\":\"{}\",\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"lamports\":{},\"settlement_tx_signature\":\"{}\",\"settlement_commitment\":\"{}\",\"payer_balance_before\":{},\"payer_balance_after\":{},\"recipient_balance_before\":{},\"recipient_balance_after\":{},\"persisted_settlement_tx_signature\":\"{}\"}}",
+        "{{\"id\":\"devnet_settlement_asset_movement\",\"label\":\"devnet-backed\",\"required\":true,\"status\":\"PASS\",\"summary\":\"Solana devnet escrow settlement transfer observed\",\"network\":\"{}\",\"execution_surface\":\"{}\",\"rpc_url\":\"{}\",\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"lamports\":{},\"escrow_id\":\"{}\",\"settlement_tx_signature\":\"{}\",\"settlement_commitment\":\"{}\",\"payer_balance_before\":{},\"payer_balance_after\":{},\"recipient_balance_before\":{},\"recipient_balance_after\":{},\"persisted_settlement_tx_signature\":\"{}\"{}}}",
         escape_json(evidence.network.as_str()),
+        escape_json(evidence.execution_surface.as_str()),
         escape_json(evidence.rpc_url.as_str()),
         escape_json(evidence.payer_pubkey.as_str()),
         escape_json(evidence.recipient_pubkey.as_str()),
         evidence.lamports,
+        escape_json(evidence.escrow_id.as_str()),
         escape_json(evidence.settlement_tx_signature.as_str()),
         escape_json(evidence.settlement_commitment.as_str()),
         evidence.payer_balance_before,
         evidence.payer_balance_after,
         evidence.recipient_balance_before,
         evidence.recipient_balance_after,
-        escape_json(evidence.persisted_settlement_tx_signature.as_str())
+        escape_json(evidence.persisted_settlement_tx_signature.as_str()),
+        binding,
     )
+}
+
+fn binding_fields(evidence: &DevnetSettlementEvidence) -> String {
+    match (&evidence.task_id, &evidence.task_binding_digest) {
+        (Some(task_id), Some(digest)) => format!(
+            ",\"task_id\":\"{}\",\"task_binding_digest\":\"{}\"",
+            escape_json(task_id),
+            escape_json(digest)
+        ),
+        _ => String::new(),
+    }
 }
 
 pub(super) fn json_string_value(json: &str, key: &str) -> Result<String, String> {

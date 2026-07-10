@@ -1,5 +1,6 @@
 use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::devnet_settlement::DevnetSettlementEvidence;
+use super::live_task_binding::LiveTaskBinding;
 use super::report::{escape_json, CLAIM_LABEL_DEVNET_BACKED};
 use super::three_agent_views::{
     agent_a_private_view_digest, agent_b_private_view_digest, public_view_digest,
@@ -8,25 +9,36 @@ use super::three_agent_views::{
 pub(crate) fn three_agent_escrow_claim_json(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     transcript_path: &str,
     view_paths: [&str; 3],
     receipt_paths: [&str; 3],
     artifact_digests: &ThreeAgentArtifactDigests,
 ) -> String {
-    let transaction_id = format!("mvp-three-agent-{run_id}");
-    let terms_digest = format!("terms-digest-{run_id}");
-    let escrow_id = format!("escrow-three-agent-{run_id}");
+    let transaction_id = binding.task_id.as_str();
+    let terms_digest = binding.digest.as_str();
+    let escrow_id = evidence.escrow_id.as_str();
     format!(
-        "{{{},{},{},{},{},{},{},{},{}}}",
+        "{{{},{},{},{},{},{},{},{},{},{}}}",
         claim_header(),
+        binding_fields(binding),
         transcript_fields(transcript_path, artifact_digests),
         view_artifact_fields(view_paths, artifact_digests),
         receipt_artifact_fields(receipt_paths, artifact_digests),
-        digest_fields(transaction_id.as_str(), terms_digest.as_str()),
-        escrow_fields(escrow_id.as_str()),
+        digest_fields(transaction_id, terms_digest),
+        escrow_fields(escrow_id),
         settlement_fields(evidence),
         privacy_fields(),
         view_fields(run_id)
+    )
+}
+
+fn binding_fields(binding: &LiveTaskBinding) -> String {
+    format!(
+        "\"live_task_settlement_binding_artifact\":\"{}\",\"live_task_settlement_binding_digest\":\"{}\",\"task_binding_digest\":\"{}\"",
+        escape_json(binding.artifact_path.as_str()),
+        escape_json(binding.digest.as_str()),
+        escape_json(binding.digest.as_str())
     )
 }
 
@@ -106,8 +118,9 @@ fn settlement_fields(evidence: &DevnetSettlementEvidence) -> String {
 
 fn network_fields(evidence: &DevnetSettlementEvidence) -> String {
     format!(
-        "\"network\":\"{}\",\"rpc_url\":\"{}\",\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\"",
+        "\"network\":\"{}\",\"execution_surface\":\"{}\",\"rpc_url\":\"{}\",\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\"",
         escape_json(evidence.network.as_str()),
+        escape_json(evidence.execution_surface.as_str()),
         escape_json(evidence.rpc_url.as_str()),
         escape_json(evidence.payer_pubkey.as_str()),
         escape_json(evidence.recipient_pubkey.as_str()),

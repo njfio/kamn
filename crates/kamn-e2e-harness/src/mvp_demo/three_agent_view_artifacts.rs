@@ -127,6 +127,9 @@ fn validate_common_view(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> 
     )?;
     require_matching_string(raw, claim, "transaction_id")?;
     require_matching_string(raw, claim, "escrow_id")?;
+    if claim.raw.contains("\"task_binding_digest\":") {
+        require_matching_string(raw, claim, "task_binding_digest")?;
+    }
     require_matching_string(raw, claim, "settlement_tx_signature")?;
     require_matching_u64(raw, claim, "amount_lamports")?;
     require_matching_string(raw, claim, "payer_pubkey")?;

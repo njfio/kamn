@@ -20,7 +20,17 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
     if let Some(path) = input.agent_harness_evidence_path {
         entries.push(("agent_harness_evidence", path.to_owned()));
     }
-    if input.devnet_settlement.is_some() {
+    if let Some(binding) = input.live_task_binding {
+        entries.push((
+            "live_task_settlement_binding",
+            binding.artifact_path.clone(),
+        ));
+    }
+    let funding_request = run_proof_path(input, "devnet-escrow-funding-request.json");
+    if std::path::Path::new(funding_request.as_str()).is_file() {
+        entries.push(("devnet_escrow_funding_request", funding_request));
+    }
+    if input.devnet_settlement.is_some() && input.live_task_binding.is_some() {
         entries.push(("three_agent_transcript", three_agent_transcript_path(input)));
         entries.push(("agent_a_view", agent_a_view_path(input)));
         entries.push(("agent_b_view", agent_b_view_path(input)));

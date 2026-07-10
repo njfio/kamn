@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::artifact_digest::{attach_json_digest, ArtifactJson, ThreeAgentViewDigests};
 use super::devnet_settlement::DevnetSettlementEvidence;
+use super::live_task_binding::LiveTaskBinding;
 use super::report::{escape_json, DemoReportInput};
 
 const AGENT_A_VIEW_FILE: &str = "agent-a-view.json";
@@ -35,21 +36,24 @@ pub(crate) fn agent_b_private_view_digest(run_id: &str) -> String {
 pub(crate) fn write_three_agent_views(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     run_dir: &Path,
 ) -> Result<ThreeAgentViewDigests, String> {
     let agent_a = participant_view_json(
         run_id,
         evidence,
+        binding,
         "agent_a",
         agent_a_private_view_digest(run_id),
     )?;
     let agent_b = participant_view_json(
         run_id,
         evidence,
+        binding,
         "agent_b",
         agent_b_private_view_digest(run_id),
     )?;
-    let agent_c = verifier_view_json(run_id, evidence)?;
+    let agent_c = verifier_view_json(run_id, evidence, binding)?;
     write_view(run_dir, AGENT_A_VIEW_FILE, agent_a.json.as_str())?;
     write_view(run_dir, AGENT_B_VIEW_FILE, agent_b.json.as_str())?;
     write_view(run_dir, AGENT_C_VIEW_FILE, agent_c.json.as_str())?;
@@ -81,6 +85,7 @@ fn write_view(run_dir: &Path, file_name: &str, json: &str) -> Result<(), String>
 fn participant_view_json(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     agent: &str,
     private_digest: String,
 ) -> Result<ArtifactJson, String> {
@@ -88,7 +93,7 @@ fn participant_view_json(
         format!(
             "{{\"schema_version\":\"kamn.mvp.three-agent-view.v1\",\"agent\":\"{}\",\"view_scope\":\"participant-private\",{},\"private_field_count\":3,\"participant_private_view_digest\":\"{}\",\"public_view_digest\":\"{}\",\"private_payload_redacted\":true,\"view_digest\":\"\"}}",
             escape_json(agent),
-            shared_view_fields(run_id, evidence),
+            shared_view_fields(evidence, binding),
             escape_json(private_digest.as_str()),
             escape_json(public_view_digest(run_id).as_str()),
         ),
@@ -99,22 +104,24 @@ fn participant_view_json(
 fn verifier_view_json(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
 ) -> Result<ArtifactJson, String> {
     attach_json_digest(
         format!(
             "{{\"schema_version\":\"kamn.mvp.three-agent-view.v1\",\"agent\":\"agent_c_verifier\",\"view_scope\":\"restricted-public\",{},\"private_field_count\":0,\"public_view_digest\":\"{}\",\"private_payload_redacted\":true,\"view_digest\":\"\"}}",
-            shared_view_fields(run_id, evidence),
+            shared_view_fields(evidence, binding),
             escape_json(public_view_digest(run_id).as_str()),
         ),
         "view_digest",
     )
 }
 
-fn shared_view_fields(run_id: &str, evidence: &DevnetSettlementEvidence) -> String {
+fn shared_view_fields(evidence: &DevnetSettlementEvidence, binding: &LiveTaskBinding) -> String {
     format!(
-        "\"transaction_id\":\"mvp-three-agent-{}\",\"escrow_id\":\"escrow-three-agent-{}\",\"settlement_tx_signature\":\"{}\",\"amount_lamports\":{},\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"settlement_commitment\":\"{}\"",
-        escape_json(run_id),
-        escape_json(run_id),
+        "\"transaction_id\":\"{}\",\"escrow_id\":\"{}\",\"task_binding_digest\":\"{}\",\"settlement_tx_signature\":\"{}\",\"amount_lamports\":{},\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"settlement_commitment\":\"{}\"",
+        escape_json(binding.task_id.as_str()),
+        escape_json(evidence.escrow_id.as_str()),
+        escape_json(binding.digest.as_str()),
         escape_json(evidence.settlement_tx_signature.as_str()),
         evidence.lamports,
         escape_json(evidence.payer_pubkey.as_str()),

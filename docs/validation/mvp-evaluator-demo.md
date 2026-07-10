@@ -282,7 +282,8 @@ participant private-field counts, verifier zero-private-field count, redaction
 marker, and absence of a verifier private digest. This does not prove generic Pi MCP protocol support, and it does not upgrade local-only or dry-run settlement into MVP success.
 
 ## Devnet-Required Demo
-Run with the MVP and service API Solana settlement environment configured:
+Run with the MVP, service API Solana settlement environment, and the four fresh
+independent Pi task artifacts configured:
 
 ```bash
 KAMN_MVP_DEVNET_MODE=required \
@@ -292,10 +293,14 @@ KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/absolute/path/to/devnet-pa
 KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=<devnet-recipient-pubkey> \
 KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 \
 KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized \
+KAMN_MVP_LIVE_TASK_HANDOFF_FILE=/tmp/kamn-independent-<run-id>-handoff.json \
+KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE=/tmp/kamn-independent-<run-id>-agent-a.json \
+KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE=/tmp/kamn-independent-<run-id>-agent-b.json \
+KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE=/tmp/kamn-independent-<run-id>-agent-c.json \
 make demo-mvp
 ```
 
-A funded run is expected to return `GO` only after the local service API release path submits and confirms a Solana devnet transfer. The report includes a `devnet_settlement_asset_movement` claim labelled `devnet-backed`, and the proof bundle includes `devnet-settlement-output.txt` with non-secret evidence fields:
+A funded run is expected to return `GO` only after the local service API release path submits and confirms a Solana devnet transfer. The report includes a `devnet_settlement_asset_movement` claim labelled `devnet-backed` with `execution_surface:"live-service-api"`, and the proof bundle includes `devnet-settlement-output.txt` with non-secret evidence fields:
 
 ```text
 devnet_settlement_status=PASS
@@ -304,14 +309,23 @@ settlement_tx_signature=<confirmed-devnet-signature>
 settlement_commitment=finalized
 ```
 
-Successful devnet-backed reports also include
-`three-agent-transcript.json`. That artifact records the local proof transcript
+When all four Pi artifact variables are present and valid, the report also
+includes `live-task-settlement-binding.json`, the exact v2 escrow funding
+request, and `three-agent-transcript.json`. The funding request contains the
+accepted task ID and binding digest; the canonical verifier recomputes the
+actual `escrow-local-*` service ID from those exact request bytes. The
+transcript records the local proof transcript
 for Agent A registration, Agent B registration, Agent A task or transaction
 invocation, Agent B acceptance, escrow funding and release, and Agent C
 restricted-public verification. It links those steps to the report's Solana
 devnet settlement signature, amount, payer, recipient, and finalized commitment.
 The transcript is local proof evidence; the settlement or asset-movement claim
 remains `devnet-backed`, and raw participant-private payloads stay redacted.
+
+A funded run without the four Pi artifacts may still prove standalone devnet
+asset movement, but it must not emit `three_agent_escrow_verification` or a
+three-agent section in `report.md`. Partial task-artifact configuration is a
+hard error rather than a fallback.
 
 If devnet-backed settlement evidence cannot be produced, the report must remain explicit:
 
@@ -342,4 +356,4 @@ The verifier command:
 cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
 ```
 
-returns `{"status":"PASS"}` only when the report schema, artifacts, required local proof claims, claim labels, and value-movement boundaries are valid.
+returns `{"status":"PASS"}` only when the report schema, artifacts, required local proof claims, claim labels, and value-movement boundaries are valid. For a live bound three-agent report it also revalidates all four Pi sources, the binding digest, the v2 funding request, the request-derived service escrow ID, and every task/binding/escrow reference across transcript, views, and receipts.

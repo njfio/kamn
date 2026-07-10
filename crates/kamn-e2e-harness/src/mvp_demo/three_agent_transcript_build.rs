@@ -2,19 +2,22 @@ use std::path::Path;
 
 use super::artifact_digest::{attach_json_digest, ArtifactJson, ThreeAgentViewDigests};
 use super::devnet_settlement::DevnetSettlementEvidence;
+use super::live_task_binding::LiveTaskBinding;
 use super::report::escape_json;
 
 pub(crate) fn transcript_json(
-    run_id: &str,
+    _run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     run_dir: &Path,
     view_digests: &ThreeAgentViewDigests,
 ) -> Result<ArtifactJson, String> {
     attach_json_digest(
         format!(
-            "{{\"schema_version\":\"kamn.mvp.three-agent-transcript.v1\",\"proof_label\":\"local-only\",\"devnet_settlement_linked\":true,\"transaction_id\":\"mvp-three-agent-{}\",\"escrow_id\":\"escrow-three-agent-{}\",{},\"views\":{},\"agent_a_private_field_count\":3,\"agent_b_private_field_count\":3,\"verifier_private_field_count\":0,\"private_payload_redacted\":true,{},\"transcript_digest\":\"\",{}}}",
-            escape_json(run_id),
-            escape_json(run_id),
+            "{{\"schema_version\":\"kamn.mvp.three-agent-transcript.v1\",\"proof_label\":\"local-only\",\"devnet_settlement_linked\":true,\"transaction_id\":\"{}\",\"escrow_id\":\"{}\",\"task_binding_digest\":\"{}\",{},\"views\":{},\"agent_a_private_field_count\":3,\"agent_b_private_field_count\":3,\"verifier_private_field_count\":0,\"private_payload_redacted\":true,{},\"transcript_digest\":\"\",{}}}",
+            escape_json(binding.task_id.as_str()),
+            escape_json(evidence.escrow_id.as_str()),
+            escape_json(binding.digest.as_str()),
             steps_json(),
             views_json(),
             settlement_json(evidence),

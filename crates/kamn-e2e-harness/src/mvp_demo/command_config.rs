@@ -1,3 +1,16 @@
+/// Paths to one independent Pi A/B/C live task evidence set.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LiveTaskEvidencePaths {
+    /// Minimal task handoff artifact.
+    pub handoff: String,
+    /// Agent A accepted-state receipt.
+    pub agent_a_receipt: String,
+    /// Agent B accepted-state receipt.
+    pub agent_b_receipt: String,
+    /// Agent C restricted-public observation.
+    pub agent_c_observation: String,
+}
+
 /// Parsed `demo-mvp` command configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MvpDemoCommandConfig {
@@ -17,6 +30,8 @@ pub struct MvpDemoCommandConfig {
     pub service_api_websocket_command: Option<Vec<String>>,
     /// Optional MCP-agent harness evidence artifact path.
     pub agent_harness_evidence_path: Option<String>,
+    /// Optional all-or-none independent live task evidence paths.
+    pub live_task_evidence: Option<LiveTaskEvidencePaths>,
 }
 
 /// Parsed `verify-mvp-demo` command configuration.

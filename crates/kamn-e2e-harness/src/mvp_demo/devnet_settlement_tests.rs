@@ -23,10 +23,14 @@ fn unit_live_success_log_records_settlement_evidence() {
 fn sample_evidence() -> DevnetSettlementEvidence {
     DevnetSettlementEvidence {
         network: "solana:devnet".to_owned(),
+        execution_surface: "live-service-api".to_owned(),
         rpc_url: "https://api.devnet.solana.com".to_owned(),
         payer_pubkey: "payer111111111111111111111111111111111111111".to_owned(),
         recipient_pubkey: "recipient11111111111111111111111111111111111".to_owned(),
         lamports: 1_000_000,
+        escrow_id: "escrow-local-test".to_owned(),
+        task_id: None,
+        task_binding_digest: None,
         settlement_tx_signature: "devnet-signature-111".to_owned(),
         settlement_commitment: "finalized".to_owned(),
         payer_balance_before: 2_500_000_000,

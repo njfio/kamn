@@ -4,6 +4,7 @@ use super::artifact_digest::{
     attach_json_digest, ArtifactJson, ThreeAgentReceiptDigests, ThreeAgentViewDigests,
 };
 use super::devnet_settlement::DevnetSettlementEvidence;
+use super::live_task_binding::LiveTaskBinding;
 use super::report::escape_json;
 use super::three_agent_receipt_spec::{agent_a_spec, agent_b_spec, ReceiptSpec};
 use super::three_agent_receipts::{
@@ -16,12 +17,13 @@ const RECEIPT_DIGEST_FIELD: &str = "receipt_digest";
 pub(crate) fn write_three_agent_receipts(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     run_dir: &Path,
     views: &ThreeAgentViewDigests,
 ) -> Result<ThreeAgentReceiptDigests, String> {
-    let agent_a = participant_receipt(run_id, evidence, run_dir, views, agent_a_spec())?;
-    let agent_b = participant_receipt(run_id, evidence, run_dir, views, agent_b_spec())?;
-    let agent_c = verifier_receipt(run_id, evidence, run_dir, views)?;
+    let agent_a = participant_receipt(run_id, evidence, binding, run_dir, views, agent_a_spec())?;
+    let agent_b = participant_receipt(run_id, evidence, binding, run_dir, views, agent_b_spec())?;
+    let agent_c = verifier_receipt(run_id, evidence, binding, run_dir, views)?;
     write_receipt(run_dir, AGENT_A_RECEIPT_FILE, agent_a.json.as_str())?;
     write_receipt(run_dir, AGENT_B_RECEIPT_FILE, agent_b.json.as_str())?;
     write_receipt(run_dir, AGENT_C_RECEIPT_FILE, agent_c.json.as_str())?;
@@ -45,6 +47,7 @@ fn write_receipt(run_dir: &Path, file_name: &str, json: &str) -> Result<(), Stri
 fn participant_receipt(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     run_dir: &Path,
     views: &ThreeAgentViewDigests,
     spec: ReceiptSpec,
@@ -54,7 +57,7 @@ fn participant_receipt(
             "{{\"schema_version\":\"kamn.mvp.three-agent-observation-receipt.v1\",\"agent\":\"{}\",\"action\":\"{}\",\"view_scope\":\"participant-private\",{},\"view_artifact\":\"{}\",\"view_digest\":\"{}\",\"participant_private_view_digest\":\"{}\",\"public_view_digest\":\"{}\",\"private_payload_redacted\":true,\"receipt_digest\":\"\"}}",
             spec.agent,
             spec.action,
-            shared_fields(run_id, evidence),
+            shared_fields(evidence, binding),
             receipt_view_path(run_dir, spec.view_file),
             spec.view_digest(views),
             spec.private_digest(run_id),
@@ -67,13 +70,14 @@ fn participant_receipt(
 fn verifier_receipt(
     run_id: &str,
     evidence: &DevnetSettlementEvidence,
+    binding: &LiveTaskBinding,
     run_dir: &Path,
     views: &ThreeAgentViewDigests,
 ) -> Result<ArtifactJson, String> {
     attach_json_digest(
         format!(
             "{{\"schema_version\":\"kamn.mvp.three-agent-observation-receipt.v1\",\"agent\":\"agent_c_verifier\",\"action\":\"verify_three_agent_proof\",\"view_scope\":\"restricted-public\",{},\"view_artifact\":\"{}\",\"view_digest\":\"{}\",\"public_view_digest\":\"{}\",\"private_payload_redacted\":true,\"receipt_digest\":\"\"}}",
-            shared_fields(run_id, evidence),
+            shared_fields(evidence, binding),
             receipt_view_path(run_dir, "agent-c-verifier-view.json"),
             views.agent_c_verifier,
             public_view_digest(run_id),
@@ -82,11 +86,12 @@ fn verifier_receipt(
     )
 }
 
-fn shared_fields(run_id: &str, evidence: &DevnetSettlementEvidence) -> String {
+fn shared_fields(evidence: &DevnetSettlementEvidence, binding: &LiveTaskBinding) -> String {
     format!(
-        "\"transaction_id\":\"mvp-three-agent-{}\",\"escrow_id\":\"escrow-three-agent-{}\",\"settlement_tx_signature\":\"{}\",\"amount_lamports\":{},\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"settlement_commitment\":\"{}\"",
-        escape_json(run_id),
-        escape_json(run_id),
+        "\"transaction_id\":\"{}\",\"escrow_id\":\"{}\",\"task_binding_digest\":\"{}\",\"settlement_tx_signature\":\"{}\",\"amount_lamports\":{},\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"settlement_commitment\":\"{}\"",
+        escape_json(binding.task_id.as_str()),
+        escape_json(evidence.escrow_id.as_str()),
+        escape_json(binding.digest.as_str()),
         escape_json(evidence.settlement_tx_signature.as_str()),
         evidence.lamports,
         escape_json(evidence.payer_pubkey.as_str()),
