@@ -64,7 +64,7 @@ fn write_with_digest(path: &Path, raw: String) -> String {
         "{},\"artifact_digest\":\"{digest}\"}}",
         raw.trim_end_matches('}')
     );
-    std::fs::write(path, json).expect("task evidence should be written");
+    std::fs::write(path, format!("{json}\n")).expect("task evidence should be written");
     digest
 }
 
