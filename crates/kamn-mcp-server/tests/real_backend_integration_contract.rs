@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX";
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "1111111111111111111111111111111111111111111111111111111111111111";
+const TEST_MCP_AGENT_DID: &str = "kamn:did:agent:pkh-038394c7f7ffdc1bfd761be5740fd3aeb46fdea8a79c1b9384d79c03c50fc44248--keyh-67726c2c9ade28652475e1b8fa00855e";
 
 fn bind_loopback_listener() -> TcpListener {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
@@ -17,7 +18,7 @@ fn bind_loopback_listener() -> TcpListener {
     listener
 }
 
-fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String> {
+fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String, String), String> {
     let mut request = Vec::new();
     let mut chunk = [0_u8; 1024];
     stream
@@ -46,7 +47,7 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String
 
     let request_text =
         String::from_utf8(request).map_err(|_| "request was not valid utf-8".to_owned())?;
-    let Some((request_head, _)) = request_text.split_once("\r\n\r\n") else {
+    let Some((request_head, request_body)) = request_text.split_once("\r\n\r\n") else {
         return Err("request header terminator missing".to_owned());
     };
     let request_line = request_head
@@ -62,7 +63,7 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String
         .next()
         .ok_or_else(|| "request path missing".to_owned())?
         .to_owned();
-    Ok((method, path))
+    Ok((method, path, request_body.to_owned()))
 }
 
 fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Result<(), String> {
@@ -70,6 +71,7 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
         200 => "200 OK",
         201 => "201 Created",
         202 => "202 Accepted",
+        400 => "400 Bad Request",
         404 => "404 Not Found",
         _ => "500 Internal Server Error",
     };
@@ -116,8 +118,8 @@ fn accept_real_backend_request(listener: &TcpListener) -> Result<usize, String> 
 }
 
 fn serve_real_backend_connection(stream: &mut TcpStream) -> Result<(), String> {
-    let (method, path) = parse_http_request(stream)?;
-    if write_public_or_task_response(stream, &method, &path)? {
+    let (method, path, body) = parse_http_request(stream)?;
+    if write_public_or_task_response(stream, &method, &path, &body)? {
         return Ok(());
     }
     if write_content_response(stream, &method, &path)? {
@@ -137,6 +139,7 @@ fn write_public_or_task_response(
     stream: &mut TcpStream,
     method: &str,
     path: &str,
+    body: &str,
 ) -> Result<bool, String> {
     let response = match (method, path) {
         ("GET", "/healthz") => Some((
@@ -154,9 +157,21 @@ fn write_public_or_task_response(
             200,
             r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
         )),
+        ("POST", "/v1/agents/register") if body == mcp_registration_payload() => Some((
+            201,
+            r#"{"did":"kamn:did:agent:pkh-038394c7f7ffdc1bfd761be5740fd3aeb46fdea8a79c1b9384d79c03c50fc44248--keyh-67726c2c9ade28652475e1b8fa00855e","reputation_score":0,"agent_type":"autonomous","model_family":"mcp-agent","capabilities":["mcp"]}"#,
+        )),
+        ("POST", "/v1/agents/register") => Some((
+            400,
+            r#"{"error":"bad-request","reason_code":"registration_payload_mismatch"}"#,
+        )),
         _ => None,
     };
     write_optional_response(stream, response)
+}
+
+fn mcp_registration_payload() -> &'static str {
+    r#"{"agent_type":"autonomous","capabilities":["mcp"],"model_family":"mcp-agent"}"#
 }
 
 fn write_content_response(
@@ -486,5 +501,34 @@ fn spec_c09_real_backend_dispatch_bridge_lifecycle_contract() {
     assert!(
         server_result.is_ok(),
         "service fixture should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c10_real_backend_register_persists_mcp_agent_profile() {
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
+    let backend = real_backend(bind_addr.as_str());
+
+    let response = dispatch_tool_request_json(&backend, r#"{"id":"req-10","tool":"register"}"#)
+        .expect("register dispatch should use the service backend");
+
+    for marker in [
+        r#""ok":true"#,
+        r#""agent_type":"autonomous""#,
+        r#""model_family":"mcp-agent""#,
+        r#""capabilities":["mcp"]"#,
+        r#""reputation_score":0"#,
+    ] {
+        assert!(
+            response.contains(marker),
+            "missing marker {marker}: {response}"
+        );
+    }
+    assert!(response.contains(TEST_MCP_AGENT_DID));
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "register must consume the HTTP request"
     );
 }
