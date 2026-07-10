@@ -47,7 +47,7 @@ Outputs:
 
 - [ ] The Pi extension registers `kamn_live_agent_a_register` and `kamn_live_agent_a_query_profile`.
 - [ ] Both tools share one lazily spawned child and ordered request IDs.
-- [ ] Registration dispatches `register`; query dispatches `agent_profile_query` with the registered DID.
+- [ ] Registration dispatches `register`; query dispatches `query_agent_profile` with the registered DID.
 - [ ] Required configuration and key-file existence are validated before spawn.
 - [ ] The key path is passed as a child argument, while key contents remain inaccessible to tool output.
 - [ ] All specified protocol, process, timeout, abort, and ordering failures are loud.
