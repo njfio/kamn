@@ -97,6 +97,6 @@ REFACTOR:
 INTEGRATION:
 
 - Build real binaries and start one disposable local node with durable storage.
-- Run Pi with Codex OAuth and only the seven live identity/task tools.
+- Run Pi with Codex OAuth and only the six live identity/task tools.
 - Inspect node logs for distinct DIDs and independent nonce sequences.
 - Run Node tests, evaluator contracts, formatting, strict clippy, `make check`, canonical demo, and verifier.
