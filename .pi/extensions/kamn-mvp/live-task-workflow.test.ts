@@ -93,6 +93,40 @@ test("workflow rejects a non-accepted query projection", async () => {
 	await workflow.shutdown();
 });
 
+test("Agent B imports an external task while Agent A polls accepted state", async () => {
+	const setupA = await testSetup();
+	const setupB = await testSetup();
+	const agentA = new LiveTaskWorkflow(setupA.env, process.cwd());
+	const agentB = new LiveTaskWorkflow(setupB.env, process.cwd());
+	await agentA.register("agent_a");
+	await agentB.register("agent_b");
+	const created = await agentA.createTask("title", "description");
+	agentB.importTask(String(created.task_id));
+
+	await agentB.acceptTask();
+	await agentB.queryTask("agent_b");
+	const observed = await agentA.waitForAccepted("agent_a", { timeoutMs: 100, pollMs: 5 });
+	assert.deepEqual(agentA.acceptedObservation("agent_a"), observed);
+	assert.equal(agentB.acceptedObservation("agent_b").task_id, created.task_id);
+	await agentA.shutdown();
+	await agentB.shutdown();
+});
+
+test("external task import and acceptance polling fail closed", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "wrong-query-state" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	assert.throws(() => workflow.importTask("bad task id"), /invalid/);
+	workflow.importTask("task-live-1");
+	assert.throws(() => workflow.importTask("task-other"), /conflicts/);
+	await workflow.register("agent_a");
+
+	await assert.rejects(workflow.waitForAccepted("agent_a", { timeoutMs: 20, pollMs: 5 }), /timed out/);
+	const controller = new AbortController();
+	controller.abort();
+	await assert.rejects(workflow.waitForAccepted("agent_a", { timeoutMs: 20, pollMs: 5 }, controller.signal), /aborted/);
+	await workflow.shutdown();
+});
+
 async function testSetup(extra: Record<string, string> = {}) {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-live-task-"));
 	const agentAKey = resolve(root, "agent-a.key");

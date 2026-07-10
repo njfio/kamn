@@ -189,6 +189,67 @@ A passing run returns distinct Agent A and Agent B DIDs, one shared task ID, `su
 
 This is a real local-only task lifecycle backed by the service task store. It does not prove escrow, settlement, asset movement, third-party verification, or restart durability. Those claims require their own proof slices, and any eventual value-movement claim must remain devnet-backed.
 
+### Independent Pi Actor Check
+
+The two-agent task check above uses separate KAMN identities inside one Pi process. To prove independent AI actors, run Agent A and Agent B as separate Pi processes with a minimal task handoff. Run this export block in each actor and verifier terminal with the same newly chosen run ID; use a fresh run ID for every rehearsal:
+
+```bash
+export KAMN_MVP_LIVE_TASK_RUN_ID=run-7082-001
+export KAMN_MVP_LIVE_TASK_HANDOFF_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-handoff.json
+export KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-a.json
+export KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-b.json
+export KAMN_MVP_LIVE_TASK_COORDINATION_TIMEOUT_MS=60000
+```
+
+Start Agent B first. It registers through its own MCP child, then waits for Agent A's task handoff:
+
+```bash
+KAMN_MVP_LIVE_MCP_BINARY=target/debug/kamn-mcp-server \
+KAMN_MVP_LIVE_MCP_ENDPOINT=http://127.0.0.1:18278 \
+KAMN_MVP_LIVE_MCP_AGENT_B_NAME=pi-independent-agent-b \
+KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE=/tmp/kamn-pi-agent-b.key \
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_live_agent_b_register,kamn_live_agent_b_receive_task_handoff,kamn_live_agent_b_accept_task,kamn_live_agent_b_query_task,kamn_live_agent_b_write_task_receipt \
+  --approve --no-session \
+  -p "Use only the KAMN tools. Register Agent B, receive Agent A's task handoff, accept the task, query accepted state, and write Agent B's task receipt. Report the claim boundary exactly."
+```
+
+While Agent B is waiting, start Agent A in another terminal. Agent A's Pi process stays alive while its persistent MCP child polls for Agent B's acceptance:
+
+```bash
+KAMN_MVP_LIVE_MCP_BINARY=target/debug/kamn-mcp-server \
+KAMN_MVP_LIVE_MCP_ENDPOINT=http://127.0.0.1:18278 \
+KAMN_MVP_LIVE_MCP_AGENT_A_NAME=pi-independent-agent-a \
+KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE=/tmp/kamn-pi-agent-a.key \
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_live_agent_a_register,kamn_live_agent_a_create_task,kamn_live_agent_a_publish_task_handoff,kamn_live_agent_a_wait_for_task_acceptance \
+  --approve --no-session \
+  -p "Use only the KAMN tools. Register Agent A, create a task titled 'Independent actor proof' with description 'Prove separate Pi processes coordinate one KAMN task', publish the task handoff, and wait until Agent B accepts it. Report the claim boundary exactly."
+```
+
+After both actor processes exit successfully, run a verifier-only Pi process. It requires coordination artifact paths but no KAMN key or identity configuration:
+
+```bash
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_live_verify_independent_actor_receipts \
+  --approve --no-session \
+  -p "Use only the KAMN tool. Verify the independent actor receipts and report the claim boundary exactly."
+```
+
+The verifier requires matching accepted task IDs and distinct positive Pi process IDs; the Agent A and Agent B Pi process IDs must differ. Node logs show separate DIDs and nonce streams. Agent B uses register/accept/query requests, while Agent A may record one or more `submitted` polls before its final `accepted` query. Handoff and receipt artifacts are integrity-protected and contain no DIDs, task payload, keys, auth headers, signatures, nonces, or credentials. This proves real local-only independent Pi actors. It does not prove Agent C, disclosure asymmetry, escrow, settlement, asset movement, devnet execution, or restart durability.
+
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
 `three_agent_escrow_verification` must preserve the report's claim status, label,

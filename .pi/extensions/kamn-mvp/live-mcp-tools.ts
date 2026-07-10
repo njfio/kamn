@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { LiveTaskWorkflow, type AgentRole, type WorkflowResult } from "./live-task-workflow.ts";
+import { registerLiveTaskCoordinationTools } from "./live-task-coordination-tools.ts";
 
 type WorkflowHolder = { workflow?: LiveTaskWorkflow };
 
@@ -10,6 +11,7 @@ export function registerLiveMcpTools(pi: ExtensionAPI) {
 	registerAgent(pi, holder, "agent_b", "kamn_live_agent_b_register", "KAMN Live Agent B Register");
 	registerLiveAgentAQuery(pi, holder);
 	registerTaskTools(pi, holder);
+	registerLiveTaskCoordinationTools(pi, (cwd) => workflow(holder, cwd));
 	pi.on("session_shutdown", async () => holder.workflow?.shutdown());
 }
 
