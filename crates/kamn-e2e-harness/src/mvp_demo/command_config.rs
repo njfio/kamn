@@ -24,4 +24,6 @@ pub struct MvpDemoCommandConfig {
 pub struct VerifyMvpDemoCommandConfig {
     /// Proof report JSON path.
     pub report: String,
+    /// Optional agent-harness evidence validated directly against the report.
+    pub agent_harness_evidence_path: Option<String>,
 }

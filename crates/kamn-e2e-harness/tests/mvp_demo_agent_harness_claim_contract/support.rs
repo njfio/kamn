@@ -23,6 +23,7 @@ pub(crate) fn temp_root(stem: &str) -> PathBuf {
 pub(crate) fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
+        agent_harness_evidence_path: None,
     }
 }
 

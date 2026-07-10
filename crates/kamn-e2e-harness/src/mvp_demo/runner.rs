@@ -1,7 +1,9 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::agent_harness::validate_agent_harness_evidence_file;
+use super::agent_harness::{
+    validate_agent_harness_evidence_file, validate_agent_harness_evidence_path,
+};
 use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 use super::devnet_settlement::{
@@ -54,10 +56,15 @@ pub fn execute_verify_mvp_demo_contract(
     verify_mvp_demo_report_json(report.as_str())?;
     validate_local_artifact_files(report.as_str())?;
     validate_agent_harness_evidence_file(report.as_str(), config.report.as_str())?;
+    if let Some(path) = config.agent_harness_evidence_path.as_deref() {
+        validate_agent_harness_evidence_path(report.as_str(), config.report.as_str(), path)?;
+    }
     validate_three_agent_transcript_file(report.as_str())?;
+    let evidence_path = config.agent_harness_evidence_path.as_deref().unwrap_or("");
     Ok(format!(
-        "{{\"status\":\"PASS\",\"report\":\"{}\"}}",
-        escape_json(config.report.as_str())
+        "{{\"status\":\"PASS\",\"report\":\"{}\",\"agent_harness_evidence\":\"{}\"}}",
+        escape_json(config.report.as_str()),
+        escape_json(evidence_path)
     ))
 }
 

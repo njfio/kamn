@@ -460,6 +460,7 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
 
 fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, String> {
     let mut report = None;
+    let mut agent_harness_evidence_path = None;
     let mut index = 1;
     while index < args.len() {
         let (parsed_report, advanced) = parse_flag_value(args, index, "--report")?;
@@ -468,11 +469,19 @@ fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, Stri
             index = advanced + 1;
             continue;
         }
+        let (parsed_evidence, advanced) =
+            parse_flag_value(args, index, "--agent-harness-evidence")?;
+        if let Some(value) = parsed_evidence {
+            agent_harness_evidence_path = Some(value);
+            index = advanced + 1;
+            continue;
+        }
         return Err(format!("unknown verify-mvp-demo flag: {}", args[index]));
     }
     let report = report.ok_or_else(|| "missing required flag --report".to_owned())?;
     Ok(HarnessCommand::VerifyMvpDemo(VerifyMvpDemoCommandConfig {
         report,
+        agent_harness_evidence_path,
     }))
 }
 

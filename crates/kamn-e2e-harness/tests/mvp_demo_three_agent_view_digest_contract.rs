@@ -73,5 +73,6 @@ fn append_json_marker(path: &Path, marker: &str) {
 fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
+        agent_harness_evidence_path: None,
     }
 }

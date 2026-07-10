@@ -55,6 +55,7 @@ fn temp_root(stem: &str) -> PathBuf {
 fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
+        agent_harness_evidence_path: None,
     }
 }
 
