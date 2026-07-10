@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 type Environment = Record<string, string | undefined>;
+const PROCESS_ENV_ALLOWLIST = new Set(["HOME", "PATH", "RUST_LOG", "TMPDIR"]);
 type JsonObject = Record<string, unknown>;
 type PendingRequest = {
 	id: string;
@@ -126,8 +127,15 @@ export function readLiveMcpConfig(env: Environment = process.env, cwd = process.
 		keyFile,
 		endpoint: requiredEnv(env, "KAMN_MVP_LIVE_MCP_ENDPOINT"),
 		agentName: requiredEnv(env, "KAMN_MVP_LIVE_MCP_AGENT_A_NAME"),
-		env: { ...process.env, ...env },
+		env: childEnvironment(env),
 	};
+}
+function childEnvironment(env: Environment): NodeJS.ProcessEnv {
+	return Object.fromEntries(
+		Object.entries({ ...process.env, ...env }).filter(
+			([name, value]) => value !== undefined && (name.startsWith("KAMN_") || PROCESS_ENV_ALLOWLIST.has(name)),
+		),
+	);
 }
 function requiredEnv(env: Environment, name: string): string {
 	const value = env[name]?.trim();

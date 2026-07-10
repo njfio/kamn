@@ -32,6 +32,14 @@ test("configuration rejects missing values and key files", () => {
 	);
 });
 
+test("configuration does not forward unrelated Pi credentials", async () => {
+	const paths = await testPaths();
+	const config = readLiveMcpConfig(configEnv(paths.keyFile, { OPENAI_API_KEY: "must-not-leak" }), process.cwd());
+
+	assert.equal(config.env.OPENAI_API_KEY, undefined);
+	assert.equal(config.env.KAMN_MVP_LIVE_MCP_AGENT_A_NAME, "agent-a");
+});
+
 for (const [mode, expected] of [
 	["error", /backend_error.*forced backend failure/],
 	["malformed", /invalid JSON/],

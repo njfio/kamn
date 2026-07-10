@@ -155,7 +155,7 @@ env -u OPENAI_API_KEY pi \
   -p "Use only the KAMN tools. Register Agent A, then query the same durable Agent A profile. Report the claim boundary exactly."
 ```
 
-`kamn_live_agent_a_register` starts `kamn-mcp-server` lazily. `kamn_live_agent_a_query_profile` reuses that process, preserving its authenticated request nonce and querying the DID returned by registration. The extension passes the key-file path to the child process but does not read or return key contents; Pi session shutdown terminates the child.
+`kamn_live_agent_a_register` starts `kamn-mcp-server` lazily. `kamn_live_agent_a_query_profile` reuses that process, preserving its authenticated request nonce and querying the DID returned by registration. The extension passes the key-file path to the child process but does not read or return key contents; Pi session shutdown terminates the child. Only KAMN-prefixed configuration and basic process variables are forwarded to the child; Pi and OpenAI credentials are not forwarded.
 
 A passing node log shows `POST /v1/agents/register` with request nonce `1` and status `201`, followed by `GET /v1/agents/<same-did>` with request nonce `2` and status `200`.
 
