@@ -19,8 +19,9 @@ Outputs:
 
 - A durable grant record containing actor DID, resource selector, role, allowed
   action, status, and idempotency key.
-- A durable authorization decision receipt containing correlation ID, actor DID,
-  resource, action, decision, and stable reason code.
+- A durable authorization decision receipt containing a deterministic redacted
+  correlation join key, actor DID, resource, action, decision, and stable
+  reason code.
 - A middleware authorization gate for transaction-rail task and escrow routes.
 - Structured forbidden responses for unregistered and ungranted actors.
 
@@ -98,8 +99,8 @@ resources are created and assigned.
 - [x] Identical grant provisioning/revocation is idempotent.
 - [x] Conflicting idempotency-key reuse fails without replacing durable state.
 - [x] Allow and deny decisions persist secret-free authorization receipts.
-- [x] Every receipt identifies correlation ID, actor, resource, action, decision,
-      role, and reason code.
+- [x] Every receipt identifies a redacted correlation join key, actor, resource,
+      action, decision, role, and reason code.
 - [x] Registration remains callable by a valid unregistered signer.
 - [x] Existing signature, route-scope, replay, and nonce-restart tests remain
       green.
@@ -195,7 +196,7 @@ INTEGRATION:
 - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 cargo clippy -p
   kamn-node --all-targets -- -D warnings` passed.
 - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 cargo test -p
-  kamn-node` passed, including 639 binary tests and extraction contracts.
+  kamn-node` passed, including 643 binary tests and extraction contracts.
 - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 cargo test -p
   kamn-node service_api_endpoint_tests` passed with 161 service API tests.
 - `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 make check` passed
@@ -209,3 +210,9 @@ INTEGRATION:
   issue. Exact lifecycle issuance remains owned by #7090 and #7091.
 - Solana settlement behavior is unchanged and was not claimed as completion
   evidence for this identity/grant slice.
+- The transport correlation string embeds a request nonce, so receipts persist
+  `service-api-authz:<deterministic-hash>` rather than the raw transport value.
+  This keeps receipts joinable without violating the no-nonce receipt boundary.
+- Durable pre-dispatch pending state and post-dispatch recovery for live value
+  movement remain required in #7092. This issue only guarantees that grant
+  revalidation happens before dispatch and that denial is fail-closed.

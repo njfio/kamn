@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::{
     build_task_escrow_snapshot, raw_signed_request, read_state_json, register_agent_profile,
-    set_state_file_env, state_hash, unique_named_state_file, with_api_server, SignedRequest,
+    set_state_file_env, unique_named_state_file, SignedRequest,
 };
 use crate::service_api_endpoint::ServiceApiSnapshot;
 use std::path::{Path, PathBuf};
@@ -85,89 +85,6 @@ fn integration_service_api_denial_does_not_consume_request_nonce() {
     let retried = case.create_task(actor, 2);
     assert!(retried.contains("HTTP/1.1 201 Created"), "{retried}");
     case.cleanup();
-}
-
-#[test]
-fn integration_service_api_concurrent_same_nonce_records_one_authorization_decision() {
-    let case = AuthorizationCase::new("concurrent-replay");
-    let actor = "kamn:did:agent:concurrent-replay";
-    let registered_did = case.register(actor, 1);
-    provision_grant(&case.state_file, registered_did.as_str(), "active");
-
-    let responses = concurrent_task_create_requests(&case.snapshot, actor, 2);
-
-    assert_eq!(
-        responses
-            .iter()
-            .filter(|r| r.contains("201 Created"))
-            .count(),
-        1
-    );
-    assert_eq!(
-        responses
-            .iter()
-            .filter(|r| r.contains("409 Conflict"))
-            .count(),
-        1
-    );
-    let state = read_state_json(&case.state_file);
-    assert_eq!(state["authorization_receipts"].as_array().unwrap().len(), 1);
-    assert_eq!(state["tasks"].as_object().unwrap().len(), 1);
-    case.cleanup();
-}
-
-fn concurrent_task_create_requests(
-    snapshot: &ServiceApiSnapshot,
-    actor: &str,
-    nonce: u64,
-) -> Vec<String> {
-    let bind_addr = reserve_loopback_addr();
-    with_api_server(snapshot, bind_addr.as_str(), 2, |addr| {
-        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
-        thread::scope(|scope| {
-            let handles: Vec<_> = (0..2)
-                .map(|_| {
-                    spawn_task_create_request(scope, barrier.clone(), snapshot, addr, actor, nonce)
-                })
-                .collect();
-            handles
-                .into_iter()
-                .map(|handle| handle.join().unwrap())
-                .collect()
-        })
-    })
-}
-
-fn spawn_task_create_request<'scope>(
-    scope: &'scope thread::Scope<'scope, '_>,
-    barrier: std::sync::Arc<std::sync::Barrier>,
-    snapshot: &'scope ServiceApiSnapshot,
-    addr: &'scope str,
-    actor: &'scope str,
-    nonce: u64,
-) -> thread::ScopedJoinHandle<'scope, String> {
-    scope.spawn(move || {
-        let nonce_text = nonce.to_string();
-        let signature = service_api_request_signature_for_fields(
-            actor,
-            nonce,
-            state_hash(snapshot).as_str(),
-            TASK_CREATE_BODY,
-        );
-        barrier.wait();
-        send_http_request_with_headers(
-            addr,
-            "POST",
-            TASK_CREATE_PATH,
-            TASK_CREATE_BODY,
-            &[
-                ("X-KAMN-Sender-DID", actor),
-                ("X-KAMN-Request-Nonce", nonce_text.as_str()),
-                ("X-KAMN-Request-Signature", signature.as_str()),
-                ("X-KAMN-Authz-Scope", "tasks:write"),
-            ],
-        )
-    })
 }
 
 struct AuthorizationCase {

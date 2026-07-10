@@ -10,9 +10,25 @@ pub(super) async fn validate_request(
     request_started_at: Instant,
     is_websocket_route: bool,
 ) -> Result<(), Response> {
-    verify_request_identity(state, parsed_request, correlation_id, request_started_at).await?;
+    let mut replay_guard = state.replay_guard.lock().await;
+    verify_request_identity(
+        state,
+        parsed_request,
+        correlation_id,
+        request_started_at,
+        &mut replay_guard,
+    )
+    .await?;
     run_policy_checks(state, parsed_request, correlation_id, request_started_at).await?;
-    record_request_nonce(state, parsed_request, correlation_id, request_started_at).await?;
+    record_request_nonce(
+        state,
+        parsed_request,
+        correlation_id,
+        request_started_at,
+        &mut replay_guard,
+    )
+    .await?;
+    drop(replay_guard);
     policy_checks::validate_websocket_requirements(
         state,
         parsed_request,
@@ -28,11 +44,18 @@ async fn verify_request_identity(
     parsed_request: &ParsedRequest,
     correlation_id: &str,
     request_started_at: Instant,
+    replay_guard: &mut ServiceApiReplayGuard,
 ) -> Result<(), Response> {
     auth_checks::log_request_received(state, parsed_request, correlation_id, request_started_at)
         .await?;
-    auth_checks::verify_request_identity(state, parsed_request, correlation_id, request_started_at)
-        .await
+    auth_checks::verify_request_identity(
+        state,
+        parsed_request,
+        correlation_id,
+        request_started_at,
+        replay_guard,
+    )
+    .await
 }
 
 async fn run_policy_checks(
@@ -71,9 +94,16 @@ async fn record_request_nonce(
     parsed_request: &ParsedRequest,
     correlation_id: &str,
     request_started_at: Instant,
+    replay_guard: &mut ServiceApiReplayGuard,
 ) -> Result<(), Response> {
-    auth_checks::record_request_nonce(state, parsed_request, correlation_id, request_started_at)
-        .await
+    auth_checks::record_request_nonce(
+        state,
+        parsed_request,
+        correlation_id,
+        request_started_at,
+        replay_guard,
+    )
+    .await
 }
 
 pub(super) async fn internal_response(

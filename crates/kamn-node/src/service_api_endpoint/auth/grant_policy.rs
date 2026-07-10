@@ -53,29 +53,20 @@ fn route_target(
 
 fn dynamic_route_target(method: &str, path: &str) -> Option<(String, &'static str, &'static str)> {
     if method == "GET" {
-        return task_id_for_read(path).map(|id| (task_resource(id), "task:read", "participant"));
+        return super::payload::task_path_id(path)
+            .map(|id| (task_resource(id), "task:read", "participant"));
     }
     if method != "POST" {
         return None;
     }
-    if let Some(id) = path_id(path, ROUTE_TASKS_PREFIX, ROUTE_TASKS_ACCEPT_SUFFIX) {
+    if let Some(id) = super::payload::task_accept_path_id(path) {
         return Some((task_resource(id), "task:accept", "provider"));
     }
-    if let Some(id) = path_id(path, ROUTE_TASKS_PREFIX, ROUTE_TASKS_COMPLETE_SUFFIX) {
+    if let Some(id) = super::payload::task_complete_path_id(path) {
         return Some((task_resource(id), "task:complete", "provider"));
     }
-    path_id(path, ROUTE_ESCROW_PREFIX, ROUTE_ESCROW_RELEASE_SUFFIX)
+    super::payload::escrow_release_path_id(path)
         .map(|id| (format!("escrow:{id}"), "escrow:release", "initiator"))
-}
-
-fn task_id_for_read(path: &str) -> Option<&str> {
-    let id = path.strip_prefix(ROUTE_TASKS_PREFIX)?;
-    (!id.is_empty() && !id.contains('/')).then_some(id)
-}
-
-fn path_id<'a>(path: &'a str, prefix: &str, suffix: &str) -> Option<&'a str> {
-    let id = path.strip_prefix(prefix)?.strip_suffix(suffix)?;
-    (!id.is_empty() && !id.contains('/')).then_some(id)
 }
 
 fn escrow_fund_resource(request: &ParsedRequest) -> Result<String, ServiceApiReasonedError> {
