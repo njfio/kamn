@@ -140,6 +140,12 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
         "kamn_agent_c_verify_three_agent_proof",
         "invoke_transaction",
         "accept_task",
+        "kamn_live_agent_a_register",
+        "kamn_live_agent_a_query_profile",
+        "query_agent_profile",
+        "session_shutdown",
+        "KAMN_MVP_LIVE_MCP_BINARY",
+        "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE",
     ] {
         assert!(source.contains(marker), "missing Pi tool marker: {marker}");
     }
@@ -208,6 +214,8 @@ fn pi_extension_source() -> String {
         ".pi/extensions/kamn-mvp/index.ts",
         ".pi/extensions/kamn-mvp/evidence.ts",
         ".pi/extensions/kamn-mvp/actor-receipts.ts",
+        ".pi/extensions/kamn-mvp/live-mcp-tools.ts",
+        ".pi/extensions/kamn-mvp/mcp-session.ts",
     ]
     .map(|path| {
         std::fs::read_to_string(workspace_root().join(path))

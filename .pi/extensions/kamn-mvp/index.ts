@@ -3,6 +3,7 @@ import type { ExtensionAPI, ExtensionContext, ExecResult } from "@earendil-works
 import { Type } from "typebox";
 import { actorToolSpecs, recordActorReceipt } from "./actor-receipts";
 import { boundarySummary, readReport, writeEvidence } from "./evidence";
+import { registerLiveMcpTools } from "./live-mcp-tools.ts";
 
 const DEFAULT_REPORT = ".kamn/demo/latest/proof/report.json";
 const DEFAULT_EVIDENCE = "/tmp/kamn-pi-mcp-agent-harness-evidence.json";
@@ -17,6 +18,7 @@ export default function kamnMvpExtension(pi: ExtensionAPI) {
 	registerActorReceiptTools(pi);
 	registerEvidenceTool(pi);
 	registerDemoTool(pi);
+	registerLiveMcpTools(pi);
 }
 function registerVerifyTool(pi: ExtensionAPI) {
 	pi.registerTool({

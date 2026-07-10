@@ -121,6 +121,46 @@ still records report-bound evaluator evidence; it is not yet wired to invoke
 the live MCP registration process. Keep those two surfaces distinct when
 describing the current demo.
 
+### Live Pi Identity Check
+
+Pi can also prove local-only identity durability through a persistent live MCP process. In one terminal, build the binaries, create a disposable Agent A key, and start the local KAMN service:
+
+```bash
+cargo build -p kamn-mcp-server -p kamn-node
+openssl rand -hex 32 > /tmp/kamn-pi-agent-a.key
+KAMN_SERVICE_API_TLS_MODE=disabled target/debug/kamn-node \
+  --runtime-mode api \
+  --role processor \
+  --api-bind 127.0.0.1:18278 \
+  --api-max-requests 1000 \
+  --api-idle-timeout-ms 600000 \
+  --storage-dir /tmp/kamn-node-pi-live
+```
+
+In a second terminal, run the two live Pi tools:
+
+```bash
+KAMN_MVP_LIVE_MCP_BINARY=target/debug/kamn-mcp-server \
+KAMN_MVP_LIVE_MCP_ENDPOINT=http://127.0.0.1:18278 \
+KAMN_MVP_LIVE_MCP_AGENT_A_NAME=pi-agent-a \
+KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE=/tmp/kamn-pi-agent-a.key \
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_live_agent_a_register,kamn_live_agent_a_query_profile \
+  --approve \
+  --no-session \
+  -p "Use only the KAMN tools. Register Agent A, then query the same durable Agent A profile. Report the claim boundary exactly."
+```
+
+`kamn_live_agent_a_register` starts `kamn-mcp-server` lazily. `kamn_live_agent_a_query_profile` reuses that process, preserving its authenticated request nonce and querying the DID returned by registration. The extension passes the key-file path to the child process but does not read or return key contents; Pi session shutdown terminates the child. Only KAMN-prefixed configuration and basic process variables are forwarded to the child; Pi and OpenAI credentials are not forwarded.
+
+A passing node log shows `POST /v1/agents/register` with request nonce `1` and status `201`, followed by `GET /v1/agents/<same-did>` with request nonce `2` and status `200`.
+
+This proves local-only identity durability through the live service API. It does not prove task, escrow, settlement, or asset movement, and it does not replace the devnet-required proof for any value-movement claim.
+
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
 `three_agent_escrow_verification` must preserve the report's claim status, label,

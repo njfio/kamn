@@ -26,6 +26,20 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "three-agent-transcript.json",
         "raw participant-private payloads stay redacted",
         "does not prove generic Pi MCP protocol support",
+        "kamn_live_agent_a_register",
+        "kamn_live_agent_a_query_profile",
+        "KAMN_MVP_LIVE_MCP_BINARY",
+        "KAMN_MVP_LIVE_MCP_ENDPOINT",
+        "KAMN_MVP_LIVE_MCP_AGENT_A_NAME",
+        "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE",
+        "persistent live MCP process",
+        "local-only identity durability",
+        "does not prove task, escrow, settlement, or asset movement",
+        "openssl rand -hex 32 > /tmp/kamn-pi-agent-a.key",
+        "--runtime-mode api",
+        "--api-bind 127.0.0.1:18278",
+        "request nonce `1` and status `201`",
+        "request nonce `2` and status `200`",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }
