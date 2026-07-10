@@ -110,6 +110,10 @@ canonical `agent_a_observation_receipt_digest`,
 report. Agent C's verifier receipt evidence remains restricted-public and must
 not expose participant-private digest or raw private payload markers.
 
+When `--agent-harness-evidence` is supplied directly to `verify-mvp-demo`, the
+same checks run without adding `mcp_agent_harness_verification` to the report.
+The verifier result names the separately validated evidence artifact instead.
+
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
 `three_agent_escrow_verification` must preserve the report's claim status, label,

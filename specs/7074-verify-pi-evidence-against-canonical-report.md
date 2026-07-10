@@ -94,8 +94,41 @@ exact canonical report that produced its actor and observation receipts.
 
 ## Deviations
 
-- None at specification time.
+- The existing report-only verifier result now includes an empty
+  `agent_harness_evidence` field. This is an additive JSON field; report-only
+  validation behavior and exit semantics are unchanged.
 
 ## Completion Evidence
 
-- Pending implementation and verification.
+- Red command/harness/runbook contracts failed as expected because
+  `--agent-harness-evidence`, the Pi parameter, and the immutable-report
+  runbook flow did not exist.
+- Focused green contracts passed: 23 agent-harness tests, 7 command tests, and
+  1 evaluator runbook test.
+- The broader MVP proof matrix passed 75 tests across claim, command, local
+  artifact, three-agent transcript/view/receipt, agent-harness, and runbook
+  contracts.
+- `cargo fmt --check` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features --
+  -D warnings` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0 make check` passed.
+- Optional `make demo-mvp` returned `GO`; report-only `verify-mvp-demo`
+  returned `PASS`.
+- Devnet-required `make demo-mvp` returned `GO` for run
+  `run-44951-1783642279986` and recorded finalized Solana signature
+  `2j5TsXkw51sFs8CjhCorKC38om3YnDkmqruL7rjEsjwqSpx6pTLJVbPZBiyqqo9K8os4QhLyz3PsSgAt4bYXofQ8`.
+- `solana confirm -v` independently showed the 1,000,000 lamport transfer
+  finalized in slot `475171619` from
+  `Ew2NpaFAK2TbUkbUMV54JN1gURSKkLWEypk5v9kJR7XU` to
+  `BSN17KC1c5kUuA7ZaTXvMUnFbZUhizeaisYcAFeTsbEb`.
+- Pi with `openai-codex/gpt-5.5` invoked Agent A register/invoke, Agent B
+  register/accept, and Agent C verify tools, then wrote
+  `/tmp/kamn-pi-7074-evidence.json` with five actor tool receipts and canonical
+  observation receipts for all three agents.
+- Combined verification with `--report .kamn/demo/latest/proof/report.json
+  --agent-harness-evidence /tmp/kamn-pi-7074-evidence.json` returned `PASS`.
+- The report SHA-256 remained
+  `33590f1770c0fb5a501bd0956c26d12c354624d47f4db7962f1e2261685a775c`
+  before and after combined verification.
