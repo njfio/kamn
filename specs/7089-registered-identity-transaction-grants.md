@@ -89,21 +89,21 @@ resources are created and assigned.
 
 ## Acceptance Criteria
 
-- [ ] A signed unregistered actor cannot call any covered task/escrow route.
-- [ ] A registered actor without a matching grant cannot call a covered route.
-- [ ] `tasks:write` or `escrow:write` request scope alone never authorizes.
-- [ ] Active grants match actor DID, exact action, exact resource selector, role,
+- [x] A signed unregistered actor cannot call any covered task/escrow route.
+- [x] A registered actor without a matching grant cannot call a covered route.
+- [x] `tasks:write` or `escrow:write` request scope alone never authorizes.
+- [x] Active grants match actor DID, exact action, exact resource selector, role,
       and active status.
-- [ ] Registration and grant decisions reload from the service state file.
-- [ ] Identical grant provisioning/revocation is idempotent.
-- [ ] Conflicting idempotency-key reuse fails without replacing durable state.
-- [ ] Allow and deny decisions persist secret-free authorization receipts.
-- [ ] Every receipt identifies correlation ID, actor, resource, action, decision,
+- [x] Registration and grant decisions reload from the service state file.
+- [x] Identical grant provisioning/revocation is idempotent.
+- [x] Conflicting idempotency-key reuse fails without replacing durable state.
+- [x] Allow and deny decisions persist secret-free authorization receipts.
+- [x] Every receipt identifies correlation ID, actor, resource, action, decision,
       role, and reason code.
-- [ ] Registration remains callable by a valid unregistered signer.
-- [ ] Existing signature, route-scope, replay, and nonce-restart tests remain
+- [x] Registration remains callable by a valid unregistered signer.
+- [x] Existing signature, route-scope, replay, and nonce-restart tests remain
       green.
-- [ ] Real service API integration tests exercise the shared middleware and
+- [x] Real service API integration tests exercise the shared middleware and
       durable store without mocking either layer.
 
 ## Files To Touch
@@ -181,3 +181,31 @@ INTEGRATION:
 - Exercise registration, allowed action, denied action, revocation, restart,
   receipt inspection, and unchanged domain state through the live HTTP server.
 - Run targeted tests, formatting, strict clippy, and `make check`.
+
+## Completion Evidence
+
+- RED commit `7938c347`: four authorization contract tests failed before the
+  grant model and middleware gate existed.
+- GREEN commit `c3c3e8af`: persisted grants, receipts, and middleware policy
+  made the authorization contract tests pass.
+- REFACTOR commit `15495b92`: protected handlers revalidate grants while
+  holding the message-store lock; escrow records persist task ownership;
+  denied requests do not consume a nonce.
+- `cargo fmt --check` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 cargo clippy -p
+  kamn-node --all-targets -- -D warnings` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 cargo test -p
+  kamn-node` passed, including 639 binary tests and extraction contracts.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 cargo test -p
+  kamn-node service_api_endpoint_tests` passed with 161 service API tests.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1 make check` passed
+  workspace formatting and strict all-target, all-feature clippy.
+
+## Deviations And Follow-up Boundaries
+
+- No public grant administration surface was added. Production authorization
+  consumes trusted preseeded state; test-only helpers provision fixture grants.
+- Task and escrow lifecycle code does not issue actor-facing grants in this
+  issue. Exact lifecycle issuance remains owned by #7090 and #7091.
+- Solana settlement behavior is unchanged and was not claimed as completion
+  evidence for this identity/grant slice.
