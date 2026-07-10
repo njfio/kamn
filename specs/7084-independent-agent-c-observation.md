@@ -48,18 +48,18 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] A builder derives one minimal restricted observation from the verified
+- [x] A builder derives one minimal restricted observation from the verified
   handoff and Agent A/B receipts.
-- [ ] The observation binds the task, accepted state, source digests, and one
+- [x] The observation binds the task, accepted state, source digests, and one
   deterministic public commitment without copying participant-private data.
-- [ ] Agent C verifies the artifact from a Pi process distinct from Agent A/B.
-- [ ] Writes are idempotent for identical content and conflicting writes fail.
-- [ ] Unknown fields, tampering, task mismatch, same-PID reuse, private-field
+- [x] Agent C verifies the artifact from a Pi process distinct from Agent A/B.
+- [x] Writes are idempotent for identical content and conflicting writes fail.
+- [x] Unknown fields, tampering, task mismatch, same-PID reuse, private-field
   leakage, private scope, and non-accepted state fail loudly.
-- [ ] The Pi extension exposes one Agent C tool with no KAMN identity config.
-- [ ] Node and Rust contracts pin the artifact fields, tool, configuration,
+- [x] The Pi extension exposes one Agent C tool with no KAMN identity config.
+- [x] Node and Rust contracts pin the artifact fields, tool, configuration,
   three-process runbook, and exact claim limitation.
-- [ ] A live three-process Pi rehearsal produces matching task evidence.
+- [x] A live three-process Pi rehearsal produces matching task evidence.
 - [ ] Existing targeted tests, formatter, strict clippy, `make check`, canonical
   demo, and canonical report verifier remain green.
 
@@ -105,3 +105,16 @@ INTEGRATION:
 - Run Agent A and Agent B concurrently against one disposable local node.
 - Run Agent C in a third Pi process over their accepted-task evidence.
 - Inspect the artifact allowlist and process IDs, then run all proof gates.
+
+## Integration Evidence
+
+- 2026-07-10: Agent A, Agent B, and Agent C ran as separate Pi processes with
+  PIDs `29023`, `27635`, and `32181`.
+- All three artifacts bound to accepted task `task-local-7c1b978c62c40958`.
+- The local service returned `201` for task creation and `200` for acceptance
+  and both participant task queries.
+- Agent C reported `real local-only independent Agent C artifact observation`.
+- The restricted observation had the exact 12-field allowlist, zero private
+  fields, a redaction marker, source digests, and a public commitment.
+- The evidence remains artifact-level and does not claim server-side
+  authorization, settlement, asset movement, or devnet execution.
