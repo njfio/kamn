@@ -119,7 +119,12 @@ INTEGRATION:
 - The evidence remains artifact-level and does not claim server-side
   authorization, settlement, asset movement, or devnet execution.
 - `cargo fmt --check`, strict workspace clippy, and `make check` passed.
-- All 29 Pi extension tests, 23 harness claim contracts, and the runbook
+- All 30 Pi extension tests, 23 harness claim contracts, and the runbook
   contract passed.
+- Review-driven verification re-reads the handoff and both actor receipts,
+  compares task/state and all source digests, and rechecks all three Pi PIDs.
+- Post-fix Pi revalidation ran Agent C as PID `73743`; task and source digests
+  matched the original A/B evidence, all process IDs differed, scope remained
+  `restricted-public`, and private-field count remained zero.
 - `make demo-mvp` returned `GO` in optional-devnet local mode, with no value
   movement claim, and the canonical report verifier returned `PASS`.
