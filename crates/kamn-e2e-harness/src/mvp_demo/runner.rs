@@ -2,7 +2,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::agent_harness::{
-    validate_agent_harness_evidence_file, validate_agent_harness_evidence_path,
+    validate_agent_harness_evidence_path, validate_embedded_agent_harness_evidence,
 };
 use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
@@ -55,7 +55,7 @@ pub fn execute_verify_mvp_demo_contract(
         .map_err(|error| format!("failed to read MVP demo report {}: {error}", config.report))?;
     verify_mvp_demo_report_json(report.as_str())?;
     validate_local_artifact_files(report.as_str())?;
-    validate_agent_harness_evidence_file(report.as_str(), config.report.as_str())?;
+    validate_embedded_agent_harness_evidence(report.as_str(), config.report.as_str())?;
     if let Some(path) = config.agent_harness_evidence_path.as_deref() {
         validate_agent_harness_evidence_path(report.as_str(), config.report.as_str(), path)?;
     }
@@ -89,7 +89,10 @@ fn create_three_agent_transcript(
 fn validate_generated_report(report_json: &str, output_root: &Path) -> Result<(), String> {
     verify_mvp_demo_report_json(report_json)?;
     validate_local_artifact_files(report_json)?;
-    validate_agent_harness_evidence_file(report_json, latest_report_path(output_root).as_str())?;
+    validate_embedded_agent_harness_evidence(
+        report_json,
+        latest_report_path(output_root).as_str(),
+    )?;
     validate_three_agent_transcript_file(report_json)
 }
 

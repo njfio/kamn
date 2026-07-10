@@ -22,7 +22,7 @@ pub(crate) fn validate_agent_harness_claim_shape(claims: &[ClaimView<'_>]) -> Re
     Ok(())
 }
 
-pub(crate) fn validate_agent_harness_evidence_file(
+pub(crate) fn validate_embedded_agent_harness_evidence(
     report_json: &str,
     report_path: &str,
 ) -> Result<(), String> {
