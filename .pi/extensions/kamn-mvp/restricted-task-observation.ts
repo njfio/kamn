@@ -47,13 +47,18 @@ export async function writeRestrictedTaskObservation(
 		public_commitment: digest(publicFields),
 	};
 	await writeIdempotent(outputPath, { ...unsigned, artifact_digest: digest(unsigned) });
-	return verifyRestrictedTaskObservation(outputPath);
+	return verifyRestrictedTaskObservation(outputPath, handoffPath, agentAPath, agentBPath);
 }
 
-export async function verifyRestrictedTaskObservation(path: string) {
+export async function verifyRestrictedTaskObservation(
+	path: string, handoffPath: string, agentAPath: string, agentBPath: string,
+) {
 	assertSafePath(path);
 	const artifact = parse(await readFile(path, "utf8"));
 	assertPolicy(artifact);
+	const source = await readVerifiedActorEvidence(handoffPath, agentAPath, agentBPath);
+	assertBoundToSource(artifact, source);
+	assertThirdProcess(artifact.agent_c_pi_process_id, source.agent_a_pi_process_id, source.agent_b_pi_process_id);
 	return {
 		claim_boundary: CLAIM,
 		task_id: artifact.task_id,
@@ -64,6 +69,17 @@ export async function verifyRestrictedTaskObservation(path: string) {
 		agent_c_pi_process_id: artifact.agent_c_pi_process_id,
 		public_commitment: artifact.public_commitment,
 	};
+}
+
+function assertBoundToSource(artifact: Observation, source: Awaited<ReturnType<typeof readVerifiedActorEvidence>>) {
+	if (artifact.task_id !== source.task_id || artifact.state !== source.state) {
+		throw new Error("KAMN Agent C observation task or state mismatch");
+	}
+	const actual = [artifact.source_handoff_digest, artifact.source_agent_a_receipt_digest, artifact.source_agent_b_receipt_digest];
+	const expected = [source.source_handoff_digest, source.source_agent_a_receipt_digest, source.source_agent_b_receipt_digest];
+	if (actual.some((digestValue, index) => digestValue !== expected[index])) {
+		throw new Error("KAMN Agent C observation source digest mismatch");
+	}
 }
 
 export function restrictedObservationConfig(env: Environment, cwd: string) {
