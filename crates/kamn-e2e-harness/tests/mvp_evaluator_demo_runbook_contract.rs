@@ -62,6 +62,8 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "real local-only independent Pi actors",
         "separate Pi processes",
         "Run this export block in each actor and verifier terminal",
+        "Agent A and Agent B Pi process IDs must differ",
+        "one or more `submitted` polls before its final `accepted` query",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }

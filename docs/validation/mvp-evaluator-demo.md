@@ -248,7 +248,7 @@ env -u OPENAI_API_KEY pi \
   -p "Use only the KAMN tool. Verify the independent actor receipts and report the claim boundary exactly."
 ```
 
-The verifier requires matching accepted task IDs and distinct positive Pi process IDs. Handoff and receipt artifacts are integrity-protected and contain no DIDs, task payload, keys, auth headers, signatures, nonces, or credentials. This proves real local-only independent Pi actors. It does not prove Agent C, disclosure asymmetry, escrow, settlement, asset movement, devnet execution, or restart durability.
+The verifier requires matching accepted task IDs and distinct positive Pi process IDs; the Agent A and Agent B Pi process IDs must differ. Node logs show separate DIDs and nonce streams. Agent B uses register/accept/query requests, while Agent A may record one or more `submitted` polls before its final `accepted` query. Handoff and receipt artifacts are integrity-protected and contain no DIDs, task payload, keys, auth headers, signatures, nonces, or credentials. This proves real local-only independent Pi actors. It does not prove Agent C, disclosure asymmetry, escrow, settlement, asset movement, devnet execution, or restart durability.
 
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
