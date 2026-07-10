@@ -14,7 +14,7 @@ pub(super) fn validate_shape(raw: &str, schema: &str, field_count: usize) -> Res
 
 pub(super) fn artifact_digest(raw: &str) -> Result<String, String> {
     let expected = extract_string(raw, "artifact_digest")?;
-    let actual = digest_json_without_field(raw, "artifact_digest")?;
+    let actual = digest_json_without_field(raw.trim_end(), "artifact_digest")?;
     if actual.strip_prefix("sha256:") == Some(expected.as_str()) {
         return Ok(expected);
     }
