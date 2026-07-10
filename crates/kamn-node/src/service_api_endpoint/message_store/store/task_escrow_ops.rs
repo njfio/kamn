@@ -8,6 +8,7 @@ use dispatch::{
     dispatch_prerequisite_missing_error, dispatch_request_from_record,
     parse_dispatchable_task_payload, select_dispatch_assignee,
 };
+pub(crate) use settlement::escrow_fund_task_id;
 use settlement::{
     build_escrow_record, escrow_status_response, next_escrow_id, release_escrow_record,
 };
@@ -70,10 +71,12 @@ impl ServiceApiMessageStore {
         payload: &str,
     ) -> Result<ServiceApiEscrowStatusBody, String> {
         self.refresh_from_disk()?;
+        let task_id = escrow_fund_task_id(payload)?;
         let escrow_id = next_escrow_id(self, payload);
-        self.snapshot
-            .escrows
-            .insert(escrow_id.clone(), build_escrow_record(escrow_id.as_str()));
+        self.snapshot.escrows.insert(
+            escrow_id.clone(),
+            build_escrow_record(escrow_id.as_str(), task_id),
+        );
         self.persist()?;
         Ok(ServiceApiEscrowStatusBody {
             escrow_id,

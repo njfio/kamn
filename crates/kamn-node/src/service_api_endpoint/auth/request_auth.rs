@@ -9,7 +9,8 @@ mod signature;
 use failures::{invalid_nonce_failure, missing_nonce_failure, missing_signature_failure};
 use nonce::{record_fresh_nonce, require_request_nonce, verify_fresh_nonce, verify_positive_nonce};
 pub(super) use sender_binding::{
-    resolve_signer_public_key_for_request, sender_did_matches_signer_public_key,
+    require_valid_sender_did_header, resolve_signer_public_key_for_request,
+    sender_did_matches_signer_public_key,
 };
 use signature::{request_signature_matches, signature_verification_failure};
 
@@ -47,25 +48,6 @@ pub(crate) fn record_verified_service_api_request_nonce(
     let sender_did = require_valid_sender_did_header(request)?;
     let nonce = require_request_nonce(request)?;
     record_fresh_nonce(replay_guard, sender_did, nonce)
-}
-
-pub(super) fn require_valid_sender_did_header(
-    request: &ParsedRequest,
-) -> Result<&str, RequestAuthFailure> {
-    let sender_did =
-        header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
-            RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
-                REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING,
-                format!("missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"),
-            ))
-        })?;
-    AgentDid::parse(sender_did).map_err(|error| {
-        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
-            REASON_CODE_AUTH_SENDER_DID_INVALID,
-            format!("invalid sender did: {error}"),
-        ))
-    })?;
-    Ok(sender_did)
 }
 
 #[cfg(test)]

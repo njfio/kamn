@@ -12,7 +12,7 @@ pub(crate) struct TransactionAuthorizationTarget {
 pub(crate) fn resolve_transaction_authorization_target(
     request: &ParsedRequest,
 ) -> Result<Option<TransactionAuthorizationTarget>, ServiceApiReasonedError> {
-    if request.path == ROUTE_AGENTS_REGISTER {
+    if request.method == "POST" && request.path == ROUTE_AGENTS_REGISTER {
         return Ok(None);
     }
     let Some((resource, action, role)) = route_target(request)? else {
@@ -79,15 +79,9 @@ fn path_id<'a>(path: &'a str, prefix: &str, suffix: &str) -> Option<&'a str> {
 }
 
 fn escrow_fund_resource(request: &ParsedRequest) -> Result<String, ServiceApiReasonedError> {
-    let body = serde_json::from_str::<serde_json::Value>(request.body.as_str())
-        .map_err(|_| unresolved_resource_error("escrow fund payload must be json"))?;
-    let task_id = body
-        .get("task_id")
-        .and_then(serde_json::Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| unresolved_resource_error("escrow fund task_id is required"))?;
-    Ok(task_resource(task_id))
+    super::message_store::escrow_fund_task_id(request.body.as_str())
+        .map(|task_id| task_resource(task_id.as_str()))
+        .map_err(|error| unresolved_resource_error(error.as_str()))
 }
 
 fn task_resource(task_id: &str) -> String {

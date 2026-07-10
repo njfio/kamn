@@ -3,17 +3,24 @@ use crate::service_api_endpoint::ServiceApiSnapshot;
 
 #[test]
 fn regression_service_api_endpoint_rejects_unknown_task_and_escrow_resource_transitions() {
+    let _env = acquire_service_api_test_env();
     let (snapshot, state_hash) = missing_resource_snapshot();
     let caller_did = "kamn:did:agent:test-client-missing-resource";
+    let state_file = missing_resource_state_file();
+    let _state_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_STATE_FILE",
+        Some(state_file.to_string_lossy().as_ref()),
+    );
+    provision_missing_resource_grants(state_file.as_path(), caller_did);
     let bind_addr = reserve_loopback_addr();
     let server = spawn_missing_resource_server(bind_addr.as_str(), snapshot);
     wait_for_endpoint_ready(bind_addr.as_str());
     assert_missing_task_and_escrow_paths(bind_addr.as_str(), caller_did, state_hash.as_str());
     assert_missing_resource_server_result(server);
+    let _ = std::fs::remove_file(state_file);
 }
 
 fn missing_resource_snapshot() -> (ServiceApiSnapshot, String) {
-    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -32,6 +39,32 @@ fn missing_resource_snapshot() -> (ServiceApiSnapshot, String) {
         snapshot.chain_version.as_str()
     );
     (snapshot, state_hash)
+}
+
+fn missing_resource_state_file() -> std::path::PathBuf {
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock should be after unix epoch")
+        .as_nanos();
+    std::env::temp_dir().join(format!(
+        "kamn-missing-resource-{}-{}.json",
+        std::process::id(),
+        timestamp
+    ))
+}
+
+fn provision_missing_resource_grants(path: &std::path::Path, caller_did: &str) {
+    let actor_did = test_service_api_sender_did(caller_did);
+    for (_, method, route) in missing_resource_routes() {
+        crate::service_api_endpoint::provision_test_transaction_grant(
+            path.to_string_lossy().into_owned(),
+            actor_did.as_str(),
+            method,
+            route,
+            "",
+        )
+        .expect("missing-resource fixture grant should persist");
+    }
 }
 
 fn spawn_missing_resource_server(

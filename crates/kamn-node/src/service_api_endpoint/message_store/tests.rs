@@ -88,3 +88,6 @@ mod atomic_state_write_tests {
         let _ = fs::remove_dir(base_dir);
     }
 }
+
+#[path = "tests/authorization_contract_tests.rs"]
+mod authorization_contract_tests;

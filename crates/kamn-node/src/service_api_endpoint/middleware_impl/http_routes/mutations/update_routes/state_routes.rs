@@ -6,27 +6,32 @@ pub(super) async fn handle_post_route(
     context: &ServiceApiRequestContext,
 ) -> Option<Response> {
     let path = context.parsed_request.path.as_str();
-    if let Some(response) = task_route_response(state, path).await {
+    if let Some(response) = task_route_response(state, context, path).await {
         return Some(response);
     }
-    if let Some(response) = persistence_route_response(state, path).await {
+    if let Some(response) = persistence_route_response(state, context, path).await {
         return Some(response);
     }
     content_route_response(state, path).await
 }
-async fn task_route_response(state: &Arc<ServiceApiRuntimeState>, path: &str) -> Option<Response> {
+async fn task_route_response(
+    state: &Arc<ServiceApiRuntimeState>,
+    context: &ServiceApiRequestContext,
+    path: &str,
+) -> Option<Response> {
     if let Some(task_id) = super::payload::task_accept_path_id(path) {
-        return Some(task_transition(state, task_id, "accepted", true).await);
+        return Some(task_transition(state, context, task_id, "accepted", true).await);
     }
     let task_id = super::payload::task_complete_path_id(path)?;
-    Some(task_transition(state, task_id, "completed", true).await)
+    Some(task_transition(state, context, task_id, "completed", true).await)
 }
 async fn persistence_route_response(
     state: &Arc<ServiceApiRuntimeState>,
+    context: &ServiceApiRequestContext,
     path: &str,
 ) -> Option<Response> {
     if let Some(escrow_id) = super::payload::escrow_release_path_id(path) {
-        return Some(release_escrow(state, escrow_id).await);
+        return Some(release_escrow(state, context, escrow_id).await);
     }
     let bridge_id = super::payload::bridge_forward_path_id(path)?;
     Some(forward_bridge(state, bridge_id).await)
@@ -44,15 +49,20 @@ async fn content_route_response(
 
 async fn task_transition(
     state: &Arc<ServiceApiRuntimeState>,
+    context: &ServiceApiRequestContext,
     task_id: &str,
     target: &str,
     publish: bool,
 ) -> Response {
-    let result = state
-        .message_store
-        .lock()
-        .await
-        .transition_task(task_id, target);
+    let result = {
+        let mut store = state.message_store.lock().await;
+        if let Err(response) =
+            super::super::super::revalidate_transaction_authorization(&mut store, context)
+        {
+            return *response;
+        }
+        store.transition_task(task_id, target)
+    };
     match result {
         Ok(Some(payload)) => {
             if publish {
@@ -67,8 +77,12 @@ async fn task_transition(
     }
 }
 
-async fn release_escrow(state: &Arc<ServiceApiRuntimeState>, escrow_id: &str) -> Response {
-    let result = match resolve_release_escrow_result(state, escrow_id).await {
+async fn release_escrow(
+    state: &Arc<ServiceApiRuntimeState>,
+    context: &ServiceApiRequestContext,
+    escrow_id: &str,
+) -> Response {
+    let result = match resolve_release_escrow_result(state, context, escrow_id).await {
         Ok(result) => result,
         Err(error) => return live_settlement_evidence_error(error.as_str()),
     };

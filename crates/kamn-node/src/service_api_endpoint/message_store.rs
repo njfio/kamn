@@ -53,4 +53,5 @@ pub(crate) use models::{
     ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError, ServiceApiMessageStore,
     ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
 };
+pub(crate) use store::escrow_fund_task_id;
 pub(crate) use store::{ServiceApiAuthorizationDecision, ServiceApiAuthorizationRequest};

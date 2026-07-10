@@ -1,5 +1,11 @@
 use super::super::*;
 
+mod grant_validation;
+
+use grant_validation::validate_persisted_grants;
+#[cfg(test)]
+use grant_validation::{identical_or_conflict, validate_grant};
+
 const GRANT_STATUS_ACTIVE: &str = "active";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,12 +29,23 @@ impl ServiceApiMessageStore {
         request: ServiceApiAuthorizationRequest<'_>,
     ) -> Result<ServiceApiAuthorizationDecision, String> {
         self.refresh_from_disk()?;
+        validate_persisted_grants(&self.snapshot)?;
         let decision = evaluate_authorization(&self.snapshot, &request);
         append_receipt(&mut self.snapshot, &request, &decision);
         self.persist()?;
         Ok(decision)
     }
 
+    pub(crate) fn revalidate_transaction_action(
+        &mut self,
+        request: ServiceApiAuthorizationRequest<'_>,
+    ) -> Result<ServiceApiAuthorizationDecision, String> {
+        self.refresh_from_disk()?;
+        validate_persisted_grants(&self.snapshot)?;
+        Ok(evaluate_authorization(&self.snapshot, &request))
+    }
+
+    #[cfg(test)]
     pub(crate) fn provision_agent_grant(
         &mut self,
         grant: ServiceApiPersistedAgentGrantRecord,
@@ -44,6 +61,7 @@ impl ServiceApiMessageStore {
         self.persist()
     }
 
+    #[cfg(test)]
     pub(crate) fn revoke_agent_grant(&mut self, idempotency_key: &str) -> Result<(), String> {
         self.refresh_from_disk()?;
         let grant = self
@@ -135,38 +153,4 @@ fn append_receipt(
             decision: if decision.allowed { "allow" } else { "deny" }.to_owned(),
             reason_code: decision.reason_code.to_owned(),
         });
-}
-
-fn validate_grant(grant: &ServiceApiPersistedAgentGrantRecord) -> Result<(), String> {
-    let fields = [
-        grant.did.as_str(),
-        grant.resource.as_str(),
-        grant.role.as_str(),
-        grant.action.as_str(),
-        grant.status.as_str(),
-        grant.idempotency_key.as_str(),
-    ];
-    if fields.iter().any(|field| field.trim().is_empty()) {
-        return Err("agent grant fields must not be empty".to_owned());
-    }
-    if grant.resource == "*" {
-        return Err("agent grant generic wildcard resource is forbidden".to_owned());
-    }
-    if !matches!(grant.status.as_str(), "active" | "revoked") {
-        return Err(format!("agent grant status is invalid: {}", grant.status));
-    }
-    Ok(())
-}
-
-fn identical_or_conflict(
-    existing: &ServiceApiPersistedAgentGrantRecord,
-    requested: &ServiceApiPersistedAgentGrantRecord,
-) -> Result<(), String> {
-    if existing == requested {
-        return Ok(());
-    }
-    Err(format!(
-        "agent grant idempotency key conflict: {}",
-        requested.idempotency_key
-    ))
 }

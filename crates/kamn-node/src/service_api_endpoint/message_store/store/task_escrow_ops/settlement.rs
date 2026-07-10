@@ -6,12 +6,27 @@ pub(super) fn next_escrow_id(store: &ServiceApiMessageStore, payload: &str) -> S
     })
 }
 
-pub(super) fn build_escrow_record(escrow_id: &str) -> ServiceApiPersistedEscrowRecord {
+pub(super) fn build_escrow_record(
+    escrow_id: &str,
+    task_id: String,
+) -> ServiceApiPersistedEscrowRecord {
     ServiceApiPersistedEscrowRecord {
         escrow_id: escrow_id.to_owned(),
         state: "funded".to_owned(),
+        task_id: Some(task_id),
         settlement: ServiceApiSettlementMetadata::default(),
     }
+}
+
+pub(crate) fn escrow_fund_task_id(payload: &str) -> Result<String, String> {
+    let body = serde_json::from_str::<serde_json::Value>(payload)
+        .map_err(|error| format!("escrow fund payload must be json: {error}"))?;
+    body.get("task_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| "escrow fund task_id is required".to_owned())
 }
 
 pub(super) fn release_escrow_record(

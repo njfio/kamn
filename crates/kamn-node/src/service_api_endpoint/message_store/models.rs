@@ -54,6 +54,8 @@ pub(crate) struct ServiceApiPersistedTaskRecord {
 pub(crate) struct ServiceApiPersistedEscrowRecord {
     pub(crate) escrow_id: String,
     pub(crate) state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) task_id: Option<String>,
     #[serde(flatten, default)]
     pub(crate) settlement: ServiceApiSettlementMetadata,
 }

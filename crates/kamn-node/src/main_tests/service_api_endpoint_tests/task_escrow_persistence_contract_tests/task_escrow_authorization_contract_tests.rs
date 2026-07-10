@@ -72,6 +72,21 @@ fn integration_service_api_persists_revoked_grant_denial_across_restart() {
     case.cleanup();
 }
 
+#[test]
+fn integration_service_api_denial_does_not_consume_request_nonce() {
+    let case = AuthorizationCase::new("deny-nonce-retry");
+    let actor = "kamn:did:agent:deny-nonce-retry";
+    let registered_did = case.register(actor, 1);
+
+    let denied = case.create_task(actor, 2);
+    assert_forbidden(&denied, "ACTION_NOT_GRANTED");
+    provision_grant(&case.state_file, registered_did.as_str(), "active");
+
+    let retried = case.create_task(actor, 2);
+    assert!(retried.contains("HTTP/1.1 201 Created"), "{retried}");
+    case.cleanup();
+}
+
 struct AuthorizationCase {
     _env: ServiceApiTestEnvGuards,
     _state_file_guard: EnvVarGuard,
