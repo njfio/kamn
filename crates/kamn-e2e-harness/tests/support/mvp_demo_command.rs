@@ -2,6 +2,9 @@ use std::path::Path;
 
 use kamn_e2e_harness::MvpDemoCommandConfig;
 
+#[path = "live_task_evidence.rs"]
+pub(crate) mod live_task_evidence;
+
 pub(crate) fn local_demo_config(temp: &Path) -> MvpDemoCommandConfig {
     MvpDemoCommandConfig {
         output_root: temp.display().to_string(),
@@ -16,6 +19,7 @@ pub(crate) fn local_demo_config(temp: &Path) -> MvpDemoCommandConfig {
             "integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event",
         )),
         agent_harness_evidence_path: None,
+        live_task_evidence: None,
     }
 }
 
@@ -24,6 +28,13 @@ pub(crate) fn devnet_required_demo_config(temp: &Path) -> MvpDemoCommandConfig {
     config.devnet_mode = "required".to_owned();
     config.solana_rpc_url = Some("https://api.devnet.solana.com".to_owned());
     config.devnet_settlement_command = Some(stub_devnet_settlement_command());
+    config.live_task_evidence = Some(live_task_evidence::write(temp));
+    config
+}
+
+pub(crate) fn devnet_required_without_task_binding(temp: &Path) -> MvpDemoCommandConfig {
+    let mut config = devnet_required_demo_config(temp);
+    config.live_task_evidence = None;
     config
 }
 
@@ -55,7 +66,7 @@ fn stub_devnet_settlement_command() -> Vec<String> {
         "sh".to_owned(),
         "-c".to_owned(),
         r#"cat <<'JSON'
-{"network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","recipient_pubkey":"FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe","lamports":1000000,"settlement_tx_signature":"devnet-signature-111","settlement_commitment":"finalized","payer_balance_before":2500000000,"payer_balance_after":2498995000,"recipient_balance_before":2500000000,"recipient_balance_after":2501000000,"persisted_settlement_tx_signature":"devnet-signature-111"}
+{"network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","recipient_pubkey":"FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe","lamports":1000000,"escrow_id":"escrow-local-bound-7086","settlement_tx_signature":"devnet-signature-111","settlement_commitment":"finalized","payer_balance_before":2500000000,"payer_balance_after":2498995000,"recipient_balance_before":2500000000,"recipient_balance_after":2501000000,"persisted_settlement_tx_signature":"devnet-signature-111"}
 JSON
 "#
         .to_owned(),
