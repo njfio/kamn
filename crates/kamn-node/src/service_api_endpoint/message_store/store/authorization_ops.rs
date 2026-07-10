@@ -4,7 +4,7 @@ mod grant_validation;
 
 use grant_validation::validate_persisted_grants;
 #[cfg(test)]
-use grant_validation::{identical_or_conflict, validate_grant};
+use grant_validation::{identical_or_conflict, reject_semantic_duplicate, validate_grant};
 
 const GRANT_STATUS_ACTIVE: &str = "active";
 
@@ -55,6 +55,7 @@ impl ServiceApiMessageStore {
         if let Some(existing) = self.snapshot.agent_grants.get(&grant.idempotency_key) {
             return identical_or_conflict(existing, &grant);
         }
+        reject_semantic_duplicate(&self.snapshot, &grant)?;
         self.snapshot
             .agent_grants
             .insert(grant.idempotency_key.clone(), grant);

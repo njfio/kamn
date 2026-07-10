@@ -21,7 +21,46 @@ pub(super) fn validate_persisted_grants(
             ));
         }
     }
+    validate_semantic_uniqueness(snapshot)
+}
+
+#[cfg(test)]
+pub(super) fn reject_semantic_duplicate(
+    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
+    requested: &ServiceApiPersistedAgentGrantRecord,
+) -> Result<(), String> {
+    if snapshot.agent_grants.values().any(|existing| {
+        existing.idempotency_key != requested.idempotency_key
+            && semantic_grants_match(existing, requested)
+    }) {
+        return Err("duplicate semantic grant authority is forbidden".to_owned());
+    }
     Ok(())
+}
+
+fn validate_semantic_uniqueness(
+    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
+) -> Result<(), String> {
+    let grants: Vec<_> = snapshot.agent_grants.values().collect();
+    for (index, grant) in grants.iter().enumerate() {
+        if grants[index + 1..]
+            .iter()
+            .any(|candidate| semantic_grants_match(grant, candidate))
+        {
+            return Err("duplicate semantic grant authority is forbidden".to_owned());
+        }
+    }
+    Ok(())
+}
+
+fn semantic_grants_match(
+    left: &ServiceApiPersistedAgentGrantRecord,
+    right: &ServiceApiPersistedAgentGrantRecord,
+) -> bool {
+    left.did == right.did
+        && left.resource == right.resource
+        && left.role == right.role
+        && left.action == right.action
 }
 
 #[cfg(test)]

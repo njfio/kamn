@@ -1,5 +1,5 @@
 use super::super::*;
-use super::state_routes_release::{live_settlement_evidence_error, resolve_release_escrow_result};
+use super::state_routes_release::resolve_release_escrow_result;
 
 pub(super) async fn handle_post_route(
     state: &Arc<ServiceApiRuntimeState>,
@@ -84,7 +84,7 @@ async fn release_escrow(
 ) -> Response {
     let result = match resolve_release_escrow_result(state, context, escrow_id).await {
         Ok(result) => result,
-        Err(error) => return live_settlement_evidence_error(error.as_str()),
+        Err(response) => return *response,
     };
     match result {
         Ok(Some(payload)) => contract_json(200, &payload),
