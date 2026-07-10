@@ -185,7 +185,7 @@ env -u OPENAI_API_KEY pi \
   -p "Use only the KAMN tools. Register Agent A and Agent B. As Agent A create a task titled 'Review KAMN proof' with description 'Validate the local two-agent task lifecycle'. As Agent B accept it. Query the accepted task as Agent A and Agent B. Report the claim boundary exactly."
 ```
 
-A passing run returns distinct Agent A and Agent B DIDs, one shared task ID, `submitted` from creation, and `accepted` from acceptance and both queries. Node logs show independent nonce domains: Agent A uses request nonces `1`, `2`, and `3` for register/create/query; Agent B independently uses `1`, `2`, and `3` for register/accept/query.
+A passing run returns distinct Agent A and Agent B DIDs, one shared task ID, `submitted` from creation, and `accepted` from acceptance and both queries. Node logs show independent nonce domains: Agent A uses request nonces `1`, `2`, and `3` for register/create/query; Agent B independently uses `1`, `2`, and `3` for register/accept/query. Both registrations and task creation return `201`; acceptance and both task queries return `200`.
 
 This is a real local-only task lifecycle backed by the service task store. It does not prove escrow, settlement, asset movement, third-party verification, or restart durability. Those claims require their own proof slices, and any eventual value-movement claim must remain devnet-backed.
 

@@ -49,6 +49,8 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE",
         "real local-only task lifecycle",
         "does not prove escrow, settlement, asset movement, third-party verification, or restart durability",
+        "Both registrations and task creation return `201`",
+        "acceptance and both task queries return `200`",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }
