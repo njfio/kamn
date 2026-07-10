@@ -4,7 +4,7 @@ use super::super::{
     ServiceBridgeStatus, ServiceBridgeSubmission, ServiceHealthStatus, ServiceRequestAuth,
 };
 use super::ServiceApiClient;
-use crate::{AgentDid, AgentMetadata, AgentQuery};
+use crate::{service_agent_registration_payload, AgentDid, AgentMetadata, AgentQuery};
 
 impl ServiceApiClient {
     /// Submits one bridge message via `POST /v1/bridge/submit`.
@@ -78,12 +78,7 @@ impl ServiceApiClient {
         metadata: &AgentMetadata,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceAgentProfile, SdkError> {
-        let payload = serde_json::json!({
-            "agent_type": metadata.agent_type,
-            "model_family": metadata.model_family,
-            "capabilities": metadata.capabilities,
-        })
-        .to_string();
+        let payload = service_agent_registration_payload(metadata)?;
         let response = self.request("POST", "/v1/agents/register", payload.as_str(), Some(auth))?;
         expect_status(response.status, 201)?;
         parse_agent_profile_response(response.body.as_str())

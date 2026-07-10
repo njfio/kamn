@@ -114,6 +114,13 @@ When `--agent-harness-evidence` is supplied directly to `verify-mvp-demo`, the
 same checks run without adding `mcp_agent_harness_verification` to the report.
 The verifier result names the separately validated evidence artifact instead.
 
+The underlying `kamn-mcp-server` `register` tool is service-backed: it signs an
+`agents:write` request, calls `POST /v1/agents/register`, and returns the
+persisted profile. The similarly named project-local Pi actor receipt tool
+still records report-bound evaluator evidence; it is not yet wired to invoke
+the live MCP registration process. Keep those two surfaces distinct when
+describing the current demo.
+
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
 `three_agent_escrow_verification` must preserve the report's claim status, label,

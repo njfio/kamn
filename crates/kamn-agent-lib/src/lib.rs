@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use auth::KamnAuthHeaders;
 use client::ServiceApiHttpClient;
 use envelope::{build_and_sign_envelope, CanonicalMessageEnvelope};
+use kamn_sdk::{service_agent_registration_payload, AgentMetadata};
 use kolme::KolmeClient;
 use nonce::{NonceTracker, NonceTrackerError};
 
@@ -179,6 +180,30 @@ impl KamnAgentHandle {
             Some("agents:read"),
         )?;
         self.service_client.get_agent_profile(did, &auth)
+    }
+
+    /// Registers this authenticated identity through the service API.
+    pub fn register_agent(
+        &self,
+        metadata: &AgentMetadata,
+    ) -> Result<ServiceAgentProfile, AgentLibError> {
+        let payload = service_agent_registration_payload(metadata)?;
+        let nonce = self.next_nonce()?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            self.identity.signing_key(),
+            nonce,
+            payload.as_str(),
+            Some("agents:write"),
+        )?;
+        let profile = self.service_client.register_agent(metadata, &auth)?;
+        if profile.did != self.identity.did().as_str() {
+            return Err(AgentLibError::InvalidInput {
+                field: "service_agent_profile.did",
+                reason: "must match authenticated identity".to_owned(),
+            });
+        }
+        Ok(profile)
     }
 
     /// Queries service health.
