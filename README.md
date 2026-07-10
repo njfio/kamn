@@ -65,6 +65,14 @@ make demo-mvp
 
 If the devnet path is fully configured and funded, the report can return `GO` with a `devnet_settlement_asset_movement` claim labelled `devnet-backed`. If devnet evidence is unavailable, the honest result is `NO-GO`, not a local-only settlement pass.
 
+To produce the full three-agent story, first create fresh independent Agent A,
+Agent B, and restricted Agent C artifacts using the evaluator runbook, then
+provide all four `KAMN_MVP_LIVE_TASK_*_FILE` variables to the funded command.
+KAMN validates those sources, places their task ID and binding digest in the
+live service escrow request, and propagates the request-derived `escrow-local-*`
+ID through the transcript, participant views, restricted verifier view, and
+receipts. A settlement-only run does not claim three-agent verification.
+
 Detailed evaluator runbook:
 
 - `docs/validation/mvp-evaluator-demo.md`

@@ -56,6 +56,9 @@ fn spec_c02_unbound_devnet_settlement_does_not_claim_three_agent_proof() {
     assert!(report.contains(r#""id":"devnet_settlement_asset_movement""#));
     assert!(!report.contains(r#""id":"three_agent_escrow_verification""#));
     assert!(!report.contains(r#""live_task_settlement_binding":""#));
+    let markdown = std::fs::read_to_string(root.join("latest/proof/report.md"))
+        .expect("standalone settlement markdown should exist");
+    assert!(!markdown.contains("Three-Agent View Boundary"));
 }
 
 #[test]
