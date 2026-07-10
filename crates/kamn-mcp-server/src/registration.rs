@@ -1,7 +1,9 @@
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle};
 use kamn_sdk::AgentMetadata;
 
-pub(crate) fn register_mcp_agent(handle: &KamnAgentHandle) -> Result<String, AgentLibError> {
+pub(crate) fn register_service_backed_mcp_agent(
+    handle: &KamnAgentHandle,
+) -> Result<String, AgentLibError> {
     let profile = handle.register_agent(&mcp_agent_metadata())?;
     Ok(serde_json::json!({
         "did": profile.did,
