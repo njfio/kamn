@@ -8,6 +8,7 @@ import { writeActorReceipt, writeTaskHandoff } from "./live-task-coordination.ts
 import {
 	writeRestrictedTaskObservation,
 	verifyRestrictedTaskObservation,
+	restrictedObservationConfig,
 } from "./restricted-task-observation.ts";
 
 test("Agent C writes a minimal task-bound restricted observation", async () => {
@@ -30,7 +31,7 @@ test("Agent C writes a minimal task-bound restricted observation", async () => {
 		"task_id",
 		"view_scope",
 	]);
-	assert.deepEqual(await verifyRestrictedTaskObservation(paths.observation), first);
+	assert.deepEqual(await verifyWithSources(paths), first);
 	assert.equal(first.claim_boundary, "real local-only independent Agent C artifact observation");
 	assert.equal(first.task_id, "task-live-c");
 	assert.equal(first.state, "accepted");
@@ -53,9 +54,16 @@ test("Agent C observation binds all source digests and rejects conflicts", async
 		writeRestrictedTaskObservation(paths.handoff, paths.agentA, paths.agentB, paths.observation, 404),
 		/conflicts/,
 	);
+	const otherSources = await acceptedSources(404, 505);
+	await assert.rejects(
+		verifyRestrictedTaskObservation(
+			paths.observation, otherSources.handoff, otherSources.agentA, otherSources.agentB,
+		),
+		/source digest mismatch/,
+	);
 	artifact.task_id = "task-altered";
 	await writeFile(paths.observation, JSON.stringify(artifact));
-	await assert.rejects(verifyRestrictedTaskObservation(paths.observation), /digest mismatch/);
+	await assert.rejects(verifyWithSources(paths), /digest mismatch/);
 });
 
 test("Agent C observation rejects private fields and unrestricted scope", async () => {
@@ -65,7 +73,7 @@ test("Agent C observation rejects private fields and unrestricted scope", async 
 	privateArtifact.participant_private_view_digest = "forbidden";
 	privateArtifact.artifact_digest = digestOf(privateArtifact);
 	await writeFile(paths.observation, JSON.stringify(privateArtifact));
-	await assert.rejects(verifyRestrictedTaskObservation(paths.observation), /field mismatch/);
+	await assert.rejects(verifyWithSources(paths), /field mismatch/);
 
 	const other = await acceptedSources(101, 202);
 	await writeRestrictedTaskObservation(other.handoff, other.agentA, other.agentB, other.observation, 303);
@@ -75,7 +83,28 @@ test("Agent C observation rejects private fields and unrestricted scope", async 
 	scoped.private_payload_redacted = false;
 	scoped.artifact_digest = digestOf(scoped);
 	await writeFile(other.observation, JSON.stringify(scoped));
-	await assert.rejects(verifyRestrictedTaskObservation(other.observation), /restricted-public/);
+	await assert.rejects(verifyWithSources(other), /restricted-public/);
+});
+
+test("Agent C entrypoint rejects malformed sources and unsafe configuration", async () => {
+	const paths = await acceptedSources(101, 202);
+	const handoff = JSON.parse(await readFile(paths.handoff, "utf8"));
+	handoff.unexpected = "field";
+	await writeFile(paths.handoff, JSON.stringify(handoff));
+	await assert.rejects(
+		writeRestrictedTaskObservation(paths.handoff, paths.agentA, paths.agentB, paths.observation, 303),
+		/field mismatch/,
+	);
+	const env = {
+		KAMN_MVP_LIVE_TASK_HANDOFF_FILE: paths.handoff,
+		KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE: paths.agentA,
+		KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE: paths.agentB,
+	};
+	assert.throws(() => restrictedObservationConfig(env, process.cwd()), /AGENT_C_OBSERVATION_FILE/);
+	assert.throws(
+		() => restrictedObservationConfig({ ...env, KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE: "/tmp/keypair-agent-c.json" }, process.cwd()),
+		/secret-like/,
+	);
 });
 
 test("Agent C must be a third distinct Pi process", async () => {
@@ -139,4 +168,8 @@ function publicCommitment(artifact: Record<string, unknown>): string {
 			source_agent_b_receipt_digest: artifact.source_agent_b_receipt_digest,
 		}))
 		.digest("hex");
+}
+
+function verifyWithSources(paths: { observation: string; handoff: string; agentA: string; agentB: string }) {
+	return verifyRestrictedTaskObservation(paths.observation, paths.handoff, paths.agentA, paths.agentB);
 }
