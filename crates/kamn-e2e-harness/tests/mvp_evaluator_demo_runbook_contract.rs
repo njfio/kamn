@@ -64,6 +64,11 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "Run this export block in each actor and verifier terminal",
         "Agent A and Agent B Pi process IDs must differ",
         "one or more `submitted` polls before its final `accepted` query",
+        "kamn_live_agent_c_verify_restricted_task_observation",
+        "KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE",
+        "third independent Pi process",
+        "real local-only independent Agent C artifact observation",
+        "artifact-level disclosure boundary, not server-side authorization",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }

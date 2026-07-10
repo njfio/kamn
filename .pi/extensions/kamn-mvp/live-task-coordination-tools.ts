@@ -9,6 +9,10 @@ import {
 	writeTaskHandoff,
 } from "./live-task-coordination.ts";
 import type { LiveTaskWorkflow, WorkflowResult } from "./live-task-workflow.ts";
+import {
+	restrictedObservationConfig,
+	writeRestrictedTaskObservation,
+} from "./restricted-task-observation.ts";
 
 type WorkflowResolver = (cwd: string) => LiveTaskWorkflow;
 
@@ -18,6 +22,27 @@ export function registerLiveTaskCoordinationTools(pi: ExtensionAPI, resolveWorkf
 	registerAgentAWaitTool(pi, resolveWorkflow);
 	registerAgentBReceiptTool(pi, resolveWorkflow);
 	registerVerifierTool(pi);
+	registerAgentCObservationTool(pi);
+}
+
+function registerAgentCObservationTool(pi: ExtensionAPI) {
+	pi.registerTool({
+		name: "kamn_live_agent_c_verify_restricted_task_observation",
+		label: "KAMN Agent C Verify Restricted Task Observation",
+		description: "Verify a restricted task observation in a third independent Pi process.",
+		parameters: Type.Object({}),
+		executionMode: "sequential",
+		async execute(_id, _params, _signal, _onUpdate, ctx) {
+			const config = restrictedObservationConfig(process.env, ctx.cwd);
+			const result = await writeRestrictedTaskObservation(
+				config.handoffPath, config.agentAPath, config.agentBPath, config.observationPath, process.pid,
+			);
+			return {
+				content: [{ type: "text" as const, text: `Agent C verified the restricted task observation. Claim boundary: ${result.claim_boundary}.` }],
+				details: { claimBoundary: result.claim_boundary, result },
+			};
+		},
+	});
 }
 
 function registerPublishTool(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {

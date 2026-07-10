@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import type { VerifiedActorEvidence } from "./live-task-evidence.ts";
 
 const HANDOFF_SCHEMA = "kamn.mvp.live-task-handoff.v1";
 const RECEIPT_SCHEMA = "kamn.mvp.live-task-actor-receipt.v1";
@@ -52,17 +53,34 @@ export async function writeActorReceipt(path: string, actor: Actor, taskId: stri
 }
 
 export async function verifyIndependentActorReceipts(handoffPath: string, agentAPath: string, agentBPath: string) {
+	const evidence = await readVerifiedActorEvidence(handoffPath, agentAPath, agentBPath);
+	return {
+		claim_boundary: "real local-only independent Pi actors",
+		task_id: evidence.task_id,
+		state: evidence.state,
+		agent_a_pi_process_id: evidence.agent_a_pi_process_id,
+		agent_b_pi_process_id: evidence.agent_b_pi_process_id,
+	};
+}
+
+export async function readVerifiedActorEvidence(
+	handoffPath: string,
+	agentAPath: string,
+	agentBPath: string,
+): Promise<VerifiedActorEvidence> {
 	const handoff = await readHandoff(handoffPath);
 	const agentA = await readReceipt(agentAPath, "agent_a");
 	const agentB = await readReceipt(agentBPath, "agent_b");
 	if (agentA.task_id !== handoff.task_id || agentB.task_id !== handoff.task_id) throw new Error("KAMN live actor receipt task ID mismatch");
 	if (agentA.pi_process_id === agentB.pi_process_id) throw new Error("KAMN live actor receipts must come from distinct Pi processes");
 	return {
-		claim_boundary: "real local-only independent Pi actors",
 		task_id: handoff.task_id,
 		state: "accepted",
 		agent_a_pi_process_id: agentA.pi_process_id,
 		agent_b_pi_process_id: agentB.pi_process_id,
+		source_handoff_digest: handoff.artifact_digest,
+		source_agent_a_receipt_digest: agentA.artifact_digest,
+		source_agent_b_receipt_digest: agentB.artifact_digest,
 	};
 }
 
