@@ -89,8 +89,41 @@ instead of returning an identity-only synthetic response.
 
 ## Deviations
 
-- None at specification time.
+- Live validation exposed an existing nonce-continuity boundary: launching a
+  fresh MCP process for the same DID resets its local nonce tracker and the
+  service correctly rejects nonce `1` as replay. Registration plus follow-up
+  operations must use one persistent MCP session or a persisted nonce source.
+- No fallback was added; the replay failure remains hard and observable.
 
 ## Completion Evidence
 
-- Pending implementation and verification.
+- Red evidence: the focused real-backend contract failed because `register`
+  returned only a DID and omitted persisted profile metadata without consuming
+  the fixture HTTP request.
+- Green evidence: the real-backend contract passed after `register` called the
+  canonical service route and returned the persisted profile.
+- `cargo test -p kamn-sdk` passed.
+- `cargo test -p kamn-agent-lib` passed.
+- `cargo test -p kamn-mcp-server` passed, including real backend, persistent
+  stdio, protocol, dispatch, inventory, and duplicate-helper contracts.
+- `cargo fmt --check` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features --
+  -D warnings` passed.
+- `CARGO_TARGET_DIR=target/mvp-demo-proof CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0 make check` passed.
+- Live loopback proof built and started `kamn-node` on `127.0.0.1:18276`, then
+  invoked the real `kamn-mcp-server` binary with a disposable deterministic
+  test identity.
+- Agent A registration returned `ok=true`, `agent_type=autonomous`,
+  `model_family=mcp-agent`, `capabilities=[mcp]`, and a persisted
+  self-certifying DID.
+- One persistent Agent B MCP process registered and then queried its profile;
+  both calls returned `ok=true`, and node logs recorded HTTP `201` then `200`
+  with nonce progression from `1` to `2`.
+- One persistent Agent C MCP process repeated identical registration; both
+  calls returned the same DID/profile and node logs recorded two HTTP `201`
+  outcomes, proving idempotent retry behavior.
+- A deliberately fresh process for the already-used Agent A DID was rejected
+  with `service_api_auth_replay_nonce_detected`, proving the replay guard and
+  persistent-session requirement remain active.
