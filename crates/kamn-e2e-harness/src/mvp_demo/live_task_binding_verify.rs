@@ -1,7 +1,7 @@
 use super::artifact_digest::validate_json_digest;
 use super::command_config::LiveTaskEvidencePaths;
-use super::devnet_settlement_service::expected_escrow_id;
-use super::live_task_binding::{validate_live_task_evidence, ValidatedSources};
+use super::live_task_funding_verify::validate_funding_request;
+use super::live_task_sources::{validate_live_task_evidence, ValidatedSources};
 use super::verify_support::{extract_string, extract_u64, parse_claims, ClaimView};
 
 pub(crate) fn validate_live_task_binding_file(report: &str) -> Result<(), String> {
@@ -51,6 +51,15 @@ fn validate_binding_fields(
     sources: &ValidatedSources,
     digest: &str,
 ) -> Result<(), String> {
+    validate_binding_identity(raw, sources, digest)?;
+    validate_binding_source_digests(raw, sources)
+}
+
+fn validate_binding_identity(
+    raw: &str,
+    sources: &ValidatedSources,
+    digest: &str,
+) -> Result<(), String> {
     require_string(
         raw,
         "schema_version",
@@ -61,7 +70,10 @@ fn validate_binding_fields(
     require_string(raw, "state", "accepted")?;
     require_u64(raw, "agent_a_pi_process_id", sources.agent_a_pid)?;
     require_u64(raw, "agent_b_pi_process_id", sources.agent_b_pid)?;
-    require_u64(raw, "agent_c_pi_process_id", sources.agent_c_pid)?;
+    require_u64(raw, "agent_c_pi_process_id", sources.agent_c_pid)
+}
+
+fn validate_binding_source_digests(raw: &str, sources: &ValidatedSources) -> Result<(), String> {
     require_string(
         raw,
         "source_handoff_digest",
@@ -98,10 +110,7 @@ fn validate_claim_fields(
     require_string(claim.raw, "transaction_id", sources.task_id.as_str())?;
     require_string(claim.raw, "terms_digest", digest)?;
     require_string(claim.raw, "task_binding_digest", digest)?;
-    let devnet = parse_claims(report)?
-        .into_iter()
-        .find(|item| item.id == "devnet_settlement_asset_movement")
-        .ok_or_else(|| "missing devnet settlement claim for live task binding".to_owned())?;
+    let devnet = devnet_claim(report)?;
     require_string(devnet.raw, "task_id", sources.task_id.as_str())?;
     require_string(devnet.raw, "task_binding_digest", digest)?;
     let escrow_id = extract_string(devnet.raw, "escrow_id")?;
@@ -115,59 +124,11 @@ fn validate_claim_fields(
     )
 }
 
-fn validate_funding_request(
-    report: &str,
-    devnet: &ClaimView<'_>,
-    task_id: &str,
-    digest: &str,
-    escrow_id: &str,
-) -> Result<(), String> {
-    let surface = extract_string(devnet.raw, "execution_surface")?;
-    if surface == "command-override" {
-        return Ok(());
-    }
-    if surface != "live-service-api" {
-        return funding_error(format!("unsupported execution surface: {surface}"));
-    }
-    let request = read_funding_request(report)?;
-    require_request_string(
-        request.as_str(),
-        "schema_version",
-        "kamn.mvp.devnet-settlement.v2",
-    )?;
-    require_request_string(request.as_str(), "task_id", task_id)?;
-    require_request_string(request.as_str(), "task_binding_digest", digest)?;
-    require_request_escrow(request.as_str(), escrow_id)
-}
-
-fn read_funding_request(report: &str) -> Result<String, String> {
-    let path = extract_string(report, "devnet_escrow_funding_request")
-        .map_err(|error| format!("devnet escrow funding request artifact missing: {error}"))?;
-    std::fs::read_to_string(path)
-        .map_err(|error| format!("failed to read devnet escrow funding request: {error}"))
-}
-
-fn require_request_string(raw: &str, field: &str, expected: &str) -> Result<(), String> {
-    match extract_string(raw, field) {
-        Ok(actual) if actual == expected => Ok(()),
-        Ok(_) => funding_error(format!("{field} mismatch")),
-        Err(error) => funding_error(error),
-    }
-}
-
-fn require_request_escrow(raw: &str, escrow_id: &str) -> Result<(), String> {
-    let expected = expected_escrow_id(raw);
-    if escrow_id == expected {
-        Ok(())
-    } else {
-        funding_error(format!(
-            "escrow ID mismatch: expected {expected}, found {escrow_id}"
-        ))
-    }
-}
-
-fn funding_error<T>(detail: String) -> Result<T, String> {
-    Err(format!("devnet escrow funding request {detail}"))
+fn devnet_claim(report: &str) -> Result<ClaimView<'_>, String> {
+    parse_claims(report)?
+        .into_iter()
+        .find(|item| item.id == "devnet_settlement_asset_movement")
+        .ok_or_else(|| "missing devnet settlement claim for live task binding".to_owned())
 }
 
 fn require_string(raw: &str, field: &str, expected: &str) -> Result<(), String> {
