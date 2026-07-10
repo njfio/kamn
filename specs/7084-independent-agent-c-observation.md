@@ -69,6 +69,7 @@ Outputs:
 - `.pi/extensions/kamn-mvp/restricted-task-observation.test.ts`
 - `.pi/extensions/kamn-mvp/live-task-coordination-tools.ts`
 - `.pi/extensions/kamn-mvp/live-task-coordination.ts`
+- `.pi/extensions/kamn-mvp/live-task-evidence.ts`
 - `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract.rs`
 - `crates/kamn-e2e-harness/tests/mvp_evaluator_demo_runbook_contract.rs`
 - `docs/validation/mvp-evaluator-demo.md`

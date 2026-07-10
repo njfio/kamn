@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import type { VerifiedActorEvidence } from "./live-task-evidence.ts";
 
 const HANDOFF_SCHEMA = "kamn.mvp.live-task-handoff.v1";
 const RECEIPT_SCHEMA = "kamn.mvp.live-task-actor-receipt.v1";
@@ -17,15 +18,6 @@ type Environment = Record<string, string | undefined>;
 type Actor = "agent_a" | "agent_b";
 type Handoff = { schema_version: string; task_id: string; artifact_digest: string };
 type Receipt = Handoff & { actor: Actor; state: string; pi_process_id: number };
-export type VerifiedActorEvidence = {
-	task_id: string;
-	state: "accepted";
-	agent_a_pi_process_id: number;
-	agent_b_pi_process_id: number;
-	source_handoff_digest: string;
-	source_agent_a_receipt_digest: string;
-	source_agent_b_receipt_digest: string;
-};
 
 export async function writeTaskHandoff(path: string, taskId: string): Promise<void> {
 	assertSafePath(path);

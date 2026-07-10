@@ -31,6 +31,7 @@ export async function writeRestrictedTaskObservation(
 	handoffPath: string, agentAPath: string, agentBPath: string, outputPath: string, agentCPid: number,
 ) {
 	assertSafePath(outputPath);
+	assertDistinctOutput(outputPath, [handoffPath, agentAPath, agentBPath]);
 	const source = await readVerifiedActorEvidence(handoffPath, agentAPath, agentBPath);
 	assertThirdProcess(agentCPid, source.agent_a_pi_process_id, source.agent_b_pi_process_id);
 	const publicFields = {
@@ -126,6 +127,13 @@ function configuredPath(env: Environment, name: string, cwd: string): string {
 function assertSafePath(path: string) {
 	const lower = path.toLowerCase();
 	if (SECRET_MARKERS.some((marker) => lower.includes(marker))) throw new Error("Refusing secret-like KAMN Agent C observation path");
+}
+
+function assertDistinctOutput(outputPath: string, sourcePaths: string[]) {
+	const output = resolve(outputPath);
+	if (sourcePaths.some((path) => resolve(path) === output)) {
+		throw new Error("KAMN Agent C observation path must differ from source artifacts");
+	}
 }
 
 function digest(value: Record<string, unknown>): string {
