@@ -35,6 +35,11 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "persistent live MCP process",
         "local-only identity durability",
         "does not prove task, escrow, settlement, or asset movement",
+        "openssl rand -hex 32 > /tmp/kamn-pi-agent-a.key",
+        "--runtime-mode api",
+        "--api-bind 127.0.0.1:18278",
+        "request nonce `1` and status `201`",
+        "request nonce `2` and status `200`",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }

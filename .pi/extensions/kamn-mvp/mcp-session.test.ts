@@ -41,7 +41,7 @@ for (const [mode, expected] of [
 ] as const) {
 	test(`session fails loudly for ${mode} child behavior`, async () => {
 		const paths = await testPaths();
-		const session = sessionFor(paths, mode, 50);
+		const session = sessionFor(paths, mode, mode === "hang" ? 50 : 1000);
 		await assert.rejects(session.call("register"), expected);
 		await session.shutdown();
 	});

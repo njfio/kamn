@@ -123,15 +123,27 @@ describing the current demo.
 
 ### Live Pi Identity Check
 
-Pi can also prove local-only identity durability through a persistent live MCP process. Build the binaries, start the local KAMN service separately, and provide an existing disposable Agent A key file:
+Pi can also prove local-only identity durability through a persistent live MCP process. In one terminal, build the binaries, create a disposable Agent A key, and start the local KAMN service:
 
 ```bash
 cargo build -p kamn-mcp-server -p kamn-node
+openssl rand -hex 32 > /tmp/kamn-pi-agent-a.key
+KAMN_SERVICE_API_TLS_MODE=disabled target/debug/kamn-node \
+  --runtime-mode api \
+  --role processor \
+  --api-bind 127.0.0.1:18278 \
+  --api-max-requests 1000 \
+  --api-idle-timeout-ms 600000 \
+  --storage-dir /tmp/kamn-node-pi-live
+```
 
+In a second terminal, run the two live Pi tools:
+
+```bash
 KAMN_MVP_LIVE_MCP_BINARY=target/debug/kamn-mcp-server \
 KAMN_MVP_LIVE_MCP_ENDPOINT=http://127.0.0.1:18278 \
 KAMN_MVP_LIVE_MCP_AGENT_A_NAME=pi-agent-a \
-KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE=/absolute/path/to/disposable-agent-a.key \
+KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE=/tmp/kamn-pi-agent-a.key \
 env -u OPENAI_API_KEY pi \
   --model openai-codex/gpt-5.5 \
   --thinking medium \
@@ -144,6 +156,8 @@ env -u OPENAI_API_KEY pi \
 ```
 
 `kamn_live_agent_a_register` starts `kamn-mcp-server` lazily. `kamn_live_agent_a_query_profile` reuses that process, preserving its authenticated request nonce and querying the DID returned by registration. The extension passes the key-file path to the child process but does not read or return key contents; Pi session shutdown terminates the child.
+
+A passing node log shows `POST /v1/agents/register` with request nonce `1` and status `201`, followed by `GET /v1/agents/<same-did>` with request nonce `2` and status `200`.
 
 This proves local-only identity durability through the live service API. It does not prove task, escrow, settlement, or asset movement, and it does not replace the devnet-required proof for any value-movement claim.
 
