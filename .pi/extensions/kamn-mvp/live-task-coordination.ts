@@ -17,6 +17,15 @@ type Environment = Record<string, string | undefined>;
 type Actor = "agent_a" | "agent_b";
 type Handoff = { schema_version: string; task_id: string; artifact_digest: string };
 type Receipt = Handoff & { actor: Actor; state: string; pi_process_id: number };
+export type VerifiedActorEvidence = {
+	task_id: string;
+	state: "accepted";
+	agent_a_pi_process_id: number;
+	agent_b_pi_process_id: number;
+	source_handoff_digest: string;
+	source_agent_a_receipt_digest: string;
+	source_agent_b_receipt_digest: string;
+};
 
 export async function writeTaskHandoff(path: string, taskId: string): Promise<void> {
 	assertSafePath(path);
@@ -52,17 +61,34 @@ export async function writeActorReceipt(path: string, actor: Actor, taskId: stri
 }
 
 export async function verifyIndependentActorReceipts(handoffPath: string, agentAPath: string, agentBPath: string) {
+	const evidence = await readVerifiedActorEvidence(handoffPath, agentAPath, agentBPath);
+	return {
+		claim_boundary: "real local-only independent Pi actors",
+		task_id: evidence.task_id,
+		state: evidence.state,
+		agent_a_pi_process_id: evidence.agent_a_pi_process_id,
+		agent_b_pi_process_id: evidence.agent_b_pi_process_id,
+	};
+}
+
+export async function readVerifiedActorEvidence(
+	handoffPath: string,
+	agentAPath: string,
+	agentBPath: string,
+): Promise<VerifiedActorEvidence> {
 	const handoff = await readHandoff(handoffPath);
 	const agentA = await readReceipt(agentAPath, "agent_a");
 	const agentB = await readReceipt(agentBPath, "agent_b");
 	if (agentA.task_id !== handoff.task_id || agentB.task_id !== handoff.task_id) throw new Error("KAMN live actor receipt task ID mismatch");
 	if (agentA.pi_process_id === agentB.pi_process_id) throw new Error("KAMN live actor receipts must come from distinct Pi processes");
 	return {
-		claim_boundary: "real local-only independent Pi actors",
 		task_id: handoff.task_id,
 		state: "accepted",
 		agent_a_pi_process_id: agentA.pi_process_id,
 		agent_b_pi_process_id: agentB.pi_process_id,
+		source_handoff_digest: handoff.artifact_digest,
+		source_agent_a_receipt_digest: agentA.artifact_digest,
+		source_agent_b_receipt_digest: agentB.artifact_digest,
 	};
 }
 

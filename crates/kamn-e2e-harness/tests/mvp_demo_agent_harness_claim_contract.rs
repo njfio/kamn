@@ -238,6 +238,8 @@ fn pi_extension_source() -> String {
         ".pi/extensions/kamn-mvp/mcp-session.ts",
         ".pi/extensions/kamn-mvp/live-task-workflow.ts",
         ".pi/extensions/kamn-mvp/live-task-coordination.ts",
+        ".pi/extensions/kamn-mvp/live-task-coordination-tools.ts",
+        ".pi/extensions/kamn-mvp/restricted-task-observation.ts",
     ]
     .map(|path| {
         std::fs::read_to_string(workspace_root().join(path))

@@ -198,6 +198,7 @@ export KAMN_MVP_LIVE_TASK_RUN_ID=run-7082-001
 export KAMN_MVP_LIVE_TASK_HANDOFF_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-handoff.json
 export KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-a.json
 export KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-b.json
+export KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-c.json
 export KAMN_MVP_LIVE_TASK_COORDINATION_TIMEOUT_MS=60000
 ```
 
@@ -249,6 +250,30 @@ env -u OPENAI_API_KEY pi \
 ```
 
 The verifier requires matching accepted task IDs and distinct positive Pi process IDs; the Agent A and Agent B Pi process IDs must differ. Node logs show separate DIDs and nonce streams. Agent B uses register/accept/query requests, while Agent A may record one or more `submitted` polls before its final `accepted` query. Handoff and receipt artifacts are integrity-protected and contain no DIDs, task payload, keys, auth headers, signatures, nonces, or credentials. This proves real local-only independent Pi actors. It does not prove Agent C, disclosure asymmetry, escrow, settlement, asset movement, devnet execution, or restart durability.
+
+To prove a third independent Pi process can validate a task-bound restricted
+observation, run Agent C after Agent A and Agent B finish. Agent C has no KAMN
+name, key file, MCP child, or participant identity configuration:
+
+```bash
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_live_agent_c_verify_restricted_task_observation \
+  --approve --no-session \
+  -p "Use only the KAMN tool. Verify the restricted task observation as independent Agent C and report the claim boundary exactly."
+```
+
+The tool writes `KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE` with only the
+accepted task ID, restricted-public policy markers, zero private fields, source
+artifact digests, a deterministic public commitment, the Agent C Pi process ID,
+and an integrity digest. Agent C must have a process ID different from Agent A
+and Agent B. Success reports `real local-only independent Agent C artifact observation`.
+This is an artifact-level disclosure boundary, not server-side authorization.
+It does not prove runtime role-based projection, escrow,
+settlement, asset movement, devnet execution, or restart durability.
 
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
