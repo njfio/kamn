@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-import { appendFileSync, writeFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 const mode = process.env.KAMN_MVP_FAKE_MCP_MODE ?? "success";
+const resultMode = process.env.KAMN_MVP_FAKE_MCP_RESULT_MODE ?? "success";
 const startFile = process.env.KAMN_MVP_FAKE_MCP_START_FILE;
 const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
-if (startFile) writeFileSync(startFile, `${process.pid}\n`);
+const agentName = argumentValue("--agent-name") ?? "agent-a";
+if (startFile) appendFileSync(startFile, `${process.pid}\n`);
 
 process.on("SIGTERM", () => {
 	if (stopFile) appendFileSync(stopFile, `${process.pid}\n`);
@@ -22,13 +24,35 @@ createInterface({ input: process.stdin }).on("line", (line) => {
 });
 
 function successResponse(request) {
-	const did = request.did ?? "kamn:did:agent-a";
+	const result = toolResult(request);
 	return {
 		ok: true,
 		id: mode === "mismatch" ? "wrong-id" : request.id,
 		tool: request.tool,
-		result: { did, pid: process.pid, request_id: request.id },
+		result: { ...result, pid: process.pid, request_id: request.id },
 	};
+}
+
+function toolResult(request) {
+	if (request.tool === "register") {
+		return { did: resultMode === "same-did" ? "kamn:did:shared" : `kamn:did:${agentName}` };
+	}
+	if (request.tool === "query_agent_profile") return { did: request.did };
+	if (request.tool === "create_task") {
+		const payload = JSON.parse(request.payload);
+		if (resultMode === "missing-task-id") return { state: "submitted", ...payload };
+		const state = resultMode === "wrong-create-state" ? "queued" : "submitted";
+		return { task_id: "task-live-1", state, ...payload };
+	}
+	if (request.tool === "accept_task") {
+		const taskId = resultMode === "wrong-accept-id" ? "task-other" : request.task_id;
+		return { task_id: taskId, state: "accepted" };
+	}
+	if (request.tool === "query_task") {
+		const state = resultMode === "wrong-query-state" ? "submitted" : "accepted";
+		return { task_id: request.task_id, state };
+	}
+	return {};
 }
 
 function errorResponse(request) {
@@ -42,4 +66,9 @@ function errorResponse(request) {
 
 function write(response) {
 	process.stdout.write(`${JSON.stringify(response)}\n`);
+}
+
+function argumentValue(flag) {
+	const index = process.argv.indexOf(flag);
+	return index >= 0 ? process.argv[index + 1] : undefined;
 }

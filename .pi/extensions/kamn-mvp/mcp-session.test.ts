@@ -25,19 +25,31 @@ test("session starts lazily and reuses one child for ordered calls", async () =>
 });
 
 test("configuration rejects missing values and key files", () => {
-	assert.throws(() => readLiveMcpConfig({}, process.cwd()), /KAMN_MVP_LIVE_MCP_BINARY/);
+	assert.throws(() => readLiveMcpConfig("AGENT_A", {}, process.cwd()), /KAMN_MVP_LIVE_MCP_BINARY/);
 	assert.throws(
-		() => readLiveMcpConfig(configEnv("/missing/key", {}), process.cwd()),
+		() => readLiveMcpConfig("AGENT_A", configEnv("/missing/key", {}), process.cwd()),
 		/key file does not exist/,
 	);
 });
 
 test("configuration does not forward unrelated Pi credentials", async () => {
 	const paths = await testPaths();
-	const config = readLiveMcpConfig(configEnv(paths.keyFile, { OPENAI_API_KEY: "must-not-leak" }), process.cwd());
+	const config = readLiveMcpConfig("AGENT_A", configEnv(paths.keyFile, { OPENAI_API_KEY: "must-not-leak" }), process.cwd());
 
 	assert.equal(config.env.OPENAI_API_KEY, undefined);
 	assert.equal(config.env.KAMN_MVP_LIVE_MCP_AGENT_A_NAME, "agent-a");
+});
+
+test("configuration selects independent Agent B identity inputs", async () => {
+	const paths = await testPaths();
+	const env = configEnv(paths.keyFile, {
+		KAMN_MVP_LIVE_MCP_AGENT_B_NAME: "agent-b",
+		KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE: paths.keyFile,
+	});
+	const config = readLiveMcpConfig("AGENT_B", env, process.cwd());
+
+	assert.equal(config.agentName, "agent-b");
+	assert.equal(config.keyFile, paths.keyFile);
 });
 
 for (const [mode, expected] of [
@@ -75,7 +87,7 @@ async function testPaths() {
 
 function sessionFor(paths: Awaited<ReturnType<typeof testPaths>>, mode: string, timeoutMs = 1000) {
 	return new McpSession(
-		readLiveMcpConfig(configEnv(paths.keyFile, {
+		readLiveMcpConfig("AGENT_A", configEnv(paths.keyFile, {
 			KAMN_MVP_FAKE_MCP_MODE: mode,
 			KAMN_MVP_FAKE_MCP_START_FILE: paths.startFile,
 			KAMN_MVP_FAKE_MCP_STOP_FILE: paths.stopFile,

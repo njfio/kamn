@@ -161,6 +161,34 @@ A passing node log shows `POST /v1/agents/register` with request nonce `1` and s
 
 This proves local-only identity durability through the live service API. It does not prove task, escrow, settlement, or asset movement, and it does not replace the devnet-required proof for any value-movement claim.
 
+### Live Pi Two-Agent Task Check
+
+The next bounded check uses two independently authenticated MCP children for a real local-only task lifecycle. Keep the node from the identity check running, create a second disposable key, and run Pi with both agent configurations:
+
+```bash
+openssl rand -hex 32 > /tmp/kamn-pi-agent-b.key
+
+KAMN_MVP_LIVE_MCP_BINARY=target/debug/kamn-mcp-server \
+KAMN_MVP_LIVE_MCP_ENDPOINT=http://127.0.0.1:18278 \
+KAMN_MVP_LIVE_MCP_AGENT_A_NAME=pi-agent-a \
+KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE=/tmp/kamn-pi-agent-a.key \
+KAMN_MVP_LIVE_MCP_AGENT_B_NAME=pi-agent-b \
+KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE=/tmp/kamn-pi-agent-b.key \
+env -u OPENAI_API_KEY pi \
+  --model openai-codex/gpt-5.5 \
+  --thinking medium \
+  --extension .pi/extensions/kamn-mvp/index.ts \
+  --no-builtin-tools \
+  --tools kamn_live_agent_a_register,kamn_live_agent_b_register,kamn_live_agent_a_create_task,kamn_live_agent_b_accept_task,kamn_live_agent_a_query_task,kamn_live_agent_b_query_task \
+  --approve \
+  --no-session \
+  -p "Use only the KAMN tools. Register Agent A and Agent B. As Agent A create a task titled 'Review KAMN proof' with description 'Validate the local two-agent task lifecycle'. As Agent B accept it. Query the accepted task as Agent A and Agent B. Report the claim boundary exactly."
+```
+
+A passing run returns distinct Agent A and Agent B DIDs, one shared task ID, `submitted` from creation, and `accepted` from acceptance and both queries. Node logs show independent nonce domains: Agent A uses request nonces `1`, `2`, and `3` for register/create/query; Agent B independently uses `1`, `2`, and `3` for register/accept/query. Both registrations and task creation return `201`; acceptance and both task queries return `200`.
+
+This is a real local-only task lifecycle backed by the service task store. It does not prove escrow, settlement, asset movement, third-party verification, or restart durability. Those claims require their own proof slices, and any eventual value-movement claim must remain devnet-backed.
+
 The evidence also records a `three_agent_boundary` summary derived from the
 verified report: local-only reports are marked `NOT_PRESENT`, while reports with
 `three_agent_escrow_verification` must preserve the report's claim status, label,

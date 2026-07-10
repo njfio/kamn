@@ -40,6 +40,17 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "--api-bind 127.0.0.1:18278",
         "request nonce `1` and status `201`",
         "request nonce `2` and status `200`",
+        "kamn_live_agent_b_register",
+        "kamn_live_agent_a_create_task",
+        "kamn_live_agent_b_accept_task",
+        "kamn_live_agent_a_query_task",
+        "kamn_live_agent_b_query_task",
+        "KAMN_MVP_LIVE_MCP_AGENT_B_NAME",
+        "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE",
+        "real local-only task lifecycle",
+        "does not prove escrow, settlement, asset movement, third-party verification, or restart durability",
+        "Both registrations and task creation return `201`",
+        "acceptance and both task queries return `200`",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }
