@@ -112,6 +112,21 @@ test("Agent B imports an external task while Agent A polls accepted state", asyn
 	await agentB.shutdown();
 });
 
+test("external task import and acceptance polling fail closed", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "wrong-query-state" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	assert.throws(() => workflow.importTask("bad task id"), /invalid/);
+	workflow.importTask("task-live-1");
+	assert.throws(() => workflow.importTask("task-other"), /conflicts/);
+	await workflow.register("agent_a");
+
+	await assert.rejects(workflow.waitForAccepted("agent_a", { timeoutMs: 20, pollMs: 5 }), /timed out/);
+	const controller = new AbortController();
+	controller.abort();
+	await assert.rejects(workflow.waitForAccepted("agent_a", { timeoutMs: 20, pollMs: 5 }, controller.signal), /aborted/);
+	await workflow.shutdown();
+});
+
 async function testSetup(extra: Record<string, string> = {}) {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-live-task-"));
 	const agentAKey = resolve(root, "agent-a.key");

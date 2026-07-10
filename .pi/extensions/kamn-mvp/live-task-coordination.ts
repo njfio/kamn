@@ -89,7 +89,9 @@ async function readHandoffIfPresent(path: string, maxAgeMs: number): Promise<Han
 
 async function readHandoff(path: string): Promise<Handoff> {
 	assertSafePath(path);
-	return parseArtifact(await readFile(path, "utf8"), HANDOFF_SCHEMA, ["artifact_digest", "schema_version", "task_id"]) as Handoff;
+	const handoff = parseArtifact(await readFile(path, "utf8"), HANDOFF_SCHEMA, ["artifact_digest", "schema_version", "task_id"]) as Handoff;
+	validTaskId(handoff.task_id);
+	return handoff;
 }
 
 async function readReceipt(path: string, actor: Actor): Promise<Receipt> {
@@ -162,8 +164,13 @@ function optionalPositiveInteger(raw: string | undefined, fallback: number): num
 
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
 	return new Promise((resolveDelay, reject) => {
-		const timer = setTimeout(resolveDelay, milliseconds);
-		const abort = () => { clearTimeout(timer); reject(new Error("KAMN live task handoff wait aborted")); };
+		const finish = () => { signal?.removeEventListener("abort", abort); resolveDelay(); };
+		const timer = setTimeout(finish, milliseconds);
+		const abort = () => {
+			clearTimeout(timer);
+			signal?.removeEventListener("abort", abort);
+			reject(new Error("KAMN live task handoff wait aborted"));
+		};
 		signal?.addEventListener("abort", abort, { once: true });
 	});
 }

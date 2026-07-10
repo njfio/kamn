@@ -191,12 +191,13 @@ This is a real local-only task lifecycle backed by the service task store. It do
 
 ### Independent Pi Actor Check
 
-The two-agent task check above uses separate KAMN identities inside one Pi process. To prove independent AI actors, run Agent A and Agent B as separate Pi processes with a minimal task handoff. Use fresh artifact paths for each rehearsal:
+The two-agent task check above uses separate KAMN identities inside one Pi process. To prove independent AI actors, run Agent A and Agent B as separate Pi processes with a minimal task handoff. Run this export block in each actor and verifier terminal with the same newly chosen run ID; use a fresh run ID for every rehearsal:
 
 ```bash
-export KAMN_MVP_LIVE_TASK_HANDOFF_FILE=/tmp/kamn-independent-task-handoff.json
-export KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE=/tmp/kamn-independent-agent-a.json
-export KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE=/tmp/kamn-independent-agent-b.json
+export KAMN_MVP_LIVE_TASK_RUN_ID=run-7082-001
+export KAMN_MVP_LIVE_TASK_HANDOFF_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-handoff.json
+export KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-a.json
+export KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE=/tmp/kamn-independent-${KAMN_MVP_LIVE_TASK_RUN_ID}-agent-b.json
 export KAMN_MVP_LIVE_TASK_COORDINATION_TIMEOUT_MS=60000
 ```
 

@@ -63,6 +63,7 @@ export class LiveTaskWorkflow {
 		return observation;
 	}
 	async waitForAccepted(role: AgentRole, options: WaitOptions, signal?: AbortSignal): Promise<WorkflowResult> {
+		validateWaitOptions(options);
 		this.registeredDid(role);
 		const taskId = this.createdTaskId();
 		const deadline = Date.now() + options.timeoutMs;
@@ -135,8 +136,17 @@ function validImportedTaskId(taskId: string): string {
 }
 function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
 	return new Promise((resolveDelay, reject) => {
-		const timer = setTimeout(resolveDelay, milliseconds);
-		const abort = () => { clearTimeout(timer); reject(new Error("Task acceptance wait aborted")); };
+		const finish = () => { signal?.removeEventListener("abort", abort); resolveDelay(); };
+		const timer = setTimeout(finish, milliseconds);
+		const abort = () => {
+			clearTimeout(timer);
+			signal?.removeEventListener("abort", abort);
+			reject(new Error("Task acceptance wait aborted"));
+		};
 		signal?.addEventListener("abort", abort, { once: true });
 	});
+}
+function validateWaitOptions(options: WaitOptions) {
+	if (!Number.isInteger(options.timeoutMs) || options.timeoutMs <= 0) throw new Error("Task acceptance timeout must be positive");
+	if (!Number.isInteger(options.pollMs) || options.pollMs <= 0) throw new Error("Task acceptance poll interval must be positive");
 }

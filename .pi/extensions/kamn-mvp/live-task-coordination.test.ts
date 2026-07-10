@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import {
 	verifyIndependentActorReceipts,
+	coordinationConfig,
 	waitForTaskHandoff,
 	writeActorReceipt,
 	writeTaskHandoff,
@@ -41,6 +42,17 @@ test("handoff rejects tampering, stale state, timeout, abort, and secret-like pa
 	await assert.rejects(writeTaskHandoff("/tmp/kamn-keypair-handoff.json", "task-1"), /secret-like/);
 });
 
+test("coordination rejects missing config and unknown artifact fields", async () => {
+	assert.throws(() => coordinationConfig({}, process.cwd()), /KAMN_MVP_LIVE_TASK_HANDOFF_FILE/);
+	const paths = await pathsForTest();
+	await writeTaskHandoff(paths.handoff, "task-live-1");
+	const artifact = JSON.parse(await readFile(paths.handoff, "utf8"));
+	artifact.unexpected = "field";
+	await writeFile(paths.handoff, JSON.stringify(artifact));
+
+	await assert.rejects(waitForTaskHandoff(paths.handoff, options()), /field mismatch/);
+});
+
 test("actor receipts verify agreement and distinct Pi processes", async () => {
 	const paths = await pathsForTest();
 	await writeTaskHandoff(paths.handoff, "task-live-1");
@@ -65,6 +77,9 @@ test("actor receipts verify agreement and distinct Pi processes", async () => {
 	]);
 	await writeActorReceipt(paths.agentA, "agent_a", "task-live-1", "accepted", 101);
 	await assert.rejects(writeActorReceipt(paths.agentA, "agent_a", "task-live-1", "accepted", 303), /conflicts/);
+	const tampered = (await readFile(paths.agentB, "utf8")).replace("task-live-1", "task-tampered");
+	await writeFile(paths.agentB, tampered);
+	await assert.rejects(verifyIndependentActorReceipts(paths.handoff, paths.agentA, paths.agentB), /digest mismatch/);
 });
 
 test("receipt verifier rejects same process and task mismatch", async () => {

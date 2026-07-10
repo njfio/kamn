@@ -61,6 +61,7 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
         "KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE",
         "real local-only independent Pi actors",
         "separate Pi processes",
+        "Run this export block in each actor and verifier terminal",
     ] {
         assert!(runbook.contains(needle), "{RUNBOOK} missing: {needle}");
     }
