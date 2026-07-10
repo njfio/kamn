@@ -1,5 +1,9 @@
 use super::super::*;
 
+mod transaction_authorization;
+
+pub(super) use transaction_authorization::enforce_transaction_authorization;
+
 pub(super) async fn enforce_scope_policy(
     state: &Arc<ServiceApiRuntimeState>,
     parsed_request: &ParsedRequest,

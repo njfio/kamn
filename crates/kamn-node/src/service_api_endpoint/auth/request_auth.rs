@@ -7,18 +7,46 @@ mod sender_binding;
 mod signature;
 
 use failures::{invalid_nonce_failure, missing_nonce_failure, missing_signature_failure};
-use nonce::{record_fresh_nonce, require_request_nonce, verify_positive_nonce};
+use nonce::{record_fresh_nonce, require_request_nonce, verify_fresh_nonce, verify_positive_nonce};
 pub(super) use sender_binding::{
     resolve_signer_public_key_for_request, sender_did_matches_signer_public_key,
 };
 use signature::{request_signature_matches, signature_verification_failure};
 
+#[cfg(test)]
 pub(crate) fn authorize_service_api_request(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
     replay_guard: &mut ServiceApiReplayGuard,
 ) -> Result<(), RequestAuthFailure> {
     authorize_service_api_request_with_legacy_policy(state, request, replay_guard, false)
+}
+
+pub(crate) fn verify_service_api_request_identity(
+    state: &ServiceApiRuntimeState,
+    request: &ParsedRequest,
+    replay_guard: &mut ServiceApiReplayGuard,
+) -> Result<(), RequestAuthFailure> {
+    if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
+        return Ok(());
+    }
+    let sender_did = require_valid_sender_did_header(request)?;
+    let nonce = require_request_nonce(request)?;
+    verify_positive_nonce(nonce)?;
+    verify_binding_and_signature(state, request, sender_did, nonce, false)?;
+    verify_fresh_nonce(replay_guard, sender_did, nonce)
+}
+
+pub(crate) fn record_verified_service_api_request_nonce(
+    request: &ParsedRequest,
+    replay_guard: &mut ServiceApiReplayGuard,
+) -> Result<(), RequestAuthFailure> {
+    if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
+        return Ok(());
+    }
+    let sender_did = require_valid_sender_did_header(request)?;
+    let nonce = require_request_nonce(request)?;
+    record_fresh_nonce(replay_guard, sender_did, nonce)
 }
 
 pub(super) fn require_valid_sender_did_header(
@@ -40,6 +68,7 @@ pub(super) fn require_valid_sender_did_header(
     Ok(sender_did)
 }
 
+#[cfg(test)]
 pub(super) fn authorize_service_api_request_with_legacy_policy(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
@@ -61,6 +90,7 @@ pub(super) fn authorize_service_api_request_with_legacy_policy(
     )
 }
 
+#[cfg(test)]
 fn verify_request_auth_envelope(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,

@@ -40,14 +40,14 @@ fn received_log_fields<'a>(
     ]
 }
 
-pub(super) async fn authorize_request(
+pub(super) async fn verify_request_identity(
     state: &Arc<ServiceApiRuntimeState>,
     parsed_request: &ParsedRequest,
     correlation_id: &str,
     request_started_at: Instant,
 ) -> Result<(), Response> {
     let mut replay_guard = state.replay_guard.lock().await;
-    match super::auth::authorize_service_api_request(
+    match super::auth::verify_service_api_request_identity(
         state.as_ref(),
         parsed_request,
         &mut replay_guard,
@@ -109,12 +109,22 @@ fn auth_error_details(
     }
 }
 
-pub(super) async fn persist_auth_nonce(
+pub(super) async fn record_request_nonce(
     state: &Arc<ServiceApiRuntimeState>,
     parsed_request: &ParsedRequest,
     correlation_id: &str,
     request_started_at: Instant,
 ) -> Result<(), Response> {
+    if let Err(error) = reserve_request_nonce(state, parsed_request).await {
+        return Err(auth_error_response(
+            state,
+            parsed_request,
+            correlation_id,
+            request_started_at,
+            error,
+        )
+        .await);
+    }
     let Some((sender_did, nonce)) = auth_nonce_persistence_input(parsed_request) else {
         return Ok(());
     };
@@ -129,6 +139,14 @@ pub(super) async fn persist_auth_nonce(
         )
         .await),
     }
+}
+
+async fn reserve_request_nonce(
+    state: &Arc<ServiceApiRuntimeState>,
+    parsed_request: &ParsedRequest,
+) -> Result<(), RequestAuthFailure> {
+    let mut replay_guard = state.replay_guard.lock().await;
+    super::auth::record_verified_service_api_request_nonce(parsed_request, &mut replay_guard)
 }
 
 fn auth_nonce_persistence_input(parsed_request: &ParsedRequest) -> Option<(&str, u64)> {

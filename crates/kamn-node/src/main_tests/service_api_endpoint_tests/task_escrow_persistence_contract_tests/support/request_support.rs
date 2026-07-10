@@ -188,12 +188,21 @@ pub(crate) fn raw_signed_request(
     })
 }
 
+pub(crate) fn authorized_signed_request(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    request: SignedRequest<'_>,
+) -> String {
+    super::authorization_fixture::provision_request_grant(&request);
+    raw_signed_request(snapshot, bind_addr, request)
+}
+
 fn signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
     request: SignedRequest<'_>,
 ) -> String {
-    raw_signed_request(snapshot, bind_addr, request)
+    authorized_signed_request(snapshot, bind_addr, request)
 }
 
 fn build_signed_header_values(

@@ -91,6 +91,28 @@ pub(crate) struct ServiceApiPersistedAgentRecord {
     pub(crate) capabilities: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiPersistedAgentGrantRecord {
+    pub(crate) did: String,
+    pub(crate) resource: String,
+    pub(crate) role: String,
+    pub(crate) action: String,
+    pub(crate) status: String,
+    pub(crate) idempotency_key: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiAuthorizationReceiptRecord {
+    pub(crate) receipt_id: String,
+    pub(crate) correlation_id: String,
+    pub(crate) actor_did: String,
+    pub(crate) resource: String,
+    pub(crate) action: String,
+    pub(crate) role: String,
+    pub(crate) decision: String,
+    pub(crate) reason_code: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct ServiceApiAgentBalanceBody {
     pub(crate) did: String,
@@ -120,12 +142,16 @@ pub(crate) struct ServiceApiPersistedMessageStoreSnapshot {
     pub(crate) bridges: BTreeMap<String, ServiceApiPersistedBridgeRecord>,
     #[serde(default)]
     pub(crate) agents: BTreeMap<String, ServiceApiPersistedAgentRecord>,
+    #[serde(default)]
+    pub(crate) agent_grants: BTreeMap<String, ServiceApiPersistedAgentGrantRecord>,
+    #[serde(default)]
+    pub(crate) authorization_receipts: Vec<ServiceApiAuthorizationReceiptRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
     fn default() -> Self {
         Self {
-            schema_version: "kamn.runtime.service-api-message-store.v2".to_owned(),
+            schema_version: "kamn.runtime.service-api-message-store.v3".to_owned(),
             messages: BTreeMap::new(),
             channel_messages: BTreeMap::new(),
             auth_nonce_high_watermarks: BTreeMap::new(),
@@ -134,6 +160,8 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             contents: BTreeMap::new(),
             bridges: BTreeMap::new(),
             agents: BTreeMap::new(),
+            agent_grants: BTreeMap::new(),
+            authorization_receipts: Vec::new(),
         }
     }
 }

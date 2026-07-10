@@ -25,12 +25,12 @@ fn integration_service_api_rejects_signed_unregistered_task_creator() {
 fn integration_service_api_rejects_self_asserted_scope_without_grant() {
     let case = AuthorizationCase::new("scope-without-grant");
     let actor = "kamn:did:agent:scope-without-grant";
-    case.register(actor, 1);
+    let registered_did = case.register(actor, 1);
 
     let response = case.create_task(actor, 2);
 
     assert_forbidden(&response, "ACTION_NOT_GRANTED");
-    assert_secret_free_denial_receipt(&case.state_file, actor);
+    assert_secret_free_denial_receipt(&case.state_file, registered_did.as_str());
     case.cleanup();
 }
 
@@ -38,13 +38,18 @@ fn integration_service_api_rejects_self_asserted_scope_without_grant() {
 fn integration_service_api_persists_active_grant_and_allow_receipt_across_restart() {
     let case = AuthorizationCase::new("active-grant-restart");
     let actor = "kamn:did:agent:active-grant";
-    case.register(actor, 1);
-    provision_grant(&case.state_file, actor, "active");
+    let registered_did = case.register(actor, 1);
+    provision_grant(&case.state_file, registered_did.as_str(), "active");
 
     let response = case.create_task(actor, 2);
 
     assert!(response.contains("HTTP/1.1 201 Created"), "{response}");
-    assert_decision_receipt(&case.state_file, actor, "allow", "AUTHORIZED");
+    assert_decision_receipt(
+        &case.state_file,
+        registered_did.as_str(),
+        "allow",
+        "AUTHORIZED",
+    );
     case.cleanup();
 }
 
@@ -52,13 +57,18 @@ fn integration_service_api_persists_active_grant_and_allow_receipt_across_restar
 fn integration_service_api_persists_revoked_grant_denial_across_restart() {
     let case = AuthorizationCase::new("revoked-grant-restart");
     let actor = "kamn:did:agent:revoked-grant";
-    case.register(actor, 1);
-    provision_grant(&case.state_file, actor, "revoked");
+    let registered_did = case.register(actor, 1);
+    provision_grant(&case.state_file, registered_did.as_str(), "revoked");
 
     let response = case.create_task(actor, 2);
 
     assert_forbidden(&response, "ACTION_NOT_GRANTED");
-    assert_decision_receipt(&case.state_file, actor, "deny", "ACTION_NOT_GRANTED");
+    assert_decision_receipt(
+        &case.state_file,
+        registered_did.as_str(),
+        "deny",
+        "ACTION_NOT_GRANTED",
+    );
     case.cleanup();
 }
 
@@ -83,14 +93,15 @@ impl AuthorizationCase {
         }
     }
 
-    fn register(&self, actor: &str, nonce: u64) {
+    fn register(&self, actor: &str, nonce: u64) -> String {
         register_agent_profile(
             &self.snapshot,
             reserve_loopback_addr().as_str(),
             actor,
             nonce,
             r#"{"agent_type":"assistant","model_family":"pi","capabilities":["tasks:write"]}"#,
-        );
+        )
+        .did
     }
 
     fn create_task(&self, actor: &str, nonce: u64) -> String {
@@ -146,7 +157,7 @@ fn assert_secret_free_denial_receipt(path: &Path, actor: &str) {
         "signature",
         "public_key",
         "nonce",
-        "authorization",
+        "x-kamn-authz-scope",
         "description",
     ] {
         assert!(

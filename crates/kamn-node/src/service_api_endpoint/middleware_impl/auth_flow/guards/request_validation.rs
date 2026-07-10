@@ -10,8 +10,9 @@ pub(super) async fn validate_request(
     request_started_at: Instant,
     is_websocket_route: bool,
 ) -> Result<(), Response> {
-    run_auth_checks(state, parsed_request, correlation_id, request_started_at).await?;
+    verify_request_identity(state, parsed_request, correlation_id, request_started_at).await?;
     run_policy_checks(state, parsed_request, correlation_id, request_started_at).await?;
+    record_request_nonce(state, parsed_request, correlation_id, request_started_at).await?;
     policy_checks::validate_websocket_requirements(
         state,
         parsed_request,
@@ -22,7 +23,7 @@ pub(super) async fn validate_request(
     .await
 }
 
-async fn run_auth_checks(
+async fn verify_request_identity(
     state: &Arc<ServiceApiRuntimeState>,
     parsed_request: &ParsedRequest,
     correlation_id: &str,
@@ -30,9 +31,8 @@ async fn run_auth_checks(
 ) -> Result<(), Response> {
     auth_checks::log_request_received(state, parsed_request, correlation_id, request_started_at)
         .await?;
-    auth_checks::authorize_request(state, parsed_request, correlation_id, request_started_at)
-        .await?;
-    auth_checks::persist_auth_nonce(state, parsed_request, correlation_id, request_started_at).await
+    auth_checks::verify_request_identity(state, parsed_request, correlation_id, request_started_at)
+        .await
 }
 
 async fn run_policy_checks(
@@ -43,6 +43,13 @@ async fn run_policy_checks(
 ) -> Result<(), Response> {
     policy_checks::enforce_scope_policy(state, parsed_request, correlation_id, request_started_at)
         .await?;
+    policy_checks::enforce_transaction_authorization(
+        state,
+        parsed_request,
+        correlation_id,
+        request_started_at,
+    )
+    .await?;
     policy_checks::enforce_sender_anti_spam(
         state,
         parsed_request,
@@ -57,6 +64,16 @@ async fn run_policy_checks(
         request_started_at,
     )
     .await
+}
+
+async fn record_request_nonce(
+    state: &Arc<ServiceApiRuntimeState>,
+    parsed_request: &ParsedRequest,
+    correlation_id: &str,
+    request_started_at: Instant,
+) -> Result<(), Response> {
+    auth_checks::record_request_nonce(state, parsed_request, correlation_id, request_started_at)
+        .await
 }
 
 pub(super) async fn internal_response(

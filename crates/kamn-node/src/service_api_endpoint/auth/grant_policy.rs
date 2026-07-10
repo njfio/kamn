@@ -1,0 +1,106 @@
+use super::support::header_value;
+use super::*;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct TransactionAuthorizationTarget {
+    pub(crate) actor_did: String,
+    pub(crate) resource: String,
+    pub(crate) action: &'static str,
+    pub(crate) role: &'static str,
+}
+
+pub(crate) fn resolve_transaction_authorization_target(
+    request: &ParsedRequest,
+) -> Result<Option<TransactionAuthorizationTarget>, ServiceApiReasonedError> {
+    if request.path == ROUTE_AGENTS_REGISTER {
+        return Ok(None);
+    }
+    let Some((resource, action, role)) = route_target(request)? else {
+        return Ok(None);
+    };
+    let actor_did = header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER)
+        .ok_or_else(missing_actor_error)?
+        .to_owned();
+    Ok(Some(TransactionAuthorizationTarget {
+        actor_did,
+        resource,
+        action,
+        role,
+    }))
+}
+
+fn route_target(
+    request: &ParsedRequest,
+) -> Result<Option<(String, &'static str, &'static str)>, ServiceApiReasonedError> {
+    let method = request.method.as_str();
+    let path = request.path.as_str();
+    if method == "POST" && path == ROUTE_TASKS_CREATE {
+        return Ok(Some((
+            "transaction:new".to_owned(),
+            "task:create",
+            "initiator",
+        )));
+    }
+    if method == "POST" && path == ROUTE_ESCROW_FUND {
+        return Ok(Some((
+            escrow_fund_resource(request)?,
+            "escrow:fund",
+            "initiator",
+        )));
+    }
+    Ok(dynamic_route_target(method, path))
+}
+
+fn dynamic_route_target(method: &str, path: &str) -> Option<(String, &'static str, &'static str)> {
+    if method == "GET" {
+        return task_id_for_read(path).map(|id| (task_resource(id), "task:read", "participant"));
+    }
+    if method != "POST" {
+        return None;
+    }
+    if let Some(id) = path_id(path, ROUTE_TASKS_PREFIX, ROUTE_TASKS_ACCEPT_SUFFIX) {
+        return Some((task_resource(id), "task:accept", "provider"));
+    }
+    if let Some(id) = path_id(path, ROUTE_TASKS_PREFIX, ROUTE_TASKS_COMPLETE_SUFFIX) {
+        return Some((task_resource(id), "task:complete", "provider"));
+    }
+    path_id(path, ROUTE_ESCROW_PREFIX, ROUTE_ESCROW_RELEASE_SUFFIX)
+        .map(|id| (format!("escrow:{id}"), "escrow:release", "initiator"))
+}
+
+fn task_id_for_read(path: &str) -> Option<&str> {
+    let id = path.strip_prefix(ROUTE_TASKS_PREFIX)?;
+    (!id.is_empty() && !id.contains('/')).then_some(id)
+}
+
+fn path_id<'a>(path: &'a str, prefix: &str, suffix: &str) -> Option<&'a str> {
+    let id = path.strip_prefix(prefix)?.strip_suffix(suffix)?;
+    (!id.is_empty() && !id.contains('/')).then_some(id)
+}
+
+fn escrow_fund_resource(request: &ParsedRequest) -> Result<String, ServiceApiReasonedError> {
+    let body = serde_json::from_str::<serde_json::Value>(request.body.as_str())
+        .map_err(|_| unresolved_resource_error("escrow fund payload must be json"))?;
+    let task_id = body
+        .get("task_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| unresolved_resource_error("escrow fund task_id is required"))?;
+    Ok(task_resource(task_id))
+}
+
+fn task_resource(task_id: &str) -> String {
+    format!("task:{task_id}")
+}
+
+fn missing_actor_error() -> ServiceApiReasonedError {
+    ServiceApiReasonedError::new(
+        REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING,
+        "verified authorization actor did is missing",
+    )
+}
+
+fn unresolved_resource_error(message: &str) -> ServiceApiReasonedError {
+    ServiceApiReasonedError::new(REASON_CODE_RESOURCE_ROLE_MISMATCH, message)
+}
