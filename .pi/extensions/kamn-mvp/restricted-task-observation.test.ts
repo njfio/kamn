@@ -41,6 +41,10 @@ test("Agent C writes a minimal task-bound restricted observation", async () => {
 
 test("Agent C observation binds all source digests and rejects conflicts", async () => {
 	const paths = await acceptedSources(101, 202);
+	await assert.rejects(
+		writeRestrictedTaskObservation(paths.handoff, paths.agentA, paths.agentB, paths.handoff, 303),
+		/must differ from source artifacts/,
+	);
 	const result = await writeRestrictedTaskObservation(paths.handoff, paths.agentA, paths.agentB, paths.observation, 303);
 	const artifact = JSON.parse(await readFile(paths.observation, "utf8"));
 
