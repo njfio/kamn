@@ -61,7 +61,7 @@ fn integration_task_bound_escrow_release_enforces_authority_and_replays_receipt(
     assert_eq!(
         state["escrow_transition_receipts"]
             .as_array()
-            .unwrap()
+            .expect("escrow receipts should be an array")
             .len(),
         2
     );
