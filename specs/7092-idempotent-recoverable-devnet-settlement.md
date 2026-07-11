@@ -93,19 +93,19 @@ released.
 
 ## Acceptance Criteria
 
-- [ ] Intent is durably `prepared` before the external submit boundary.
-- [ ] Intent binds escrow, actor, recipient, bounded amount, devnet, release key,
+- [x] Intent is durably `prepared` before the external submit boundary.
+- [x] Intent binds escrow, actor, recipient, bounded amount, devnet, release key,
       expected signature, and signed transaction digest.
-- [ ] Identical retry reconciles the known signature before any resubmission.
-- [ ] Conflicting reuse returns `SETTLEMENT_INTENT_CONFLICT` without mutation.
-- [ ] Confirmed evidence validates signature, recipient, amount, devnet, and
+- [x] Identical retry reconciles the known signature before any resubmission.
+- [x] Conflicting reuse returns `SETTLEMENT_INTENT_CONFLICT` without mutation.
+- [x] Confirmed evidence validates signature, recipient, amount, devnet, and
       commitment before release.
-- [ ] Ambiguous post-submit outcomes never report `released`.
-- [ ] Restart reconciliation converges without creating another transaction.
-- [ ] Concurrent release requests share one intent and transaction identity.
-- [ ] Proof generation cannot invoke submission.
-- [ ] Negative authorization and retry tests pass before funded rehearsal.
-- [ ] One bounded funded devnet rehearsal proves exactly one confirmed transfer.
+- [x] Ambiguous post-submit outcomes never report `released`.
+- [x] Restart reconciliation converges without creating another transaction.
+- [x] Concurrent release requests share one intent and transaction identity.
+- [x] Proof generation cannot invoke submission.
+- [x] Negative authorization and retry tests pass before funded rehearsal.
+- [x] One bounded funded devnet rehearsal proves exactly one confirmed transfer.
 
 ## Files To Touch
 
@@ -165,3 +165,28 @@ Each phase is a separate commit. Before live submission, retain a checkpoint
 with all deterministic tests green. A live rehearsal uses a fresh release key
 and bounded amount. Never delete state containing `submitted` or `ambiguous`;
 reconcile it by the persisted signature before rollback or another rehearsal.
+
+## Completion Evidence
+
+The final required-mode rehearsal is preserved at
+`.kamn/demo/run-68754-1783753805208/` and produced report status `GO` plus a
+canonical verifier `PASS`. Its task `task-local-9267453716be5563` and escrow
+`escrow-local-63d8bc55ff61d199` settled exactly one 1,000,000-lamport transfer
+from `2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T` to
+`FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe`. Solana devnet finalized
+signature
+`3iLFpQDi5QWwyqEkXhc5A76uDQnurbF1YtB2CbPt1Z6bkjD6xEY69PQiR6PHbB3DjW8eANLPxHEdXDuT3cksErdz`;
+the persisted intent is `confirmed`, and the report carries the same signature,
+commitment, recipient, amount, and before/after balances.
+
+Two earlier NO-GO rehearsals exposed the confirmation-visibility crash window.
+Both transfers finalized on devnet but their local escrow state remained
+non-released (`prepared` before the classification fix, then `ambiguous` before
+the retry horizon was extended). Their preserved signatures are
+`VpALZZJjfUBzLWr1rkm7YDAc4o3c6BzDbJZXxZsmgK9geUoPE7TA87UgQSsTgybEvNu6ciEW2GeZtif6oDFCUrD`
+and
+`4fBZ5NiFTQi7vhFvVQ3gDdzu3zC3g15W9ThLrgALQ5ySdNW3y161LubYBzMQgQK7FwbNkHP54yza9H8bhQAEBGEw`.
+They are not counted as successful MVP reports. This evidence drove the final
+post-submit ambiguity classification and bounded same-signature reconciliation
+behavior; the artifacts remain available for audit and must not be relabeled as
+successful escrows.
