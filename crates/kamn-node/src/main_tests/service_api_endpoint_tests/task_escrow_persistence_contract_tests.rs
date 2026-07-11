@@ -2,6 +2,8 @@
 mod support;
 #[path = "task_escrow_persistence_contract_tests/task_bound_escrow_contract_tests.rs"]
 mod task_bound_escrow_contract_tests;
+#[path = "task_escrow_persistence_contract_tests/task_bound_escrow_denial_contract_tests.rs"]
+mod task_bound_escrow_denial_contract_tests;
 #[path = "task_escrow_persistence_contract_tests/task_creator_provider_lifecycle_contract_tests.rs"]
 mod task_creator_provider_lifecycle_contract_tests;
 #[path = "task_escrow_persistence_contract_tests/task_escrow_authorization_contract_tests.rs"]

@@ -78,6 +78,12 @@ pub(super) fn authorize_release(
     correlation_id: &str,
 ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
     store.refresh_from_disk().map_err(persistence)?;
+    let escrow = store
+        .snapshot
+        .escrows
+        .get(escrow_id)
+        .cloned()
+        .ok_or(EscrowLifecycleError::NotFound)?;
     let key = parse_release_key(payload)?;
     if let Some(existing) = retry::release(store, actor, escrow_id, key.as_str())? {
         let record = &store.snapshot.escrows[escrow_id];
@@ -86,12 +92,6 @@ pub(super) fn authorize_release(
             Some(existing.receipt_id.as_str()),
         ));
     }
-    let escrow = store
-        .snapshot
-        .escrows
-        .get(escrow_id)
-        .cloned()
-        .ok_or(EscrowLifecycleError::NotFound)?;
     validate_release(store, actor, &escrow)?;
     let mut updated = escrow.clone();
     updated.state = "release-authorized".to_owned();

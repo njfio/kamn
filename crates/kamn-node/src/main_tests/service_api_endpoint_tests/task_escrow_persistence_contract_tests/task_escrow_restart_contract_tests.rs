@@ -73,5 +73,13 @@ fn integration_service_api_endpoint_persists_task_and_escrow_state_across_restar
         state_json["escrows"][escrow_id]["state"],
         "release-authorized"
     );
+    assert_eq!(
+        state_json["escrow_transition_receipts"]
+            .as_array()
+            .expect("escrow receipts should survive restart")
+            .len(),
+        2
+    );
+    assert!(state_json["escrows"][escrow_id]["settlement_tx_signature"].is_null());
     let _ = fs::remove_file(state_file);
 }
