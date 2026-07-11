@@ -1,10 +1,6 @@
-pub(super) fn valid_create_body() -> &'static str {
-    concat!(
-        "{\"provider_did\":\"kamn:did:agent:task-lifecycle-provider\",",
-        "\"transaction_id\":\"transaction-lifecycle-001\",",
-        "\"terms_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",",
-        "\"idempotency_key\":\"create-lifecycle-001\",",
-        "\"description\":\"canonical lifecycle task\"}"
+pub(super) fn valid_create_body(provider_did: &str) -> String {
+    format!(
+        r#"{{"provider_did":"{provider_did}","transaction_id":"transaction-lifecycle-001","terms_digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","idempotency_key":"create-lifecycle-001","description":"canonical lifecycle task"}}"#
     )
 }
 
@@ -18,6 +14,12 @@ pub(super) fn retry_body(idempotency_key: &str) -> &str {
         "accept-valid" => r#"{"idempotency_key":"accept-valid"}"#,
         _ => r#"{"idempotency_key":"complete-missing-evidence"}"#,
     }
+}
+
+pub(super) fn completion_body(idempotency_key: &str) -> String {
+    format!(
+        r#"{{"idempotency_key":"{idempotency_key}","completion_evidence_digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}"#
+    )
 }
 
 pub(super) fn assert_response(response: &str, status: &str, reason: &str) {
