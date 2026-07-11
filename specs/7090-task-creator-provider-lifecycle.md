@@ -116,26 +116,26 @@ successful transition receipt.
 
 ## Acceptance Criteria
 
-- [ ] Creation derives creator DID only from verified request context.
-- [ ] A new task persists one creator, one provider, transaction ID, terms
+- [x] Creation derives creator DID only from verified request context.
+- [x] A new task persists one creator, one provider, transaction ID, terms
       digest, create idempotency key, and submitted state.
-- [ ] Creation requires the named provider to be durably registered.
-- [ ] Creation issues deterministic exact read/accept/complete grants needed by
+- [x] Creation requires the named provider to be durably registered.
+- [x] Creation issues deterministic exact read/accept/complete grants needed by
       the real #7089 middleware path.
-- [ ] Only the assigned provider can accept and complete.
-- [ ] Creator, unrelated actor, and verifier cannot perform provider transitions.
-- [ ] Submitted tasks cannot complete; accepted tasks cannot accept again under
+- [x] Only the assigned provider can accept and complete.
+- [x] Creator, unrelated actor, and verifier cannot perform provider transitions.
+- [x] Submitted tasks cannot complete; accepted tasks cannot accept again under
       a new idempotency key.
-- [ ] Completion requires and persists a valid evidence digest.
-- [ ] Agreement identity cannot change after creation.
-- [ ] Identical retries return the existing task or transition receipt.
-- [ ] Conflicting retries fail without state or receipt mutation.
-- [ ] Successful transitions persist one secret-free receipt with agreement and
+- [x] Completion requires and persists a valid evidence digest.
+- [x] Agreement identity cannot change after creation.
+- [x] Identical retries return the existing task or transition receipt.
+- [x] Conflicting retries fail without state or receipt mutation.
+- [x] Successful transitions persist one secret-free receipt with agreement and
       state linkage.
-- [ ] Task, grants, idempotency, and receipts survive restart.
-- [ ] Legacy snapshots load, but legacy incomplete tasks fail closed on protected
+- [x] Task, grants, idempotency, and receipts survive restart.
+- [x] Legacy snapshots load, but legacy incomplete tasks fail closed on protected
       transitions with an explicit migration error.
-- [ ] A live HTTP integration test proves authenticated create -> provider accept
+- [x] A live HTTP integration test proves authenticated create -> provider accept
       -> provider complete without mocking authorization or the message store.
 
 ## Files To Touch
@@ -154,7 +154,7 @@ No new dependency is required.
 
 ## Persistence And Compatibility
 
-- New snapshots use schema `kamn.service-api.state.v4`.
+- New snapshots use schema `kamn.runtime.service-api-message-store.v4`.
 - New task agreement and receipt collections are serde-defaulted so v3
   snapshots load.
 - Existing incomplete task records remain readable for status/audit purposes but
