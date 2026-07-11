@@ -245,6 +245,7 @@ fn pi_extension_source() -> String {
         ".pi/extensions/kamn-mvp/evidence.ts",
         ".pi/extensions/kamn-mvp/actor-receipts.ts",
         ".pi/extensions/kamn-mvp/live-mcp-tools.ts",
+        ".pi/extensions/kamn-mvp/live-transaction-tools.ts",
         ".pi/extensions/kamn-mvp/mcp-session.ts",
         ".pi/extensions/kamn-mvp/live-task-workflow.ts",
         ".pi/extensions/kamn-mvp/live-task-coordination.ts",

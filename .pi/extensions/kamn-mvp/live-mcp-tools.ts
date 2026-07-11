@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { LiveTaskWorkflow, type AgentRole, type WorkflowResult } from "./live-task-workflow.ts";
 import { registerLiveTaskCoordinationTools } from "./live-task-coordination-tools.ts";
+import { registerLiveTransactionTools } from "./live-transaction-tools.ts";
 
 type WorkflowHolder = { workflow?: LiveTaskWorkflow };
 
@@ -9,14 +10,16 @@ export function registerLiveMcpTools(pi: ExtensionAPI) {
 	const holder: WorkflowHolder = {};
 	registerAgent(pi, holder, "agent_a", "kamn_live_agent_a_register", "KAMN Live Agent A Register");
 	registerAgent(pi, holder, "agent_b", "kamn_live_agent_b_register", "KAMN Live Agent B Register");
+	registerAgent(pi, holder, "agent_c", "kamn_live_agent_c_register", "KAMN Live Agent C Register");
 	registerLiveAgentAQuery(pi, holder);
 	registerTaskTools(pi, holder);
+	registerLiveTransactionTools(pi, (cwd) => workflow(holder, cwd));
 	registerLiveTaskCoordinationTools(pi, (cwd) => workflow(holder, cwd));
 	pi.on("session_shutdown", async () => holder.workflow?.shutdown());
 }
 
 function registerAgent(pi: ExtensionAPI, holder: WorkflowHolder, role: AgentRole, name: string, label: string) {
-	const agent = role === "agent_a" ? "Agent A" : "Agent B";
+	const agent = ({ agent_a: "Agent A", agent_b: "Agent B", agent_c: "Agent C" } as const)[role];
 	pi.registerTool({
 		name,
 		label,

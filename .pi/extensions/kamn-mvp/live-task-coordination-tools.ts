@@ -19,10 +19,27 @@ type WorkflowResolver = (cwd: string) => LiveTaskWorkflow;
 export function registerLiveTaskCoordinationTools(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {
 	registerPublishTool(pi, resolveWorkflow);
 	registerReceiveTool(pi, resolveWorkflow);
+	registerAgentCReceiveTool(pi, resolveWorkflow);
 	registerAgentAWaitTool(pi, resolveWorkflow);
 	registerAgentBReceiptTool(pi, resolveWorkflow);
 	registerVerifierTool(pi);
 	registerAgentCObservationTool(pi);
+}
+
+function registerAgentCReceiveTool(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {
+	pi.registerTool({
+		name: "kamn_live_agent_c_receive_task_handoff",
+		label: "KAMN Agent C Receive Task Handoff",
+		description: "Receive the non-secret task ID for Agent C without granting authorization.",
+		parameters: Type.Object({}),
+		executionMode: "sequential",
+		async execute(_id, _params, signal, _onUpdate, ctx) {
+			const config = coordinationConfig(process.env, ctx.cwd);
+			const taskId = await waitForTaskHandoff(config.handoffPath, config.options, signal);
+			resolveWorkflow(ctx.cwd).importTask(taskId);
+			return coordinationResult("Agent C received the identifier-only task handoff.", { task_id: taskId });
+		},
+	});
 }
 
 function registerAgentCObservationTool(pi: ExtensionAPI) {
