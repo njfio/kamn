@@ -16,8 +16,8 @@ export class LiveSettlementAgreement {
 		const runId = requiredValue(env.KAMN_MVP_PI_RUN_ID, "KAMN_MVP_PI_RUN_ID");
 		const digest = sha256(`${runId}:${creatorDid}:${providerDid}:${this.amountLamports}`);
 		this.transactionId = `pi-devnet-${digest.slice(0, 16)}`;
-		this.termsDigest = `sha256:${digest}`;
-		this.completionDigest = `sha256:${sha256(`completed:${digest}`)}`;
+		this.termsDigest = digest;
+		this.completionDigest = sha256(`completed:${digest}`);
 	}
 	taskPayload(title: string, description: string): string {
 		return JSON.stringify({
@@ -45,7 +45,7 @@ export class LiveSettlementAgreement {
 		const transaction = `pi-task-${sha256(taskId).slice(0, 16)}`;
 		return JSON.stringify({
 			idempotency_key: `${transaction}-${operation}`,
-			...(operation === "complete" ? { completion_evidence_digest: `sha256:${sha256(`completed:${taskId}`)}` } : {}),
+			...(operation === "complete" ? { completion_evidence_digest: sha256(`completed:${taskId}`) } : {}),
 		});
 	}
 }
