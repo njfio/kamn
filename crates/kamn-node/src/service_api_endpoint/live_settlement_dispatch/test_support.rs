@@ -80,17 +80,26 @@ pub(crate) fn maybe_submit_test_live_settlement(
         return None;
     }
     OBSERVED_PREPARED_INTENT.store(prepared_intent_exists(escrow_id), Ordering::SeqCst);
+    if RECONCILE_CONFIRMED.load(Ordering::SeqCst) {
+        return Some(Ok(success_evidence(config, prepared)));
+    }
     SUBMISSION_COUNT.fetch_add(1, Ordering::SeqCst);
     if AMBIGUOUS_AFTER_SUBMIT.load(Ordering::SeqCst) {
         return Some(Err("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned()));
     }
-    let _reconciled = RECONCILE_CONFIRMED.load(Ordering::SeqCst);
-    Some(Ok(LiveSettlementEvidence {
+    Some(Ok(success_evidence(config, prepared)))
+}
+
+fn success_evidence(
+    config: &LiveSolanaSettlementConfig,
+    prepared: &PreparedLiveSettlement,
+) -> LiveSettlementEvidence {
+    LiveSettlementEvidence {
         settlement_receipt_hash: prepared.expected_signature.clone(),
         settlement_tx_signature: prepared.expected_signature.clone(),
         settlement_network: prepared.network.clone(),
         settlement_commitment: config.commitment_label.clone(),
-    }))
+    }
 }
 
 pub(crate) fn test_live_settlement_observed_prepared_intent() -> bool {

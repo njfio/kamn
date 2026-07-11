@@ -3,6 +3,7 @@ use super::LiveSolanaSettlementConfig;
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::signer::keypair::read_keypair_file;
 use solana_system_transaction as system_transaction;
+use std::str::FromStr;
 use std::time::Duration;
 
 pub(super) fn prepare_live_settlement(
@@ -61,11 +62,21 @@ fn submit_or_reconcile_live_settlement_via_rpc(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
 ) -> Result<LiveSettlementEvidence, String> {
+    validate_prepared_config(config, prepared)?;
     let transaction: solana_sdk::transaction::Transaction =
         serde_json::from_str(prepared.signed_transaction_json.as_str()).map_err(|error| {
             format!("live solana settlement transaction decode failed: {error}")
         })?;
     let client = settlement_rpc_client(config);
+    let expected_signature =
+        solana_sdk::signature::Signature::from_str(prepared.expected_signature.as_str())
+            .map_err(|error| format!("live solana settlement signature decode failed: {error}"))?;
+    if reconcile_known_signature(&client, &expected_signature, config)? {
+        return Ok(build_live_settlement_evidence(
+            prepared.expected_signature.clone(),
+            config.commitment_label.as_str(),
+        ));
+    }
     let signature = submit_live_settlement_transaction(&client, &transaction)?;
     if signature.to_string() != prepared.expected_signature {
         return Err("live solana settlement submitted signature mismatch".to_owned());
@@ -81,6 +92,34 @@ fn submit_or_reconcile_live_settlement_via_rpc(
         signature.to_string(),
         config.commitment_label.as_str(),
     ))
+}
+
+fn reconcile_known_signature(
+    client: &RpcClient,
+    signature: &solana_sdk::signature::Signature,
+    config: &LiveSolanaSettlementConfig,
+) -> Result<bool, String> {
+    let status = client
+        .get_signature_status_with_commitment_and_history(signature, config.commitment, true)
+        .map_err(|error| format!("live solana settlement status lookup failed: {error}"))?;
+    match status {
+        Some(Ok(())) => Ok(true),
+        Some(Err(error)) => Err(format!("SETTLEMENT_TRANSACTION_FAILED: {error}")),
+        None => Ok(false),
+    }
+}
+
+fn validate_prepared_config(
+    config: &LiveSolanaSettlementConfig,
+    prepared: &PreparedLiveSettlement,
+) -> Result<(), String> {
+    if prepared.recipient_pubkey != config.recipient_pubkey.to_string()
+        || prepared.amount_lamports != config.lamports
+        || prepared.network != "solana:devnet"
+    {
+        return Err("SETTLEMENT_AGREEMENT_MISMATCH".to_owned());
+    }
+    Ok(())
 }
 
 fn read_settlement_keypair(
