@@ -55,6 +55,14 @@ participant view. Agent C registers with verifier scope, receives only the task
 ID through coordination, queries the signed restricted view, and verifies the
 shared public commitment and settlement facts.
 
+The extension derives one canonical agreement from the registered Agent A and
+Agent B DIDs, the bounded devnet amount, and a run-unique transaction ID. Task
+creation binds the provider DID, transaction ID, and terms digest. Acceptance,
+completion, funding, and release use operation-specific idempotency keys from
+that same agreement; completion also binds a completion-evidence digest. Pi
+chooses when to invoke each role-limited tool, but cannot author or override
+these settlement payloads.
+
 All three outputs must agree on task ID, escrow ID, amount, network, settlement
 signature, settlement commitment, and public commitment. Agent A and B retain
 participant receipt fields; Agent C has none.
@@ -73,6 +81,8 @@ participant receipt fields; Agent C has none.
   `PI_VERIFIER_PROJECTION_MISSING`.
 - Coordination artifact used as an authorization receipt:
   `PI_HANDOFF_AUTHORIZATION_FORBIDDEN`.
+- Missing or inconsistent canonical agreement payload at create, accept,
+  complete, fund, or release: hard MCP/service failure; no actor evidence.
 - Pi/MCP process failure, timeout, or malformed response: observable hard
   failure; no partial success artifact.
 - Devnet unavailable or settlement ambiguous: canonical `NO-GO`; never `GO`.
@@ -87,6 +97,8 @@ written idempotently and conflicting replay is rejected.
 - [ ] Three independent monotonic MCP request streams are recorded.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
+- [ ] Create, accept, complete, fund, and release payloads are derived from one
+      canonical agreement and use distinct idempotency keys.
 - [ ] Agent C performs verifier registration, restricted-view query, and public
       verification without participant-private fields.
 - [ ] One task, escrow, amount, network, settlement signature, and public
@@ -135,6 +147,10 @@ GREEN:
 - Extend role configuration and persistent sessions to Agent C.
 - Add the minimum role-specific MCP tools for task completion, escrow release,
   and participant/verifier projections.
+- Carry explicit payloads through MCP accept, complete, and release dispatch so
+  the independent actor path can satisfy the existing live-settlement contract.
+- Derive the canonical agreement inside the extension after both participant
+  DIDs are known; do not accept Pi-authored settlement payloads.
 - Digest exact successful runtime responses and record process/DID/request
   provenance in idempotent actor evidence.
 - Extend canonical evidence verification with identity, nonce, receipt,
