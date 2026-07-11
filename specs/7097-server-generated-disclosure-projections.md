@@ -51,17 +51,17 @@ placeholder, client-provided commitment, or participant response.
 
 ## Acceptance Criteria
 
-- [ ] Participant and verifier response types and serializers are separate.
-- [ ] Participant membership is derived from authenticated server context.
-- [ ] Unrelated and unregistered agents cannot retrieve participant output.
-- [ ] Verifier output is built from an explicit allowlist of durable fields.
-- [ ] Participant output contains at least one real field absent from verifier
+- [x] Participant and verifier response types and serializers are separate.
+- [x] Participant membership is derived from authenticated server context.
+- [x] Unrelated and unregistered agents cannot retrieve participant output.
+- [x] Verifier output is built from an explicit allowlist of durable fields.
+- [x] Participant output contains at least one real field absent from verifier
       output.
-- [ ] Verifier output contains no participant receipt or private payload digest.
-- [ ] Shared fields and deterministic public commitment match across views.
-- [ ] Confirmed devnet settlement fields come from persisted settlement evidence.
-- [ ] Signed HTTP integration tests exercise both routes against durable state.
-- [ ] The E2E harness can consume runtime responses without synthesizing private
+- [x] Verifier output contains no participant receipt or private payload digest.
+- [x] Shared fields and deterministic public commitment match across views.
+- [x] Confirmed devnet settlement fields come from persisted settlement evidence.
+- [x] Signed HTTP integration tests exercise both routes against durable state.
+- [x] The E2E harness can consume runtime responses without synthesizing private
       or public digest labels.
 
 ## Files To Touch
@@ -112,3 +112,33 @@ INTEGRATION:
   `kamn-e2e-harness`, formatting, strict workspace clippy, and `make check`.
 - Run `make demo-mvp` and canonical verification. This issue proves server
   disclosure behavior; it does not claim independent Pi execution yet.
+
+## Completion Evidence
+
+- `make check` passed formatting and strict workspace clippy with all targets
+  and features.
+- `cargo test -p kamn-node` passed the full package suite: 677 unit tests and
+  all standalone contract binaries; one explicitly live-only devnet test was
+  ignored by its declared environment gate.
+- `cargo test -p kamn-e2e-harness` passed the full package suite, including 255
+  library tests and the MVP disclosure, receipt, transcript, and verifier
+  contract binaries. Explicit local-runtime live probes remained ignored.
+- `make demo-mvp` returned `GO` in optional mode, with local-only claims labeled
+  separately and production readiness left `NOT_CLAIMED`.
+- The funded required-mode run returned `GO`, transferred 1,000,000 lamports on
+  Solana devnet, observed finalized balance movement, and persisted the same
+  settlement signature reported by the live service API.
+- The required-mode run wrote separate runtime-owned
+  `runtime-agent-a-participant-view.json`,
+  `runtime-agent-b-participant-view.json`, and
+  `runtime-agent-c-verifier-view.json` artifacts.
+- Canonical verification passed against `.kamn/demo/latest/proof/report.json`
+  after both optional and required-mode runs.
+
+## Deferred Boundary
+
+The runtime-owned projection artifacts are additive in this issue. The legacy
+canonical three-agent narrative and its generated view artifacts remain in the
+proof bundle until the plan's dependent transcript-replacement issue. They do
+not replace or manufacture the runtime projection responses, and they must not
+be cited as proof that independent Pi actors executed the transaction.
