@@ -253,3 +253,22 @@ fn spec_c11_mcp_tool_registry_input_schemas_expose_required_fields_for_represent
         "health input schema should reject undeclared fields"
     );
 }
+
+#[test]
+fn spec_7099_agreement_sensitive_tools_require_payloads() {
+    let registry = build_tool_registry();
+    for (tool_name, identifier) in [
+        ("accept_task", "task_id"),
+        ("complete_task", "task_id"),
+        ("release_escrow", "escrow_id"),
+    ] {
+        let tool = registry
+            .iter()
+            .find(|tool| tool.name == tool_name)
+            .expect("agreement-sensitive tool should exist");
+        let input: Value = serde_json::from_str(tool.input_schema).expect("schema should parse");
+        let required = input["required"].as_array().expect("required fields");
+        assert!(required.iter().any(|value| value == identifier));
+        assert!(required.iter().any(|value| value == "payload"));
+    }
+}

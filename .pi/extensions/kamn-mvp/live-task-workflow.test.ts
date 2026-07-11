@@ -13,7 +13,7 @@ test("two agents register and share one accepted task through independent sessio
 
 	const agentA = await workflow.register("agent_a");
 	const agentB = await workflow.register("agent_b");
-	const created = await workflow.createTask("Review proof", "Validate the local task lifecycle");
+	const created = await workflow.createTask("Review proof", "Validate the local task lifecycle", String(agentB.did));
 	const accepted = await workflow.acceptTask();
 	const queryA = await workflow.queryTask("agent_a");
 	const queryB = await workflow.queryTask("agent_b");
@@ -40,8 +40,8 @@ test("three agents drive one completed escrow transaction through independent MC
 	const agentA = await workflow.register("agent_a");
 	const agentB = await workflow.register("agent_b");
 	const agentC = await workflow.register("agent_c");
-	const created = await workflow.createTask("Settle proof", "Bind three runtime views");
-	const funded = await workflow.fundEscrow(JSON.stringify({ task_id: created.task_id, amount_lamports: 1000000 }));
+	const created = await workflow.createTask("Settle proof", "Bind three runtime views", String(agentB.did));
+	const funded = await workflow.fundEscrow();
 	await workflow.acceptTask();
 	await workflow.completeTask();
 	const released = await workflow.releaseEscrow();
@@ -51,6 +51,10 @@ test("three agents drive one completed escrow transaction through independent MC
 
 	assert.equal(new Set([agentA.did, agentB.did, agentC.did]).size, 3);
 	assert.equal(new Set([agentA.pid, agentB.pid, agentC.pid]).size, 3);
+	assert.equal(created.provider_did, agentB.did);
+	assert.match(String(created.transaction_id), /^pi-devnet-[a-f0-9]{16}$/);
+	assert.match(String(created.terms_digest), /^sha256:[a-f0-9]{64}$/);
+	assert.match(String(created.idempotency_key), /-create$/);
 	assert.equal(funded.escrow_id, released.escrow_id);
 	assert.equal(viewA.task_id, created.task_id);
 	assert.equal(viewB.task_id, created.task_id);
