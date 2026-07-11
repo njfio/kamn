@@ -109,3 +109,40 @@ fn deterministic_body_tag(payload: &[u8]) -> u64 {
         acc.wrapping_mul(0x00000100000001B3) ^ u64::from(*byte)
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn funded_rehearsal_payload_carries_canonical_task_agreement() {
+        let run_dir = Path::new("/tmp/run-contract");
+        let binding = LiveTaskBinding {
+            artifact_path: "binding.json".to_owned(),
+            digest: "a".repeat(64),
+            task_id: "task-external".to_owned(),
+            agent_a_pid: 1,
+            agent_b_pid: 2,
+            agent_c_pid: 3,
+        };
+        let raw = fund_payload(run_dir, Some(&binding)).expect("funding payload");
+        for field in [
+            "task_id",
+            "transaction_id",
+            "beneficiary_did",
+            "amount_lamports",
+            "network",
+            "terms_digest",
+            "release_authority_did",
+            "release_policy",
+            "idempotency_key",
+        ] {
+            assert!(
+                raw.contains(format!("\"{field}\":").as_str()),
+                "missing canonical field {field}"
+            );
+        }
+        assert!(raw.contains(r#""network":"solana-devnet""#));
+        assert!(raw.contains(r#""release_policy":"task-completed""#));
+    }
+}
