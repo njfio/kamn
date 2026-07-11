@@ -47,9 +47,50 @@ fn integration_ambiguous_settlement_retry_reconciles_without_resubmission() {
     assert_eq!(state["escrows"][&escrow_id]["state"], "released");
 }
 
+#[test]
+fn integration_settlement_intent_rejects_conflicting_release_key_without_submission() {
+    let _env = acquire_service_api_test_env();
+    let _override_guard =
+        crate::service_api_endpoint::set_test_live_solana_settlement_ambiguous_after_submit();
+    let context = build_live_solana_asset_movement_context(params_for("conflict", 37));
+    let escrow_id = fund_live_escrow(&context.harness, 161, 37);
+    let first = release_escrow_response_with_key(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.caller_did,
+        163,
+        escrow_id.as_str(),
+        "settlement-conflict-original",
+    );
+
+    let conflict = release_escrow_response_with_key(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.caller_did,
+        164,
+        escrow_id.as_str(),
+        "settlement-conflict-different",
+    );
+
+    assert!(first.contains("SETTLEMENT_OUTCOME_AMBIGUOUS"), "{first}");
+    assert!(conflict.contains("HTTP/1.1 409 Conflict"), "{conflict}");
+    assert!(
+        conflict.contains("SETTLEMENT_INTENT_CONFLICT"),
+        "{conflict}"
+    );
+    assert_eq!(
+        crate::service_api_endpoint::test_live_solana_settlement_submission_count(),
+        1
+    );
+}
+
 fn params() -> LiveSolanaAssetMovementParams<'static> {
+    params_for("reconciliation", 31)
+}
+
+fn params_for(label: &str, amount_lamports: u64) -> LiveSolanaAssetMovementParams<'_> {
     LiveSolanaAssetMovementParams {
-        state_file_prefix: "kamn-node-settlement-reconciliation-state",
+        state_file_prefix: label,
         caller_did: "kamn:did:agent:test-client-settlement-reconciliation",
         api_bind: "127.0.0.1:34136",
         keypair_prefix: "kamn-node-settlement-reconciliation-keypair",
@@ -57,6 +98,6 @@ fn params() -> LiveSolanaAssetMovementParams<'static> {
         recipient_env: RECIPIENT_ENV,
         lamports_env: LAMPORTS_ENV,
         live_rpc_env: RPC_URL,
-        amount_lamports: 31,
+        amount_lamports,
     }
 }
