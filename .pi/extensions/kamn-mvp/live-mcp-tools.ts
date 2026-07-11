@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import { LiveTaskWorkflow, type AgentRole, type WorkflowResult } from "./live-task-workflow.ts";
 import { registerLiveTaskCoordinationTools } from "./live-task-coordination-tools.ts";
 import { registerLiveTransactionTools } from "./live-transaction-tools.ts";
+import { registerPiTransactionEvidenceTools } from "./pi-transaction-tools.ts";
 
 type WorkflowHolder = { workflow?: LiveTaskWorkflow };
 
@@ -14,6 +15,7 @@ export function registerLiveMcpTools(pi: ExtensionAPI) {
 	registerLiveAgentAQuery(pi, holder);
 	registerTaskTools(pi, holder);
 	registerLiveTransactionTools(pi, (cwd) => workflow(holder, cwd));
+	registerPiTransactionEvidenceTools(pi, (cwd) => workflow(holder, cwd));
 	registerLiveTaskCoordinationTools(pi, (cwd) => workflow(holder, cwd));
 	pi.on("session_shutdown", async () => holder.workflow?.shutdown());
 }
