@@ -11,7 +11,23 @@ pub(crate) fn provision_test_transaction_grant(
     let target = resolve_target(actor_did, method, path, body)?;
     let mut store = ServiceApiMessageStore::from_optional_state_file(Some(state_file))?;
     ensure_registered(&mut store, actor_did)?;
+    if active_grant_exists(&store, &target) {
+        return Ok(());
+    }
     store.provision_agent_grant(grant_record(&target))
+}
+
+fn active_grant_exists(
+    store: &ServiceApiMessageStore,
+    target: &auth::TransactionAuthorizationTarget,
+) -> bool {
+    store.snapshot.agent_grants.values().any(|grant| {
+        grant.did == target.actor_did
+            && grant.resource == target.resource
+            && grant.action == target.action
+            && grant.role == target.role
+            && grant.status == "active"
+    })
 }
 
 fn resolve_target(
