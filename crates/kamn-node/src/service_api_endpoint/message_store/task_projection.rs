@@ -84,7 +84,7 @@ fn build_public_projection(
 ) -> Result<ServiceApiTaskPublicProjection, TaskProjectionError> {
     let escrow = bound_escrow(snapshot, task)?;
     let transaction_id = matching_transaction_id(task, escrow)?;
-    let mut projection = public_fields(task, escrow, transaction_id);
+    let mut projection = public_fields(task, escrow, transaction_id)?;
     projection.public_commitment = public_commitment(&projection);
     Ok(projection)
 }
@@ -123,20 +123,27 @@ fn public_fields(
     task: &ServiceApiPersistedTaskRecord,
     escrow: &ServiceApiPersistedEscrowRecord,
     transaction_id: &str,
-) -> ServiceApiTaskPublicProjection {
-    ServiceApiTaskPublicProjection {
+) -> Result<ServiceApiTaskPublicProjection, TaskProjectionError> {
+    let amount_lamports = escrow
+        .amount_lamports
+        .ok_or(TaskProjectionError::Inconsistent)?;
+    let network = escrow
+        .network
+        .clone()
+        .ok_or(TaskProjectionError::Inconsistent)?;
+    Ok(ServiceApiTaskPublicProjection {
         schema_version: TASK_PROJECTION_SCHEMA_VERSION.to_owned(),
         task_id: task.task_id.clone(),
         transaction_id: transaction_id.to_owned(),
         task_state: task.state.clone(),
         escrow_id: escrow.escrow_id.clone(),
         escrow_state: escrow.state.clone(),
-        amount_lamports: escrow.amount_lamports.unwrap_or_default(),
-        network: escrow.network.clone().unwrap_or_default(),
+        amount_lamports,
+        network,
         settlement_tx_signature: escrow.settlement.settlement_tx_signature.clone(),
         settlement_commitment: escrow.settlement.settlement_commitment.clone(),
         public_commitment: String::new(),
-    }
+    })
 }
 
 fn public_commitment(projection: &ServiceApiTaskPublicProjection) -> String {
