@@ -5,6 +5,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use super::devnet_settlement_build::node_binary_path;
+use super::devnet_settlement_grant_bootstrap::write_creator_grant_bootstrap;
 use super::devnet_settlement_live::LiveSettlementConfig;
 use super::devnet_settlement_service::drive_escrow_release;
 use super::live_task_binding::LiveTaskBinding;
@@ -22,6 +23,7 @@ pub(super) fn launch_and_drive_service_api(
 ) -> Result<ServiceApiRun, String> {
     let port = reserve_local_port()?;
     let endpoint = format!("http://127.0.0.1:{port}");
+    write_creator_grant_bootstrap(state_file, run_dir)?;
     let mut child = spawn_node(run_dir, state_file, port, config)?;
     wait_for_tcp_ready(port, &mut child)?;
     let settlement =
@@ -153,23 +155,4 @@ fn reject_early_exit(child: &mut Child) -> Result<(), String> {
 fn terminate_child(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn local_operator_bootstrap_grants_only_task_creation() {
-        let json = bootstrap_state_json(
-            "kamn:did:agent:creator-contract",
-            "mvp-demo-task-create",
-        );
-
-        assert!(json.contains(r#""resource":"transaction:new""#));
-        assert!(json.contains(r#""role":"initiator""#));
-        assert!(json.contains(r#""action":"task:create""#));
-        assert!(!json.contains(r#""resource":"*""#));
-        assert!(!json.contains("escrow:release"));
-    }
 }

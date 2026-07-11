@@ -9,6 +9,7 @@ use agreement::SettlementAgreement;
 
 const SDK_TIMEOUT_ENV: &str = "KAMN_SDK_SERVICE_TIMEOUT_SECONDS";
 const LIVE_SETTLEMENT_TIMEOUT_SECONDS: &str = "90";
+pub(super) const CREATOR_AGENT_NAME: &str = "kamn-mvp-devnet-settlement-creator";
 
 pub(super) fn drive_escrow_release(
     endpoint: &str,
@@ -17,7 +18,7 @@ pub(super) fn drive_escrow_release(
     amount_lamports: u64,
 ) -> Result<SettlementRun, String> {
     let _timeout = EnvOverride::set(SDK_TIMEOUT_ENV, LIVE_SETTLEMENT_TIMEOUT_SECONDS);
-    let creator = agent(endpoint, "kamn-mvp-devnet-settlement-creator")?;
+    let creator = agent(endpoint, CREATOR_AGENT_NAME)?;
     let provider = agent(endpoint, "kamn-mvp-devnet-settlement-provider")?;
     register(&creator, "creator")?;
     register(&provider, "provider")?;
