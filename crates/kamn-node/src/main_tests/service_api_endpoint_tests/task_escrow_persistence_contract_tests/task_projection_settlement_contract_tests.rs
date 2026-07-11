@@ -54,4 +54,44 @@ fn integration_participant_projection_uses_persisted_settlement_evidence() {
         released["settlement_tx_signature"]
     );
     assert_eq!(projection["settlement_commitment"], "finalized");
+    assert_failed_intent_is_rejected(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.state_file.as_path(),
+        task_id,
+        &escrow_id,
+    );
+}
+
+fn assert_failed_intent_is_rejected(
+    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
+    bind_addr: &str,
+    state_file: &std::path::Path,
+    task_id: &str,
+    escrow_id: &str,
+) {
+    mark_intent_failed(state_file, escrow_id);
+    let path = format!("/v1/tasks/{task_id}/participant-view");
+    let response = raw_signed_request(
+        snapshot,
+        bind_addr,
+        SignedRequest {
+            max_requests: 1,
+            method: "GET",
+            path: path.as_str(),
+            caller_did: ACTOR,
+            nonce: 185,
+            body: "",
+            extra_headers: &[("X-KAMN-Authz-Scope", "tasks:read")],
+        },
+    );
+    assert!(response.contains("500 Internal Server Error"), "{response}");
+    assert!(response.contains("TRANSACTION_PROJECTION_INCONSISTENT"));
+}
+
+fn mark_intent_failed(state_file: &std::path::Path, escrow_id: &str) {
+    let mut state = read_state_json(state_file);
+    state["settlement_intents"][escrow_id]["state"] = Value::String("failed".to_owned());
+    fs::write(state_file, serde_json::to_vec(&state).expect("state json"))
+        .expect("write tampered settlement intent");
 }

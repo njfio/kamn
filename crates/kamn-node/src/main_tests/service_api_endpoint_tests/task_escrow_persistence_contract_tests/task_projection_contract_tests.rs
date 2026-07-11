@@ -46,6 +46,12 @@ fn integration_verifier_projection_is_allowlisted_and_matches_public_commitment(
     );
     assert_eq!(verifier["task_id"], participant["task_id"]);
     assert_eq!(verifier["escrow_id"], participant["escrow_id"]);
+    assert!(
+        verifier["public_commitment"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:") && value.len() == 71),
+        "{verifier}"
+    );
     assert!(verifier.get("task_receipt_ids").is_none());
     assert!(verifier.get("completion_evidence_digest").is_none());
     case.cleanup();
