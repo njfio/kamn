@@ -56,6 +56,39 @@ fn spec_c07_parser_accepts_verify_mvp_demo_with_agent_harness_evidence() {
 }
 
 #[test]
+fn spec_c08_parser_accepts_complete_pi_transaction_actor_evidence_set() {
+    let parsed = parse_command_args([
+        "verify-mvp-demo",
+        "--report",
+        "/tmp/report.json",
+        "--pi-agent-a-evidence",
+        "/tmp/agent-a.json",
+        "--pi-agent-b-evidence",
+        "/tmp/agent-b.json",
+        "--pi-agent-c-evidence",
+        "/tmp/agent-c.json",
+    ])
+    .expect("verify-mvp-demo should accept all three Pi actor artifacts");
+    let debug = format!("{parsed:?}");
+    for marker in ["agent-a.json", "agent-b.json", "agent-c.json"] {
+        assert!(debug.contains(marker), "missing parsed actor path: {marker}");
+    }
+}
+
+#[test]
+fn spec_c09_parser_rejects_partial_pi_transaction_actor_evidence_set() {
+    let error = parse_command_args([
+        "verify-mvp-demo",
+        "--report",
+        "/tmp/report.json",
+        "--pi-agent-a-evidence",
+        "/tmp/agent-a.json",
+    ])
+    .expect_err("partial Pi actor evidence must fail");
+    assert!(error.contains("all three Pi transaction actor evidence"));
+}
+
+#[test]
 fn spec_c03_makefile_wires_demo_mvp_to_harness_command() {
     let output = make_dry_run("demo-mvp");
     assert!(
