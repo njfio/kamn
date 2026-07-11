@@ -1,8 +1,8 @@
 use super::super::super::*;
 use super::super::support::{
-    build_task_escrow_snapshot, create_task, query_task, raw_create_task_response,
-    raw_signed_request, register_agent_profile, set_audit_export_file_env, set_state_file_env,
-    unique_named_state_file, SignedRequest,
+    authorized_signed_request, build_task_escrow_snapshot, create_task, query_task,
+    raw_create_task_response, register_agent_profile, set_audit_export_file_env,
+    set_state_file_env, unique_named_state_file, SignedRequest,
 };
 
 pub(super) fn setup_dispatch_route_case() -> DispatchRouteCase {
@@ -83,7 +83,7 @@ pub(super) fn query_missing_worker_task(missing_worker: &MissingWorkerRouteCase)
         401,
         r#"{"creator":"kamn:did:agent:task-creator-missing-worker","task_type":"vision-sync","description":"nobody can do this"}"#,
     );
-    raw_signed_request(
+    authorized_signed_request(
         &missing_worker.snapshot,
         missing_worker.bind_addr.as_str(),
         SignedRequest {

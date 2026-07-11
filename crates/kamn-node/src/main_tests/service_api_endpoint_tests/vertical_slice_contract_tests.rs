@@ -173,6 +173,7 @@ fn create_vertical_slice_task(
     case: &VerticalSliceCase,
 ) -> crate::service_api_endpoint::ServiceApiTaskCreateBody {
     with_sender_env(case, || {
+        provision_vertical_slice_grant(case, "POST", "/v1/tasks/create");
         create_task(
             &case.sender_snapshot,
             case.sender_bind_addr.as_str(),
@@ -185,6 +186,8 @@ fn create_vertical_slice_task(
 
 fn query_vertical_slice_task(case: &VerticalSliceCase, task_id: &str) -> Value {
     with_sender_env(case, || {
+        let path = format!("/v1/tasks/{task_id}");
+        provision_vertical_slice_grant(case, "GET", path.as_str());
         query_task(
             &case.sender_snapshot,
             case.sender_bind_addr.as_str(),
@@ -193,6 +196,18 @@ fn query_vertical_slice_task(case: &VerticalSliceCase, task_id: &str) -> Value {
             task_id,
         )
     })
+}
+
+fn provision_vertical_slice_grant(case: &VerticalSliceCase, method: &str, path: &str) {
+    let actor_did = test_service_api_sender_did(case.sender_did);
+    crate::service_api_endpoint::provision_test_transaction_grant(
+        case.files.sender_state_file.to_string_lossy().into_owned(),
+        actor_did.as_str(),
+        method,
+        path,
+        "",
+    )
+    .expect("vertical-slice authorization grant should persist");
 }
 
 fn cleanup_case(case: VerticalSliceCase) {

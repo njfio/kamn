@@ -14,7 +14,7 @@ pub(super) async fn handle_get_route(
         return Some(channel_query(state, channel_id).await);
     }
     if let Some(task_id) = super::payload::task_path_id(context.parsed_request.path.as_str()) {
-        return Some(task_query(state, task_id).await);
+        return Some(task_query(state, context, task_id).await);
     }
     if let Some(content_id) = super::payload::content_path_id(context.parsed_request.path.as_str())
     {
@@ -61,8 +61,18 @@ async fn channel_query(state: &Arc<ServiceApiRuntimeState>, channel_id: &str) ->
     }
 }
 
-async fn task_query(state: &Arc<ServiceApiRuntimeState>, task_id: &str) -> Response {
-    let result = { state.message_store.lock().await.get_task(task_id) };
+async fn task_query(
+    state: &Arc<ServiceApiRuntimeState>,
+    context: &ServiceApiRequestContext,
+    task_id: &str,
+) -> Response {
+    let result = {
+        let mut store = state.message_store.lock().await;
+        if let Err(response) = super::revalidate_transaction_authorization(&mut store, context) {
+            return *response;
+        }
+        store.get_task(task_id)
+    };
     match result {
         Ok(Some(payload)) => contract_json(200, &payload),
         Ok(None) => not_found(),

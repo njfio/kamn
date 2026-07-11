@@ -1,5 +1,7 @@
 use super::*;
 
+mod escrow;
+
 type ResponseError = Box<Response>;
 
 pub(super) async fn handle_post_route(
@@ -13,7 +15,7 @@ pub(super) async fn handle_post_route(
         ROUTE_AGENTS_REGISTER => Some(register_agent(state, context).await),
         ROUTE_CONTENT_REGISTER => Some(register_content(state, context).await),
         ROUTE_BRIDGE_SUBMIT => Some(submit_bridge(state, context).await),
-        ROUTE_ESCROW_FUND => Some(fund_escrow(state, context).await),
+        ROUTE_ESCROW_FUND => Some(escrow::fund_escrow(state, context).await),
         _ => None,
     }
 }
@@ -42,11 +44,15 @@ async fn create_task(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
 ) -> Response {
-    let result = state
-        .message_store
-        .lock()
-        .await
-        .create_task(context.parsed_request.body.as_str());
+    let result = {
+        let mut store = state.message_store.lock().await;
+        if let Err(response) =
+            super::super::revalidate_transaction_authorization(&mut store, context)
+        {
+            return *response;
+        }
+        store.create_task(context.parsed_request.body.as_str())
+    };
     match result {
         Ok(payload) => {
             state
@@ -176,20 +182,5 @@ async fn submit_bridge(
             contract_json(202, &payload)
         }
         Err(error) => persistence_error("service api bridge persistence failed", error),
-    }
-}
-
-async fn fund_escrow(
-    state: &Arc<ServiceApiRuntimeState>,
-    context: &ServiceApiRequestContext,
-) -> Response {
-    let result = state
-        .message_store
-        .lock()
-        .await
-        .fund_escrow(context.parsed_request.body.as_str());
-    match result {
-        Ok(payload) => contract_json(200, &payload),
-        Err(error) => persistence_error("service api escrow persistence failed", error),
     }
 }

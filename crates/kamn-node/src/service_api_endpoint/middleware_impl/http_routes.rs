@@ -3,6 +3,45 @@ use super::*;
 mod mutations;
 mod queries;
 
+fn revalidate_transaction_authorization(
+    store: &mut ServiceApiMessageStore,
+    context: &ServiceApiRequestContext,
+) -> Result<(), Box<Response>> {
+    let target = super::auth::resolve_transaction_authorization_target(&context.parsed_request)
+        .map_err(|error| Box::new(forbidden(error.reason_code, error.message.as_str())))?;
+    let Some(target) = target else {
+        return Ok(());
+    };
+    let request = message_store::ServiceApiAuthorizationRequest {
+        correlation_id: "handler-revalidation",
+        actor_did: target.actor_did.as_str(),
+        resource: target.resource.as_str(),
+        action: target.action,
+        role: target.role,
+    };
+    match store.revalidate_transaction_action(request) {
+        Ok(decision) if decision.allowed => Ok(()),
+        Ok(decision) => Err(Box::new(forbidden(
+            decision.reason_code,
+            "transaction authorization changed before handler execution",
+        ))),
+        Err(error) => Err(Box::new(persistence_error(error.as_str()))),
+    }
+}
+
+fn forbidden(reason_code: &'static str, message: &str) -> Response {
+    super::payload::json_error_response(StatusCode::FORBIDDEN, "forbidden", reason_code, message)
+}
+
+fn persistence_error(error: &str) -> Response {
+    super::payload::json_error_response(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "internal",
+        REASON_CODE_STATE_PERSISTENCE_FAILED,
+        format!("service api authorization revalidation failed: {error}").as_str(),
+    )
+}
+
 pub(super) async fn handle_service_api_http_route(
     State(state): State<Arc<ServiceApiRuntimeState>>,
     Extension(context): Extension<ServiceApiRequestContext>,

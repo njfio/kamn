@@ -51,5 +51,7 @@ use runtime_evidence::build_data_layer_runtime_evidence;
 
 pub(crate) use models::{
     ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError, ServiceApiMessageStore,
-    ServiceApiRelayProgressCounts,
+    ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
 };
+pub(crate) use store::escrow_fund_task_id;
+pub(crate) use store::{ServiceApiAuthorizationDecision, ServiceApiAuthorizationRequest};

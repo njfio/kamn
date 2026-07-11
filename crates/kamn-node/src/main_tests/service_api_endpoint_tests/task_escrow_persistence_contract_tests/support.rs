@@ -1,3 +1,5 @@
+#[path = "support/authorization_fixture.rs"]
+mod authorization_fixture;
 #[path = "support/env_support.rs"]
 mod env_support;
 #[path = "support/request_support.rs"]
@@ -12,8 +14,8 @@ pub(super) use env_support::{
     set_live_solana_bridge_rpc_url_env,
 };
 pub(super) use request_support::{
-    accept_task, create_task, fund_escrow, query_task, raw_signed_request, register_agent_profile,
-    release_escrow, SignedRequest,
+    accept_task, authorized_signed_request, create_task, fund_escrow, query_task,
+    raw_signed_request, register_agent_profile, release_escrow, SignedRequest,
 };
 pub(super) use solana_asset_movement_support::{
     assert_persisted_solana_signature_metadata,
@@ -22,7 +24,8 @@ pub(super) use solana_asset_movement_support::{
     settlement_tx_signature, LiveSolanaAssetMovementParams,
 };
 pub(super) use state_support::{
-    build_task_escrow_snapshot, set_state_file_env, unique_named_state_file,
+    build_task_escrow_snapshot, set_state_file_env, state_hash, unique_named_state_file,
+    with_api_server,
 };
 
 use crate::service_api_endpoint::ServiceApiSnapshot;
@@ -34,7 +37,7 @@ pub(super) fn raw_create_task_response(
     nonce: u64,
     payload: &str,
 ) -> String {
-    request_support::raw_signed_request(
+    request_support::authorized_signed_request(
         snapshot,
         bind_addr,
         request_support::SignedRequest {

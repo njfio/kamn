@@ -28,8 +28,23 @@ pub(super) fn record_fresh_nonce(
     if replay_guard.record_nonce_if_fresh(sender_did, nonce, Instant::now()) {
         return Ok(());
     }
-    Err(RequestAuthFailure::Replay(ServiceApiReasonedError::new(
+    Err(replay_failure())
+}
+
+pub(super) fn verify_fresh_nonce(
+    replay_guard: &mut ServiceApiReplayGuard,
+    sender_did: &str,
+    nonce: u64,
+) -> Result<(), RequestAuthFailure> {
+    if replay_guard.check_nonce_is_fresh(sender_did, nonce, Instant::now()) {
+        return Ok(());
+    }
+    Err(replay_failure())
+}
+
+fn replay_failure() -> RequestAuthFailure {
+    RequestAuthFailure::Replay(ServiceApiReasonedError::new(
         REASON_CODE_AUTH_REPLAY_NONCE_DETECTED,
         "request nonce replay detected for sender",
-    )))
+    ))
 }

@@ -1,4 +1,6 @@
 mod auth;
+#[cfg(test)]
+mod grant_test_support;
 mod live_bridge_dispatch;
 mod live_settlement_dispatch;
 mod message_store;
@@ -13,6 +15,9 @@ mod state_io;
 #[cfg(test)]
 mod tests;
 mod websocket;
+
+#[cfg(test)]
+pub(crate) use grant_test_support::provision_test_transaction_grant;
 
 use crate::{
     logging::{log_info, log_warn},
@@ -164,6 +169,10 @@ const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_no
 const REASON_CODE_AUTH_SCOPE_HEADER_MISSING: &str = "service_api_auth_scope_header_missing";
 const REASON_CODE_AUTH_SCOPE_INVALID: &str = "service_api_auth_scope_invalid";
 const REASON_CODE_AUTH_SCOPE_ROUTE_MISMATCH: &str = "service_api_auth_scope_route_mismatch";
+const REASON_CODE_AGENT_NOT_REGISTERED: &str = "AGENT_NOT_REGISTERED";
+const REASON_CODE_ACTION_NOT_GRANTED: &str = "ACTION_NOT_GRANTED";
+const REASON_CODE_RESOURCE_ROLE_MISMATCH: &str = "RESOURCE_ROLE_MISMATCH";
+const REASON_CODE_ACTION_AUTHORIZED: &str = "AUTHORIZED";
 pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-auth-reason-taxonomy.v1";
 pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_did_key_binding_invalid,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
@@ -375,20 +384,28 @@ impl ServiceApiReplayGuard {
 
     fn record_nonce_if_fresh(&mut self, sender_did: &str, nonce: u64, now: Instant) -> bool {
         self.evict_expired(now);
-        if let Some(high_watermark) = self.highest_nonce_by_sender.get(sender_did) {
-            if nonce <= *high_watermark {
-                return false;
-            }
-        }
-        let entry = (sender_did.to_owned(), nonce);
-        if self.entries.contains(&entry) {
+        if !self.nonce_is_fresh(sender_did, nonce) {
             return false;
         }
+        let entry = (sender_did.to_owned(), nonce);
         self.entries.insert(entry.clone());
         self.insertion_order.push_back((entry.0, entry.1, now));
         self.seed_sender_nonce_high_watermark(sender_did, nonce);
         self.evict_over_capacity();
         true
+    }
+
+    fn check_nonce_is_fresh(&mut self, sender_did: &str, nonce: u64, now: Instant) -> bool {
+        self.evict_expired(now);
+        self.nonce_is_fresh(sender_did, nonce)
+    }
+
+    fn nonce_is_fresh(&self, sender_did: &str, nonce: u64) -> bool {
+        let above_high_watermark = self
+            .highest_nonce_by_sender
+            .get(sender_did)
+            .is_none_or(|high_watermark| nonce > *high_watermark);
+        above_high_watermark && !self.entries.contains(&(sender_did.to_owned(), nonce))
     }
 
     fn seed_sender_nonce_high_watermark(&mut self, sender_did: &str, nonce: u64) {

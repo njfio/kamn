@@ -1,7 +1,8 @@
 use super::super::*;
 use super::support::{
-    build_task_escrow_snapshot, fund_escrow, raw_signed_request, read_state_json, release_escrow,
-    set_live_solana_bridge_rpc_url_env, set_state_file_env, unique_named_state_file, SignedRequest,
+    authorized_signed_request, build_task_escrow_snapshot, fund_escrow, read_state_json,
+    release_escrow, set_live_solana_bridge_rpc_url_env, set_state_file_env,
+    unique_named_state_file, SignedRequest,
 };
 use crate::service_api_endpoint::ServiceApiSnapshot;
 
@@ -105,7 +106,7 @@ fn release_live_escrow_with_unreachable_rpc(
     amount: u64,
 ) -> String {
     let escrow_id = fund_live_escrow(harness, fund_nonce, amount);
-    raw_signed_request(
+    authorized_signed_request(
         &harness.snapshot,
         harness.bind_addr.as_str(),
         SignedRequest {

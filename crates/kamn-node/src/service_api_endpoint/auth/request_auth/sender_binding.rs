@@ -3,6 +3,25 @@ use super::super::support::{
 };
 use super::*;
 
+pub(crate) fn require_valid_sender_did_header(
+    request: &ParsedRequest,
+) -> Result<&str, RequestAuthFailure> {
+    let sender_did =
+        header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
+            RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING,
+                format!("missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"),
+            ))
+        })?;
+    AgentDid::parse(sender_did).map_err(|error| {
+        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SENDER_DID_INVALID,
+            format!("invalid sender did: {error}"),
+        ))
+    })?;
+    Ok(sender_did)
+}
+
 pub(crate) fn resolve_signer_public_key_for_request<'a>(
     headers: &'a BTreeMap<String, String>,
     fallback_public_key_hex: Option<&'a str>,
