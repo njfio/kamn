@@ -56,6 +56,10 @@ pub(crate) fn authorized_signed_request(
     raw_signed_request(snapshot, bind_addr, request)
 }
 
+pub(crate) fn provision_signed_request_grant(request: &SignedRequest<'_>) {
+    super::authorization_fixture::provision_request_grant(request);
+}
+
 fn signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,

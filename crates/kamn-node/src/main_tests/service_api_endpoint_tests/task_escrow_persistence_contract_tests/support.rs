@@ -14,9 +14,9 @@ pub(super) use env_support::{
     set_live_solana_bridge_rpc_url_env,
 };
 pub(super) use request_support::{
-    accept_task, authorized_signed_request, complete_task, create_task, fund_escrow, query_task,
-    raw_signed_request, register_agent_profile, release_escrow, release_escrow_response,
-    release_escrow_response_with_key, SignedRequest,
+    accept_task, authorized_signed_request, complete_task, create_task, fund_escrow,
+    provision_signed_request_grant, query_task, raw_signed_request, register_agent_profile,
+    release_escrow, release_escrow_response, release_escrow_response_with_key, SignedRequest,
 };
 pub(super) use solana_asset_movement_support::{
     assert_persisted_solana_signature_metadata,
