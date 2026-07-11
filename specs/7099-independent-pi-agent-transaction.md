@@ -73,6 +73,9 @@ participant receipt fields; Agent C has none.
 - Reused or missing DID: `PI_ACTOR_IDENTITY_INVALID`.
 - Missing, overlapping, or non-monotonic request sequence:
   `PI_ACTOR_NONCE_STREAM_INVALID`.
+- A handled MCP error omitted from an otherwise continuous request stream:
+  `PI_ACTOR_NONCE_STREAM_INVALID`; error responses are integrity-digested but
+  never counted as successful operation receipts.
 - Missing or mismatched runtime response digest: `PI_RUNTIME_RECEIPT_MISMATCH`.
 - Shared task, escrow, amount, network, signature, or commitment mismatch:
   `PI_TRANSACTION_FACT_MISMATCH`.
@@ -95,6 +98,9 @@ written idempotently and conflicting replay is rejected.
 - [ ] Three positive, distinct Pi process IDs are recorded.
 - [ ] Three distinct registered DIDs are bound to three external key files.
 - [ ] Three independent monotonic MCP request streams are recorded.
+- [ ] A failed settlement attempt followed by same-key reconciliation retains
+      a continuous request/digest stream without converting the failure into
+      successful operation evidence.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
 - [ ] Create, accept, complete, fund, and release payloads are derived from one
@@ -137,6 +143,7 @@ RED:
 - Accept one process ID or DID for multiple roles.
 - Accept actor receipts containing only Pi-authored action labels.
 - Accept missing/non-monotonic MCP request ranges.
+- Accept a request range that silently omits a handled MCP error response.
 - Accept Agent C evidence constructed from coordination files rather than the
   signed server verifier response.
 - Accept copied or cross-transaction escrow/settlement facts.
@@ -151,8 +158,9 @@ GREEN:
   the independent actor path can satisfy the existing live-settlement contract.
 - Derive the canonical agreement inside the extension after both participant
   DIDs are known; do not accept Pi-authored settlement payloads.
-- Digest exact successful runtime responses and record process/DID/request
-  provenance in idempotent actor evidence.
+- Digest every exact handled runtime response for continuous request
+  provenance, while returning only successful result bodies to operation
+  evidence and callers.
 - Extend canonical evidence verification with identity, nonce, receipt,
   privacy, and shared-fact checks.
 
