@@ -459,6 +459,8 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || task_path_id(path).is_some()
         || task_accept_path_id(path).is_some()
         || task_complete_path_id(path).is_some()
+        || task_participant_view_path_id(path).is_some()
+        || task_verifier_view_path_id(path).is_some()
         || escrow_release_path_id(path).is_some()
         || content_path_id(path).is_some()
         || content_expire_path_id(path).is_some()
@@ -508,6 +510,23 @@ pub(super) fn task_accept_path_id(path: &str) -> Option<&str> {
 pub(super) fn task_complete_path_id(path: &str) -> Option<&str> {
     let task_path = path.strip_prefix(ROUTE_TASKS_PREFIX)?;
     let task_id = task_path.strip_suffix(ROUTE_TASKS_COMPLETE_SUFFIX)?;
+    if task_id.is_empty() || task_id == "create" || task_id.contains('/') {
+        return None;
+    }
+    Some(task_id)
+}
+
+pub(super) fn task_participant_view_path_id(path: &str) -> Option<&str> {
+    task_view_path_id(path, ROUTE_TASKS_PARTICIPANT_VIEW_SUFFIX)
+}
+
+pub(super) fn task_verifier_view_path_id(path: &str) -> Option<&str> {
+    task_view_path_id(path, ROUTE_TASKS_VERIFIER_VIEW_SUFFIX)
+}
+
+fn task_view_path_id<'a>(path: &'a str, suffix: &str) -> Option<&'a str> {
+    let task_path = path.strip_prefix(ROUTE_TASKS_PREFIX)?;
+    let task_id = task_path.strip_suffix(suffix)?;
     if task_id.is_empty() || task_id == "create" || task_id.contains('/') {
         return None;
     }
@@ -734,9 +753,29 @@ pub(super) fn escape_metrics_label(input: &str) -> String {
 mod tests {
     use super::{
         bridge_forward_path_id, bridge_path_id, content_expire_path_id, content_path_id,
-        content_tombstone_path_id, route_exists_for_other_method, ROUTE_BRIDGE_SUBMIT,
-        ROUTE_CONTENT_REGISTER,
+        content_tombstone_path_id, route_exists_for_other_method, task_participant_view_path_id,
+        task_verifier_view_path_id, ROUTE_BRIDGE_SUBMIT, ROUTE_CONTENT_REGISTER,
     };
+
+    #[test]
+    fn unit_task_projection_paths_accept_only_canonical_shapes() {
+        assert_eq!(
+            task_participant_view_path_id("/v1/tasks/task-a/participant-view"),
+            Some("task-a")
+        );
+        assert_eq!(
+            task_verifier_view_path_id("/v1/tasks/task-a/verifier-view"),
+            Some("task-a")
+        );
+        assert_eq!(
+            task_participant_view_path_id("/v1/tasks//participant-view"),
+            None
+        );
+        assert_eq!(
+            task_verifier_view_path_id("/v1/tasks/task-a/extra/verifier-view"),
+            None
+        );
+    }
 
     #[test]
     fn unit_content_path_id_contract_accepts_and_rejects_expected_shapes() {

@@ -116,6 +116,12 @@ fn get_scope(method: &str, path: &str) -> Option<ServiceApiScope> {
             ServiceApiScope::ChannelsRead
         }
         _ if super::payload::task_path_id(path).is_some() => ServiceApiScope::TasksRead,
+        _ if super::payload::task_participant_view_path_id(path).is_some() => {
+            ServiceApiScope::TasksRead
+        }
+        _ if super::payload::task_verifier_view_path_id(path).is_some() => {
+            ServiceApiScope::TasksRead
+        }
         _ if super::payload::agent_balance_path_id(path).is_some() => ServiceApiScope::AgentsRead,
         _ if super::payload::agent_path_id(path).is_some() => ServiceApiScope::AgentsRead,
         _ => return None,

@@ -19,6 +19,22 @@ pub(crate) use settlement_intent::settlement_signature_is_available;
 use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
+    pub(crate) fn participant_task_projection(
+        &mut self,
+        task_id: &str,
+        requester_did: &str,
+    ) -> Result<Option<ServiceApiParticipantTaskProjection>, TaskProjectionError> {
+        super::super::task_projection::participant(self, task_id, requester_did)
+    }
+
+    pub(crate) fn verifier_task_projection(
+        &mut self,
+        task_id: &str,
+        requester_did: &str,
+    ) -> Result<Option<ServiceApiVerifierTaskProjection>, TaskProjectionError> {
+        super::super::task_projection::verifier(self, task_id, requester_did)
+    }
+
     pub(crate) fn prepare_settlement_intent(
         &mut self,
         actor: &str,

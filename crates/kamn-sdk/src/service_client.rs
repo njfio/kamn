@@ -15,6 +15,8 @@ pub(crate) mod service_client_bridge_misc_routes;
 mod service_client_content_routes;
 #[path = "service_client_message_task_routes.rs"]
 mod service_client_message_task_routes;
+#[path = "service_client_projection_routes.rs"]
+mod service_client_projection_routes;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct HttpResponse {

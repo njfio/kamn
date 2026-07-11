@@ -4,8 +4,11 @@ use super::live_task_binding::LiveTaskBinding;
 use kamn_agent_lib::{AgentMetadata, KamnAgentHandle};
 
 mod agreement;
+mod escrow_id;
+mod projections;
 
 use agreement::SettlementAgreement;
+pub(super) use escrow_id::expected_escrow_id;
 
 const SDK_TIMEOUT_ENV: &str = "KAMN_SDK_SERVICE_TIMEOUT_SECONDS";
 const LIVE_SETTLEMENT_TIMEOUT_SECONDS: &str = "90";
@@ -30,6 +33,14 @@ pub(super) fn drive_escrow_release(
         agreement.release_payload().as_str(),
     )?;
     require_released(released.state.as_str())?;
+    std::thread::sleep(release_pacing_delay());
+    projections::capture_runtime_task_projections(
+        endpoint,
+        run_dir,
+        &creator,
+        &provider,
+        prepared.task_id.as_str(),
+    )?;
     Ok(SettlementRun {
         escrow_id: released.escrow_id,
         task_id: prepared.task_id,
@@ -173,19 +184,6 @@ fn require_expected_escrow_id(payload: &str, escrow_id: &str) -> Result<(), Stri
             "devnet settlement escrow ID mismatch: expected {expected}, found {escrow_id}"
         ))
     }
-}
-
-pub(super) fn expected_escrow_id(payload: &str) -> String {
-    format!(
-        "escrow-local-{:016x}",
-        deterministic_body_tag(payload.as_bytes())
-    )
-}
-
-fn deterministic_body_tag(payload: &[u8]) -> u64 {
-    payload.iter().fold(0xcbf29ce484222325_u64, |acc, byte| {
-        acc.wrapping_mul(0x00000100000001B3) ^ u64::from(*byte)
-    })
 }
 
 #[cfg(test)]

@@ -53,6 +53,11 @@ fn route_target(
 
 fn dynamic_route_target(method: &str, path: &str) -> Option<(String, &'static str, &'static str)> {
     if method == "GET" {
+        if super::payload::task_participant_view_path_id(path).is_some()
+            || super::payload::task_verifier_view_path_id(path).is_some()
+        {
+            return None;
+        }
         return super::payload::task_path_id(path)
             .map(|id| (task_resource(id), "task:read", "participant"));
     }

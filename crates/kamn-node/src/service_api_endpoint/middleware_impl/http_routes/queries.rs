@@ -1,9 +1,14 @@
 use super::*;
 
+mod task_projection;
+
 pub(super) async fn handle_get_route(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
 ) -> Option<Response> {
+    if let Some(response) = task_projection::handle_task_projection_query(state, context).await {
+        return Some(response);
+    }
     if let Some(message_id) = super::payload::message_path_id(context.parsed_request.path.as_str())
     {
         return Some(message_query(state, &context.parsed_request, message_id).await);
