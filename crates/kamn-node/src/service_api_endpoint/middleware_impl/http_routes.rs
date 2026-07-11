@@ -66,6 +66,22 @@ fn task_lifecycle_error_response(error: message_store::TaskLifecycleError) -> Re
     }
 }
 
+fn escrow_lifecycle_error_response(error: message_store::EscrowLifecycleError) -> Response {
+    use message_store::EscrowLifecycleError::*;
+    match error {
+        BadRequest(code, message) => task_error(StatusCode::BAD_REQUEST, code, message),
+        Forbidden(code, message) => task_error(StatusCode::FORBIDDEN, code, message),
+        Conflict(code, message) => task_error(StatusCode::CONFLICT, code, message),
+        NotFound => super::payload::json_error_response(
+            StatusCode::NOT_FOUND,
+            "not-found",
+            "service_api_route_not_found",
+            "service api escrow not found",
+        ),
+        Persistence(message) => persistence_error(message.as_str()),
+    }
+}
+
 fn task_error(status: StatusCode, code: &'static str, message: String) -> Response {
     super::payload::json_error_response(status, "task", code, message.as_str())
 }

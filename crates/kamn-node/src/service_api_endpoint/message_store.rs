@@ -56,5 +56,6 @@ pub(crate) use models::{
     ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
 };
 pub(crate) use store::escrow_fund_task_id;
+pub(crate) use store::EscrowLifecycleError;
 pub(crate) use store::TaskLifecycleError;
 pub(crate) use store::{ServiceApiAuthorizationDecision, ServiceApiAuthorizationRequest};

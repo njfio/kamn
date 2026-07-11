@@ -1,8 +1,8 @@
 use super::super::*;
 use super::support::{
-    authorized_signed_request, build_task_escrow_snapshot, fund_escrow, read_state_json,
-    release_escrow, set_live_solana_bridge_rpc_url_env, set_state_file_env,
-    unique_named_state_file, SignedRequest,
+    accept_task, authorized_signed_request, build_task_escrow_snapshot, complete_task, create_task,
+    fund_escrow, read_state_json, release_escrow, set_live_solana_bridge_rpc_url_env,
+    set_state_file_env, unique_named_state_file, SignedRequest,
 };
 use crate::service_api_endpoint::ServiceApiSnapshot;
 
@@ -18,7 +18,7 @@ fn integration_service_api_endpoint_live_settlement_release_persists_external_re
         "kamn:did:agent:test-client-live-settlement",
         "127.0.0.1:34126",
     );
-    let (escrow_id, released_escrow) = fund_and_release_live_escrow(&harness, 81, 82, 9);
+    let (escrow_id, released_escrow) = fund_and_release_live_escrow(&harness, 81, 83, 9);
     let receipt_hash = settlement_receipt_hash(&released_escrow);
     let state_json = read_state_json(harness.state_file.as_path());
 
@@ -35,9 +35,34 @@ fn integration_service_api_endpoint_live_settlement_release_fails_loud_for_unrea
         "kamn:did:agent:test-client-live-settlement-error",
         "127.0.0.1:34128",
     );
-    let response = release_live_escrow_with_unreachable_rpc(&harness, 91, 92, 11);
+    let response = release_live_escrow_with_unreachable_rpc(&harness, 91, 93, 11);
 
     assert_failed_live_release(response.as_str());
+    cleanup_state_file(harness.state_file.as_path());
+}
+
+#[test]
+fn integration_service_api_endpoint_live_settlement_rejects_ineligible_release_before_rpc() {
+    let _env = acquire_service_api_test_env();
+    let _live_rpc_guard = set_live_solana_bridge_rpc_url_env(Some(UNREACHABLE_SOLANA_RPC_URL));
+    let harness = build_live_settlement_harness(
+        "kamn-node-live-settlement-ineligible-state",
+        "kamn:did:agent:test-client-live-settlement-ineligible",
+        "127.0.0.1:34129",
+    );
+    let escrow_id = fund_live_escrow_without_completion(&harness, 101, 13);
+
+    let response = request_live_release(&harness, 103, escrow_id.as_str());
+
+    assert!(response.contains("HTTP/1.1 409 Conflict"), "{response}");
+    assert!(
+        response.contains("ESCROW_RELEASE_NOT_ELIGIBLE"),
+        "{response}"
+    );
+    assert!(
+        !response.contains("live settlement evidence failed"),
+        "{response}"
+    );
     cleanup_state_file(harness.state_file.as_path());
 }
 
@@ -85,7 +110,45 @@ fn fund_and_release_live_escrow(
 }
 
 fn fund_live_escrow(harness: &LiveSettlementHarness, nonce: u64, amount: u64) -> String {
-    let payload = format!(r#"{{"task_id":"live-settlement-task","amount":{amount}}}"#);
+    let (task_id, escrow_id) = fund_live_escrow_task(harness, nonce, amount);
+    complete_task(
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
+        harness.caller_did,
+        nonce + 1,
+        task_id.as_str(),
+    );
+    escrow_id
+}
+
+fn fund_live_escrow_without_completion(
+    harness: &LiveSettlementHarness,
+    nonce: u64,
+    amount: u64,
+) -> String {
+    fund_live_escrow_task(harness, nonce, amount).1
+}
+
+fn fund_live_escrow_task(
+    harness: &LiveSettlementHarness,
+    nonce: u64,
+    amount: u64,
+) -> (String, String) {
+    let task = create_task(
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
+        harness.caller_did,
+        nonce - 3,
+        r#"{"description":"live settlement task"}"#,
+    );
+    accept_task(
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
+        harness.caller_did,
+        nonce - 2,
+        task.task_id.as_str(),
+    );
+    let payload = format!(r#"{{"task_id":"{}","amount":{amount}}}"#, task.task_id);
     let funded_escrow = fund_escrow(
         &harness.snapshot,
         harness.bind_addr.as_str(),
@@ -93,10 +156,11 @@ fn fund_live_escrow(harness: &LiveSettlementHarness, nonce: u64, amount: u64) ->
         nonce,
         payload.as_str(),
     );
-    funded_escrow["escrow_id"]
+    let escrow_id = funded_escrow["escrow_id"]
         .as_str()
         .expect("escrow id should be string")
-        .to_owned()
+        .to_owned();
+    (task.task_id, escrow_id)
 }
 
 fn release_live_escrow_with_unreachable_rpc(
@@ -106,6 +170,14 @@ fn release_live_escrow_with_unreachable_rpc(
     amount: u64,
 ) -> String {
     let escrow_id = fund_live_escrow(harness, fund_nonce, amount);
+    request_live_release(harness, release_nonce, escrow_id.as_str())
+}
+
+fn request_live_release(
+    harness: &LiveSettlementHarness,
+    release_nonce: u64,
+    escrow_id: &str,
+) -> String {
     authorized_signed_request(
         &harness.snapshot,
         harness.bind_addr.as_str(),

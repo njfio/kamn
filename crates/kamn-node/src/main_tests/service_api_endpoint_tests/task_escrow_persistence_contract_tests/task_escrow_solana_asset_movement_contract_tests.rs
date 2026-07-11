@@ -52,7 +52,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
         lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
     });
-    let (escrow_id, released_escrow) = fund_and_release_live_escrow(&context.harness, 101, 102, 13);
+    let (escrow_id, released_escrow) = fund_and_release_live_escrow(&context.harness, 101, 103, 13);
     let state_json = read_state_json(context.harness.state_file.as_path());
 
     assert_released_escrow_has_solana_signature_metadata(&released_escrow);
@@ -75,7 +75,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_is_idempo
         lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
     });
-    let (first, second) = release_live_escrow_twice(&context.harness, 111, 112, 113, 17);
+    let (first, second) = release_live_escrow_twice(&context.harness, 111, 113, 114, 17);
 
     assert_eq!(
         settlement_tx_signature(&first),
@@ -101,7 +101,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_reuses_si
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
     });
     let (first, second) =
-        release_live_escrow_across_restart(&context.harness, "127.0.0.1:34133", 121, 122, 123, 19);
+        release_live_escrow_across_restart(&context.harness, "127.0.0.1:34133", 121, 123, 124, 19);
 
     assert_eq!(
         settlement_tx_signature(&first),

@@ -61,16 +61,6 @@ pub(crate) struct ServiceApiPersistedTaskRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiPersistedEscrowRecord {
-    pub(crate) escrow_id: String,
-    pub(crate) state: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) task_id: Option<String>,
-    #[serde(flatten, default)]
-    pub(crate) settlement: ServiceApiSettlementMetadata,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiPersistedContentRecord {
     pub(crate) content_id: String,
     pub(crate) retention_class: String,
@@ -160,6 +150,8 @@ pub(crate) struct ServiceApiPersistedMessageStoreSnapshot {
     pub(crate) authorization_receipts: Vec<ServiceApiAuthorizationReceiptRecord>,
     #[serde(default)]
     pub(crate) task_transition_receipts: Vec<ServiceApiTaskTransitionReceiptRecord>,
+    #[serde(default)]
+    pub(crate) escrow_transition_receipts: Vec<ServiceApiEscrowTransitionReceiptRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
@@ -177,6 +169,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             agent_grants: BTreeMap::new(),
             authorization_receipts: Vec::new(),
             task_transition_receipts: Vec::new(),
+            escrow_transition_receipts: Vec::new(),
         }
     }
 }

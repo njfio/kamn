@@ -129,14 +129,6 @@ pub(crate) struct ServiceApiTaskTransitionBody {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiEscrowStatusBody {
-    pub(crate) escrow_id: String,
-    pub(crate) state: String,
-    #[serde(flatten)]
-    pub(crate) settlement: ServiceApiSettlementMetadata,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiContentRegisterBody {
     pub(crate) content_id: String,
     pub(crate) retention_class: String,

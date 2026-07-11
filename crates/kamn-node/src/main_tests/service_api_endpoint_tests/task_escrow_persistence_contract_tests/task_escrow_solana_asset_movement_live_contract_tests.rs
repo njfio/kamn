@@ -1,7 +1,8 @@
 use super::super::*;
 use super::support::{
-    build_task_escrow_snapshot, fund_escrow, release_escrow, set_live_solana_bridge_rpc_url_env,
-    set_state_file_env, unique_named_state_file,
+    accept_task, build_task_escrow_snapshot, complete_task, create_task, fund_escrow,
+    release_escrow, set_live_solana_bridge_rpc_url_env, set_state_file_env,
+    unique_named_state_file,
 };
 use solana_commitment_config::CommitmentConfig;
 use solana_rpc_client::rpc_client::RpcClient;
@@ -135,23 +136,40 @@ fn configure_live_asset_movement_env(
 fn submit_live_asset_movement_release() -> Value {
     let snapshot = build_task_escrow_snapshot("127.0.0.1:34132");
     let bind_addr = reserve_loopback_addr();
+    let caller = "kamn:did:agent:test-client-solana-asset-movement-live";
+    let task = create_task(
+        &snapshot,
+        bind_addr.as_str(),
+        caller,
+        198,
+        r#"{"description":"live devnet asset movement task"}"#,
+    );
+    accept_task(
+        &snapshot,
+        bind_addr.as_str(),
+        caller,
+        199,
+        task.task_id.as_str(),
+    );
+    let fund_body = format!(r#"{{"task_id":"{}","amount":9}}"#, task.task_id);
     let funded = fund_escrow(
         &snapshot,
         bind_addr.as_str(),
-        "kamn:did:agent:test-client-solana-asset-movement-live",
+        caller,
         201,
-        r#"{"task_id":"solana-asset-movement-live-task","amount":9}"#,
+        fund_body.as_str(),
+    );
+    complete_task(
+        &snapshot,
+        bind_addr.as_str(),
+        caller,
+        202,
+        task.task_id.as_str(),
     );
     let escrow_id = funded["escrow_id"]
         .as_str()
         .expect("escrow id should be string");
-    release_escrow(
-        &snapshot,
-        bind_addr.as_str(),
-        "kamn:did:agent:test-client-solana-asset-movement-live",
-        202,
-        escrow_id,
-    )
+    release_escrow(&snapshot, bind_addr.as_str(), caller, 203, escrow_id)
 }
 
 fn assert_live_release_result(fixture: &LiveDevnetAssetMovementFixture, released: &Value) {

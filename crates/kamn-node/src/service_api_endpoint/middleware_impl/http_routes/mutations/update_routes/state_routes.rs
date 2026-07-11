@@ -91,6 +91,9 @@ async fn release_escrow(
     context: &ServiceApiRequestContext,
     escrow_id: &str,
 ) -> Response {
+    if state.live_solana_settlement.is_none() && state.live_solana_bridge_dispatch.is_none() {
+        return authorize_local_release(state, context, escrow_id).await;
+    }
     let result = match resolve_release_escrow_result(state, context, escrow_id).await {
         Ok(result) => result,
         Err(response) => return *response,
@@ -99,6 +102,27 @@ async fn release_escrow(
         Ok(Some(payload)) => contract_json(200, &payload),
         Ok(None) => not_found(),
         Err(error) => persistence_error("service api escrow persistence failed", error),
+    }
+}
+
+async fn authorize_local_release(
+    state: &Arc<ServiceApiRuntimeState>,
+    context: &ServiceApiRequestContext,
+    escrow_id: &str,
+) -> Response {
+    let actor = match super::super::super::task_actor(context) {
+        Ok(actor) => actor,
+        Err(response) => return *response,
+    };
+    let result = state.message_store.lock().await.authorize_escrow_release(
+        actor.as_str(),
+        escrow_id,
+        context.parsed_request.body.as_str(),
+        context.correlation_id.as_str(),
+    );
+    match result {
+        Ok(payload) => contract_json(200, &payload),
+        Err(error) => super::super::super::escrow_lifecycle_error_response(error),
     }
 }
 

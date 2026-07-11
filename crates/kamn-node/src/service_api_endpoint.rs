@@ -1,4 +1,5 @@
 mod auth;
+mod escrow_models;
 #[cfg(test)]
 mod grant_test_support;
 mod live_bridge_dispatch;
@@ -59,6 +60,7 @@ use std::{env, fs, net::SocketAddr};
 use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
+pub(crate) use escrow_models::ServiceApiEscrowStatusBody;
 use live_bridge_dispatch::LiveSolanaBridgeDispatchConfig;
 use live_settlement_dispatch::LiveSolanaSettlementConfig;
 use message_store::ServiceApiMessageStore;
@@ -67,10 +69,10 @@ pub(crate) use models::{
     ServiceApiBridgeStatusBody, ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody,
     ServiceApiChannelMessagesBody, ServiceApiContentLifecycleBody, ServiceApiContentRegisterBody,
     ServiceApiEndpointConfig, ServiceApiEndpointResponse, ServiceApiErrorBody,
-    ServiceApiEscrowStatusBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
-    ServiceApiMessageGetBody, ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry,
-    ServiceApiSettlementMetadata, ServiceApiTaskCreateBody, ServiceApiTaskGetBody,
-    ServiceApiTaskTransitionBody, ServiceApiWebsocketStateTransitionBody,
+    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
+    ServiceApiMessageRelayBody, ServiceApiRelaySpoolEntry, ServiceApiSettlementMetadata,
+    ServiceApiTaskCreateBody, ServiceApiTaskGetBody, ServiceApiTaskTransitionBody,
+    ServiceApiWebsocketStateTransitionBody,
 };
 use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use snapshot::ServiceApiSnapshot;
