@@ -9,6 +9,9 @@ use kamn_sdk::{
 };
 use std::env;
 
+#[path = "client/projection_routes.rs"]
+mod projection_routes;
+
 const DEFAULT_CHAIN_ID: &str = "kamn-devnet";
 const DEFAULT_CHAIN_VERSION: &str = "v0.1.0";
 const AGENT_CHAIN_ID_ENV: &str = "KAMN_AGENT_CHAIN_ID";

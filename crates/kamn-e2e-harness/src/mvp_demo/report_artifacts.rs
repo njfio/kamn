@@ -31,6 +31,7 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
         entries.push(("devnet_escrow_funding_request", funding_request));
     }
     if input.devnet_settlement.is_some() && input.live_task_binding.is_some() {
+        entries.extend(runtime_projection_entries(input));
         entries.push(("three_agent_transcript", three_agent_transcript_path(input)));
         entries.push(("agent_a_view", agent_a_view_path(input)));
         entries.push(("agent_b_view", agent_b_view_path(input)));
@@ -49,6 +50,27 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
         ));
     }
     entries
+}
+
+fn runtime_projection_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> {
+    [
+        (
+            "runtime_agent_a_participant_view",
+            "runtime-agent-a-participant-view.json",
+        ),
+        (
+            "runtime_agent_b_participant_view",
+            "runtime-agent-b-participant-view.json",
+        ),
+        (
+            "runtime_agent_c_verifier_view",
+            "runtime-agent-c-verifier-view.json",
+        ),
+    ]
+    .into_iter()
+    .map(|(key, file)| (key, run_proof_path(input, file)))
+    .filter(|(_, path)| std::path::Path::new(path).is_file())
+    .collect()
 }
 
 fn base_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> {

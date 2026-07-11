@@ -35,6 +35,7 @@ pub mod identity;
 pub mod kolme;
 /// Monotonic nonce tracking.
 pub mod nonce;
+mod projection;
 
 /// Top-level phase-1 facade for authenticated KAMN operations.
 #[derive(Debug)]
