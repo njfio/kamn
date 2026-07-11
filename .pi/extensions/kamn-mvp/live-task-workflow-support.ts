@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import type { LiveMcpAgent } from "./mcp-session.ts";
+import type { McpSessionProvenance } from "./mcp-session.ts";
 import type { AgentRole, WorkflowResult } from "./live-task-workflow.ts";
 
 export function validateTaskResult(result: WorkflowResult, expectedId: string | undefined, expectedState: string, step: string): string {
@@ -23,6 +25,57 @@ export function validateProjection(result: WorkflowResult, taskId: string, scope
 	if (requiredString(result, "task_id", step) !== taskId) throw new Error(`${step} returned a different task ID`);
 	if (requiredString(result, "view_scope", step) !== scope) throw new Error(`${step} returned a different view scope`);
 	requiredString(result, "public_commitment", step);
+}
+export function buildActorEvidence(
+	role: AgentRole,
+	piProcessId: number,
+	did: string,
+	provenance: McpSessionProvenance,
+	projection: WorkflowResult,
+	handoffDigest: string,
+) {
+	const runtimeProjectionDigest = provenance.runtime_response_digests.at(-1);
+	if (!runtimeProjectionDigest) throw new Error(`${agentLabel(role)} runtime projection provenance is missing`);
+	return {
+		actor: role,
+		pi_process_id: piProcessId,
+		did,
+		mcp_child_process_id: provenance.child_process_id,
+		first_request_id: provenance.first_request_id,
+		last_request_id: provenance.last_request_id,
+		runtime_response_digests: provenance.runtime_response_digests,
+		runtime_projection_digest: runtimeProjectionDigest,
+		...sharedProjectionFields(projection),
+		view_scope: requiredString(projection, "view_scope", `${agentLabel(role)} projection`),
+		...(role === "agent_c" ? {} : { private_receipt_digest: privateReceiptDigest(projection) }),
+		source_handoff_digest: handoffDigest,
+		handoff_authorized: false,
+	};
+}
+function sharedProjectionFields(projection: WorkflowResult) {
+	return {
+		task_id: requiredString(projection, "task_id", "runtime projection"),
+		transaction_id: requiredString(projection, "transaction_id", "runtime projection"),
+		escrow_id: requiredString(projection, "escrow_id", "runtime projection"),
+		amount_lamports: requiredPositiveNumber(projection, "amount_lamports"),
+		network: requiredString(projection, "network", "runtime projection"),
+		settlement_tx_signature: requiredString(projection, "settlement_tx_signature", "runtime projection"),
+		settlement_commitment: requiredString(projection, "settlement_commitment", "runtime projection"),
+		public_commitment: requiredString(projection, "public_commitment", "runtime projection"),
+	};
+}
+function privateReceiptDigest(projection: WorkflowResult): string {
+	if (typeof projection.private_receipt_digest === "string") return projection.private_receipt_digest;
+	const privateFields = {
+		task_receipt_ids: projection.task_receipt_ids,
+		completion_evidence_digest: projection.completion_evidence_digest,
+	};
+	return `sha256:${createHash("sha256").update(JSON.stringify(privateFields)).digest("hex")}`;
+}
+function requiredPositiveNumber(result: WorkflowResult, field: string): number {
+	const value = result[field];
+	if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return value;
+	throw new Error(`runtime projection omitted ${field}`);
 }
 export function requiredString(result: WorkflowResult, field: string, step: string): string {
 	const value = result[field];

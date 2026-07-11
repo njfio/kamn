@@ -1,7 +1,7 @@
 import { McpSession, readLiveMcpConfig, type McpSessionProvenance } from "./mcp-session.ts";
 import {
 	agentLabel, configRole, delay, requiredString, requiredText, validImportedTaskId,
-	validateEscrowResult, validateProjection, validateTaskProjection, validateTaskResult, validateWaitOptions,
+	buildActorEvidence, validateEscrowResult, validateProjection, validateTaskProjection, validateTaskResult, validateWaitOptions,
 } from "./live-task-workflow-support.ts";
 
 export type AgentRole = "agent_a" | "agent_b" | "agent_c";
@@ -13,6 +13,7 @@ type WaitOptions = { timeoutMs: number; pollMs: number };
 export class LiveTaskWorkflow {
 	private readonly agents: Record<AgentRole, AgentState> = { agent_a: {}, agent_b: {}, agent_c: {} };
 	private readonly observations: Partial<Record<AgentRole, WorkflowResult>> = {};
+	private readonly projections: Partial<Record<AgentRole, WorkflowResult>> = {};
 	private taskId?: string;
 	private escrowId?: string;
 	private readonly env: Environment;
@@ -71,6 +72,7 @@ export class LiveTaskWorkflow {
 		const taskId = this.createdTaskId();
 		const result = await this.session(role).call("query_participant_task_projection", { task_id: taskId }, signal);
 		validateProjection(result, taskId, "participant-private", `${agentLabel(role)} participant projection`);
+		this.projections[role] = result;
 		return result;
 	}
 	async queryVerifierProjection(signal?: AbortSignal): Promise<WorkflowResult> {
@@ -78,10 +80,17 @@ export class LiveTaskWorkflow {
 		const taskId = this.createdTaskId();
 		const result = await this.session("agent_c").call("query_verifier_task_projection", { task_id: taskId }, signal);
 		validateProjection(result, taskId, "restricted-public", "Agent C verifier projection");
+		this.projections.agent_c = result;
 		return result;
 	}
 	provenance(role: AgentRole): McpSessionProvenance {
 		return this.session(role).provenance();
+	}
+	actorEvidence(role: AgentRole, piProcessId: number, handoffDigest: string): Record<string, unknown> {
+		const did = this.registeredDid(role);
+		const projection = this.projections[role];
+		if (!projection) throw new Error(`${agentLabel(role)} final runtime projection is missing`);
+		return buildActorEvidence(role, piProcessId, did, this.provenance(role), projection, handoffDigest);
 	}
 	async queryTask(role: AgentRole, signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid(role);

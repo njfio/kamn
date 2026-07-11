@@ -61,7 +61,7 @@ function toolResult(request) {
 		return participantProjection(request.task_id, agentName);
 	}
 	if (request.tool === "query_verifier_task_projection") {
-		return { task_id: request.task_id, view_scope: "restricted-public", public_commitment: "sha256:shared" };
+		return { ...sharedProjection(request.task_id), view_scope: "restricted-public" };
 	}
 	return {};
 }
@@ -69,10 +69,22 @@ function toolResult(request) {
 function participantProjection(taskId, name) {
 	const suffix = name.endsWith("b") ? "b" : "a";
 	return {
-		task_id: taskId,
+		...sharedProjection(taskId),
 		view_scope: "participant-private",
-		public_commitment: "sha256:shared",
 		private_receipt_digest: `sha256:participant-${suffix}`,
+	};
+}
+
+function sharedProjection(taskId) {
+	return {
+		task_id: taskId,
+		transaction_id: "transaction-live-1",
+		escrow_id: "escrow-live-1",
+		amount_lamports: 1000000,
+		network: "solana-devnet",
+		settlement_tx_signature: "devnet-signature-1",
+		settlement_commitment: "finalized",
+		public_commitment: "sha256:shared",
 	};
 }
 
