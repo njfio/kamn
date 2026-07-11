@@ -73,6 +73,44 @@ fn unit_agent_grant_validation_rejects_generic_or_incompatible_authority() {
     assert!(store.snapshot.agent_grants.is_empty());
 }
 
+#[test]
+fn unit_settlement_signature_cannot_belong_to_two_escrows() {
+    let mut snapshot = ServiceApiPersistedMessageStoreSnapshot::default();
+    snapshot.settlement_intents.insert(
+        "escrow-a".to_owned(),
+        settlement_intent("escrow-a", "signature-shared"),
+    );
+
+    assert!(settlement_signature_is_available(
+        &snapshot,
+        "escrow-a",
+        "signature-shared"
+    ));
+    assert!(!settlement_signature_is_available(
+        &snapshot,
+        "escrow-b",
+        "signature-shared"
+    ));
+}
+
+fn settlement_intent(escrow_id: &str, signature: &str) -> ServiceApiSettlementIntentRecord {
+    ServiceApiSettlementIntentRecord {
+        settlement_intent_id: format!("intent-{escrow_id}"),
+        escrow_id: escrow_id.to_owned(),
+        actor_did: ACTOR_DID.to_owned(),
+        idempotency_key: "release-key".to_owned(),
+        recipient_pubkey: "recipient".to_owned(),
+        amount_lamports: 1,
+        network: "solana:devnet".to_owned(),
+        expected_signature: signature.to_owned(),
+        signed_transaction_digest: "digest".to_owned(),
+        signed_transaction_json: "json".to_owned(),
+        state: "prepared".to_owned(),
+        submission_attempt_count: 0,
+        last_error_code: None,
+    }
+}
+
 fn registered_store() -> ServiceApiMessageStore {
     let mut store = ServiceApiMessageStore {
         state_file: None,
