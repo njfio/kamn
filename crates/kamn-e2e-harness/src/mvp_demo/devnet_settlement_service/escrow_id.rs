@@ -1,4 +1,4 @@
-pub(super) fn expected_escrow_id(payload: &str) -> String {
+pub(crate) fn expected_escrow_id(payload: &str) -> String {
     format!(
         "escrow-local-{:016x}",
         deterministic_body_tag(payload.as_bytes())
