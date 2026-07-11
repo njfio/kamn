@@ -60,6 +60,30 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
 }
 
 #[test]
+fn integration_live_settlement_persists_prepared_intent_before_adapter_submission() {
+    let _env = acquire_service_api_test_env();
+    let _override_guard =
+        crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
+    let context = build_live_solana_asset_movement_context(LiveSolanaAssetMovementParams {
+        state_file_prefix: "kamn-node-settlement-prepared-intent-state",
+        caller_did: "kamn:did:agent:test-client-settlement-prepared-intent",
+        api_bind: "127.0.0.1:34134",
+        keypair_prefix: "kamn-node-settlement-prepared-intent-keypair",
+        keypair_env: SOLANA_SETTLEMENT_KEYPAIR_FILE_ENV,
+        recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
+        lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
+        live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+    });
+
+    fund_and_release_live_escrow(&context.harness, 131, 133, 23);
+
+    assert!(
+        crate::service_api_endpoint::test_live_settlement_observed_prepared_intent(),
+        "settlement intent must be durable before adapter submission"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_live_solana_asset_movement_release_is_idempotent_for_repeated_submit(
 ) {
     let _env = acquire_service_api_test_env();

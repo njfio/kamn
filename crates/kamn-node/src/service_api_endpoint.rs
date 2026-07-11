@@ -85,7 +85,9 @@ pub(crate) use state_io::{
 use websocket::ServiceApiWebsocketEventFanout;
 
 #[cfg(test)]
-pub(crate) use live_settlement_dispatch::set_test_live_solana_settlement_override;
+pub(crate) use live_settlement_dispatch::{
+    set_test_live_solana_settlement_override, test_live_settlement_observed_prepared_intent,
+};
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;

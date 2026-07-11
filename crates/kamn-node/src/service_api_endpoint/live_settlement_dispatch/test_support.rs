@@ -1,8 +1,10 @@
 use super::models::LiveSettlementEvidence;
 use super::LiveSolanaSettlementConfig;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 static TEST_LIVE_SOLANA_SETTLEMENT_OVERRIDE: OnceLock<Mutex<bool>> = OnceLock::new();
+static OBSERVED_PREPARED_INTENT: AtomicBool = AtomicBool::new(false);
 
 pub(crate) struct TestLiveSolanaSettlementOverrideGuard {
     previous: bool,
@@ -16,6 +18,7 @@ pub(crate) fn set_test_live_solana_settlement_override(
         .expect("override lock should not poison");
     let previous = *guard;
     *guard = enabled;
+    OBSERVED_PREPARED_INTENT.store(false, Ordering::SeqCst);
     TestLiveSolanaSettlementOverrideGuard { previous }
 }
 
@@ -29,12 +32,17 @@ pub(crate) fn maybe_collect_test_live_settlement_evidence(
     {
         return None;
     }
+    OBSERVED_PREPARED_INTENT.store(prepared_intent_exists(escrow_id), Ordering::SeqCst);
     Some(Ok(LiveSettlementEvidence {
         settlement_receipt_hash: deterministic_signature(escrow_id),
         settlement_tx_signature: deterministic_signature(escrow_id),
         settlement_network: "solana:devnet".to_owned(),
         settlement_commitment: config.commitment_label.clone(),
     }))
+}
+
+pub(crate) fn test_live_settlement_observed_prepared_intent() -> bool {
+    OBSERVED_PREPARED_INTENT.load(Ordering::SeqCst)
 }
 
 impl Drop for TestLiveSolanaSettlementOverrideGuard {
@@ -48,6 +56,25 @@ impl Drop for TestLiveSolanaSettlementOverrideGuard {
 
 fn override_state() -> &'static Mutex<bool> {
     TEST_LIVE_SOLANA_SETTLEMENT_OVERRIDE.get_or_init(|| Mutex::new(false))
+}
+
+fn prepared_intent_exists(escrow_id: &str) -> bool {
+    let Ok(path) = std::env::var("KAMN_SERVICE_API_STATE_FILE") else {
+        return false;
+    };
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return false;
+    };
+    let Ok(state) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        return false;
+    };
+    state["settlement_intents"]
+        .as_array()
+        .is_some_and(|intents| {
+            intents
+                .iter()
+                .any(|intent| intent["escrow_id"] == escrow_id && intent["state"] == "prepared")
+        })
 }
 
 fn deterministic_signature(seed: &str) -> String {
