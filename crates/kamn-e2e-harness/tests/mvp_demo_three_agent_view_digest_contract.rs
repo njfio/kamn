@@ -74,5 +74,6 @@ fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
         agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: None,
     }
 }

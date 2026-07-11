@@ -55,14 +55,26 @@ pub fn execute_verify_mvp_demo_contract(
     if let Some(path) = config.agent_harness_evidence_path.as_deref() {
         validate_agent_harness_evidence_path(report.as_str(), config.report.as_str(), path)?;
     }
+    let pi_actor_summary = config
+        .pi_transaction_actor_paths
+        .as_ref()
+        .map(super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths)
+        .transpose()?;
     validate_three_agent_transcript_file(report.as_str())?;
     validate_live_task_binding_file(report.as_str())?;
     let evidence_path = config.agent_harness_evidence_path.as_deref().unwrap_or("");
-    Ok(format!(
+    let output = format!(
         "{{\"status\":\"PASS\",\"report\":\"{}\",\"agent_harness_evidence\":\"{}\"}}",
         escape_json(config.report.as_str()),
         escape_json(evidence_path)
-    ))
+    );
+    Ok(match pi_actor_summary {
+        Some(summary) => format!(
+            "{},\"pi_transaction_actors\":{summary}}}",
+            &output[..output.len() - 1]
+        ),
+        None => output,
+    })
 }
 
 fn validate_generated_report(report_json: &str, output_root: &Path) -> Result<(), String> {

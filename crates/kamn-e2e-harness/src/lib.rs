@@ -462,6 +462,7 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
 fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, String> {
     let mut report = None;
     let mut agent_harness_evidence_path = None;
+    let mut pi_actor_paths: [Option<String>; 3] = [None, None, None];
     let mut index = 1;
     while index < args.len() {
         let (parsed_report, advanced) = parse_flag_value(args, index, "--report")?;
@@ -477,13 +478,47 @@ fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, Stri
             index = advanced + 1;
             continue;
         }
+        let mut matched_actor = false;
+        for (slot, flag) in [
+            "--pi-agent-a-evidence",
+            "--pi-agent-b-evidence",
+            "--pi-agent-c-evidence",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let (value, advanced) = parse_flag_value(args, index, flag)?;
+            if let Some(value) = value {
+                pi_actor_paths[slot] = Some(value);
+                index = advanced + 1;
+                matched_actor = true;
+                break;
+            }
+        }
+        if matched_actor {
+            continue;
+        }
         return Err(format!("unknown verify-mvp-demo flag: {}", args[index]));
     }
     let report = report.ok_or_else(|| "missing required flag --report".to_owned())?;
     Ok(HarnessCommand::VerifyMvpDemo(VerifyMvpDemoCommandConfig {
         report,
         agent_harness_evidence_path,
+        pi_transaction_actor_paths: complete_pi_actor_paths(pi_actor_paths)?,
     }))
+}
+
+fn complete_pi_actor_paths(paths: [Option<String>; 3]) -> Result<Option<[String; 3]>, String> {
+    if paths.iter().all(Option::is_none) {
+        return Ok(None);
+    }
+    let [a, b, c] = paths;
+    match (a, b, c) {
+        (Some(a), Some(b), Some(c)) => Ok(Some([a, b, c])),
+        _ => {
+            Err("verify-mvp-demo requires all three Pi transaction actor evidence paths".to_owned())
+        }
+    }
 }
 
 fn mvp_devnet_mode_from_env() -> String {

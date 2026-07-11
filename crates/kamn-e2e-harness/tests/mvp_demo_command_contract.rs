@@ -35,6 +35,7 @@ fn spec_c02_parser_accepts_verify_mvp_demo_with_report() {
     let expected = HarnessCommand::VerifyMvpDemo(VerifyMvpDemoCommandConfig {
         report: "/tmp/report.json".to_owned(),
         agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: None,
     });
     assert_eq!(parsed, expected);
 }
@@ -71,7 +72,10 @@ fn spec_c08_parser_accepts_complete_pi_transaction_actor_evidence_set() {
     .expect("verify-mvp-demo should accept all three Pi actor artifacts");
     let debug = format!("{parsed:?}");
     for marker in ["agent-a.json", "agent-b.json", "agent-c.json"] {
-        assert!(debug.contains(marker), "missing parsed actor path: {marker}");
+        assert!(
+            debug.contains(marker),
+            "missing parsed actor path: {marker}"
+        );
     }
 }
 
@@ -119,6 +123,7 @@ fn spec_c05_verify_mvp_demo_command_accepts_generated_report() {
     let verify_config = VerifyMvpDemoCommandConfig {
         report: temp.join("latest/proof/report.json").display().to_string(),
         agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: None,
     };
     let output = execute_verify_mvp_demo_contract(&verify_config)
         .expect("verify-mvp-demo should accept generated report");
