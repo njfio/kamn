@@ -39,6 +39,7 @@ pub(super) fn drive_escrow_release(
     provider
         .complete_task_with_payload(task.task_id.as_str(), agreement.complete_payload().as_str())
         .map_err(|error| format!("failed to complete MVP demo task: {error}"))?;
+    std::thread::sleep(release_pacing_delay());
     let released = creator
         .release_escrow_with_payload(
             funded.escrow_id.as_str(),
@@ -50,6 +51,10 @@ pub(super) fn drive_escrow_release(
         escrow_id: released.escrow_id,
         task_id: task.task_id,
     })
+}
+
+fn release_pacing_delay() -> std::time::Duration {
+    std::time::Duration::from_millis(5_100)
 }
 
 pub(super) struct SettlementRun {
