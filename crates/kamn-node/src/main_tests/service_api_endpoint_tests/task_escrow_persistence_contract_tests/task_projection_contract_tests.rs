@@ -112,6 +112,25 @@ fn integration_projection_fails_closed_for_inconsistent_durable_state() {
     case.cleanup();
 }
 
+#[test]
+fn integration_projection_rejects_missing_required_public_facts() {
+    let case = ProjectionCase::new("missing-public-fact");
+    let task_id = case.seed_transaction();
+    case.remove_escrow_field("amount_lamports");
+
+    let response = case.query(VERIFIER, 2, &task_id, "verifier-view");
+
+    assert!(
+        response.contains("HTTP/1.1 500 Internal Server Error"),
+        "{response}"
+    );
+    assert!(
+        response.contains("TRANSACTION_PROJECTION_INCONSISTENT"),
+        "{response}"
+    );
+    case.cleanup();
+}
+
 fn payload(response: &str) -> Value {
     assert_ok(response);
     parse_service_api_payload(extract_http_response_body(response)).expect("projection payload")

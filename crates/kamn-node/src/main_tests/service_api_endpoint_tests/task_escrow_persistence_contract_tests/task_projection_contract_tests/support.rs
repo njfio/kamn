@@ -77,9 +77,21 @@ impl ProjectionCase {
         let escrows = state["escrows"].as_object_mut().expect("escrow map");
         let escrow = escrows.values_mut().next().expect("bound escrow");
         escrow["transaction_id"] = serde_json::Value::String(replacement.to_owned());
+        self.write_state(&state);
+    }
+
+    pub(super) fn remove_escrow_field(&self, field: &str) {
+        let mut state = read_state_json(self.state_file.as_path());
+        let escrows = state["escrows"].as_object_mut().expect("escrow map");
+        let escrow = escrows.values_mut().next().expect("bound escrow");
+        escrow.as_object_mut().expect("escrow record").remove(field);
+        self.write_state(&state);
+    }
+
+    fn write_state(&self, state: &serde_json::Value) {
         fs::write(
             self.state_file.as_path(),
-            serde_json::to_vec(&state).expect("state json"),
+            serde_json::to_vec(state).expect("state json"),
         )
         .expect("write tampered state");
     }
