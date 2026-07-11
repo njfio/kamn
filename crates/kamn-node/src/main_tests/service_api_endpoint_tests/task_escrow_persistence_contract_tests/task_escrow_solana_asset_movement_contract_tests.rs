@@ -99,6 +99,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
     let state_json = read_state_json(context.harness.state_file.as_path());
 
     assert_released_escrow_has_solana_signature_metadata(&released_escrow);
+    assert_eq!(released_escrow["claim_scope"], "devnet-backed");
     assert_persisted_solana_signature_metadata(&state_json, escrow_id.as_str());
 }
 
