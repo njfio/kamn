@@ -41,9 +41,9 @@ test("three agents drive one completed escrow transaction through independent MC
 	const agentB = await workflow.register("agent_b");
 	const agentC = await workflow.register("agent_c");
 	const created = await workflow.createTask("Settle proof", "Bind three runtime views");
+	const funded = await workflow.fundEscrow(JSON.stringify({ task_id: created.task_id, amount_lamports: 1000000 }));
 	await workflow.acceptTask();
 	await workflow.completeTask();
-	const funded = await workflow.fundEscrow(JSON.stringify({ task_id: created.task_id, amount_lamports: 1000000 }));
 	const released = await workflow.releaseEscrow();
 	const viewA = await workflow.queryParticipantProjection("agent_a");
 	const viewB = await workflow.queryParticipantProjection("agent_b");
