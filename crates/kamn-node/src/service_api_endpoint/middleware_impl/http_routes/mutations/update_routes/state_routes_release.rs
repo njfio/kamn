@@ -48,9 +48,14 @@ async fn release_escrow_with_live_solana_settlement(
     let actor = super::super::super::task_actor(context)?;
     let key = release_idempotency_key(context)?;
     let prepared = resolve_prepared_settlement(&mut store, config, escrow_id)?;
-    store
-        .prepare_settlement_intent(actor.as_str(), escrow_id, key.as_str(), &prepared)
-        .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))?;
+    if let Err(error) =
+        store.prepare_settlement_intent(actor.as_str(), escrow_id, key.as_str(), &prepared)
+    {
+        if error == "SETTLEMENT_INTENT_CONFLICT" {
+            return Err(Box::new(settlement_intent_conflict_error()));
+        }
+        return Err(Box::new(live_settlement_evidence_error(error.as_str())));
+    }
     let evidence = match crate::service_api_endpoint::live_settlement_dispatch::submit_or_reconcile_live_settlement(
         config, &prepared, escrow_id,
     ) {
@@ -72,6 +77,15 @@ fn settlement_outcome_ambiguous_error() -> Response {
         "unavailable",
         "SETTLEMENT_OUTCOME_AMBIGUOUS",
         "settlement submission outcome is ambiguous and requires reconciliation",
+    )
+}
+
+fn settlement_intent_conflict_error() -> Response {
+    super::payload::json_error_response(
+        StatusCode::CONFLICT,
+        "conflict",
+        "SETTLEMENT_INTENT_CONFLICT",
+        "settlement idempotency key conflicts with the durable intent",
     )
 }
 
