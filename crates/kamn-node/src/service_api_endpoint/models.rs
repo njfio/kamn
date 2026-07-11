@@ -96,6 +96,14 @@ pub(crate) struct ServiceApiSettlementMetadata {
 pub(crate) struct ServiceApiTaskCreateBody {
     pub(crate) task_id: String,
     pub(crate) state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) transaction_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) creator_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) provider_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) terms_digest: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -108,6 +116,16 @@ pub(crate) struct ServiceApiTaskGetBody {
 pub(crate) struct ServiceApiTaskTransitionBody {
     pub(crate) task_id: String,
     pub(crate) state: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) transaction_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) creator_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) provider_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) terms_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) receipt_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

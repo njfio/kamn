@@ -39,6 +39,7 @@ mod models;
 mod persistence;
 mod runtime_evidence;
 mod store;
+mod task_models;
 #[cfg(test)]
 mod tests;
 
@@ -48,10 +49,12 @@ use audit_export::{
 };
 use models::*;
 use runtime_evidence::build_data_layer_runtime_evidence;
+use task_models::*;
 
 pub(crate) use models::{
     ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError, ServiceApiMessageStore,
     ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
 };
 pub(crate) use store::escrow_fund_task_id;
+pub(crate) use store::TaskLifecycleError;
 pub(crate) use store::{ServiceApiAuthorizationDecision, ServiceApiAuthorizationRequest};

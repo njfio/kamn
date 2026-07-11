@@ -12,3 +12,4 @@ pub(crate) use authorization_ops::{
 };
 pub(crate) use query_ops::recipient_mailbox_channel_id;
 pub(crate) use task_escrow_ops::escrow_fund_task_id;
+pub(crate) use task_escrow_ops::TaskLifecycleError;

@@ -7,7 +7,7 @@ use support::{
     list_mailbox_live, project_relay_to_recipient, query_message_live, query_task,
     read_audit_export_json, read_state_json, recipient_env_guards, register_agent_profile,
     send_message, set_audit_export_file_env, set_relay_spool_env, set_state_file_env,
-    spawn_api_server, VerticalSliceFiles,
+    spawn_api_server, transition_task, VerticalSliceFiles,
 };
 
 #[test]
@@ -153,8 +153,33 @@ fn dispatch_slice_task(
 ) -> (crate::service_api_endpoint::ServiceApiTaskCreateBody, Value) {
     register_vertical_slice_worker(case);
     let created_task = create_vertical_slice_task(case);
+    complete_vertical_slice_task(case, created_task.task_id.as_str());
     let queried_task = query_vertical_slice_task(case, created_task.task_id.as_str());
     (created_task, queried_task)
+}
+
+fn complete_vertical_slice_task(case: &VerticalSliceCase, task_id: &str) {
+    let provider = "kamn:did:agent:vertical-slice-recipient";
+    with_sender_env(case, || {
+        transition_task(
+            &case.sender_snapshot,
+            case.sender_bind_addr.as_str(),
+            provider,
+            705,
+            task_id,
+            "accept",
+            r#"{"idempotency_key":"vertical-slice-accept"}"#,
+        );
+        transition_task(
+            &case.sender_snapshot,
+            case.sender_bind_addr.as_str(),
+            provider,
+            706,
+            task_id,
+            "complete",
+            r#"{"idempotency_key":"vertical-slice-complete","completion_evidence_digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}"#,
+        );
+    });
 }
 
 fn register_vertical_slice_worker(case: &VerticalSliceCase) {
@@ -174,25 +199,33 @@ fn create_vertical_slice_task(
 ) -> crate::service_api_endpoint::ServiceApiTaskCreateBody {
     with_sender_env(case, || {
         provision_vertical_slice_grant(case, "POST", "/v1/tasks/create");
+        let provider_did = test_service_api_sender_did("kamn:did:agent:vertical-slice-recipient");
+        let body = serde_json::json!({
+            "provider_did": provider_did,
+            "transaction_id": "transaction-vertical-slice",
+            "terms_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "idempotency_key": "vertical-slice-create",
+            "task_type": "vertical-slice",
+            "description": "prove one working slice",
+        })
+        .to_string();
         create_task(
             &case.sender_snapshot,
             case.sender_bind_addr.as_str(),
             case.sender_did,
             705,
-            r#"{"creator":"kamn:did:agent:vertical-slice-sender","task_type":"vertical-slice","description":"prove one working slice"}"#,
+            body.as_str(),
         )
     })
 }
 
 fn query_vertical_slice_task(case: &VerticalSliceCase, task_id: &str) -> Value {
     with_sender_env(case, || {
-        let path = format!("/v1/tasks/{task_id}");
-        provision_vertical_slice_grant(case, "GET", path.as_str());
         query_task(
             &case.sender_snapshot,
             case.sender_bind_addr.as_str(),
             case.sender_did,
-            706,
+            707,
             task_id,
         )
     })

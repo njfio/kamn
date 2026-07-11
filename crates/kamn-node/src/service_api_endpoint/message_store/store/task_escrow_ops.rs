@@ -1,37 +1,38 @@
 use super::super::*;
 
 mod dispatch;
+mod lifecycle;
 mod settlement;
 mod tasks;
 
 use dispatch::{
-    dispatch_prerequisite_missing_error, dispatch_request_from_record,
-    parse_dispatchable_task_payload, select_dispatch_assignee,
+    dispatch_prerequisite_missing_error, dispatch_request_from_record, select_dispatch_assignee,
 };
+pub(crate) use lifecycle::TaskLifecycleError;
 pub(crate) use settlement::escrow_fund_task_id;
 use settlement::{
     build_escrow_record, escrow_status_response, next_escrow_id, release_escrow_record,
 };
-use tasks::{build_task_record, next_task_id, persist_task_created_audit_export};
+use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
-    pub(crate) fn create_task(
+    pub(crate) fn create_bound_task(
         &mut self,
+        actor_did: &str,
         payload: &str,
-    ) -> Result<ServiceApiTaskCreateBody, String> {
-        self.refresh_from_disk()?;
-        let task_id = next_task_id(self, payload);
-        let dispatch_metadata = parse_dispatchable_task_payload(payload)?;
-        self.snapshot.tasks.insert(
-            task_id.clone(),
-            build_task_record(task_id.as_str(), dispatch_metadata),
-        );
-        self.persist()?;
-        persist_task_created_audit_export(self, task_id.as_str())?;
-        Ok(ServiceApiTaskCreateBody {
-            task_id,
-            state: "submitted".to_owned(),
-        })
+    ) -> Result<ServiceApiTaskCreateBody, TaskLifecycleError> {
+        lifecycle::create_bound_task(self, actor_did, payload)
+    }
+
+    pub(crate) fn transition_bound_task(
+        &mut self,
+        actor_did: &str,
+        task_id: &str,
+        action: &str,
+        payload: &str,
+        correlation_id: &str,
+    ) -> Result<ServiceApiTaskTransitionBody, TaskLifecycleError> {
+        lifecycle::transition_bound_task(self, actor_did, task_id, action, payload, correlation_id)
     }
 
     pub(crate) fn get_task(
@@ -46,23 +47,6 @@ impl ServiceApiMessageStore {
         Ok(Some(ServiceApiTaskGetBody {
             task_id: record.task_id.clone(),
             state: record.state.clone(),
-        }))
-    }
-
-    pub(crate) fn transition_task(
-        &mut self,
-        task_id: &str,
-        state: &str,
-    ) -> Result<Option<ServiceApiTaskTransitionBody>, String> {
-        self.refresh_from_disk()?;
-        let Some(record) = self.snapshot.tasks.get_mut(task_id) else {
-            return Ok(None);
-        };
-        record.state = state.to_owned();
-        self.persist()?;
-        Ok(Some(ServiceApiTaskTransitionBody {
-            task_id: task_id.to_owned(),
-            state: state.to_owned(),
         }))
     }
 
@@ -149,6 +133,9 @@ impl ServiceApiMessageStore {
         let Some(record) = self.snapshot.tasks.get(task_id).cloned() else {
             return Ok(());
         };
+        if record.provider_did.is_some() {
+            return Ok(());
+        }
         if record.state != "submitted" {
             return Ok(());
         }

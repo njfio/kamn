@@ -44,6 +44,10 @@ async fn create_task(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
 ) -> Response {
+    let actor_did = match super::super::task_actor(context) {
+        Ok(actor) => actor,
+        Err(response) => return *response,
+    };
     let result = {
         let mut store = state.message_store.lock().await;
         if let Err(response) =
@@ -51,7 +55,7 @@ async fn create_task(
         {
             return *response;
         }
-        store.create_task(context.parsed_request.body.as_str())
+        store.create_bound_task(actor_did.as_str(), context.parsed_request.body.as_str())
     };
     match result {
         Ok(payload) => {
@@ -60,7 +64,7 @@ async fn create_task(
                 .publish_task_submitted_event(&payload);
             contract_json(201, &payload)
         }
-        Err(error) => persistence_error("service api task persistence failed", error),
+        Err(error) => super::super::task_lifecycle_error_response(error),
     }
 }
 

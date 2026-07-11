@@ -35,6 +35,7 @@ pub(crate) fn create_task(
     nonce: u64,
     payload: &str,
 ) -> ServiceApiTaskCreateBody {
+    let canonical_payload = canonical_task_payload(snapshot, bind_addr, caller_did, nonce, payload);
     let response = signed_request(
         snapshot,
         bind_addr,
@@ -44,13 +45,40 @@ pub(crate) fn create_task(
             path: "/v1/tasks/create",
             caller_did,
             nonce,
-            body: payload,
+            body: canonical_payload.as_str(),
             extra_headers: &[],
         },
     );
     assert!(response.contains("HTTP/1.1 201 Created"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("task create payload should deserialize")
+}
+
+fn canonical_task_payload(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    payload: &str,
+) -> String {
+    if payload.contains("\"provider_did\"") {
+        return payload.to_owned();
+    }
+    let provider = register_agent_profile(
+        snapshot,
+        bind_addr,
+        caller_did,
+        nonce - 1,
+        r#"{"agent_type":"provider","model_family":"test","capabilities":["tasks"]}"#,
+    );
+    serde_json::json!({
+        "provider_did": provider.did,
+        "transaction_id": format!("transaction-{nonce}"),
+        "terms_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "idempotency_key": format!("create-{nonce}"),
+        "description": payload,
+    })
+    .to_string()
 }
 
 pub(crate) fn accept_task(
@@ -60,7 +88,7 @@ pub(crate) fn accept_task(
     nonce: u64,
     task_id: &str,
 ) {
-    let response = signed_request(
+    let response = raw_signed_request(
         snapshot,
         bind_addr,
         SignedRequest {
@@ -69,7 +97,7 @@ pub(crate) fn accept_task(
             path: format!("/v1/tasks/{task_id}/accept").as_str(),
             caller_did,
             nonce,
-            body: "",
+            body: r#"{"idempotency_key":"accept-task"}"#,
             extra_headers: &[],
         },
     );
@@ -83,7 +111,7 @@ pub(crate) fn query_task(
     nonce: u64,
     task_id: &str,
 ) -> Value {
-    let response = signed_request(
+    let response = raw_signed_request(
         snapshot,
         bind_addr,
         SignedRequest {

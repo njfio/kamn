@@ -5,7 +5,6 @@ use std::path::Path;
 
 const ACTOR: &str = "kamn:did:agent:concurrent-replay";
 const PATH: &str = "/v1/tasks/create";
-const BODY: &str = r#"{"title":"authorized-task","description":"grant contract"}"#;
 
 #[test]
 fn integration_service_api_concurrent_same_nonce_records_one_authorization_decision() {
@@ -53,19 +52,20 @@ fn spawn_request<'scope>(
     nonce: u64,
 ) -> thread::ScopedJoinHandle<'scope, String> {
     scope.spawn(move || {
+        let body = canonical_body();
         let nonce_text = nonce.to_string();
         let signature = service_api_request_signature_for_fields(
             ACTOR,
             nonce,
             state_hash(snapshot).as_str(),
-            BODY,
+            body.as_str(),
         );
         barrier.wait();
         send_http_request_with_headers(
             addr,
             "POST",
             PATH,
-            BODY,
+            body.as_str(),
             &[
                 ("X-KAMN-Sender-DID", ACTOR),
                 ("X-KAMN-Request-Nonce", nonce_text.as_str()),
@@ -74,6 +74,17 @@ fn spawn_request<'scope>(
             ],
         )
     })
+}
+
+fn canonical_body() -> String {
+    serde_json::json!({
+        "provider_did": test_service_api_sender_did(ACTOR),
+        "transaction_id": "transaction-concurrent-replay",
+        "terms_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "idempotency_key": "concurrent-replay-create",
+        "description": "grant contract",
+    })
+    .to_string()
 }
 
 fn provision_grant(path: &Path, actor: &str) {

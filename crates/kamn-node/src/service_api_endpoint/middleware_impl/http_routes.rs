@@ -42,6 +42,34 @@ fn persistence_error(error: &str) -> Response {
     )
 }
 
+fn task_actor(context: &ServiceApiRequestContext) -> Result<String, Box<Response>> {
+    let target = super::auth::resolve_transaction_authorization_target(&context.parsed_request)
+        .map_err(|error| Box::new(forbidden(error.reason_code, error.message.as_str())))?;
+    target
+        .map(|target| target.actor_did)
+        .ok_or_else(|| Box::new(persistence_error("task authorization target is missing")))
+}
+
+fn task_lifecycle_error_response(error: message_store::TaskLifecycleError) -> Response {
+    use message_store::TaskLifecycleError::*;
+    match error {
+        BadRequest(code, message) => task_error(StatusCode::BAD_REQUEST, code, message),
+        Forbidden(code, message) => task_error(StatusCode::FORBIDDEN, code, message),
+        Conflict(code, message) => task_error(StatusCode::CONFLICT, code, message),
+        NotFound => super::payload::json_error_response(
+            StatusCode::NOT_FOUND,
+            "not-found",
+            "service_api_route_not_found",
+            "service api task not found",
+        ),
+        Persistence(message) => persistence_error(message.as_str()),
+    }
+}
+
+fn task_error(status: StatusCode, code: &'static str, message: String) -> Response {
+    super::payload::json_error_response(status, "task", code, message.as_str())
+}
+
 pub(super) async fn handle_service_api_http_route(
     State(state): State<Arc<ServiceApiRuntimeState>>,
     Extension(context): Extension<ServiceApiRequestContext>,

@@ -20,10 +20,10 @@ async fn task_route_response(
     path: &str,
 ) -> Option<Response> {
     if let Some(task_id) = super::payload::task_accept_path_id(path) {
-        return Some(task_transition(state, context, task_id, "accepted", true).await);
+        return Some(task_transition(state, context, task_id, "task:accept", true).await);
     }
     let task_id = super::payload::task_complete_path_id(path)?;
-    Some(task_transition(state, context, task_id, "completed", true).await)
+    Some(task_transition(state, context, task_id, "task:complete", true).await)
 }
 async fn persistence_route_response(
     state: &Arc<ServiceApiRuntimeState>,
@@ -54,6 +54,10 @@ async fn task_transition(
     target: &str,
     publish: bool,
 ) -> Response {
+    let actor_did = match super::super::super::task_actor(context) {
+        Ok(actor) => actor,
+        Err(response) => return *response,
+    };
     let result = {
         let mut store = state.message_store.lock().await;
         if let Err(response) =
@@ -61,10 +65,16 @@ async fn task_transition(
         {
             return *response;
         }
-        store.transition_task(task_id, target)
+        store.transition_bound_task(
+            actor_did.as_str(),
+            task_id,
+            target,
+            context.parsed_request.body.as_str(),
+            context.correlation_id.as_str(),
+        )
     };
     match result {
-        Ok(Some(payload)) => {
+        Ok(payload) => {
             if publish {
                 state
                     .websocket_events
@@ -72,8 +82,7 @@ async fn task_transition(
             }
             contract_json(200, &payload)
         }
-        Ok(None) => not_found(),
-        Err(error) => persistence_error("service api task persistence failed", error),
+        Err(error) => super::super::super::task_lifecycle_error_response(error),
     }
 }
 
