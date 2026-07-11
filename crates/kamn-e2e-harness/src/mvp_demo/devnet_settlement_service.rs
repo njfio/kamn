@@ -40,12 +40,11 @@ pub(super) fn drive_escrow_release(
         .complete_task_with_payload(task.task_id.as_str(), agreement.complete_payload().as_str())
         .map_err(|error| format!("failed to complete MVP demo task: {error}"))?;
     std::thread::sleep(release_pacing_delay());
-    let released = creator
-        .release_escrow_with_payload(
-            funded.escrow_id.as_str(),
-            agreement.release_payload().as_str(),
-        )
-        .map_err(|error| format!("failed to release MVP demo escrow: {error}"))?;
+    let released = release_with_reconciliation(
+        &creator,
+        funded.escrow_id.as_str(),
+        agreement.release_payload().as_str(),
+    )?;
     require_released(released.state.as_str())?;
     Ok(SettlementRun {
         escrow_id: released.escrow_id,
@@ -55,6 +54,28 @@ pub(super) fn drive_escrow_release(
 
 fn release_pacing_delay() -> std::time::Duration {
     std::time::Duration::from_millis(5_100)
+}
+
+fn release_with_reconciliation(
+    creator: &KamnAgentHandle,
+    escrow_id: &str,
+    payload: &str,
+) -> Result<kamn_agent_lib::ServiceEscrowStatus, String> {
+    for attempt in 0..3 {
+        match creator.release_escrow_with_payload(escrow_id, payload) {
+            Ok(released) => return Ok(released),
+            Err(error) if attempt < 2 && should_retry_release(error.to_string().as_str()) => {
+                std::thread::sleep(std::time::Duration::from_secs(2));
+            }
+            Err(error) => return Err(format!("failed to release MVP demo escrow: {error}")),
+        }
+    }
+    Err("failed to reconcile MVP demo escrow release".to_owned())
+}
+
+fn should_retry_release(error: &str) -> bool {
+    error.contains("SETTLEMENT_OUTCOME_AMBIGUOUS")
+        || error.contains("live settlement evidence failed")
 }
 
 pub(super) struct SettlementRun {

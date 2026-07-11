@@ -83,16 +83,20 @@ fn submit_or_reconcile_live_settlement_via_rpc(
         return Err("live solana settlement submitted signature mismatch".to_owned());
     }
     let confirmed = confirm_live_settlement_signature(&client, &signature, config)?;
-    if !confirmed {
-        return Err(format!(
-            "live solana settlement confirmation missing at {}",
-            config.commitment_label
-        ));
-    }
+    require_confirmation(confirmed, config.commitment_label.as_str())?;
     Ok(build_live_settlement_evidence(
         signature.to_string(),
         config.commitment_label.as_str(),
         prepared,
+    ))
+}
+
+fn require_confirmation(confirmed: bool, commitment: &str) -> Result<(), String> {
+    if confirmed {
+        return Ok(());
+    }
+    Err(format!(
+        "SETTLEMENT_OUTCOME_AMBIGUOUS: confirmation missing at {commitment}"
     ))
 }
 
