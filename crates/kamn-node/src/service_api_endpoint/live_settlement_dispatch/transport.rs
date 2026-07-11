@@ -164,8 +164,8 @@ fn submit_live_settlement_transaction(
     transaction: &solana_sdk::transaction::Transaction,
 ) -> Result<solana_sdk::signature::Signature, String> {
     client
-        .send_and_confirm_transaction(transaction)
-        .map_err(|error| format!("live solana settlement transaction submit failed: {error}"))
+        .send_transaction(transaction)
+        .map_err(|error| format!("SETTLEMENT_OUTCOME_AMBIGUOUS: submit failed: {error}"))
 }
 
 fn confirm_live_settlement_signature(
@@ -176,7 +176,9 @@ fn confirm_live_settlement_signature(
     client
         .confirm_transaction_with_commitment(signature, config.commitment)
         .map(|response| response.value)
-        .map_err(|error| format!("live solana settlement confirmation lookup failed: {error}"))
+        .map_err(|error| {
+            format!("SETTLEMENT_OUTCOME_AMBIGUOUS: confirmation lookup failed: {error}")
+        })
 }
 
 fn build_live_settlement_evidence(

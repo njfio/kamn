@@ -69,7 +69,7 @@ fn submit(
     match live_settlement_dispatch::submit_or_reconcile_live_settlement(config, prepared, escrow_id)
     {
         Ok(evidence) => Ok(evidence),
-        Err(error) if error == "SETTLEMENT_OUTCOME_AMBIGUOUS" => {
+        Err(error) if error.starts_with("SETTLEMENT_OUTCOME_AMBIGUOUS") => {
             store
                 .mark_settlement_outcome_ambiguous(escrow_id)
                 .map_err(|persist_error| {

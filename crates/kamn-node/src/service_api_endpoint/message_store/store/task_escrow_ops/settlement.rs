@@ -40,8 +40,17 @@ pub(super) fn escrow_status_response(
         terms_digest: record.terms_digest.clone(),
         release_authority_did: record.release_authority_did.clone(),
         release_policy: record.release_policy.clone(),
-        claim_scope: "local-only".to_owned(),
+        claim_scope: escrow_claim_scope(record).to_owned(),
         receipt_id: None,
         settlement: record.settlement.clone(),
     }
+}
+
+fn escrow_claim_scope(record: &ServiceApiPersistedEscrowRecord) -> &'static str {
+    if record.settlement.settlement_tx_signature.is_some()
+        && record.settlement.settlement_network.as_deref() == Some("solana:devnet")
+    {
+        return "devnet-backed";
+    }
+    "local-only"
 }
