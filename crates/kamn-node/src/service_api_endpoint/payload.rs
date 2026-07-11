@@ -753,9 +753,29 @@ pub(super) fn escape_metrics_label(input: &str) -> String {
 mod tests {
     use super::{
         bridge_forward_path_id, bridge_path_id, content_expire_path_id, content_path_id,
-        content_tombstone_path_id, route_exists_for_other_method, ROUTE_BRIDGE_SUBMIT,
-        ROUTE_CONTENT_REGISTER,
+        content_tombstone_path_id, route_exists_for_other_method, task_participant_view_path_id,
+        task_verifier_view_path_id, ROUTE_BRIDGE_SUBMIT, ROUTE_CONTENT_REGISTER,
     };
+
+    #[test]
+    fn unit_task_projection_paths_accept_only_canonical_shapes() {
+        assert_eq!(
+            task_participant_view_path_id("/v1/tasks/task-a/participant-view"),
+            Some("task-a")
+        );
+        assert_eq!(
+            task_verifier_view_path_id("/v1/tasks/task-a/verifier-view"),
+            Some("task-a")
+        );
+        assert_eq!(
+            task_participant_view_path_id("/v1/tasks//participant-view"),
+            None
+        );
+        assert_eq!(
+            task_verifier_view_path_id("/v1/tasks/task-a/extra/verifier-view"),
+            None
+        );
+    }
 
     #[test]
     fn unit_content_path_id_contract_accepts_and_rejects_expected_shapes() {

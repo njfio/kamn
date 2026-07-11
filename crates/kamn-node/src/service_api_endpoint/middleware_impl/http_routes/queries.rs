@@ -1,18 +1,13 @@
 use super::*;
 
+mod task_projection;
+
 pub(super) async fn handle_get_route(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
 ) -> Option<Response> {
-    if let Some(task_id) =
-        super::payload::task_participant_view_path_id(context.parsed_request.path.as_str())
-    {
-        return Some(participant_task_projection(state, context, task_id).await);
-    }
-    if let Some(task_id) =
-        super::payload::task_verifier_view_path_id(context.parsed_request.path.as_str())
-    {
-        return Some(verifier_task_projection(state, context, task_id).await);
+    if let Some(response) = task_projection::handle_task_projection_query(state, context).await {
+        return Some(response);
     }
     if let Some(message_id) = super::payload::message_path_id(context.parsed_request.path.as_str())
     {
@@ -34,79 +29,6 @@ pub(super) async fn handle_get_route(
         return Some(bridge_query(state, bridge_id).await);
     }
     agent_like_query(state, context).await
-}
-
-async fn participant_task_projection(
-    state: &Arc<ServiceApiRuntimeState>,
-    context: &ServiceApiRequestContext,
-    task_id: &str,
-) -> Response {
-    let requester = requester_did(context);
-    let result = {
-        let mut store = state.message_store.lock().await;
-        if let Err(response) = super::revalidate_transaction_authorization(&mut store, context) {
-            return *response;
-        }
-        store.participant_task_projection(task_id, requester)
-    };
-    projection_response(result)
-}
-
-async fn verifier_task_projection(
-    state: &Arc<ServiceApiRuntimeState>,
-    context: &ServiceApiRequestContext,
-    task_id: &str,
-) -> Response {
-    let requester = requester_did(context);
-    let result = state
-        .message_store
-        .lock()
-        .await
-        .verifier_task_projection(task_id, requester);
-    projection_response(result)
-}
-
-fn requester_did(context: &ServiceApiRequestContext) -> &str {
-    super::auth::header_value(
-        &context.parsed_request.headers,
-        REQUEST_AUTH_SENDER_DID_HEADER,
-    )
-    .unwrap_or_default()
-}
-
-fn projection_response<T: Serialize>(
-    result: Result<Option<T>, message_store::TaskProjectionError>,
-) -> Response {
-    use message_store::TaskProjectionError::*;
-    match result {
-        Ok(Some(payload)) => contract_json(200, &payload),
-        Ok(None) => not_found(),
-        Err(Unregistered) => projection_error(
-            StatusCode::FORBIDDEN,
-            "AGENT_NOT_REGISTERED",
-            "requester is not a registered agent",
-        ),
-        Err(Forbidden) => projection_error(
-            StatusCode::FORBIDDEN,
-            "TASK_PARTICIPANT_VIEW_FORBIDDEN",
-            "requester is not a task participant",
-        ),
-        Err(EscrowBindingMissing) => projection_error(
-            StatusCode::CONFLICT,
-            "TASK_ESCROW_BINDING_MISSING",
-            "task has no bound escrow",
-        ),
-        Err(Inconsistent) => projection_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "TRANSACTION_PROJECTION_INCONSISTENT",
-            "durable transaction projection fields disagree",
-        ),
-        Err(Persistence(error)) => persistence_error("task projection persistence failed", error),
-    }
-}
-
-fn projection_error(status: StatusCode, code: &str, message: &str) -> Response {
-    super::payload::json_error_response(status, "task-projection", code, message)
 }
 
 async fn message_query(
