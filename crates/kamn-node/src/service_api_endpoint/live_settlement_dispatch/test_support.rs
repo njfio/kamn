@@ -1,4 +1,4 @@
-use super::models::LiveSettlementEvidence;
+use super::models::{LiveSettlementEvidence, PreparedLiveSettlement};
 use super::LiveSolanaSettlementConfig;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -22,8 +22,29 @@ pub(crate) fn set_test_live_solana_settlement_override(
     TestLiveSolanaSettlementOverrideGuard { previous }
 }
 
-pub(crate) fn maybe_collect_test_live_settlement_evidence(
+pub(crate) fn maybe_prepare_test_live_settlement(
     config: &LiveSolanaSettlementConfig,
+    escrow_id: &str,
+) -> Option<Result<PreparedLiveSettlement, String>> {
+    if !*override_state()
+        .lock()
+        .expect("override lock should not poison")
+    {
+        return None;
+    }
+    Some(Ok(PreparedLiveSettlement {
+        expected_signature: deterministic_signature(escrow_id),
+        signed_transaction_digest: format!("sha256:test-{escrow_id}"),
+        signed_transaction_json: format!("test-signed-transaction:{escrow_id}"),
+        recipient_pubkey: config.recipient_pubkey.to_string(),
+        amount_lamports: config.lamports,
+        network: "solana:devnet".to_owned(),
+    }))
+}
+
+pub(crate) fn maybe_submit_test_live_settlement(
+    config: &LiveSolanaSettlementConfig,
+    prepared: &PreparedLiveSettlement,
     escrow_id: &str,
 ) -> Option<Result<LiveSettlementEvidence, String>> {
     if !*override_state()
@@ -34,9 +55,9 @@ pub(crate) fn maybe_collect_test_live_settlement_evidence(
     }
     OBSERVED_PREPARED_INTENT.store(prepared_intent_exists(escrow_id), Ordering::SeqCst);
     Some(Ok(LiveSettlementEvidence {
-        settlement_receipt_hash: deterministic_signature(escrow_id),
-        settlement_tx_signature: deterministic_signature(escrow_id),
-        settlement_network: "solana:devnet".to_owned(),
+        settlement_receipt_hash: prepared.expected_signature.clone(),
+        settlement_tx_signature: prepared.expected_signature.clone(),
+        settlement_network: prepared.network.clone(),
         settlement_commitment: config.commitment_label.clone(),
     }))
 }
@@ -69,12 +90,9 @@ fn prepared_intent_exists(escrow_id: &str) -> bool {
         return false;
     };
     state["settlement_intents"]
-        .as_array()
-        .is_some_and(|intents| {
-            intents
-                .iter()
-                .any(|intent| intent["escrow_id"] == escrow_id && intent["state"] == "prepared")
-        })
+        .as_object()
+        .and_then(|intents| intents.get(escrow_id))
+        .is_some_and(|intent| intent["state"] == "prepared")
 }
 
 fn deterministic_signature(seed: &str) -> String {

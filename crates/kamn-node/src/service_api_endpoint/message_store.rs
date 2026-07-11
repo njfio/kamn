@@ -49,6 +49,7 @@ use audit_export::{
 };
 use models::*;
 use runtime_evidence::build_data_layer_runtime_evidence;
+pub(crate) use task_models::ServiceApiSettlementIntentRecord;
 use task_models::*;
 
 pub(crate) use models::{

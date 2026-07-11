@@ -51,6 +51,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
         recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
         lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+        amount_lamports: 13,
     });
     let (escrow_id, released_escrow) = fund_and_release_live_escrow(&context.harness, 101, 103, 13);
     let state_json = read_state_json(context.harness.state_file.as_path());
@@ -73,6 +74,7 @@ fn integration_live_settlement_persists_prepared_intent_before_adapter_submissio
         recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
         lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+        amount_lamports: 23,
     });
 
     fund_and_release_live_escrow(&context.harness, 131, 133, 23);
@@ -98,6 +100,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_is_idempo
         recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
         lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+        amount_lamports: 17,
     });
     let (first, second) = release_live_escrow_twice(&context.harness, 111, 113, 114, 17);
 
@@ -123,6 +126,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_reuses_si
         recipient_env: SOLANA_SETTLEMENT_RECIPIENT_ENV,
         lamports_env: SOLANA_SETTLEMENT_LAMPORTS_ENV,
         live_rpc_env: LIVE_SOLANA_DEVNET_RPC_URL,
+        amount_lamports: 19,
     });
     let (first, second) =
         release_live_escrow_across_restart(&context.harness, "127.0.0.1:34133", 121, 123, 124, 19);

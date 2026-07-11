@@ -4,6 +4,7 @@ mod dispatch;
 mod escrow_lifecycle;
 mod lifecycle;
 mod settlement;
+mod settlement_intent;
 mod tasks;
 
 use dispatch::{
@@ -16,6 +17,32 @@ use settlement::{escrow_status_response, release_escrow_record};
 use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
+    pub(crate) fn prepare_settlement_intent(
+        &mut self,
+        actor: &str,
+        escrow_id: &str,
+        idempotency_key: &str,
+        prepared: &crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement,
+    ) -> Result<ServiceApiSettlementIntentRecord, String> {
+        settlement_intent::prepare(self, actor, escrow_id, idempotency_key, prepared)
+    }
+
+    pub(crate) fn get_settlement_intent(
+        &mut self,
+        escrow_id: &str,
+    ) -> Result<Option<ServiceApiSettlementIntentRecord>, String> {
+        self.refresh_from_disk()?;
+        Ok(self.snapshot.settlement_intents.get(escrow_id).cloned())
+    }
+
+    pub(crate) fn finalize_settlement_intent(
+        &mut self,
+        escrow_id: &str,
+        settlement: &ServiceApiSettlementMetadata,
+    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        settlement_intent::finalize(self, escrow_id, settlement)
+    }
+
     pub(crate) fn fund_bound_escrow(
         &mut self,
         actor: &str,
@@ -106,14 +133,6 @@ impl ServiceApiMessageStore {
                 ..ServiceApiSettlementMetadata::default()
             }),
         )
-    }
-
-    pub(crate) fn release_escrow_with_settlement_metadata(
-        &mut self,
-        escrow_id: &str,
-        settlement: &ServiceApiSettlementMetadata,
-    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
-        self.release_escrow_inner(escrow_id, Some(settlement))
     }
 
     fn release_escrow_inner(

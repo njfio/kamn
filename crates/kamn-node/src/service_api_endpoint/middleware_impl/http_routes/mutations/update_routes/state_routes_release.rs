@@ -45,15 +45,72 @@ async fn release_escrow_with_live_solana_settlement(
     {
         return Ok(Ok(existing));
     }
+    let actor = super::super::super::task_actor(context)?;
+    let key = release_idempotency_key(context)?;
+    let prepared = resolve_prepared_settlement(&mut store, config, escrow_id)?;
+    store
+        .prepare_settlement_intent(actor.as_str(), escrow_id, key.as_str(), &prepared)
+        .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))?;
     let evidence =
-        crate::service_api_endpoint::live_settlement_dispatch::collect_live_settlement_evidence(
-            config, escrow_id,
+        crate::service_api_endpoint::live_settlement_dispatch::submit_or_reconcile_live_settlement(
+            config, &prepared, escrow_id,
         )
         .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))?;
-    Ok(store.release_escrow_with_settlement_metadata(
-        escrow_id,
-        &settlement_metadata_from_evidence(evidence),
-    ))
+    Ok(store.finalize_settlement_intent(escrow_id, &settlement_metadata_from_evidence(evidence)))
+}
+
+fn resolve_prepared_settlement(
+    store: &mut ServiceApiMessageStore,
+    config: &LiveSolanaSettlementConfig,
+    escrow_id: &str,
+) -> Result<
+    crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement,
+    Box<Response>,
+> {
+    let existing = store
+        .get_settlement_intent(escrow_id)
+        .map_err(|error| Box::new(super::super::super::persistence_error(error.as_str())))?;
+    if let Some(intent) = existing {
+        return Ok(prepared_from_intent(intent));
+    }
+    crate::service_api_endpoint::live_settlement_dispatch::prepare_live_settlement(
+        config, escrow_id,
+    )
+    .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))
+}
+
+fn prepared_from_intent(
+    intent: ServiceApiSettlementIntentRecord,
+) -> crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement {
+    crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement {
+        expected_signature: intent.expected_signature,
+        signed_transaction_digest: intent.signed_transaction_digest,
+        signed_transaction_json: intent.signed_transaction_json,
+        recipient_pubkey: intent.recipient_pubkey,
+        amount_lamports: intent.amount_lamports,
+        network: intent.network,
+    }
+}
+
+fn release_idempotency_key(context: &ServiceApiRequestContext) -> Result<String, Box<Response>> {
+    let value: serde_json::Value = serde_json::from_str(context.parsed_request.body.as_str())
+        .map_err(|error| Box::new(invalid_release_key(error.to_string().as_str())))?;
+    value
+        .get("idempotency_key")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| Box::new(invalid_release_key("release idempotency key is required")))
+}
+
+fn invalid_release_key(message: &str) -> Response {
+    super::payload::json_error_response(
+        StatusCode::BAD_REQUEST,
+        "bad_request",
+        "ESCROW_AGREEMENT_INVALID",
+        message,
+    )
 }
 
 async fn release_escrow_with_slot_backed_settlement(

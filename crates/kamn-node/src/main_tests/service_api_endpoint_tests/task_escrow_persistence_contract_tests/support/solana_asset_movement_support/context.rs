@@ -22,6 +22,7 @@ pub(crate) struct LiveSolanaAssetMovementParams<'a> {
     pub(crate) recipient_env: &'static str,
     pub(crate) lamports_env: &'static str,
     pub(crate) live_rpc_env: &'static str,
+    pub(crate) amount_lamports: u64,
 }
 
 pub(crate) fn build_live_solana_asset_movement_context(
@@ -34,6 +35,7 @@ pub(crate) fn build_live_solana_asset_movement_context(
         params.recipient_env,
         params.lamports_env,
         params.live_rpc_env,
+        params.amount_lamports,
     );
     let harness =
         build_asset_movement_harness(params.state_file_prefix, params.caller_did, params.api_bind);
@@ -72,12 +74,14 @@ fn build_live_solana_asset_movement_guards(
     recipient_env: &'static str,
     lamports_env: &'static str,
     live_rpc_env: &'static str,
+    amount_lamports: u64,
 ) -> LiveSolanaAssetMovementGuards {
+    let lamports = amount_lamports.to_string();
     LiveSolanaAssetMovementGuards {
         live_rpc_guard: set_live_solana_bridge_rpc_url_env(Some(live_rpc_env)),
         keypair_guard: EnvVarGuard::set(keypair_env, Some(fixture.keypair_file_text.as_str())),
         recipient_guard: EnvVarGuard::set(recipient_env, Some(fixture.recipient_pubkey.as_str())),
-        lamports_guard: EnvVarGuard::set(lamports_env, Some("1")),
+        lamports_guard: EnvVarGuard::set(lamports_env, Some(lamports.as_str())),
     }
 }
 

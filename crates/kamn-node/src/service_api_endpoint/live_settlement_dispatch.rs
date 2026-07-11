@@ -6,7 +6,7 @@ mod test_support;
 mod transport;
 
 pub(crate) use config::{resolve_live_solana_settlement_config, LiveSolanaSettlementConfig};
-pub(crate) use models::LiveSettlementEvidence;
+pub(crate) use models::{LiveSettlementEvidence, PreparedLiveSettlement};
 
 pub(super) fn collect_slot_backed_live_settlement_evidence(
     config: &super::live_bridge_dispatch::LiveSolanaBridgeDispatchConfig,
@@ -15,11 +15,19 @@ pub(super) fn collect_slot_backed_live_settlement_evidence(
     legacy::collect_slot_backed_live_settlement_evidence(config, escrow_id)
 }
 
-pub(super) fn collect_live_settlement_evidence(
+pub(super) fn prepare_live_settlement(
     config: &LiveSolanaSettlementConfig,
     escrow_id: &str,
+) -> Result<PreparedLiveSettlement, String> {
+    transport::prepare_live_settlement(config, escrow_id)
+}
+
+pub(super) fn submit_or_reconcile_live_settlement(
+    config: &LiveSolanaSettlementConfig,
+    prepared: &PreparedLiveSettlement,
+    escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, String> {
-    transport::collect_live_settlement_evidence(config, escrow_id)
+    transport::submit_or_reconcile_live_settlement(config, prepared, escrow_id)
 }
 
 #[cfg(test)]
