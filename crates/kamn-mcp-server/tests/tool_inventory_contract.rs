@@ -2,7 +2,7 @@ use kamn_mcp_server::tools::{build_tool_registry, MCP_TOOL_NAMES};
 use serde_json::Value;
 
 #[test]
-fn spec_c03_mcp_tool_registry_contains_required_21_tools() {
+fn spec_c03_mcp_tool_registry_contains_required_23_tools() {
     let required = [
         "register",
         "send_message",
@@ -10,6 +10,8 @@ fn spec_c03_mcp_tool_registry_contains_required_21_tools() {
         "list_messages",
         "query_message",
         "query_task",
+        "query_participant_task_projection",
+        "query_verifier_task_projection",
         "query_agent_profile",
         "register_content",
         "expire_content",
