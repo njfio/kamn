@@ -167,7 +167,7 @@ fn write_actor(
         "participant-private"
     };
     let private_field = private
-        .map(|value| format!(r#",\"private_receipt_digest\":\"{value}\""#))
+        .map(|value| format!(r#","private_receipt_digest":"{value}""#))
         .unwrap_or_default();
     let responses = [
         sha('a'),
@@ -182,7 +182,7 @@ fn write_actor(
     ]
     .join("\",\"");
     let unsigned = format!(
-        r#"{{\"schema_version\":\"kamn.mvp.pi-transaction-actor.v1\",\"actor\":\"{role}\",\"pi_process_id\":{pid},\"did\":\"{did}\",\"mcp_child_process_id\":{},\"first_request_id\":1,\"last_request_id\":5,\"runtime_response_digests\":[\"{responses}\"],\"runtime_projection_digest\":\"{projection}\",\"task_id\":\"task-live-7099\",\"transaction_id\":\"transaction-live-7099\",\"escrow_id\":\"{escrow}\",\"amount_lamports\":1000000,\"network\":\"solana-devnet\",\"settlement_tx_signature\":\"devnet-signature-7099\",\"settlement_commitment\":\"finalized\",\"public_commitment\":\"{}\",\"view_scope\":\"{scope}\"{private_field},\"source_handoff_digest\":\"{}\",\"handoff_authorized\":{handoff_authorized}}}"#,
+        r#"{{"schema_version":"kamn.mvp.pi-transaction-actor.v1","actor":"{role}","pi_process_id":{pid},"did":"{did}","mcp_child_process_id":{},"first_request_id":1,"last_request_id":5,"runtime_response_digests":["{responses}"],"runtime_projection_digest":"{projection}","task_id":"task-live-7099","transaction_id":"transaction-live-7099","escrow_id":"{escrow}","amount_lamports":1000000,"network":"solana-devnet","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized","public_commitment":"{}","view_scope":"{scope}"{private_field},"source_handoff_digest":"{}","handoff_authorized":{handoff_authorized}}}"#,
         pid + 1000,
         sha('d'),
         sha('b')
