@@ -1,6 +1,7 @@
 use super::super::*;
 
 mod dispatch;
+mod escrow_lifecycle;
 mod lifecycle;
 mod settlement;
 mod tasks;
@@ -8,6 +9,7 @@ mod tasks;
 use dispatch::{
     dispatch_prerequisite_missing_error, dispatch_request_from_record, select_dispatch_assignee,
 };
+pub(crate) use escrow_lifecycle::EscrowLifecycleError;
 pub(crate) use lifecycle::TaskLifecycleError;
 pub(crate) use settlement::escrow_fund_task_id;
 use settlement::{
@@ -16,6 +18,21 @@ use settlement::{
 use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
+    pub(crate) fn fund_bound_escrow(
+        &mut self,
+        actor: &str,
+        payload: &str,
+    ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
+        escrow_lifecycle::fund(self, actor, payload)
+    }
+
+    pub(crate) fn authorize_escrow_release(
+        &mut self,
+        actor: &str,
+        escrow_id: &str,
+    ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
+        escrow_lifecycle::authorize_release(self, actor, escrow_id)
+    }
     pub(crate) fn create_bound_task(
         &mut self,
         actor_did: &str,
@@ -59,12 +76,22 @@ impl ServiceApiMessageStore {
         let escrow_id = next_escrow_id(self, payload);
         self.snapshot.escrows.insert(
             escrow_id.clone(),
-            build_escrow_record(escrow_id.as_str(), task_id),
+            build_escrow_record(escrow_id.as_str(), task_id.clone()),
         );
         self.persist()?;
         Ok(ServiceApiEscrowStatusBody {
             escrow_id,
             state: "funded".to_owned(),
+            task_id: Some(task_id),
+            transaction_id: None,
+            funder_did: None,
+            beneficiary_did: None,
+            amount_lamports: None,
+            network: None,
+            terms_digest: None,
+            release_authority_did: None,
+            release_policy: None,
+            claim_scope: "legacy-local-only".to_owned(),
             settlement: ServiceApiSettlementMetadata::default(),
         })
     }

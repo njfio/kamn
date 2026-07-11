@@ -249,6 +249,16 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiEscrowStatusBody {
                 escrow_id,
                 state: "funded".to_owned(),
+                task_id: None,
+                transaction_id: None,
+                funder_did: None,
+                beneficiary_did: None,
+                amount_lamports: None,
+                network: None,
+                terms_digest: None,
+                release_authority_did: None,
+                release_policy: None,
+                claim_scope: "render-only".to_owned(),
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
@@ -261,6 +271,16 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiEscrowStatusBody {
                 escrow_id: escrow_id.to_owned(),
                 state: "released".to_owned(),
+                task_id: None,
+                transaction_id: None,
+                funder_did: None,
+                beneficiary_did: None,
+                amount_lamports: None,
+                network: None,
+                terms_digest: None,
+                release_authority_did: None,
+                release_policy: None,
+                claim_scope: "render-only".to_owned(),
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {

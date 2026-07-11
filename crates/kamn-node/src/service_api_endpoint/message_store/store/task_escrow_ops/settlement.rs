@@ -14,6 +14,15 @@ pub(super) fn build_escrow_record(
         escrow_id: escrow_id.to_owned(),
         state: "funded".to_owned(),
         task_id: Some(task_id),
+        transaction_id: None,
+        funder_did: None,
+        beneficiary_did: None,
+        amount_lamports: None,
+        network: None,
+        terms_digest: None,
+        release_authority_did: None,
+        release_policy: None,
+        fund_idempotency_key: None,
         settlement: ServiceApiSettlementMetadata::default(),
     }
 }
@@ -43,6 +52,16 @@ pub(super) fn escrow_status_response(
     ServiceApiEscrowStatusBody {
         escrow_id: record.escrow_id.clone(),
         state: record.state.clone(),
+        task_id: record.task_id.clone(),
+        transaction_id: record.transaction_id.clone(),
+        funder_did: record.funder_did.clone(),
+        beneficiary_did: record.beneficiary_did.clone(),
+        amount_lamports: record.amount_lamports,
+        network: record.network.clone(),
+        terms_digest: record.terms_digest.clone(),
+        release_authority_did: record.release_authority_did.clone(),
+        release_policy: record.release_policy.clone(),
+        claim_scope: "local-only".to_owned(),
         settlement: record.settlement.clone(),
     }
 }
