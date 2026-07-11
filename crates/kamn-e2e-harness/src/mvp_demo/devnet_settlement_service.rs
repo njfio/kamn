@@ -61,16 +61,23 @@ fn release_with_reconciliation(
     escrow_id: &str,
     payload: &str,
 ) -> Result<kamn_agent_lib::ServiceEscrowStatus, String> {
-    for attempt in 0..3 {
+    let attempts = release_attempt_limit();
+    for attempt in 0..attempts {
         match creator.release_escrow_with_payload(escrow_id, payload) {
             Ok(released) => return Ok(released),
-            Err(error) if attempt < 2 && should_retry_release(error.to_string().as_str()) => {
+            Err(error)
+                if attempt + 1 < attempts && should_retry_release(error.to_string().as_str()) =>
+            {
                 std::thread::sleep(std::time::Duration::from_secs(2));
             }
             Err(error) => return Err(format!("failed to release MVP demo escrow: {error}")),
         }
     }
     Err("failed to reconcile MVP demo escrow release".to_owned())
+}
+
+fn release_attempt_limit() -> usize {
+    15
 }
 
 fn should_retry_release(error: &str) -> bool {
@@ -211,6 +218,7 @@ mod tests {
 
     #[test]
     fn funded_rehearsal_retries_only_recoverable_settlement_visibility() {
+        assert_eq!(release_attempt_limit(), 15);
         assert!(should_retry_release(
             "service api live settlement evidence failed: confirmation missing"
         ));
