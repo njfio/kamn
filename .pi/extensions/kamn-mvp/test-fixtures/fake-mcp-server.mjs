@@ -52,7 +52,28 @@ function toolResult(request) {
 		const state = resultMode === "wrong-query-state" ? "submitted" : "accepted";
 		return { task_id: request.task_id, state };
 	}
+	if (request.tool === "complete_task") return { task_id: request.task_id, state: "completed" };
+	if (request.tool === "fund_escrow") return { escrow_id: "escrow-live-1", state: "funded" };
+	if (request.tool === "release_escrow") {
+		return { escrow_id: request.escrow_id, state: "released", settlement_tx_signature: "devnet-signature-1" };
+	}
+	if (request.tool === "query_participant_task_projection") {
+		return participantProjection(request.task_id, agentName);
+	}
+	if (request.tool === "query_verifier_task_projection") {
+		return { task_id: request.task_id, view_scope: "restricted-public", public_commitment: "sha256:shared" };
+	}
 	return {};
+}
+
+function participantProjection(taskId, name) {
+	const suffix = name.endsWith("b") ? "b" : "a";
+	return {
+		task_id: taskId,
+		view_scope: "participant-private",
+		public_commitment: "sha256:shared",
+		private_receipt_digest: `sha256:participant-${suffix}`,
+	};
 }
 
 function errorResponse(request) {

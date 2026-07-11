@@ -34,6 +34,41 @@ test("two agents register and share one accepted task through independent sessio
 	assert.equal((await readFile(setup.stopFile, "utf8")).trim().split("\n").length, 2);
 });
 
+test("three agents drive one completed escrow transaction through independent MCP sessions", async () => {
+	const setup = await testSetup();
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	const agentA = await workflow.register("agent_a");
+	const agentB = await workflow.register("agent_b");
+	const agentC = await workflow.register("agent_c");
+	const created = await workflow.createTask("Settle proof", "Bind three runtime views");
+	await workflow.acceptTask();
+	await workflow.completeTask();
+	const funded = await workflow.fundEscrow(JSON.stringify({ task_id: created.task_id, amount_lamports: 1000000 }));
+	const released = await workflow.releaseEscrow();
+	const viewA = await workflow.queryParticipantProjection("agent_a");
+	const viewB = await workflow.queryParticipantProjection("agent_b");
+	const viewC = await workflow.queryVerifierProjection();
+
+	assert.equal(new Set([agentA.did, agentB.did, agentC.did]).size, 3);
+	assert.equal(new Set([agentA.pid, agentB.pid, agentC.pid]).size, 3);
+	assert.equal(funded.escrow_id, released.escrow_id);
+	assert.equal(viewA.task_id, created.task_id);
+	assert.equal(viewB.task_id, created.task_id);
+	assert.equal(viewC.task_id, created.task_id);
+	assert.equal(viewA.public_commitment, viewB.public_commitment);
+	assert.equal(viewB.public_commitment, viewC.public_commitment);
+	assert.equal(viewA.private_receipt_digest, "sha256:participant-a");
+	assert.equal(viewB.private_receipt_digest, "sha256:participant-b");
+	assert.equal("private_receipt_digest" in viewC, false);
+	for (const role of ["agent_a", "agent_b", "agent_c"] as const) {
+		const provenance = workflow.provenance(role);
+		assert.ok(provenance.child_process_id > 0);
+		assert.ok(provenance.last_request_id >= provenance.first_request_id);
+		assert.equal(provenance.runtime_response_digests.every((value) => value.startsWith("sha256:")), true);
+	}
+	await workflow.shutdown();
+});
+
 test("workflow rejects calls that violate registration and task order", async () => {
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
@@ -131,9 +166,11 @@ async function testSetup(extra: Record<string, string> = {}) {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-live-task-"));
 	const agentAKey = resolve(root, "agent-a.key");
 	const agentBKey = resolve(root, "agent-b.key");
+	const agentCKey = resolve(root, "agent-c.key");
 	const stopFile = resolve(root, "stop");
 	await writeFile(agentAKey, "test-agent-a-key\n");
 	await writeFile(agentBKey, "test-agent-b-key\n");
+	await writeFile(agentCKey, "test-agent-c-key\n");
 	await chmod(fixture, 0o755);
 	return {
 		stopFile,
@@ -144,6 +181,8 @@ async function testSetup(extra: Record<string, string> = {}) {
 			KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE: agentAKey,
 			KAMN_MVP_LIVE_MCP_AGENT_B_NAME: "agent-b",
 			KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE: agentBKey,
+			KAMN_MVP_LIVE_MCP_AGENT_C_NAME: "agent-c",
+			KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE: agentCKey,
 			KAMN_MVP_FAKE_MCP_STOP_FILE: stopFile,
 			...extra,
 		},
