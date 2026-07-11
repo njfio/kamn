@@ -17,3 +17,18 @@ pub(crate) struct PreparedLiveSettlement {
     pub(crate) amount_lamports: u64,
     pub(crate) network: String,
 }
+
+pub(super) fn build_live_settlement_evidence(
+    signature: String,
+    commitment: &str,
+    prepared: &PreparedLiveSettlement,
+) -> LiveSettlementEvidence {
+    LiveSettlementEvidence {
+        settlement_receipt_hash: signature.clone(),
+        settlement_tx_signature: signature,
+        settlement_network: "solana:devnet".to_owned(),
+        settlement_commitment: commitment.to_owned(),
+        recipient_pubkey: Some(prepared.recipient_pubkey.clone()),
+        amount_lamports: Some(prepared.amount_lamports),
+    }
+}

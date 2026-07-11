@@ -20,10 +20,35 @@ pub(super) fn drive_escrow_release(
     let _timeout = EnvOverride::set(SDK_TIMEOUT_ENV, LIVE_SETTLEMENT_TIMEOUT_SECONDS);
     let creator = agent(endpoint, CREATOR_AGENT_NAME)?;
     let provider = agent(endpoint, "kamn-mvp-devnet-settlement-provider")?;
-    register(&creator, "creator")?;
-    register(&provider, "provider")?;
     let agreement =
         SettlementAgreement::new(run_dir, binding, amount_lamports, &creator, &provider)?;
+    let prepared = prepare_completed_escrow(run_dir, &creator, &provider, &agreement)?;
+    std::thread::sleep(release_pacing_delay());
+    let released = release_with_reconciliation(
+        &creator,
+        prepared.escrow_id.as_str(),
+        agreement.release_payload().as_str(),
+    )?;
+    require_released(released.state.as_str())?;
+    Ok(SettlementRun {
+        escrow_id: released.escrow_id,
+        task_id: prepared.task_id,
+    })
+}
+
+struct PreparedEscrow {
+    task_id: String,
+    escrow_id: String,
+}
+
+fn prepare_completed_escrow(
+    run_dir: &Path,
+    creator: &KamnAgentHandle,
+    provider: &KamnAgentHandle,
+    agreement: &SettlementAgreement,
+) -> Result<PreparedEscrow, String> {
+    register(creator, "creator")?;
+    register(provider, "provider")?;
     let task = creator
         .create_task(agreement.task_payload().as_str())
         .map_err(|error| format!("failed to create MVP demo task: {error}"))?;
@@ -39,16 +64,9 @@ pub(super) fn drive_escrow_release(
     provider
         .complete_task_with_payload(task.task_id.as_str(), agreement.complete_payload().as_str())
         .map_err(|error| format!("failed to complete MVP demo task: {error}"))?;
-    std::thread::sleep(release_pacing_delay());
-    let released = release_with_reconciliation(
-        &creator,
-        funded.escrow_id.as_str(),
-        agreement.release_payload().as_str(),
-    )?;
-    require_released(released.state.as_str())?;
-    Ok(SettlementRun {
-        escrow_id: released.escrow_id,
+    Ok(PreparedEscrow {
         task_id: task.task_id,
+        escrow_id: funded.escrow_id,
     })
 }
 
@@ -171,59 +189,5 @@ fn deterministic_body_tag(payload: &[u8]) -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn funded_rehearsal_payload_carries_canonical_task_agreement() {
-        let run_dir = Path::new("/tmp/run-contract");
-        let binding = LiveTaskBinding {
-            artifact_path: "binding.json".to_owned(),
-            digest: "a".repeat(64),
-            task_id: "task-external".to_owned(),
-            agent_a_pid: 1,
-            agent_b_pid: 2,
-            agent_c_pid: 3,
-        };
-        let creator = agent("http://127.0.0.1:1", "contract-creator").expect("creator");
-        let provider = agent("http://127.0.0.1:1", "contract-provider").expect("provider");
-        let agreement =
-            SettlementAgreement::new(run_dir, Some(&binding), 1_000_000, &creator, &provider)
-                .expect("agreement");
-        let raw = agreement.fund_payload("task-settlement");
-        for field in [
-            "task_id",
-            "transaction_id",
-            "beneficiary_did",
-            "amount_lamports",
-            "network",
-            "terms_digest",
-            "release_authority_did",
-            "release_policy",
-            "idempotency_key",
-        ] {
-            assert!(
-                raw.contains(format!("\"{field}\":").as_str()),
-                "missing canonical field {field}"
-            );
-        }
-        assert!(raw.contains(r#""network":"solana-devnet""#));
-        assert!(raw.contains(r#""release_policy":"task-completed""#));
-    }
-
-    #[test]
-    fn funded_rehearsal_paces_release_past_sender_window() {
-        assert!(release_pacing_delay() > std::time::Duration::from_secs(5));
-    }
-
-    #[test]
-    fn funded_rehearsal_retries_only_recoverable_settlement_visibility() {
-        assert_eq!(release_attempt_limit(), 15);
-        assert!(should_retry_release(
-            "service api live settlement evidence failed: confirmation missing"
-        ));
-        assert!(should_retry_release("SETTLEMENT_OUTCOME_AMBIGUOUS"));
-        assert!(!should_retry_release("ACTION_NOT_GRANTED"));
-        assert!(!should_retry_release("SETTLEMENT_INTENT_CONFLICT"));
-    }
-}
+#[path = "devnet_settlement_service_tests.rs"]
+mod tests;

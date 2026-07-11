@@ -1,4 +1,6 @@
-use super::models::{LiveSettlementEvidence, PreparedLiveSettlement};
+use super::models::{
+    build_live_settlement_evidence, LiveSettlementEvidence, PreparedLiveSettlement,
+};
 use super::LiveSolanaSettlementConfig;
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::signer::keypair::read_keypair_file;
@@ -185,29 +187,6 @@ fn confirm_live_settlement_signature(
         })
 }
 
-fn build_live_settlement_evidence(
-    settlement_tx_signature: String,
-    settlement_commitment: &str,
-    prepared: &PreparedLiveSettlement,
-) -> LiveSettlementEvidence {
-    LiveSettlementEvidence {
-        settlement_receipt_hash: settlement_tx_signature.clone(),
-        settlement_tx_signature,
-        settlement_network: "solana:devnet".to_owned(),
-        settlement_commitment: settlement_commitment.to_owned(),
-        recipient_pubkey: Some(prepared.recipient_pubkey.clone()),
-        amount_lamports: Some(prepared.amount_lamports),
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn false_confirmation_is_an_ambiguous_outcome() {
-        let error = require_confirmation(false, "finalized").expect_err("ambiguous result");
-
-        assert!(error.starts_with("SETTLEMENT_OUTCOME_AMBIGUOUS"));
-    }
-}
+#[path = "transport_tests.rs"]
+mod tests;
