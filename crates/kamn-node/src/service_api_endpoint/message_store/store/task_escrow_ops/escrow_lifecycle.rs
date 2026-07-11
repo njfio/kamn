@@ -1,7 +1,11 @@
 use super::super::super::*;
 use super::settlement::{escrow_status_response, next_escrow_id};
 
-const MAX_AMOUNT_LAMPORTS: u64 = 1_000_000;
+mod agreement;
+mod receipt;
+mod retry;
+
+use agreement::{build_record, parse_fund, parse_release_key, validate_funding, validate_release};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EscrowLifecycleError {
@@ -13,25 +17,32 @@ pub(crate) enum EscrowLifecycleError {
 }
 
 #[derive(Debug, Deserialize)]
-struct FundInput {
-    task_id: String,
-    transaction_id: String,
-    beneficiary_did: String,
-    amount_lamports: u64,
-    network: String,
-    terms_digest: String,
-    release_authority_did: String,
-    release_policy: String,
-    idempotency_key: String,
+pub(super) struct FundInput {
+    pub(super) task_id: String,
+    pub(super) transaction_id: String,
+    pub(super) beneficiary_did: String,
+    pub(super) amount_lamports: u64,
+    pub(super) network: String,
+    pub(super) terms_digest: String,
+    pub(super) release_authority_did: String,
+    pub(super) release_policy: String,
+    pub(super) idempotency_key: String,
 }
 
 pub(super) fn fund(
     store: &mut ServiceApiMessageStore,
     actor: &str,
     payload: &str,
+    correlation_id: &str,
 ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
     store.refresh_from_disk().map_err(persistence)?;
     let input = parse_fund(payload)?;
+    if let Some(existing) = retry::funding(store, actor, &input)? {
+        return Ok(receipt::response(
+            existing,
+            funding_receipt_id(store, existing).as_deref(),
+        ));
+    }
     let task = store
         .snapshot
         .tasks
@@ -40,18 +51,41 @@ pub(super) fn fund(
         .ok_or(EscrowLifecycleError::NotFound)?;
     validate_funding(actor, &input, &task)?;
     let escrow_id = next_escrow_id(store, payload);
+    let key = input.idempotency_key.clone();
     let record = build_record(escrow_id.as_str(), actor, input);
+    let receipt_id = receipt::append(
+        store,
+        &record,
+        actor,
+        "escrow:fund",
+        "unfunded",
+        key,
+        correlation_id,
+    )?;
     store.snapshot.escrows.insert(escrow_id.clone(), record);
     store.persist().map_err(persistence)?;
-    Ok(escrow_status_response(&store.snapshot.escrows[&escrow_id]))
+    Ok(receipt::response(
+        &store.snapshot.escrows[&escrow_id],
+        Some(&receipt_id),
+    ))
 }
 
 pub(super) fn authorize_release(
     store: &mut ServiceApiMessageStore,
     actor: &str,
     escrow_id: &str,
+    payload: &str,
+    correlation_id: &str,
 ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
     store.refresh_from_disk().map_err(persistence)?;
+    let key = parse_release_key(payload)?;
+    if let Some(existing) = retry::release(store, actor, escrow_id, key.as_str())? {
+        let record = &store.snapshot.escrows[escrow_id];
+        return Ok(receipt::response(
+            record,
+            Some(existing.receipt_id.as_str()),
+        ));
+    }
     let escrow = store
         .snapshot
         .escrows
@@ -59,117 +93,48 @@ pub(super) fn authorize_release(
         .cloned()
         .ok_or(EscrowLifecycleError::NotFound)?;
     validate_release(store, actor, &escrow)?;
-    let record = store.snapshot.escrows.get_mut(escrow_id).unwrap();
-    record.state = "release-authorized".to_owned();
-    let response = escrow_status_response(record);
+    let mut updated = escrow.clone();
+    updated.state = "release-authorized".to_owned();
+    let receipt_id = receipt::append(
+        store,
+        &updated,
+        actor,
+        "escrow:release-authorize",
+        "funded",
+        key,
+        correlation_id,
+    )?;
+    store.snapshot.escrows.insert(escrow_id.to_owned(), updated);
+    let response = receipt::response(&store.snapshot.escrows[escrow_id], Some(&receipt_id));
     store.persist().map_err(persistence)?;
     Ok(response)
 }
 
-fn parse_fund(payload: &str) -> Result<FundInput, EscrowLifecycleError> {
-    let input: FundInput = serde_json::from_str(payload)
-        .map_err(|error| bad("ESCROW_AGREEMENT_INVALID", error.to_string()))?;
-    if input.amount_lamports == 0 || input.amount_lamports > MAX_AMOUNT_LAMPORTS {
-        return Err(bad("ESCROW_AMOUNT_INVALID", "amount is outside MVP bounds"));
-    }
-    if input.network != "solana-devnet" {
-        return Err(bad(
-            "ESCROW_NETWORK_INVALID",
-            "network must be solana-devnet",
-        ));
-    }
-    if input.idempotency_key.trim().is_empty() || input.release_policy != "task-completed" {
-        return Err(bad(
-            "ESCROW_AGREEMENT_INVALID",
-            "escrow policy or retry key is invalid",
-        ));
-    }
-    Ok(input)
-}
-
-fn validate_funding(
+pub(super) fn validate_release_eligibility(
+    store: &mut ServiceApiMessageStore,
     actor: &str,
-    input: &FundInput,
-    task: &ServiceApiPersistedTaskRecord,
+    escrow_id: &str,
 ) -> Result<(), EscrowLifecycleError> {
-    if task.state != "accepted" {
-        return Err(conflict(
-            "ESCROW_TASK_STATE_CONFLICT",
-            "task is not accepted",
-        ));
-    }
-    if task.creator_did.as_deref() != Some(actor) {
-        return Err(forbidden(
-            "ESCROW_FUNDER_MISMATCH",
-            "funder is not task creator",
-        ));
-    }
-    if input.release_authority_did != actor {
-        return Err(forbidden(
-            "ESCROW_RELEASE_AUTHORITY_MISMATCH",
-            "release authority differs",
-        ));
-    }
-    if task.provider_did.as_deref() != Some(input.beneficiary_did.as_str()) {
-        return Err(conflict(
-            "ESCROW_BENEFICIARY_MISMATCH",
-            "beneficiary differs",
-        ));
-    }
-    if task.transaction_id.as_deref() != Some(input.transaction_id.as_str()) {
-        return Err(conflict(
-            "ESCROW_TRANSACTION_MISMATCH",
-            "transaction differs",
-        ));
-    }
-    if task.terms_digest.as_deref() != Some(input.terms_digest.as_str()) {
-        return Err(conflict("ESCROW_TERMS_MISMATCH", "terms differ"));
-    }
-    Ok(())
-}
-
-fn validate_release(
-    store: &ServiceApiMessageStore,
-    actor: &str,
-    escrow: &ServiceApiPersistedEscrowRecord,
-) -> Result<(), EscrowLifecycleError> {
-    if escrow.release_authority_did.as_deref() != Some(actor) {
-        return Err(forbidden(
-            "ESCROW_RELEASE_AUTHORITY_MISMATCH",
-            "actor is not release authority",
-        ));
-    }
-    let task_id = escrow.task_id.as_deref().ok_or_else(migration_required)?;
-    let task = store
+    store.refresh_from_disk().map_err(persistence)?;
+    let escrow = store
         .snapshot
-        .tasks
-        .get(task_id)
+        .escrows
+        .get(escrow_id)
+        .cloned()
         .ok_or(EscrowLifecycleError::NotFound)?;
-    if task.state != "completed" || task.completion_evidence_digest.is_none() {
-        return Err(conflict(
-            "ESCROW_RELEASE_NOT_ELIGIBLE",
-            "task is not completed with evidence",
-        ));
-    }
-    Ok(())
+    validate_release(store, actor, &escrow)
 }
 
-fn build_record(id: &str, actor: &str, input: FundInput) -> ServiceApiPersistedEscrowRecord {
-    ServiceApiPersistedEscrowRecord {
-        escrow_id: id.to_owned(),
-        state: "funded".to_owned(),
-        task_id: Some(input.task_id),
-        transaction_id: Some(input.transaction_id),
-        funder_did: Some(actor.to_owned()),
-        beneficiary_did: Some(input.beneficiary_did),
-        amount_lamports: Some(input.amount_lamports),
-        network: Some(input.network),
-        terms_digest: Some(input.terms_digest),
-        release_authority_did: Some(input.release_authority_did),
-        release_policy: Some(input.release_policy),
-        fund_idempotency_key: Some(input.idempotency_key),
-        settlement: ServiceApiSettlementMetadata::default(),
-    }
+fn funding_receipt_id(
+    store: &ServiceApiMessageStore,
+    escrow: &ServiceApiPersistedEscrowRecord,
+) -> Option<String> {
+    store
+        .snapshot
+        .escrow_transition_receipts
+        .iter()
+        .find(|receipt| receipt.escrow_id == escrow.escrow_id && receipt.action == "escrow:fund")
+        .map(|receipt| receipt.receipt_id.clone())
 }
 
 fn migration_required() -> EscrowLifecycleError {

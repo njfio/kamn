@@ -259,6 +259,7 @@ pub(super) fn render_service_api_endpoint_response(
                 release_authority_did: None,
                 release_policy: None,
                 claim_scope: "render-only".to_owned(),
+                receipt_id: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
@@ -281,6 +282,7 @@ pub(super) fn render_service_api_endpoint_response(
                 release_authority_did: None,
                 release_policy: None,
                 claim_scope: "render-only".to_owned(),
+                receipt_id: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {

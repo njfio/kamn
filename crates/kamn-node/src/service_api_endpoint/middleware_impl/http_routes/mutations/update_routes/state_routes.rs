@@ -114,11 +114,12 @@ async fn authorize_local_release(
         Ok(actor) => actor,
         Err(response) => return *response,
     };
-    let result = state
-        .message_store
-        .lock()
-        .await
-        .authorize_escrow_release(actor.as_str(), escrow_id);
+    let result = state.message_store.lock().await.authorize_escrow_release(
+        actor.as_str(),
+        escrow_id,
+        context.parsed_request.body.as_str(),
+        context.correlation_id.as_str(),
+    );
     match result {
         Ok(payload) => contract_json(200, &payload),
         Err(error) => super::super::super::escrow_lifecycle_error_response(error),

@@ -178,6 +178,8 @@ pub(crate) struct ServiceApiPersistedMessageStoreSnapshot {
     pub(crate) authorization_receipts: Vec<ServiceApiAuthorizationReceiptRecord>,
     #[serde(default)]
     pub(crate) task_transition_receipts: Vec<ServiceApiTaskTransitionReceiptRecord>,
+    #[serde(default)]
+    pub(crate) escrow_transition_receipts: Vec<ServiceApiEscrowTransitionReceiptRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
@@ -195,6 +197,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             agent_grants: BTreeMap::new(),
             authorization_receipts: Vec::new(),
             task_transition_receipts: Vec::new(),
+            escrow_transition_receipts: Vec::new(),
         }
     }
 }

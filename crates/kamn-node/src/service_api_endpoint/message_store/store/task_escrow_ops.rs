@@ -12,9 +12,7 @@ use dispatch::{
 pub(crate) use escrow_lifecycle::EscrowLifecycleError;
 pub(crate) use lifecycle::TaskLifecycleError;
 pub(crate) use settlement::escrow_fund_task_id;
-use settlement::{
-    build_escrow_record, escrow_status_response, next_escrow_id, release_escrow_record,
-};
+use settlement::{escrow_status_response, release_escrow_record};
 use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
@@ -22,16 +20,27 @@ impl ServiceApiMessageStore {
         &mut self,
         actor: &str,
         payload: &str,
+        correlation_id: &str,
     ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
-        escrow_lifecycle::fund(self, actor, payload)
+        escrow_lifecycle::fund(self, actor, payload, correlation_id)
     }
 
     pub(crate) fn authorize_escrow_release(
         &mut self,
         actor: &str,
         escrow_id: &str,
+        payload: &str,
+        correlation_id: &str,
     ) -> Result<ServiceApiEscrowStatusBody, EscrowLifecycleError> {
-        escrow_lifecycle::authorize_release(self, actor, escrow_id)
+        escrow_lifecycle::authorize_release(self, actor, escrow_id, payload, correlation_id)
+    }
+
+    pub(crate) fn validate_escrow_release_eligibility(
+        &mut self,
+        actor: &str,
+        escrow_id: &str,
+    ) -> Result<(), EscrowLifecycleError> {
+        escrow_lifecycle::validate_release_eligibility(self, actor, escrow_id)
     }
     pub(crate) fn create_bound_task(
         &mut self,
@@ -65,35 +74,6 @@ impl ServiceApiMessageStore {
             task_id: record.task_id.clone(),
             state: record.state.clone(),
         }))
-    }
-
-    pub(crate) fn fund_escrow(
-        &mut self,
-        payload: &str,
-    ) -> Result<ServiceApiEscrowStatusBody, String> {
-        self.refresh_from_disk()?;
-        let task_id = escrow_fund_task_id(payload)?;
-        let escrow_id = next_escrow_id(self, payload);
-        self.snapshot.escrows.insert(
-            escrow_id.clone(),
-            build_escrow_record(escrow_id.as_str(), task_id.clone()),
-        );
-        self.persist()?;
-        Ok(ServiceApiEscrowStatusBody {
-            escrow_id,
-            state: "funded".to_owned(),
-            task_id: Some(task_id),
-            transaction_id: None,
-            funder_did: None,
-            beneficiary_did: None,
-            amount_lamports: None,
-            network: None,
-            terms_digest: None,
-            release_authority_did: None,
-            release_policy: None,
-            claim_scope: "legacy-local-only".to_owned(),
-            settlement: ServiceApiSettlementMetadata::default(),
-        })
     }
 
     pub(crate) fn get_escrow_status(

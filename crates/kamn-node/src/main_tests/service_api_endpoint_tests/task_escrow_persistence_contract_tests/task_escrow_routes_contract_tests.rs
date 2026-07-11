@@ -3,8 +3,9 @@ mod task_dispatch_support;
 
 use super::super::*;
 use super::support::{
-    accept_task, build_task_escrow_snapshot, create_task, default_audit_export_file, fund_escrow,
-    read_audit_export_json, release_escrow, set_state_file_env, unique_named_state_file,
+    accept_task, build_task_escrow_snapshot, complete_task, create_task, default_audit_export_file,
+    fund_escrow, read_audit_export_json, release_escrow, set_state_file_env,
+    unique_named_state_file,
 };
 use task_dispatch_support::{
     assert_dispatched_task_state, create_task_with_broken_audit_export,
@@ -20,7 +21,7 @@ fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes
     let (_state_file_text, _state_file_guard) = set_state_file_env(state_file.as_path());
     let snapshot = build_task_escrow_snapshot("127.0.0.1:34106");
     let task_caller_did = "kamn:did:agent:test-client-task-state";
-    let escrow_caller_did = "kamn:did:agent:test-client-escrow-state";
+    let escrow_caller_did = task_caller_did;
     let bind_addr = reserve_loopback_addr();
 
     let created_task = create_task(
@@ -49,16 +50,23 @@ fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes
         bind_addr.as_str(),
         escrow_caller_did,
         24,
-        r#"{"task_id":"persisted-task","amount":1}"#,
+        format!(r#"{{"task_id":"{}","amount":1}}"#, created_task.task_id).as_str(),
     );
     let escrow_id = funded_escrow["escrow_id"]
         .as_str()
         .expect("escrow id should be string");
+    complete_task(
+        &snapshot,
+        bind_addr.as_str(),
+        task_caller_did,
+        25,
+        created_task.task_id.as_str(),
+    );
     let released_escrow = release_escrow(
         &snapshot,
         bind_addr.as_str(),
         escrow_caller_did,
-        25,
+        26,
         escrow_id,
     );
 
@@ -67,7 +75,7 @@ fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes
     assert_eq!(queried_task["state"], "accepted");
     assert_eq!(funded_escrow["state"], "funded");
     assert_eq!(released_escrow["escrow_id"], escrow_id);
-    assert_eq!(released_escrow["state"], "released");
+    assert_eq!(released_escrow["state"], "release-authorized");
     let _ = fs::remove_file(state_file);
 }
 

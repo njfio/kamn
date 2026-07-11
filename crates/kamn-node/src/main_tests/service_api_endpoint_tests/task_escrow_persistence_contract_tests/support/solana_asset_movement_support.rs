@@ -1,7 +1,7 @@
 use super::super::super::*;
 use super::{
-    build_task_escrow_snapshot, fund_escrow, release_escrow, set_state_file_env,
-    unique_named_state_file,
+    accept_task, build_task_escrow_snapshot, complete_task, create_task, fund_escrow,
+    release_escrow, set_state_file_env, unique_named_state_file,
 };
 use crate::service_api_endpoint::ServiceApiSnapshot;
 use solana_sdk::signer::keypair::{write_keypair_file, Keypair};
@@ -81,13 +81,34 @@ pub(crate) fn fund_and_release_live_escrow(
 }
 
 pub(crate) fn fund_live_escrow(harness: &AssetMovementHarness, nonce: u64, amount: u64) -> String {
-    let payload = format!(r#"{{"task_id":"solana-asset-movement-task","amount":{amount}}}"#);
+    let task = create_task(
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
+        harness.caller_did,
+        nonce - 3,
+        r#"{"description":"solana asset movement task"}"#,
+    );
+    accept_task(
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
+        harness.caller_did,
+        nonce - 2,
+        task.task_id.as_str(),
+    );
+    let payload = format!(r#"{{"task_id":"{}","amount":{amount}}}"#, task.task_id);
     let funded_escrow = fund_escrow(
         &harness.snapshot,
         harness.bind_addr.as_str(),
         harness.caller_did,
         nonce,
         payload.as_str(),
+    );
+    complete_task(
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
+        harness.caller_did,
+        nonce + 1,
+        task.task_id.as_str(),
     );
     funded_escrow["escrow_id"]
         .as_str()

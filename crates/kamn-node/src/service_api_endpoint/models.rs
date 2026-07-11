@@ -151,6 +151,8 @@ pub(crate) struct ServiceApiEscrowStatusBody {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) release_policy: Option<String>,
     pub(crate) claim_scope: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) receipt_id: Option<String>,
     #[serde(flatten)]
     pub(crate) settlement: ServiceApiSettlementMetadata,
 }

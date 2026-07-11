@@ -104,6 +104,30 @@ pub(crate) fn accept_task(
     assert!(response.contains("HTTP/1.1 200 OK"));
 }
 
+pub(crate) fn complete_task(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    task_id: &str,
+) {
+    let path = format!("/v1/tasks/{task_id}/complete");
+    let response = raw_signed_request(
+        snapshot,
+        bind_addr,
+        SignedRequest {
+            max_requests: 1,
+            method: "POST",
+            path: path.as_str(),
+            caller_did,
+            nonce,
+            body: r#"{"idempotency_key":"complete-for-escrow","completion_evidence_digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}"#,
+            extra_headers: &[],
+        },
+    );
+    assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
+}
+
 pub(crate) fn query_task(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
@@ -139,6 +163,7 @@ pub(crate) fn fund_escrow(
     nonce: u64,
     payload: &str,
 ) -> Value {
+    let canonical_payload = canonical_escrow_payload(caller_did, nonce, payload);
     let response = signed_request(
         snapshot,
         bind_addr,
@@ -148,13 +173,42 @@ pub(crate) fn fund_escrow(
             path: "/v1/escrow/fund",
             caller_did,
             nonce,
-            body: payload,
+            body: canonical_payload.as_str(),
             extra_headers: &[],
         },
     );
     assert!(response.contains("HTTP/1.1 200 OK"));
     parse_service_api_payload(extract_http_response_body(response.as_str()))
         .expect("escrow fund payload should deserialize")
+}
+
+fn canonical_escrow_payload(caller_did: &str, nonce: u64, payload: &str) -> String {
+    if payload.contains("\"transaction_id\"") {
+        return payload.to_owned();
+    }
+    let input: Value = serde_json::from_str(payload).expect("legacy escrow fixture should parse");
+    let task_id = input["task_id"]
+        .as_str()
+        .expect("task id should be present");
+    let state_file = std::env::var("KAMN_SERVICE_API_STATE_FILE").expect("state file env");
+    let state = super::env_support::read_state_json(std::path::Path::new(&state_file));
+    let task = &state["tasks"][task_id];
+    let amount = input["amount_lamports"]
+        .as_u64()
+        .or_else(|| input["amount"].as_u64())
+        .unwrap_or(1);
+    serde_json::json!({
+        "task_id": task_id,
+        "transaction_id": task["transaction_id"],
+        "beneficiary_did": task["provider_did"],
+        "amount_lamports": amount,
+        "network": "solana-devnet",
+        "terms_digest": task["terms_digest"],
+        "release_authority_did": test_service_api_sender_did(caller_did),
+        "release_policy": "task-completed",
+        "idempotency_key": format!("escrow-fund-{nonce}"),
+    })
+    .to_string()
 }
 
 pub(crate) fn release_escrow(
@@ -164,6 +218,7 @@ pub(crate) fn release_escrow(
     nonce: u64,
     escrow_id: &str,
 ) -> Value {
+    let body = format!(r#"{{"idempotency_key":"escrow-release-{nonce}"}}"#);
     let response = signed_request(
         snapshot,
         bind_addr,
@@ -173,7 +228,7 @@ pub(crate) fn release_escrow(
             path: format!("/v1/escrow/{escrow_id}/release").as_str(),
             caller_did,
             nonce,
-            body: "",
+            body: body.as_str(),
             extra_headers: &[],
         },
     );

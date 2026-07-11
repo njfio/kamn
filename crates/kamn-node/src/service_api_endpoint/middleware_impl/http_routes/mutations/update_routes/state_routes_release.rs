@@ -13,7 +13,7 @@ pub(super) async fn resolve_release_escrow_result(
     }
     let Some(config) = state.live_solana_bridge_dispatch.as_ref() else {
         let mut store = state.message_store.lock().await;
-        revalidate_release(&mut store, context)?;
+        validate_release_eligibility(&mut store, context, escrow_id)?;
         return Ok(store.release_escrow(escrow_id));
     };
     release_escrow_with_slot_backed_settlement(state, context, escrow_id, config).await
@@ -35,7 +35,7 @@ async fn release_escrow_with_live_solana_settlement(
     config: &LiveSolanaSettlementConfig,
 ) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>> {
     let mut store = state.message_store.lock().await;
-    revalidate_release(&mut store, context)?;
+    validate_release_eligibility(&mut store, context, escrow_id)?;
     let existing = store
         .get_escrow_status(escrow_id)
         .map_err(|error| Box::new(super::super::super::persistence_error(error.as_str())))?;
@@ -63,7 +63,7 @@ async fn release_escrow_with_slot_backed_settlement(
     config: &LiveSolanaBridgeDispatchConfig,
 ) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>> {
     let mut store = state.message_store.lock().await;
-    revalidate_release(&mut store, context)?;
+    validate_release_eligibility(&mut store, context, escrow_id)?;
     let evidence = crate::service_api_endpoint::live_settlement_dispatch::collect_slot_backed_live_settlement_evidence(
         config,
         escrow_id,
@@ -80,6 +80,18 @@ fn revalidate_release(
     context: &ServiceApiRequestContext,
 ) -> Result<(), Box<Response>> {
     super::super::super::revalidate_transaction_authorization(store, context)
+}
+
+fn validate_release_eligibility(
+    store: &mut ServiceApiMessageStore,
+    context: &ServiceApiRequestContext,
+    escrow_id: &str,
+) -> Result<(), Box<Response>> {
+    revalidate_release(store, context)?;
+    let actor = super::super::super::task_actor(context)?;
+    store
+        .validate_escrow_release_eligibility(actor.as_str(), escrow_id)
+        .map_err(|error| Box::new(super::super::super::escrow_lifecycle_error_response(error)))
 }
 
 fn settlement_metadata_from_evidence(

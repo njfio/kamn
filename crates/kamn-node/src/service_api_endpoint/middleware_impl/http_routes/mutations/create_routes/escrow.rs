@@ -15,7 +15,11 @@ pub(super) async fn fund_escrow(
         {
             return *response;
         }
-        store.fund_bound_escrow(actor_did.as_str(), context.parsed_request.body.as_str())
+        store.fund_bound_escrow(
+            actor_did.as_str(),
+            context.parsed_request.body.as_str(),
+            context.correlation_id.as_str(),
+        )
     };
     match result {
         Ok(payload) => contract_json(200, &payload),
