@@ -38,6 +38,9 @@ structured error and never return `released`.
 - Reuse the existing live settlement adapter, service API store, and proof
   surfaces. Do not add a generalized workflow engine or blockchain adapter.
 - External keypair paths remain runtime-only and never enter git or artifacts.
+- An expired or never-landed signed transaction remains recoverable only by
+  querying or resubmitting that exact transaction. This MVP does not generate a
+  replacement signature because doing so would weaken at-most-once settlement.
 
 ## Settlement Contract
 
@@ -72,6 +75,9 @@ Only then may the intent become `confirmed`/`reconciled` and escrow become
   `ambiguous`, returns `SETTLEMENT_OUTCOME_AMBIGUOUS`, and never reports release.
 - Restart with `prepared`, `submitted`, or `ambiguous`: query the persisted
   signature first and converge to confirmed, failed, or still ambiguous.
+- A transaction that remains absent after its blockhash expires stays
+  observably `ambiguous`; operator-driven replacement is roadmap work and is
+  not claimed by this issue.
 - Concurrent identical requests serialize through the durable intent and return
   one result; they cannot create a second transaction identity.
 - Proof/report regeneration reads persisted evidence and never submits.
@@ -168,16 +174,22 @@ reconcile it by the persisted signature before rollback or another rehearsal.
 
 ## Completion Evidence
 
-The final required-mode rehearsal is preserved at
-`.kamn/demo/run-68754-1783753805208/` and produced report status `GO` plus a
-canonical verifier `PASS`. Its task `task-local-9267453716be5563` and escrow
-`escrow-local-63d8bc55ff61d199` settled exactly one 1,000,000-lamport transfer
+The final escrow-bound required-mode rehearsal is preserved at
+`.kamn/demo/run-55450-1783755996034/` and produced report status `GO` plus a
+canonical verifier `PASS`. Its escrow `escrow-local-ab2190a8436d1bd7` settled
+exactly one 1,000,000-lamport transfer
 from `2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T` to
 `FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe`. Solana devnet finalized
 signature
-`3iLFpQDi5QWwyqEkXhc5A76uDQnurbF1YtB2CbPt1Z6bkjD6xEY69PQiR6PHbB3DjW8eANLPxHEdXDuT3cksErdz`;
+`3qZigXwYm3msVGbv9h7ShujMNRxKidDxoXZ7MKExZN8Js7MvU8dfsPpWbTLoZcpNKVQp9DY3oijhojRJoTf2QB8W`;
 the persisted intent is `confirmed`, and the report carries the same signature,
 commitment, recipient, amount, and before/after balances.
+
+The earlier successful report at `.kamn/demo/run-68754-1783753805208/`
+predates cryptographic persisted-transaction validation and escrow-specific
+memo binding. It remains valid evidence for the earlier transaction shape but
+is superseded by the final rehearsal above and is not the completion artifact
+for the hardened implementation.
 
 Two earlier NO-GO rehearsals exposed the confirmation-visibility crash window.
 Both transfers finalized on devnet but their local escrow state remained
