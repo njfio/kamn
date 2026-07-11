@@ -37,6 +37,37 @@ fn integration_task_bound_escrow_rejects_transaction_and_terms_mismatch() {
     case.cleanup();
 }
 
+#[test]
+fn integration_task_bound_escrow_release_enforces_authority_and_replays_receipt() {
+    let case = DenialCase::new("release-authority-retry");
+    let task = case.accepted_task();
+    let body = case.funding_body(
+        task.task_id.as_str(),
+        CREATOR,
+        "transaction-2",
+        valid_terms(),
+    );
+    let funded = response_payload(&case.request(CREATOR, 4, body.as_str()));
+    case.complete(task.task_id.as_str(), 5);
+    let escrow_id = funded["escrow_id"].as_str().expect("escrow id");
+
+    let denied = case.release(OTHER, 6, escrow_id, "release-retry");
+    let released = response_payload(&case.release(CREATOR, 7, escrow_id, "release-retry"));
+    let replayed = response_payload(&case.release(CREATOR, 8, escrow_id, "release-retry"));
+
+    assert!(denied.contains("ESCROW_RELEASE_AUTHORITY_MISMATCH"));
+    assert_eq!(replayed["receipt_id"], released["receipt_id"]);
+    let state = read_state_json(case.state_file.as_path());
+    assert_eq!(
+        state["escrow_transition_receipts"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    case.cleanup();
+}
+
 struct DenialCase {
     _env: ServiceApiTestEnvGuards,
     _state_guard: EnvVarGuard,
@@ -112,6 +143,34 @@ impl DenialCase {
         )
     }
 
+    fn complete(&self, task_id: &str, nonce: u64) {
+        complete_task(
+            &self.snapshot,
+            reserve_loopback_addr().as_str(),
+            CREATOR,
+            nonce,
+            task_id,
+        );
+    }
+
+    fn release(&self, actor: &str, nonce: u64, escrow_id: &str, key: &str) -> String {
+        let path = format!("/v1/escrow/{escrow_id}/release");
+        let body = serde_json::json!({"idempotency_key": key}).to_string();
+        authorized_signed_request(
+            &self.snapshot,
+            reserve_loopback_addr().as_str(),
+            SignedRequest {
+                max_requests: 1,
+                method: "POST",
+                path: path.as_str(),
+                caller_did: actor,
+                nonce,
+                body: body.as_str(),
+                extra_headers: &[],
+            },
+        )
+    }
+
     fn cleanup(self) {
         let _ = fs::remove_file(self.state_file);
     }
@@ -123,4 +182,9 @@ fn valid_terms() -> &'static str {
 
 fn wrong_terms() -> &'static str {
     "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}
+
+fn response_payload(response: &str) -> Value {
+    parse_service_api_payload(extract_http_response_body(response))
+        .expect("response payload should deserialize")
 }
