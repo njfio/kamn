@@ -84,6 +84,33 @@ fn integration_settlement_intent_rejects_conflicting_release_key_without_submiss
     );
 }
 
+#[test]
+fn integration_settlement_rejects_mismatched_confirmed_evidence_without_release() {
+    let _env = acquire_service_api_test_env();
+    let _override_guard =
+        crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
+    crate::service_api_endpoint::set_test_live_solana_settlement_evidence_mismatch();
+    let context = build_live_solana_asset_movement_context(params_for("evidence-mismatch", 41));
+    let escrow_id = fund_live_escrow(&context.harness, 171, 41);
+
+    let response = release_escrow_response_with_key(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.caller_did,
+        173,
+        escrow_id.as_str(),
+        "settlement-evidence-mismatch",
+    );
+    let state = read_state_json(context.harness.state_file.as_path());
+
+    assert!(
+        response.contains("SETTLEMENT_EVIDENCE_MISMATCH"),
+        "{response}"
+    );
+    assert_eq!(state["settlement_intents"][&escrow_id]["state"], "failed");
+    assert_ne!(state["escrows"][&escrow_id]["state"], "released");
+}
+
 fn params() -> LiveSolanaAssetMovementParams<'static> {
     params_for("reconciliation", 31)
 }

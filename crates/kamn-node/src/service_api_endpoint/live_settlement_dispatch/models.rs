@@ -4,6 +4,8 @@ pub(crate) struct LiveSettlementEvidence {
     pub(crate) settlement_tx_signature: String,
     pub(crate) settlement_network: String,
     pub(crate) settlement_commitment: String,
+    pub(crate) recipient_pubkey: Option<String>,
+    pub(crate) amount_lamports: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

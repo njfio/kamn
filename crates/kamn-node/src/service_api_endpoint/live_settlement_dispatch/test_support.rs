@@ -8,6 +8,7 @@ static OBSERVED_PREPARED_INTENT: AtomicBool = AtomicBool::new(false);
 static AMBIGUOUS_AFTER_SUBMIT: AtomicBool = AtomicBool::new(false);
 static RECONCILE_CONFIRMED: AtomicBool = AtomicBool::new(false);
 static SUBMISSION_COUNT: AtomicU64 = AtomicU64::new(0);
+static EVIDENCE_MISMATCH: AtomicBool = AtomicBool::new(false);
 
 pub(crate) struct TestLiveSolanaSettlementOverrideGuard {
     previous: bool,
@@ -26,6 +27,7 @@ pub(crate) fn set_test_live_solana_settlement_override(
     OBSERVED_PREPARED_INTENT.store(false, Ordering::SeqCst);
     RECONCILE_CONFIRMED.store(false, Ordering::SeqCst);
     SUBMISSION_COUNT.store(0, Ordering::SeqCst);
+    EVIDENCE_MISMATCH.store(false, Ordering::SeqCst);
     TestLiveSolanaSettlementOverrideGuard {
         previous,
         previous_ambiguous,
@@ -35,6 +37,10 @@ pub(crate) fn set_test_live_solana_settlement_override(
 pub(crate) fn set_test_live_solana_settlement_reconcile_confirmed() {
     AMBIGUOUS_AFTER_SUBMIT.store(false, Ordering::SeqCst);
     RECONCILE_CONFIRMED.store(true, Ordering::SeqCst);
+}
+
+pub(crate) fn set_test_live_solana_settlement_evidence_mismatch() {
+    EVIDENCE_MISMATCH.store(true, Ordering::SeqCst);
 }
 
 pub(crate) fn test_live_solana_settlement_submission_count() -> u64 {
@@ -99,6 +105,12 @@ fn success_evidence(
         settlement_tx_signature: prepared.expected_signature.clone(),
         settlement_network: prepared.network.clone(),
         settlement_commitment: config.commitment_label.clone(),
+        recipient_pubkey: Some(prepared.recipient_pubkey.clone()),
+        amount_lamports: Some(if EVIDENCE_MISMATCH.load(Ordering::SeqCst) {
+            prepared.amount_lamports + 1
+        } else {
+            prepared.amount_lamports
+        }),
     }
 }
 

@@ -75,6 +75,7 @@ fn submit_or_reconcile_live_settlement_via_rpc(
         return Ok(build_live_settlement_evidence(
             prepared.expected_signature.clone(),
             config.commitment_label.as_str(),
+            prepared,
         ));
     }
     let signature = submit_live_settlement_transaction(&client, &transaction)?;
@@ -91,6 +92,7 @@ fn submit_or_reconcile_live_settlement_via_rpc(
     Ok(build_live_settlement_evidence(
         signature.to_string(),
         config.commitment_label.as_str(),
+        prepared,
     ))
 }
 
@@ -180,11 +182,14 @@ fn confirm_live_settlement_signature(
 fn build_live_settlement_evidence(
     settlement_tx_signature: String,
     settlement_commitment: &str,
+    prepared: &PreparedLiveSettlement,
 ) -> LiveSettlementEvidence {
     LiveSettlementEvidence {
         settlement_receipt_hash: settlement_tx_signature.clone(),
         settlement_tx_signature,
         settlement_network: "solana:devnet".to_owned(),
         settlement_commitment: settlement_commitment.to_owned(),
+        recipient_pubkey: Some(prepared.recipient_pubkey.clone()),
+        amount_lamports: Some(prepared.amount_lamports),
     }
 }
