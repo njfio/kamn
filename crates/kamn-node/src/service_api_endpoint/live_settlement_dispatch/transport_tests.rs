@@ -1,3 +1,4 @@
+use super::transaction::{build_escrow_bound_transaction, validate_persisted_transaction};
 use super::*;
 use solana_sdk::{hash::Hash, pubkey::Pubkey, signature::Keypair};
 
@@ -26,14 +27,9 @@ fn escrow_binding_makes_same_blockhash_transfers_unique() {
 fn persisted_transaction_integrity_rejects_tampering() {
     let payer = Keypair::new();
     let recipient = Pubkey::new_unique();
-    let mut transaction = build_escrow_bound_transaction(
-        &payer,
-        &recipient,
-        7,
-        Hash::new_unique(),
-        "escrow-a",
-    )
-    .expect("transaction");
+    let mut transaction =
+        build_escrow_bound_transaction(&payer, &recipient, 7, Hash::new_unique(), "escrow-a")
+            .expect("transaction");
     let expected = transaction.signatures[0].to_string();
     transaction.message.instructions[0].data.push(0);
     let json = serde_json::to_string(&transaction).expect("json");

@@ -13,6 +13,13 @@ pub(super) fn prepare(
     if let Some(existing) = store.snapshot.settlement_intents.get(escrow_id) {
         return identical_or_conflict(existing, actor, idempotency_key, prepared);
     }
+    if !settlement_signature_is_available(
+        &store.snapshot,
+        escrow_id,
+        prepared.expected_signature.as_str(),
+    ) {
+        return Err("SETTLEMENT_SIGNATURE_REUSE".to_owned());
+    }
     let record = build_record(actor, escrow_id, idempotency_key, prepared);
     store
         .snapshot
@@ -20,6 +27,17 @@ pub(super) fn prepare(
         .insert(escrow_id.to_owned(), record.clone());
     store.persist()?;
     Ok(record)
+}
+
+pub(crate) fn settlement_signature_is_available(
+    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
+    escrow_id: &str,
+    signature: &str,
+) -> bool {
+    snapshot
+        .settlement_intents
+        .values()
+        .all(|intent| intent.escrow_id == escrow_id || intent.expected_signature != signature)
 }
 
 pub(super) fn finalize(

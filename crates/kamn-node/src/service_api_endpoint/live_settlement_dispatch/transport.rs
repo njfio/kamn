@@ -4,43 +4,45 @@ use super::models::{
 use super::LiveSolanaSettlementConfig;
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::signer::keypair::read_keypair_file;
-use solana_system_transaction as system_transaction;
 use std::str::FromStr;
 use std::time::Duration;
 
+mod transaction;
+use transaction::{build_live_settlement_transaction, validate_prepared_transaction};
+
 pub(super) fn prepare_live_settlement(
     config: &LiveSolanaSettlementConfig,
-    _escrow_id: &str,
+    escrow_id: &str,
 ) -> Result<PreparedLiveSettlement, String> {
     #[cfg(test)]
-    if let Some(result) =
-        super::test_support::maybe_prepare_test_live_settlement(config, _escrow_id)
+    if let Some(result) = super::test_support::maybe_prepare_test_live_settlement(config, escrow_id)
     {
         return result;
     }
-    prepare_live_settlement_via_rpc(config)
+    prepare_live_settlement_via_rpc(config, escrow_id)
 }
 
 pub(super) fn submit_or_reconcile_live_settlement(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
-    _escrow_id: &str,
+    escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, String> {
     #[cfg(test)]
     if let Some(result) =
-        super::test_support::maybe_submit_test_live_settlement(config, prepared, _escrow_id)
+        super::test_support::maybe_submit_test_live_settlement(config, prepared, escrow_id)
     {
         return result;
     }
-    submit_or_reconcile_live_settlement_via_rpc(config, prepared)
+    submit_or_reconcile_live_settlement_via_rpc(config, prepared, escrow_id)
 }
 
 fn prepare_live_settlement_via_rpc(
     config: &LiveSolanaSettlementConfig,
+    escrow_id: &str,
 ) -> Result<PreparedLiveSettlement, String> {
     let keypair = read_settlement_keypair(config)?;
     let client = settlement_rpc_client(config);
-    let transaction = build_live_settlement_transaction(&client, config, &keypair)?;
+    let transaction = build_live_settlement_transaction(&client, config, &keypair, escrow_id)?;
     let signature = transaction
         .signatures
         .first()
@@ -63,12 +65,14 @@ fn prepare_live_settlement_via_rpc(
 fn submit_or_reconcile_live_settlement_via_rpc(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
+    escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, String> {
     validate_prepared_config(config, prepared)?;
     let transaction: solana_sdk::transaction::Transaction =
         serde_json::from_str(prepared.signed_transaction_json.as_str()).map_err(|error| {
             format!("live solana settlement transaction decode failed: {error}")
         })?;
+    validate_prepared_transaction(&transaction, prepared, escrow_id)?;
     let client = settlement_rpc_client(config);
     let expected_signature =
         solana_sdk::signature::Signature::from_str(prepared.expected_signature.as_str())
@@ -147,22 +151,6 @@ fn settlement_rpc_client(config: &LiveSolanaSettlementConfig) -> RpcClient {
         Duration::from_secs(30),
         config.commitment,
     )
-}
-
-fn build_live_settlement_transaction(
-    client: &RpcClient,
-    config: &LiveSolanaSettlementConfig,
-    keypair: &solana_sdk::signer::keypair::Keypair,
-) -> Result<solana_sdk::transaction::Transaction, String> {
-    let latest_blockhash = client.get_latest_blockhash().map_err(|error| {
-        format!("live solana settlement latest blockhash lookup failed: {error}")
-    })?;
-    Ok(system_transaction::transfer(
-        keypair,
-        &config.recipient_pubkey,
-        config.lamports,
-        latest_blockhash,
-    ))
 }
 
 fn submit_live_settlement_transaction(

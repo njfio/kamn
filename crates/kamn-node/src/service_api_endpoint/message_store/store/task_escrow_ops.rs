@@ -14,6 +14,8 @@ pub(crate) use escrow_lifecycle::EscrowLifecycleError;
 pub(crate) use lifecycle::TaskLifecycleError;
 pub(crate) use settlement::escrow_fund_task_id;
 use settlement::{escrow_status_response, release_escrow_record};
+#[cfg(test)]
+pub(crate) use settlement_intent::settlement_signature_is_available;
 use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
