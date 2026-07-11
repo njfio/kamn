@@ -40,6 +40,26 @@ test("session provenance binds child process, request range, and runtime respons
 	await session.shutdown();
 });
 
+test("session provenance keeps handled error responses in the contiguous request stream", async () => {
+	const paths = await testPaths();
+	const session = sessionFor(paths, "error-on-second");
+	const registered = await session.call("register");
+	await assert.rejects(session.call("release_escrow"), /forced backend failure/);
+	const queried = await session.call("query_agent_profile", { did: registered.did });
+
+	assert.deepEqual(session.provenance(), {
+		child_process_id: registered.pid,
+		first_request_id: 1,
+		last_request_id: 3,
+		runtime_response_digests: [
+			responseDigest(registered),
+			responseDigest({ kind: "backend_error", message: "forced backend failure" }),
+			responseDigest(queried),
+		],
+	});
+	await session.shutdown();
+});
+
 test("configuration rejects missing values and key files", () => {
 	assert.throws(() => readLiveMcpConfig("AGENT_A", {}, process.cwd()), /KAMN_MVP_LIVE_MCP_BINARY/);
 	assert.throws(

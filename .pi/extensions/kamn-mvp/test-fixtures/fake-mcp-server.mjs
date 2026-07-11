@@ -20,6 +20,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
 	if (mode === "malformed") return process.stdout.write("not-json\n");
 	const request = JSON.parse(line);
 	if (mode === "error") return write(errorResponse(request));
+	if (mode === "error-on-second" && request.id === "2") return write(errorResponse(request));
 	write(successResponse(request));
 });
 
