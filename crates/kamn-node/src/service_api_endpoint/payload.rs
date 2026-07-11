@@ -151,6 +151,10 @@ pub(super) fn render_service_api_endpoint_response(
         let payload = ServiceApiTaskCreateBody {
             task_id,
             state: "submitted".to_owned(),
+            transaction_id: None,
+            creator_did: None,
+            provider_did: None,
+            terms_digest: None,
         };
         return ServiceApiEndpointResponse {
             status_code: 201,
@@ -212,6 +216,11 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiTaskTransitionBody {
                 task_id: task_id.to_owned(),
                 state: "accepted".to_owned(),
+                transaction_id: None,
+                creator_did: None,
+                provider_did: None,
+                terms_digest: None,
+                receipt_id: None,
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,
@@ -223,6 +232,11 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiTaskTransitionBody {
                 task_id: task_id.to_owned(),
                 state: "completed".to_owned(),
+                transaction_id: None,
+                creator_did: None,
+                provider_did: None,
+                terms_digest: None,
+                receipt_id: None,
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,

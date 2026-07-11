@@ -27,6 +27,11 @@ pub(super) fn build_task_record(
             .map(|metadata| metadata.task_type.clone()),
         description: dispatch_metadata.map(|metadata| metadata.description),
         assignee: None,
+        provider_did: None,
+        transaction_id: None,
+        terms_digest: None,
+        completion_evidence_digest: None,
+        create_idempotency_key: None,
     }
 }
 

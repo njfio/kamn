@@ -628,10 +628,19 @@ mod tests {
         fanout.publish_task_submitted_event(&ServiceApiTaskCreateBody {
             task_id: "task-1".to_owned(),
             state: "submitted".to_owned(),
+            transaction_id: None,
+            creator_did: None,
+            provider_did: None,
+            terms_digest: None,
         });
         fanout.publish_task_transition_event(&ServiceApiTaskTransitionBody {
             task_id: "task-1".to_owned(),
             state: "accepted".to_owned(),
+            transaction_id: None,
+            creator_did: None,
+            provider_did: None,
+            terms_digest: None,
+            receipt_id: None,
         });
         fanout.publish_bridge_submitted_event(&ServiceApiBridgeSubmitBody {
             bridge_id: "bridge-1".to_owned(),

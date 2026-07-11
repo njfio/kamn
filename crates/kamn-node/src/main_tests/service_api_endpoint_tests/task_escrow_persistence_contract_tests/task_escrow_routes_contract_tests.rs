@@ -106,7 +106,7 @@ fn integration_service_api_endpoint_task_create_fails_loud_when_audit_export_wri
 }
 
 #[test]
-fn integration_service_api_endpoint_auto_dispatches_sdk_shaped_task_to_registered_worker() {
+fn integration_service_api_endpoint_does_not_auto_complete_provider_bound_task() {
     let dispatch = setup_dispatch_route_case();
     let (created_task, queried_task) = dispatch_task_to_registered_worker(&dispatch);
     let persisted = super::support::read_state_json(dispatch.state_file.as_path());
@@ -122,18 +122,17 @@ fn integration_service_api_endpoint_auto_dispatches_sdk_shaped_task_to_registere
 }
 
 #[test]
-fn integration_service_api_endpoint_task_query_fails_loud_when_no_dispatch_worker_exists() {
+fn integration_service_api_endpoint_bound_task_query_does_not_require_dispatch_worker() {
     let missing_worker = setup_missing_worker_route_case();
     let response = query_missing_worker_task(&missing_worker);
 
-    assert!(response.contains("HTTP/1.1 503 Service Unavailable"));
-    assert!(response.contains("service_api_task_dispatch_prerequisites_missing"));
-    assert!(response.contains("task dispatch prerequisites missing"));
+    assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
+    assert!(response.contains(r#""state":"submitted""#), "{response}");
     let _ = fs::remove_file(missing_worker.state_file);
 }
 
 #[test]
-fn integration_service_api_endpoint_repeated_task_query_keeps_dispatched_task_terminal() {
+fn integration_service_api_endpoint_repeated_task_query_keeps_bound_task_submitted() {
     let dispatch = setup_dispatch_route_case();
     let (created_task, queried_task) = dispatch_task_to_registered_worker(&dispatch);
     let repeated_query = super::support::query_task(
@@ -152,7 +151,7 @@ fn integration_service_api_endpoint_repeated_task_query_keeps_dispatched_task_te
         task,
         dispatch.worker_did.as_str(),
     );
-    assert_eq!(repeated_query["state"], "completed");
+    assert_eq!(repeated_query["state"], "submitted");
     let _ = fs::remove_file(dispatch.state_file);
 }
 

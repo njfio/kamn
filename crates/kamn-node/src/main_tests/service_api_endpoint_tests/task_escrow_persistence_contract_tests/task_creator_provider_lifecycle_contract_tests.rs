@@ -178,7 +178,10 @@ fn integration_task_completion_evidence_and_receipts_survive_restart() {
         state["tasks"][&task.task_id]["completion_evidence_digest"],
         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     );
-    assert_eq!(state["task_transition_receipts"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        state["task_transition_receipts"].as_array().unwrap().len(),
+        2
+    );
     case.cleanup();
 }
 

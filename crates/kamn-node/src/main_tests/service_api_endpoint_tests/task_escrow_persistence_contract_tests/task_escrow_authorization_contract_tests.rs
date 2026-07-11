@@ -7,7 +7,6 @@ use crate::service_api_endpoint::ServiceApiSnapshot;
 use std::path::{Path, PathBuf};
 
 const TASK_CREATE_PATH: &str = "/v1/tasks/create";
-const TASK_CREATE_BODY: &str = r#"{"title":"authorized-task","description":"grant contract"}"#;
 
 #[test]
 fn integration_service_api_rejects_signed_unregistered_task_creator() {
@@ -120,6 +119,15 @@ impl AuthorizationCase {
     }
 
     fn create_task(&self, actor: &str, nonce: u64) -> String {
+        let provider_did = test_service_api_sender_did(actor);
+        let body = serde_json::json!({
+            "provider_did": provider_did,
+            "transaction_id": "transaction-authorization-contract",
+            "terms_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "idempotency_key": "authorization-contract-create",
+            "description": "grant contract",
+        })
+        .to_string();
         raw_signed_request(
             &self.snapshot,
             reserve_loopback_addr().as_str(),
@@ -129,7 +137,7 @@ impl AuthorizationCase {
                 path: TASK_CREATE_PATH,
                 caller_did: actor,
                 nonce,
-                body: TASK_CREATE_BODY,
+                body: body.as_str(),
                 extra_headers: &[("X-KAMN-Authz-Scope", "tasks:write")],
             },
         )

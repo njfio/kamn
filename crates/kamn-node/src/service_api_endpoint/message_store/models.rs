@@ -48,6 +48,16 @@ pub(crate) struct ServiceApiPersistedTaskRecord {
     pub(crate) description: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) assignee: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) provider_did: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) transaction_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) terms_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) completion_evidence_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) create_idempotency_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -115,6 +125,22 @@ pub(crate) struct ServiceApiAuthorizationReceiptRecord {
     pub(crate) reason_code: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiTaskTransitionReceiptRecord {
+    pub(crate) receipt_id: String,
+    pub(crate) correlation_id: String,
+    pub(crate) idempotency_key: String,
+    pub(crate) actor_did: String,
+    pub(crate) task_id: String,
+    pub(crate) transaction_id: String,
+    pub(crate) action: String,
+    pub(crate) prior_state: String,
+    pub(crate) resulting_state: String,
+    pub(crate) terms_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) completion_evidence_digest: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct ServiceApiAgentBalanceBody {
     pub(crate) did: String,
@@ -148,12 +174,14 @@ pub(crate) struct ServiceApiPersistedMessageStoreSnapshot {
     pub(crate) agent_grants: BTreeMap<String, ServiceApiPersistedAgentGrantRecord>,
     #[serde(default)]
     pub(crate) authorization_receipts: Vec<ServiceApiAuthorizationReceiptRecord>,
+    #[serde(default)]
+    pub(crate) task_transition_receipts: Vec<ServiceApiTaskTransitionReceiptRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
     fn default() -> Self {
         Self {
-            schema_version: "kamn.runtime.service-api-message-store.v3".to_owned(),
+            schema_version: "kamn.runtime.service-api-message-store.v4".to_owned(),
             messages: BTreeMap::new(),
             channel_messages: BTreeMap::new(),
             auth_nonce_high_watermarks: BTreeMap::new(),
@@ -164,6 +192,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             agents: BTreeMap::new(),
             agent_grants: BTreeMap::new(),
             authorization_receipts: Vec::new(),
+            task_transition_receipts: Vec::new(),
         }
     }
 }
