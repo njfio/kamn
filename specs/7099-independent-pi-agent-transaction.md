@@ -1,0 +1,167 @@
+# Drive One Transaction Through Independent Pi Agents
+
+## Objective
+
+Prove that three independent Pi processes use three key-bound KAMN identities
+and persistent MCP sessions to drive and verify one task-bound Solana devnet
+settlement. Bind every actor receipt to an authenticated runtime response so
+filesystem coordination cannot substitute for authorization or proof.
+
+## Inputs/Outputs
+
+Inputs are the local KAMN service endpoint, `kamn-mcp-server` binary, three
+external key-file paths, three agent names, bounded coordination paths, funded
+Solana devnet configuration, and existing Pi Codex OAuth. Key material and Pi
+credentials remain outside artifacts and child environments.
+
+Agent A outputs authenticated receipts for registration, task creation, escrow
+funding/release, and its participant projection. Agent B outputs authenticated
+receipts for registration, task acceptance, completion evidence/completion,
+and its participant projection. Agent C outputs authenticated receipts for
+registration, the restricted verifier projection, and public-proof
+verification. A combined evidence artifact records process IDs, DIDs, request
+sequence bounds, shared transaction facts, runtime response digests, and
+coordination-artifact digests.
+
+## Boundaries/Non-goals
+
+- Reuse the project-local Pi extension, persistent MCP line-protocol session,
+  service API routes, devnet settlement path, and canonical verifier.
+- Coordination files may carry non-secret task, escrow, and artifact IDs. They
+  never carry credentials and never authorize a KAMN request.
+- Runtime receipt means the exact successful MCP/server response body, reduced
+  to an integrity digest plus required public identifiers. A Pi-authored label
+  is not a runtime receipt.
+- The funded rehearsal is Solana devnet only. Local simulation, dry-run output,
+  placeholders, and copied settlement evidence cannot satisfy success.
+- Replacing the legacy generated transcript is Issue 8. Adding the canonical
+  one-command runner is Issue 9.
+- No new agent framework, generalized workflow engine, mainnet, custody,
+  disputes, refunds, or multi-chain behavior.
+
+## Actor Contract
+
+Each role runs in a distinct Pi operating-system process. Each process starts
+one role-specific persistent `kamn-mcp-server` child with its own key file and
+monotonic request IDs beginning at one. The role receipt records the Pi process
+ID, registered DID, first and last MCP request IDs, and digests of every runtime
+response used for its claim.
+
+Agent A registers, creates a task, obtains the bound escrow, waits for Agent B
+completion, authorizes the bounded release, and queries its participant view.
+Agent B registers, accepts the handed-off task through its own authenticated
+session, submits completion evidence, completes the task, and queries its
+participant view. Agent C registers with verifier scope, receives only the task
+ID through coordination, queries the signed restricted view, and verifies the
+shared public commitment and settlement facts.
+
+All three outputs must agree on task ID, escrow ID, amount, network, settlement
+signature, settlement commitment, and public commitment. Agent A and B retain
+participant receipt fields; Agent C has none.
+
+## Failure Modes
+
+- Reused Pi process ID: `PI_ACTOR_PROCESS_REUSED`.
+- Reused or missing DID: `PI_ACTOR_IDENTITY_INVALID`.
+- Missing, overlapping, or non-monotonic request sequence:
+  `PI_ACTOR_NONCE_STREAM_INVALID`.
+- Missing or mismatched runtime response digest: `PI_RUNTIME_RECEIPT_MISMATCH`.
+- Shared task, escrow, amount, network, signature, or commitment mismatch:
+  `PI_TRANSACTION_FACT_MISMATCH`.
+- Agent C participant field or digest exposure: `PI_VERIFIER_PRIVATE_LEAK`.
+- Agent C evidence not bound to a server verifier response:
+  `PI_VERIFIER_PROJECTION_MISSING`.
+- Coordination artifact used as an authorization receipt:
+  `PI_HANDOFF_AUTHORIZATION_FORBIDDEN`.
+- Pi/MCP process failure, timeout, or malformed response: observable hard
+  failure; no partial success artifact.
+- Devnet unavailable or settlement ambiguous: canonical `NO-GO`; never `GO`.
+
+All failures hard-fail at the tool or verifier boundary. Existing artifacts are
+written idempotently and conflicting replay is rejected.
+
+## Acceptance Criteria
+
+- [ ] Three positive, distinct Pi process IDs are recorded.
+- [ ] Three distinct registered DIDs are bound to three external key files.
+- [ ] Three independent monotonic MCP request streams are recorded.
+- [ ] Agent A performs create, release, and participant-view operations.
+- [ ] Agent B performs accept, completion, and participant-view operations.
+- [ ] Agent C performs verifier registration, restricted-view query, and public
+      verification without participant-private fields.
+- [ ] One task, escrow, amount, network, settlement signature, and public
+      commitment match across all actor evidence.
+- [ ] Every claimed actor operation references a matching runtime response
+      digest.
+- [ ] Coordination artifacts are identifier-only and cannot satisfy runtime
+      receipt or authorization checks.
+- [ ] Required-mode funded rehearsal produces finalized devnet evidence or an
+      explicit `NO-GO` without a success claim.
+- [ ] Canonical verification rejects each identity, nonce, receipt, privacy,
+      and shared-fact failure mode.
+
+## Files To Touch
+
+- `.pi/extensions/kamn-mvp/mcp-session.ts` and focused role/session modules
+- `.pi/extensions/kamn-mvp/live-mcp-tools.ts` and focused transaction tools
+- `.pi/extensions/kamn-mvp/live-task-coordination*.ts`
+- focused `.pi/extensions/kamn-mvp/*.test.ts` contracts
+- `crates/kamn-e2e-harness/src/mvp_demo/agent_harness_*.rs`
+- focused `crates/kamn-e2e-harness/tests/` verifier contracts
+- `docs/validation/mvp-evaluator-demo.md` only for the bounded rehearsal
+
+## Error Semantics
+
+Pi extension interiors throw `Error` without logging. Tool entrypoints return
+failure once and do not write success receipts after a failed MCP response.
+Rust verification returns stable reason codes with actor and artifact context.
+Neither layer includes keys, auth headers, signatures used for authentication,
+OAuth state, or raw private participant payloads in errors or artifacts.
+
+## Test Plan
+
+RED:
+
+- Accept one process ID or DID for multiple roles.
+- Accept actor receipts containing only Pi-authored action labels.
+- Accept missing/non-monotonic MCP request ranges.
+- Accept Agent C evidence constructed from coordination files rather than the
+  signed server verifier response.
+- Accept copied or cross-transaction escrow/settlement facts.
+- Accept participant-private markers in Agent C output.
+
+GREEN:
+
+- Extend role configuration and persistent sessions to Agent C.
+- Add the minimum role-specific MCP tools for task completion, escrow release,
+  and participant/verifier projections.
+- Digest exact successful runtime responses and record process/DID/request
+  provenance in idempotent actor evidence.
+- Extend canonical evidence verification with identity, nonce, receipt,
+  privacy, and shared-fact checks.
+
+REFACTOR:
+
+- Keep role orchestration, session transport, receipt encoding, coordination,
+  and verification separate.
+- Reuse one response-digest and shared-fact validator.
+- Keep files below 200 lines and functions below 25 lines.
+- Remove obsolete local-only receipt fields only when behavior is covered.
+
+INTEGRATION:
+
+- Run TypeScript extension contracts and Rust verifier negative contracts.
+- Run three separate Pi processes with bounded tool allowlists and existing
+  Codex OAuth against one local KAMN stack.
+- Run one bounded required-mode devnet settlement through the actor path.
+- Verify the resulting canonical report and Pi evidence after all processes
+  exit.
+- Run formatting, strict clippy, package suites, and `make check` before PR.
+
+## Rollback
+
+Preserve spec, RED, GREEN, REFACTOR, and INTEGRATION commits independently.
+Use a fresh coordination directory and release idempotency key per rehearsal.
+Never delete or retry an ambiguous settlement by creating a new transaction;
+reconcile the persisted signature first. Roll back Pi tool exposure separately
+from server settlement state.
