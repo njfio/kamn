@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::devnet_settlement::DevnetSettlementEvidence;
 use super::devnet_settlement_build::build_node_binary;
-use super::devnet_settlement_node::launch_and_drive_service_api;
+use super::devnet_settlement_node::{launch_and_drive_service_api, ServiceApiRun};
 use super::devnet_settlement_solana::{balance_pair, solana_pubkey, validate_balance_movement};
 use super::devnet_settlement_state::persisted_signature;
 use super::live_task_binding::LiveTaskBinding;
@@ -32,7 +32,7 @@ pub(super) fn collect_live_devnet_settlement(
         before,
         after,
         persisted,
-        service_api.escrow_id,
+        service_api,
         binding,
     ))
 }
@@ -63,7 +63,7 @@ fn evidence(
     before: super::devnet_settlement_solana::BalancePair,
     after: super::devnet_settlement_solana::BalancePair,
     persisted: String,
-    escrow_id: String,
+    service_api: ServiceApiRun,
     binding: Option<&LiveTaskBinding>,
 ) -> DevnetSettlementEvidence {
     DevnetSettlementEvidence {
@@ -73,8 +73,8 @@ fn evidence(
         payer_pubkey: payer,
         recipient_pubkey: config.recipient_pubkey,
         lamports: config.lamports,
-        escrow_id,
-        task_id: binding.map(|value| value.task_id.clone()),
+        escrow_id: service_api.escrow_id,
+        task_id: Some(service_api.task_id),
         task_binding_digest: binding.map(|value| value.digest.clone()),
         settlement_tx_signature: persisted.clone(),
         settlement_commitment: config.commitment,

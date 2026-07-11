@@ -11,6 +11,7 @@ use super::live_task_binding::LiveTaskBinding;
 
 pub(super) struct ServiceApiRun {
     pub(super) escrow_id: String,
+    pub(super) task_id: String,
 }
 
 pub(super) fn launch_and_drive_service_api(
@@ -23,15 +24,19 @@ pub(super) fn launch_and_drive_service_api(
     let endpoint = format!("http://127.0.0.1:{port}");
     let mut child = spawn_node(run_dir, state_file, port, config)?;
     wait_for_tcp_ready(port, &mut child)?;
-    let escrow_id = match drive_escrow_release(endpoint.as_str(), run_dir, binding) {
-        Ok(value) => value,
-        Err(error) => {
-            terminate_child(&mut child);
-            return Err(error);
-        }
-    };
+    let settlement =
+        match drive_escrow_release(endpoint.as_str(), run_dir, binding, config.lamports) {
+            Ok(value) => value,
+            Err(error) => {
+                terminate_child(&mut child);
+                return Err(error);
+            }
+        };
     terminate_child(&mut child);
-    Ok(ServiceApiRun { escrow_id })
+    Ok(ServiceApiRun {
+        escrow_id: settlement.escrow_id,
+        task_id: settlement.task_id,
+    })
 }
 
 fn spawn_node(

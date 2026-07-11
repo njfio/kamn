@@ -152,6 +152,18 @@ impl ServiceApiHttpClient {
         Ok(self.inner.accept_task(task_id, auth)?)
     }
 
+    /// Accepts one task with a canonical transition payload.
+    pub fn accept_task_with_payload(
+        &self,
+        task_id: &str,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, AgentLibError> {
+        Ok(self
+            .inner
+            .accept_task_with_payload(task_id, payload, auth)?)
+    }
+
     /// Completes one task via `POST /v1/tasks/{id}/complete`.
     pub fn complete_task(
         &self,
@@ -159,6 +171,18 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, AgentLibError> {
         Ok(self.inner.complete_task(task_id, auth)?)
+    }
+
+    /// Completes one task with a canonical evidence payload.
+    pub fn complete_task_with_payload(
+        &self,
+        task_id: &str,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, AgentLibError> {
+        Ok(self
+            .inner
+            .complete_task_with_payload(task_id, payload, auth)?)
     }
 
     /// Funds escrow via `POST /v1/escrow/fund`.
@@ -177,6 +201,18 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceEscrowStatus, AgentLibError> {
         Ok(self.inner.release_escrow(escrow_id, auth)?)
+    }
+
+    /// Releases escrow with a canonical idempotency payload.
+    pub fn release_escrow_with_payload(
+        &self,
+        escrow_id: &str,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceEscrowStatus, AgentLibError> {
+        Ok(self
+            .inner
+            .release_escrow_with_payload(escrow_id, payload, auth)?)
     }
 
     /// Registers content lifecycle via `POST /v1/content/register`.

@@ -22,9 +22,19 @@ impl ServiceApiClient {
         escrow_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceEscrowStatus, SdkError> {
+        self.release_escrow_with_payload(escrow_id, "{}", auth)
+    }
+
+    /// Releases escrow with a canonical idempotency payload.
+    pub fn release_escrow_with_payload(
+        &self,
+        escrow_id: &str,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceEscrowStatus, SdkError> {
         let escrow_id = normalize_route_segment("escrow_id", escrow_id)?;
         let route = format!("/v1/escrow/{escrow_id}/release");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        let response = self.request("POST", route.as_str(), payload, Some(auth))?;
         expect_status(response.status, 200)?;
         parse_escrow_status(response.body.as_str())
     }
