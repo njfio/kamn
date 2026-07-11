@@ -187,4 +187,14 @@ mod tests {
     fn funded_rehearsal_paces_release_past_sender_window() {
         assert!(release_pacing_delay() > std::time::Duration::from_secs(5));
     }
+
+    #[test]
+    fn funded_rehearsal_retries_only_recoverable_settlement_visibility() {
+        assert!(should_retry_release(
+            "service api live settlement evidence failed: confirmation missing"
+        ));
+        assert!(should_retry_release("SETTLEMENT_OUTCOME_AMBIGUOUS"));
+        assert!(!should_retry_release("ACTION_NOT_GRANTED"));
+        assert!(!should_retry_release("SETTLEMENT_INTENT_CONFLICT"));
+    }
 }
