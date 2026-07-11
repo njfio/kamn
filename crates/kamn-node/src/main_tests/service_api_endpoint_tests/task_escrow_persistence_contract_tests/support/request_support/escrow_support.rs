@@ -33,6 +33,19 @@ pub(crate) fn release_escrow(
     nonce: u64,
     escrow_id: &str,
 ) -> Value {
+    let response = release_escrow_response(snapshot, bind_addr, caller_did, nonce, escrow_id);
+    assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
+    parse_service_api_payload(extract_http_response_body(response.as_str()))
+        .expect("escrow release payload should deserialize")
+}
+
+pub(crate) fn release_escrow_response(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    escrow_id: &str,
+) -> String {
     let body = format!(r#"{{"idempotency_key":"escrow-release-{nonce}"}}"#);
     let response = signed_request(
         snapshot,
@@ -47,9 +60,7 @@ pub(crate) fn release_escrow(
             extra_headers: &[],
         },
     );
-    assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
-    parse_service_api_payload(extract_http_response_body(response.as_str()))
-        .expect("escrow release payload should deserialize")
+    response
 }
 
 fn canonical_escrow_payload(caller_did: &str, nonce: u64, payload: &str) -> String {

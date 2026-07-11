@@ -5,9 +5,11 @@ use std::sync::{Mutex, OnceLock};
 
 static TEST_LIVE_SOLANA_SETTLEMENT_OVERRIDE: OnceLock<Mutex<bool>> = OnceLock::new();
 static OBSERVED_PREPARED_INTENT: AtomicBool = AtomicBool::new(false);
+static AMBIGUOUS_AFTER_SUBMIT: AtomicBool = AtomicBool::new(false);
 
 pub(crate) struct TestLiveSolanaSettlementOverrideGuard {
     previous: bool,
+    previous_ambiguous: bool,
 }
 
 pub(crate) fn set_test_live_solana_settlement_override(
@@ -17,9 +19,20 @@ pub(crate) fn set_test_live_solana_settlement_override(
         .lock()
         .expect("override lock should not poison");
     let previous = *guard;
+    let previous_ambiguous = AMBIGUOUS_AFTER_SUBMIT.swap(false, Ordering::SeqCst);
     *guard = enabled;
     OBSERVED_PREPARED_INTENT.store(false, Ordering::SeqCst);
-    TestLiveSolanaSettlementOverrideGuard { previous }
+    TestLiveSolanaSettlementOverrideGuard {
+        previous,
+        previous_ambiguous,
+    }
+}
+
+pub(crate) fn set_test_live_solana_settlement_ambiguous_after_submit(
+) -> TestLiveSolanaSettlementOverrideGuard {
+    let guard = set_test_live_solana_settlement_override(true);
+    AMBIGUOUS_AFTER_SUBMIT.store(true, Ordering::SeqCst);
+    guard
 }
 
 pub(crate) fn maybe_prepare_test_live_settlement(
@@ -54,6 +67,9 @@ pub(crate) fn maybe_submit_test_live_settlement(
         return None;
     }
     OBSERVED_PREPARED_INTENT.store(prepared_intent_exists(escrow_id), Ordering::SeqCst);
+    if AMBIGUOUS_AFTER_SUBMIT.load(Ordering::SeqCst) {
+        return Some(Err("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned()));
+    }
     Some(Ok(LiveSettlementEvidence {
         settlement_receipt_hash: prepared.expected_signature.clone(),
         settlement_tx_signature: prepared.expected_signature.clone(),
@@ -72,6 +88,7 @@ impl Drop for TestLiveSolanaSettlementOverrideGuard {
             .lock()
             .expect("override lock should not poison");
         *guard = self.previous;
+        AMBIGUOUS_AFTER_SUBMIT.store(self.previous_ambiguous, Ordering::SeqCst);
     }
 }
 
