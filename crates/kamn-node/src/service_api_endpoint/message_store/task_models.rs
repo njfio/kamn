@@ -61,3 +61,21 @@ pub(crate) struct ServiceApiEscrowTransitionReceiptRecord {
     pub(crate) terms_digest: String,
     pub(crate) release_policy: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiSettlementIntentRecord {
+    pub(crate) settlement_intent_id: String,
+    pub(crate) escrow_id: String,
+    pub(crate) actor_did: String,
+    pub(crate) idempotency_key: String,
+    pub(crate) recipient_pubkey: String,
+    pub(crate) amount_lamports: u64,
+    pub(crate) network: String,
+    pub(crate) expected_signature: String,
+    pub(crate) signed_transaction_digest: String,
+    pub(crate) signed_transaction_json: String,
+    pub(crate) state: String,
+    pub(crate) submission_attempt_count: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) last_error_code: Option<String>,
+}

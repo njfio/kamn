@@ -63,7 +63,7 @@ use tokio::sync::{Mutex, Notify, Semaphore};
 pub(crate) use escrow_models::ServiceApiEscrowStatusBody;
 use live_bridge_dispatch::LiveSolanaBridgeDispatchConfig;
 use live_settlement_dispatch::LiveSolanaSettlementConfig;
-use message_store::ServiceApiMessageStore;
+use message_store::{ServiceApiMessageStore, ServiceApiSettlementIntentRecord};
 pub(crate) use models::{
     ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiAgentSearchRequestBody,
     ServiceApiBridgeStatusBody, ServiceApiBridgeSubmitBody, ServiceApiChannelCreateBody,
@@ -85,7 +85,12 @@ pub(crate) use state_io::{
 use websocket::ServiceApiWebsocketEventFanout;
 
 #[cfg(test)]
-pub(crate) use live_settlement_dispatch::set_test_live_solana_settlement_override;
+pub(crate) use live_settlement_dispatch::{
+    set_test_live_solana_settlement_ambiguous_after_submit,
+    set_test_live_solana_settlement_evidence_mismatch, set_test_live_solana_settlement_override,
+    set_test_live_solana_settlement_reconcile_confirmed,
+    test_live_settlement_observed_prepared_intent, test_live_solana_settlement_submission_count,
+};
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;

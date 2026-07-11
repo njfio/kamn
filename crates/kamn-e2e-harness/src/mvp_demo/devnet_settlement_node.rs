@@ -5,12 +5,14 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use super::devnet_settlement_build::node_binary_path;
+use super::devnet_settlement_grant_bootstrap::write_creator_grant_bootstrap;
 use super::devnet_settlement_live::LiveSettlementConfig;
 use super::devnet_settlement_service::drive_escrow_release;
 use super::live_task_binding::LiveTaskBinding;
 
 pub(super) struct ServiceApiRun {
     pub(super) escrow_id: String,
+    pub(super) task_id: String,
 }
 
 pub(super) fn launch_and_drive_service_api(
@@ -21,17 +23,22 @@ pub(super) fn launch_and_drive_service_api(
 ) -> Result<ServiceApiRun, String> {
     let port = reserve_local_port()?;
     let endpoint = format!("http://127.0.0.1:{port}");
+    write_creator_grant_bootstrap(state_file, run_dir)?;
     let mut child = spawn_node(run_dir, state_file, port, config)?;
     wait_for_tcp_ready(port, &mut child)?;
-    let escrow_id = match drive_escrow_release(endpoint.as_str(), run_dir, binding) {
-        Ok(value) => value,
-        Err(error) => {
-            terminate_child(&mut child);
-            return Err(error);
-        }
-    };
+    let settlement =
+        match drive_escrow_release(endpoint.as_str(), run_dir, binding, config.lamports) {
+            Ok(value) => value,
+            Err(error) => {
+                terminate_child(&mut child);
+                return Err(error);
+            }
+        };
     terminate_child(&mut child);
-    Ok(ServiceApiRun { escrow_id })
+    Ok(ServiceApiRun {
+        escrow_id: settlement.escrow_id,
+        task_id: settlement.task_id,
+    })
 }
 
 fn spawn_node(

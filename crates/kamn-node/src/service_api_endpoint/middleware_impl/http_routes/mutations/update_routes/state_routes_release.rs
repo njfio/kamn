@@ -1,7 +1,9 @@
 use super::*;
 use crate::service_api_endpoint::live_settlement_dispatch::{
-    LiveSettlementEvidence, LiveSolanaSettlementConfig,
+    LiveSettlementEvidence, LiveSolanaSettlementConfig, PreparedLiveSettlement,
 };
+
+mod live_settlement;
 
 pub(super) async fn resolve_release_escrow_result(
     state: &Arc<ServiceApiRuntimeState>,
@@ -9,7 +11,7 @@ pub(super) async fn resolve_release_escrow_result(
     escrow_id: &str,
 ) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>> {
     if let Some(config) = state.live_solana_settlement.as_ref() {
-        return release_escrow_with_live_solana_settlement(state, context, escrow_id, config).await;
+        return live_settlement::release(state, context, escrow_id, config).await;
     }
     let Some(config) = state.live_solana_bridge_dispatch.as_ref() else {
         let mut store = state.message_store.lock().await;
@@ -26,34 +28,6 @@ pub(super) fn live_settlement_evidence_error(error: &str) -> Response {
         REASON_CODE_LIVE_SETTLEMENT_EVIDENCE_FAILED,
         format!("service api live settlement evidence failed: {error}").as_str(),
     )
-}
-
-async fn release_escrow_with_live_solana_settlement(
-    state: &Arc<ServiceApiRuntimeState>,
-    context: &ServiceApiRequestContext,
-    escrow_id: &str,
-    config: &LiveSolanaSettlementConfig,
-) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>> {
-    let mut store = state.message_store.lock().await;
-    validate_release_eligibility(&mut store, context, escrow_id)?;
-    let existing = store
-        .get_escrow_status(escrow_id)
-        .map_err(|error| Box::new(super::super::super::persistence_error(error.as_str())))?;
-    if existing
-        .as_ref()
-        .is_some_and(|payload| payload.state == "released")
-    {
-        return Ok(Ok(existing));
-    }
-    let evidence =
-        crate::service_api_endpoint::live_settlement_dispatch::collect_live_settlement_evidence(
-            config, escrow_id,
-        )
-        .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))?;
-    Ok(store.release_escrow_with_settlement_metadata(
-        escrow_id,
-        &settlement_metadata_from_evidence(evidence),
-    ))
 }
 
 async fn release_escrow_with_slot_backed_settlement(
@@ -92,15 +66,4 @@ fn validate_release_eligibility(
     store
         .validate_escrow_release_eligibility(actor.as_str(), escrow_id)
         .map_err(|error| Box::new(super::super::super::escrow_lifecycle_error_response(error)))
-}
-
-fn settlement_metadata_from_evidence(
-    evidence: LiveSettlementEvidence,
-) -> ServiceApiSettlementMetadata {
-    ServiceApiSettlementMetadata {
-        settlement_receipt_hash: Some(evidence.settlement_receipt_hash),
-        settlement_tx_signature: Some(evidence.settlement_tx_signature),
-        settlement_network: Some(evidence.settlement_network),
-        settlement_commitment: Some(evidence.settlement_commitment),
-    }
 }

@@ -109,6 +109,25 @@ pub(super) fn build_record(
     }
 }
 
+pub(super) fn issue_release_grant(
+    store: &mut ServiceApiMessageStore,
+    escrow_id: &str,
+    authority: &str,
+) {
+    let key = format!("escrow-lifecycle:{escrow_id}:{authority}:escrow:release");
+    store.snapshot.agent_grants.insert(
+        key.clone(),
+        ServiceApiPersistedAgentGrantRecord {
+            did: authority.to_owned(),
+            resource: format!("escrow:{escrow_id}"),
+            role: "initiator".to_owned(),
+            action: "escrow:release".to_owned(),
+            status: "active".to_owned(),
+            idempotency_key: key,
+        },
+    );
+}
+
 fn validate_participants(
     actor: &str,
     input: &FundInput,

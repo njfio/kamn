@@ -49,6 +49,7 @@ use audit_export::{
 };
 use models::*;
 use runtime_evidence::build_data_layer_runtime_evidence;
+pub(crate) use task_models::ServiceApiSettlementIntentRecord;
 use task_models::*;
 
 pub(crate) use models::{
@@ -56,6 +57,8 @@ pub(crate) use models::{
     ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
 };
 pub(crate) use store::escrow_fund_task_id;
+#[cfg(test)]
+pub(crate) use store::settlement_signature_is_available;
 pub(crate) use store::EscrowLifecycleError;
 pub(crate) use store::TaskLifecycleError;
 pub(crate) use store::{ServiceApiAuthorizationDecision, ServiceApiAuthorizationRequest};

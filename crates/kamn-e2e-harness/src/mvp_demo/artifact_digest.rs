@@ -62,7 +62,7 @@ fn tagged_sha256(value: &str) -> String {
     format!("sha256:{}", sha256_hex(value))
 }
 
-fn sha256_hex(value: &str) -> String {
+pub(crate) fn sha256_hex(value: &str) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let digest = Sha256::digest(value.as_bytes());
     let mut output = String::with_capacity(64);

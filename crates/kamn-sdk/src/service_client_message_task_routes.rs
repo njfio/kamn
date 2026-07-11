@@ -116,9 +116,19 @@ impl ServiceApiClient {
         task_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, SdkError> {
+        self.accept_task_with_payload(task_id, "{}", auth)
+    }
+
+    /// Accepts one task with a canonical transition payload.
+    pub fn accept_task_with_payload(
+        &self,
+        task_id: &str,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, SdkError> {
         let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}/accept");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        let response = self.request("POST", route.as_str(), payload, Some(auth))?;
         expect_status(response.status, 200)?;
         Ok(ServiceTaskStatus {
             task_id: json_string_field(response.body.as_str(), "task_id")?,
@@ -132,9 +142,19 @@ impl ServiceApiClient {
         task_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, SdkError> {
+        self.complete_task_with_payload(task_id, "{}", auth)
+    }
+
+    /// Completes one task with a canonical evidence payload.
+    pub fn complete_task_with_payload(
+        &self,
+        task_id: &str,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, SdkError> {
         let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}/complete");
-        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        let response = self.request("POST", route.as_str(), payload, Some(auth))?;
         expect_status(response.status, 200)?;
         Ok(ServiceTaskStatus {
             task_id: json_string_field(response.body.as_str(), "task_id")?,

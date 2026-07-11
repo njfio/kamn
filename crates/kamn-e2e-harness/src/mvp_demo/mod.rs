@@ -10,6 +10,7 @@ mod artifact_digest;
 mod command_config;
 mod devnet_settlement;
 mod devnet_settlement_build;
+mod devnet_settlement_grant_bootstrap;
 mod devnet_settlement_json;
 mod devnet_settlement_live;
 mod devnet_settlement_node;

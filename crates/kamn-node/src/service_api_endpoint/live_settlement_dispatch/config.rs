@@ -22,6 +22,12 @@ pub(crate) struct LiveSolanaSettlementConfig {
     pub(super) commitment_label: String,
 }
 
+impl LiveSolanaSettlementConfig {
+    pub(crate) fn commitment_label(&self) -> &str {
+        self.commitment_label.as_str()
+    }
+}
+
 pub(crate) fn resolve_live_solana_settlement_config(
     bridge_config: Option<&LiveSolanaBridgeDispatchConfig>,
 ) -> Result<Option<LiveSolanaSettlementConfig>, String> {

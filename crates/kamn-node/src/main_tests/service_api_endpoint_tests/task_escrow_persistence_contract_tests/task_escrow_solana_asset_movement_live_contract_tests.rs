@@ -1,7 +1,7 @@
 use super::super::*;
 use super::support::{
     accept_task, build_task_escrow_snapshot, complete_task, create_task, fund_escrow,
-    release_escrow, set_live_solana_bridge_rpc_url_env, set_state_file_env,
+    read_state_json, release_escrow, set_live_solana_bridge_rpc_url_env, set_state_file_env,
     unique_named_state_file,
 };
 use solana_commitment_config::CommitmentConfig;
@@ -151,7 +151,10 @@ fn submit_live_asset_movement_release() -> Value {
         199,
         task.task_id.as_str(),
     );
-    let fund_body = format!(r#"{{"task_id":"{}","amount":9}}"#, task.task_id);
+    let fund_body = format!(
+        r#"{{"task_id":"{}","amount":{LIVE_SETTLEMENT_LAMPORTS}}}"#,
+        task.task_id
+    );
     let funded = fund_escrow(
         &snapshot,
         bind_addr.as_str(),
@@ -186,6 +189,14 @@ fn assert_live_release_result(fixture: &LiveDevnetAssetMovementFixture, released
     assert_eq!(released["settlement_network"], "solana:devnet");
     assert_eq!(released["settlement_commitment"], "finalized");
     assert_eq!(released["settlement_receipt_hash"], signature);
+    assert_eq!(released["claim_scope"], "devnet-backed");
+    let escrow_id = released["escrow_id"].as_str().expect("escrow id");
+    let state = read_state_json(fixture.state_file.as_path());
+    assert_eq!(state["settlement_intents"][escrow_id]["state"], "confirmed");
+    assert_eq!(
+        state["settlement_intents"][escrow_id]["expected_signature"],
+        signature
+    );
 }
 
 fn wait_for_balance_at_least(client: &RpcClient, pubkey: &Pubkey, minimum: u64) {

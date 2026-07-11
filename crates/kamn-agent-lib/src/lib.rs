@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use auth::KamnAuthHeaders;
 use client::ServiceApiHttpClient;
 use envelope::{build_and_sign_envelope, CanonicalMessageEnvelope};
-use kamn_sdk::{service_agent_registration_payload, AgentMetadata};
+use kamn_sdk::service_agent_registration_payload;
 use kolme::KolmeClient;
 use nonce::{NonceTracker, NonceTrackerError};
 
@@ -15,10 +15,10 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages,
-    ServiceChannelReceipt, ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus,
-    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt,
-    ServiceTaskStatus,
+    AgentMetadata, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
+    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
 };
 
 /// Authentication helpers.
@@ -222,28 +222,48 @@ impl KamnAgentHandle {
 
     /// Accepts one task through the service API.
     pub fn accept_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+        self.accept_task_with_payload(task_id, "{}")
+    }
+
+    /// Accepts one task with a canonical transition payload.
+    pub fn accept_task_with_payload(
+        &self,
+        task_id: &str,
+        payload: &str,
+    ) -> Result<ServiceTaskStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
             self.identity.signing_key(),
             nonce,
-            "{}",
+            payload,
             Some("tasks:write"),
         )?;
-        self.service_client.accept_task(task_id, &auth)
+        self.service_client
+            .accept_task_with_payload(task_id, payload, &auth)
     }
 
     /// Completes one task through the service API.
     pub fn complete_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+        self.complete_task_with_payload(task_id, "{}")
+    }
+
+    /// Completes one task with a canonical evidence payload.
+    pub fn complete_task_with_payload(
+        &self,
+        task_id: &str,
+        payload: &str,
+    ) -> Result<ServiceTaskStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
             self.identity.signing_key(),
             nonce,
-            "{}",
+            payload,
             Some("tasks:write"),
         )?;
-        self.service_client.complete_task(task_id, &auth)
+        self.service_client
+            .complete_task_with_payload(task_id, payload, &auth)
     }
 
     /// Funds escrow through the service API.
@@ -261,15 +281,25 @@ impl KamnAgentHandle {
 
     /// Releases one escrow through the service API.
     pub fn release_escrow(&self, escrow_id: &str) -> Result<ServiceEscrowStatus, AgentLibError> {
+        self.release_escrow_with_payload(escrow_id, "{}")
+    }
+
+    /// Releases escrow with a canonical idempotency payload.
+    pub fn release_escrow_with_payload(
+        &self,
+        escrow_id: &str,
+        payload: &str,
+    ) -> Result<ServiceEscrowStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
             self.identity.signing_key(),
             nonce,
-            "{}",
+            payload,
             Some("escrow:write"),
         )?;
-        self.service_client.release_escrow(escrow_id, &auth)
+        self.service_client
+            .release_escrow_with_payload(escrow_id, payload, &auth)
     }
 
     /// Registers content lifecycle state through the service API.

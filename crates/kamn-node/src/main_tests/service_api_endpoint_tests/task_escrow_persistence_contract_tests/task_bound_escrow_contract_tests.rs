@@ -21,6 +21,30 @@ fn integration_task_bound_escrow_funding_persists_canonical_agreement() {
 }
 
 #[test]
+fn integration_task_and_funding_issue_scoped_escrow_grants() {
+    let case = EscrowCase::new("runtime-grants");
+    let task = case.accepted_task();
+    let body = case.funding_body(task.task_id.as_str(), "escrow-runtime-grant");
+
+    let funded = case.raw_request(4, "POST", "/v1/escrow/fund", body.as_str());
+    assert!(funded.contains("HTTP/1.1 200 OK"), "{funded}");
+    let payload = response_payload(&funded);
+    case.complete_task(task.task_id.as_str(), 5);
+    let path = format!(
+        "/v1/escrow/{}/release",
+        payload["escrow_id"].as_str().expect("escrow id")
+    );
+    let released = case.raw_request(
+        6,
+        "POST",
+        path.as_str(),
+        r#"{"idempotency_key":"escrow-runtime-release"}"#,
+    );
+    assert!(released.contains("HTTP/1.1 200 OK"), "{released}");
+    case.cleanup();
+}
+
+#[test]
 fn integration_task_bound_escrow_rejects_release_before_task_completion() {
     let case = EscrowCase::new("early-release");
     let task = case.accepted_task();
@@ -184,6 +208,22 @@ impl EscrowCase {
                 nonce,
                 body,
                 extra_headers: &[],
+            },
+        )
+    }
+
+    fn raw_request(&self, nonce: u64, method: &str, path: &str, body: &str) -> String {
+        raw_signed_request(
+            &self.snapshot,
+            reserve_loopback_addr().as_str(),
+            SignedRequest {
+                max_requests: 1,
+                method,
+                path,
+                caller_did: ACTOR,
+                nonce,
+                body,
+                extra_headers: &[("X-KAMN-Authz-Scope", "escrow:write")],
             },
         )
     }

@@ -6,7 +6,9 @@ mod escrow_support;
 #[path = "request_support/task_support.rs"]
 mod task_support;
 
-pub(crate) use escrow_support::{fund_escrow, release_escrow};
+pub(crate) use escrow_support::{
+    fund_escrow, release_escrow, release_escrow_response, release_escrow_response_with_key,
+};
 pub(crate) use task_support::{
     accept_task, complete_task, create_task, query_task, register_agent_profile,
 };
@@ -52,6 +54,10 @@ pub(crate) fn authorized_signed_request(
 ) -> String {
     super::authorization_fixture::provision_request_grant(&request);
     raw_signed_request(snapshot, bind_addr, request)
+}
+
+pub(crate) fn provision_signed_request_grant(request: &SignedRequest<'_>) {
+    super::authorization_fixture::provision_request_grant(request);
 }
 
 fn signed_request(
