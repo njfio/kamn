@@ -154,3 +154,22 @@ fn terminate_child(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_operator_bootstrap_grants_only_task_creation() {
+        let json = bootstrap_state_json(
+            "kamn:did:agent:creator-contract",
+            "mvp-demo-task-create",
+        );
+
+        assert!(json.contains(r#""resource":"transaction:new""#));
+        assert!(json.contains(r#""role":"initiator""#));
+        assert!(json.contains(r#""action":"task:create""#));
+        assert!(!json.contains(r#""resource":"*""#));
+        assert!(!json.contains("escrow:release"));
+    }
+}
