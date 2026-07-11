@@ -177,4 +177,9 @@ mod tests {
         assert!(raw.contains(r#""network":"solana-devnet""#));
         assert!(raw.contains(r#""release_policy":"task-completed""#));
     }
+
+    #[test]
+    fn funded_rehearsal_paces_release_past_sender_window() {
+        assert!(release_pacing_delay() > std::time::Duration::from_secs(5));
+    }
 }
