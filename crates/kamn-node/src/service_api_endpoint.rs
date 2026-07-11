@@ -87,7 +87,8 @@ use websocket::ServiceApiWebsocketEventFanout;
 #[cfg(test)]
 pub(crate) use live_settlement_dispatch::{
     set_test_live_solana_settlement_ambiguous_after_submit,
-    set_test_live_solana_settlement_override, test_live_settlement_observed_prepared_intent,
+    set_test_live_solana_settlement_override, set_test_live_solana_settlement_reconcile_confirmed,
+    test_live_settlement_observed_prepared_intent, test_live_solana_settlement_submission_count,
 };
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;

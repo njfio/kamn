@@ -1,11 +1,13 @@
 use super::models::{LiveSettlementEvidence, PreparedLiveSettlement};
 use super::LiveSolanaSettlementConfig;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 static TEST_LIVE_SOLANA_SETTLEMENT_OVERRIDE: OnceLock<Mutex<bool>> = OnceLock::new();
 static OBSERVED_PREPARED_INTENT: AtomicBool = AtomicBool::new(false);
 static AMBIGUOUS_AFTER_SUBMIT: AtomicBool = AtomicBool::new(false);
+static RECONCILE_CONFIRMED: AtomicBool = AtomicBool::new(false);
+static SUBMISSION_COUNT: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) struct TestLiveSolanaSettlementOverrideGuard {
     previous: bool,
@@ -22,10 +24,21 @@ pub(crate) fn set_test_live_solana_settlement_override(
     let previous_ambiguous = AMBIGUOUS_AFTER_SUBMIT.swap(false, Ordering::SeqCst);
     *guard = enabled;
     OBSERVED_PREPARED_INTENT.store(false, Ordering::SeqCst);
+    RECONCILE_CONFIRMED.store(false, Ordering::SeqCst);
+    SUBMISSION_COUNT.store(0, Ordering::SeqCst);
     TestLiveSolanaSettlementOverrideGuard {
         previous,
         previous_ambiguous,
     }
+}
+
+pub(crate) fn set_test_live_solana_settlement_reconcile_confirmed() {
+    AMBIGUOUS_AFTER_SUBMIT.store(false, Ordering::SeqCst);
+    RECONCILE_CONFIRMED.store(true, Ordering::SeqCst);
+}
+
+pub(crate) fn test_live_solana_settlement_submission_count() -> u64 {
+    SUBMISSION_COUNT.load(Ordering::SeqCst)
 }
 
 pub(crate) fn set_test_live_solana_settlement_ambiguous_after_submit(
@@ -67,9 +80,11 @@ pub(crate) fn maybe_submit_test_live_settlement(
         return None;
     }
     OBSERVED_PREPARED_INTENT.store(prepared_intent_exists(escrow_id), Ordering::SeqCst);
+    SUBMISSION_COUNT.fetch_add(1, Ordering::SeqCst);
     if AMBIGUOUS_AFTER_SUBMIT.load(Ordering::SeqCst) {
         return Some(Err("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned()));
     }
+    let _reconciled = RECONCILE_CONFIRMED.load(Ordering::SeqCst);
     Some(Ok(LiveSettlementEvidence {
         settlement_receipt_hash: prepared.expected_signature.clone(),
         settlement_tx_signature: prepared.expected_signature.clone(),

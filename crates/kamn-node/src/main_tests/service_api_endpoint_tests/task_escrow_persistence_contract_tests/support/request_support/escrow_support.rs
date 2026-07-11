@@ -46,7 +46,25 @@ pub(crate) fn release_escrow_response(
     nonce: u64,
     escrow_id: &str,
 ) -> String {
-    let body = format!(r#"{{"idempotency_key":"escrow-release-{nonce}"}}"#);
+    release_escrow_response_with_key(
+        snapshot,
+        bind_addr,
+        caller_did,
+        nonce,
+        escrow_id,
+        format!("escrow-release-{nonce}").as_str(),
+    )
+}
+
+pub(crate) fn release_escrow_response_with_key(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    escrow_id: &str,
+    idempotency_key: &str,
+) -> String {
+    let body = serde_json::json!({"idempotency_key": idempotency_key}).to_string();
     let response = signed_request(
         snapshot,
         bind_addr,

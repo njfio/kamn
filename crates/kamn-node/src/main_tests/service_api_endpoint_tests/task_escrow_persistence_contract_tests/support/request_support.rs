@@ -6,7 +6,9 @@ mod escrow_support;
 #[path = "request_support/task_support.rs"]
 mod task_support;
 
-pub(crate) use escrow_support::{fund_escrow, release_escrow, release_escrow_response};
+pub(crate) use escrow_support::{
+    fund_escrow, release_escrow, release_escrow_response, release_escrow_response_with_key,
+};
 pub(crate) use task_support::{
     accept_task, complete_task, create_task, query_task, register_agent_profile,
 };
