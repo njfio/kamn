@@ -37,7 +37,7 @@ export class McpSession {
 	private pending?: PendingRequest;
 	private terminalError?: Error;
 	private sequence = 0;
-	private readonly successfulRequests: Array<{ id: number; digest: string }> = [];
+	private readonly handledResponses: Array<{ id: number; digest: string }> = [];
 	private stdoutBuffer = "";
 	private shutdownPromise?: Promise<void>;
 	private readonly config: LiveMcpConfig;
@@ -66,14 +66,14 @@ export class McpSession {
 	}
 	provenance(): McpSessionProvenance {
 		const childProcessId = this.child?.pid;
-		const first = this.successfulRequests[0];
-		const last = this.successfulRequests.at(-1);
+		const first = this.handledResponses[0];
+		const last = this.handledResponses.at(-1);
 		if (!childProcessId || !first || !last) throw new Error("KAMN live MCP session has no successful runtime provenance");
 		return {
 			child_process_id: childProcessId,
 			first_request_id: first.id,
 			last_request_id: last.id,
-			runtime_response_digests: this.successfulRequests.map(({ digest }) => digest),
+			runtime_response_digests: this.handledResponses.map(({ digest }) => digest),
 		};
 	}
 	private start(): ChildProcessWithoutNullStreams {
@@ -111,16 +111,19 @@ export class McpSession {
 		const pending = this.pending;
 		if (!pending || response.id !== pending.id) return this.failSession(new Error("KAMN live MCP response ID mismatch"));
 		this.clearPending();
-		if (response.ok !== true) return pending.reject(toolError(response));
+		if (response.ok !== true) {
+			this.recordHandledResponse(pending.id, isObject(response.error) ? response.error : {});
+			return pending.reject(toolError(response));
+		}
 		if (!isObject(response.result)) return pending.reject(new Error("KAMN live MCP success response omitted result"));
-		this.recordSuccessfulResponse(pending.id, response.result);
+		this.recordHandledResponse(pending.id, response.result);
 		pending.resolve(response.result);
 	}
-	private recordSuccessfulResponse(id: string, result: JsonObject) {
+	private recordHandledResponse(id: string, payload: JsonObject) {
 		const requestId = Number(id);
 		if (!Number.isSafeInteger(requestId) || requestId <= 0) return this.failSession(new Error("KAMN live MCP request ID is invalid"));
-		const digest = createHash("sha256").update(JSON.stringify(result)).digest("hex");
-		this.successfulRequests.push({ id: requestId, digest: `sha256:${digest}` });
+		const digest = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+		this.handledResponses.push({ id: requestId, digest: `sha256:${digest}` });
 	}
 	private handleExit(code: number | null, signal: NodeJS.Signals | null) {
 		if (this.shutdownPromise) return;
