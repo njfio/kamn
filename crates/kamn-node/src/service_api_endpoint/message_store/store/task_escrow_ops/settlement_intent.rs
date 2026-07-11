@@ -32,9 +32,27 @@ pub(super) fn finalize(
         return Err("settlement intent missing during finalize".to_owned());
     };
     intent.state = "confirmed".to_owned();
+    intent.submission_attempt_count += 1;
+    intent.last_error_code = None;
     let response = release_without_refresh(store, escrow_id, settlement)?;
     store.persist()?;
     Ok(response)
+}
+
+pub(super) fn mark_ambiguous(
+    store: &mut ServiceApiMessageStore,
+    escrow_id: &str,
+) -> Result<(), String> {
+    store.refresh_from_disk()?;
+    let intent = store
+        .snapshot
+        .settlement_intents
+        .get_mut(escrow_id)
+        .ok_or_else(|| "settlement intent missing during ambiguous outcome".to_owned())?;
+    intent.state = "ambiguous".to_owned();
+    intent.submission_attempt_count += 1;
+    intent.last_error_code = Some("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned());
+    store.persist()
 }
 
 fn validate_agreement(

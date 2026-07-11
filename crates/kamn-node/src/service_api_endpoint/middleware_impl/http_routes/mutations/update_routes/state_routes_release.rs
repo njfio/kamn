@@ -51,12 +51,28 @@ async fn release_escrow_with_live_solana_settlement(
     store
         .prepare_settlement_intent(actor.as_str(), escrow_id, key.as_str(), &prepared)
         .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))?;
-    let evidence =
-        crate::service_api_endpoint::live_settlement_dispatch::submit_or_reconcile_live_settlement(
-            config, &prepared, escrow_id,
-        )
-        .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))?;
+    let evidence = match crate::service_api_endpoint::live_settlement_dispatch::submit_or_reconcile_live_settlement(
+        config, &prepared, escrow_id,
+    ) {
+        Ok(evidence) => evidence,
+        Err(error) if error == "SETTLEMENT_OUTCOME_AMBIGUOUS" => {
+            store.mark_settlement_outcome_ambiguous(escrow_id).map_err(|persist_error| {
+                Box::new(super::super::super::persistence_error(persist_error.as_str()))
+            })?;
+            return Err(Box::new(settlement_outcome_ambiguous_error()));
+        }
+        Err(error) => return Err(Box::new(live_settlement_evidence_error(error.as_str()))),
+    };
     Ok(store.finalize_settlement_intent(escrow_id, &settlement_metadata_from_evidence(evidence)))
+}
+
+fn settlement_outcome_ambiguous_error() -> Response {
+    super::payload::json_error_response(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "unavailable",
+        "SETTLEMENT_OUTCOME_AMBIGUOUS",
+        "settlement submission outcome is ambiguous and requires reconciliation",
+    )
 }
 
 fn resolve_prepared_settlement(
