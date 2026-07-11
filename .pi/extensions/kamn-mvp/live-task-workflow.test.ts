@@ -60,12 +60,34 @@ test("three agents drive one completed escrow transaction through independent MC
 	assert.equal(viewA.private_receipt_digest, "sha256:participant-a");
 	assert.equal(viewB.private_receipt_digest, "sha256:participant-b");
 	assert.equal("private_receipt_digest" in viewC, false);
+	for (const [role, pid, scope] of [
+		["agent_a", 101, "participant-private"],
+		["agent_b", 202, "participant-private"],
+		["agent_c", 303, "restricted-public"],
+	] as const) {
+		const evidence = workflow.actorEvidence(role, pid, `sha256:${"b".repeat(64)}`);
+		assert.equal(evidence.pi_process_id, pid);
+		assert.equal(evidence.did, `kamn:did:${role.replace("agent_", "agent-")}`);
+		assert.equal(evidence.view_scope, scope);
+		assert.equal(evidence.runtime_projection_digest, workflow.provenance(role).runtime_response_digests.at(-1));
+		assert.equal(evidence.handoff_authorized, false);
+	}
 	for (const role of ["agent_a", "agent_b", "agent_c"] as const) {
 		const provenance = workflow.provenance(role);
 		assert.ok(provenance.child_process_id > 0);
 		assert.ok(provenance.last_request_id >= provenance.first_request_id);
 		assert.equal(provenance.runtime_response_digests.every((value) => value.startsWith("sha256:")), true);
 	}
+	await workflow.shutdown();
+});
+
+test("actor evidence requires a registered identity and final runtime projection", async () => {
+	const setup = await testSetup();
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	assert.throws(() => workflow.actorEvidence("agent_c", 303, `sha256:${"b".repeat(64)}`), /Register Agent C/);
+	await workflow.register("agent_c");
+	workflow.importTask("task-live-1");
+	assert.throws(() => workflow.actorEvidence("agent_c", 303, `sha256:${"b".repeat(64)}`), /projection/);
 	await workflow.shutdown();
 });
 
