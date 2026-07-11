@@ -12,7 +12,22 @@ fn integration_participant_projection_uses_persisted_settlement_evidence() {
     let _env = acquire_service_api_test_env();
     let _override_guard =
         crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
-    let context = build_live_solana_asset_movement_context(LiveSolanaAssetMovementParams {
+    let context = projection_context();
+    let (escrow_id, released) = fund_and_release_live_escrow(&context.harness, 181, 183, 31);
+    let task_id = escrow_task_id(&context.harness, &escrow_id);
+    let (response, projection) = query_projection(&context.harness, &task_id, 184);
+    assert_settlement_projection(&response, &projection, &released);
+    assert_failed_intent_is_rejected(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.state_file.as_path(),
+        &task_id,
+        &escrow_id,
+    );
+}
+
+fn projection_context() -> LiveSolanaAssetMovementContext {
+    build_live_solana_asset_movement_context(LiveSolanaAssetMovementParams {
         state_file_prefix: "kamn-projection-settlement-state",
         caller_did: ACTOR,
         api_bind: "127.0.0.1:34251",
@@ -22,30 +37,37 @@ fn integration_participant_projection_uses_persisted_settlement_evidence() {
         lamports_env: LAMPORTS_ENV,
         live_rpc_env: RPC_URL,
         amount_lamports: 31,
-    });
-    let (escrow_id, released) = fund_and_release_live_escrow(&context.harness, 181, 183, 31);
-    let state = read_state_json(context.harness.state_file.as_path());
-    let task_id = state["escrows"][&escrow_id]["task_id"]
-        .as_str()
-        .expect("task id");
-    let path = format!("/v1/tasks/{task_id}/participant-view");
+    })
+}
 
+fn escrow_task_id(harness: &AssetMovementHarness, escrow_id: &str) -> String {
+    read_state_json(harness.state_file.as_path())["escrows"][escrow_id]["task_id"]
+        .as_str()
+        .expect("task id")
+        .to_owned()
+}
+
+fn query_projection(harness: &AssetMovementHarness, task_id: &str, nonce: u64) -> (String, Value) {
+    let path = format!("/v1/tasks/{task_id}/participant-view");
     let response = raw_signed_request(
-        &context.harness.snapshot,
-        context.harness.bind_addr.as_str(),
+        &harness.snapshot,
+        harness.bind_addr.as_str(),
         SignedRequest {
             max_requests: 1,
             method: "GET",
             path: path.as_str(),
             caller_did: ACTOR,
-            nonce: 184,
+            nonce,
             body: "",
             extra_headers: &[("X-KAMN-Authz-Scope", "tasks:read")],
         },
     );
     let projection: Value =
         parse_service_api_payload(extract_http_response_body(&response)).expect("projection");
+    (response, projection)
+}
 
+fn assert_settlement_projection(response: &str, projection: &Value, released: &Value) {
     assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
     assert_eq!(projection["escrow_state"], "released");
     assert_eq!(projection["network"], "solana-devnet");
@@ -54,13 +76,6 @@ fn integration_participant_projection_uses_persisted_settlement_evidence() {
         released["settlement_tx_signature"]
     );
     assert_eq!(projection["settlement_commitment"], "finalized");
-    assert_failed_intent_is_rejected(
-        &context.harness.snapshot,
-        context.harness.bind_addr.as_str(),
-        context.harness.state_file.as_path(),
-        task_id,
-        &escrow_id,
-    );
 }
 
 fn assert_failed_intent_is_rejected(
