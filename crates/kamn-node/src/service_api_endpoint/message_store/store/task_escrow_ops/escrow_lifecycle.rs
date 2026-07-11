@@ -5,7 +5,10 @@ mod agreement;
 mod receipt;
 mod retry;
 
-use agreement::{build_record, parse_fund, parse_release_key, validate_funding, validate_release};
+use agreement::{
+    build_record, issue_release_grant, parse_fund, parse_release_key, validate_funding,
+    validate_release,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum EscrowLifecycleError {
@@ -63,6 +66,7 @@ pub(super) fn fund(
         correlation_id,
     )?;
     store.snapshot.escrows.insert(escrow_id.clone(), record);
+    issue_release_grant(store, escrow_id.as_str(), actor);
     store.persist().map_err(persistence)?;
     Ok(receipt::response(
         &store.snapshot.escrows[&escrow_id],

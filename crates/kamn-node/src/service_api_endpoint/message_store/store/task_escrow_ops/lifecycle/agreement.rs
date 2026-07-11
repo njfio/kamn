@@ -74,12 +74,13 @@ pub(super) fn issue_grants(
     provider: &str,
 ) {
     for (did, action, role) in grant_contract(creator, provider) {
+        let resource = format!("task:{task_id}");
         let key = format!("task-lifecycle:{task_id}:{did}:{action}");
         store.snapshot.agent_grants.insert(
             key.clone(),
             ServiceApiPersistedAgentGrantRecord {
                 did: did.to_owned(),
-                resource: format!("task:{task_id}"),
+                resource,
                 role: role.to_owned(),
                 action: action.to_owned(),
                 status: "active".to_owned(),
@@ -92,12 +93,13 @@ pub(super) fn issue_grants(
 fn grant_contract<'a>(
     creator: &'a str,
     provider: &'a str,
-) -> [(&'a str, &'static str, &'static str); 4] {
+) -> [(&'a str, &'static str, &'static str); 5] {
     [
         (creator, "task:read", "participant"),
         (provider, "task:read", "participant"),
         (provider, "task:accept", "provider"),
         (provider, "task:complete", "provider"),
+        (creator, "escrow:fund", "initiator"),
     ]
 }
 
