@@ -42,8 +42,8 @@ test("three agents drive one completed escrow transaction through independent MC
 	const agentC = await workflow.register("agent_c");
 	const created = await workflow.createTask("Settle proof", "Bind three runtime views", String(agentB.did));
 	const funded = await workflow.fundEscrow();
-	await workflow.acceptTask();
-	await workflow.completeTask();
+	const accepted = await workflow.acceptTask();
+	const completed = await workflow.completeTask();
 	const released = await workflow.releaseEscrow();
 	const viewA = await workflow.queryParticipantProjection("agent_a");
 	const viewB = await workflow.queryParticipantProjection("agent_b");
@@ -55,6 +55,14 @@ test("three agents drive one completed escrow transaction through independent MC
 	assert.match(String(created.transaction_id), /^pi-devnet-[a-f0-9]{16}$/);
 	assert.match(String(created.terms_digest), /^sha256:[a-f0-9]{64}$/);
 	assert.match(String(created.idempotency_key), /-create$/);
+	assert.match(String(accepted.idempotency_key), /-accept$/);
+	assert.match(String(completed.idempotency_key), /-complete$/);
+	assert.match(String(completed.completion_evidence_digest), /^sha256:[a-f0-9]{64}$/);
+	assert.equal(funded.transaction_id, created.transaction_id);
+	assert.equal(funded.terms_digest, created.terms_digest);
+	assert.equal(funded.beneficiary_did, agentB.did);
+	assert.equal(funded.amount_lamports, 1000000);
+	assert.equal(released.idempotency_key, `${created.transaction_id}-release`);
 	assert.equal(funded.escrow_id, released.escrow_id);
 	assert.equal(viewA.task_id, created.task_id);
 	assert.equal(viewB.task_id, created.task_id);
@@ -99,11 +107,11 @@ test("workflow rejects calls that violate registration and task order", async ()
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 
-	await assert.rejects(workflow.createTask("title", "description"), /Register Agent A/);
+	await assert.rejects(workflow.createTask("title", "description", "kamn:did:provider"), /Register Agent A/);
 	await assert.rejects(workflow.acceptTask(), /Register Agent B/);
 	await assert.rejects(workflow.queryTask("agent_a"), /Register Agent A/);
 	await workflow.register("agent_a");
-	await assert.rejects(workflow.createTask(" ", "description"), /title/);
+	await assert.rejects(workflow.createTask(" ", "description", "kamn:did:provider"), /title/);
 	await assert.rejects(workflow.queryTask("agent_a"), /Create a task/);
 	await workflow.shutdown();
 });
@@ -126,7 +134,7 @@ for (const [mode, expected] of [
 		const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 		await workflow.register("agent_a");
 
-		await assert.rejects(workflow.createTask("title", "description"), expected);
+		await assert.rejects(workflow.createTask("title", "description", "kamn:did:provider"), expected);
 		await workflow.shutdown();
 	});
 }
@@ -136,7 +144,7 @@ test("workflow rejects a mismatched acceptance task ID", async () => {
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 	await workflow.register("agent_a");
 	await workflow.register("agent_b");
-	await workflow.createTask("title", "description");
+	await workflow.createTask("title", "description", "kamn:did:provider");
 
 	await assert.rejects(workflow.acceptTask(), /different task ID/);
 	await workflow.shutdown();
@@ -147,7 +155,7 @@ test("workflow rejects a non-accepted query projection", async () => {
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 	await workflow.register("agent_a");
 	await workflow.register("agent_b");
-	await workflow.createTask("title", "description");
+	await workflow.createTask("title", "description", "kamn:did:provider");
 	await workflow.acceptTask();
 
 	await assert.rejects(workflow.queryTask("agent_a"), /expected accepted/);
@@ -161,7 +169,7 @@ test("Agent B imports an external task while Agent A polls accepted state", asyn
 	const agentB = new LiveTaskWorkflow(setupB.env, process.cwd());
 	await agentA.register("agent_a");
 	await agentB.register("agent_b");
-	const created = await agentA.createTask("title", "description");
+	const created = await agentA.createTask("title", "description", "kamn:did:agent-b");
 	agentB.importTask(String(created.task_id));
 
 	await agentB.acceptTask();
@@ -200,7 +208,9 @@ async function testSetup(extra: Record<string, string> = {}) {
 	await chmod(fixture, 0o755);
 	return {
 		stopFile,
-		env: {
+			env: {
+				KAMN_MVP_PI_RUN_ID: "test-run",
+				KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS: "1000000",
 			KAMN_MVP_LIVE_MCP_BINARY: fixture,
 			KAMN_MVP_LIVE_MCP_ENDPOINT: "http://127.0.0.1:18278",
 			KAMN_MVP_LIVE_MCP_AGENT_A_NAME: "agent-a",

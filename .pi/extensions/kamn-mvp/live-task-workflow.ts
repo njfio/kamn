@@ -3,6 +3,7 @@ import {
 	agentLabel, configRole, delay, requiredString, requiredText, validImportedTaskId,
 	buildActorEvidence, validateEscrowResult, validateProjection, validateTaskProjection, validateTaskResult, validateWaitOptions,
 } from "./live-task-workflow-support.ts";
+import { LiveSettlementAgreement } from "./live-settlement-agreement.ts";
 
 export type AgentRole = "agent_a" | "agent_b" | "agent_c";
 export type WorkflowResult = Record<string, unknown>;
@@ -16,6 +17,7 @@ export class LiveTaskWorkflow {
 	private readonly projections: Partial<Record<AgentRole, WorkflowResult>> = {};
 	private taskId?: string;
 	private escrowId?: string;
+	private agreement?: LiveSettlementAgreement;
 	private readonly env: Environment;
 	private readonly cwd: string;
 	constructor(env: Environment, cwd: string) {
@@ -33,9 +35,10 @@ export class LiveTaskWorkflow {
 		const did = this.registeredDid(role);
 		return this.session(role).call("query_agent_profile", { did }, signal);
 	}
-	async createTask(title: string, description: string, signal?: AbortSignal): Promise<WorkflowResult> {
-		this.registeredDid("agent_a");
-		const payload = JSON.stringify({ title: requiredText(title, "title"), description: requiredText(description, "description") });
+	async createTask(title: string, description: string, providerDid: string, signal?: AbortSignal): Promise<WorkflowResult> {
+		const creatorDid = this.registeredDid("agent_a");
+		this.agreement = new LiveSettlementAgreement(creatorDid, requiredText(providerDid, "provider DID"), this.env);
+		const payload = this.agreement.taskPayload(requiredText(title, "title"), requiredText(description, "description"));
 		const result = await this.session("agent_a").call("create_task", { payload }, signal);
 		this.taskId = validateTaskResult(result, undefined, "submitted", "task creation");
 		return result;
@@ -43,27 +46,31 @@ export class LiveTaskWorkflow {
 	async acceptTask(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_b");
 		const taskId = this.createdTaskId();
-		const result = await this.session("agent_b").call("accept_task", { task_id: taskId }, signal);
+		const payload = LiveSettlementAgreement.taskOperationPayload(taskId, "accept");
+		const result = await this.session("agent_b").call("accept_task", { task_id: taskId, payload }, signal);
 		validateTaskResult(result, taskId, "accepted", "task acceptance");
 		return result;
 	}
 	async completeTask(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_b");
 		const taskId = this.createdTaskId();
-		const result = await this.session("agent_b").call("complete_task", { task_id: taskId }, signal);
+		const payload = LiveSettlementAgreement.taskOperationPayload(taskId, "complete");
+		const result = await this.session("agent_b").call("complete_task", { task_id: taskId, payload }, signal);
 		validateTaskResult(result, taskId, "completed", "task completion");
 		return result;
 	}
-	async fundEscrow(payload: string, signal?: AbortSignal): Promise<WorkflowResult> {
+	async fundEscrow(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_a");
-		const result = await this.session("agent_a").call("fund_escrow", { payload: requiredText(payload, "escrow payload") }, signal);
+		const payload = this.currentAgreement().fundPayload(this.createdTaskId());
+		const result = await this.session("agent_a").call("fund_escrow", { payload }, signal);
 		this.escrowId = validateEscrowResult(result, undefined, "funded", "escrow funding");
 		return result;
 	}
 	async releaseEscrow(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_a");
 		const escrowId = this.fundedEscrowId();
-		const result = await this.session("agent_a").call("release_escrow", { escrow_id: escrowId }, signal);
+		const payload = this.currentAgreement().releasePayload();
+		const result = await this.session("agent_a").call("release_escrow", { escrow_id: escrowId, payload }, signal);
 		validateEscrowResult(result, escrowId, "released", "escrow release");
 		return result;
 	}
@@ -151,6 +158,10 @@ export class LiveTaskWorkflow {
 	private fundedEscrowId(): string {
 		if (!this.escrowId) throw new Error("Fund escrow before release");
 		return this.escrowId;
+	}
+	private currentAgreement(): LiveSettlementAgreement {
+		if (!this.agreement) throw new Error("Create a canonical settlement agreement before continuing");
+		return this.agreement;
 	}
 	private assertDistinctDid(role: AgentRole, did: string) {
 		const duplicate = Object.entries(this.agents).some(([otherRole, state]) => otherRole !== role && state.did === did);

@@ -17,8 +17,8 @@ function registerFund(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {
 	registerTool(pi, {
 		name: "kamn_live_agent_a_fund_escrow",
 		label: "KAMN Agent A Fund Escrow",
-		parameters: Type.Object({ payload: Type.String({ minLength: 1 }) }),
-		run: (workflow, params, signal) => workflow.fundEscrow(String(params.payload), signal),
+		parameters: Type.Object({}),
+		run: (workflow, _params, signal) => workflow.fundEscrow(signal),
 		role: "agent_a",
 	}, resolveWorkflow);
 }

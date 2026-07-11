@@ -46,16 +46,16 @@ function toolResult(request) {
 	}
 	if (request.tool === "accept_task") {
 		const taskId = resultMode === "wrong-accept-id" ? "task-other" : request.task_id;
-		return { task_id: taskId, state: "accepted" };
+		return { task_id: taskId, state: "accepted", ...JSON.parse(request.payload) };
 	}
 	if (request.tool === "query_task") {
 		const state = resultMode === "wrong-query-state" ? "submitted" : "accepted";
 		return { task_id: request.task_id, state };
 	}
-	if (request.tool === "complete_task") return { task_id: request.task_id, state: "completed" };
-	if (request.tool === "fund_escrow") return { escrow_id: "escrow-live-1", state: "funded" };
+	if (request.tool === "complete_task") return { task_id: request.task_id, state: "completed", ...JSON.parse(request.payload) };
+	if (request.tool === "fund_escrow") return { escrow_id: "escrow-live-1", state: "funded", ...JSON.parse(request.payload) };
 	if (request.tool === "release_escrow") {
-		return { escrow_id: request.escrow_id, state: "released", settlement_tx_signature: "devnet-signature-1" };
+		return { escrow_id: request.escrow_id, state: "released", settlement_tx_signature: "devnet-signature-1", ...JSON.parse(request.payload) };
 	}
 	if (request.tool === "query_participant_task_projection") {
 		return participantProjection(request.task_id, agentName);

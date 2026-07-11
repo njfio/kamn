@@ -100,11 +100,11 @@ impl McpToolBackend for TestBackend {
         Ok(format!(r#"{{"task_id":"task-{payload_len}"}}"#))
     }
 
-    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+    fn accept_task(&self, task_id: &str, _payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(r#"{{"task_id":"{task_id}","state":"accepted"}}"#))
     }
 
-    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+    fn complete_task(&self, task_id: &str, _payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(r#"{{"task_id":"{task_id}","state":"completed"}}"#))
     }
 
@@ -115,7 +115,7 @@ impl McpToolBackend for TestBackend {
         ))
     }
 
-    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
+    fn release_escrow(&self, escrow_id: &str, _payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(
             r#"{{"escrow_id":"{escrow_id}","state":"released"}}"#
         ))
@@ -229,7 +229,7 @@ fn spec_c05_mcp_dispatch_executes_task_and_escrow_tools_with_structured_success(
 
     let accept = dispatch_tool_request_json(
         &backend,
-        r#"{"id":"req-5","tool":"accept_task","task_id":"task-1"}"#,
+        r#"{"id":"req-5","tool":"accept_task","task_id":"task-1","payload":"{\"idempotency_key\":\"accept-1\"}"}"#,
     )
     .expect("accept_task should dispatch successfully");
     assert!(
@@ -243,7 +243,7 @@ fn spec_c05_mcp_dispatch_executes_task_and_escrow_tools_with_structured_success(
 
     let complete = dispatch_tool_request_json(
         &backend,
-        r#"{"id":"req-6","tool":"complete_task","task_id":"task-1"}"#,
+        r#"{"id":"req-6","tool":"complete_task","task_id":"task-1","payload":"{\"idempotency_key\":\"complete-1\"}"}"#,
     )
     .expect("complete_task should dispatch successfully");
     assert!(
@@ -268,7 +268,7 @@ fn spec_c05_mcp_dispatch_executes_task_and_escrow_tools_with_structured_success(
 
     let release = dispatch_tool_request_json(
         &backend,
-        r#"{"id":"req-8","tool":"release_escrow","escrow_id":"escrow-1"}"#,
+        r#"{"id":"req-8","tool":"release_escrow","escrow_id":"escrow-1","payload":"{\"idempotency_key\":\"release-1\"}"}"#,
     )
     .expect("release_escrow should dispatch successfully");
     assert!(

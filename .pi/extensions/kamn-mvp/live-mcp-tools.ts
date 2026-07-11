@@ -64,10 +64,13 @@ function registerCreateTask(pi: ExtensionAPI, holder: WorkflowHolder) {
 		label: "KAMN Live Agent A Create Task",
 		description: "Create one durable local KAMN task through Agent A's live MCP process.",
 		promptSnippet: "Create a real local-only KAMN task as Agent A",
-		parameters: Type.Object({ title: Type.String({ minLength: 1 }), description: Type.String({ minLength: 1 }) }),
+		parameters: Type.Object({
+			title: Type.String({ minLength: 1 }), description: Type.String({ minLength: 1 }),
+			provider_did: Type.String({ minLength: 1 }),
+		}),
 		executionMode: "sequential",
 		async execute(_id, params, signal, _onUpdate, ctx) {
-			const result = await workflow(holder, ctx.cwd).createTask(params.title, params.description, signal);
+			const result = await workflow(holder, ctx.cwd).createTask(params.title, params.description, params.provider_did, signal);
 			return taskResult("Agent A created a durable local KAMN task.", result);
 		},
 	});

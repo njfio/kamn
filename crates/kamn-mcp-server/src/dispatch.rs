@@ -39,13 +39,13 @@ pub trait McpToolBackend {
     /// Creates one task payload.
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Accepts one task by identifier.
-    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    fn accept_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError>;
     /// Completes one task by identifier.
-    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    fn complete_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError>;
     /// Funds escrow with payload contract.
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Releases one escrow by identifier.
-    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError>;
+    fn release_escrow(&self, escrow_id: &str, payload: &str) -> Result<String, AgentLibError>;
     /// Reads service health.
     fn health(&self) -> Result<String, AgentLibError>;
     /// Verifies one proof receipt projection.
@@ -214,8 +214,8 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
-    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        let receipt = KamnAgentHandle::accept_task(self, task_id)?;
+    fn accept_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::accept_task_with_payload(self, task_id, payload)?;
         Ok(format!(
             r#"{{"task_id":"{}","state":"{}"}}"#,
             escape_json(receipt.task_id.as_str()),
@@ -223,8 +223,8 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
-    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        let receipt = KamnAgentHandle::complete_task(self, task_id)?;
+    fn complete_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::complete_task_with_payload(self, task_id, payload)?;
         Ok(format!(
             r#"{{"task_id":"{}","state":"{}"}}"#,
             escape_json(receipt.task_id.as_str()),
@@ -241,8 +241,8 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
-    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
-        let receipt = KamnAgentHandle::release_escrow(self, escrow_id)?;
+    fn release_escrow(&self, escrow_id: &str, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::release_escrow_with_payload(self, escrow_id, payload)?;
         Ok(format!(
             r#"{{"escrow_id":"{}","state":"{}"}}"#,
             escape_json(receipt.escrow_id.as_str()),
@@ -397,14 +397,16 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Ok(value) => value,
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
-            backend.accept_task(task_id.as_str())
+            let payload = required_string_arg(request_json, "payload")?;
+            backend.accept_task(task_id.as_str(), payload.as_str())
         }
         "complete_task" => {
             let task_id = match required_string_arg(request_json, "task_id") {
                 Ok(value) => value,
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
-            backend.complete_task(task_id.as_str())
+            let payload = required_string_arg(request_json, "payload")?;
+            backend.complete_task(task_id.as_str(), payload.as_str())
         }
         "fund_escrow" => {
             let payload = match required_string_arg(request_json, "payload") {
@@ -418,7 +420,8 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Ok(value) => value,
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
-            backend.release_escrow(escrow_id.as_str())
+            let payload = required_string_arg(request_json, "payload")?;
+            backend.release_escrow(escrow_id.as_str(), payload.as_str())
         }
         "health" => backend.health(),
         "verify_proof" => {
