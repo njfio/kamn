@@ -47,6 +47,59 @@ fn integration_task_bound_escrow_rejects_release_before_task_completion() {
     case.cleanup();
 }
 
+#[test]
+fn integration_task_bound_escrow_funding_retry_is_idempotent_and_conflict_safe() {
+    let case = EscrowCase::new("funding-idempotency");
+    let task = case.accepted_task();
+    let body = case.funding_body(task.task_id.as_str(), "escrow-fund-retry");
+    let first = case.request(4, "POST", "/v1/escrow/fund", body.as_str());
+    let retried = case.request(5, "POST", "/v1/escrow/fund", body.as_str());
+    let first_payload = response_payload(&first);
+    let retry_payload = response_payload(&retried);
+    assert_eq!(retry_payload["escrow_id"], first_payload["escrow_id"]);
+
+    let conflict_body = body.replace("10000", "10001");
+    let conflict = case.request(6, "POST", "/v1/escrow/fund", conflict_body.as_str());
+    assert!(conflict.contains("HTTP/1.1 409 Conflict"), "{conflict}");
+    assert!(
+        conflict.contains("ESCROW_IDEMPOTENCY_CONFLICT"),
+        "{conflict}"
+    );
+    case.cleanup();
+}
+
+#[test]
+fn integration_task_bound_escrow_completed_task_authorizes_release_with_receipt() {
+    let case = EscrowCase::new("release-receipt");
+    let task = case.accepted_task();
+    let body = case.funding_body(task.task_id.as_str(), "escrow-fund-release");
+    let funded = response_payload(&case.request(4, "POST", "/v1/escrow/fund", body.as_str()));
+    case.complete_task(task.task_id.as_str(), 5);
+    let path = format!(
+        "/v1/escrow/{}/release",
+        funded["escrow_id"].as_str().expect("escrow id")
+    );
+
+    let released = case.request(
+        6,
+        "POST",
+        path.as_str(),
+        r#"{"idempotency_key":"escrow-release-completed"}"#,
+    );
+    let payload = response_payload(&released);
+    assert_eq!(payload["state"], "release-authorized");
+    assert!(payload["receipt_id"].as_str().is_some());
+    let state = read_state_json(case.state_file.as_path());
+    assert_eq!(
+        state["escrow_transition_receipts"]
+            .as_array()
+            .expect("escrow receipts should be an array")
+            .len(),
+        2
+    );
+    case.cleanup();
+}
+
 struct EscrowCase {
     _env: ServiceApiTestEnvGuards,
     _state_guard: EnvVarGuard,
@@ -101,6 +154,24 @@ impl EscrowCase {
         .to_string()
     }
 
+    fn complete_task(&self, task_id: &str, nonce: u64) {
+        let path = format!("/v1/tasks/{task_id}/complete");
+        let response = raw_signed_request(
+            &self.snapshot,
+            reserve_loopback_addr().as_str(),
+            SignedRequest {
+                max_requests: 1,
+                method: "POST",
+                path: path.as_str(),
+                caller_did: ACTOR,
+                nonce,
+                body: r#"{"idempotency_key":"task-complete-escrow","completion_evidence_digest":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}"#,
+                extra_headers: &[],
+            },
+        );
+        assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
+    }
+
     fn request(&self, nonce: u64, method: &str, path: &str, body: &str) -> String {
         authorized_signed_request(
             &self.snapshot,
@@ -120,4 +191,9 @@ impl EscrowCase {
     fn cleanup(self) {
         let _ = fs::remove_file(self.state_file);
     }
+}
+
+fn response_payload(response: &str) -> Value {
+    parse_service_api_payload(extract_http_response_body(response))
+        .expect("response payload should deserialize")
 }
