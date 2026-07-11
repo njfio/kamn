@@ -103,22 +103,37 @@ return structured errors and do not append a successful escrow receipt.
 
 ## Acceptance Criteria
 
-- [ ] Funding derives funder DID only from verified request context.
-- [ ] Funding persists the complete immutable task, participant, amount,
+- [x] Funding derives funder DID only from verified request context.
+- [x] Funding persists the complete immutable task, participant, amount,
       network, terms, authority, policy, and idempotency agreement.
-- [ ] Funding requires an accepted canonical task and exact #7090 linkage.
-- [ ] Only the task creator can fund and act as release authority.
-- [ ] Only the task provider can be beneficiary.
-- [ ] Release requires completed task state and completion evidence.
-- [ ] Identical retries return the existing escrow or release receipt.
-- [ ] Conflicting retries fail without state or receipt mutation.
-- [ ] Successful transitions persist secret-free receipts.
-- [ ] Escrow agreement, idempotency, and receipts survive restart.
-- [ ] Legacy generic escrows remain readable but cannot use protected release.
-- [ ] Signed HTTP integration proves task accept -> escrow fund -> task complete
+- [x] Funding requires an accepted canonical task and exact #7090 linkage.
+- [x] Only the task creator can fund and act as release authority.
+- [x] Only the task provider can be beneficiary.
+- [x] Release requires completed task state and completion evidence.
+- [x] Identical retries return the existing escrow or release receipt.
+- [x] Conflicting retries fail without state or receipt mutation.
+- [x] Successful transitions persist secret-free receipts.
+- [x] Escrow agreement, idempotency, and receipts survive restart.
+- [x] Legacy generic escrows remain readable but cannot use protected release.
+- [x] Signed HTTP integration proves task accept -> escrow fund -> task complete
       -> release authorization without settlement submission.
-- [ ] Output and tests label the result local-only and do not claim custody,
+- [x] Output and tests label the result local-only and do not claim custody,
       settlement, or asset movement.
+
+## Implementation Notes
+
+- Local authorization responses use `claim_scope: local-only` and never write a
+  settlement signature. Configured live paths validate actor and task
+  eligibility before invoking RPC or bridge evidence collection.
+- Successful funding and release transitions append escrow transition receipts.
+  Domain denials return stable structured errors and append no successful
+  transition receipt. This clarifies the issue phrase "successful and denied
+  escrow transitions emit durable runtime receipts": a denied non-transition is
+  observable through the request outcome and existing authorization audit, but
+  is not represented as a successful escrow state-transition receipt.
+- The MVP validates a bounded immutable amount and exact `solana-devnet`
+  network. The #7090 task record does not contain a separate expected amount,
+  so there is no second task amount against which funding can compare.
 
 ## Files To Touch
 
