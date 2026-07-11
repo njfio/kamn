@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -22,6 +23,21 @@ test("session starts lazily and reuses one child for ordered calls", async () =>
 	await session.shutdown();
 	await session.shutdown();
 	assert.equal((await readFile(paths.stopFile, "utf8")).trim(), String(registered.pid));
+});
+
+test("session provenance binds child process, request range, and runtime response digests", async () => {
+	const paths = await testPaths();
+	const session = sessionFor(paths, "success");
+	const registered = await session.call("register");
+	const queried = await session.call("query_agent_profile", { did: registered.did });
+
+	assert.deepEqual(session.provenance(), {
+		child_process_id: registered.pid,
+		first_request_id: 1,
+		last_request_id: 2,
+		runtime_response_digests: [responseDigest(registered), responseDigest(queried)],
+	});
+	await session.shutdown();
 });
 
 test("configuration rejects missing values and key files", () => {
@@ -116,4 +132,8 @@ function configEnv(keyFile: string, extra: Record<string, string>) {
 		KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE: keyFile,
 		...extra,
 	};
+}
+
+function responseDigest(response: Record<string, unknown>): string {
+	return `sha256:${createHash("sha256").update(JSON.stringify(response)).digest("hex")}`;
 }
