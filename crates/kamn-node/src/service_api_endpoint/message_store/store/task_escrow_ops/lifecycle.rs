@@ -55,6 +55,9 @@ pub(super) fn transition_bound_task(
     correlation_id: &str,
 ) -> Result<ServiceApiTaskTransitionBody, TaskLifecycleError> {
     store.refresh_from_disk().map_err(persistence)?;
+    if !store.snapshot.tasks.contains_key(task_id) {
+        return Err(TaskLifecycleError::NotFound);
+    }
     let input = parse_transition(payload, action)?;
     if let Some(receipt) = find_transition_retry(store, actor_did, task_id, action, &input)? {
         return Ok(retry_response(store, receipt));

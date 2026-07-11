@@ -119,6 +119,27 @@ pub(crate) fn query_task(
     ))
 }
 
+pub(crate) fn transition_task(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    task_id: &str,
+    action: &str,
+    body: &str,
+) -> Value {
+    let path = format!("/v1/tasks/{task_id}/{action}");
+    parse_ok_payload(&signed_request(
+        snapshot,
+        bind_addr,
+        "POST",
+        path.as_str(),
+        caller_did,
+        nonce,
+        body,
+    ))
+}
+
 fn signed_request(
     snapshot: &ServiceApiSnapshot,
     bind_addr: &str,
