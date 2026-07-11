@@ -3,6 +3,8 @@ use crate::service_api_endpoint::projection_models::{
     ServiceApiTaskPublicProjection, TASK_PROJECTION_SCHEMA_VERSION,
 };
 
+mod commitment;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TaskProjectionError {
     Unregistered,
@@ -84,8 +86,9 @@ fn build_public_projection(
 ) -> Result<ServiceApiTaskPublicProjection, TaskProjectionError> {
     let escrow = bound_escrow(snapshot, task)?;
     let transaction_id = matching_transaction_id(task, escrow)?;
+    require_settlement_consistency(snapshot, escrow)?;
     let mut projection = public_fields(task, escrow, transaction_id)?;
-    projection.public_commitment = public_commitment(&projection);
+    projection.public_commitment = commitment::public_commitment(&projection);
     Ok(projection)
 }
 
@@ -119,6 +122,28 @@ fn matching_transaction_id<'a>(
     }
 }
 
+fn require_settlement_consistency(
+    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
+    escrow: &ServiceApiPersistedEscrowRecord,
+) -> Result<(), TaskProjectionError> {
+    let Some(signature) = escrow.settlement.settlement_tx_signature.as_deref() else {
+        return Ok(());
+    };
+    let intent = snapshot
+        .settlement_intents
+        .get(&escrow.escrow_id)
+        .ok_or(TaskProjectionError::Inconsistent)?;
+    if intent.state == "confirmed"
+        && intent.expected_signature == signature
+        && Some(intent.amount_lamports) == escrow.amount_lamports
+        && intent.network == "solana:devnet"
+        && escrow.network.as_deref() == Some("solana-devnet")
+    {
+        return Ok(());
+    }
+    Err(TaskProjectionError::Inconsistent)
+}
+
 fn public_fields(
     task: &ServiceApiPersistedTaskRecord,
     escrow: &ServiceApiPersistedEscrowRecord,
@@ -144,25 +169,6 @@ fn public_fields(
         settlement_commitment: escrow.settlement.settlement_commitment.clone(),
         public_commitment: String::new(),
     })
-}
-
-fn public_commitment(projection: &ServiceApiTaskPublicProjection) -> String {
-    let canonical = format!(
-        "{}|{}|{}|{}|{}|{}|{}|{}|{}",
-        projection.task_id,
-        projection.transaction_id,
-        projection.task_state,
-        projection.escrow_id,
-        projection.escrow_state,
-        projection.amount_lamports,
-        projection.network,
-        projection.settlement_tx_signature.as_deref().unwrap_or(""),
-        projection.settlement_commitment.as_deref().unwrap_or("")
-    );
-    format!(
-        "fnv1a64:{:016x}",
-        crate::service_api_endpoint::deterministic_body_tag(canonical.as_bytes())
-    )
 }
 
 fn task_receipt_ids(
