@@ -8,6 +8,7 @@ mod message_store;
 mod middleware_impl;
 mod models;
 mod payload;
+mod projection_models;
 mod runtime_observability;
 mod scope_fixture;
 mod server;
@@ -74,6 +75,9 @@ pub(crate) use models::{
     ServiceApiTaskCreateBody, ServiceApiTaskGetBody, ServiceApiTaskTransitionBody,
     ServiceApiWebsocketStateTransitionBody,
 };
+pub(crate) use projection_models::{
+    ServiceApiParticipantTaskProjection, ServiceApiVerifierTaskProjection,
+};
 use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use snapshot::ServiceApiSnapshot;
 pub(crate) use state_io::{
@@ -116,6 +120,8 @@ const ROUTE_CHANNELS_MESSAGES_SUFFIX: &str = "/messages";
 const ROUTE_TASKS_PREFIX: &str = "/v1/tasks/";
 const ROUTE_TASKS_ACCEPT_SUFFIX: &str = "/accept";
 const ROUTE_TASKS_COMPLETE_SUFFIX: &str = "/complete";
+const ROUTE_TASKS_PARTICIPANT_VIEW_SUFFIX: &str = "/participant-view";
+const ROUTE_TASKS_VERIFIER_VIEW_SUFFIX: &str = "/verifier-view";
 const ROUTE_ESCROW_PREFIX: &str = "/v1/escrow/";
 const ROUTE_ESCROW_RELEASE_SUFFIX: &str = "/release";
 const ROUTE_CONTENT_PREFIX: &str = "/v1/content/";

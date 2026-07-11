@@ -40,6 +40,7 @@ mod persistence;
 mod runtime_evidence;
 mod store;
 mod task_models;
+mod task_projection;
 #[cfg(test)]
 mod tests;
 
@@ -51,6 +52,7 @@ use models::*;
 use runtime_evidence::build_data_layer_runtime_evidence;
 pub(crate) use task_models::ServiceApiSettlementIntentRecord;
 use task_models::*;
+pub(crate) use task_projection::TaskProjectionError;
 
 pub(crate) use models::{
     ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError, ServiceApiMessageStore,

@@ -1,11 +1,15 @@
 use super::super::*;
-use super::support::*;
 use serde_json::Value;
 
-const CREATOR: &str = "kamn:did:agent:projection-creator";
-const PROVIDER: &str = "kamn:did:agent:projection-provider";
-const VERIFIER: &str = "kamn:did:agent:projection-verifier";
-const OUTSIDER: &str = "kamn:did:agent:projection-outsider";
+#[path = "task_projection_contract_tests/support.rs"]
+mod projection_support;
+use projection_support::ProjectionCase;
+
+pub(super) const CREATOR: &str = "kamn:did:agent:projection-creator";
+pub(super) const PROVIDER: &str = "kamn:did:agent:projection-provider";
+pub(super) const VERIFIER: &str = "kamn:did:agent:projection-verifier";
+pub(super) const OUTSIDER: &str = "kamn:did:agent:projection-outsider";
+const UNREGISTERED: &str = "kamn:did:agent:projection-unregistered";
 
 #[test]
 fn integration_participants_receive_private_runtime_projection() {
@@ -62,94 +66,50 @@ fn integration_unrelated_agent_cannot_retrieve_participant_projection() {
     case.cleanup();
 }
 
-struct ProjectionCase {
-    _env: ServiceApiTestEnvGuards,
-    _state_guard: EnvVarGuard,
-    snapshot: crate::service_api_endpoint::ServiceApiSnapshot,
-    state_file: std::path::PathBuf,
+#[test]
+fn integration_unregistered_agent_cannot_retrieve_verifier_projection() {
+    let case = ProjectionCase::new("unregistered-verifier");
+    let task_id = case.seed_transaction();
+
+    let response = case.query(UNREGISTERED, 1, &task_id, "verifier-view");
+
+    assert!(response.contains("HTTP/1.1 403 Forbidden"), "{response}");
+    assert!(response.contains("AGENT_NOT_REGISTERED"), "{response}");
+    case.cleanup();
 }
 
-impl ProjectionCase {
-    fn new(label: &str) -> Self {
-        let env = acquire_service_api_test_env();
-        let state_file = unique_named_state_file(format!("kamn-projection-{label}").as_str());
-        let (_, state_guard) = set_state_file_env(state_file.as_path());
-        Self {
-            _env: env,
-            _state_guard: state_guard,
-            snapshot: build_task_escrow_snapshot("127.0.0.1:34250"),
-            state_file,
-        }
-    }
+#[test]
+fn integration_projection_requires_bound_escrow() {
+    let case = ProjectionCase::new("missing-escrow");
+    let task_id = case.seed_task();
 
-    fn seed_transaction(&self) -> String {
-        self.register(CREATOR, 1);
-        self.register(PROVIDER, 1);
-        self.register(VERIFIER, 1);
-        self.register(OUTSIDER, 1);
-        let provider = test_service_api_sender_did(PROVIDER);
-        let body = serde_json::json!({
-            "provider_did": provider,
-            "transaction_id": "transaction-projection-001",
-            "terms_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "idempotency_key": "create-projection-001",
-            "description": "runtime disclosure projection",
-        });
-        let task = create_task(
-            &self.snapshot,
-            reserve_loopback_addr().as_str(),
-            CREATOR,
-            2,
-            body.to_string().as_str(),
-        );
-        accept_task(
-            &self.snapshot,
-            reserve_loopback_addr().as_str(),
-            PROVIDER,
-            2,
-            task.task_id.as_str(),
-        );
-        let escrow = serde_json::json!({"task_id": task.task_id, "amount_lamports": 10_000});
-        fund_escrow(
-            &self.snapshot,
-            reserve_loopback_addr().as_str(),
-            CREATOR,
-            3,
-            escrow.to_string().as_str(),
-        );
-        task.task_id
-    }
+    let response = case.query(VERIFIER, 2, &task_id, "verifier-view");
 
-    fn register(&self, actor: &str, nonce: u64) {
-        register_agent_profile(
-            &self.snapshot,
-            reserve_loopback_addr().as_str(),
-            actor,
-            nonce,
-            r#"{"agent_type":"agent","model_family":"pi","capabilities":["tasks"]}"#,
-        );
-    }
+    assert!(response.contains("HTTP/1.1 409 Conflict"), "{response}");
+    assert!(
+        response.contains("TASK_ESCROW_BINDING_MISSING"),
+        "{response}"
+    );
+    case.cleanup();
+}
 
-    fn query(&self, actor: &str, nonce: u64, task_id: &str, view: &str) -> String {
-        let path = format!("/v1/tasks/{task_id}/{view}");
-        authorized_signed_request(
-            &self.snapshot,
-            reserve_loopback_addr().as_str(),
-            SignedRequest {
-                max_requests: 1,
-                method: "GET",
-                path: path.as_str(),
-                caller_did: actor,
-                nonce,
-                body: "",
-                extra_headers: &[("X-KAMN-Authz-Scope", "tasks:read")],
-            },
-        )
-    }
+#[test]
+fn integration_projection_fails_closed_for_inconsistent_durable_state() {
+    let case = ProjectionCase::new("inconsistent-state");
+    let task_id = case.seed_transaction();
+    case.replace_escrow_transaction_id("transaction-tampered");
 
-    fn cleanup(self) {
-        let _ = fs::remove_file(self.state_file);
-    }
+    let response = case.query(VERIFIER, 2, &task_id, "verifier-view");
+
+    assert!(
+        response.contains("HTTP/1.1 500 Internal Server Error"),
+        "{response}"
+    );
+    assert!(
+        response.contains("TRANSACTION_PROJECTION_INCONSISTENT"),
+        "{response}"
+    );
+    case.cleanup();
 }
 
 fn payload(response: &str) -> Value {
