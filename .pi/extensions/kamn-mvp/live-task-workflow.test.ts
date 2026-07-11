@@ -53,11 +53,11 @@ test("three agents drive one completed escrow transaction through independent MC
 	assert.equal(new Set([agentA.pid, agentB.pid, agentC.pid]).size, 3);
 	assert.equal(created.provider_did, agentB.did);
 	assert.match(String(created.transaction_id), /^pi-devnet-[a-f0-9]{16}$/);
-	assert.match(String(created.terms_digest), /^sha256:[a-f0-9]{64}$/);
+	assert.match(String(created.terms_digest), /^[a-f0-9]{64}$/);
 	assert.match(String(created.idempotency_key), /-create$/);
 	assert.match(String(accepted.idempotency_key), /-accept$/);
 	assert.match(String(completed.idempotency_key), /-complete$/);
-	assert.match(String(completed.completion_evidence_digest), /^sha256:[a-f0-9]{64}$/);
+	assert.match(String(completed.completion_evidence_digest), /^[a-f0-9]{64}$/);
 	assert.equal(funded.transaction_id, created.transaction_id);
 	assert.equal(funded.terms_digest, created.terms_digest);
 	assert.equal(funded.beneficiary_did, agentB.did);
