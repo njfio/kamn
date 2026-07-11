@@ -37,6 +37,17 @@ export function buildActorEvidence(
 	const runtimeProjectionDigest = provenance.runtime_response_digests.at(-1);
 	if (!runtimeProjectionDigest) throw new Error(`${agentLabel(role)} runtime projection provenance is missing`);
 	return {
+		...actorProvenance(role, piProcessId, did, provenance),
+		runtime_projection_digest: runtimeProjectionDigest,
+		...sharedProjectionFields(projection),
+		view_scope: requiredString(projection, "view_scope", `${agentLabel(role)} projection`),
+		...(role === "agent_c" ? {} : { private_receipt_digest: privateReceiptDigest(projection) }),
+		source_handoff_digest: handoffDigest,
+		handoff_authorized: false,
+	};
+}
+function actorProvenance(role: AgentRole, piProcessId: number, did: string, provenance: McpSessionProvenance) {
+	return {
 		actor: role,
 		pi_process_id: piProcessId,
 		did,
@@ -44,12 +55,6 @@ export function buildActorEvidence(
 		first_request_id: provenance.first_request_id,
 		last_request_id: provenance.last_request_id,
 		runtime_response_digests: provenance.runtime_response_digests,
-		runtime_projection_digest: runtimeProjectionDigest,
-		...sharedProjectionFields(projection),
-		view_scope: requiredString(projection, "view_scope", `${agentLabel(role)} projection`),
-		...(role === "agent_c" ? {} : { private_receipt_digest: privateReceiptDigest(projection) }),
-		source_handoff_digest: handoffDigest,
-		handoff_authorized: false,
 	};
 }
 function sharedProjectionFields(projection: WorkflowResult) {

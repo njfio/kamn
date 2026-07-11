@@ -64,17 +64,36 @@ export async function verifyPiTransactionActors(paths: Record<Role, string>) {
 }
 
 function normalizeActor(input: Record<string, unknown>): Omit<ActorArtifact, "artifact_digest"> {
-	const actor = requiredRole(input.actor);
 	const artifact = {
 		schema_version: SCHEMA,
-		actor,
+		...identityFields(input),
+		...runtimeFields(input),
+		...transactionFields(input),
+		...disclosureFields(input),
+		source_handoff_digest: shaDigest(input.source_handoff_digest, "PI_RUNTIME_RECEIPT_MISMATCH"),
+		handoff_authorized: input.handoff_authorized === true,
+	};
+	validateActor(artifact as ActorArtifact);
+	return artifact;
+}
+function identityFields(input: Record<string, unknown>) {
+	return {
+		actor: requiredRole(input.actor),
 		pi_process_id: positiveInteger(input.pi_process_id, "PI_ACTOR_PROCESS_REUSED"),
 		did: requiredString(input.did, "PI_ACTOR_IDENTITY_INVALID"),
 		mcp_child_process_id: positiveInteger(input.mcp_child_process_id, "PI_ACTOR_PROCESS_REUSED"),
+	};
+}
+function runtimeFields(input: Record<string, unknown>) {
+	return {
 		first_request_id: positiveInteger(input.first_request_id, "PI_ACTOR_NONCE_STREAM_INVALID"),
 		last_request_id: positiveInteger(input.last_request_id, "PI_ACTOR_NONCE_STREAM_INVALID"),
 		runtime_response_digests: digestList(input.runtime_response_digests),
 		runtime_projection_digest: shaDigest(input.runtime_projection_digest, "PI_RUNTIME_RECEIPT_MISMATCH"),
+	};
+}
+function transactionFields(input: Record<string, unknown>) {
+	return {
 		task_id: requiredString(input.task_id, "PI_TRANSACTION_FACT_MISMATCH"),
 		transaction_id: requiredString(input.transaction_id, "PI_TRANSACTION_FACT_MISMATCH"),
 		escrow_id: requiredString(input.escrow_id, "PI_TRANSACTION_FACT_MISMATCH"),
@@ -83,13 +102,13 @@ function normalizeActor(input: Record<string, unknown>): Omit<ActorArtifact, "ar
 		settlement_tx_signature: requiredString(input.settlement_tx_signature, "PI_TRANSACTION_FACT_MISMATCH"),
 		settlement_commitment: requiredString(input.settlement_commitment, "PI_TRANSACTION_FACT_MISMATCH"),
 		public_commitment: shaDigest(input.public_commitment, "PI_TRANSACTION_FACT_MISMATCH"),
+	};
+}
+function disclosureFields(input: Record<string, unknown>) {
+	return {
 		view_scope: requiredString(input.view_scope, "PI_VERIFIER_PROJECTION_MISSING"),
 		...(input.private_receipt_digest === undefined ? {} : { private_receipt_digest: shaDigest(input.private_receipt_digest, "PI_VERIFIER_PRIVATE_LEAK") }),
-		source_handoff_digest: shaDigest(input.source_handoff_digest, "PI_RUNTIME_RECEIPT_MISMATCH"),
-		handoff_authorized: input.handoff_authorized === true,
 	};
-	validateActor(artifact as ActorArtifact);
-	return artifact;
 }
 
 async function readActor(path: string, role: Role): Promise<ActorArtifact> {
