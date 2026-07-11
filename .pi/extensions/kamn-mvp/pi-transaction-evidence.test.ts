@@ -28,12 +28,16 @@ test("actor verification rejects process, DID, and MCP child reuse", async () =>
 
 test("actor verification rejects missing runtime projection provenance and private verifier data", async () => {
 	const missing = await actorPaths();
-	await writeActors(missing, { agent_c: { runtime_projection_digest: `sha256:${"f".repeat(64)}` } });
-	await assert.rejects(verifyPiTransactionActors(missing), /PI_RUNTIME_RECEIPT_MISMATCH/);
+	await assert.rejects(
+		writeActors(missing, { agent_c: { runtime_projection_digest: `sha256:${"f".repeat(64)}` } }),
+		/PI_RUNTIME_RECEIPT_MISMATCH/,
+	);
 
 	const leaked = await actorPaths();
-	await writeActors(leaked, { agent_c: { private_receipt_digest: `sha256:${"e".repeat(64)}` } });
-	await assert.rejects(verifyPiTransactionActors(leaked), /PI_VERIFIER_PRIVATE_LEAK/);
+	await assert.rejects(
+		writeActors(leaked, { agent_c: { private_receipt_digest: `sha256:${"e".repeat(64)}` } }),
+		/PI_VERIFIER_PRIVATE_LEAK/,
+	);
 });
 
 test("actor verification rejects copied facts and handoff authorization", async () => {
@@ -42,8 +46,10 @@ test("actor verification rejects copied facts and handoff authorization", async 
 	await assert.rejects(verifyPiTransactionActors(mismatch), /PI_TRANSACTION_FACT_MISMATCH/);
 
 	const handoff = await actorPaths();
-	await writeActors(handoff, { agent_a: { handoff_authorized: true } });
-	await assert.rejects(verifyPiTransactionActors(handoff), /PI_HANDOFF_AUTHORIZATION_FORBIDDEN/);
+	await assert.rejects(
+		writeActors(handoff, { agent_a: { handoff_authorized: true } }),
+		/PI_HANDOFF_AUTHORIZATION_FORBIDDEN/,
+	);
 });
 
 type Role = "agent_a" | "agent_b" | "agent_c";
@@ -65,7 +71,7 @@ function actor(role: Role) {
 		mcp_child_process_id: 1000 + index,
 		first_request_id: 1,
 		last_request_id: 5,
-		runtime_response_digests: [`sha256:${"a".repeat(64)}`, projectionDigest],
+		runtime_response_digests: [1, 2, 3, 4].map((value) => `sha256:${String(value).repeat(64)}`).concat(projectionDigest),
 		runtime_projection_digest: projectionDigest,
 		task_id: "task-live-7099",
 		transaction_id: "transaction-live-7099",
