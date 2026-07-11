@@ -68,7 +68,35 @@ async fn release_escrow_with_live_solana_settlement(
         }
         Err(error) => return Err(Box::new(live_settlement_evidence_error(error.as_str()))),
     };
+    if !settlement_evidence_matches(&prepared, &evidence, config) {
+        store
+            .mark_settlement_failed(escrow_id, "SETTLEMENT_EVIDENCE_MISMATCH")
+            .map_err(|error| Box::new(super::super::super::persistence_error(error.as_str())))?;
+        return Err(Box::new(settlement_evidence_mismatch_error()));
+    }
     Ok(store.finalize_settlement_intent(escrow_id, &settlement_metadata_from_evidence(evidence)))
+}
+
+fn settlement_evidence_matches(
+    prepared: &crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement,
+    evidence: &LiveSettlementEvidence,
+    config: &LiveSolanaSettlementConfig,
+) -> bool {
+    evidence.settlement_tx_signature == prepared.expected_signature
+        && evidence.settlement_receipt_hash == prepared.expected_signature
+        && evidence.settlement_network == prepared.network
+        && evidence.settlement_commitment == config.commitment_label()
+        && evidence.recipient_pubkey.as_deref() == Some(prepared.recipient_pubkey.as_str())
+        && evidence.amount_lamports == Some(prepared.amount_lamports)
+}
+
+fn settlement_evidence_mismatch_error() -> Response {
+    super::payload::json_error_response(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "internal",
+        "SETTLEMENT_EVIDENCE_MISMATCH",
+        "confirmed settlement evidence does not match the durable intent",
+    )
 }
 
 fn settlement_outcome_ambiguous_error() -> Response {

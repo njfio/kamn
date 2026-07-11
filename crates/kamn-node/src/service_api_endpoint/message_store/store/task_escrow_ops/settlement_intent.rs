@@ -55,6 +55,23 @@ pub(super) fn mark_ambiguous(
     store.persist()
 }
 
+pub(super) fn mark_failed(
+    store: &mut ServiceApiMessageStore,
+    escrow_id: &str,
+    error_code: &str,
+) -> Result<(), String> {
+    store.refresh_from_disk()?;
+    let intent = store
+        .snapshot
+        .settlement_intents
+        .get_mut(escrow_id)
+        .ok_or_else(|| "settlement intent missing during failed outcome".to_owned())?;
+    intent.state = "failed".to_owned();
+    intent.submission_attempt_count += 1;
+    intent.last_error_code = Some(error_code.to_owned());
+    store.persist()
+}
+
 fn validate_agreement(
     store: &ServiceApiMessageStore,
     escrow_id: &str,
