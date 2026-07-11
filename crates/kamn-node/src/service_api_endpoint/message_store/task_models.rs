@@ -1,6 +1,34 @@
 use super::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiPersistedEscrowRecord {
+    pub(crate) escrow_id: String,
+    pub(crate) state: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) task_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) transaction_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) funder_did: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) beneficiary_did: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) amount_lamports: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) network: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) terms_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) release_authority_did: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) release_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) fund_idempotency_key: Option<String>,
+    #[serde(flatten, default)]
+    pub(crate) settlement: ServiceApiSettlementMetadata,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiTaskTransitionReceiptRecord {
     pub(crate) receipt_id: String,
     pub(crate) correlation_id: String,
