@@ -16,6 +16,10 @@ pub trait McpToolBackend {
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError>;
     /// Queries one task status by identifier.
     fn query_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one participant-private task projection.
+    fn query_participant_task_projection(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one restricted-public task projection.
+    fn query_verifier_task_projection(&self, task_id: &str) -> Result<String, AgentLibError>;
     /// Queries one agent profile by DID.
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError>;
     /// Registers one content lifecycle record.
@@ -109,6 +113,14 @@ impl McpToolBackend for KamnAgentHandle {
             escape_json(status.task_id.as_str()),
             escape_json(status.state.as_str()),
         ))
+    }
+
+    fn query_participant_task_projection(&self, task_id: &str) -> Result<String, AgentLibError> {
+        KamnAgentHandle::query_participant_task_projection(self, task_id)
+    }
+
+    fn query_verifier_task_projection(&self, task_id: &str) -> Result<String, AgentLibError> {
+        KamnAgentHandle::query_verifier_task_projection(self, task_id)
     }
 
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
@@ -306,6 +318,20 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
             backend.query_task(task_id.as_str())
+        }
+        "query_participant_task_projection" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_participant_task_projection(task_id.as_str())
+        }
+        "query_verifier_task_projection" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_verifier_task_projection(task_id.as_str())
         }
         "query_agent_profile" => {
             let did = match required_string_arg(request_json, "did") {

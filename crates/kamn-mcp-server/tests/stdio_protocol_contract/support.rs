@@ -35,6 +35,18 @@ impl McpToolBackend for ProtocolBackend {
         Ok(format!(r#"{{"task_id":"{task_id}","state":"submitted"}}"#))
     }
 
+    fn query_participant_task_projection(&self, task_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"task_id":"{task_id}","view_scope":"participant-private"}}"#
+        ))
+    }
+
+    fn query_verifier_task_projection(&self, task_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"task_id":"{task_id}","view_scope":"restricted-public"}}"#
+        ))
+    }
+
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
         Ok(format!(r#"{{"did":"{did}","reputation_score":777}}"#))
     }

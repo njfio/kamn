@@ -25,13 +25,15 @@ const VERIFY_PROOF_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["me
 const MCP_ENVELOPE_OUTPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"},"id":{"type":"string"},"tool":{"type":"string"},"result":{"type":"object"},"error":{"type":"object","required":["kind","message"],"properties":{"kind":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}"#;
 
 /// Required PRD phase-2 MCP tool names.
-pub const MCP_TOOL_NAMES: [&str; 21] = [
+pub const MCP_TOOL_NAMES: [&str; 23] = [
     "register",
     "send_message",
     "create_channel",
     "list_messages",
     "query_message",
     "query_task",
+    "query_participant_task_projection",
+    "query_verifier_task_projection",
     "query_agent_profile",
     "register_content",
     "expire_content",
@@ -66,6 +68,8 @@ fn tool_descriptor_for_name(name: &'static str) -> ToolDescriptor {
         "list_messages" => "List channel messages",
         "query_message" => "Query one message",
         "query_task" => "Query one task",
+        "query_participant_task_projection" => "Query one participant-private task projection",
+        "query_verifier_task_projection" => "Query one restricted-public task projection",
         "query_agent_profile" => "Query one agent profile",
         "register_content" => "Register one content record",
         "expire_content" => "Expire one content record",
@@ -91,6 +95,9 @@ fn tool_descriptor_for_name(name: &'static str) -> ToolDescriptor {
         "list_messages" => CHANNEL_ID_INPUT_SCHEMA_JSON,
         "query_message" => MESSAGE_ID_INPUT_SCHEMA_JSON,
         "query_task" => TASK_ID_INPUT_SCHEMA_JSON,
+        "query_participant_task_projection" | "query_verifier_task_projection" => {
+            TASK_ID_INPUT_SCHEMA_JSON
+        }
         "query_agent_profile" => DID_INPUT_SCHEMA_JSON,
         "register_content" => PAYLOAD_INPUT_SCHEMA_JSON,
         "expire_content" => CONTENT_ID_INPUT_SCHEMA_JSON,
@@ -125,6 +132,6 @@ mod tests {
     fn unit_mcp_tool_registry_count_matches_constant_inventory() {
         let registry = build_tool_registry();
         assert_eq!(registry.len(), MCP_TOOL_NAMES.len());
-        assert_eq!(registry.len(), 21);
+        assert_eq!(registry.len(), 23);
     }
 }

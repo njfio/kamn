@@ -3,11 +3,12 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 type Environment = Record<string, string | undefined>;
-export type LiveMcpAgent = "AGENT_A" | "AGENT_B";
+export type LiveMcpAgent = "AGENT_A" | "AGENT_B" | "AGENT_C";
 const PROCESS_ENV_ALLOWLIST = new Set(["HOME", "PATH", "RUST_LOG", "TMPDIR"]);
 const AGENT_ENV = {
 	AGENT_A: { name: "KAMN_MVP_LIVE_MCP_AGENT_A_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE" },
 	AGENT_B: { name: "KAMN_MVP_LIVE_MCP_AGENT_B_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE" },
+	AGENT_C: { name: "KAMN_MVP_LIVE_MCP_AGENT_C_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE" },
 } as const;
 type JsonObject = Record<string, unknown>;
 type PendingRequest = {
