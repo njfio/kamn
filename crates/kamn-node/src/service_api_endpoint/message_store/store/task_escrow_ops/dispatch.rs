@@ -7,27 +7,6 @@ pub(super) struct DispatchableTaskPayload {
     pub(super) description: String,
 }
 
-pub(super) fn parse_dispatchable_task_payload(
-    payload: &str,
-) -> Result<Option<DispatchableTaskPayload>, String> {
-    let root = match serde_json::from_str::<serde_json::Value>(payload) {
-        Ok(root) => root,
-        Err(_) => return Ok(None),
-    };
-    let Some(object) = root.as_object() else {
-        return Ok(None);
-    };
-    let has_dispatch_keys = object.contains_key("creator") || object.contains_key("task_type");
-    if !has_dispatch_keys {
-        return Ok(None);
-    }
-    Ok(Some(DispatchableTaskPayload {
-        creator_did: required_dispatch_field(object, "creator")?,
-        task_type: required_dispatch_field(object, "task_type")?,
-        description: required_dispatch_field(object, "description")?,
-    }))
-}
-
 pub(super) fn dispatch_request_from_record(
     record: &ServiceApiPersistedTaskRecord,
 ) -> Result<Option<DispatchableTaskPayload>, String> {
@@ -74,22 +53,4 @@ pub(super) fn select_dispatch_assignee(
 
 pub(super) fn dispatch_prerequisite_missing_error(task_type: &str) -> String {
     format!("task dispatch prerequisites missing: no registered worker for task_type {task_type}")
-}
-
-fn required_dispatch_field(
-    object: &serde_json::Map<String, serde_json::Value>,
-    field: &str,
-) -> Result<String, String> {
-    let Some(value) = object.get(field).and_then(serde_json::Value::as_str) else {
-        return Err(format!(
-            "task dispatch payload field `{field}` must be string"
-        ));
-    };
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(format!(
-            "task dispatch payload field `{field}` must not be empty"
-        ));
-    }
-    Ok(trimmed.to_owned())
 }

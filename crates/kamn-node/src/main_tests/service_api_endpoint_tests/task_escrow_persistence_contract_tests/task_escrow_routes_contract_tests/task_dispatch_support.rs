@@ -1,9 +1,12 @@
 use super::super::super::*;
+#[path = "task_dispatch_support/payloads.rs"]
+mod payloads;
 use super::super::support::{
     build_task_escrow_snapshot, create_task, query_task, raw_create_task_response,
     raw_signed_request, register_agent_profile, set_audit_export_file_env, set_state_file_env,
     unique_named_state_file, SignedRequest,
 };
+use payloads::canonical_dispatch_body;
 
 pub(super) fn setup_dispatch_route_case() -> DispatchRouteCase {
     let env = acquire_service_api_test_env();
@@ -113,18 +116,6 @@ pub(super) fn query_missing_worker_task(missing_worker: &MissingWorkerRouteCase)
             extra_headers: &[],
         },
     )
-}
-
-fn canonical_dispatch_body(provider: &str, task_type: &str, key: &str) -> String {
-    serde_json::json!({
-        "provider_did": provider,
-        "transaction_id": format!("transaction-{key}"),
-        "terms_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "idempotency_key": key,
-        "task_type": task_type,
-        "description": "canonical dispatch task",
-    })
-    .to_string()
 }
 
 pub(super) fn setup_audit_export_failure_route_case() -> AuditExportFailureRouteCase {

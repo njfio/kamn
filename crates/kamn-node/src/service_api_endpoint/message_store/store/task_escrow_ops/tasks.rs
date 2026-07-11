@@ -1,38 +1,13 @@
 use super::super::super::{
     audit_export::{persist_service_api_audit_export_event, service_api_task_created_audit_event},
-    models::ServiceApiPersistedTaskRecord,
     ServiceApiMessageStore,
 };
-use super::dispatch::DispatchableTaskPayload;
 use crate::service_api_endpoint::payload::deterministic_body_tag;
 
 pub(super) fn next_task_id(store: &ServiceApiMessageStore, payload: &str) -> String {
     next_local_task_escrow_id("task-local", payload, |candidate| {
         store.snapshot.tasks.contains_key(candidate)
     })
-}
-
-pub(super) fn build_task_record(
-    task_id: &str,
-    dispatch_metadata: Option<DispatchableTaskPayload>,
-) -> ServiceApiPersistedTaskRecord {
-    ServiceApiPersistedTaskRecord {
-        task_id: task_id.to_owned(),
-        state: "submitted".to_owned(),
-        creator_did: dispatch_metadata
-            .as_ref()
-            .map(|metadata| metadata.creator_did.clone()),
-        task_type: dispatch_metadata
-            .as_ref()
-            .map(|metadata| metadata.task_type.clone()),
-        description: dispatch_metadata.map(|metadata| metadata.description),
-        assignee: None,
-        provider_did: None,
-        transaction_id: None,
-        terms_digest: None,
-        completion_evidence_digest: None,
-        create_idempotency_key: None,
-    }
 }
 
 pub(super) fn persist_task_created_audit_export(
