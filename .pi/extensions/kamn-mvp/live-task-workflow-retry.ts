@@ -4,15 +4,16 @@ type WorkflowResult = Record<string, unknown>;
 type WaitOptions = { timeoutMs: number; pollMs: number };
 const MAX_ATTEMPTS = 3;
 const FINAL_PROJECTION_ATTEMPTS = 60;
+const RELEASE_RECONCILIATION_ATTEMPTS = 60;
 const RETRY_DELAY_MS = 1000;
 
 export async function reconcileAmbiguousRelease(
 	call: () => Promise<WorkflowResult>,
 	signal?: AbortSignal,
 ): Promise<WorkflowResult> {
-	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+	for (let attempt = 1; attempt <= RELEASE_RECONCILIATION_ATTEMPTS; attempt += 1) {
 		try { return await call(); } catch (error) {
-			if (!isAmbiguousSettlement(error) || attempt === MAX_ATTEMPTS) throw error;
+			if (!isAmbiguousSettlement(error) || attempt === RELEASE_RECONCILIATION_ATTEMPTS) throw error;
 			await delay(RETRY_DELAY_MS, signal);
 		}
 	}
