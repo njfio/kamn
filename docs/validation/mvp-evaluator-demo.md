@@ -54,6 +54,61 @@ cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proo
 
 The default demo is local-only for runtime, auth, message/task, state, relay, websocket, and audit proof. It does not claim settlement or asset movement success.
 
+## Canonical Three-Agent Devnet Demo
+
+Use this path for the complete evaluator story. It requires Pi `0.80.3` or
+compatible, an existing `openai-codex` OAuth login with `gpt-5.5`, three local
+KAMN identity keys, and a funded Solana devnet payer/recipient pair.
+
+```bash
+mkdir -p .kamn/devnet
+openssl rand -hex 32 > .kamn/devnet/mvp-agent-a.key
+openssl rand -hex 32 > .kamn/devnet/mvp-agent-b.key
+openssl rand -hex 32 > .kamn/devnet/mvp-agent-c.key
+chmod 600 .kamn/devnet/mvp-agent-*.key
+```
+
+```bash
+KAMN_MVP_AGENT_DRIVER=pi \
+KAMN_MVP_DEVNET_MODE=required \
+KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com \
+KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/absolute/path/to/devnet-payer.json \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=<devnet-recipient-pubkey> \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized \
+KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-a.key" \
+KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-b.key" \
+KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-c.key" \
+make demo-agent-transaction
+```
+
+The supervisor owns the local node and all Pi/MCP child lifecycles. Agent B
+registers first; Agent A creates and funds the task; Agent B accepts and
+completes it; Agent A releases escrow; Agent B records its final participant
+view; and Agent C verifies the restricted public view. The command then
+confirms the exact release signature and balance movement on Solana devnet,
+builds one runtime receipt chain, and runs the canonical verifier.
+
+The report may label settlement evidence `execution_surface:"command-override"`
+because a bounded adapter feeds already-confirmed actor evidence into the
+existing report collector. It does not execute or simulate settlement. The
+actual transfer is the live service release transaction named by all actor
+projections and independently confirmed by the adapter.
+
+Expected terminal result:
+
+```text
+{"decision":"GO","proof_schema":"kamn.mvp.runtime-receipt-chain.v1",...}
+```
+
+Re-run the verifier independently after all children exit:
+
+```bash
+cargo run -p kamn-e2e-harness -- \
+  verify-mvp-demo --report .kamn/demo/latest/proof/report.json
+```
+
 ## Optional Pi Agent Harness
 KAMN includes a project-local Pi extension at `.pi/extensions/kamn-mvp/index.ts`.
 It registers named local proof tools:

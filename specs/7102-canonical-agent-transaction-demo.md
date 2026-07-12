@@ -61,7 +61,7 @@ registers and verifies the restricted projection. The exact tool sequence may
 be coordinated through existing identifier-only handoff files, never through
 authorization-bearing files.
 
-Each actor command uses `pi --print --no-session --approve --no-extensions`
+Each actor command uses persistent `pi --mode rpc --no-session --approve --no-extensions`
 with the explicit project extension, OpenAI provider/model from validated
 configuration, `--no-builtin-tools`, and a role-specific `--tools` allowlist.
 The supervisor accepts success only from process exit status plus strict actor,
@@ -106,24 +106,24 @@ and never reuses a prior GO report.
 
 ## Acceptance Criteria
 
-- [ ] The documented canonical environment plus `make demo-agent-transaction`
+- [x] The documented canonical environment plus `make demo-agent-transaction`
       invokes the Rust-owned supervisor.
-- [ ] Driver, Pi/auth/model/extension, agent keys, and devnet configuration are
+- [x] Driver, Pi/auth/model/extension, agent keys, and devnet configuration are
       validated before any task mutation.
-- [ ] Three independent bounded Pi processes and their MCP children start and
+- [x] Three independent bounded Pi processes and their MCP children start and
       stop automatically.
-- [ ] Actor role tool allowlists exclude built-in and cross-role capabilities.
-- [ ] Any child failure or signal writes NO-GO and leaves no known child alive.
-- [ ] Dry-run, placeholder, copied, missing, or non-finalized settlement cannot
+- [x] Actor role tool allowlists exclude built-in and cross-role capabilities.
+- [x] Any child failure or signal writes NO-GO and leaves no known child alive.
+- [x] Dry-run, placeholder, copied, missing, or non-finalized settlement cannot
       produce GO.
-- [ ] Success writes exactly one proof directory and one unambiguous latest
+- [x] Success writes exactly one proof directory and one unambiguous latest
       pointer containing reports, actors, receipts, projections, and devnet
       evidence.
-- [ ] The report labels local, devnet-backed, dry-run, placeholder, roadmap, and
+- [x] The report labels local, devnet-backed, dry-run, placeholder, roadmap, and
       not-claimed surfaces honestly.
-- [ ] Canonical verification passes after every demo process exits.
-- [ ] No secret value or mutable live artifact is committed or emitted.
-- [ ] Formatting, strict clippy, focused integration tests, and `make check`
+- [x] Canonical verification passes after every demo process exits.
+- [x] No secret value or mutable live artifact is committed or emitted.
+- [x] Formatting, strict clippy, focused integration tests, and `make check`
       pass.
 
 ## Files To Touch
@@ -136,7 +136,8 @@ and never reuses a prior GO report.
   cannot be invoked non-interactively
 - `docs/validation/mvp-evaluator-demo.md`
 
-No new dependency is expected. Shell LOC remains a thin Make alias; the issue
+The harness adds only the existing local `kamn-sdk` workspace crate for exact
+key-bound DID derivation. Shell LOC remains a thin Make alias; the issue
 estimate is revised toward Rust ownership rather than adding a shell supervisor.
 
 ## Error Semantics
