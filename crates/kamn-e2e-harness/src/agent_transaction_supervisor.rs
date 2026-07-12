@@ -75,7 +75,7 @@ kamn_live_agent_a_publish_task_handoff. Then stop."
 
 const AGENT_B_ACCEPT_PROMPT: &str = "Call these tools exactly once in order: \
 kamn_live_agent_b_receive_task_handoff; kamn_live_agent_b_accept_task; \
-kamn_live_agent_b_write_task_receipt. Then stop.";
+kamn_live_agent_b_query_task; kamn_live_agent_b_write_task_receipt. Then stop.";
 
 const AGENT_A_FUND_PROMPT: &str = "Call these tools exactly once in order: \
 kamn_live_agent_a_wait_for_task_acceptance; kamn_live_agent_a_fund_escrow. Then stop.";

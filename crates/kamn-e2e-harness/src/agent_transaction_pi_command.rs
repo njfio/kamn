@@ -76,6 +76,7 @@ const AGENT_B_TOOLS: &[&str] = &[
     "kamn_live_agent_b_register",
     "kamn_live_agent_b_receive_task_handoff",
     "kamn_live_agent_b_accept_task",
+    "kamn_live_agent_b_query_task",
     "kamn_live_agent_b_write_task_receipt",
     "kamn_live_agent_b_wait_for_escrow_funding",
     "kamn_live_agent_b_complete_task",
