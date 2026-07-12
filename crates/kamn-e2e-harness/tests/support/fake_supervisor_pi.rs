@@ -5,6 +5,7 @@ pub fn write(root: &Path, mode: &str) {
     let b_branch = match mode {
         "hang" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; sleep 2; exit 9; fi",
         "fail" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; exit 9; fi",
+        "tool-error" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; echo '{\"type\":\"tool_execution_end\",\"toolName\":\"kamn_live_agent_b_register\",\"result\":{\"isError\":true}}'; echo '{\"type\":\"agent_end\",\"messages\":[]}'; fi",
         _ => "",
     };
     let script = format!(
