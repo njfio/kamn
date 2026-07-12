@@ -3,6 +3,9 @@ use kamn_e2e_harness::{
 };
 use std::path::{Path, PathBuf};
 
+#[path = "support/artifact_digest.rs"]
+#[allow(dead_code)]
+mod artifact_digest;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 
@@ -134,6 +137,25 @@ fn relabel_report_as_live_service(root: &Path, request: Option<&Path>) {
         );
     }
     std::fs::write(report_path, report).expect("latest report tamper should be written");
+    relabel_settlement_artifacts(root);
+}
+
+fn relabel_settlement_artifacts(root: &Path) {
+    let proof = only_run_dir(root).join("proof");
+    let evidence_path = proof.join("settlement-evidence.json");
+    let evidence = std::fs::read_to_string(&evidence_path)
+        .expect("settlement evidence")
+        .replace("command-override", "live-service-api");
+    std::fs::write(
+        evidence_path,
+        artifact_digest::with_digest(evidence, "evidence_digest"),
+    )
+    .expect("relabeled settlement evidence");
+    let log_path = proof.join("devnet-settlement-output.txt");
+    let log = std::fs::read_to_string(&log_path)
+        .expect("settlement log")
+        .replace("command-override", "live-service-api");
+    std::fs::write(log_path, log).expect("relabeled settlement log");
 }
 
 fn verify_latest(root: &Path) -> Result<String, String> {

@@ -57,6 +57,17 @@ fn spec_c30_bundled_shared_fact_drift_keeps_public_category() {
     );
 }
 
+#[test]
+fn spec_c32_bundled_runtime_chain_rejects_schema_downgrade() {
+    let fixture = Fixture::new("schema-downgrade");
+    fixture.downgrade_transcript_schema();
+
+    let error = fixture
+        .verify()
+        .expect_err("runtime transcript downgrade must fail");
+    assert_eq!(error, "RECEIPT_CHAIN_INVALID");
+}
+
 fn assert_bundled_error(stem: &str, overrides: Overrides, expected: &str) {
     let fixture = Fixture::new(stem);
     fixture.replace_bundled(overrides);
@@ -104,6 +115,19 @@ impl Fixture {
             agent_harness_evidence_path: None,
             pi_transaction_actor_paths: None,
         })
+    }
+
+    fn downgrade_transcript_schema(&self) {
+        let path = only_run_dir(&self.root).join("proof/three-agent-transcript.json");
+        let raw = std::fs::read_to_string(&path).expect("runtime transcript");
+        std::fs::write(
+            path,
+            raw.replace(
+                "kamn.mvp.runtime-receipt-chain.v1",
+                "kamn.mvp.three-agent-transcript.v1",
+            ),
+        )
+        .expect("downgraded transcript");
     }
 }
 

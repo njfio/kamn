@@ -57,13 +57,13 @@ pub fn execute_verify_mvp_demo_contract(
     validate_local_artifact_files(report.as_str())?;
     validate_embedded_agent_harness_evidence(report.as_str(), config.report.as_str())?;
     let pi_actor_summary = validate_direct_evidence(config, report.as_str())?;
-    validate_three_agent_transcript_file(report.as_str())?;
-    validate_live_task_binding_file(report.as_str())?;
     super::independent_verifier::validate_independent_bundle(
         report.as_str(),
         config.report.as_str(),
     )?;
     super::runtime_actor_bundle::validate_runtime_actor_bundle(report.as_str())?;
+    validate_three_agent_transcript_file(report.as_str())?;
+    validate_live_task_binding_file(report.as_str())?;
     Ok(render_verify_output(config, pi_actor_summary))
 }
 

@@ -70,6 +70,14 @@ fn spec_c06_verifier_rejects_explorer_link_drift() {
     fixture.assert_error("EXPLORER_LINK_INVALID");
 }
 
+#[test]
+fn spec_c31_verifier_rejects_removed_three_agent_claim() {
+    let fixture = Fixture::new("removed-three-agent-claim");
+    fixture.remove_three_agent_claim();
+
+    fixture.assert_error("AGENT_TRANSACTION_CLAIM_INVALID");
+}
+
 struct Fixture {
     root: PathBuf,
     run_dir: PathBuf,
@@ -116,6 +124,21 @@ impl Fixture {
         let source = read(path);
         assert!(source.contains(from), "fixture marker must exist: {from}");
         std::fs::write(path, source.replace(from, to)).expect("fixture mutation");
+    }
+
+    fn remove_three_agent_claim(&self) {
+        let path = self.report_path();
+        let raw = read(path.as_path());
+        let start = raw
+            .find(r#",{"id":"three_agent_escrow_verification"#)
+            .expect("three-agent claim start");
+        let tail = &raw[start + 1..];
+        let end = tail
+            .find(r#",{"id":"production_readiness"#)
+            .expect("three-agent claim end");
+        let mut reduced = raw[..start].to_owned();
+        reduced.push_str(&tail[end..]);
+        std::fs::write(path, reduced).expect("claim removal");
     }
 
     fn assert_error(&self, expected: &str) {

@@ -3,7 +3,9 @@ use std::path::Path;
 use super::devnet_settlement::DevnetSettlementEvidence;
 use super::devnet_settlement_build::build_node_binary;
 use super::devnet_settlement_node::{launch_and_drive_service_api, ServiceApiRun};
-use super::devnet_settlement_solana::{balance_pair, solana_pubkey, validate_balance_movement};
+use super::devnet_settlement_solana::{
+    balance_pair, capture_confirmation, solana_pubkey, validate_balance_movement,
+};
 use super::devnet_settlement_state::persisted_signature;
 use super::live_task_binding::LiveTaskBinding;
 
@@ -24,17 +26,20 @@ pub(super) fn collect_live_devnet_settlement(
     let state_file = run_dir.join("state/service-api-state.json");
     let service_api = launch_and_drive_service_api(run_dir, &state_file, &config, binding)?;
     let persisted = persisted_signature(state_file.as_path(), service_api.escrow_id.as_str())?;
+    let confirmation = capture_confirmation(
+        config.rpc_url.as_str(),
+        config.commitment.as_str(),
+        persisted.as_str(),
+        run_dir,
+    )?;
     let after = balance_pair(config.rpc_url.as_str(), payer.as_str(), &config)?;
     validate_balance_movement(&before, &after, &config)?;
-    Ok(evidence(
-        config,
-        payer,
-        before,
-        after,
+    let result = LiveSettlementResult {
         persisted,
         service_api,
-        binding,
-    ))
+        confirmation,
+    };
+    Ok(evidence(config, payer, before, after, result, binding))
 }
 
 pub(super) struct LiveSettlementConfig {
@@ -43,6 +48,12 @@ pub(super) struct LiveSettlementConfig {
     pub(super) recipient_pubkey: String,
     pub(super) lamports: u64,
     pub(super) commitment: String,
+}
+
+struct LiveSettlementResult {
+    persisted: String,
+    service_api: ServiceApiRun,
+    confirmation: std::path::PathBuf,
 }
 
 impl LiveSettlementConfig {
@@ -62,8 +73,7 @@ fn evidence(
     payer: String,
     before: super::devnet_settlement_solana::BalancePair,
     after: super::devnet_settlement_solana::BalancePair,
-    persisted: String,
-    service_api: ServiceApiRun,
+    result: LiveSettlementResult,
     binding: Option<&LiveTaskBinding>,
 ) -> DevnetSettlementEvidence {
     DevnetSettlementEvidence {
@@ -73,17 +83,17 @@ fn evidence(
         payer_pubkey: payer,
         recipient_pubkey: config.recipient_pubkey,
         lamports: config.lamports,
-        escrow_id: service_api.escrow_id,
-        task_id: Some(service_api.task_id),
+        escrow_id: result.service_api.escrow_id,
+        task_id: Some(result.service_api.task_id),
         task_binding_digest: binding.map(|value| value.digest.clone()),
-        settlement_tx_signature: persisted.clone(),
+        settlement_tx_signature: result.persisted.clone(),
         settlement_commitment: config.commitment,
         payer_balance_before: before.payer,
         payer_balance_after: after.payer,
         recipient_balance_before: before.recipient,
         recipient_balance_after: after.recipient,
-        persisted_settlement_tx_signature: persisted,
-        authoritative_rpc_artifact: None,
+        persisted_settlement_tx_signature: result.persisted,
+        authoritative_rpc_artifact: Some(result.confirmation.display().to_string()),
     }
 }
 

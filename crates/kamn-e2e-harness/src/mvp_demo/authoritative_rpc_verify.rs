@@ -9,11 +9,7 @@ pub(super) fn validate_authoritative_rpc(
     evidence: &SettlementEvidenceArtifact,
 ) -> Result<(), String> {
     if report["artifacts"]["solana_confirmation_response"].is_null() {
-        return if report["artifacts"]["runtime_agent_a_evidence"].is_null() {
-            Ok(())
-        } else {
-            Err(invalid())
-        };
+        return Err(invalid());
     }
     let path = report["artifacts"]["solana_confirmation_response"]
         .as_str()

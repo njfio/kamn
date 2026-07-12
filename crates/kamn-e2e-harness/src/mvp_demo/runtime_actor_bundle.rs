@@ -58,11 +58,20 @@ fn copy_source(source: &Path, destination: PathBuf) -> Result<(), String> {
 }
 
 fn has_runtime_chain(report: &Value) -> Result<bool, String> {
-    let Some(path) = report["artifacts"]["three_agent_transcript"].as_str() else {
+    let has_actor_sources = ACTOR_FILES
+        .iter()
+        .any(|(field, _)| !report["artifacts"][*field].is_null());
+    if !has_actor_sources {
         return Ok(false);
+    }
+    let Some(path) = report["artifacts"]["three_agent_transcript"].as_str() else {
+        return Err(invalid());
     };
     let raw = std::fs::read_to_string(path).map_err(|_| invalid())?;
-    Ok(raw.contains("kamn.mvp.runtime-receipt-chain.v1"))
+    if raw.contains("kamn.mvp.runtime-receipt-chain.v1") {
+        return Ok(true);
+    }
+    Err(invalid())
 }
 
 fn invalid() -> String {
