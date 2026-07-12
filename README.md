@@ -95,8 +95,8 @@ Every report labels claims explicitly:
 | `placeholder` | Illustrative or unimplemented; never MVP success. |
 | `roadmap` | Future work, including production readiness. |
 
-Exchange, escrow settlement, transfer, lamports, asset movement, and value
-movement count as success only when labeled `devnet-backed`. Missing or
+Any exchange, escrow, settlement, transfer, lamport, asset-movement, or
+value-movement claim counts as success only when labeled `devnet-backed`. Missing or
 ambiguous devnet evidence produces `NO-GO`, never a simulated success.
 
 ## Repository Map
