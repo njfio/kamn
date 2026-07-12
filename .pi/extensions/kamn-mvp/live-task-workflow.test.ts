@@ -82,6 +82,7 @@ test("three agents drive one completed escrow transaction through independent MC
 		assert.equal(evidence.pi_process_id, pid);
 		assert.equal(evidence.did, `kamn:did:${role.replace("agent_", "agent-")}`);
 		assert.equal(evidence.view_scope, scope);
+		if (role !== "agent_c") assert.equal(evidence.participant_role, role === "agent_a" ? "creator" : "provider");
 		assert.equal(evidence.runtime_projection_digest, workflow.provenance(role).runtime_response_digests.at(-1));
 		assert.equal(evidence.handoff_authorized, false);
 	}

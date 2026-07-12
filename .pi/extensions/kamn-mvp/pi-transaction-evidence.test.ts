@@ -61,6 +61,14 @@ test("actor verification rejects a missing successful role operation", async () 
 	);
 });
 
+test("actor verification rejects a participant role that does not match the actor", async () => {
+	const paths = await actorPaths();
+	await assert.rejects(
+		writeActors(paths, { agent_b: { participant_role: "creator" } }),
+		/PI_ACTOR_IDENTITY_INVALID/,
+	);
+});
+
 type Role = "agent_a" | "agent_b" | "agent_c";
 type Overrides = Partial<Record<Role, Record<string, unknown>>>;
 
@@ -92,7 +100,10 @@ function actor(role: Role) {
 		settlement_commitment: "finalized",
 		public_commitment: `sha256:${"d".repeat(64)}`,
 		view_scope: role === "agent_c" ? "restricted-public" : "participant-private",
-		...(role === "agent_c" ? {} : { private_receipt_digest: `sha256:${"e".repeat(64)}` }),
+		...(role === "agent_c" ? {} : {
+			participant_role: role === "agent_a" ? "creator" : "provider",
+			private_receipt_digest: `sha256:${"e".repeat(64)}`,
+		}),
 		source_handoff_digest: `sha256:${"b".repeat(64)}`,
 		handoff_authorized: false,
 	};
