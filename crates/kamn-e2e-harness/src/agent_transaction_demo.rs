@@ -44,6 +44,13 @@ pub fn parse_agent_transaction_demo_config(
     Ok(config)
 }
 
+/// Validates canonical process configuration before supervisor execution.
+pub fn execute_agent_transaction_demo_contract() -> Result<String, String> {
+    let env = std::env::vars().collect::<BTreeMap<_, _>>();
+    parse_agent_transaction_demo_config(&env)?;
+    Err("AGENT_TRANSACTION_CHILD_FAILED: supervisor unavailable".to_owned())
+}
+
 fn agent_keys(env: &BTreeMap<String, String>) -> Result<[String; 3], String> {
     Ok([
         required(env, "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE")?,

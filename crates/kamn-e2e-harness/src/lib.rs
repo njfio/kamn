@@ -4,7 +4,10 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-pub use agent_transaction_demo::{parse_agent_transaction_demo_config, AgentTransactionDemoConfig};
+pub use agent_transaction_demo::{
+    execute_agent_transaction_demo_contract, parse_agent_transaction_demo_config,
+    AgentTransactionDemoConfig,
+};
 pub use mvp_demo::{
     build_runtime_receipt_chain_from_actor_paths, execute_mvp_demo_contract,
     execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths, LiveTaskEvidencePaths,
@@ -253,6 +256,8 @@ pub enum HarnessCommand {
     DemoMvp(Box<MvpDemoCommandConfig>),
     /// Verify an MVP evaluator demo proof report.
     VerifyMvpDemo(VerifyMvpDemoCommandConfig),
+    /// Run the canonical three-agent devnet transaction demo.
+    DemoAgentTransaction,
 }
 
 /// Parses a comma-delimited list of scenario IDs.
@@ -312,6 +317,12 @@ where
     }
     match args[0].as_str() {
         "demo-mvp" => parse_demo_mvp_command(args.as_slice()),
+        "demo-agent-transaction" => {
+            if args.len() != 1 {
+                return Err("demo-agent-transaction does not accept flags".to_owned());
+            }
+            Ok(HarnessCommand::DemoAgentTransaction)
+        }
         "verify-mvp-demo" => parse_verify_mvp_demo_command(args.as_slice()),
         "run" => {
             let mut mode = None;
