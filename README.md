@@ -1,240 +1,145 @@
 # KAMN
 
-KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordination layer for autonomous agents. It is meant to let agents identify themselves, exchange signed work messages, leave durable proof trails, and make settlement claims only when there is evidence behind them.
+KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable
+coordination layer for autonomous agents. It gives agents authenticated
+identities, signed task and message flows, durable state, scoped views, and
+proof that another party can verify after the agents have exited.
 
-This repository is the Rust implementation and validation workspace for that system. It contains the local runtime, service API, SDK and agent helpers, proof/report harnesses, live-provider integration surfaces, and process tooling used to evolve KAMN without overstating what is real.
+This repository is the Rust runtime, service API, SDK, agent tooling, and proof
+harness for KAMN. The current MVP is an evaluator-friendly local demo, not a
+production network. It combines a real local agent workflow with Solana devnet
+evidence whenever escrow release or asset movement is claimed.
 
-The current MVP is not a production network. It is a locally runnable, evaluator-friendly demo that proves one coherent product story: local authenticated agent flow plus optional Solana devnet-backed settlement evidence when funded devnet keypairs are configured.
+## What Works Today
 
-## What KAMN Proves Today <!-- ## What This Repository Contains -->
+The canonical demo proves one bounded product story:
 
-The repository currently contains proof surfaces for:
+1. Three independent agents register authenticated, key-bound identities.
+2. Agent A creates a task and invokes a transaction with Agent B.
+3. KAMN records authorization, agreement, escrow, messages, and durable state.
+4. Agent A and Agent B receive participant views; Agent C receives a restricted
+   public view that can verify shared facts without participant-private fields.
+5. Escrow release submits one funded Solana devnet transfer.
+6. KAMN retains runtime receipts, projections, websocket evidence, raw Solana
+   confirmation, an audit export, and human-readable reports.
+7. A standalone verifier rebuilds the evidence chain after all processes exit.
 
-- A local KAMN service API/runtime starts and produces proof artifacts.
-- Alice/Bob agent identities are authenticated in local proof output.
-- A signed message or task flow is recorded.
-- Durable state is written under the demo run directory.
-- Relay/projection state and websocket event visibility are captured.
-- An audit/proof export and human-readable proof report are generated.
-- Settlement or asset-movement success is claimed only as `devnet-backed`, using Solana devnet transaction, balance, and persisted KAMN state evidence.
+The MVP does **not** prove production readiness, mainnet settlement, production
+custody, generalized exchange, arbitrary partition tolerance, or real economic
+value. Solana devnet tokens are developer-test tokens.
 
-The demo does not prove production readiness, mainnet settlement, generalized exchange, broad bridge finality, arbitrary partition tolerance, or real economic value. Solana devnet tokens are developer-test tokens.
+## Quickstart
 
-## MVP Demo Quickstart <!-- ## Quickstart -->
+Prerequisites are Rust, Bash, Python 3, Pi authenticated with existing Codex
+OAuth, three local KAMN identity keys, and funded Solana devnet payer/recipient
+keypairs. The exact one-time key and environment setup is in the
+[evaluator runbook](docs/validation/mvp-evaluator-demo.md).
 
-Prerequisites:
-
-- Rust toolchain (`cargo`, `rustc`)
-- Bash
-- Python 3
-- Solana CLI only for independently confirming devnet transactions
-
-Run the bounded local proof demo without autonomous Pi actors:
-
-```bash
-make demo-mvp
-```
-
-Verify the generated proof report:
-
-```bash
-cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
-```
-
-Expected top-level artifacts:
-
-```text
-.kamn/demo/latest/proof/report.json
-.kamn/demo/latest/proof/report.md
-```
-
-The report links to the concrete run directory under `.kamn/demo/<run-id>/`,
-including local signed-flow, service API, websocket, audit, and settlement proof
-files where applicable. A successful devnet-backed transaction report also
-includes a direct Solana Explorer devnet link and digest-bearing offline
-settlement evidence that the verifier checks after all demo processes exit.
-
-### Canonical three-agent transaction demo
-
-The evaluator-facing product demo is `make demo-agent-transaction`. It starts
-the local KAMN node, launches three independent persistent Pi processes using
-existing Codex OAuth and `gpt-5.5`, drives the task and escrow lifecycle, makes
-one Solana devnet transfer on release, verifies all three actor views, and
-writes the canonical report.
-
-Create three local KAMN identity keys in an ignored directory once:
+Run the canonical evaluator demo after applying that configuration:
 
 ```bash
-mkdir -p .kamn/devnet
-openssl rand -hex 32 > .kamn/devnet/mvp-agent-a.key
-openssl rand -hex 32 > .kamn/devnet/mvp-agent-b.key
-openssl rand -hex 32 > .kamn/devnet/mvp-agent-c.key
-chmod 600 .kamn/devnet/mvp-agent-*.key
-```
-
-Then run with a funded Solana devnet payer and recipient:
-
-```bash
-KAMN_MVP_AGENT_DRIVER=pi \
-KAMN_MVP_DEVNET_MODE=required \
-KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com \
-KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/absolute/path/to/devnet-payer.json \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=<devnet-recipient-pubkey> \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized \
-KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-a.key" \
-KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-b.key" \
-KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-c.key" \
 make demo-agent-transaction
 ```
 
-The command returns `GO` only after the standalone report verifier passes. A
-failure returns a stable reason and writes `.kamn/demo/latest/NO-GO.txt`.
+The command starts the local KAMN stack and three persistent Pi actors, drives
+the task and escrow lifecycle, submits one devnet transfer, verifies all three
+actor perspectives, and writes the proof bundle. It returns `GO` only after the
+standalone verifier passes. Failures return a stable reason and write
+`.kamn/demo/latest/NO-GO.txt`.
 
-For the funded Solana devnet-backed path:
+Verify the report again with no node or agent process running:
 
 ```bash
-KAMN_MVP_DEVNET_MODE=required \
-KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com \
-KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/absolute/path/to/devnet-payer.json \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=<devnet-recipient-pubkey> \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 \
-KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized \
+cargo run -p kamn-e2e-harness -- verify-mvp-demo \
+  --report .kamn/demo/latest/proof/report.json
+```
+
+The immutable run is under `.kamn/demo/<run-id>/`; `latest` is its convenient
+alias. Read `.kamn/demo/latest/proof/report.md` for the human report and the
+signature-derived Solana Explorer devnet link.
+
+### Local bounded proof
+
+To inspect KAMN's local runtime and proof surfaces without autonomous Pi actors:
+
+```bash
 make demo-mvp
 ```
 
-If the devnet path is fully configured and funded, the report can return `GO` with a `devnet_settlement_asset_movement` claim labelled `devnet-backed`. If devnet evidence is unavailable, the honest result is `NO-GO`, not a local-only settlement pass.
+This is real local execution, but it does not count as settlement or asset
+movement unless the generated evidence is explicitly devnet-backed.
 
-In the canonical transaction report, `execution_surface:"command-override"`
-describes the bounded report adapter, not a simulated transfer. The transfer is
-initiated by Agent A through the live local KAMN service. The adapter confirms
-that exact actor signature with `solana confirm`, verifies finalized payer and
-recipient balance movement, and reuses the evidence without submitting a
-second transaction.
+## What Each Observer Sees
 
-Detailed evaluator runbook:
+- **Agent A and Agent B:** shared transaction facts plus their own
+  participant-private proof commitments.
+- **Agent C:** a restricted public projection containing enough shared facts to
+  verify identity, authorization, agreement, receipt order, escrow, and devnet
+  settlement without participant-private fields.
+- **Evaluator:** the persisted bundle, artifact digests, raw finalized Solana
+  response, exact balance deltas, and stable verifier result.
 
-- `docs/validation/mvp-evaluator-demo.md`
+The observers should not see identical data. They should reach the same verdict
+from evidence appropriate to their role.
 
 ## Claim Boundaries
 
-KAMN proof reports use explicit claim labels:
+Every report labels claims explicitly:
 
 | Label | Meaning |
 | --- | --- |
 | `real` | Local runtime or proof behavior that actually ran. |
 | `local-only` | Real local behavior without external value movement. |
-| `devnet-backed` | Solana devnet-backed evidence exists for the settlement or asset-movement claim. |
-| `dry-run` | Intentional non-live execution that must not count as MVP success for required claims. |
-| `placeholder` | Unimplemented or illustrative output that must not count as MVP success. |
-| `roadmap` | Future work or non-MVP scope, including production readiness. |
+| `devnet-backed` | Solana devnet evidence proves the settlement or movement. |
+| `dry-run` | Intentional non-live execution; never required-claim success. |
+| `placeholder` | Illustrative or unimplemented; never MVP success. |
+| `roadmap` | Future work, including production readiness. |
 
-Required MVP success claims cannot be `dry-run` or `placeholder`.
+Exchange, escrow settlement, transfer, lamports, asset movement, and value
+movement count as success only when labeled `devnet-backed`. Missing or
+ambiguous devnet evidence produces `NO-GO`, never a simulated success.
 
-Any claim involving exchange, escrow, settlement, transfer, lamports, asset movement, or value movement must be `devnet-backed`. KAMN must not turn fake in-memory movement into a settlement success claim.
+## Repository Map
 
-## Repository Map <!-- ## Architecture Map -->
+- `crates/kamn-core`: protocol and domain contracts
+- `crates/kamn-node`: local runtime and service API
+- `crates/kamn-sdk`: Rust client SDK
+- `crates/kamn-agent-lib`: agent identity and authentication helpers
+- `crates/kamn-kolme`: live Kolme integration
+- `crates/kamn-e2e-harness`: demo, report, and independent verifier
+- `specs/`: issue-scoped behavior contracts
+- `docs/`: architecture, operations, security, and validation
 
-- `crates/kamn-core`: protocol/domain logic and contract suites
-- `crates/kamn-node`: node runtime entrypoint and service API
-- `crates/kamn-sdk`: Rust SDK client surface
-- `crates/kamn-agent-lib`: agent-facing auth/identity helpers
-- `crates/kamn-kolme`: Kolme live provider integration layer
-- `crates/kamn-e2e-harness`: MVP demo, report verifier, and end-to-end proof harnesses
-- `scripts/`: CI, contract lanes, and deterministic validation utilities
-- `docs/`: architecture, operations, security, validation, and planning references
-- `specs/`: issue-scoped specs that precede implementation work
+Start with the [architecture index](docs/architecture/README.md) for system
+boundaries and diagrams.
 
-## Validation Lanes
+## Development
 
-Fast local gates:
+Run the local quality gates before publishing changes:
 
 ```bash
 make check
 make test
-make ci-tools
 ```
 
-Core validation commands:
+The detailed command, policy, and validation inventory lives in the
+[README contract reference](docs/developer/readme-contract-reference.md).
 
-```bash
-cargo fmt --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test
-```
+## For AI Agents And Maintainers
 
-Evaluator and live-network lanes:
+Read [AGENTS.md](AGENTS.md) before changing the repository. The required flow is
+issue first, spec before code, RED/GREEN/REFACTOR, real integration wiring, proof
+before completion, and PR review before merge.
 
-```bash
-make demo-mvp
-make smoke-live-network
-make deep-live-network
-make demo-localhost-transport
-```
-
-Live HTTPS dependency posture checks for `kamn-core`:
-
-```bash
-cargo check -p kamn-core --features live-https
-cargo check -p kamn-core --no-default-features
-```
-
-## For AI Agents And Maintainers <!-- ## Workflow -->
-
-Start with `AGENTS.md`. The repository process is issue-first, spec-before-code, TDD, integration-wired, and proof-before-completion.
-
-Required change flow:
-
-1. Open or reuse a GitHub issue with problem statement, acceptance criteria, and non-goals.
-2. Write `specs/<issue>-<slug>.md` before implementation or test changes.
-3. Add red tests derived from the spec.
-4. Implement the smallest green path.
-5. Refactor deliberately; do not skip the refactor phase.
-6. Wire the behavior into real entrypoints; no floating code.
-7. Run focused tests, local gates, proof commands, and PR checks before merging.
-
-Agent guardrails:
-
-- Do not weaken tests, lint, clippy, formatting, proof semantics, or claim boundaries.
-- Do not claim exchange, escrow, settlement, or asset movement unless the evidence is devnet-backed.
-- Do not commit secrets, devnet keypairs, `.kamn/` proof artifacts, generated package metadata, or unrelated local files.
-- Prefer consolidating existing working surfaces over adding architecture.
-- Keep root README human-first; put exhaustive operational detail in linked docs.
+Do not weaken tests or claim boundaries. Do not commit secrets, keypairs,
+`.kamn/` artifacts, generated package metadata, or unrelated local files.
+Prefer consolidating existing surfaces over adding architecture.
 
 ## Key Links
 
-Start here for system navigation:
-
-- `docs/architecture/README.md`
-
-Core architecture references:
-
-- `docs/architecture/runtime-layout.md`
-- `docs/architecture/service-runtime.md`
-- `docs/architecture/kamn-core-module-map.md`
-- `docs/architecture/kamn-node-module-map.md`
-- `docs/foundation/kolme-runtime-architecture.md`
-- `docs/foundation/runtime-network.md`
-- `docs/architecture/adr-kamn-core-live-tls-transport.md`
-
-MVP and validation references:
-
-- `docs/validation/mvp-evaluator-demo.md`
-- `docs/developer/readme-contract-reference.md`
-- `docs/ci/strategy.md`
-- `docs/planning/engineering-hardening-wave.md`
-- `docs/planning/live-network-wave.md`
-- `docs/planning/kolme-devnet-ops.md`
-- `docs/developer/rustdoc-publishing.md`
-- `docs/security/secure-coding.md`
-- `docs/security/tls-hardening.md`
-
-## Contract Reference
-
-Detailed command matrices, contract markers, policy snippets, and lane-specific references are maintained in:
-
-- `docs/developer/readme-contract-reference.md`
-
-This keeps the root README useful as an onboarding front door while preserving deterministic contract markers in a stable docs location.
+- [Evaluator runbook](docs/validation/mvp-evaluator-demo.md)
+- [Architecture index](docs/architecture/README.md)
+- [README contract reference](docs/developer/readme-contract-reference.md)
+- [CI strategy](docs/ci/strategy.md)
+- [Kolme devnet operations](docs/planning/kolme-devnet-ops.md)
+- [Secure coding](docs/security/secure-coding.md)
