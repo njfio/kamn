@@ -4,6 +4,7 @@ use super::artifact_digest::attach_json_digest;
 use super::pi_transaction_actor_model::{Actor, Outcome, RuntimeReceipt};
 use super::pi_transaction_actor_verify::read_and_validate_actors;
 use super::pi_transaction_public_result::PublicResult;
+use super::runtime_receipt_chain_facts::validate_step_public_result;
 use super::runtime_receipt_chain_precheck::precheck_required_operations;
 
 const SCHEMA: &str = "kamn.mvp.runtime-receipt-chain.v1";
@@ -73,6 +74,12 @@ pub fn build_runtime_receipt_chain_from_actor_paths(paths: &[String; 3]) -> Resu
 fn build_step<'a>(actors: &'a [Actor; 3], required: &RequiredStep) -> Result<Step<'a>, String> {
     let actor = &actors[required.actor_index];
     let receipt = select_receipt(actor, required)?;
+    validate_step_public_result(
+        actor,
+        required.action,
+        required.after,
+        &receipt.public_result,
+    )?;
     Ok(Step {
         actor: actor.actor.as_str(),
         action: required.action,
