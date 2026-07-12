@@ -11,6 +11,7 @@ pub(crate) struct ActorInput<'a> {
     pub(crate) duplicate_fund: bool,
     pub(crate) release_error: bool,
     pub(crate) receipt_digest_mismatch: bool,
+    pub(crate) public_fact_drift: bool,
 }
 
 impl<'a> ActorInput<'a> {
@@ -34,6 +35,7 @@ impl<'a> ActorInput<'a> {
             duplicate_fund: false,
             release_error: false,
             receipt_digest_mismatch: false,
+            public_fact_drift: false,
         }
     }
 
@@ -69,6 +71,11 @@ impl<'a> ActorInput<'a> {
 
     pub(crate) fn with_receipt_digest_mismatch(mut self, value: bool) -> Self {
         self.receipt_digest_mismatch = value;
+        self
+    }
+
+    pub(crate) fn with_public_fact_drift(mut self, value: bool) -> Self {
+        self.public_fact_drift = value;
         self
     }
 }
@@ -117,11 +124,14 @@ fn tools(input: &ActorInput<'_>) -> [&'static str; 5] {
 fn receipt_json(input: &ActorInput<'_>, index: usize, tool: &str) -> String {
     let is_error = input.release_error && tool == "release_escrow";
     let outcome = if is_error { "error" } else { "success" };
-    let public_result = if is_error {
+    let mut public_result = if is_error {
         "{}".to_owned()
     } else {
         public_result_json(input.role, tool)
     };
+    if input.public_fact_drift && tool == "fund_escrow" {
+        public_result = public_result.replace("escrow-live-7099", "escrow-other");
+    }
     let digest = if input.receipt_digest_mismatch && tool == "release_escrow" {
         sha('f')
     } else {
