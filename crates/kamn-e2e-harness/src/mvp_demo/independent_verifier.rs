@@ -17,7 +17,7 @@ pub(super) fn validate_independent_bundle(report: &str, report_path: &str) -> Re
     let context = BundleContext::new(&report_json, report_path)?;
     context.validate_paths()?;
     let evidence = context.read_settlement_evidence()?;
-    validate_settlement(&report_json, &evidence)?;
+    super::independent_settlement_verify::validate_settlement(&report_json, &evidence)?;
     super::settlement_log_verify::validate_settlement_log(&report_json, &evidence)?;
     validate_explorer_link(&context, &evidence)
 }
@@ -62,59 +62,6 @@ impl<'a> BundleContext<'a> {
     fn markdown_path(&self) -> PathBuf {
         self.output_root.join("latest/proof/report.md")
     }
-}
-
-fn validate_settlement(
-    report: &Value,
-    evidence: &SettlementEvidenceArtifact,
-) -> Result<(), String> {
-    let claim = claim(report, "devnet_settlement_asset_movement")?;
-    require_claim_string(claim, "network", evidence.network.as_str())?;
-    require_claim_string(claim, "rpc_url", evidence.rpc_url.as_str())?;
-    require_claim_string(
-        claim,
-        "recipient_pubkey",
-        evidence.recipient_pubkey.as_str(),
-    )?;
-    require_claim_string(claim, "escrow_id", evidence.escrow_id.as_str())?;
-    require_claim_string(
-        claim,
-        "settlement_tx_signature",
-        evidence.settlement_tx_signature.as_str(),
-    )?;
-    require_claim_string(
-        claim,
-        "persisted_settlement_tx_signature",
-        evidence.persisted_settlement_tx_signature.as_str(),
-    )?;
-    require_claim_u64(claim, "lamports", evidence.lamports)?;
-    validate_finality(evidence)?;
-    validate_balances(evidence)
-}
-
-fn validate_finality(evidence: &SettlementEvidenceArtifact) -> Result<(), String> {
-    if evidence.network == "solana:devnet"
-        && evidence.settlement_commitment == "finalized"
-        && evidence.settlement_tx_signature == evidence.persisted_settlement_tx_signature
-    {
-        return Ok(());
-    }
-    Err(settlement_invalid())
-}
-
-fn validate_balances(evidence: &SettlementEvidenceArtifact) -> Result<(), String> {
-    let payer_delta = evidence
-        .payer_balance_before
-        .checked_sub(evidence.payer_balance_after)
-        .ok_or_else(settlement_invalid)?;
-    let recipient_delta = evidence
-        .recipient_balance_after
-        .checked_sub(evidence.recipient_balance_before)
-        .ok_or_else(settlement_invalid)?;
-    if payer_delta >= evidence.lamports && recipient_delta == evidence.lamports {
-        return Ok(());
-    }
-    Err(settlement_invalid())
 }
 
 fn validate_explorer_link(
@@ -166,20 +113,6 @@ fn artifact_path<'a>(report: &'a Value, name: &str) -> Result<&'a str, String> {
     report["artifacts"][name]
         .as_str()
         .ok_or_else(settlement_invalid)
-}
-
-fn require_claim_string(claim: &Value, field: &str, expected: &str) -> Result<(), String> {
-    if claim[field].as_str() == Some(expected) {
-        return Ok(());
-    }
-    Err(settlement_invalid())
-}
-
-fn require_claim_u64(claim: &Value, field: &str, expected: u64) -> Result<(), String> {
-    if claim[field].as_u64() == Some(expected) {
-        return Ok(());
-    }
-    Err(settlement_invalid())
 }
 
 fn string<'a>(value: &'a Value, field: &str) -> Option<&'a str> {

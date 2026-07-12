@@ -17,6 +17,7 @@ mod devnet_settlement_node;
 mod devnet_settlement_service;
 mod devnet_settlement_solana;
 mod devnet_settlement_state;
+mod independent_settlement_verify;
 mod independent_verifier;
 mod independent_verifier_errors;
 mod live_task_binding;

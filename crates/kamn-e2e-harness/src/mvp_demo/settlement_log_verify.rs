@@ -51,8 +51,8 @@ fn require_balances(log: &str, evidence: &SettlementEvidenceArtifact) -> Result<
 }
 
 fn require(log: &str, field: &str, expected: &str) -> Result<(), String> {
-    let marker = format!("{field}={expected}\n");
-    if log.lines().any(|line| line == marker.trim_end()) {
+    let marker = format!("{field}={expected}");
+    if log.lines().any(|line| line == marker) {
         return Ok(());
     }
     Err(invalid())
