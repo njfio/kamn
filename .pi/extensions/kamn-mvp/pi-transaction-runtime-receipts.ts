@@ -16,9 +16,15 @@ export function validateRuntimeReceipts(
 	receipts.forEach((receipt, index) => {
 		if (receipt.request_id !== firstRequestId + index || receipt.digest !== digests[index]) throw mismatch();
 	});
-	for (const tool of requiredTools(role)) {
+	for (const tool of requiredMutationTools(role)) {
 		if (receipts.filter((receipt) => receipt.tool === tool && receipt.outcome === "success").length !== 1) throw mismatch();
 	}
+	if (!receipts.some((receipt) => receipt.tool === projectionTool(role) && receipt.outcome === "success")) throw mismatch();
+}
+
+export function validateFinalProjectionReceipt(role: Role, digest: string, receipts: RuntimeReceipt[]) {
+	const final = receipts.at(-1);
+	if (!final || final.tool !== projectionTool(role) || final.outcome !== "success" || final.digest !== digest) throw mismatch();
 }
 
 function normalizeReceipt(value: unknown): RuntimeReceipt {
@@ -33,10 +39,13 @@ function normalizeReceipt(value: unknown): RuntimeReceipt {
 	};
 }
 
-function requiredTools(role: Role): string[] {
-	if (role === "agent_a") return ["register", "create_task", "fund_escrow", "release_escrow", "query_participant_task_projection"];
-	if (role === "agent_b") return ["register", "accept_task", "complete_task", "query_participant_task_projection"];
-	return ["register", "query_verifier_task_projection"];
+function requiredMutationTools(role: Role): string[] {
+	if (role === "agent_a") return ["register", "create_task", "fund_escrow", "release_escrow"];
+	if (role === "agent_b") return ["register", "accept_task", "complete_task"];
+	return ["register"];
+}
+function projectionTool(role: Role): string {
+	return role === "agent_c" ? "query_verifier_task_projection" : "query_participant_task_projection";
 }
 function positiveInteger(value: unknown): number {
 	if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return value;

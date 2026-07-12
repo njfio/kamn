@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import { normalizeRuntimeReceipts, validateRuntimeReceipts, type Role, type RuntimeReceipt } from "./pi-transaction-runtime-receipts.ts";
+import { normalizeRuntimeReceipts, validateFinalProjectionReceipt, validateRuntimeReceipts, type Role, type RuntimeReceipt } from "./pi-transaction-runtime-receipts.ts";
 
 const SCHEMA = "kamn.mvp.pi-transaction-actor.v1";
 const ROLES = ["agent_a", "agent_b", "agent_c"] as const;
@@ -140,6 +140,7 @@ function validateActor(actor: Omit<ActorArtifact, "artifact_digest">) {
 	const expectedCount = actor.last_request_id - actor.first_request_id + 1;
 	if (expectedCount !== actor.runtime_response_digests.length) throw new Error("PI_ACTOR_NONCE_STREAM_INVALID");
 	validateRuntimeReceipts(actor.actor, actor.first_request_id, actor.runtime_response_digests, actor.runtime_response_receipts);
+	validateFinalProjectionReceipt(actor.actor, actor.runtime_projection_digest, actor.runtime_response_receipts);
 	if (!actor.runtime_response_digests.includes(actor.runtime_projection_digest)) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
 	if (actor.handoff_authorized) throw new Error("PI_HANDOFF_AUTHORIZATION_FORBIDDEN");
 	if (actor.actor === "agent_c") {
