@@ -63,7 +63,8 @@ pub fn parse_agent_transaction_demo_config(
 /// Validates canonical process configuration before supervisor execution.
 pub fn execute_agent_transaction_demo_contract() -> Result<String, String> {
     let env = std::env::vars().collect::<BTreeMap<_, _>>();
-    parse_agent_transaction_demo_config(&env)?;
+    let config = parse_agent_transaction_demo_config(&env)?;
+    super::agent_transaction_preflight::validate_agent_transaction_preflight(&config)?;
     Err("AGENT_TRANSACTION_CHILD_FAILED: supervisor unavailable".to_owned())
 }
 
