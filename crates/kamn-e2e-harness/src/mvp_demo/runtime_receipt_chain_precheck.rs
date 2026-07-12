@@ -8,23 +8,44 @@ const REQUIRED: [[&str; 4]; 3] = [
 
 pub(super) fn precheck_required_operations(paths: &[String; 3]) -> Result<(), String> {
     for (index, path) in paths.iter().enumerate() {
-        let Some(receipts) = read_receipts(path)? else {
+        let Some(actor) = read_actor_json(path)? else {
+            continue;
+        };
+        precheck_digest_stream(&actor)?;
+        let Some(receipts) = actor["runtime_response_receipts"].as_array() else {
             continue;
         };
         for action in REQUIRED[index].iter().filter(|action| !action.is_empty()) {
-            classify_action(receipts.as_slice(), action)?;
+            classify_action(receipts, action)?;
         }
     }
     Ok(())
 }
 
-fn read_receipts(path: &str) -> Result<Option<Vec<Value>>, String> {
+fn read_actor_json(path: &str) -> Result<Option<Value>, String> {
     let raw = std::fs::read_to_string(path)
         .map_err(|error| format!("failed to read Pi transaction actor {path}: {error}"))?;
     let Ok(value) = serde_json::from_str::<Value>(&raw) else {
         return Ok(None);
     };
-    Ok(value["runtime_response_receipts"].as_array().cloned())
+    Ok(Some(value))
+}
+
+fn precheck_digest_stream(actor: &Value) -> Result<(), String> {
+    let (Some(receipts), Some(digests)) = (
+        actor["runtime_response_receipts"].as_array(),
+        actor["runtime_response_digests"].as_array(),
+    ) else {
+        return Ok(());
+    };
+    let drifted = receipts
+        .iter()
+        .zip(digests)
+        .any(|(receipt, digest)| receipt["digest"] != *digest);
+    if drifted {
+        return Err("RUNTIME_RECEIPT_CHAIN_DIGEST_MISMATCH".to_owned());
+    }
+    Ok(())
 }
 
 fn classify_action(receipts: &[Value], action: &str) -> Result<(), String> {
