@@ -52,8 +52,9 @@ fn run_phases(group: &mut RpcGroup) -> Result<(), String> {
         1,
         "Call kamn_live_agent_b_register exactly once, then stop.",
     )?;
-    let provider_did = find_string(&registration, "did")
-        .ok_or_else(|| "AGENT_TRANSACTION_CHILD_FAILED: Agent B omitted DID".to_owned())?;
+    let provider_did = find_string(&registration, "did").ok_or_else(|| {
+        format!("AGENT_TRANSACTION_CHILD_FAILED: Agent B omitted DID: {registration}")
+    })?;
     group.prompt(0, agent_a_create_prompt(provider_did).as_str())?;
     group.prompt(1, AGENT_B_ACCEPT_PROMPT)?;
     group.prompt(0, AGENT_A_FUND_PROMPT)?;

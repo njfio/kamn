@@ -122,8 +122,9 @@ fn read_agent_end(child: &mut RpcChild, timeout_ms: u64) -> Result<Value, String
 }
 
 fn failed_tool(event: &Value) -> Option<&str> {
-    let failed =
-        event["type"] == "tool_execution_end" && event["result"]["isError"].as_bool() == Some(true);
+    let failed = event["type"] == "tool_execution_end"
+        && (event["isError"].as_bool() == Some(true)
+            || event["result"]["isError"].as_bool() == Some(true));
     failed.then(|| event["toolName"].as_str()).flatten()
 }
 

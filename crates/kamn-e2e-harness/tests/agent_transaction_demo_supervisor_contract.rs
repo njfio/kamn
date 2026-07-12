@@ -85,7 +85,7 @@ fn spec_c04_tool_execution_failure_stops_the_transaction_immediately() {
     let error = execute_agent_transaction_demo_with_config(&config)
         .expect_err("failed tool execution must fail the actor phase");
     assert!(error.starts_with("AGENT_TRANSACTION_CHILD_FAILED"));
-    assert!(error.contains("kamn_live_agent_b_register"));
+    assert!(error.contains("Pi tool failed: kamn_live_agent_b_register"));
     assert!(!fixture.root.join("demo/latest/proof/report.json").exists());
 }
 

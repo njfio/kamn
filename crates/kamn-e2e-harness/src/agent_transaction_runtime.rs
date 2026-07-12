@@ -17,6 +17,7 @@ pub(super) struct LocalRuntime {
 impl LocalRuntime {
     pub(super) fn start(config: &AgentTransactionDemoConfig) -> Result<Self, String> {
         let address = endpoint_address(config.mcp_endpoint.as_str())?;
+        reject_occupied_endpoint(address.as_str())?;
         let mut command = runtime_command(config, address.as_str());
         let child = command
             .spawn()
@@ -32,6 +33,13 @@ impl LocalRuntime {
     pub(super) fn cleanup(&mut self) {
         terminate_process(&mut self.child);
     }
+}
+
+fn reject_occupied_endpoint(address: &str) -> Result<(), String> {
+    if TcpStream::connect(address).is_ok() {
+        return Err(format!("{RUNTIME_ERROR}: endpoint already occupied"));
+    }
+    Ok(())
 }
 
 impl Drop for LocalRuntime {
