@@ -13,6 +13,15 @@ Inputs are the three `kamn.mvp.pi-transaction-actor.v1` artifacts already
 accepted by `verify_pi_transaction_actor_paths`, the task-bound settlement
 claim, and runtime-owned participant/restricted projection artifacts.
 
+The #7099 receipt shape currently carries request ID, tool, outcome, and exact
+response digest. That proves provenance but is insufficient to prove state
+transitions. This issue extends each receipt with a strict allowlisted
+`public_result` projection containing only applicable public fields: task ID,
+task state, transaction ID, escrow ID, escrow state, amount, network,
+settlement signature/commitment, public commitment, view scope, and participant
+role. Raw response bodies, private receipt digests, payloads, auth material, and
+completion evidence remain excluded.
+
 Output is `kamn.mvp.runtime-receipt-chain.v1`, referenced by the canonical
 three-agent claim. Each ordered step records actor, action, request ID, outcome,
 runtime response digest, before/after state, and the shared public transaction
@@ -54,6 +63,11 @@ actor artifact. Mutation steps require exactly one successful receipt. Repeated
 projection reads are allowed, but only the final successful projection receipt
 can satisfy the corresponding chain step.
 
+The response digest continues to bind the exact full runtime response observed
+by Pi; `public_result` supplies independently typed fields for chain semantics.
+Unknown public fields, type confusion, missing required operation fields, and
+private-field markers fail closed.
+
 All steps carry one task ID, transaction ID, escrow ID, amount, network,
 settlement signature, settlement commitment, and public commitment where those
 facts exist. Earlier steps may use explicit `not-yet-created` state markers,
@@ -66,6 +80,7 @@ private receipt digest.
 - Duplicate successful mutation: `RUNTIME_RECEIPT_CHAIN_STEP_DUPLICATED`.
 - Invalid business-state order: `RUNTIME_RECEIPT_CHAIN_ORDER_INVALID`.
 - Receipt/digest mismatch: `RUNTIME_RECEIPT_CHAIN_DIGEST_MISMATCH`.
+- Missing/invalid public receipt projection: `RUNTIME_RECEIPT_CHAIN_PUBLIC_RESULT_INVALID`.
 - Cross-transaction/task/escrow facts: `RUNTIME_RECEIPT_CHAIN_FACT_MISMATCH`.
 - Error receipt used as success: `RUNTIME_RECEIPT_CHAIN_OUTCOME_INVALID`.
 - Handoff/generated narrative used as proof: `RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID`.
@@ -78,6 +93,8 @@ from a configured runtime chain to generated transcript strings.
 ## Acceptance Criteria
 
 - [ ] Every required chain step references one exact actor runtime receipt and digest.
+- [ ] Every successful chain receipt exposes only strict typed public fields
+      needed to prove state and shared facts.
 - [ ] Missing, reordered, duplicated, skipped, or cross-transaction receipts fail closed.
 - [ ] Business-state order covers registration, create, accept, fund, complete,
       release/finalization, participant projections, and restricted verification.
