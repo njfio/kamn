@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { normalizeRuntimeReceipts, validateRuntimeReceipts, type Role, type RuntimeReceipt } from "./pi-transaction-runtime-receipts.ts";
 
 const SCHEMA = "kamn.mvp.pi-transaction-actor.v1";
 const ROLES = ["agent_a", "agent_b", "agent_c"] as const;
@@ -7,7 +8,6 @@ const SHARED = [
 	"task_id", "transaction_id", "escrow_id", "amount_lamports", "network",
 	"settlement_tx_signature", "settlement_commitment", "public_commitment",
 ] as const;
-type Role = typeof ROLES[number];
 type ActorArtifact = {
 	schema_version: string;
 	actor: Role;
@@ -17,6 +17,7 @@ type ActorArtifact = {
 	first_request_id: number;
 	last_request_id: number;
 	runtime_response_digests: string[];
+	runtime_response_receipts: RuntimeReceipt[];
 	runtime_projection_digest: string;
 	task_id: string;
 	transaction_id: string;
@@ -89,6 +90,7 @@ function runtimeFields(input: Record<string, unknown>) {
 		first_request_id: positiveInteger(input.first_request_id, "PI_ACTOR_NONCE_STREAM_INVALID"),
 		last_request_id: positiveInteger(input.last_request_id, "PI_ACTOR_NONCE_STREAM_INVALID"),
 		runtime_response_digests: digestList(input.runtime_response_digests),
+		runtime_response_receipts: normalizeRuntimeReceipts(input.runtime_response_receipts),
 		runtime_projection_digest: shaDigest(input.runtime_projection_digest, "PI_RUNTIME_RECEIPT_MISMATCH"),
 	};
 }
@@ -124,6 +126,7 @@ async function readActor(path: string, role: Role): Promise<ActorArtifact> {
 function validateActor(actor: Omit<ActorArtifact, "artifact_digest">) {
 	const expectedCount = actor.last_request_id - actor.first_request_id + 1;
 	if (expectedCount !== actor.runtime_response_digests.length) throw new Error("PI_ACTOR_NONCE_STREAM_INVALID");
+	validateRuntimeReceipts(actor.actor, actor.first_request_id, actor.runtime_response_digests, actor.runtime_response_receipts);
 	if (!actor.runtime_response_digests.includes(actor.runtime_projection_digest)) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
 	if (actor.handoff_authorized) throw new Error("PI_HANDOFF_AUTHORIZATION_FORBIDDEN");
 	if (actor.actor === "agent_c") {
@@ -133,6 +136,7 @@ function validateActor(actor: Omit<ActorArtifact, "artifact_digest">) {
 	}
 	if (actor.view_scope !== "participant-private" || !actor.private_receipt_digest) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
 }
+
 
 function validateSharedFacts(actors: ActorArtifact[]) {
 	const first = actors[0] as unknown as Record<string, unknown>;

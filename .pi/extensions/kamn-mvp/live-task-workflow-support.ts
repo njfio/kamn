@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { LiveMcpAgent } from "./mcp-session.ts";
 import type { McpSessionProvenance } from "./mcp-session.ts";
 import type { AgentRole, WorkflowResult } from "./live-task-workflow.ts";
@@ -41,7 +40,7 @@ export function buildActorEvidence(
 		runtime_projection_digest: runtimeProjectionDigest,
 		...sharedProjectionFields(projection),
 		view_scope: requiredString(projection, "view_scope", `${agentLabel(role)} projection`),
-		...(role === "agent_c" ? {} : { private_receipt_digest: privateReceiptDigest(projection) }),
+		...(role === "agent_c" ? {} : { private_receipt_digest: runtimeProjectionDigest }),
 		source_handoff_digest: handoffDigest,
 		handoff_authorized: false,
 	};
@@ -55,6 +54,7 @@ function actorProvenance(role: AgentRole, piProcessId: number, did: string, prov
 		first_request_id: provenance.first_request_id,
 		last_request_id: provenance.last_request_id,
 		runtime_response_digests: provenance.runtime_response_digests,
+		runtime_response_receipts: provenance.runtime_response_receipts,
 	};
 }
 function sharedProjectionFields(projection: WorkflowResult) {
@@ -68,14 +68,6 @@ function sharedProjectionFields(projection: WorkflowResult) {
 		settlement_commitment: requiredString(projection, "settlement_commitment", "runtime projection"),
 		public_commitment: requiredString(projection, "public_commitment", "runtime projection"),
 	};
-}
-function privateReceiptDigest(projection: WorkflowResult): string {
-	if (typeof projection.private_receipt_digest === "string") return projection.private_receipt_digest;
-	const privateFields = {
-		task_receipt_ids: projection.task_receipt_ids,
-		completion_evidence_digest: projection.completion_evidence_digest,
-	};
-	return `sha256:${createHash("sha256").update(JSON.stringify(privateFields)).digest("hex")}`;
 }
 function requiredPositiveNumber(result: WorkflowResult, field: string): number {
 	const value = result[field];
