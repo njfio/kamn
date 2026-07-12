@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
@@ -39,13 +40,16 @@ pub(crate) struct ActorFixture {
     root: PathBuf,
 }
 
+static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
 impl ActorFixture {
     pub(crate) fn new() -> Self {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let root = std::env::temp_dir().join(format!("kamn-pi-actors-{nanos}"));
+        let sequence = FIXTURE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("kamn-pi-actors-{nanos}-{sequence}"));
         std::fs::create_dir_all(&root).expect("fixture directory");
         Self { root }
     }

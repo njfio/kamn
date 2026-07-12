@@ -38,7 +38,7 @@ struct RequiredStep {
 
 /// Builds a digested transaction chain from three verified Pi actor artifacts.
 pub fn build_runtime_receipt_chain_from_actor_paths(paths: &[String; 3]) -> Result<String, String> {
-    let actors = read_and_validate_actors(paths)?;
+    let actors = read_and_validate_actors(paths).map_err(map_actor_error)?;
     let steps = required_steps()
         .iter()
         .map(|required| build_step(&actors, required))
@@ -147,4 +147,13 @@ fn missing() -> String {
 
 fn artifact_mismatch() -> String {
     "RUNTIME_RECEIPT_CHAIN_ARTIFACT_MISMATCH".to_owned()
+}
+
+fn map_actor_error(error: String) -> String {
+    match error.as_str() {
+        "PI_RUNTIME_RECEIPT_MISMATCH" => "RUNTIME_RECEIPT_CHAIN_STEP_MISSING".to_owned(),
+        "PI_TRANSACTION_FACT_MISMATCH" => "RUNTIME_RECEIPT_CHAIN_FACT_MISMATCH".to_owned(),
+        "PI_VERIFIER_PRIVATE_LEAK" => "RUNTIME_RECEIPT_CHAIN_VERIFIER_PRIVATE_LEAK".to_owned(),
+        _ => error,
+    }
 }
