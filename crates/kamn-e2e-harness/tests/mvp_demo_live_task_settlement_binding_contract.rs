@@ -76,7 +76,7 @@ fn spec_c03_verifier_rejects_tampered_task_binding_artifact() {
     std::fs::write(binding, tampered).expect("binding tamper should be written");
 
     let err = verify_latest(&root).expect_err("tampered task binding must fail");
-    assert!(err.contains("live task settlement binding"), "{err}");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn spec_c04_live_service_claim_requires_funding_request_artifact() {
     relabel_report_as_live_service(&root, None);
 
     let err = verify_latest(&root).expect_err("live service claim without request must fail");
-    assert!(err.contains("devnet escrow funding request"), "{err}");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]
@@ -104,7 +104,7 @@ fn spec_c05_live_service_claim_requires_request_derived_escrow_id() {
     relabel_report_as_live_service(&root, Some(&request));
 
     let err = verify_latest(&root).expect_err("request-derived escrow mismatch must fail");
-    assert!(err.contains("devnet escrow funding request"), "{err}");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]

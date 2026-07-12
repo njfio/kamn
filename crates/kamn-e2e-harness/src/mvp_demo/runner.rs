@@ -61,9 +61,10 @@ pub fn execute_verify_mvp_demo_contract(
         report.as_str(),
         config.report.as_str(),
     )?;
-    super::runtime_actor_bundle::validate_runtime_actor_bundle(report.as_str())?;
-    validate_three_agent_transcript_file(report.as_str())?;
-    validate_live_task_binding_file(report.as_str())?;
+    let map = super::independent_verifier_errors::map_three_agent_verification_error;
+    super::runtime_actor_bundle::validate_runtime_actor_bundle(report.as_str()).map_err(map)?;
+    validate_three_agent_transcript_file(report.as_str()).map_err(map)?;
+    validate_live_task_binding_file(report.as_str()).map_err(map)?;
     Ok(render_verify_output(config, pi_actor_summary))
 }
 

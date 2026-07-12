@@ -7,20 +7,24 @@ use super::settlement_evidence_artifact::{
 
 const PATH_INVALID: &str = "PROOF_ARTIFACT_PATH_INVALID";
 const SETTLEMENT_INVALID: &str = "SETTLEMENT_EVIDENCE_INVALID";
-const EXPLORER_INVALID: &str = "EXPLORER_LINK_INVALID";
+const AGENT_CLAIM_INVALID: &str = "AGENT_TRANSACTION_CLAIM_INVALID";
 pub(super) fn validate_independent_bundle(report: &str, report_path: &str) -> Result<(), String> {
     let report_json: Value =
         serde_json::from_str(report).map_err(|_| "PROOF_ARTIFACT_TAMPERED".to_owned())?;
-    if !has_agent_transaction(&report_json) {
+    let context = BundleContext::new(&report_json, report_path)?;
+    let has_claim = has_agent_transaction(&report_json);
+    if context.has_agent_transaction_files() && !has_claim {
+        return Err(AGENT_CLAIM_INVALID.to_owned());
+    }
+    if !has_claim {
         return Ok(());
     }
-    let context = BundleContext::new(&report_json, report_path)?;
     context.validate_paths()?;
     let evidence = context.read_settlement_evidence()?;
     super::independent_settlement_verify::validate_settlement(&report_json, &evidence)?;
     super::settlement_log_verify::validate_settlement_log(&report_json, &evidence)?;
     super::authoritative_rpc_verify::validate_authoritative_rpc(&report_json, &evidence)?;
-    validate_explorer_link(&context, &evidence)
+    super::independent_explorer_verify::validate_explorer_links(context.markdown_paths(), &evidence)
 }
 
 struct BundleContext<'a> {
@@ -84,23 +88,16 @@ impl<'a> BundleContext<'a> {
             self.report_path.with_file_name("report.md"),
         ]
     }
-}
 
-fn validate_explorer_link(
-    context: &BundleContext<'_>,
-    evidence: &SettlementEvidenceArtifact,
-) -> Result<(), String> {
-    let expected = format!(
-        "https://explorer.solana.com/tx/{}?cluster=devnet",
-        evidence.settlement_tx_signature
-    );
-    for path in context.markdown_paths() {
-        let markdown = std::fs::read_to_string(path).map_err(|_| explorer_invalid())?;
-        if !markdown.contains(expected.as_str()) {
-            return Err(explorer_invalid());
-        }
+    fn has_agent_transaction_files(&self) -> bool {
+        [
+            "three-agent-transcript.json",
+            "live-task-settlement-binding.json",
+            "runtime-agent-a-evidence.json",
+        ]
+        .iter()
+        .any(|name| self.run_dir.join("proof").join(name).is_file())
     }
-    Ok(())
 }
 
 fn validate_supplied_report_path(context: &BundleContext<'_>) -> Result<(), String> {
@@ -189,8 +186,4 @@ fn path_invalid() -> String {
 
 fn settlement_invalid() -> String {
     SETTLEMENT_INVALID.to_owned()
-}
-
-fn explorer_invalid() -> String {
-    EXPLORER_INVALID.to_owned()
 }

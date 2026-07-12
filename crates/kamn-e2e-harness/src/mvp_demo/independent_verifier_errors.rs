@@ -4,6 +4,32 @@ pub(super) fn map_actor_verification_error(error: String) -> String {
         .unwrap_or(error)
 }
 
+pub(super) fn map_three_agent_verification_error(error: String) -> String {
+    if is_public_code(error.as_str()) {
+        return error;
+    }
+    let normalized = error.to_ascii_uppercase();
+    classify_three_agent_error(normalized.as_str())
+        .unwrap_or("TRANSACTION_AGREEMENT_INVALID")
+        .to_owned()
+}
+
+fn classify_three_agent_error(error: &str) -> Option<&'static str> {
+    if contains_any(error, &["VIEW", "PRIVATE", "PROJECTION", "PARTICIPANT"]) {
+        return Some("PROJECTION_SCOPE_INVALID");
+    }
+    if contains_any(error, &["RECEIPT", "RUNTIME CHAIN", "RUNTIME_CHAIN"]) {
+        return Some("RECEIPT_CHAIN_INVALID");
+    }
+    None
+}
+
+fn is_public_code(error: &str) -> bool {
+    error
+        .chars()
+        .all(|value| value == '_' || value.is_ascii_uppercase())
+}
+
 fn classify_actor_error(error: &str) -> Option<&'static str> {
     if is_identity_error(error) {
         return Some("AGENT_IDENTITY_INVALID");
