@@ -7,6 +7,8 @@ use kamn_e2e_harness::{
     HarnessCommand, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
+#[path = "support/artifact_digest.rs"]
+mod artifact_digest;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 #[path = "support/pi_transaction_actor_fixture.rs"]
@@ -188,6 +190,43 @@ fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
     })
     .expect_err("runtime actors must not validate a generated transcript");
     assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID");
+}
+
+#[test]
+fn spec_c12_verifier_rebuilds_chain_from_actor_receipts() {
+    let temp = temp_dir("mvp-demo-rebuilt-chain");
+    let actors = ActorFixture::new();
+    actors.write_all(Overrides::default());
+    actors.rebind_shared_facts();
+    let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
+    config.pi_transaction_actor_paths = Some(actors.paths());
+    execute_mvp_demo_contract(&config).expect("runtime-backed report");
+
+    rewrite_chain_and_claim(&temp);
+    let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
+        report: temp.join("latest/proof/report.json").display().to_string(),
+        agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: Some(actors.paths()),
+    })
+    .expect_err("self-consistent forged chain must not pass");
+    assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_ARTIFACT_MISMATCH");
+}
+
+fn rewrite_chain_and_claim(root: &Path) {
+    let chain_path = run_directories(root)[0].join("proof/three-agent-transcript.json");
+    let raw = std::fs::read_to_string(&chain_path).expect("runtime chain");
+    let old_digest = artifact_digest::digest_field(raw.as_str(), "chain_digest");
+    let changed = raw.replacen(
+        r#""after_state":"submitted""#,
+        r#""after_state":"forged""#,
+        1,
+    );
+    let changed = artifact_digest::with_digest(changed, "chain_digest");
+    let new_digest = artifact_digest::digest_field(changed.as_str(), "chain_digest");
+    std::fs::write(chain_path, changed).expect("forged chain");
+    let report_path = root.join("latest/proof/report.json");
+    let report = std::fs::read_to_string(&report_path).expect("report");
+    std::fs::write(report_path, report.replace(&old_digest, &new_digest)).expect("forged claim");
 }
 
 fn devnet_settlement_markers() -> [&'static str; 6] {
