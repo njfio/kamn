@@ -11,6 +11,8 @@ pub(crate) struct Overrides {
     pub(crate) agent_c_private: Option<String>,
     pub(crate) agent_b_escrow: &'static str,
     pub(crate) agent_a_handoff_authorized: bool,
+    pub(crate) agent_a_handoff_as_string: bool,
+    pub(crate) agent_a_include_release: bool,
 }
 
 impl Default for Overrides {
@@ -22,6 +24,8 @@ impl Default for Overrides {
             agent_c_private: None,
             agent_b_escrow: "escrow-live-7099",
             agent_a_handoff_authorized: false,
+            agent_a_handoff_as_string: false,
+            agent_a_include_release: true,
         }
     }
 }
@@ -55,7 +59,9 @@ impl ActorFixture {
     fn write_a(&self, overrides: &Overrides) {
         let input = ActorInput::new("agent_a", 101, "kamn:did:a", "escrow-live-7099", '1')
             .with_private(sha('e'))
-            .with_handoff_authorized(overrides.agent_a_handoff_authorized);
+            .with_handoff_authorized(overrides.agent_a_handoff_authorized)
+            .with_handoff_as_string(overrides.agent_a_handoff_as_string)
+            .with_release(overrides.agent_a_include_release);
         write_actor(&self.root.join("agent-a.json"), input);
     }
 
@@ -87,6 +93,8 @@ struct ActorInput<'a> {
     projection: String,
     private: Option<String>,
     handoff_authorized: bool,
+    handoff_as_string: bool,
+    include_release: bool,
 }
 
 impl<'a> ActorInput<'a> {
@@ -99,6 +107,8 @@ impl<'a> ActorInput<'a> {
             projection: sha(projection),
             private: None,
             handoff_authorized: false,
+            handoff_as_string: false,
+            include_release: true,
         }
     }
 
@@ -109,6 +119,16 @@ impl<'a> ActorInput<'a> {
 
     fn with_handoff_authorized(mut self, value: bool) -> Self {
         self.handoff_authorized = value;
+        self
+    }
+
+    fn with_handoff_as_string(mut self, value: bool) -> Self {
+        self.handoff_as_string = value;
+        self
+    }
+
+    fn with_release(mut self, value: bool) -> Self {
+        self.include_release = value;
         self
     }
 }
@@ -135,8 +155,12 @@ fn actor_json(input: &ActorInput<'_>) -> String {
         .map(|value| format!(r#","private_receipt_digest":"{value}""#))
         .unwrap_or_default();
     let responses = response_digests(input).join("\",\"");
+    let receipts = runtime_receipts(input);
+    let participant_role = if input.role == "agent_a" { "creator" } else { "provider" };
+    let participant_field = if input.role == "agent_c" { String::new() } else { format!(r#","participant_role":"{participant_role}""#) };
+    let handoff = if input.handoff_as_string { format!(r#""{}""#, input.handoff_authorized) } else { input.handoff_authorized.to_string() };
     format!(
-        r#"{{"schema_version":"kamn.mvp.pi-transaction-actor.v1","actor":"{}","pi_process_id":{},"did":"{}","mcp_child_process_id":{},"first_request_id":1,"last_request_id":5,"runtime_response_digests":["{responses}"],"runtime_projection_digest":"{}","task_id":"task-live-7099","transaction_id":"transaction-live-7099","escrow_id":"{}","amount_lamports":1000000,"network":"solana-devnet","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized","public_commitment":"{}","view_scope":"{scope}"{private_field},"source_handoff_digest":"{}","handoff_authorized":{}}}"#,
+        r#"{{"schema_version":"kamn.mvp.pi-transaction-actor.v1","actor":"{}","pi_process_id":{},"did":"{}","mcp_child_process_id":{},"first_request_id":1,"last_request_id":5,"runtime_response_digests":["{responses}"],"runtime_response_receipts":[{receipts}],"runtime_projection_digest":"{}","task_id":"task-live-7099","transaction_id":"transaction-live-7099","escrow_id":"{}","amount_lamports":1000000,"network":"solana-devnet","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized","public_commitment":"{}","view_scope":"{scope}"{participant_field}{private_field},"source_handoff_digest":"{}","handoff_authorized":{handoff}}}"#,
         input.role,
         input.pid,
         input.did,
@@ -145,8 +169,19 @@ fn actor_json(input: &ActorInput<'_>) -> String {
         input.escrow,
         sha('d'),
         sha('b'),
-        input.handoff_authorized,
     )
+}
+
+fn runtime_receipts(input: &ActorInput<'_>) -> String {
+    let tools = match input.role {
+        "agent_a" => ["register", "create_task", "fund_escrow", if input.include_release { "release_escrow" } else { "query_task" }, "query_participant_task_projection"],
+        "agent_b" => ["register", "accept_task", "complete_task", "query_task", "query_participant_task_projection"],
+        _ => ["register", "query_task", "query_task", "query_task", "query_verifier_task_projection"],
+    };
+    tools.iter().enumerate().map(|(index, tool)| format!(
+        r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}"}}"#,
+        index + 1, tool, response_digests(input)[index]
+    )).collect::<Vec<_>>().join(",")
 }
 
 fn response_digests(input: &ActorInput<'_>) -> [String; 5] {

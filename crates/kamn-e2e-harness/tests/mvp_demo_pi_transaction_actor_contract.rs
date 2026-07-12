@@ -73,3 +73,17 @@ fn spec_c03_rust_verifier_rejects_runtime_privacy_and_shared_fact_drift() {
         assert!(error.contains(code), "unexpected error: {error}");
     }
 }
+
+#[test]
+fn spec_c04_rust_verifier_rejects_missing_operation_and_type_confusion() {
+    for overrides in [
+        Overrides { agent_a_include_release: false, ..Overrides::default() },
+        Overrides { agent_a_handoff_as_string: true, ..Overrides::default() },
+    ] {
+        let fixture = ActorFixture::new();
+        fixture.write_all(overrides);
+        let error = verify_pi_transaction_actor_paths(&fixture.paths())
+            .expect_err("incomplete or type-confused actor evidence must fail");
+        assert!(error.contains("PI_"), "unexpected error: {error}");
+    }
+}
