@@ -14,7 +14,7 @@ fn classify_actor_error(error: &str) -> Option<&'static str> {
     if contains_any(error, &["HANDOFF_AUTHORIZATION", "ACTION_NOT_GRANTED"]) {
         return Some("AUTHORIZATION_EVIDENCE_INVALID");
     }
-    if error.contains("FACT_MISMATCH") {
+    if contains_any(error, &["CHAIN_FACT_MISMATCH", "TRANSACTION_FACT_MISMATCH"]) {
         return Some("TRANSACTION_AGREEMENT_INVALID");
     }
     (error.contains("RECEIPT_CHAIN") || error.contains("RUNTIME_RECEIPT"))
