@@ -152,7 +152,9 @@ fn public_result_json(role: &str, tool: &str) -> String {
         "accept_task" => task_result("accepted"),
         "complete_task" => task_result("completed"),
         "fund_escrow" => r#"{"task_id":"task-live-7099","escrow_id":"escrow-live-7099","state":"funded","amount_lamports":1000000,"network":"solana-devnet"}"#.to_owned(),
-        "release_escrow" => r#"{"escrow_id":"escrow-live-7099","state":"released","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized"}"#.to_owned(),
+        "release_escrow" => {
+            r#"{"escrow_id":"escrow-live-7099","state":"released"}"#.to_owned()
+        }
         "query_participant_task_projection" => projection_result(role, "participant-private"),
         "query_verifier_task_projection" => projection_result(role, "restricted-public"),
         _ => r#"{"task_id":"task-live-7099","state":"accepted"}"#.to_owned(),
