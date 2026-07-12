@@ -11,6 +11,8 @@ export type WorkflowResult = Record<string, unknown>;
 type Environment = Record<string, string | undefined>;
 type AgentState = { did?: string; session?: McpSession };
 type WaitOptions = { timeoutMs: number; pollMs: number };
+const RELEASE_RECONCILIATION_ATTEMPTS = 3;
+const RELEASE_RECONCILIATION_DELAY_MS = 1000;
 
 export class LiveTaskWorkflow {
 	private readonly agents: Record<AgentRole, AgentState> = { agent_a: {}, agent_b: {}, agent_c: {} };
@@ -73,7 +75,7 @@ export class LiveTaskWorkflow {
 		this.registeredDid("agent_a");
 		const escrowId = this.fundedEscrowId();
 		const payload = this.currentAgreement().releasePayload();
-		const result = await this.session("agent_a").call("release_escrow", { escrow_id: escrowId, payload }, signal);
+		const result = await this.releaseWithReconciliation(escrowId, payload, signal);
 		validateEscrowResult(result, escrowId, "released", "escrow release");
 		return result;
 	}
@@ -171,6 +173,17 @@ export class LiveTaskWorkflow {
 		if (!this.agreement) throw new Error("Create a canonical settlement agreement before continuing");
 		return this.agreement;
 	}
+	private async releaseWithReconciliation(escrowId: string, payload: string, signal?: AbortSignal): Promise<WorkflowResult> {
+		for (let attempt = 1; attempt <= RELEASE_RECONCILIATION_ATTEMPTS; attempt += 1) {
+			try {
+				return await this.session("agent_a").call("release_escrow", { escrow_id: escrowId, payload }, signal);
+			} catch (error) {
+				if (!isAmbiguousSettlement(error) || attempt === RELEASE_RECONCILIATION_ATTEMPTS) throw error;
+				await delay(RELEASE_RECONCILIATION_DELAY_MS, signal);
+			}
+		}
+		throw new Error("Settlement reconciliation attempts exhausted");
+	}
 	private transitionAgreement(): AgreementIdentity {
 		if (!this.agreementIdentity) throw new Error("Import the canonical settlement agreement before continuing");
 		return this.agreementIdentity;
@@ -179,4 +192,8 @@ export class LiveTaskWorkflow {
 		const duplicate = Object.entries(this.agents).some(([otherRole, state]) => otherRole !== role && state.did === did);
 		if (duplicate) throw new Error("Agent A, Agent B, and Agent C registration DIDs must be distinct");
 	}
+}
+
+function isAmbiguousSettlement(error: unknown): boolean {
+	return error instanceof Error && error.message.includes("SETTLEMENT_OUTCOME_AMBIGUOUS");
 }

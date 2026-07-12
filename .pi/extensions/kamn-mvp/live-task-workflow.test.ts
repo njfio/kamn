@@ -106,10 +106,10 @@ test("ambiguous release reconciles through the same MCP child and idempotency ke
 	const provenance = workflow.provenance("agent_a");
 
 	assert.equal(released.state, "released");
-	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.status), ["error", "success"]);
+	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.outcome), ["error", "success"]);
 	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.tool), ["release_escrow", "release_escrow"]);
-	assert.equal(provenance.runtime_response_receipts.at(-2)?.response_digest.startsWith("sha256:"), true);
-	assert.equal(provenance.last_request_id, 4);
+	assert.equal(provenance.runtime_response_receipts.at(-2)?.digest.startsWith("sha256:"), true);
+	assert.equal(provenance.last_request_id, 5);
 	await workflow.shutdown();
 });
 
