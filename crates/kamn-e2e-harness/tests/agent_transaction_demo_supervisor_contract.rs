@@ -70,6 +70,7 @@ fn spec_c03_successful_rpc_children_run_the_canonical_phase_order() {
             "kamn-mvp-agent-a",
             "kamn-mvp-agent-b",
             "kamn-mvp-agent-a",
+            "kamn-mvp-agent-b",
             "kamn-mvp-agent-c",
         ]
     );

@@ -48,19 +48,34 @@ fn execute_with_paths(
 }
 
 fn run_phases(group: &mut RpcGroup) -> Result<(), String> {
+    let provider_did = register_provider(group)?;
+    run_mutations(group, provider_did.as_str())?;
+    run_final_evidence(group)
+}
+
+fn register_provider(group: &mut RpcGroup) -> Result<String, String> {
     let registration = group.prompt(
         1,
         "Call kamn_live_agent_b_register exactly once, then stop.",
         "kamn_live_agent_b_register",
     )?;
-    let provider_did = find_string(&registration, "did").ok_or_else(|| {
-        format!("AGENT_TRANSACTION_CHILD_FAILED: Agent B omitted DID: {registration}")
-    })?;
+    find_string(&registration, "did")
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            format!("AGENT_TRANSACTION_CHILD_FAILED: Agent B omitted DID: {registration}")
+        })
+}
+
+fn run_mutations(group: &mut RpcGroup, provider_did: &str) -> Result<(), String> {
     group.prompt(
         0,
         agent_a_create_prompt(provider_did).as_str(),
         "kamn_live_agent_a_publish_task_handoff",
     )?;
+    run_state_transitions(group)
+}
+
+fn run_state_transitions(group: &mut RpcGroup) -> Result<(), String> {
     group.prompt(
         1,
         AGENT_B_ACCEPT_PROMPT,
@@ -70,12 +85,21 @@ fn run_phases(group: &mut RpcGroup) -> Result<(), String> {
     group.prompt(
         1,
         AGENT_B_COMPLETE_PROMPT,
-        "kamn_live_agent_b_write_transaction_evidence",
+        "kamn_live_agent_b_complete_task",
     )?;
     group.prompt(
         0,
         AGENT_A_RELEASE_PROMPT,
         "kamn_live_agent_a_write_transaction_evidence",
+    )?;
+    Ok(())
+}
+
+fn run_final_evidence(group: &mut RpcGroup) -> Result<(), String> {
+    group.prompt(
+        1,
+        AGENT_B_EVIDENCE_PROMPT,
+        "kamn_live_agent_b_write_transaction_evidence",
     )?;
     group.prompt(
         2,
@@ -102,14 +126,17 @@ const AGENT_A_FUND_PROMPT: &str = "Call these tools exactly once in order: \
 kamn_live_agent_a_wait_for_task_acceptance; kamn_live_agent_a_fund_escrow. Then stop.";
 
 const AGENT_B_COMPLETE_PROMPT: &str = "Call these tools exactly once in order: \
-kamn_live_agent_b_wait_for_escrow_funding; kamn_live_agent_b_complete_task; \
-kamn_live_agent_b_query_participant_projection; \
-kamn_live_agent_b_write_transaction_evidence. Then stop.";
+kamn_live_agent_b_wait_for_escrow_funding; kamn_live_agent_b_complete_task. \
+Then stop.";
 
 const AGENT_A_RELEASE_PROMPT: &str = "Call these tools exactly once in order: \
 kamn_live_agent_a_wait_for_task_completion; kamn_live_agent_a_release_escrow; \
 kamn_live_agent_a_query_participant_projection; \
 kamn_live_agent_a_write_transaction_evidence. Then stop.";
+
+const AGENT_B_EVIDENCE_PROMPT: &str = "Call these tools exactly once in order: \
+kamn_live_agent_b_query_participant_projection; \
+kamn_live_agent_b_write_transaction_evidence. Then stop.";
 
 const AGENT_C_VERIFY_PROMPT: &str = "Call these tools exactly once in order: \
 kamn_live_agent_c_register; kamn_live_agent_c_receive_task_handoff; \
