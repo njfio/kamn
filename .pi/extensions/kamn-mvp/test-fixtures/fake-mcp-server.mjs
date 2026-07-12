@@ -7,6 +7,7 @@ const resultMode = process.env.KAMN_MVP_FAKE_MCP_RESULT_MODE ?? "success";
 const startFile = process.env.KAMN_MVP_FAKE_MCP_START_FILE;
 const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
 const agentName = argumentValue("--agent-name") ?? "agent-a";
+let releaseAttempts = 0;
 if (startFile) appendFileSync(startFile, `${process.pid}\n`);
 
 process.on("SIGTERM", () => {
@@ -21,6 +22,9 @@ createInterface({ input: process.stdin }).on("line", (line) => {
 	const request = JSON.parse(line);
 	if (mode === "error") return write(errorResponse(request));
 	if (mode === "error-on-second" && request.id === "2") return write(errorResponse(request));
+	if (mode === "ambiguous-first-release" && request.tool === "release_escrow" && releaseAttempts++ === 0) {
+		return write(ambiguousReleaseResponse(request));
+	}
 	write(successResponse(request));
 });
 
@@ -96,6 +100,15 @@ function errorResponse(request) {
 		id: request.id,
 		tool: request.tool,
 		error: { kind: "backend_error", message: "forced backend failure" },
+	};
+}
+
+function ambiguousReleaseResponse(request) {
+	return {
+		ok: false,
+		id: request.id,
+		tool: request.tool,
+		error: { kind: "backend_error", message: "SETTLEMENT_OUTCOME_AMBIGUOUS: reconciliation required" },
 	};
 }
 

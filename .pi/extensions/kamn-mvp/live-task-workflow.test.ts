@@ -95,6 +95,24 @@ test("three agents drive one completed escrow transaction through independent MC
 	await workflow.shutdown();
 });
 
+test("ambiguous release reconciles through the same MCP child and idempotency key", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_MODE: "ambiguous-first-release" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+	const agentB = await workflow.register("agent_b");
+	await workflow.createTask("Settle proof", "Reconcile one signature", String(agentB.did));
+	await workflow.fundEscrow();
+	const released = await workflow.releaseEscrow();
+	const provenance = workflow.provenance("agent_a");
+
+	assert.equal(released.state, "released");
+	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.status), ["error", "success"]);
+	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.tool), ["release_escrow", "release_escrow"]);
+	assert.equal(provenance.runtime_response_receipts.at(-2)?.response_digest.startsWith("sha256:"), true);
+	assert.equal(provenance.last_request_id, 4);
+	await workflow.shutdown();
+});
+
 test("actor evidence requires a registered identity and final runtime projection", async () => {
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
