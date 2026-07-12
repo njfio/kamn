@@ -4,6 +4,7 @@ use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
 
 mod actor_receipts;
 mod artifact;
+mod canonical_bundle_fixture;
 mod canonical_receipts;
 mod live_binding_fixture;
 #[path = "../support/live_task_evidence.rs"]
@@ -23,6 +24,14 @@ pub(crate) fn temp_root(stem: &str) -> PathBuf {
     std::env::temp_dir().join(format!("kamn-7047-{stem}-{}-{millis}", std::process::id()))
 }
 
+pub(crate) fn canonical_run_root(stem: &str, run_id: &str) -> PathBuf {
+    temp_root(stem).join(run_id)
+}
+
+pub(crate) fn write_canonical_report(root: &Path, report: String) -> PathBuf {
+    canonical_bundle_fixture::write(root, report)
+}
+
 pub(crate) fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
     VerifyMvpDemoCommandConfig {
         report: report.display().to_string(),
@@ -34,6 +43,10 @@ pub(crate) fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
 pub(crate) fn write_report(root: &Path, report: String) -> PathBuf {
     let path = root.join("proof/report.json");
     mvp_local_artifacts::write_valid_local_artifacts(root);
+    write_file(
+        &root.join("proof/report.md"),
+        "# MVP demo proof\n".to_owned(),
+    );
     write_file(path.as_path(), report);
     path
 }
