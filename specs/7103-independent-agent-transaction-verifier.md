@@ -95,26 +95,26 @@ replaced with copied report data.
 
 ## Acceptance Criteria
 
-- [ ] The canonical verifier recomputes every required artifact and receipt
+- [x] The canonical verifier recomputes every required artifact and receipt
       digest from files in the proof bundle.
-- [ ] Identity, authorization, operation order, agreement, projections, and
+- [x] Identity, authorization, operation order, agreement, projections, and
       settlement evidence are checked from authoritative artifacts.
-- [ ] Offline settlement verification validates a digest-bound authoritative
+- [x] Offline settlement verification validates a digest-bound authoritative
       Solana RPC response, recipient, amount, network, signature, finalized
       commitment, and exact payer/recipient balance movement.
-- [ ] `report.md` contains the exact signature-derived Solana Explorer devnet
+- [x] `report.md` contains the exact signature-derived Solana Explorer devnet
       transaction link.
-- [ ] Verification passes after node and agent processes have exited and after
+- [x] Verification passes after node and agent processes have exited and after
       process-local state outside the proof bundle is unavailable.
-- [ ] Tampering with signature, recipient, amount, commitment, role, operation
+- [x] Tampering with signature, recipient, amount, commitment, role, operation
       order, public projection, actor receipt, or explorer link fails with a
       stable reason code.
-- [ ] A signature copied from another escrow fails.
-- [ ] Local-only, dry-run, placeholder, ambiguous, synthetic, and missing-actor
+- [x] A signature copied from another escrow fails.
+- [x] Local-only, dry-run, placeholder, ambiguous, synthetic, and missing-actor
       evidence cannot produce agent-transaction PASS.
-- [ ] Existing report schema verification remains compatible; the stricter
+- [x] Existing report schema verification remains compatible; the stricter
       agent-transaction success contract is fail-closed.
-- [ ] Formatting, strict clippy, the verifier negative matrix, and `make check`
+- [x] Formatting, strict clippy, the verifier negative matrix, and `make check`
       pass.
 
 ## Files To Touch
@@ -162,3 +162,17 @@ cargo run -p kamn-e2e-harness -- \
 Completion evidence must include the passing negative matrix and one standalone
 verification executed after confirming the demo's node and Pi child processes
 are no longer running.
+
+## Completion Evidence
+
+- Canonical devnet run: `run-67664-1783861118291`, finalized signature
+  `aGdmjmRELAPZ8k7Fe6Gmn8Ajy781Ru8QVwYSAGaNLxoKCGmsSSZDBBi4YwbetdZ6UxhFEJgMk6y4EYsN7oGKGBi`.
+- The run moved `1000000` lamports from the configured payer to recipient and
+  retained the finalized raw Solana confirmation response in the proof bundle.
+- Standalone verification passed for both `.kamn/demo/latest/proof/report.json`
+  and the immutable run report after all KAMN and Pi processes exited.
+- The focused negative matrix passed 39 tests; `cargo fmt --check`, strict
+  workspace clippy, and `make check` passed on the final implementation.
+- The broader `make test` remains blocked by the pre-existing
+  `current_branch_head_restores_ratio_compliance` branch-history baseline, which
+  reproduces on `origin/main` and is outside this issue's verifier scope.
