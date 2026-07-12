@@ -22,20 +22,15 @@ pub(super) fn copy_runtime_actor_sources(
 }
 
 pub(super) fn validate_runtime_actor_bundle(report: &str) -> Result<(), String> {
-    let report: Value = serde_json::from_str(report).map_err(|_| invalid())?;
-    if !has_runtime_chain(&report)? {
+    let report_json: Value = serde_json::from_str(report).map_err(|_| invalid())?;
+    if !has_runtime_chain(&report_json)? {
         return Ok(());
     }
-    let paths = actor_paths(&report)?;
+    let paths = actor_paths(&report_json)?;
     let chain = super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(&paths)
         .map_err(super::independent_verifier_errors::map_actor_verification_error)?;
-    super::three_agent_transcript::require_runtime_chain_source(
-        serde_json::to_string(&report)
-            .map_err(|_| invalid())?
-            .as_str(),
-        chain.as_str(),
-    )
-    .map_err(super::independent_verifier_errors::map_actor_verification_error)
+    super::three_agent_transcript::require_runtime_chain_source(report, chain.as_str())
+        .map_err(super::independent_verifier_errors::map_actor_verification_error)
 }
 
 pub(super) fn report_entries(run_dir: &Path) -> Vec<(&'static str, String)> {
