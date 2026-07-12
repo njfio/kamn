@@ -45,6 +45,7 @@ mod three_agent_receipt_verify;
 mod three_agent_receipt_verify_support;
 mod three_agent_receipt_write;
 mod three_agent_receipts;
+mod three_agent_runtime_chain;
 mod three_agent_transcript;
 mod three_agent_transcript_build;
 mod three_agent_verify;

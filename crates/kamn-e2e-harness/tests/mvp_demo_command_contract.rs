@@ -17,7 +17,7 @@ use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
     let parsed = parse_command_args(["demo-mvp", "--output-root", "/tmp/kamn-demo"])
         .expect("demo-mvp command should parse");
-    let expected = HarnessCommand::DemoMvp(MvpDemoCommandConfig {
+    let expected = HarnessCommand::DemoMvp(Box::new(MvpDemoCommandConfig {
         output_root: "/tmp/kamn-demo".to_owned(),
         devnet_mode: "optional".to_owned(),
         solana_rpc_url: None,
@@ -27,7 +27,8 @@ fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
         service_api_websocket_command: None,
         agent_harness_evidence_path: None,
         live_task_evidence: None,
-    });
+        pi_transaction_actor_paths: None,
+    }));
     assert_eq!(parsed, expected);
 }
 
@@ -158,6 +159,7 @@ fn spec_c10_demo_consumes_runtime_actor_chain_when_configured() {
     let temp = temp_dir("mvp-demo-runtime-chain");
     let actors = ActorFixture::new();
     actors.write_all(Overrides::default());
+    actors.rebind_shared_facts();
     let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
     config.pi_transaction_actor_paths = Some(actors.paths());
 

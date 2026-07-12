@@ -11,6 +11,14 @@ const SCHEMA: &str = "kamn.mvp.runtime-receipt-chain.v1";
 #[derive(Serialize)]
 struct Chain<'a> {
     schema_version: &'static str,
+    task_id: &'a str,
+    transaction_id: &'a str,
+    escrow_id: &'a str,
+    amount_lamports: u64,
+    network: &'a str,
+    settlement_tx_signature: &'a str,
+    settlement_commitment: &'a str,
+    public_commitment: &'a str,
     steps: Vec<Step<'a>>,
     chain_digest: &'static str,
 }
@@ -47,6 +55,14 @@ pub fn build_runtime_receipt_chain_from_actor_paths(paths: &[String; 3]) -> Resu
         .collect::<Result<Vec<_>, _>>()?;
     let raw = serde_json::to_string(&Chain {
         schema_version: SCHEMA,
+        task_id: actors[0].task_id.as_str(),
+        transaction_id: actors[0].transaction_id.as_str(),
+        escrow_id: actors[0].escrow_id.as_str(),
+        amount_lamports: actors[0].amount_lamports,
+        network: actors[0].network.as_str(),
+        settlement_tx_signature: actors[0].settlement_tx_signature.as_str(),
+        settlement_commitment: actors[0].settlement_commitment.as_str(),
+        public_commitment: actors[0].public_commitment.as_str(),
         steps,
         chain_digest: "",
     })

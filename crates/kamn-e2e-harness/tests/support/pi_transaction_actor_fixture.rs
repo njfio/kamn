@@ -71,6 +71,13 @@ impl ActorFixture {
         self.write_c(overrides);
     }
 
+    #[allow(dead_code)]
+    pub(crate) fn rebind_shared_facts(&self) {
+        for path in self.paths() {
+            rebind_actor(Path::new(path.as_str()));
+        }
+    }
+
     fn write_a(&self, overrides: &Overrides) {
         let input = ActorInput::new("agent_a", 101, "kamn:did:a", "escrow-live-7099", '1')
             .with_private(sha('e'))
@@ -111,6 +118,23 @@ fn write_actor(path: &Path, input: ActorInput<'_>) {
         &unsigned[..unsigned.len() - 1]
     );
     std::fs::write(path, artifact).expect("write actor fixture");
+}
+
+#[allow(dead_code)]
+fn rebind_actor(path: &Path) {
+    let raw = std::fs::read_to_string(path).expect("actor fixture");
+    let marker = raw.rfind(",\"artifact_digest\":").expect("artifact digest");
+    let unsigned = format!("{}}}", &raw[..marker])
+        .replace("task-live-7099", "task-local-bound-7086")
+        .replace("transaction-live-7099", "task-local-bound-7086")
+        .replace("escrow-live-7099", "escrow-local-bound-7086")
+        .replace("devnet-signature-7099", "devnet-signature-111");
+    let digest = format!("sha256:{:x}", Sha256::digest(unsigned.as_bytes()));
+    let artifact = format!(
+        "{},\"artifact_digest\":\"{digest}\"}}",
+        &unsigned[..unsigned.len() - 1]
+    );
+    std::fs::write(path, artifact).expect("rebind actor fixture");
 }
 
 fn actor_json(input: &ActorInput<'_>) -> String {

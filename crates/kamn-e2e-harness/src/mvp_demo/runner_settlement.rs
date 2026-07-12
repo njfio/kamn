@@ -24,7 +24,7 @@ pub(super) fn create_bound_settlement(
     let binding = create_binding(config, run_dir)?;
     let settlement = create_settlement(config, run_dir, binding.as_ref())?;
     let artifact_digests =
-        create_three_agent_artifacts(run_id, &settlement, binding.as_ref(), run_dir)?;
+        create_three_agent_artifacts(config, run_id, &settlement, binding.as_ref(), run_dir)?;
     Ok(BoundSettlement {
         binding,
         settlement,
@@ -61,6 +61,7 @@ fn create_settlement(
 }
 
 fn create_three_agent_artifacts(
+    config: &MvpDemoCommandConfig,
     run_id: &str,
     settlement: &DevnetSettlementAttempt,
     binding: Option<&LiveTaskBinding>,
@@ -71,7 +72,14 @@ fn create_three_agent_artifacts(
     };
     let views = write_three_agent_views(run_id, evidence, binding, run_dir)?;
     let receipts = write_three_agent_receipts(run_id, evidence, binding, run_dir, &views)?;
-    let transcript = write_three_agent_transcript(run_id, evidence, binding, run_dir, &views)?;
+    let transcript = write_three_agent_transcript(
+        run_id,
+        evidence,
+        binding,
+        run_dir,
+        &views,
+        config.pi_transaction_actor_paths.as_ref(),
+    )?;
     Ok(Some(ThreeAgentArtifactDigests {
         transcript,
         views,

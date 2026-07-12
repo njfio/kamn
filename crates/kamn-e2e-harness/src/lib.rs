@@ -247,7 +247,7 @@ pub enum HarnessCommand {
     /// Verify an evidence bundle.
     Verify(VerifyCommandConfig),
     /// Generate the MVP evaluator demo proof report.
-    DemoMvp(MvpDemoCommandConfig),
+    DemoMvp(Box<MvpDemoCommandConfig>),
     /// Verify an MVP evaluator demo proof report.
     VerifyMvpDemo(VerifyMvpDemoCommandConfig),
 }
@@ -445,7 +445,7 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
         }
         return Err(format!("unknown demo-mvp flag: {}", args[index]));
     }
-    Ok(HarnessCommand::DemoMvp(MvpDemoCommandConfig {
+    Ok(HarnessCommand::DemoMvp(Box::new(MvpDemoCommandConfig {
         output_root: output_root
             .unwrap_or_else(|| mvp_demo::DEFAULT_MVP_DEMO_OUTPUT_ROOT.to_owned()),
         devnet_mode: mvp_devnet_mode_from_env(),
@@ -457,7 +457,16 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
         agent_harness_evidence_path: agent_harness_evidence_path
             .or_else(mvp_agent_harness_evidence_path_from_env),
         live_task_evidence: mvp_live_task_evidence_from_env()?,
-    }))
+        pi_transaction_actor_paths: mvp_pi_transaction_actor_paths_from_env()?,
+    })))
+}
+
+fn mvp_pi_transaction_actor_paths_from_env() -> Result<Option<[String; 3]>, String> {
+    complete_pi_actor_paths([
+        std::env::var("KAMN_MVP_PI_TRANSACTION_AGENT_A_FILE").ok(),
+        std::env::var("KAMN_MVP_PI_TRANSACTION_AGENT_B_FILE").ok(),
+        std::env::var("KAMN_MVP_PI_TRANSACTION_AGENT_C_FILE").ok(),
+    ])
 }
 
 fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, String> {
