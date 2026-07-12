@@ -1,5 +1,6 @@
 use crate::support::{
     f64_field, output_json, read_report, run_checker, status, u64_field, MAX_GOVERNANCE_RATIO,
+    WINDOW_SIZE,
 };
 use serde_json::Value;
 
@@ -17,7 +18,8 @@ fn current_branch_head_restores_ratio_compliance() {
     );
     assert_eq!(status(&report), "ok");
     assert_report_invariants(&report);
-    assert_eq!(u64_field(&report, "non_merge_commit_total"), 50);
+    let window = WINDOW_SIZE.parse::<u64>().expect("valid window size");
+    assert_eq!(u64_field(&report, "non_merge_commit_total"), window);
 }
 
 fn assert_report_invariants(report: &Value) {
