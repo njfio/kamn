@@ -15,8 +15,8 @@ pub(crate) fn three_agent_escrow_claim_json(
     receipt_paths: [&str; 3],
     artifact_digests: &ThreeAgentArtifactDigests,
 ) -> String {
-    let transaction_id = binding.task_id.as_str();
-    let terms_digest = binding.digest.as_str();
+    let transaction_id = binding.transaction_id.as_str();
+    let terms_digest = binding.terms_digest.as_str();
     let escrow_id = evidence.escrow_id.as_str();
     format!(
         "{{{},{},{},{},{},{},{},{},{},{}}}",

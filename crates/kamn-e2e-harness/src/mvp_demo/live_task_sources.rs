@@ -20,6 +20,8 @@ impl Sources {
 
 pub(crate) struct ValidatedSources {
     pub(crate) task_id: String,
+    pub(crate) transaction_id: Option<String>,
+    pub(crate) terms_digest: Option<String>,
     pub(crate) agent_a_pid: u64,
     pub(crate) agent_b_pid: u64,
     pub(crate) agent_c_pid: u64,
@@ -94,8 +96,12 @@ fn validate_handoff_v2(raw: &str) -> Result<(), String> {
 }
 
 fn source_fields(sources: &Sources, task_id: String) -> Result<ValidatedSources, String> {
+    let version_two =
+        extract_string(&sources.handoff, "schema_version")? == "kamn.mvp.live-task-handoff.v2";
     Ok(ValidatedSources {
         task_id,
+        transaction_id: optional_v2_field(&sources.handoff, "transaction_id", version_two)?,
+        terms_digest: optional_v2_field(&sources.handoff, "terms_digest", version_two)?,
         agent_a_pid: receipt_pid(&sources.agent_a, "agent_a")?,
         agent_b_pid: receipt_pid(&sources.agent_b, "agent_b")?,
         agent_c_pid: extract_u64(&sources.agent_c, "agent_c_pi_process_id")?,
@@ -105,6 +111,10 @@ fn source_fields(sources: &Sources, task_id: String) -> Result<ValidatedSources,
         agent_c_digest: artifact_digest(&sources.agent_c)?,
         public_commitment: extract_string(&sources.agent_c, "public_commitment")?,
     })
+}
+
+fn optional_v2_field(raw: &str, field: &str, version_two: bool) -> Result<Option<String>, String> {
+    version_two.then(|| extract_string(raw, field)).transpose()
 }
 
 fn validate_source_agreement(sources: &Sources, found: &ValidatedSources) -> Result<(), String> {

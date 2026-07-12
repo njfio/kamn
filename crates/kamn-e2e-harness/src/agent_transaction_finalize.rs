@@ -1,3 +1,4 @@
+use super::agent_transaction_devnet_evidence::collect_actor_settlement_evidence;
 use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
 use super::{
     build_runtime_receipt_chain_from_actor_paths, execute_mvp_demo_contract,
@@ -10,7 +11,13 @@ pub(super) fn finalize(
     paths: &AgentTransactionEvidencePaths,
 ) -> Result<String, String> {
     build_runtime_receipt_chain_from_actor_paths(&paths.actors)?;
-    let report = execute_mvp_demo_contract(&demo_config(config, paths))?;
+    let mut demo = demo_config(config, paths);
+    if demo.devnet_settlement_command.is_none() {
+        let evidence = collect_actor_settlement_evidence(config, paths)?;
+        demo.devnet_settlement_command =
+            Some(vec!["cat".to_owned(), evidence.display().to_string()]);
+    }
+    let report = execute_mvp_demo_contract(&demo)?;
     execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
         report: format!("{}/latest/proof/report.json", config.output_root),
         agent_harness_evidence_path: None,

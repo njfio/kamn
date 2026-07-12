@@ -119,7 +119,7 @@ fn verifier_view_json(
 fn shared_view_fields(evidence: &DevnetSettlementEvidence, binding: &LiveTaskBinding) -> String {
     format!(
         "\"transaction_id\":\"{}\",\"escrow_id\":\"{}\",\"task_binding_digest\":\"{}\",\"settlement_tx_signature\":\"{}\",\"amount_lamports\":{},\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"settlement_commitment\":\"{}\"",
-        escape_json(binding.task_id.as_str()),
+        escape_json(binding.transaction_id.as_str()),
         escape_json(evidence.escrow_id.as_str()),
         escape_json(binding.digest.as_str()),
         escape_json(evidence.settlement_tx_signature.as_str()),

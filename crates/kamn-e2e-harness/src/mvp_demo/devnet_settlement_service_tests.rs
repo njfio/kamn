@@ -7,6 +7,8 @@ fn funded_rehearsal_payload_carries_canonical_task_agreement() {
         artifact_path: "binding.json".to_owned(),
         digest: "a".repeat(64),
         task_id: "task-external".to_owned(),
+        transaction_id: "task-external".to_owned(),
+        terms_digest: "a".repeat(64),
         agent_a_pid: 1,
         agent_b_pid: 2,
         agent_c_pid: 3,
