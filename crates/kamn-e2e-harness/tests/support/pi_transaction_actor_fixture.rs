@@ -217,14 +217,46 @@ fn runtime_receipts(input: &ActorInput<'_>) -> String {
         .enumerate()
         .map(|(index, tool)| {
             format!(
-                r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}"}}"#,
+                r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}","public_result":{}}}"#,
                 index + 1,
                 tool,
-                response_digests(input)[index]
+                response_digests(input)[index],
+                public_result_json(input.role, tool),
             )
         })
         .collect::<Vec<_>>()
         .join(",")
+}
+
+fn public_result_json(role: &str, tool: &str) -> String {
+    match tool {
+        "register" => format!(r#"{{"did":"kamn:did:{}"}}"#, role_suffix(role)),
+        "create_task" => task_result("submitted"),
+        "accept_task" => task_result("accepted"),
+        "complete_task" => task_result("completed"),
+        "fund_escrow" => r#"{"task_id":"task-live-7099","escrow_id":"escrow-live-7099","state":"funded","amount_lamports":1000000,"network":"solana-devnet"}"#.to_owned(),
+        "release_escrow" => r#"{"escrow_id":"escrow-live-7099","state":"released","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized"}"#.to_owned(),
+        "query_participant_task_projection" => projection_result(role, "participant-private"),
+        "query_verifier_task_projection" => projection_result(role, "restricted-public"),
+        _ => r#"{"task_id":"task-live-7099","state":"accepted"}"#.to_owned(),
+    }
+}
+
+fn task_result(state: &str) -> String {
+    format!(r#"{{"task_id":"task-live-7099","state":"{state}","transaction_id":"transaction-live-7099"}}"#)
+}
+
+fn projection_result(role: &str, scope: &str) -> String {
+    let participant = match role {
+        "agent_a" => r#", "participant_role":"creator""#,
+        "agent_b" => r#", "participant_role":"provider""#,
+        _ => "",
+    };
+    format!(r#"{{"task_id":"task-live-7099","escrow_id":"escrow-live-7099","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized","public_commitment":"{}","view_scope":"{scope}"{participant}}}"#, sha('d'))
+}
+
+fn role_suffix(role: &str) -> char {
+    match role { "agent_a" => 'a', "agent_b" => 'b', _ => 'c' }
 }
 
 fn response_digests(input: &ActorInput<'_>) -> [String; 5] {
