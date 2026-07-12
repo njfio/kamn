@@ -88,6 +88,10 @@ fn validate_runtime_receipts(actor: &Actor) -> Result<(), String> {
         }
     }
     require_operations(actor)?;
+    validate_projection_receipt(actor)
+}
+
+fn validate_projection_receipt(actor: &Actor) -> Result<(), String> {
     let projection_tool = if actor.actor == "agent_c" {
         "query_verifier_task_projection"
     } else {
@@ -128,14 +132,22 @@ fn has_success(actor: &Actor, tool: &str, digest: Option<&str>) -> bool {
 
 fn validate_scope(actor: &Actor) -> Result<(), String> {
     if actor.actor == "agent_c" {
-        if actor.view_scope != "restricted-public" {
-            return Err("PI_VERIFIER_PROJECTION_MISSING".to_owned());
-        }
-        if actor.private_receipt_digest.is_some() || actor.participant_role.is_some() {
-            return Err("PI_VERIFIER_PRIVATE_LEAK".to_owned());
-        }
-        return Ok(());
+        return validate_verifier_scope(actor);
     }
+    validate_participant_scope(actor)
+}
+
+fn validate_verifier_scope(actor: &Actor) -> Result<(), String> {
+    if actor.view_scope != "restricted-public" {
+        return Err("PI_VERIFIER_PROJECTION_MISSING".to_owned());
+    }
+    if actor.private_receipt_digest.is_some() || actor.participant_role.is_some() {
+        return Err("PI_VERIFIER_PRIVATE_LEAK".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_participant_scope(actor: &Actor) -> Result<(), String> {
     let expected_role = if actor.actor == "agent_a" {
         "creator"
     } else {
