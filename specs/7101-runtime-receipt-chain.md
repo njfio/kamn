@@ -92,21 +92,34 @@ from a configured runtime chain to generated transcript strings.
 
 ## Acceptance Criteria
 
-- [ ] Every required chain step references one exact actor runtime receipt and digest.
-- [ ] Every successful chain receipt exposes only strict typed public fields
+- [x] Every required chain step references one exact actor runtime receipt and digest.
+- [x] Every successful chain receipt exposes only strict typed public fields
       needed to prove state and shared facts.
-- [ ] Missing, reordered, duplicated, skipped, or cross-transaction receipts fail closed.
-- [ ] Business-state order covers registration, create, accept, fund, complete,
+- [x] Missing, reordered, duplicated, skipped, or cross-transaction receipts fail closed.
+- [x] Business-state order covers registration, create, accept, fund, complete,
       release/finalization, participant projections, and restricted verification.
-- [ ] Before/after state and all shared facts remain consistent across the chain.
-- [ ] Failed/ambiguous responses remain provenance but cannot satisfy success.
-- [ ] Handoff artifacts and generated step labels cannot satisfy chain steps.
-- [ ] Agent C is sourced from the final restricted server projection and exposes
+- [x] Before/after state and all shared facts remain consistent across the chain.
+- [x] Failed/ambiguous responses remain provenance but cannot satisfy success.
+- [x] Handoff artifacts and generated step labels cannot satisfy chain steps.
+- [x] Agent C is sourced from the final restricted server projection and exposes
       no participant-private field or digest.
-- [ ] Canonical report generation consumes the verified runtime chain.
-- [ ] Legacy v1 generated transcripts cannot satisfy the runtime-chain claim.
-- [ ] Positive/negative contracts, integration wiring, formatting, strict
+- [x] Canonical report generation consumes the verified runtime chain.
+- [x] Legacy v1 generated transcripts cannot satisfy the runtime-chain claim.
+- [x] Positive/negative contracts, integration wiring, formatting, strict
       clippy, and `make check` pass.
+
+## Delivered Compatibility Boundary
+
+`demo-mvp` consumes the existing all-or-none
+`KAMN_MVP_PI_TRANSACTION_AGENT_{A,B,C}_FILE` environment contract. When those
+paths are configured, the canonical `three-agent-transcript.json` artifact is
+the runtime receipt chain and generation has no narrative fallback. The
+verifier rebuilds that chain from the supplied actor artifacts and requires an
+exact artifact match.
+
+Legacy generated transcript v1 remains readable only when no runtime actor set
+is asserted. It cannot satisfy verification with configured actor evidence.
+One-command production of fresh actor artifacts remains scoped to #7102.
 
 ## Files To Touch
 
