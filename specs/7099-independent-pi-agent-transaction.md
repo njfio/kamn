@@ -127,37 +127,37 @@ written idempotently and conflicting replay is rejected.
 
 ## Acceptance Criteria
 
-- [ ] Three positive, distinct Pi process IDs are recorded.
-- [ ] Three distinct registered DIDs are bound to three external key files.
-- [ ] Three independent monotonic MCP request streams are recorded.
-- [ ] A failed settlement attempt followed by same-key reconciliation retains
+- [x] Three positive, distinct Pi process IDs are recorded.
+- [x] Three distinct registered DIDs are bound to three external key files.
+- [x] Three independent monotonic MCP request streams are recorded.
+- [x] A failed settlement attempt followed by same-key reconciliation retains
       a continuous request/digest stream without converting the failure into
       successful operation evidence.
-- [ ] One release invocation performs bounded same-child reconciliation after
+- [x] One release invocation performs bounded same-child reconciliation after
       `SETTLEMENT_OUTCOME_AMBIGUOUS` and fails closed if confirmation is absent.
-- [ ] Final projection operations retain the same MCP child while waiting for
+- [x] Final projection operations retain the same MCP child while waiting for
       complete finalized settlement fields and fail closed on exhaustion.
-- [ ] Agent B proves escrow funding from its authenticated runtime projection
+- [x] Agent B proves escrow funding from its authenticated runtime projection
       before completing the task, preventing acceptance/completion races.
-- [ ] Agent A proves completed task state through its authenticated MCP session
+- [x] Agent A proves completed task state through its authenticated MCP session
       before invoking escrow release.
-- [ ] Typed anti-spam rate-limit and suspension responses are retained in
+- [x] Typed anti-spam rate-limit and suspension responses are retained in
       provenance and retried only after bounded server-respecting backoff.
-- [ ] Agent A performs create, release, and participant-view operations.
-- [ ] Agent B performs accept, completion, and participant-view operations.
-- [ ] Create, accept, complete, fund, and release payloads are derived from one
+- [x] Agent A performs create, release, and participant-view operations.
+- [x] Agent B performs accept, completion, and participant-view operations.
+- [x] Create, accept, complete, fund, and release payloads are derived from one
       canonical agreement and use distinct idempotency keys.
-- [ ] Agent C performs verifier registration, restricted-view query, and public
+- [x] Agent C performs verifier registration, restricted-view query, and public
       verification without participant-private fields.
-- [ ] One task, escrow, amount, network, settlement signature, and public
+- [x] One task, escrow, amount, network, settlement signature, and public
       commitment match across all actor evidence.
-- [ ] Every claimed actor operation references a matching runtime response
+- [x] Every claimed actor operation references a matching runtime response
       digest.
-- [ ] Coordination artifacts are identifier-only and cannot satisfy runtime
+- [x] Coordination artifacts are identifier-only and cannot satisfy runtime
       receipt or authorization checks.
-- [ ] Required-mode funded rehearsal produces finalized devnet evidence or an
+- [x] Required-mode funded rehearsal produces finalized devnet evidence or an
       explicit `NO-GO` without a success claim.
-- [ ] Canonical verification rejects each identity, nonce, receipt, privacy,
+- [x] Canonical verification rejects each identity, nonce, receipt, privacy,
       and shared-fact failure mode.
 
 ## Files To Touch
@@ -236,6 +236,21 @@ INTEGRATION:
 - Verify the resulting canonical report and Pi evidence after all processes
   exit.
 - Run formatting, strict clippy, package suites, and `make check` before PR.
+
+## Completion Evidence
+
+- Three distinct Pi processes wrote strict actor artifacts for task
+  `task-local-50e8ee869c945044` and escrow
+  `escrow-local-37f7e78fc2c4d4e3`.
+- Pi verification returned `Independent Pi transaction actors verified`.
+- The Rust typed verifier returned the same task, escrow, and settlement
+  signature `3gRmLg9WowUjVmQv2Jq9Vemx7ZessnztWk9Q6bPPLvVTAQxfZgW5XUczMCbHwGZRCozJ2yd9FNdaJKK7t2Fktb1L`.
+- Solana devnet reported that signature `finalized` with no transaction error.
+- Durable KAMN state recorded task `completed`, escrow `released`, and settlement
+  intent `confirmed`.
+- `node --test .pi/extensions/kamn-mvp/*.test.ts` passed 48 contracts.
+- Focused Rust evaluator and MCP contracts passed; `cargo fmt --check`, strict
+  clippy, and `make check` passed locally.
 
 ## Rollback
 
