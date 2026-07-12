@@ -15,11 +15,37 @@ pub(super) fn precheck_required_operations(paths: &[String; 3]) -> Result<(), St
         let Some(receipts) = actor["runtime_response_receipts"].as_array() else {
             continue;
         };
-        for action in REQUIRED[index].iter().filter(|action| !action.is_empty()) {
+        let actions = REQUIRED[index]
+            .iter()
+            .filter(|action| !action.is_empty())
+            .copied()
+            .collect::<Vec<_>>();
+        for action in &actions {
             classify_action(receipts, action)?;
         }
+        precheck_action_order(receipts, actions.as_slice())?;
     }
     Ok(())
+}
+
+fn precheck_action_order(receipts: &[Value], actions: &[&str]) -> Result<(), String> {
+    let positions = actions
+        .iter()
+        .map(|action| success_position(receipts, action))
+        .collect::<Option<Vec<_>>>();
+    let Some(positions) = positions else {
+        return Ok(());
+    };
+    if positions.windows(2).all(|pair| pair[0] < pair[1]) {
+        return Ok(());
+    }
+    Err("RUNTIME_RECEIPT_CHAIN_ORDER_INVALID".to_owned())
+}
+
+fn success_position(receipts: &[Value], action: &str) -> Option<usize> {
+    receipts
+        .iter()
+        .position(|receipt| receipt["tool"] == action && receipt["outcome"] == "success")
 }
 
 fn read_actor_json(path: &str) -> Result<Option<Value>, String> {

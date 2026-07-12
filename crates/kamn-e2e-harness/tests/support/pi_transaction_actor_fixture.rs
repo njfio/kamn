@@ -83,6 +83,7 @@ impl ActorFixture {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn reorder_agent_a_mutations(&self) {
         reorder_actor_mutations(&self.root.join("agent-a.json"));
     }

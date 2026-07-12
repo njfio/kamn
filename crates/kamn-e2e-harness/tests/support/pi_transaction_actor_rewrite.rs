@@ -14,6 +14,7 @@ pub(super) fn rebind_actor(path: &Path) {
     );
 }
 
+#[allow(dead_code)]
 pub(super) fn reorder_actor_mutations(path: &Path) {
     rewrite_actor(
         path,
