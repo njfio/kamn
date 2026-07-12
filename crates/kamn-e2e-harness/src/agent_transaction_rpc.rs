@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 
+use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
 use super::agent_transaction_process::{start_process, take_pipes, wait_or_kill};
 use super::{build_pi_actor_command, AgentTransactionDemoConfig, AgentTransactionRole};
 
@@ -25,14 +26,17 @@ pub(super) struct RpcGroup {
 }
 
 impl RpcGroup {
-    pub(super) fn spawn(config: &AgentTransactionDemoConfig) -> Result<Self, String> {
+    pub(super) fn spawn(
+        config: &AgentTransactionDemoConfig,
+        paths: &AgentTransactionEvidencePaths,
+    ) -> Result<Self, String> {
         let mut children = Vec::with_capacity(3);
         for role in [
             AgentTransactionRole::AgentA,
             AgentTransactionRole::AgentB,
             AgentTransactionRole::AgentC,
         ] {
-            match spawn_child(config, role) {
+            match spawn_child(config, paths, role) {
                 Ok(child) => children.push(child),
                 Err(error) => {
                     cleanup_children(children.as_mut_slice(), config.rpc_timeout_ms);
@@ -68,10 +72,11 @@ impl Drop for RpcGroup {
 
 fn spawn_child(
     config: &AgentTransactionDemoConfig,
+    paths: &AgentTransactionEvidencePaths,
     role: AgentTransactionRole,
 ) -> Result<RpcChild, String> {
     let command = build_pi_actor_command(config, role);
-    let mut child = start_process(command.as_slice())?;
+    let mut child = start_process(command.as_slice(), paths.environment().as_slice())?;
     let (stdin, stdout) = take_pipes(&mut child)?;
     let (events, reader) = spawn_reader(stdout);
     Ok(RpcChild {

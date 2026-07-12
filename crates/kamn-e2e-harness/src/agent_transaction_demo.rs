@@ -33,6 +33,16 @@ pub struct AgentTransactionDemoConfig {
     pub output_root: String,
     /// Maximum wait for one Pi RPC phase.
     pub rpc_timeout_ms: u64,
+    /// Non-proof staging root for coordination and actor artifacts.
+    pub staging_root: String,
+    /// Optional devnet settlement command override at the external test boundary.
+    pub devnet_settlement_command: Option<Vec<String>>,
+    /// Optional localhost proof command override at the external test boundary.
+    pub localhost_signed_demo_command: Option<Vec<String>>,
+    /// Optional service API proof command override at the external test boundary.
+    pub service_api_vertical_slice_command: Option<Vec<String>>,
+    /// Optional websocket proof command override at the external test boundary.
+    pub service_api_websocket_command: Option<Vec<String>>,
 }
 
 /// Parses and validates canonical demo configuration without performing work.
@@ -65,6 +75,11 @@ pub fn parse_agent_transaction_demo_config(
             "KAMN_MVP_AGENT_TRANSACTION_RPC_TIMEOUT_MS",
             180_000,
         )?,
+        staging_root: staging_root(env),
+        devnet_settlement_command: None,
+        localhost_signed_demo_command: None,
+        service_api_vertical_slice_command: None,
+        service_api_websocket_command: None,
     };
     validate_config(&config)?;
     Ok(config)
@@ -107,6 +122,19 @@ fn optional(env: &BTreeMap<String, String>, name: &str, default: &str) -> String
         .filter(|value| !value.is_empty())
         .unwrap_or(default)
         .to_owned()
+}
+
+fn staging_root(env: &BTreeMap<String, String>) -> String {
+    env.get("KAMN_MVP_AGENT_TRANSACTION_STAGING_ROOT")
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| {
+            std::env::temp_dir()
+                .join(format!("kamn-agent-transaction-{}", std::process::id()))
+                .display()
+                .to_string()
+        })
 }
 
 fn positive_u64(env: &BTreeMap<String, String>, name: &str) -> Result<u64, String> {

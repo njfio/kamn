@@ -2,6 +2,8 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
+use super::agent_transaction_finalize::finalize;
 use super::agent_transaction_rpc::RpcGroup;
 use super::AgentTransactionDemoConfig;
 
@@ -10,17 +12,21 @@ const PROOF_ERROR: &str = "AGENT_TRANSACTION_PROOF_INVALID";
 pub(super) fn run_supervised_registration(
     config: &AgentTransactionDemoConfig,
 ) -> Result<String, String> {
-    let mut group = match RpcGroup::spawn(config) {
+    let paths = match AgentTransactionEvidencePaths::prepare(config) {
+        Ok(paths) => paths,
+        Err(error) => return fail_no_go(config, error.as_str()),
+    };
+    let mut group = match RpcGroup::spawn(config, &paths) {
         Ok(group) => group,
         Err(error) => return fail_no_go(config, error.as_str()),
     };
     let result = run_phases(&mut group);
     group.cleanup();
     match result {
-        Ok(()) => fail_no_go(
-            config,
-            format!("{PROOF_ERROR}: actor evidence is missing").as_str(),
-        ),
+        Ok(()) => match finalize(config, &paths) {
+            Ok(output) => Ok(output),
+            Err(error) => fail_no_go(config, format!("{PROOF_ERROR}: {error}").as_str()),
+        },
         Err(error) => fail_no_go(config, error.as_str()),
     }
 }

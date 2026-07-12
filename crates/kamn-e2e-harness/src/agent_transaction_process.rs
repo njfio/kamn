@@ -4,13 +4,17 @@ use std::time::{Duration, Instant};
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 
-pub(super) fn start_process(command: &[String]) -> Result<Child, String> {
+pub(super) fn start_process(
+    command: &[String],
+    environment: &[(&'static str, String)],
+) -> Result<Child, String> {
     let mut process = Command::new(&command[0]);
     process
         .args(&command[1..])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+        .stderr(Stdio::null())
+        .envs(environment.iter().cloned());
     #[cfg(unix)]
     process.process_group(0);
     process

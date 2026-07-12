@@ -87,6 +87,7 @@ const AGENT_C_TOOLS: &[&str] = &[
     "kamn_live_agent_c_register",
     "kamn_live_agent_c_receive_task_handoff",
     "kamn_live_agent_c_query_verifier_projection",
+    "kamn_live_agent_c_verify_restricted_task_observation",
     "kamn_live_agent_c_write_transaction_evidence",
     "kamn_live_verify_pi_transaction_actors",
 ];
