@@ -47,6 +47,12 @@ monotonic request IDs beginning at one. The role receipt records the Pi process
 ID, registered DID, first and last MCP request IDs, and digests of every runtime
 response used for its claim.
 
+The MCP child environment is deny-by-default. Endpoint, agent name, and key file
+are passed as explicit process arguments; unrelated `KAMN_*` variables,
+including signer secrets and settlement keypair configuration, are never
+inherited by role children. Only ordinary process essentials and named
+test-fixture controls may cross this boundary.
+
 Agent A registers, creates a task, obtains the bound escrow, waits for Agent B
 completion, authorizes the bounded release, and queries its participant view.
 Agent B registers, accepts the handed-off task through its own authenticated
@@ -77,6 +83,8 @@ participant receipt fields; Agent C has none.
   `PI_ACTOR_NONCE_STREAM_INVALID`; error responses are integrity-digested but
   never counted as successful operation receipts.
 - Missing or mismatched runtime response digest: `PI_RUNTIME_RECEIPT_MISMATCH`.
+- Malformed, duplicate-key, type-confused, or unknown actor artifact field:
+  `PI_RUNTIME_RECEIPT_MISMATCH`.
 - Shared task, escrow, amount, network, signature, or commitment mismatch:
   `PI_TRANSACTION_FACT_MISMATCH`.
 - Agent C participant field or digest exposure: `PI_VERIFIER_PRIVATE_LEAK`.
@@ -148,6 +156,12 @@ RED:
   signed server verifier response.
 - Accept copied or cross-transaction escrow/settlement facts.
 - Accept participant-private markers in Agent C output.
+- Forward unrelated signer, service-auth, settlement, or OAuth configuration to
+  a spawned MCP role child.
+- Accept malformed JSON types, duplicate keys, or unknown fields in an actor
+  artifact.
+- Accept a claimed successful actor operation without an exact request ID and
+  runtime response digest mapping.
 
 GREEN:
 
@@ -161,6 +175,11 @@ GREEN:
 - Digest every exact handled runtime response for continuous request
   provenance, while returning only successful result bodies to operation
   evidence and callers.
+- Map each successful role operation to its exact request ID and response digest;
+  handled failures remain only in the contiguous provenance stream.
+- Decode actor artifacts with strict typed JSON semantics before verification.
+- Construct the MCP child environment from an explicit allowlist that excludes
+  all secret-bearing KAMN and provider configuration.
 - Extend canonical evidence verification with identity, nonce, receipt,
   privacy, and shared-fact checks.
 
