@@ -51,6 +51,17 @@ fn spec_c10_duplicate_agent_identity_fails_with_public_identity_code() {
 }
 
 #[test]
+fn spec_c24_duplicate_agent_process_fails_with_public_identity_code() {
+    let fixture = Fixture::new("process-reuse");
+    fixture.rewrite(Overrides {
+        agent_c_pid: 101,
+        ..Overrides::default()
+    });
+
+    fixture.assert_error("AGENT_IDENTITY_INVALID");
+}
+
+#[test]
 fn spec_c16_report_indexes_all_runtime_actor_sources() {
     let fixture = Fixture::new("actor-source-index");
     let report = std::fs::read_to_string(fixture.report_path()).expect("report");
@@ -70,7 +81,7 @@ fn spec_c17_standalone_verifier_rejects_missing_runtime_actor_source() {
     let path = fixture.run_proof().join("runtime-agent-a-evidence.json");
     std::fs::remove_file(path).expect("remove actor source");
 
-    fixture.assert_standalone_error("RECEIPT_CHAIN_INVALID");
+    fixture.assert_standalone_error("PROOF_ARTIFACT_MISSING");
 }
 
 #[test]

@@ -48,6 +48,40 @@ fn spec_c15_balance_movement_drift_fails_after_digest_refresh() {
     });
 }
 
+#[test]
+fn spec_c19_payer_drift_fails_after_digest_refresh() {
+    assert_mutation_fails("payer-drift", |evidence| {
+        evidence["payer_pubkey"] =
+            Value::String("ForeignPayer1111111111111111111111111111111".to_owned());
+    });
+}
+
+#[test]
+fn spec_c20_task_binding_drift_fails_after_digest_refresh() {
+    assert_mutation_fails("task-binding-drift", |evidence| {
+        evidence["task_binding_digest"] = Value::String(format!("sha256:{}", "f".repeat(64)));
+    });
+}
+
+#[test]
+fn spec_c25_report_indexes_raw_authoritative_solana_response() {
+    let fixture = Fixture::new("raw-rpc-index");
+    let report = std::fs::read_to_string(fixture.report_path()).expect("report");
+
+    assert!(report.contains(r#""solana_confirmation_response":"#));
+}
+
+#[test]
+fn spec_c26_raw_solana_response_tamper_fails_closed() {
+    let fixture = Fixture::new("raw-rpc-tamper");
+    let path = fixture.raw_solana_response();
+    let raw = std::fs::read_to_string(&path).expect("raw Solana response");
+    std::fs::write(path, raw.replace("finalized", "confirmed")).expect("tampered Solana response");
+
+    let error = fixture.verify().expect_err("raw RPC tamper must fail");
+    assert_eq!(error, "SETTLEMENT_EVIDENCE_INVALID");
+}
+
 fn assert_mutation_fails(stem: &str, mutate: impl FnOnce(&mut Value)) {
     let fixture = Fixture::new(stem);
     fixture.mutate_evidence(mutate);
@@ -78,6 +112,14 @@ impl Fixture {
         let unsigned = serde_json::to_string(&value).expect("mutated evidence JSON");
         let refreshed = artifact_digest::with_digest(unsigned, "evidence_digest");
         std::fs::write(&self.evidence, refreshed).expect("mutated settlement evidence");
+    }
+
+    fn report_path(&self) -> PathBuf {
+        self.root.join("latest/proof/report.json")
+    }
+
+    fn raw_solana_response(&self) -> PathBuf {
+        only_run_dir(&self.root).join("proof/solana-confirmation-response.json")
     }
 
     fn verify(&self) -> Result<String, String> {
