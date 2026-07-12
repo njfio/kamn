@@ -10,6 +10,7 @@ pub(crate) struct ActorInput<'a> {
     pub(crate) include_release: bool,
     pub(crate) duplicate_fund: bool,
     pub(crate) release_error: bool,
+    pub(crate) receipt_digest_mismatch: bool,
 }
 
 impl<'a> ActorInput<'a> {
@@ -32,6 +33,7 @@ impl<'a> ActorInput<'a> {
             include_release: true,
             duplicate_fund: false,
             release_error: false,
+            receipt_digest_mismatch: false,
         }
     }
 
@@ -62,6 +64,11 @@ impl<'a> ActorInput<'a> {
 
     pub(crate) fn with_release_error(mut self, value: bool) -> Self {
         self.release_error = value;
+        self
+    }
+
+    pub(crate) fn with_receipt_digest_mismatch(mut self, value: bool) -> Self {
+        self.receipt_digest_mismatch = value;
         self
     }
 }
@@ -115,11 +122,16 @@ fn receipt_json(input: &ActorInput<'_>, index: usize, tool: &str) -> String {
     } else {
         public_result_json(input.role, tool)
     };
+    let digest = if input.receipt_digest_mismatch && tool == "release_escrow" {
+        sha('f')
+    } else {
+        response_digests(input)[index].clone()
+    };
     format!(
         r#"{{"request_id":{},"tool":"{}","outcome":"{outcome}","digest":"{}","public_result":{public_result}}}"#,
         index + 1,
         tool,
-        response_digests(input)[index],
+        digest,
     )
 }
 

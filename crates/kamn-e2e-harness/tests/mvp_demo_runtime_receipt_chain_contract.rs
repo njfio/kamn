@@ -76,6 +76,17 @@ fn spec_c06_failed_release_cannot_satisfy_success_step() {
     assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_OUTCOME_INVALID");
 }
 
+#[test]
+fn spec_c07_receipt_digest_drift_fails_closed() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides {
+        agent_a_receipt_digest_mismatch: true,
+        ..Overrides::default()
+    });
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_DIGEST_MISMATCH");
+}
+
 fn assert_chain_error(fixture: &ActorFixture, code: &str) {
     let error = build_runtime_receipt_chain_from_actor_paths(&fixture.paths())
         .expect_err("tampered runtime evidence must fail");

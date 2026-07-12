@@ -21,6 +21,7 @@ pub(crate) struct Overrides {
     pub(crate) agent_a_include_release: bool,
     pub(crate) agent_a_duplicate_fund: bool,
     pub(crate) agent_a_release_error: bool,
+    pub(crate) agent_a_receipt_digest_mismatch: bool,
 }
 
 impl Default for Overrides {
@@ -36,6 +37,7 @@ impl Default for Overrides {
             agent_a_include_release: true,
             agent_a_duplicate_fund: false,
             agent_a_release_error: false,
+            agent_a_receipt_digest_mismatch: false,
         }
     }
 }
@@ -76,7 +78,8 @@ impl ActorFixture {
             .with_handoff_as_string(overrides.agent_a_handoff_as_string)
             .with_release(overrides.agent_a_include_release)
             .with_duplicate_fund(overrides.agent_a_duplicate_fund)
-            .with_release_error(overrides.agent_a_release_error);
+            .with_release_error(overrides.agent_a_release_error)
+            .with_receipt_digest_mismatch(overrides.agent_a_receipt_digest_mismatch);
         write_actor(&self.root.join("agent-a.json"), input);
     }
 
