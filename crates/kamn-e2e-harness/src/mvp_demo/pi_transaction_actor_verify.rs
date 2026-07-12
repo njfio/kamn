@@ -6,15 +6,28 @@ const ROLES: [&str; 3] = ["agent_a", "agent_b", "agent_c"];
 
 /// Verifies three independent Pi actor artifacts and returns shared evidence.
 pub fn verify_pi_transaction_actor_paths(paths: &[String; 3]) -> Result<String, String> {
-    let actors = [
-        read_actor(paths[0].as_str(), ROLES[0])?,
-        read_actor(paths[1].as_str(), ROLES[1])?,
-        read_actor(paths[2].as_str(), ROLES[2])?,
-    ];
+    let actors = read_and_validate_actors(paths)?;
+    shared_summary(&actors)
+}
+
+pub(super) fn read_and_validate_actors(paths: &[String; 3]) -> Result<[Actor; 3], String> {
+    let actors = read_actors(paths)?;
     require_distinct_u64(&actors, |actor| actor.pi_process_id)?;
     require_distinct_u64(&actors, |actor| actor.mcp_child_process_id)?;
     require_distinct_dids(&actors)?;
     require_shared_facts(&actors)?;
+    Ok(actors)
+}
+
+fn read_actors(paths: &[String; 3]) -> Result<[Actor; 3], String> {
+    Ok([
+        read_actor(paths[0].as_str(), ROLES[0])?,
+        read_actor(paths[1].as_str(), ROLES[1])?,
+        read_actor(paths[2].as_str(), ROLES[2])?,
+    ])
+}
+
+fn shared_summary(actors: &[Actor; 3]) -> Result<String, String> {
     serde_json::to_string(&serde_json::json!({
         "task_id": actors[0].task_id,
         "escrow_id": actors[0].escrow_id,

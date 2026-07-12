@@ -5,8 +5,9 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub use mvp_demo::{
-    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths,
-    LiveTaskEvidencePaths, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
+    build_runtime_receipt_chain_from_actor_paths, execute_mvp_demo_contract,
+    execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths, LiveTaskEvidencePaths,
+    MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
 /// Driver implementations for each execution mode.

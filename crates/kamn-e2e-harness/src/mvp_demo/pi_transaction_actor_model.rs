@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::pi_transaction_public_result::{validate_public_result, PublicResult};
 
@@ -43,7 +43,7 @@ pub(super) struct RuntimeReceipt {
     pub(super) public_result: PublicResult,
 }
 
-#[derive(Deserialize, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub(super) enum Outcome {
     Success,
