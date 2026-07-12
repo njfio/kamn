@@ -50,6 +50,40 @@ fn spec_c10_duplicate_agent_identity_fails_with_public_identity_code() {
     fixture.assert_error("AGENT_IDENTITY_INVALID");
 }
 
+#[test]
+fn spec_c16_report_indexes_all_runtime_actor_sources() {
+    let fixture = Fixture::new("actor-source-index");
+    let report = std::fs::read_to_string(fixture.report_path()).expect("report");
+
+    for field in [
+        "runtime_agent_a_evidence",
+        "runtime_agent_b_evidence",
+        "runtime_agent_c_evidence",
+    ] {
+        assert!(report.contains(format!(r#""{field}":"#).as_str()));
+    }
+}
+
+#[test]
+fn spec_c17_standalone_verifier_rejects_missing_runtime_actor_source() {
+    let fixture = Fixture::new("missing-actor-source");
+    let path = fixture.run_proof().join("runtime-agent-a-evidence.json");
+    std::fs::remove_file(path).expect("remove actor source");
+
+    fixture.assert_standalone_error("RECEIPT_CHAIN_INVALID");
+}
+
+#[test]
+fn spec_c18_standalone_verifier_rejects_tampered_runtime_actor_source() {
+    let fixture = Fixture::new("tampered-actor-source");
+    let path = fixture.run_proof().join("runtime-agent-a-evidence.json");
+    let raw = std::fs::read_to_string(&path).expect("actor source");
+    std::fs::write(path, raw.replace("kamn:did:a", "kamn:did:forged"))
+        .expect("tampered actor source");
+
+    fixture.assert_standalone_error("RECEIPT_CHAIN_INVALID");
+}
+
 struct Fixture {
     root: PathBuf,
     actors: ActorFixture,
@@ -85,6 +119,24 @@ impl Fixture {
         .expect_err("tampered actor evidence must fail");
         assert_eq!(error, expected);
     }
+
+    fn assert_standalone_error(&self, expected: &str) {
+        let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
+            report: self.report_path().display().to_string(),
+            agent_harness_evidence_path: None,
+            pi_transaction_actor_paths: None,
+        })
+        .expect_err("invalid bundled actor evidence must fail");
+        assert_eq!(error, expected);
+    }
+
+    fn report_path(&self) -> PathBuf {
+        self.root.join("latest/proof/report.json")
+    }
+
+    fn run_proof(&self) -> PathBuf {
+        only_run_dir(&self.root).join("proof")
+    }
 }
 
 impl Drop for Fixture {
@@ -102,4 +154,13 @@ fn temp_root(stem: &str) -> PathBuf {
             .expect("clock")
             .as_nanos()
     ))
+}
+
+fn only_run_dir(root: &std::path::Path) -> PathBuf {
+    std::fs::read_dir(root)
+        .expect("fixture root")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| path.is_dir() && path.file_name().is_some_and(|name| name != "latest"))
+        .expect("one run directory")
 }
