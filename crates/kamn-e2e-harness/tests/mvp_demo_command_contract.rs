@@ -8,6 +8,7 @@ use kamn_e2e_harness::{
 };
 
 #[path = "support/artifact_digest.rs"]
+#[allow(dead_code)]
 mod artifact_digest;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;

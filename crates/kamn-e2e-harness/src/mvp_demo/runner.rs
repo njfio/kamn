@@ -68,7 +68,9 @@ fn validate_direct_evidence(
     let Some(paths) = config.pi_transaction_actor_paths.as_ref() else {
         return Ok(None);
     };
-    super::three_agent_transcript::require_runtime_chain_source(report)?;
+    let expected =
+        super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(paths)?;
+    super::three_agent_transcript::require_runtime_chain_source(report, expected.as_str())?;
     super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths(paths).map(Some)
 }
 
