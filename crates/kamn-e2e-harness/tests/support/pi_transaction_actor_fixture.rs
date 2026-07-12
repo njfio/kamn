@@ -156,9 +156,21 @@ fn actor_json(input: &ActorInput<'_>) -> String {
         .unwrap_or_default();
     let responses = response_digests(input).join("\",\"");
     let receipts = runtime_receipts(input);
-    let participant_role = if input.role == "agent_a" { "creator" } else { "provider" };
-    let participant_field = if input.role == "agent_c" { String::new() } else { format!(r#","participant_role":"{participant_role}""#) };
-    let handoff = if input.handoff_as_string { format!(r#""{}""#, input.handoff_authorized) } else { input.handoff_authorized.to_string() };
+    let participant_role = if input.role == "agent_a" {
+        "creator"
+    } else {
+        "provider"
+    };
+    let participant_field = if input.role == "agent_c" {
+        String::new()
+    } else {
+        format!(r#","participant_role":"{participant_role}""#)
+    };
+    let handoff = if input.handoff_as_string {
+        format!(r#""{}""#, input.handoff_authorized)
+    } else {
+        input.handoff_authorized.to_string()
+    };
     format!(
         r#"{{"schema_version":"kamn.mvp.pi-transaction-actor.v1","actor":"{}","pi_process_id":{},"did":"{}","mcp_child_process_id":{},"first_request_id":1,"last_request_id":5,"runtime_response_digests":["{responses}"],"runtime_response_receipts":[{receipts}],"runtime_projection_digest":"{}","task_id":"task-live-7099","transaction_id":"transaction-live-7099","escrow_id":"{}","amount_lamports":1000000,"network":"solana-devnet","settlement_tx_signature":"devnet-signature-7099","settlement_commitment":"finalized","public_commitment":"{}","view_scope":"{scope}"{participant_field}{private_field},"source_handoff_digest":"{}","handoff_authorized":{handoff}}}"#,
         input.role,
@@ -174,14 +186,45 @@ fn actor_json(input: &ActorInput<'_>) -> String {
 
 fn runtime_receipts(input: &ActorInput<'_>) -> String {
     let tools = match input.role {
-        "agent_a" => ["register", "create_task", "fund_escrow", if input.include_release { "release_escrow" } else { "query_task" }, "query_participant_task_projection"],
-        "agent_b" => ["register", "accept_task", "complete_task", "query_task", "query_participant_task_projection"],
-        _ => ["register", "query_task", "query_task", "query_task", "query_verifier_task_projection"],
+        "agent_a" => [
+            "register",
+            "create_task",
+            "fund_escrow",
+            if input.include_release {
+                "release_escrow"
+            } else {
+                "query_task"
+            },
+            "query_participant_task_projection",
+        ],
+        "agent_b" => [
+            "register",
+            "accept_task",
+            "complete_task",
+            "query_task",
+            "query_participant_task_projection",
+        ],
+        _ => [
+            "register",
+            "query_task",
+            "query_task",
+            "query_task",
+            "query_verifier_task_projection",
+        ],
     };
-    tools.iter().enumerate().map(|(index, tool)| format!(
-        r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}"}}"#,
-        index + 1, tool, response_digests(input)[index]
-    )).collect::<Vec<_>>().join(",")
+    tools
+        .iter()
+        .enumerate()
+        .map(|(index, tool)| {
+            format!(
+                r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}"}}"#,
+                index + 1,
+                tool,
+                response_digests(input)[index]
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn response_digests(input: &ActorInput<'_>) -> [String; 5] {

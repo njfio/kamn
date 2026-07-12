@@ -26,6 +26,7 @@ mod local_artifact_paths;
 mod local_artifact_verify;
 mod local_artifacts;
 mod localhost_signed;
+mod pi_transaction_actor_model;
 mod pi_transaction_actor_verify;
 mod report;
 mod report_artifacts;

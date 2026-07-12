@@ -77,8 +77,14 @@ fn spec_c03_rust_verifier_rejects_runtime_privacy_and_shared_fact_drift() {
 #[test]
 fn spec_c04_rust_verifier_rejects_missing_operation_and_type_confusion() {
     for overrides in [
-        Overrides { agent_a_include_release: false, ..Overrides::default() },
-        Overrides { agent_a_handoff_as_string: true, ..Overrides::default() },
+        Overrides {
+            agent_a_include_release: false,
+            ..Overrides::default()
+        },
+        Overrides {
+            agent_a_handoff_as_string: true,
+            ..Overrides::default()
+        },
     ] {
         let fixture = ActorFixture::new();
         fixture.write_all(overrides);
