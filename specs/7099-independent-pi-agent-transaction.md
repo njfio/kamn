@@ -103,6 +103,10 @@ The workflow retains the same MCP child, release idempotency key, and contiguous
 request stream for a bounded retry. It returns success only after the runtime
 reports the escrow released with finalized settlement evidence; exhaustion or
 any non-ambiguous error hard-fails without writing actor success evidence.
+Participant and verifier projection operations likewise poll boundedly when the
+runtime view is valid but settlement fields are not finalized yet. Every
+interim projection remains in contiguous provenance, and actor evidence uses
+only the first complete finalized projection.
 
 All failures hard-fail at the tool or verifier boundary. Existing artifacts are
 written idempotently and conflicting replay is rejected.
@@ -117,6 +121,8 @@ written idempotently and conflicting replay is rejected.
       successful operation evidence.
 - [ ] One release invocation performs bounded same-child reconciliation after
       `SETTLEMENT_OUTCOME_AMBIGUOUS` and fails closed if confirmation is absent.
+- [ ] Final projection operations retain the same MCP child while waiting for
+      complete finalized settlement fields and fail closed on exhaustion.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
 - [ ] Create, accept, complete, fund, and release payloads are derived from one
