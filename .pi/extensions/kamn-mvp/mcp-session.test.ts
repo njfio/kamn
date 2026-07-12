@@ -36,6 +36,10 @@ test("session provenance binds child process, request range, and runtime respons
 		first_request_id: 1,
 		last_request_id: 2,
 		runtime_response_digests: [responseDigest(registered), responseDigest(queried)],
+		runtime_response_receipts: [
+			{ request_id: 1, tool: "register", outcome: "success", digest: responseDigest(registered) },
+			{ request_id: 2, tool: "query_agent_profile", outcome: "success", digest: responseDigest(queried) },
+		],
 	});
 	await session.shutdown();
 });
@@ -55,6 +59,11 @@ test("session provenance keeps handled error responses in the contiguous request
 			responseDigest(registered),
 			responseDigest({ kind: "backend_error", message: "forced backend failure" }),
 			responseDigest(queried),
+		],
+		runtime_response_receipts: [
+			{ request_id: 1, tool: "register", outcome: "success", digest: responseDigest(registered) },
+			{ request_id: 2, tool: "release_escrow", outcome: "error", digest: responseDigest({ kind: "backend_error", message: "forced backend failure" }) },
+			{ request_id: 3, tool: "query_agent_profile", outcome: "success", digest: responseDigest(queried) },
 		],
 	});
 	await session.shutdown();

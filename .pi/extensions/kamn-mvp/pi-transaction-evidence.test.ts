@@ -52,6 +52,15 @@ test("actor verification rejects copied facts and handoff authorization", async 
 	);
 });
 
+test("actor verification rejects a missing successful role operation", async () => {
+	const paths = await actorPaths();
+	const receipts = runtimeReceipts("agent_a").filter((receipt) => receipt.tool !== "release_escrow");
+	await assert.rejects(
+		writeActors(paths, { agent_a: { runtime_response_receipts: receipts } }),
+		/PI_RUNTIME_RECEIPT_MISMATCH/,
+	);
+});
+
 type Role = "agent_a" | "agent_b" | "agent_c";
 type Overrides = Partial<Record<Role, Record<string, unknown>>>;
 
@@ -72,6 +81,7 @@ function actor(role: Role) {
 		first_request_id: 1,
 		last_request_id: 5,
 		runtime_response_digests: [1, 2, 3, 4].map((value) => `sha256:${String(value).repeat(64)}`).concat(projectionDigest),
+		runtime_response_receipts: runtimeReceipts(role),
 		runtime_projection_digest: projectionDigest,
 		task_id: "task-live-7099",
 		transaction_id: "transaction-live-7099",
@@ -86,6 +96,20 @@ function actor(role: Role) {
 		source_handoff_digest: `sha256:${"b".repeat(64)}`,
 		handoff_authorized: false,
 	};
+}
+
+function runtimeReceipts(role: Role) {
+	const tools = {
+		agent_a: ["register", "create_task", "fund_escrow", "release_escrow", "query_participant_task_projection"],
+		agent_b: ["register", "accept_task", "complete_task", "query_task", "query_participant_task_projection"],
+		agent_c: ["register", "query_task", "query_task", "query_task", "query_verifier_task_projection"],
+	}[role];
+	return tools.map((tool, index) => ({
+		request_id: index + 1,
+		tool,
+		outcome: "success",
+		digest: `sha256:${String(index + 1 === 5 ? { agent_a: 1, agent_b: 2, agent_c: 3 }[role] : index + 1).repeat(64)}`,
+	}));
 }
 
 async function actorPaths(): Promise<Record<Role, string>> {
