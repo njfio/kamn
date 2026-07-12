@@ -7,10 +7,21 @@ type WorkflowResolver = (cwd: string) => LiveTaskWorkflow;
 export function registerLiveTransactionTools(pi: ExtensionAPI, workflow: WorkflowResolver) {
 	registerFund(pi, workflow);
 	registerComplete(pi, workflow);
+	registerFundingBarrier(pi, workflow);
 	registerRelease(pi, workflow);
 	registerParticipantProjection(pi, workflow, "agent_a", "kamn_live_agent_a_query_participant_projection");
 	registerParticipantProjection(pi, workflow, "agent_b", "kamn_live_agent_b_query_participant_projection");
 	registerVerifierProjection(pi, workflow);
+}
+
+function registerFundingBarrier(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {
+	registerTool(pi, {
+		name: "kamn_live_agent_b_wait_for_escrow_funding",
+		label: "KAMN Agent B Wait For Escrow Funding",
+		parameters: Type.Object({}),
+		run: (workflow, _params, signal) => workflow.waitForEscrowFunding(signal),
+		role: "agent_b",
+	}, resolveWorkflow);
 }
 
 function registerFund(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {

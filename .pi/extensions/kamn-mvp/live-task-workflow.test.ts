@@ -135,7 +135,7 @@ test("Agent B waits for a runtime escrow binding before completion", async () =>
 	workflow.importTask("task-live-1", {
 		transaction_id: "transaction-live-1", terms_digest: "a".repeat(64), provider_did: "kamn:did:agent-b",
 	});
-	const projection = await workflow.waitForEscrowFunding("agent_b");
+	const projection = await workflow.waitForEscrowFunding();
 
 	assert.equal(projection.escrow_id, "escrow-live-1");
 	assert.equal(workflow.provenance("agent_b").last_request_id, 3);

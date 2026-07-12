@@ -29,8 +29,28 @@ export async function waitForFinalProjection(
 	throw new Error("Finalized settlement projection was not available");
 }
 
+export async function waitForEscrowProjection(
+	call: () => Promise<WorkflowResult>,
+	signal?: AbortSignal,
+): Promise<WorkflowResult> {
+	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+		try {
+			const result = await call();
+			if (typeof result.escrow_id === "string" && result.escrow_id.length > 0) return result;
+		} catch (error) {
+			if (!isMissingEscrowBinding(error)) throw error;
+		}
+		if (attempt < MAX_ATTEMPTS) await delay(RETRY_DELAY_MS, signal);
+	}
+	throw new Error("Task-bound escrow projection was not available");
+}
+
 function isAmbiguousSettlement(error: unknown): boolean {
 	return error instanceof Error && error.message.includes("SETTLEMENT_OUTCOME_AMBIGUOUS");
+}
+
+function isMissingEscrowBinding(error: unknown): boolean {
+	return error instanceof Error && error.message.includes("TASK_ESCROW_BINDING_MISSING");
 }
 
 function isFinalizedProjection(result: WorkflowResult): boolean {

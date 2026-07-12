@@ -5,7 +5,7 @@ import {
 } from "./live-task-workflow-support.ts";
 import { LiveSettlementAgreement } from "./live-settlement-agreement.ts";
 import type { AgreementIdentity } from "./live-settlement-agreement.ts";
-import { reconcileAmbiguousRelease, waitForFinalProjection } from "./live-task-workflow-retry.ts";
+import { reconcileAmbiguousRelease, waitForEscrowProjection, waitForFinalProjection } from "./live-task-workflow-retry.ts";
 
 export type AgentRole = "agent_a" | "agent_b" | "agent_c";
 export type WorkflowResult = Record<string, unknown>;
@@ -62,6 +62,13 @@ export class LiveTaskWorkflow {
 		const result = await this.session("agent_b").call("complete_task", { task_id: taskId, payload }, signal);
 		validateTaskResult(result, taskId, "completed", "task completion");
 		return result;
+	}
+	async waitForEscrowFunding(signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid("agent_b");
+		const taskId = this.createdTaskId();
+		return waitForEscrowProjection(
+			() => this.session("agent_b").call("query_participant_task_projection", { task_id: taskId }, signal), signal,
+		);
 	}
 	async fundEscrow(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_a");
