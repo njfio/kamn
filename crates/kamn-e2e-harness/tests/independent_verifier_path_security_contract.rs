@@ -22,9 +22,10 @@ fn spec_c21_run_id_cannot_select_its_own_containment_root() {
 fn spec_c22_report_markdown_index_must_name_verified_file() {
     let fixture = Fixture::new("markdown-index");
     let foreign = fixture.run_dir.join("proof/foreign-report.md");
-    std::fs::copy(fixture.markdown_path(), &foreign).expect("foreign markdown");
+    let indexed = fixture.run_dir.join("proof/report.md");
+    std::fs::copy(&indexed, &foreign).expect("foreign markdown");
     fixture.replace_report(
-        &fixture.markdown_path().display().to_string(),
+        &indexed.display().to_string(),
         &foreign.display().to_string(),
     );
 
@@ -69,10 +70,6 @@ impl Fixture {
 
     fn report_path(&self) -> PathBuf {
         self.root.join("latest/proof/report.json")
-    }
-
-    fn markdown_path(&self) -> PathBuf {
-        self.root.join("latest/proof/report.md")
     }
 
     fn replace_report(&self, from: &str, to: &str) {

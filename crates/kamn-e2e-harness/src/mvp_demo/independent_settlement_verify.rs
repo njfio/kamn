@@ -17,14 +17,35 @@ fn validate_claim_strings(
     claim: &Value,
     evidence: &SettlementEvidenceArtifact,
 ) -> Result<(), String> {
+    validate_claim_context(claim, evidence)?;
+    validate_claim_signatures(claim, evidence)?;
+    validate_optional_binding(claim, evidence)
+}
+
+fn validate_claim_context(
+    claim: &Value,
+    evidence: &SettlementEvidenceArtifact,
+) -> Result<(), String> {
     require_claim_string(claim, "network", evidence.network.as_str())?;
+    require_claim_string(
+        claim,
+        "execution_surface",
+        evidence.execution_surface.as_str(),
+    )?;
     require_claim_string(claim, "rpc_url", evidence.rpc_url.as_str())?;
+    require_claim_string(claim, "payer_pubkey", evidence.payer_pubkey.as_str())?;
     require_claim_string(
         claim,
         "recipient_pubkey",
         evidence.recipient_pubkey.as_str(),
     )?;
-    require_claim_string(claim, "escrow_id", evidence.escrow_id.as_str())?;
+    require_claim_string(claim, "escrow_id", evidence.escrow_id.as_str())
+}
+
+fn validate_claim_signatures(
+    claim: &Value,
+    evidence: &SettlementEvidenceArtifact,
+) -> Result<(), String> {
     require_claim_string(
         claim,
         "settlement_tx_signature",
@@ -35,6 +56,19 @@ fn validate_claim_strings(
         "persisted_settlement_tx_signature",
         evidence.persisted_settlement_tx_signature.as_str(),
     )
+}
+
+fn validate_optional_binding(
+    claim: &Value,
+    evidence: &SettlementEvidenceArtifact,
+) -> Result<(), String> {
+    if let Some(task_id) = evidence.task_id.as_deref() {
+        require_claim_string(claim, "task_id", task_id)?;
+    }
+    if let Some(digest) = evidence.task_binding_digest.as_deref() {
+        require_claim_string(claim, "task_binding_digest", digest)?;
+    }
+    Ok(())
 }
 
 fn validate_finality(evidence: &SettlementEvidenceArtifact) -> Result<(), String> {

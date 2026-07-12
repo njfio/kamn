@@ -1,5 +1,6 @@
 use super::report::{escape_json, DemoReportInput};
 use super::settlement_evidence_artifact::FILE_NAME as SETTLEMENT_EVIDENCE_FILE;
+use super::settlement_evidence_artifact::RPC_FILE_NAME;
 use super::three_agent_receipts::{
     agent_a_observation_receipt_path, agent_b_observation_receipt_path,
     agent_c_verifier_observation_receipt_path,
@@ -50,6 +51,9 @@ fn artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> 
             agent_c_verifier_observation_receipt_path(input),
         ));
     }
+    entries.extend(super::runtime_actor_bundle::report_entries(
+        input.output_root.join(input.run_id).as_path(),
+    ));
     entries
 }
 
@@ -76,11 +80,8 @@ fn runtime_projection_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str,
 
 fn base_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> {
     vec![
-        (
-            "report_json",
-            artifact_path(input, "latest/proof/report.json"),
-        ),
-        ("report_md", artifact_path(input, "latest/proof/report.md")),
+        ("report_json", run_proof_path(input, "report.json")),
+        ("report_md", run_proof_path(input, "report.md")),
         (
             "state_dir",
             artifact_path(input, &format!("{}/state", input.run_id)),
@@ -117,6 +118,10 @@ fn proof_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, Str
             "devnet_settlement_evidence",
             run_proof_path(input, SETTLEMENT_EVIDENCE_FILE),
         ));
+        let rpc = run_proof_path(input, RPC_FILE_NAME);
+        if std::path::Path::new(rpc.as_str()).is_file() {
+            entries.push(("solana_confirmation_response", rpc));
+        }
     }
     entries
 }

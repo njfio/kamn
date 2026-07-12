@@ -24,9 +24,16 @@ pub(crate) fn parse_devnet_settlement_evidence(
             json,
             "persisted_settlement_tx_signature",
         )?,
+        authoritative_rpc_artifact: optional_json_string_value(json, "authoritative_rpc_artifact"),
     };
     validate_devnet_settlement_evidence(&evidence)?;
     Ok(evidence)
+}
+
+fn optional_json_string_value(json: &str, key: &str) -> Option<String> {
+    json_string_value(json, key)
+        .ok()
+        .filter(|value| !value.is_empty())
 }
 
 pub(crate) fn devnet_settlement_claim_json(evidence: &DevnetSettlementEvidence) -> String {

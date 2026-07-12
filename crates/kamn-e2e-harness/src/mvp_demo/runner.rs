@@ -26,6 +26,10 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     let run_id = build_run_id()?;
     let run_dir = output_root.join(run_id.as_str());
     create_demo_artifacts(&run_dir)?;
+    super::runtime_actor_bundle::copy_runtime_actor_sources(
+        config.pi_transaction_actor_paths.as_ref(),
+        &run_dir,
+    )?;
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
     let bound = create_bound_settlement(config, run_id.as_str(), &run_dir)?;
@@ -59,6 +63,7 @@ pub fn execute_verify_mvp_demo_contract(
         report.as_str(),
         config.report.as_str(),
     )?;
+    super::runtime_actor_bundle::validate_runtime_actor_bundle(report.as_str())?;
     Ok(render_verify_output(config, pi_actor_summary))
 }
 

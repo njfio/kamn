@@ -34,6 +34,7 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) recipient_balance_before: u64,
     pub(crate) recipient_balance_after: u64,
     pub(crate) persisted_settlement_tx_signature: String,
+    pub(crate) authoritative_rpc_artifact: Option<String>,
 }
 
 pub(crate) struct DevnetSettlementInput<'a> {

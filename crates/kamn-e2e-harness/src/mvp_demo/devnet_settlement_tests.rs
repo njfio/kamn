@@ -38,6 +38,7 @@ fn sample_evidence() -> DevnetSettlementEvidence {
         recipient_balance_before: 2_500_000_000,
         recipient_balance_after: 2_501_000_000,
         persisted_settlement_tx_signature: "devnet-signature-111".to_owned(),
+        authoritative_rpc_artifact: None,
     }
 }
 

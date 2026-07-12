@@ -28,6 +28,7 @@ fn is_identity_error(error: &str) -> bool {
             "IDENTITY",
             "NONCE_STREAM",
             "PROCESS_NOT_DISTINCT",
+            "PROCESS_REUSED",
             "DID_NOT_DISTINCT",
         ],
     )

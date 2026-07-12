@@ -83,6 +83,7 @@ fn evidence(
         recipient_balance_before: before.recipient,
         recipient_balance_after: after.recipient,
         persisted_settlement_tx_signature: persisted,
+        authoritative_rpc_artifact: None,
     }
 }
 
