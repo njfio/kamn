@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { VerifiedActorEvidence } from "./live-task-evidence.ts";
+import { buildTaskHandoff, parseTaskHandoff, taskHandoffInput, type TaskHandoffInput } from "./live-task-handoff.ts";
 
-const HANDOFF_SCHEMA = "kamn.mvp.live-task-handoff.v1";
 const RECEIPT_SCHEMA = "kamn.mvp.live-task-actor-receipt.v1";
 const SECRET_MARKERS = [".kamn/devnet", "auth.json", ".env", "keypair", "id_rsa", "oauth"];
 export const COORDINATION_TOOL_NAMES = [
@@ -16,29 +16,29 @@ export const COORDINATION_TOOL_NAMES = [
 export type CoordinationOptions = { timeoutMs: number; pollMs: number; maxAgeMs: number };
 type Environment = Record<string, string | undefined>;
 type Actor = "agent_a" | "agent_b";
-type Handoff = { schema_version: string; task_id: string; artifact_digest: string };
-type Receipt = Handoff & { actor: Actor; state: string; pi_process_id: number };
+type Handoff = ReturnType<typeof parseTaskHandoff>;
+type Receipt = { schema_version: string; task_id: string; artifact_digest: string; actor: Actor; state: string; pi_process_id: number };
 
-export async function writeTaskHandoff(path: string, taskId: string): Promise<void> {
+export async function writeTaskHandoff(path: string, input: TaskHandoffInput): Promise<void> {
 	assertSafePath(path);
-	const artifact = withDigest({ schema_version: HANDOFF_SCHEMA, task_id: validTaskId(taskId) });
+	const artifact = buildTaskHandoff(input);
 	await writeIdempotent(path, artifact, "task handoff");
 }
-export async function waitForTaskHandoff(path: string, options: CoordinationOptions, signal?: AbortSignal): Promise<string> {
+export async function waitForTaskHandoff(path: string, options: CoordinationOptions, signal?: AbortSignal): Promise<TaskHandoffInput> {
 	assertSafePath(path);
 	validateOptions(options);
 	const deadline = Date.now() + options.timeoutMs;
 	while (Date.now() <= deadline) {
 		if (signal?.aborted) throw new Error("KAMN live task handoff wait aborted");
 		const handoff = await readHandoffIfPresent(path, options.maxAgeMs);
-		if (handoff) return handoff.task_id;
+		if (handoff) return taskHandoffInput(handoff);
 		await delay(options.pollMs, signal);
 	}
 	throw new Error(`KAMN live task handoff timed out: ${path}`);
 }
 export async function readTaskHandoffEvidence(path: string) {
 	const handoff = await readHandoff(path);
-	return { task_id: handoff.task_id, artifact_digest: `sha256:${handoff.artifact_digest}` };
+	return { ...taskHandoffInput(handoff), artifact_digest: `sha256:${handoff.artifact_digest}` };
 }
 export async function writeActorReceipt(path: string, actor: Actor, taskId: string, state: string, piProcessId: number): Promise<void> {
 	assertSafePath(path);
@@ -109,9 +109,7 @@ async function readHandoffIfPresent(path: string, maxAgeMs: number): Promise<Han
 
 async function readHandoff(path: string): Promise<Handoff> {
 	assertSafePath(path);
-	const handoff = parseArtifact(await readFile(path, "utf8"), HANDOFF_SCHEMA, ["artifact_digest", "schema_version", "task_id"]) as Handoff;
-	validTaskId(handoff.task_id);
-	return handoff;
+	return parseTaskHandoff(await readFile(path, "utf8"));
 }
 
 async function readReceipt(path: string, actor: Actor): Promise<Receipt> {

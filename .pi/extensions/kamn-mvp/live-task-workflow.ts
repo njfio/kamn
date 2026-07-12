@@ -4,6 +4,7 @@ import {
 	buildActorEvidence, validateEscrowResult, validateProjection, validateTaskProjection, validateTaskResult, validateWaitOptions,
 } from "./live-task-workflow-support.ts";
 import { LiveSettlementAgreement } from "./live-settlement-agreement.ts";
+import type { AgreementIdentity } from "./live-settlement-agreement.ts";
 
 export type AgentRole = "agent_a" | "agent_b" | "agent_c";
 export type WorkflowResult = Record<string, unknown>;
@@ -18,6 +19,7 @@ export class LiveTaskWorkflow {
 	private taskId?: string;
 	private escrowId?: string;
 	private agreement?: LiveSettlementAgreement;
+	private agreementIdentity?: AgreementIdentity;
 	private readonly env: Environment;
 	private readonly cwd: string;
 	constructor(env: Environment, cwd: string) {
@@ -38,6 +40,7 @@ export class LiveTaskWorkflow {
 	async createTask(title: string, description: string, providerDid: string, signal?: AbortSignal): Promise<WorkflowResult> {
 		const creatorDid = this.registeredDid("agent_a");
 		this.agreement = new LiveSettlementAgreement(creatorDid, requiredText(providerDid, "provider DID"), this.env);
+		this.agreementIdentity = this.agreement.identity();
 		const payload = this.agreement.taskPayload(requiredText(title, "title"), requiredText(description, "description"));
 		const result = await this.session("agent_a").call("create_task", { payload }, signal);
 		this.taskId = validateTaskResult(result, undefined, "submitted", "task creation");
@@ -46,7 +49,7 @@ export class LiveTaskWorkflow {
 	async acceptTask(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_b");
 		const taskId = this.createdTaskId();
-		const payload = LiveSettlementAgreement.taskOperationPayload(taskId, "accept");
+		const payload = LiveSettlementAgreement.taskOperationPayload(this.transitionAgreement(), "accept");
 		const result = await this.session("agent_b").call("accept_task", { task_id: taskId, payload }, signal);
 		validateTaskResult(result, taskId, "accepted", "task acceptance");
 		return result;
@@ -54,7 +57,7 @@ export class LiveTaskWorkflow {
 	async completeTask(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_b");
 		const taskId = this.createdTaskId();
-		const payload = LiveSettlementAgreement.taskOperationPayload(taskId, "complete");
+		const payload = LiveSettlementAgreement.taskOperationPayload(this.transitionAgreement(), "complete");
 		const result = await this.session("agent_b").call("complete_task", { task_id: taskId, payload }, signal);
 		validateTaskResult(result, taskId, "completed", "task completion");
 		return result;
@@ -107,10 +110,15 @@ export class LiveTaskWorkflow {
 		this.observations[role] = result;
 		return result;
 	}
-	importTask(taskId: string) {
+	importTask(taskId: string, agreement?: AgreementIdentity) {
 		const imported = validImportedTaskId(taskId);
 		if (this.taskId && this.taskId !== imported) throw new Error("Imported task ID conflicts with current task");
+		if (agreement && this.registeredDid("agent_b") !== agreement.provider_did) throw new Error("Imported agreement provider differs from registered Agent B");
 		this.taskId = imported;
+		this.agreementIdentity = agreement ?? this.agreementIdentity;
+	}
+	taskHandoff() {
+		return { task_id: this.createdTaskId(), ...this.transitionAgreement() };
 	}
 	currentTaskId(): string {
 		return this.createdTaskId();
@@ -162,6 +170,10 @@ export class LiveTaskWorkflow {
 	private currentAgreement(): LiveSettlementAgreement {
 		if (!this.agreement) throw new Error("Create a canonical settlement agreement before continuing");
 		return this.agreement;
+	}
+	private transitionAgreement(): AgreementIdentity {
+		if (!this.agreementIdentity) throw new Error("Import the canonical settlement agreement before continuing");
+		return this.agreementIdentity;
 	}
 	private assertDistinctDid(role: AgentRole, did: string) {
 		const duplicate = Object.entries(this.agents).some(([otherRole, state]) => otherRole !== role && state.did === did);

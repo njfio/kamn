@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 type Environment = Record<string, string | undefined>;
+export type AgreementIdentity = { transaction_id: string; terms_digest: string; provider_did: string };
 
 export class LiveSettlementAgreement {
 	readonly transactionId: string;
@@ -38,15 +39,17 @@ export class LiveSettlementAgreement {
 	releasePayload(): string {
 		return JSON.stringify({ idempotency_key: this.operationKey("release") });
 	}
+	identity(): AgreementIdentity {
+		return { transaction_id: this.transactionId, terms_digest: this.termsDigest, provider_did: this.providerDid };
+	}
+	static taskOperationPayload(identity: AgreementIdentity, operation: "accept" | "complete"): string {
+		return JSON.stringify({
+			idempotency_key: `${identity.transaction_id}-${operation}`,
+			...(operation === "complete" ? { completion_evidence_digest: sha256(`completed:${identity.terms_digest}`) } : {}),
+		});
+	}
 	private operationKey(operation: string): string {
 		return `${this.transactionId}-${operation}`;
-	}
-	static taskOperationPayload(taskId: string, operation: "accept" | "complete"): string {
-		const transaction = `pi-task-${sha256(taskId).slice(0, 16)}`;
-		return JSON.stringify({
-			idempotency_key: `${transaction}-${operation}`,
-			...(operation === "complete" ? { completion_evidence_digest: sha256(`completed:${taskId}`) } : {}),
-		});
 	}
 }
 

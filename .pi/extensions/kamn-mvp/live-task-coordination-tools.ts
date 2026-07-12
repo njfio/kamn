@@ -35,9 +35,9 @@ function registerAgentCReceiveTool(pi: ExtensionAPI, resolveWorkflow: WorkflowRe
 		executionMode: "sequential",
 		async execute(_id, _params, signal, _onUpdate, ctx) {
 			const config = coordinationConfig(process.env, ctx.cwd);
-			const taskId = await waitForTaskHandoff(config.handoffPath, config.options, signal);
-			resolveWorkflow(ctx.cwd).importTask(taskId);
-			return coordinationResult("Agent C received the identifier-only task handoff.", { task_id: taskId });
+			const handoff = await waitForTaskHandoff(config.handoffPath, config.options, signal);
+			resolveWorkflow(ctx.cwd).importTask(handoff.task_id);
+			return coordinationResult("Agent C received the identifier-only task handoff.", { task_id: handoff.task_id });
 		},
 	});
 }
@@ -71,9 +71,9 @@ function registerPublishTool(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver
 		executionMode: "sequential",
 		async execute(_id, _params, _signal, _onUpdate, ctx) {
 			const config = coordinationConfig(process.env, ctx.cwd);
-			const taskId = resolveWorkflow(ctx.cwd).currentTaskId();
-			await writeTaskHandoff(config.handoffPath, taskId);
-			return coordinationResult("Agent A published the task handoff.", { task_id: taskId });
+			const handoff = resolveWorkflow(ctx.cwd).taskHandoff();
+			await writeTaskHandoff(config.handoffPath, handoff);
+			return coordinationResult("Agent A published the task handoff.", { task_id: handoff.task_id });
 		},
 	});
 }
@@ -87,9 +87,9 @@ function registerReceiveTool(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver
 		executionMode: "sequential",
 		async execute(_id, _params, signal, _onUpdate, ctx) {
 			const config = coordinationConfig(process.env, ctx.cwd);
-			const taskId = await waitForTaskHandoff(config.handoffPath, config.options, signal);
-			resolveWorkflow(ctx.cwd).importTask(taskId);
-			return coordinationResult("Agent B received the task handoff.", { task_id: taskId });
+			const handoff = await waitForTaskHandoff(config.handoffPath, config.options, signal);
+			resolveWorkflow(ctx.cwd).importTask(handoff.task_id, handoff);
+			return coordinationResult("Agent B received the task handoff.", { task_id: handoff.task_id });
 		},
 	});
 }

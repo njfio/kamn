@@ -147,7 +147,12 @@ async function acceptedSources(agentAPid: number, agentBPid: number, agentBTask 
 		agentB: resolve(root, "agent-b.json"),
 		observation: resolve(root, "agent-c.json"),
 	};
-	await writeTaskHandoff(paths.handoff, "task-live-c");
+	await writeTaskHandoff(paths.handoff, {
+		task_id: "task-live-c",
+		transaction_id: "pi-devnet-1234567890abcdef",
+		terms_digest: "a".repeat(64),
+		provider_did: "kamn:did:agent-b",
+	});
 	await writeActorReceipt(paths.agentA, "agent_a", "task-live-c", "accepted", agentAPid);
 	await writeActorReceipt(paths.agentB, "agent_b", agentBTask, "accepted", agentBPid);
 	return paths;
