@@ -1,4 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+use super::pi_transaction_public_result::{validate_public_result, PublicResult};
 
 const SCHEMA: &str = "kamn.mvp.pi-transaction-actor.v1";
 
@@ -6,14 +8,14 @@ const SCHEMA: &str = "kamn.mvp.pi-transaction-actor.v1";
 #[serde(deny_unknown_fields)]
 pub(super) struct Actor {
     schema_version: String,
-    actor: String,
+    pub(super) actor: String,
     pub(super) pi_process_id: u64,
     pub(super) did: String,
     pub(super) mcp_child_process_id: u64,
     first_request_id: u64,
     last_request_id: u64,
     runtime_response_digests: Vec<String>,
-    runtime_response_receipts: Vec<RuntimeReceipt>,
+    pub(super) runtime_response_receipts: Vec<RuntimeReceipt>,
     runtime_projection_digest: String,
     pub(super) task_id: String,
     pub(super) transaction_id: String,
@@ -33,16 +35,17 @@ pub(super) struct Actor {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct RuntimeReceipt {
-    request_id: u64,
-    tool: String,
-    outcome: Outcome,
-    digest: String,
+pub(super) struct RuntimeReceipt {
+    pub(super) request_id: u64,
+    pub(super) tool: String,
+    pub(super) outcome: Outcome,
+    pub(super) digest: String,
+    pub(super) public_result: PublicResult,
 }
 
-#[derive(Deserialize, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-enum Outcome {
+pub(super) enum Outcome {
     Success,
     Error,
 }
@@ -86,6 +89,7 @@ fn validate_runtime_receipts(actor: &Actor) -> Result<(), String> {
         {
             return Err(mismatch());
         }
+        validate_public_result(&receipt.public_result, receipt.outcome == Outcome::Error)?;
     }
     require_operations(actor)?;
     validate_projection_receipt(actor)

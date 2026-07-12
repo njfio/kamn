@@ -7,14 +7,20 @@ use kamn_e2e_harness::{
     HarnessCommand, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
+#[path = "support/artifact_digest.rs"]
+#[allow(dead_code)]
+mod artifact_digest;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
+#[path = "support/pi_transaction_actor_fixture.rs"]
+mod pi_transaction_actor_fixture;
+use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 
 #[test]
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
     let parsed = parse_command_args(["demo-mvp", "--output-root", "/tmp/kamn-demo"])
         .expect("demo-mvp command should parse");
-    let expected = HarnessCommand::DemoMvp(MvpDemoCommandConfig {
+    let expected = HarnessCommand::DemoMvp(Box::new(MvpDemoCommandConfig {
         output_root: "/tmp/kamn-demo".to_owned(),
         devnet_mode: "optional".to_owned(),
         solana_rpc_url: None,
@@ -24,7 +30,8 @@ fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
         service_api_websocket_command: None,
         agent_harness_evidence_path: None,
         live_task_evidence: None,
-    });
+        pi_transaction_actor_paths: None,
+    }));
     assert_eq!(parsed, expected);
 }
 
@@ -148,6 +155,79 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
         assert!(report.contains(marker), "missing report marker: {marker}");
     }
     let _ = std::fs::remove_dir_all(&temp);
+}
+
+#[test]
+fn spec_c10_demo_consumes_runtime_actor_chain_when_configured() {
+    let temp = temp_dir("mvp-demo-runtime-chain");
+    let actors = ActorFixture::new();
+    actors.write_all(Overrides::default());
+    actors.rebind_shared_facts();
+    let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
+    config.pi_transaction_actor_paths = Some(actors.paths());
+
+    execute_mvp_demo_contract(&config).expect("runtime-backed demo should pass");
+    let transcript = std::fs::read_to_string(
+        run_directories(&temp)[0].join("proof/three-agent-transcript.json"),
+    )
+    .expect("canonical transaction proof");
+    assert!(transcript.contains("kamn.mvp.runtime-receipt-chain.v1"));
+    assert!(!transcript.contains("agent_a_registered"));
+}
+
+#[test]
+fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
+    let temp = temp_dir("mvp-demo-legacy-source");
+    let actors = ActorFixture::new();
+    actors.write_all(Overrides::default());
+    actors.rebind_shared_facts();
+    execute_mvp_demo_contract(&mvp_demo_command::devnet_required_demo_config(&temp))
+        .expect("legacy fixture report");
+
+    let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
+        report: temp.join("latest/proof/report.json").display().to_string(),
+        agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: Some(actors.paths()),
+    })
+    .expect_err("runtime actors must not validate a generated transcript");
+    assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID");
+}
+
+#[test]
+fn spec_c12_verifier_rebuilds_chain_from_actor_receipts() {
+    let temp = temp_dir("mvp-demo-rebuilt-chain");
+    let actors = ActorFixture::new();
+    actors.write_all(Overrides::default());
+    actors.rebind_shared_facts();
+    let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
+    config.pi_transaction_actor_paths = Some(actors.paths());
+    execute_mvp_demo_contract(&config).expect("runtime-backed report");
+
+    rewrite_chain_and_claim(&temp);
+    let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
+        report: temp.join("latest/proof/report.json").display().to_string(),
+        agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: Some(actors.paths()),
+    })
+    .expect_err("self-consistent forged chain must not pass");
+    assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_ARTIFACT_MISMATCH");
+}
+
+fn rewrite_chain_and_claim(root: &Path) {
+    let chain_path = run_directories(root)[0].join("proof/three-agent-transcript.json");
+    let raw = std::fs::read_to_string(&chain_path).expect("runtime chain");
+    let old_digest = artifact_digest::digest_field(raw.as_str(), "chain_digest");
+    let changed = raw.replacen(
+        r#""after_state":"submitted""#,
+        r#""after_state":"forged""#,
+        1,
+    );
+    let changed = artifact_digest::with_digest(changed, "chain_digest");
+    let new_digest = artifact_digest::digest_field(changed.as_str(), "chain_digest");
+    std::fs::write(chain_path, changed).expect("forged chain");
+    let report_path = root.join("latest/proof/report.json");
+    let report = std::fs::read_to_string(&report_path).expect("report");
+    std::fs::write(report_path, report.replace(&old_digest, &new_digest)).expect("forged claim");
 }
 
 fn devnet_settlement_markers() -> [&'static str; 6] {

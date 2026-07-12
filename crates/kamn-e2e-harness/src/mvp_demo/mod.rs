@@ -28,6 +28,7 @@ mod local_artifacts;
 mod localhost_signed;
 mod pi_transaction_actor_model;
 mod pi_transaction_actor_verify;
+mod pi_transaction_public_result;
 mod report;
 mod report_artifacts;
 mod report_devnet;
@@ -35,6 +36,9 @@ mod report_markdown;
 mod report_writer;
 mod runner;
 mod runner_settlement;
+mod runtime_receipt_chain;
+mod runtime_receipt_chain_facts;
+mod runtime_receipt_chain_precheck;
 mod service_api_proof;
 mod three_agent_claim;
 mod three_agent_receipt_spec;
@@ -42,6 +46,7 @@ mod three_agent_receipt_verify;
 mod three_agent_receipt_verify_support;
 mod three_agent_receipt_write;
 mod three_agent_receipts;
+mod three_agent_runtime_chain;
 mod three_agent_transcript;
 mod three_agent_transcript_build;
 mod three_agent_verify;
@@ -58,6 +63,7 @@ pub use report::{
     CLAIM_LABEL_PLACEHOLDER, CLAIM_LABEL_REAL, CLAIM_LABEL_ROADMAP, MVP_DEMO_REPORT_SCHEMA_VERSION,
 };
 pub use runner::{execute_mvp_demo_contract, execute_verify_mvp_demo_contract};
+pub use runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths;
 pub use verify::verify_mvp_demo_report_json;
 
 pub(crate) const DEFAULT_MVP_DEMO_OUTPUT_ROOT: &str = ".kamn/demo";

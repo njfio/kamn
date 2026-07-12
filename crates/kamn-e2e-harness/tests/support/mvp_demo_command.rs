@@ -20,6 +20,7 @@ pub(crate) fn local_demo_config(temp: &Path) -> MvpDemoCommandConfig {
         )),
         agent_harness_evidence_path: None,
         live_task_evidence: None,
+        pi_transaction_actor_paths: None,
     }
 }
 

@@ -1,7 +1,16 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
+
+#[path = "pi_transaction_actor_rewrite.rs"]
+mod actor_rewrite;
+#[path = "pi_transaction_receipt_fixture.rs"]
+mod receipt_fixture;
+use actor_rewrite::{rebind_actor, reorder_actor_mutations};
+pub(crate) use receipt_fixture::sha;
+use receipt_fixture::{response_digests, runtime_receipts, ActorInput};
 
 #[derive(Clone)]
 pub(crate) struct Overrides {
@@ -13,6 +22,10 @@ pub(crate) struct Overrides {
     pub(crate) agent_a_handoff_authorized: bool,
     pub(crate) agent_a_handoff_as_string: bool,
     pub(crate) agent_a_include_release: bool,
+    pub(crate) agent_a_duplicate_fund: bool,
+    pub(crate) agent_a_release_error: bool,
+    pub(crate) agent_a_receipt_digest_mismatch: bool,
+    pub(crate) agent_a_public_fact_drift: bool,
 }
 
 impl Default for Overrides {
@@ -26,6 +39,10 @@ impl Default for Overrides {
             agent_a_handoff_authorized: false,
             agent_a_handoff_as_string: false,
             agent_a_include_release: true,
+            agent_a_duplicate_fund: false,
+            agent_a_release_error: false,
+            agent_a_receipt_digest_mismatch: false,
+            agent_a_public_fact_drift: false,
         }
     }
 }
@@ -34,13 +51,16 @@ pub(crate) struct ActorFixture {
     root: PathBuf,
 }
 
+static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
 impl ActorFixture {
     pub(crate) fn new() -> Self {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let root = std::env::temp_dir().join(format!("kamn-pi-actors-{nanos}"));
+        let sequence = FIXTURE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!("kamn-pi-actors-{nanos}-{sequence}"));
         std::fs::create_dir_all(&root).expect("fixture directory");
         Self { root }
     }
@@ -56,12 +76,28 @@ impl ActorFixture {
         self.write_c(overrides);
     }
 
+    #[allow(dead_code)]
+    pub(crate) fn rebind_shared_facts(&self) {
+        for path in self.paths() {
+            rebind_actor(Path::new(path.as_str()));
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn reorder_agent_a_mutations(&self) {
+        reorder_actor_mutations(&self.root.join("agent-a.json"));
+    }
+
     fn write_a(&self, overrides: &Overrides) {
         let input = ActorInput::new("agent_a", 101, "kamn:did:a", "escrow-live-7099", '1')
             .with_private(sha('e'))
             .with_handoff_authorized(overrides.agent_a_handoff_authorized)
             .with_handoff_as_string(overrides.agent_a_handoff_as_string)
-            .with_release(overrides.agent_a_include_release);
+            .with_release(overrides.agent_a_include_release)
+            .with_duplicate_fund(overrides.agent_a_duplicate_fund)
+            .with_release_error(overrides.agent_a_release_error)
+            .with_receipt_digest_mismatch(overrides.agent_a_receipt_digest_mismatch)
+            .with_public_fact_drift(overrides.agent_a_public_fact_drift);
         write_actor(&self.root.join("agent-a.json"), input);
     }
 
@@ -82,54 +118,6 @@ impl ActorFixture {
         input.projection = overrides.agent_c_projection;
         input.private = overrides.agent_c_private;
         write_actor(&self.root.join("agent-c.json"), input);
-    }
-}
-
-struct ActorInput<'a> {
-    role: &'a str,
-    pid: u64,
-    did: &'a str,
-    escrow: &'a str,
-    projection: String,
-    private: Option<String>,
-    handoff_authorized: bool,
-    handoff_as_string: bool,
-    include_release: bool,
-}
-
-impl<'a> ActorInput<'a> {
-    fn new(role: &'a str, pid: u64, did: &'a str, escrow: &'a str, projection: char) -> Self {
-        Self {
-            role,
-            pid,
-            did,
-            escrow,
-            projection: sha(projection),
-            private: None,
-            handoff_authorized: false,
-            handoff_as_string: false,
-            include_release: true,
-        }
-    }
-
-    fn with_private(mut self, value: String) -> Self {
-        self.private = Some(value);
-        self
-    }
-
-    fn with_handoff_authorized(mut self, value: bool) -> Self {
-        self.handoff_authorized = value;
-        self
-    }
-
-    fn with_handoff_as_string(mut self, value: bool) -> Self {
-        self.handoff_as_string = value;
-        self
-    }
-
-    fn with_release(mut self, value: bool) -> Self {
-        self.include_release = value;
-        self
     }
 }
 
@@ -182,60 +170,4 @@ fn actor_json(input: &ActorInput<'_>) -> String {
         sha('d'),
         sha('b'),
     )
-}
-
-fn runtime_receipts(input: &ActorInput<'_>) -> String {
-    let tools = match input.role {
-        "agent_a" => [
-            "register",
-            "create_task",
-            "fund_escrow",
-            if input.include_release {
-                "release_escrow"
-            } else {
-                "query_task"
-            },
-            "query_participant_task_projection",
-        ],
-        "agent_b" => [
-            "register",
-            "accept_task",
-            "complete_task",
-            "query_task",
-            "query_participant_task_projection",
-        ],
-        _ => [
-            "register",
-            "query_task",
-            "query_task",
-            "query_task",
-            "query_verifier_task_projection",
-        ],
-    };
-    tools
-        .iter()
-        .enumerate()
-        .map(|(index, tool)| {
-            format!(
-                r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}"}}"#,
-                index + 1,
-                tool,
-                response_digests(input)[index]
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(",")
-}
-
-fn response_digests(input: &ActorInput<'_>) -> [String; 5] {
-    let projection = if input.projection == sha('f') {
-        sha('3')
-    } else {
-        input.projection.clone()
-    };
-    [sha('a'), sha('b'), sha('c'), sha('d'), projection]
-}
-
-pub(crate) fn sha(character: char) -> String {
-    format!("sha256:{}", character.to_string().repeat(64))
 }

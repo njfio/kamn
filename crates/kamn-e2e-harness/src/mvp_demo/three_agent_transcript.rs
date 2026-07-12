@@ -5,6 +5,7 @@ use super::devnet_settlement::DevnetSettlementEvidence;
 use super::live_task_binding::LiveTaskBinding;
 use super::report::DemoReportInput;
 use super::three_agent_receipts::validate_three_agent_receipt_files;
+use super::three_agent_runtime_chain::{validate_runtime_chain, write_runtime_chain};
 use super::three_agent_transcript_build::transcript_json;
 use super::three_agent_view_artifacts::validate_three_agent_view_files;
 use super::verify_support::{
@@ -29,8 +30,12 @@ pub(crate) fn write_three_agent_transcript(
     binding: &LiveTaskBinding,
     run_dir: &Path,
     view_digests: &ThreeAgentViewDigests,
+    actor_paths: Option<&[String; 3]>,
 ) -> Result<String, String> {
     let path = run_dir.join("proof").join(TRANSCRIPT_FILE);
+    if let Some(paths) = actor_paths {
+        return write_runtime_chain(path.as_path(), paths);
+    }
     let artifact = transcript_json(run_id, evidence, binding, run_dir, view_digests)?;
     std::fs::write(path.as_path(), artifact.json.as_str()).map_err(|error| {
         format!(
@@ -63,6 +68,25 @@ pub(crate) fn validate_three_agent_transcript_claim(claim: &ClaimView<'_>) -> Re
     Ok(())
 }
 
+pub(crate) fn require_runtime_chain_source(
+    report_json: &str,
+    expected_chain: &str,
+) -> Result<(), String> {
+    let claims = parse_claims(report_json)?;
+    let claim = three_agent_claim(claims.as_slice())
+        .ok_or_else(|| "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())?;
+    let artifact = extract_string(claim.raw, "three_agent_transcript_artifact")?;
+    let raw = std::fs::read_to_string(artifact)
+        .map_err(|_| "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())?;
+    if raw == expected_chain {
+        return Ok(());
+    }
+    if raw.contains("\"schema_version\":\"kamn.mvp.runtime-receipt-chain.v1\"") {
+        return Err("RUNTIME_RECEIPT_CHAIN_ARTIFACT_MISMATCH".to_owned());
+    }
+    Err("RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())
+}
+
 fn three_agent_claim<'a>(claims: &'a [ClaimView<'a>]) -> Option<&'a ClaimView<'a>> {
     claims.iter().find(|claim| claim.id == CLAIM_ID)
 }
@@ -78,6 +102,9 @@ fn validate_artifact_entry(report_json: &str, artifact: &str) -> Result<(), Stri
 
 fn validate_transcript(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> {
     validate_json_delimiters(raw)?;
+    if raw.contains("\"schema_version\":\"kamn.mvp.runtime-receipt-chain.v1\"") {
+        return validate_runtime_chain(raw, claim);
+    }
     reject_raw_private_payload(raw)?;
     validate_required_markers(raw)?;
     validate_transcript_fields(raw, claim)?;

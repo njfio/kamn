@@ -61,6 +61,7 @@ pub(crate) fn demo_config(root: &Path, artifact: &Path) -> MvpDemoCommandConfig 
         service_api_websocket_command: Some(stub_service_command("integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event")),
         agent_harness_evidence_path: Some(artifact.display().to_string()),
         live_task_evidence: None,
+        pi_transaction_actor_paths: None,
     }
 }
 

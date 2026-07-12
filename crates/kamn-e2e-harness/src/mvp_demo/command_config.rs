@@ -32,6 +32,8 @@ pub struct MvpDemoCommandConfig {
     pub agent_harness_evidence_path: Option<String>,
     /// Optional all-or-none independent live task evidence paths.
     pub live_task_evidence: Option<LiveTaskEvidencePaths>,
+    /// Optional complete Agent A, Agent B, and Agent C runtime evidence set.
+    pub pi_transaction_actor_paths: Option<[String; 3]>,
 }
 
 /// Parsed `verify-mvp-demo` command configuration.
