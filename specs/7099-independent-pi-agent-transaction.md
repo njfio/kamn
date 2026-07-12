@@ -114,6 +114,9 @@ files are not used for the barrier.
 After escrow funding, Agent A waits on its authenticated task projection until
 the task is completed before invoking release. This barrier prevents release
 eligibility races without retrying unrelated release failures.
+Authenticated MCP calls honor typed server anti-spam responses with bounded
+backoff on the same child and nonce stream. Rate-limit and suspension retries
+wait for the advertised window; no server threshold is weakened or bypassed.
 
 All failures hard-fail at the tool or verifier boundary. Existing artifacts are
 written idempotently and conflicting replay is rejected.
@@ -134,6 +137,8 @@ written idempotently and conflicting replay is rejected.
       before completing the task, preventing acceptance/completion races.
 - [ ] Agent A proves completed task state through its authenticated MCP session
       before invoking escrow release.
+- [ ] Typed anti-spam rate-limit and suspension responses are retained in
+      provenance and retried only after bounded server-respecting backoff.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
 - [ ] Create, accept, complete, fund, and release payloads are derived from one
