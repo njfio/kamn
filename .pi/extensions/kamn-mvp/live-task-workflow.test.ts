@@ -95,8 +95,8 @@ test("three agents drive one completed escrow transaction through independent MC
 	await workflow.shutdown();
 });
 
-test("ambiguous release reconciles through the same MCP child and idempotency key", async () => {
-	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_MODE: "ambiguous-first-release" });
+test("ambiguous release survives multiple observations on the same MCP child and idempotency key", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_MODE: "ambiguous-three-releases" });
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 	await workflow.register("agent_a");
 	const agentB = await workflow.register("agent_b");
@@ -106,10 +106,10 @@ test("ambiguous release reconciles through the same MCP child and idempotency ke
 	const provenance = workflow.provenance("agent_a");
 
 	assert.equal(released.state, "released");
-	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.outcome), ["error", "success"]);
-	assert.deepEqual(provenance.runtime_response_receipts.slice(-2).map((receipt) => receipt.tool), ["release_escrow", "release_escrow"]);
+	assert.deepEqual(provenance.runtime_response_receipts.slice(-4).map((receipt) => receipt.outcome), ["error", "error", "error", "success"]);
+	assert.equal(provenance.runtime_response_receipts.slice(-4).every((receipt) => receipt.tool === "release_escrow"), true);
 	assert.equal(provenance.runtime_response_receipts.at(-2)?.digest.startsWith("sha256:"), true);
-	assert.equal(provenance.last_request_id, 5);
+	assert.equal(provenance.last_request_id, 7);
 	await workflow.shutdown();
 });
 

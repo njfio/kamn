@@ -28,6 +28,9 @@ createInterface({ input: process.stdin }).on("line", (line) => {
 	if (mode === "ambiguous-first-release" && request.tool === "release_escrow" && releaseAttempts++ === 0) {
 		return write(ambiguousReleaseResponse(request));
 	}
+	if (mode === "ambiguous-three-releases" && request.tool === "release_escrow" && releaseAttempts++ < 3) {
+		return write(ambiguousReleaseResponse(request));
+	}
 	write(successResponse(request));
 });
 
