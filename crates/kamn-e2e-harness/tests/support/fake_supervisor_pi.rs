@@ -21,6 +21,7 @@ echo $$ > "{}/$role.pid"
 trap 'echo cleaned > "{}/$role.cleaned"; exit 0' TERM INT
 {b_branch}
 while read line; do
+  case "$line" in *'"type":"abort"'*) continue;; esac
   echo "$role" >> "{}/prompts.log"
   echo '{{"type":"response","command":"prompt","success":true}}'
   if [ "$role" = "kamn-mvp-agent-b" ]; then

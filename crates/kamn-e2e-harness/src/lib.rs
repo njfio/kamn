@@ -23,6 +23,7 @@ mod agent_transaction_pi_command;
 mod agent_transaction_preflight;
 mod agent_transaction_process;
 mod agent_transaction_rpc;
+mod agent_transaction_rpc_events;
 mod agent_transaction_runtime;
 mod agent_transaction_runtime_grant;
 mod agent_transaction_supervisor;

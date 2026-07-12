@@ -51,16 +51,37 @@ fn run_phases(group: &mut RpcGroup) -> Result<(), String> {
     let registration = group.prompt(
         1,
         "Call kamn_live_agent_b_register exactly once, then stop.",
+        "kamn_live_agent_b_register",
     )?;
     let provider_did = find_string(&registration, "did").ok_or_else(|| {
         format!("AGENT_TRANSACTION_CHILD_FAILED: Agent B omitted DID: {registration}")
     })?;
-    group.prompt(0, agent_a_create_prompt(provider_did).as_str())?;
-    group.prompt(1, AGENT_B_ACCEPT_PROMPT)?;
-    group.prompt(0, AGENT_A_FUND_PROMPT)?;
-    group.prompt(1, AGENT_B_COMPLETE_PROMPT)?;
-    group.prompt(0, AGENT_A_RELEASE_PROMPT)?;
-    group.prompt(2, AGENT_C_VERIFY_PROMPT)?;
+    group.prompt(
+        0,
+        agent_a_create_prompt(provider_did).as_str(),
+        "kamn_live_agent_a_publish_task_handoff",
+    )?;
+    group.prompt(
+        1,
+        AGENT_B_ACCEPT_PROMPT,
+        "kamn_live_agent_b_write_task_receipt",
+    )?;
+    group.prompt(0, AGENT_A_FUND_PROMPT, "kamn_live_agent_a_fund_escrow")?;
+    group.prompt(
+        1,
+        AGENT_B_COMPLETE_PROMPT,
+        "kamn_live_agent_b_write_transaction_evidence",
+    )?;
+    group.prompt(
+        0,
+        AGENT_A_RELEASE_PROMPT,
+        "kamn_live_agent_a_write_transaction_evidence",
+    )?;
+    group.prompt(
+        2,
+        AGENT_C_VERIFY_PROMPT,
+        "kamn_live_verify_pi_transaction_actors",
+    )?;
     Ok(())
 }
 

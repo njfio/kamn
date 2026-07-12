@@ -1,6 +1,6 @@
-use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, ChildStdout};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::io::Write;
+use std::process::{Child, ChildStdin};
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -8,6 +8,7 @@ use serde_json::Value;
 
 use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
 use super::agent_transaction_process::{start_process, take_pipes, terminate_process_group};
+use super::agent_transaction_rpc_events::spawn_reader;
 use super::{build_pi_actor_command, AgentTransactionDemoConfig, AgentTransactionRole};
 
 const CHILD_ERROR: &str = "AGENT_TRANSACTION_CHILD_FAILED";
@@ -51,8 +52,18 @@ impl RpcGroup {
         })
     }
 
-    pub(super) fn prompt(&mut self, index: usize, message: &str) -> Result<Value, String> {
-        prompt(&mut self.children[index], message, self.timeout_ms)
+    pub(super) fn prompt(
+        &mut self,
+        index: usize,
+        message: &str,
+        terminal_tool: &str,
+    ) -> Result<Value, String> {
+        prompt(
+            &mut self.children[index],
+            message,
+            terminal_tool,
+            self.timeout_ms,
+        )
     }
 
     pub(super) fn cleanup(&mut self) {
@@ -88,7 +99,12 @@ fn spawn_child(
     })
 }
 
-fn prompt(child: &mut RpcChild, message: &str, timeout_ms: u64) -> Result<Value, String> {
+fn prompt(
+    child: &mut RpcChild,
+    message: &str,
+    terminal_tool: &str,
+    timeout_ms: u64,
+) -> Result<Value, String> {
     let request = serde_json::json!({"id":"phase","type":"prompt","message":message});
     let stdin = child
         .stdin
@@ -98,10 +114,14 @@ fn prompt(child: &mut RpcChild, message: &str, timeout_ms: u64) -> Result<Value,
     stdin
         .flush()
         .map_err(|_| child_error("Pi prompt flush failed"))?;
-    read_agent_end(child, timeout_ms)
+    read_agent_end(child, terminal_tool, timeout_ms)
 }
 
-fn read_agent_end(child: &mut RpcChild, timeout_ms: u64) -> Result<Value, String> {
+fn read_agent_end(
+    child: &mut RpcChild,
+    terminal_tool: &str,
+    timeout_ms: u64,
+) -> Result<Value, String> {
     let timeout = Duration::from_millis(timeout_ms);
     let mut tool_result = None;
     loop {
@@ -114,11 +134,25 @@ fn read_agent_end(child: &mut RpcChild, timeout_ms: u64) -> Result<Value, String
         }
         if event["type"] == "tool_execution_end" {
             tool_result = Some(event.clone());
+            if event["toolName"] == terminal_tool {
+                abort_turn(child)?;
+            }
         }
         if event["type"] == "agent_end" {
             return Ok(tool_result.unwrap_or(event));
         }
     }
+}
+
+fn abort_turn(child: &mut RpcChild) -> Result<(), String> {
+    let stdin = child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| child_error("Pi stdin closed before abort"))?;
+    writeln!(stdin, r#"{{"type":"abort"}}"#).map_err(|_| child_error("Pi abort write failed"))?;
+    stdin
+        .flush()
+        .map_err(|_| child_error("Pi abort flush failed"))
 }
 
 fn failed_tool_error(event: &Value) -> Option<String> {
@@ -139,30 +173,6 @@ fn receive_event(child: &RpcChild, timeout: Duration) -> Result<Value, String> {
         Ok(result) => result,
         Err(RecvTimeoutError::Timeout) => Err(child_error("Pi RPC phase timed out")),
         Err(RecvTimeoutError::Disconnected) => Err(child_error("Pi actor exited before agent_end")),
-    }
-}
-
-fn spawn_reader(stdout: ChildStdout) -> (Receiver<Result<Value, String>>, JoinHandle<()>) {
-    let (sender, receiver) = mpsc::channel();
-    let handle = std::thread::spawn(move || read_events(stdout, sender));
-    (receiver, handle)
-}
-
-fn read_events(stdout: ChildStdout, sender: mpsc::Sender<Result<Value, String>>) {
-    let mut reader = BufReader::new(stdout);
-    let mut line = String::new();
-    loop {
-        line.clear();
-        match reader.read_line(&mut line) {
-            Ok(0) | Err(_) => break,
-            Ok(_) => {
-                let event = serde_json::from_str(line.trim())
-                    .map_err(|_| child_error("Pi RPC emitted malformed JSON"));
-                if sender.send(event).is_err() {
-                    break;
-                }
-            }
-        }
     }
 }
 
