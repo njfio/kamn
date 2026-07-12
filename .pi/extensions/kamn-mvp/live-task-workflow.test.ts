@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -55,9 +56,9 @@ test("three agents drive one completed escrow transaction through independent MC
 	assert.match(String(created.transaction_id), /^pi-devnet-[a-f0-9]{16}$/);
 	assert.match(String(created.terms_digest), /^[a-f0-9]{64}$/);
 	assert.match(String(created.idempotency_key), /-create$/);
-	assert.match(String(accepted.idempotency_key), /-accept$/);
-	assert.match(String(completed.idempotency_key), /-complete$/);
-	assert.match(String(completed.completion_evidence_digest), /^[a-f0-9]{64}$/);
+	assert.equal(accepted.idempotency_key, `${created.transaction_id}-accept`);
+	assert.equal(completed.idempotency_key, `${created.transaction_id}-complete`);
+	assert.equal(completed.completion_evidence_digest, completionDigest(String(created.terms_digest)));
 	assert.equal(funded.transaction_id, created.transaction_id);
 	assert.equal(funded.terms_digest, created.terms_digest);
 	assert.equal(funded.beneficiary_did, agentB.did);
@@ -137,6 +138,10 @@ for (const [mode, expected] of [
 		await assert.rejects(workflow.createTask("title", "description", "kamn:did:provider"), expected);
 		await workflow.shutdown();
 	});
+}
+
+function completionDigest(termsDigest: string): string {
+	return createHash("sha256").update(`completed:${termsDigest}`).digest("hex");
 }
 
 test("workflow rejects a mismatched acceptance task ID", async () => {
