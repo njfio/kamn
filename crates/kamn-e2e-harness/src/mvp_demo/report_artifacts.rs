@@ -1,4 +1,5 @@
 use super::report::{escape_json, DemoReportInput};
+use super::settlement_evidence_artifact::FILE_NAME as SETTLEMENT_EVIDENCE_FILE;
 use super::three_agent_receipts::{
     agent_a_observation_receipt_path, agent_b_observation_receipt_path,
     agent_c_verifier_observation_receipt_path,
@@ -88,7 +89,7 @@ fn base_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, Stri
 }
 
 fn proof_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, String)> {
-    vec![
+    let mut entries = vec![
         ("audit_export", run_proof_path(input, "audit-export.json")),
         (
             "localhost_signed_demo_artifact",
@@ -110,7 +111,14 @@ fn proof_artifact_entries(input: &DemoReportInput<'_>) -> Vec<(&'static str, Str
             "devnet_settlement_output",
             run_proof_path(input, "devnet-settlement-output.txt"),
         ),
-    ]
+    ];
+    if input.devnet_settlement.is_some() {
+        entries.push((
+            "devnet_settlement_evidence",
+            run_proof_path(input, SETTLEMENT_EVIDENCE_FILE),
+        ));
+    }
+    entries
 }
 
 fn artifact_json_entry(key: &str, path: &str) -> String {

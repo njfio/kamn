@@ -111,6 +111,14 @@ fn validate_required_label(claim: &ClaimView<'_>) -> Result<(), String> {
     if !claim.required {
         return Ok(());
     }
+    if claim.id == "three_agent_escrow_verification"
+        && matches!(
+            claim.label.as_str(),
+            CLAIM_LABEL_DRY_RUN | CLAIM_LABEL_PLACEHOLDER | CLAIM_LABEL_LOCAL_ONLY
+        )
+    {
+        return Err("AGENT_TRANSACTION_CLAIM_INVALID".to_owned());
+    }
     match claim.label.as_str() {
         CLAIM_LABEL_DRY_RUN => Err("required MVP claim cannot be dry-run".to_owned()),
         CLAIM_LABEL_PLACEHOLDER => Err("required MVP claim cannot be placeholder".to_owned()),

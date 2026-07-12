@@ -58,8 +58,12 @@ fn markdown_three_agent_boundary(input: &DemoReportInput<'_>) -> String {
         return String::new();
     };
     let transcript = three_agent_transcript_path(input);
+    let explorer = format!(
+        "https://explorer.solana.com/tx/{}?cluster=devnet",
+        settlement.settlement_tx_signature
+    );
     format!(
-        "## Three-Agent View Boundary\n\n- Task ID: `{}`\n- Actual service escrow ID: `{}`\n- Settlement execution surface: `{}`\n- Task binding digest: `{}`\n- Binding artifact: `{}`\n- Transcript artifact: `{transcript}`\n- Agent A and Agent B include participant-private proof digests and private field counts in the JSON report and transcript.\n- The third-party verifier uses a restricted public-view digest to validate shared task, escrow, and settlement commitments.\n- Raw private payloads are redacted, and no verifier private-view digest is emitted.\n",
+        "## Three-Agent View Boundary\n\n- Task ID: `{}`\n- Actual service escrow ID: `{}`\n- Settlement execution surface: `{}`\n- Solana devnet transaction: [{explorer}]({explorer})\n- Task binding digest: `{}`\n- Binding artifact: `{}`\n- Transcript artifact: `{transcript}`\n- Agent A and Agent B include participant-private proof digests and private field counts in the JSON report and transcript.\n- The third-party verifier uses a restricted public-view digest to validate shared task, escrow, and settlement commitments.\n- Raw private payloads are redacted, and no verifier private-view digest is emitted.\n",
         binding.task_id,
         settlement.escrow_id,
         settlement.execution_surface,

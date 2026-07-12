@@ -55,6 +55,10 @@ pub fn execute_verify_mvp_demo_contract(
     let pi_actor_summary = validate_direct_evidence(config, report.as_str())?;
     validate_three_agent_transcript_file(report.as_str())?;
     validate_live_task_binding_file(report.as_str())?;
+    super::independent_verifier::validate_independent_bundle(
+        report.as_str(),
+        config.report.as_str(),
+    )?;
     Ok(render_verify_output(config, pi_actor_summary))
 }
 
@@ -68,10 +72,15 @@ fn validate_direct_evidence(
     let Some(paths) = config.pi_transaction_actor_paths.as_ref() else {
         return Ok(None);
     };
+    let map = super::independent_verifier_errors::map_actor_verification_error;
     let expected =
-        super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(paths)?;
-    super::three_agent_transcript::require_runtime_chain_source(report, expected.as_str())?;
-    super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths(paths).map(Some)
+        super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(paths)
+            .map_err(map)?;
+    super::three_agent_transcript::require_runtime_chain_source(report, expected.as_str())
+        .map_err(map)?;
+    super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths(paths)
+        .map_err(map)
+        .map(Some)
 }
 
 fn render_verify_output(config: &VerifyMvpDemoCommandConfig, summary: Option<String>) -> String {
