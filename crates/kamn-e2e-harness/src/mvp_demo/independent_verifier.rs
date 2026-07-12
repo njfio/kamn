@@ -8,6 +8,11 @@ use super::settlement_evidence_artifact::{
 const PATH_INVALID: &str = "PROOF_ARTIFACT_PATH_INVALID";
 const SETTLEMENT_INVALID: &str = "SETTLEMENT_EVIDENCE_INVALID";
 const AGENT_CLAIM_INVALID: &str = "AGENT_TRANSACTION_CLAIM_INVALID";
+const AGENT_TRANSACTION_FILES: [&str; 3] = [
+    "three-agent-transcript.json",
+    "live-task-settlement-binding.json",
+    "runtime-agent-a-evidence.json",
+];
 pub(super) fn validate_independent_bundle(report: &str, report_path: &str) -> Result<(), String> {
     let report_json: Value =
         serde_json::from_str(report).map_err(|_| "PROOF_ARTIFACT_TAMPERED".to_owned())?;
@@ -90,13 +95,9 @@ impl<'a> BundleContext<'a> {
     }
 
     fn has_agent_transaction_files(&self) -> bool {
-        [
-            "three-agent-transcript.json",
-            "live-task-settlement-binding.json",
-            "runtime-agent-a-evidence.json",
-        ]
-        .iter()
-        .any(|name| self.run_dir.join("proof").join(name).is_file())
+        AGENT_TRANSACTION_FILES
+            .iter()
+            .any(|name| self.run_dir.join("proof").join(name).is_file())
     }
 }
 
