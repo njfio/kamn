@@ -47,7 +47,10 @@ fn spec_c03_successful_rpc_children_run_the_canonical_phase_order() {
 
     let error = execute_agent_transaction_demo_with_config(&config)
         .expect_err("missing proof artifacts must fail after actor phases");
-    assert!(error.starts_with("AGENT_TRANSACTION_PROOF_INVALID"));
+    assert!(
+        error.starts_with("AGENT_TRANSACTION_PROOF_INVALID"),
+        "unexpected error: {error}"
+    );
     let phases = std::fs::read_to_string(fixture.root.join("prompts.log")).expect("phase log");
     assert_eq!(
         phases.lines().collect::<Vec<_>>(),
@@ -111,9 +114,9 @@ impl SupervisorFixture {
 }
 
 fn write_fake_pi(root: &std::path::Path, mode: &str) {
-    let b_action = match mode {
-        "hang" => "sleep 2; exit 9",
-        "fail" => "exit 9",
+    let b_branch = match mode {
+        "hang" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; sleep 2; exit 9; fi",
+        "fail" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; exit 9; fi",
         _ => "",
     };
     let script = format!(
@@ -127,7 +130,7 @@ for arg in "$@"; do
 done
 echo $$ > "{}/$role.pid"
 trap 'echo cleaned > "{}/$role.cleaned"; exit 0' TERM INT
-if [ "$role" = "kamn-mvp-agent-b" ] && [ -n "{b_action}" ]; then read line; {b_action}; fi
+{b_branch}
 while read line; do
   echo "$role" >> "{}/prompts.log"
   echo '{{"type":"response","command":"prompt","success":true}}'

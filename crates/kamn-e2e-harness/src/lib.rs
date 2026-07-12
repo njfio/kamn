@@ -19,6 +19,8 @@ pub use mvp_demo::{
 mod agent_transaction_demo;
 mod agent_transaction_pi_command;
 mod agent_transaction_preflight;
+mod agent_transaction_process;
+mod agent_transaction_rpc;
 mod agent_transaction_supervisor;
 
 /// Driver implementations for each execution mode.
