@@ -76,6 +76,7 @@ fn spec_c04_pi_rpc_commands_are_role_bounded_and_persistent() {
     assert!(tools(&agent_a).contains("kamn_live_agent_a_release_escrow"));
     assert!(!tools(&agent_a).contains("kamn_live_agent_b_complete_task"));
     assert!(tools(&agent_b).contains("kamn_live_agent_b_complete_task"));
+    assert!(tools(&agent_b).contains("kamn_live_agent_b_query_task"));
     assert!(!tools(&agent_b).contains("kamn_live_agent_a_release_escrow"));
     assert!(tools(&agent_c).contains("kamn_live_agent_c_query_verifier_projection"));
     assert!(!tools(&agent_c).contains("kamn_live_agent_a_fund_escrow"));
