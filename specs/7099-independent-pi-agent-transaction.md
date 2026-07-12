@@ -98,6 +98,12 @@ participant receipt fields; Agent C has none.
   failure; no partial success artifact.
 - Devnet unavailable or settlement ambiguous: canonical `NO-GO`; never `GO`.
 
+An ambiguous release response is reconciled inside the same Pi tool invocation.
+The workflow retains the same MCP child, release idempotency key, and contiguous
+request stream for a bounded retry. It returns success only after the runtime
+reports the escrow released with finalized settlement evidence; exhaustion or
+any non-ambiguous error hard-fails without writing actor success evidence.
+
 All failures hard-fail at the tool or verifier boundary. Existing artifacts are
 written idempotently and conflicting replay is rejected.
 
@@ -109,6 +115,8 @@ written idempotently and conflicting replay is rejected.
 - [ ] A failed settlement attempt followed by same-key reconciliation retains
       a continuous request/digest stream without converting the failure into
       successful operation evidence.
+- [ ] One release invocation performs bounded same-child reconciliation after
+      `SETTLEMENT_OUTCOME_AMBIGUOUS` and fails closed if confirmation is absent.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
 - [ ] Create, accept, complete, fund, and release payloads are derived from one
@@ -177,6 +185,8 @@ GREEN:
   evidence and callers.
 - Map each successful role operation to its exact request ID and response digest;
   handled failures remain only in the contiguous provenance stream.
+- Keep ambiguous release reconciliation inside one bounded workflow operation
+  so Pi cannot exit between submission and same-key confirmation.
 - Decode actor artifacts with strict typed JSON semantics before verification.
 - Construct the MCP child environment from an explicit allowlist that excludes
   all secret-bearing KAMN and provider configuration.
