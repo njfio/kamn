@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub use agent_transaction_demo::{
-    execute_agent_transaction_demo_contract, parse_agent_transaction_demo_config,
-    AgentTransactionDemoConfig,
+    execute_agent_transaction_demo_contract, execute_agent_transaction_demo_with_config,
+    parse_agent_transaction_demo_config, AgentTransactionDemoConfig,
 };
 pub use agent_transaction_pi_command::{build_pi_actor_command, AgentTransactionRole};
 pub use agent_transaction_preflight::validate_agent_transaction_preflight;
@@ -19,6 +19,7 @@ pub use mvp_demo::{
 mod agent_transaction_demo;
 mod agent_transaction_pi_command;
 mod agent_transaction_preflight;
+mod agent_transaction_supervisor;
 
 /// Driver implementations for each execution mode.
 pub mod drivers;

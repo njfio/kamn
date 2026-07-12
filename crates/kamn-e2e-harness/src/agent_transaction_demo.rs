@@ -29,6 +29,8 @@ pub struct AgentTransactionDemoConfig {
     pub pi_model: String,
     /// Explicit project-local Pi extension path.
     pub pi_extension: String,
+    /// Canonical proof output root.
+    pub output_root: String,
 }
 
 /// Parses and validates canonical demo configuration without performing work.
@@ -55,6 +57,7 @@ pub fn parse_agent_transaction_demo_config(
             "KAMN_MVP_PI_EXTENSION",
             ".pi/extensions/kamn-mvp/index.ts",
         ),
+        output_root: optional(env, "KAMN_MVP_AGENT_TRANSACTION_OUTPUT_ROOT", ".kamn/demo"),
     };
     validate_config(&config)?;
     Ok(config)
@@ -64,8 +67,15 @@ pub fn parse_agent_transaction_demo_config(
 pub fn execute_agent_transaction_demo_contract() -> Result<String, String> {
     let env = std::env::vars().collect::<BTreeMap<_, _>>();
     let config = parse_agent_transaction_demo_config(&env)?;
-    super::agent_transaction_preflight::validate_agent_transaction_preflight(&config)?;
-    Err("AGENT_TRANSACTION_CHILD_FAILED: supervisor unavailable".to_owned())
+    execute_agent_transaction_demo_with_config(&config)
+}
+
+/// Executes the canonical demo from an already parsed configuration.
+pub fn execute_agent_transaction_demo_with_config(
+    config: &AgentTransactionDemoConfig,
+) -> Result<String, String> {
+    super::agent_transaction_preflight::validate_agent_transaction_preflight(config)?;
+    super::agent_transaction_supervisor::run_supervised_registration(config)
 }
 
 fn agent_keys(env: &BTreeMap<String, String>) -> Result<[String; 3], String> {
