@@ -68,12 +68,24 @@ test("configuration rejects missing values and key files", () => {
 	);
 });
 
-test("configuration does not forward unrelated Pi credentials", async () => {
+test("configuration does not forward parent credentials or custody configuration", async () => {
 	const paths = await testPaths();
-	const config = readLiveMcpConfig("AGENT_A", configEnv(paths.keyFile, { OPENAI_API_KEY: "must-not-leak" }), process.cwd());
+	const config = readLiveMcpConfig("AGENT_A", configEnv(paths.keyFile, {
+		OPENAI_API_KEY: "must-not-leak",
+		KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX: "service-secret",
+		KAMN_SIGNER_PRIVATE_KEY_HEX: "signer-secret",
+		KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE: "/secret/payer.json",
+		KAMN_MVP_PI_OAUTH_STATE: "oauth-state",
+		KAMN_MVP_FAKE_MCP_MODE: "success",
+	}), process.cwd());
 
 	assert.equal(config.env.OPENAI_API_KEY, undefined);
-	assert.equal(config.env.KAMN_MVP_LIVE_MCP_AGENT_A_NAME, "agent-a");
+	assert.equal(config.env.KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX, undefined);
+	assert.equal(config.env.KAMN_SIGNER_PRIVATE_KEY_HEX, undefined);
+	assert.equal(config.env.KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE, undefined);
+	assert.equal(config.env.KAMN_MVP_PI_OAUTH_STATE, undefined);
+	assert.equal(config.env.KAMN_MVP_LIVE_MCP_AGENT_A_NAME, undefined);
+	assert.equal(config.env.KAMN_MVP_FAKE_MCP_MODE, "success");
 });
 
 test("configuration selects independent Agent B identity inputs", async () => {
