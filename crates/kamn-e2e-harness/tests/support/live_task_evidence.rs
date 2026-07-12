@@ -11,12 +11,21 @@ pub(crate) fn write(root: &Path) -> LiveTaskEvidencePaths {
 }
 
 pub(crate) fn write_for_task(root: &Path, task_id: &str) -> LiveTaskEvidencePaths {
+    write_for_task_version(root, task_id, false)
+}
+
+#[allow(dead_code)]
+pub(crate) fn write_v2(root: &Path) -> LiveTaskEvidencePaths {
+    write_for_task_version(root, TASK_ID, true)
+}
+
+fn write_for_task_version(root: &Path, task_id: &str, version_two: bool) -> LiveTaskEvidencePaths {
     std::fs::create_dir_all(root).expect("task evidence root should be created");
     let handoff = root.join("live-task-handoff.json");
     let agent_a = root.join("live-task-agent-a.json");
     let agent_b = root.join("live-task-agent-b.json");
     let agent_c = root.join("live-task-agent-c.json");
-    let handoff_digest = write_handoff(handoff.as_path(), task_id);
+    let handoff_digest = write_handoff(handoff.as_path(), task_id, version_two);
     let agent_a_digest = write_receipt(agent_a.as_path(), "agent_a", 101, task_id);
     let agent_b_digest = write_receipt(agent_b.as_path(), "agent_b", 202, task_id);
     write_observation(
@@ -34,9 +43,15 @@ pub(crate) fn write_for_task(root: &Path, task_id: &str) -> LiveTaskEvidencePath
     }
 }
 
-fn write_handoff(path: &Path, task_id: &str) -> String {
-    let raw =
-        format!(r#"{{"schema_version":"kamn.mvp.live-task-handoff.v1","task_id":"{task_id}"}}"#);
+fn write_handoff(path: &Path, task_id: &str, version_two: bool) -> String {
+    let raw = if version_two {
+        format!(
+            r#"{{"schema_version":"kamn.mvp.live-task-handoff.v2","task_id":"{task_id}","transaction_id":"transaction-live-7086","terms_digest":"{}","provider_did":"kamn:did:agent:provider"}}"#,
+            "a".repeat(64)
+        )
+    } else {
+        format!(r#"{{"schema_version":"kamn.mvp.live-task-handoff.v1","task_id":"{task_id}"}}"#)
+    };
     write_with_digest(path, raw)
 }
 
