@@ -51,8 +51,12 @@ fn configured_fixture(
     live: &LiveTaskEvidencePaths,
 ) -> kamn_e2e_harness::AgentTransactionDemoConfig {
     std::fs::create_dir_all(root.join("extension")).expect("fixture root");
-    for name in ["agent-a.key", "agent-b.key", "agent-c.key"] {
-        std::fs::write(root.join(name), name).expect("agent key");
+    for (name, byte) in [
+        ("agent-a.key", "11"),
+        ("agent-b.key", "22"),
+        ("agent-c.key", "33"),
+    ] {
+        std::fs::write(root.join(name), byte.repeat(32)).expect("agent key");
     }
     let payer = (0_u8..64).collect::<Vec<_>>();
     std::fs::write(

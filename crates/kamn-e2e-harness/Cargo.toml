@@ -8,6 +8,7 @@ license = "Apache-2.0"
 kamn-agent-lib = { path = "../kamn-agent-lib" }
 kamn-cli = { path = "../kamn-cli" }
 kamn-mcp-server = { path = "../kamn-mcp-server" }
+kamn-sdk = { path = "../kamn-sdk" }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2.workspace = true

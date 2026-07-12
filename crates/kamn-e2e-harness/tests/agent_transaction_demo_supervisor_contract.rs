@@ -97,8 +97,12 @@ impl SupervisorFixture {
     fn new(pi_mode: &str) -> Self {
         let root = unique_root();
         std::fs::create_dir_all(root.join("extension")).expect("fixture root");
-        for name in ["agent-a.key", "agent-b.key", "agent-c.key"] {
-            std::fs::write(root.join(name), name).expect("agent key");
+        for (name, byte) in [
+            ("agent-a.key", "11"),
+            ("agent-b.key", "22"),
+            ("agent-c.key", "33"),
+        ] {
+            std::fs::write(root.join(name), byte.repeat(32)).expect("agent key");
         }
         let payer = (0_u8..64).collect::<Vec<_>>();
         std::fs::write(
@@ -124,6 +128,7 @@ impl SupervisorFixture {
             ("KAMN_MVP_PI_BINARY", "pi"),
             ("KAMN_MVP_PI_EXTENSION", "extension/index.ts"),
             ("KAMN_MVP_AGENT_TRANSACTION_OUTPUT_ROOT", "demo"),
+            ("KAMN_MVP_AGENT_TRANSACTION_STAGING_ROOT", "staging"),
         ] {
             env.insert(name.to_owned(), self.root.join(path).display().to_string());
         }
@@ -188,5 +193,6 @@ fn unique_root() -> PathBuf {
 
 fn test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    LOCK.lock().expect("supervisor test lock")
+    LOCK.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }

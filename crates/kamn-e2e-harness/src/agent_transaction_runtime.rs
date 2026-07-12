@@ -1,4 +1,5 @@
 use std::net::TcpStream;
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -6,6 +7,7 @@ use std::time::{Duration, Instant};
 use std::os::unix::process::CommandExt;
 
 use super::agent_transaction_process::terminate_process;
+use super::agent_transaction_runtime_grant::write_task_creation_grant;
 use super::AgentTransactionDemoConfig;
 
 const RUNTIME_ERROR: &str = "AGENT_TRANSACTION_RUNTIME_FAILED";
@@ -18,7 +20,8 @@ impl LocalRuntime {
     pub(super) fn start(config: &AgentTransactionDemoConfig) -> Result<Self, String> {
         let address = endpoint_address(config.mcp_endpoint.as_str())?;
         reject_occupied_endpoint(address.as_str())?;
-        let mut command = runtime_command(config, address.as_str());
+        let state_file = write_task_creation_grant(config)?;
+        let mut command = runtime_command(config, address.as_str(), &state_file);
         let child = command
             .spawn()
             .map_err(|error| format!("{RUNTIME_ERROR}: node spawn failed: {error}"))?;
@@ -48,13 +51,14 @@ impl Drop for LocalRuntime {
     }
 }
 
-fn runtime_command(config: &AgentTransactionDemoConfig, address: &str) -> Command {
+fn runtime_command(config: &AgentTransactionDemoConfig, address: &str, state: &Path) -> Command {
     let storage = std::path::Path::new(config.staging_root.as_str()).join("node-state");
     let mut command = Command::new(config.local_node_binary.as_str());
     command.args(runtime_args(address));
     command
         .arg(storage)
-        .env("KAMN_SERVICE_API_TLS_MODE", "disabled");
+        .env("KAMN_SERVICE_API_TLS_MODE", "disabled")
+        .env("KAMN_SERVICE_API_STATE_FILE", state);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::null())
