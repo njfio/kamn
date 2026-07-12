@@ -3,7 +3,7 @@ use serde_json::Value;
 
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
-use pi_transaction_actor_fixture::{ActorFixture, Overrides};
+use pi_transaction_actor_fixture::{sha, ActorFixture, Overrides};
 
 #[test]
 fn spec_c01_builds_ordered_chain_from_exact_runtime_receipts() {
@@ -19,6 +19,45 @@ fn spec_c01_builds_ordered_chain_from_exact_runtime_receipts() {
     assert!(steps(&chain).iter().all(has_runtime_source));
     assert!(!raw.contains("agent_a_registered"));
     assert!(!raw.contains("private_receipt_digest"));
+}
+
+#[test]
+fn spec_c02_missing_runtime_step_fails_with_chain_reason() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides {
+        agent_a_include_release: false,
+        ..Overrides::default()
+    });
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_STEP_MISSING");
+}
+
+#[test]
+fn spec_c03_shared_fact_drift_fails_with_chain_reason() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides {
+        agent_b_escrow: "escrow-other",
+        ..Overrides::default()
+    });
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_FACT_MISMATCH");
+}
+
+#[test]
+fn spec_c04_verifier_private_data_fails_with_chain_reason() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides {
+        agent_c_private: Some(sha('e')),
+        ..Overrides::default()
+    });
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_VERIFIER_PRIVATE_LEAK");
+}
+
+fn assert_chain_error(fixture: &ActorFixture, code: &str) {
+    let error = build_runtime_receipt_chain_from_actor_paths(&fixture.paths())
+        .expect_err("tampered runtime evidence must fail");
+    assert_eq!(error, code);
 }
 
 fn actions(chain: &Value) -> Vec<&str> {
