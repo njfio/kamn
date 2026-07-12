@@ -72,6 +72,7 @@ function participantProjection(taskId, name) {
 	return {
 		...sharedProjection(taskId),
 		view_scope: "participant-private",
+		participant_role: suffix === "a" ? "creator" : "provider",
 		private_receipt_digest: `sha256:participant-${suffix}`,
 	};
 }

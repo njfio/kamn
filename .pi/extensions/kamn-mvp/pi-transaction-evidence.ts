@@ -28,6 +28,7 @@ type ActorArtifact = {
 	settlement_commitment: string;
 	public_commitment: string;
 	view_scope: string;
+	participant_role?: string;
 	private_receipt_digest?: string;
 	source_handoff_digest: string;
 	handoff_authorized: boolean;
@@ -109,6 +110,7 @@ function transactionFields(input: Record<string, unknown>) {
 function disclosureFields(input: Record<string, unknown>) {
 	return {
 		view_scope: requiredString(input.view_scope, "PI_VERIFIER_PROJECTION_MISSING"),
+		...(input.participant_role === undefined ? {} : { participant_role: requiredString(input.participant_role, "PI_ACTOR_IDENTITY_INVALID") }),
 		...(input.private_receipt_digest === undefined ? {} : { private_receipt_digest: shaDigest(input.private_receipt_digest, "PI_VERIFIER_PRIVATE_LEAK") }),
 	};
 }
@@ -132,9 +134,12 @@ function validateActor(actor: Omit<ActorArtifact, "artifact_digest">) {
 	if (actor.actor === "agent_c") {
 		if (actor.view_scope !== "restricted-public") throw new Error("PI_VERIFIER_PROJECTION_MISSING");
 		if (actor.private_receipt_digest !== undefined) throw new Error("PI_VERIFIER_PRIVATE_LEAK");
+		if (actor.participant_role !== undefined) throw new Error("PI_VERIFIER_PRIVATE_LEAK");
 		return;
 	}
+	const expectedRole = actor.actor === "agent_a" ? "creator" : "provider";
 	if (actor.view_scope !== "participant-private" || !actor.private_receipt_digest) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
+	if (actor.participant_role !== expectedRole) throw new Error("PI_ACTOR_IDENTITY_INVALID");
 }
 
 

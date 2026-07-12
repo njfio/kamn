@@ -40,7 +40,10 @@ export function buildActorEvidence(
 		runtime_projection_digest: runtimeProjectionDigest,
 		...sharedProjectionFields(projection),
 		view_scope: requiredString(projection, "view_scope", `${agentLabel(role)} projection`),
-		...(role === "agent_c" ? {} : { private_receipt_digest: runtimeProjectionDigest }),
+		...(role === "agent_c" ? {} : {
+			participant_role: requiredString(projection, "participant_role", `${agentLabel(role)} projection`),
+			private_receipt_digest: runtimeProjectionDigest,
+		}),
 		source_handoff_digest: handoffDigest,
 		handoff_authorized: false,
 	};
