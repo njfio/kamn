@@ -3,8 +3,6 @@ use kamn_e2e_harness::{
 };
 use std::path::{Path, PathBuf};
 
-#[path = "support/live_task_evidence.rs"]
-mod live_task_evidence;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 
@@ -110,7 +108,9 @@ fn spec_c05_live_service_claim_requires_request_derived_escrow_id() {
 fn spec_c06_bound_demo_accepts_transaction_aware_handoff_v2() {
     let root = temp_root("handoff-v2");
     let mut config = mvp_demo_command::devnet_required_demo_config(&root);
-    config.live_task_evidence = Some(live_task_evidence::write_v2(&root.join("handoff-v2")));
+    config.live_task_evidence = Some(mvp_demo_command::live_task_evidence::write_v2(
+        &root.join("handoff-v2"),
+    ));
 
     execute_mvp_demo_contract(&config).expect("v2 handoff should bind to the demo");
 }

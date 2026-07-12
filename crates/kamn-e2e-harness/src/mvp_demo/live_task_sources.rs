@@ -61,7 +61,7 @@ pub(super) fn validate_sources(sources: &Sources) -> Result<ValidatedSources, St
 }
 
 fn validate_source_shapes(sources: &Sources) -> Result<(), String> {
-    validate_shape(&sources.handoff, "kamn.mvp.live-task-handoff.v1", 3)?;
+    validate_handoff_shape(&sources.handoff)?;
     validate_shape(&sources.agent_a, "kamn.mvp.live-task-actor-receipt.v1", 6)?;
     validate_shape(&sources.agent_b, "kamn.mvp.live-task-actor-receipt.v1", 6)?;
     validate_shape(
@@ -69,6 +69,28 @@ fn validate_source_shapes(sources: &Sources) -> Result<(), String> {
         "kamn.mvp.live-task-restricted-observation.v1",
         12,
     )
+}
+
+fn validate_handoff_shape(raw: &str) -> Result<(), String> {
+    match extract_string(raw, "schema_version")?.as_str() {
+        "kamn.mvp.live-task-handoff.v1" => validate_shape(raw, "kamn.mvp.live-task-handoff.v1", 3),
+        "kamn.mvp.live-task-handoff.v2" => validate_handoff_v2(raw),
+        _ => Err("live task evidence schema_version mismatch".to_owned()),
+    }
+}
+
+fn validate_handoff_v2(raw: &str) -> Result<(), String> {
+    validate_shape(raw, "kamn.mvp.live-task-handoff.v2", 6)?;
+    let transaction = extract_string(raw, "transaction_id")?;
+    let terms = extract_string(raw, "terms_digest")?;
+    let provider = extract_string(raw, "provider_did")?;
+    let valid = !transaction.is_empty()
+        && terms.len() == 64
+        && terms.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && provider.starts_with("kamn:did:agent:");
+    valid
+        .then_some(())
+        .ok_or_else(|| "live task handoff v2 fields invalid".to_owned())
 }
 
 fn source_fields(sources: &Sources, task_id: String) -> Result<ValidatedSources, String> {
