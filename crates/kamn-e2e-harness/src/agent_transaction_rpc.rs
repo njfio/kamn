@@ -76,7 +76,8 @@ fn spawn_child(
     role: AgentTransactionRole,
 ) -> Result<RpcChild, String> {
     let command = build_pi_actor_command(config, role);
-    let mut child = start_process(command.as_slice(), paths.environment().as_slice())?;
+    let environment = paths.environment(config);
+    let mut child = start_process(command.as_slice(), environment.as_slice())?;
     let (stdin, stdout) = take_pipes(&mut child)?;
     let (events, reader) = spawn_reader(stdout);
     Ok(RpcChild {

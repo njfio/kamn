@@ -72,6 +72,9 @@ demo-mvp:
 	CARGO_TARGET_DIR=target/mvp-demo-proof cargo run -p kamn-e2e-harness -- demo-mvp
 
 demo-agent-transaction:
+	CARGO_TARGET_DIR=target/mvp-demo-proof cargo build -p kamn-node -p kamn-mcp-server
+	KAMN_MVP_LOCAL_NODE_BINARY="$${KAMN_MVP_LOCAL_NODE_BINARY:-target/mvp-demo-proof/debug/kamn-node}" \
+	KAMN_MVP_LIVE_MCP_BINARY="$${KAMN_MVP_LIVE_MCP_BINARY:-target/mvp-demo-proof/debug/kamn-mcp-server}" \
 	CARGO_TARGET_DIR=target/mvp-demo-proof cargo run -p kamn-e2e-harness -- demo-agent-transaction
 
 demo-localhost-transport:

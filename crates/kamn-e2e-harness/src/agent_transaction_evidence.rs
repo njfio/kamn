@@ -31,8 +31,11 @@ impl AgentTransactionEvidencePaths {
         })
     }
 
-    pub(super) fn environment(&self) -> Vec<(&'static str, String)> {
-        vec![
+    pub(super) fn environment(
+        &self,
+        config: &AgentTransactionDemoConfig,
+    ) -> Vec<(&'static str, String)> {
+        let mut environment = vec![
             ("KAMN_MVP_LIVE_TASK_HANDOFF_FILE", self.handoff.clone()),
             (
                 "KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE",
@@ -59,8 +62,45 @@ impl AgentTransactionEvidencePaths {
                 self.actors[2].clone(),
             ),
             ("KAMN_MVP_PI_RUN_ID", self.run_id.clone()),
-        ]
+        ];
+        environment.extend(runtime_environment(config));
+        environment
     }
+}
+
+fn runtime_environment(config: &AgentTransactionDemoConfig) -> Vec<(&'static str, String)> {
+    vec![
+        ("KAMN_MVP_LIVE_MCP_BINARY", config.mcp_binary.clone()),
+        ("KAMN_MVP_LIVE_MCP_ENDPOINT", config.mcp_endpoint.clone()),
+        (
+            "KAMN_MVP_LIVE_MCP_AGENT_A_NAME",
+            "kamn-mvp-agent-a".to_owned(),
+        ),
+        (
+            "KAMN_MVP_LIVE_MCP_AGENT_B_NAME",
+            "kamn-mvp-agent-b".to_owned(),
+        ),
+        (
+            "KAMN_MVP_LIVE_MCP_AGENT_C_NAME",
+            "kamn-mvp-agent-c".to_owned(),
+        ),
+        (
+            "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE",
+            config.agent_key_files[0].clone(),
+        ),
+        (
+            "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE",
+            config.agent_key_files[1].clone(),
+        ),
+        (
+            "KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE",
+            config.agent_key_files[2].clone(),
+        ),
+        (
+            "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS",
+            config.solana_lamports.to_string(),
+        ),
+    ]
 }
 
 fn reject_existing_artifacts(root: &Path) -> Result<(), String> {
