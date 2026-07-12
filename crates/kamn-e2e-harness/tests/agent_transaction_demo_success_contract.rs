@@ -7,6 +7,8 @@ use kamn_e2e_harness::{
     parse_agent_transaction_demo_config, LiveTaskEvidencePaths, VerifyMvpDemoCommandConfig,
 };
 
+#[path = "support/fake_local_runtime.rs"]
+mod fake_local_runtime;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 #[path = "support/pi_transaction_actor_fixture.rs"]
@@ -76,6 +78,7 @@ fn fixture_env(root: &Path) -> BTreeMap<String, String> {
     ] {
         env.insert(name.to_owned(), root.join(file).display().to_string());
     }
+    fake_local_runtime::configure(root, &mut env);
     env
 }
 

@@ -83,7 +83,10 @@ fn kill_process_group(pid: u32) {
 #[cfg(unix)]
 fn signal_process_group(pid: u32, signal: &str) {
     let group = format!("-{pid}");
-    let _ = Command::new("kill").args([signal, group.as_str()]).status();
+    let _ = Command::new("kill")
+        .args([signal, group.as_str()])
+        .stderr(Stdio::null())
+        .status();
 }
 
 #[cfg(not(unix))]

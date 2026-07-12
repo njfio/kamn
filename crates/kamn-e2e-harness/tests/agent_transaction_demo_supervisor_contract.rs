@@ -1,10 +1,14 @@
 use std::collections::BTreeMap;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use kamn_e2e_harness::{
     execute_agent_transaction_demo_with_config, parse_agent_transaction_demo_config,
 };
+
+#[path = "support/fake_local_runtime.rs"]
+mod fake_local_runtime;
+#[path = "support/fake_supervisor_pi.rs"]
+mod fake_supervisor_pi;
 
 #[test]
 fn spec_c01_actor_failure_cleans_every_child_and_writes_no_go() {
@@ -74,7 +78,6 @@ fn spec_c03_successful_rpc_children_run_the_canonical_phase_order() {
 
 struct SupervisorFixture {
     root: PathBuf,
-    endpoint: String,
 }
 
 impl SupervisorFixture {
@@ -91,11 +94,8 @@ impl SupervisorFixture {
         )
         .expect("payer file");
         std::fs::write(root.join("extension/index.ts"), "export default {}").expect("extension");
-        write_fake_pi(&root, pi_mode);
-        let endpoint = format!("http://127.0.0.1:{}", free_port());
-        write_fake_runtime(&root);
-        std::fs::write(root.join("kamn-mcp-server"), "stub").expect("MCP binary");
-        Self { root, endpoint }
+        fake_supervisor_pi::write(&root, pi_mode);
+        Self { root }
     }
 
     fn env(&self) -> BTreeMap<String, String> {
@@ -118,87 +118,9 @@ impl SupervisorFixture {
             "KAMN_MVP_AGENT_TRANSACTION_RPC_TIMEOUT_MS".to_owned(),
             "100".to_owned(),
         );
-        env.insert(
-            "KAMN_MVP_LOCAL_NODE_BINARY".to_owned(),
-            self.root.join("kamn-node").display().to_string(),
-        );
-        env.insert(
-            "KAMN_MVP_LIVE_MCP_BINARY".to_owned(),
-            self.root.join("kamn-mcp-server").display().to_string(),
-        );
-        env.insert(
-            "KAMN_MVP_LIVE_MCP_ENDPOINT".to_owned(),
-            self.endpoint.clone(),
-        );
+        fake_local_runtime::configure(&self.root, &mut env);
         env
     }
-}
-
-fn write_fake_runtime(root: &std::path::Path) {
-    let script = format!(
-        r#"#!/bin/sh
-port=""
-previous=""
-for arg in "$@"; do
-  if [ "$previous" = "--api-bind" ]; then port="${{arg##*:}}"; fi
-  previous="$arg"
-done
-exec python3 -c 'import signal,socket,sys,time
-root=sys.argv[1]; port=int(sys.argv[2])
-open(root+"/runtime.started","w").write(str(__import__("os").getpid()))
-server=socket.socket(); server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); server.bind(("127.0.0.1",port)); server.listen()
-def stop(*_):
- open(root+"/runtime.stopped","w").write("stopped"); server.close(); sys.exit(0)
-signal.signal(signal.SIGTERM,stop)
-while True: time.sleep(.05)' "{}" "$port"
-"#,
-        root.display()
-    );
-    write_executable(root.join("kamn-node"), script.as_str());
-}
-
-fn write_fake_pi(root: &std::path::Path, mode: &str) {
-    let b_branch = match mode {
-        "hang" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; sleep 2; exit 9; fi",
-        "fail" => "if [ \"$role\" = \"kamn-mvp-agent-b\" ]; then read line; exit 9; fi",
-        _ => "",
-    };
-    let script = format!(
-        r#"#!/bin/sh
-case " $* " in *" --print "*) echo KAMN_PI_PREFLIGHT_OK; exit 0;; esac
-role=""
-previous=""
-for arg in "$@"; do
-  if [ "$previous" = "--name" ]; then role="$arg"; fi
-  previous="$arg"
-done
-echo $$ > "{}/$role.pid"
-trap 'echo cleaned > "{}/$role.cleaned"; exit 0' TERM INT
-{b_branch}
-while read line; do
-  echo "$role" >> "{}/prompts.log"
-  echo '{{"type":"response","command":"prompt","success":true}}'
-  if [ "$role" = "kamn-mvp-agent-b" ]; then
-    echo '{{"type":"agent_end","messages":[{{"did":"kamn:did:agent:b"}}]}}'
-  else
-    echo '{{"type":"agent_end","messages":[]}}'
-  fi
-done
-echo cleaned > "{}/$role.cleaned"
-"#,
-        root.display(),
-        root.display(),
-        root.display(),
-        root.display()
-    );
-    write_executable(root.join("pi"), script.as_str());
-}
-
-fn write_executable(path: PathBuf, contents: &str) {
-    std::fs::write(&path, contents).expect("fake executable");
-    let mut permissions = std::fs::metadata(&path).expect("metadata").permissions();
-    permissions.set_mode(0o700);
-    std::fs::set_permissions(path, permissions).expect("permissions");
 }
 
 fn assert_no_processes(root: &std::path::Path) {
@@ -249,14 +171,6 @@ fn unique_root() -> PathBuf {
         "kamn-agent-supervisor-{}-{nanos}-{id}",
         std::process::id()
     ))
-}
-
-fn free_port() -> u16 {
-    std::net::TcpListener::bind("127.0.0.1:0")
-        .expect("free port")
-        .local_addr()
-        .expect("local address")
-        .port()
 }
 
 fn test_lock() -> std::sync::MutexGuard<'static, ()> {

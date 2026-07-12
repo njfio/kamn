@@ -43,7 +43,21 @@ impl Drop for LocalRuntime {
 fn runtime_command(config: &AgentTransactionDemoConfig, address: &str) -> Command {
     let storage = std::path::Path::new(config.staging_root.as_str()).join("node-state");
     let mut command = Command::new(config.local_node_binary.as_str());
-    command.args([
+    command.args(runtime_args(address));
+    command
+        .arg(storage)
+        .env("KAMN_SERVICE_API_TLS_MODE", "disabled");
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(unix)]
+    command.process_group(0);
+    command
+}
+
+fn runtime_args(address: &str) -> [&str; 11] {
+    [
         "--runtime-mode",
         "api",
         "--role",
@@ -55,17 +69,7 @@ fn runtime_command(config: &AgentTransactionDemoConfig, address: &str) -> Comman
         "--api-idle-timeout-ms",
         "600000",
         "--storage-dir",
-    ]);
-    command
-        .arg(storage)
-        .env("KAMN_SERVICE_API_TLS_MODE", "disabled");
-    command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    #[cfg(unix)]
-    command.process_group(0);
-    command
+    ]
 }
 
 fn endpoint_address(endpoint: &str) -> Result<String, String> {

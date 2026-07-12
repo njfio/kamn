@@ -17,11 +17,18 @@ pub(super) fn run_supervised_registration(
         Ok(paths) => paths,
         Err(error) => return fail_no_go(config, error.as_str()),
     };
+    execute_with_paths(config, &paths)
+}
+
+fn execute_with_paths(
+    config: &AgentTransactionDemoConfig,
+    paths: &AgentTransactionEvidencePaths,
+) -> Result<String, String> {
     let mut runtime = match LocalRuntime::start(config) {
         Ok(runtime) => runtime,
         Err(error) => return fail_no_go(config, error.as_str()),
     };
-    let mut group = match RpcGroup::spawn(config, &paths) {
+    let mut group = match RpcGroup::spawn(config, paths) {
         Ok(group) => group,
         Err(error) => {
             runtime.cleanup();
@@ -32,7 +39,7 @@ pub(super) fn run_supervised_registration(
     group.cleanup();
     runtime.cleanup();
     match result {
-        Ok(()) => match finalize(config, &paths) {
+        Ok(()) => match finalize(config, paths) {
             Ok(output) => Ok(output),
             Err(error) => fail_no_go(config, format!("{PROOF_ERROR}: {error}").as_str()),
         },
