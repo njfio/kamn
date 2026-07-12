@@ -24,6 +24,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
 	const request = JSON.parse(line);
 	if (mode === "error") return write(errorResponse(request));
 	if (mode === "error-on-second" && request.id === "2") return write(errorResponse(request));
+	if (mode === "rate-limit-on-second" && request.id === "2") return write(rateLimitResponse(request));
 	if (mode === "ambiguous-first-release" && request.tool === "release_escrow" && releaseAttempts++ === 0) {
 		return write(ambiguousReleaseResponse(request));
 	}
@@ -136,6 +137,15 @@ function ambiguousReleaseResponse(request) {
 		id: request.id,
 		tool: request.tool,
 		error: { kind: "backend_error", message: "SETTLEMENT_OUTCOME_AMBIGUOUS: reconciliation required" },
+	};
+}
+
+function rateLimitResponse(request) {
+	return {
+		ok: false,
+		id: request.id,
+		tool: request.tool,
+		error: { kind: "backend_error", message: "sender anti-spam rate limit exceeded: observed=3, limit=3, window_seconds=1" },
 	};
 }
 

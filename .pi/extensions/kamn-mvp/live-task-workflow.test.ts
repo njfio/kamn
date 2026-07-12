@@ -154,6 +154,19 @@ test("Agent A waits for completed task state before release", async () => {
 	await workflow.shutdown();
 });
 
+test("authenticated workflow calls retain and back off after a typed rate limit", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_MODE: "rate-limit-on-second" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+	const created = await workflow.createTask("Rate proof", "Respect server backoff", "kamn:did:provider");
+	const receipts = workflow.provenance("agent_a").runtime_response_receipts;
+
+	assert.equal(created.task_id, "task-live-1");
+	assert.deepEqual(receipts.slice(-2).map((receipt) => receipt.outcome), ["error", "success"]);
+	assert.equal(receipts.at(-1)?.request_id, 3);
+	await workflow.shutdown();
+});
+
 test("actor evidence requires a registered identity and final runtime projection", async () => {
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
