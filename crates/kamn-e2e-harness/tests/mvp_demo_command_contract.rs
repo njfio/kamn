@@ -9,6 +9,9 @@ use kamn_e2e_harness::{
 
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
+#[path = "support/pi_transaction_actor_fixture.rs"]
+mod pi_transaction_actor_fixture;
+use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 
 #[test]
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
@@ -148,6 +151,23 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
         assert!(report.contains(marker), "missing report marker: {marker}");
     }
     let _ = std::fs::remove_dir_all(&temp);
+}
+
+#[test]
+fn spec_c10_demo_consumes_runtime_actor_chain_when_configured() {
+    let temp = temp_dir("mvp-demo-runtime-chain");
+    let actors = ActorFixture::new();
+    actors.write_all(Overrides::default());
+    let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
+    config.pi_transaction_actor_paths = Some(actors.paths());
+
+    execute_mvp_demo_contract(&config).expect("runtime-backed demo should pass");
+    let transcript = std::fs::read_to_string(
+        run_directories(&temp)[0].join("proof/three-agent-transcript.json"),
+    )
+    .expect("canonical transaction proof");
+    assert!(transcript.contains("kamn.mvp.runtime-receipt-chain.v1"));
+    assert!(!transcript.contains("agent_a_registered"));
 }
 
 fn devnet_settlement_markers() -> [&'static str; 6] {
