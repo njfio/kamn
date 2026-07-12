@@ -28,7 +28,7 @@ pub(crate) fn devnet_required_demo_config(temp: &Path) -> MvpDemoCommandConfig {
     let mut config = local_demo_config(temp);
     config.devnet_mode = "required".to_owned();
     config.solana_rpc_url = Some("https://api.devnet.solana.com".to_owned());
-    config.devnet_settlement_command = Some(stub_devnet_settlement_command());
+    config.devnet_settlement_command = Some(stub_devnet_settlement_command(temp));
     config.live_task_evidence = Some(live_task_evidence::write(temp));
     config
 }
@@ -63,14 +63,25 @@ fn stub_service_api_command(test_name: &str) -> Vec<String> {
     ]
 }
 
-fn stub_devnet_settlement_command() -> Vec<String> {
+fn stub_devnet_settlement_command(temp: &Path) -> Vec<String> {
+    let response = temp.join("authoritative-solana-confirmation.json");
+    write_confirmation_fixture(response.as_path());
     vec![
         "sh".to_owned(),
         "-c".to_owned(),
-        r#"cat <<'JSON'
-{"network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","recipient_pubkey":"FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe","lamports":1000000,"escrow_id":"escrow-local-bound-7086","settlement_tx_signature":"devnet-signature-111","settlement_commitment":"finalized","payer_balance_before":2500000000,"payer_balance_after":2498995000,"recipient_balance_before":2500000000,"recipient_balance_after":2501000000,"persisted_settlement_tx_signature":"devnet-signature-111"}
+        format!(
+            r#"cat <<'JSON'
+{{"network":"solana:devnet","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","recipient_pubkey":"FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe","lamports":1000000,"escrow_id":"escrow-local-bound-7086","settlement_tx_signature":"devnet-signature-111","settlement_commitment":"finalized","payer_balance_before":2500000000,"payer_balance_after":2498995000,"recipient_balance_before":2500000000,"recipient_balance_after":2501000000,"persisted_settlement_tx_signature":"devnet-signature-111","authoritative_rpc_artifact":"{}"}}
 JSON
-"#
-        .to_owned(),
+"#,
+            response.display()
+        ),
     ]
+}
+
+fn write_confirmation_fixture(path: &Path) {
+    let raw = r#"{"confirmationStatus":"finalized","meta":{"err":null,"preBalances":[2500000000,2500000000],"postBalances":[2498995000,2501000000]},"transaction":{"signatures":["devnet-signature-111"],"message":{"accountKeys":["2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe"]}}}"#;
+    std::fs::create_dir_all(path.parent().expect("confirmation parent"))
+        .expect("confirmation parent directory");
+    std::fs::write(path, raw).expect("confirmation fixture");
 }

@@ -13,10 +13,19 @@ pub(super) fn collect_actor_settlement_evidence(
     paths: &AgentTransactionEvidencePaths,
 ) -> Result<PathBuf, String> {
     let actor = read_actor(paths.actors[0].as_str())?;
-    let payer = payer_pubkey(config.solana_keypair_file.as_str())?;
+    let payer =
+        super::agent_transaction_rpc_artifact::payer_pubkey(config.solana_keypair_file.as_str())?;
     let confirmation = confirm(config, actor.signature.as_str())?;
+    let confirmation_path =
+        super::agent_transaction_rpc_artifact::write_confirmation(config, &confirmation)?;
     let balances = transaction_balances(&confirmation, payer.as_str(), config)?;
-    let evidence = evidence_json(config, &actor, payer.as_str(), &balances);
+    let evidence = evidence_json(
+        config,
+        &actor,
+        payer.as_str(),
+        &balances,
+        confirmation_path.as_path(),
+    );
     let path = Path::new(config.staging_root.as_str()).join("actor-devnet-evidence.json");
     std::fs::write(&path, evidence)
         .map_err(|error| settlement_error(format!("evidence write failed: {error}")))?;
@@ -46,17 +55,6 @@ fn read_actor(path: &str) -> Result<ActorSettlement, String> {
         escrow_id: string_field(&value, "escrow_id")?,
         lamports: u64_field(&value, "amount_lamports")?,
     })
-}
-
-fn payer_pubkey(keypair: &str) -> Result<String, String> {
-    let output = Command::new("solana-keygen")
-        .args(["pubkey", keypair])
-        .output()
-        .map_err(|error| settlement_error(format!("solana-keygen failed: {error}")))?;
-    if !output.status.success() {
-        return Err(settlement_error("solana-keygen rejected payer"));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
 fn confirm(config: &AgentTransactionDemoConfig, signature: &str) -> Result<Value, String> {
@@ -157,6 +155,7 @@ fn evidence_json(
     actor: &ActorSettlement,
     payer: &str,
     balances: &TransactionBalances,
+    confirmation_path: &Path,
 ) -> String {
     serde_json::json!({
         "network": "solana:devnet", "rpc_url": config.solana_rpc_url,
@@ -167,6 +166,7 @@ fn evidence_json(
         "recipient_balance_before": balances.recipient_before,
         "recipient_balance_after": balances.recipient_after,
         "persisted_settlement_tx_signature": actor.signature,
+        "authoritative_rpc_artifact": confirmation_path,
     })
     .to_string()
 }

@@ -5,6 +5,7 @@ pub(crate) use super::devnet_settlement_json::devnet_settlement_claim_json;
 use super::devnet_settlement_json::parse_devnet_settlement_evidence;
 use super::devnet_settlement_live::collect_live_devnet_settlement;
 use super::live_task_binding::LiveTaskBinding;
+use super::settlement_evidence_artifact::write_settlement_evidence_artifact;
 
 const NO_GO_RPC_MISSING: &str = "devnet_rpc_url_missing";
 const NO_GO_KEYPAIR_MISSING: &str = "devnet_keypair_not_configured";
@@ -33,6 +34,7 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) recipient_balance_before: u64,
     pub(crate) recipient_balance_after: u64,
     pub(crate) persisted_settlement_tx_signature: String,
+    pub(crate) authoritative_rpc_artifact: Option<String>,
 }
 
 pub(crate) struct DevnetSettlementInput<'a> {
@@ -145,6 +147,7 @@ fn write_live_success_log(
     run_dir: &Path,
     evidence: &DevnetSettlementEvidence,
 ) -> Result<(), String> {
+    write_settlement_evidence_artifact(run_dir, evidence)?;
     let content = format!(
         "devnet_settlement_status=PASS\nnetwork={}\nexecution_surface={}\nrpc_url={}\npayer_pubkey={}\nrecipient_pubkey={}\nlamports={}\nescrow_id={}\nsettlement_tx_signature={}\nsettlement_commitment={}\npayer_balance_before={}\npayer_balance_after={}\nrecipient_balance_before={}\nrecipient_balance_after={}\npersisted_settlement_tx_signature={}\ntask_id={}\ntask_binding_digest={}\n",
         evidence.network,

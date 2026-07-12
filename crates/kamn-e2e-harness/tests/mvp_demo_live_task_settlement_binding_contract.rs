@@ -3,6 +3,9 @@ use kamn_e2e_harness::{
 };
 use std::path::{Path, PathBuf};
 
+#[path = "support/artifact_digest.rs"]
+#[allow(dead_code)]
+mod artifact_digest;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 
@@ -73,7 +76,7 @@ fn spec_c03_verifier_rejects_tampered_task_binding_artifact() {
     std::fs::write(binding, tampered).expect("binding tamper should be written");
 
     let err = verify_latest(&root).expect_err("tampered task binding must fail");
-    assert!(err.contains("live task settlement binding"), "{err}");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]
@@ -84,7 +87,7 @@ fn spec_c04_live_service_claim_requires_funding_request_artifact() {
     relabel_report_as_live_service(&root, None);
 
     let err = verify_latest(&root).expect_err("live service claim without request must fail");
-    assert!(err.contains("devnet escrow funding request"), "{err}");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]
@@ -101,7 +104,7 @@ fn spec_c05_live_service_claim_requires_request_derived_escrow_id() {
     relabel_report_as_live_service(&root, Some(&request));
 
     let err = verify_latest(&root).expect_err("request-derived escrow mismatch must fail");
-    assert!(err.contains("devnet escrow funding request"), "{err}");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]
@@ -134,6 +137,25 @@ fn relabel_report_as_live_service(root: &Path, request: Option<&Path>) {
         );
     }
     std::fs::write(report_path, report).expect("latest report tamper should be written");
+    relabel_settlement_artifacts(root);
+}
+
+fn relabel_settlement_artifacts(root: &Path) {
+    let proof = only_run_dir(root).join("proof");
+    let evidence_path = proof.join("settlement-evidence.json");
+    let evidence = std::fs::read_to_string(&evidence_path)
+        .expect("settlement evidence")
+        .replace("command-override", "live-service-api");
+    std::fs::write(
+        evidence_path,
+        artifact_digest::with_digest(evidence, "evidence_digest"),
+    )
+    .expect("relabeled settlement evidence");
+    let log_path = proof.join("devnet-settlement-output.txt");
+    let log = std::fs::read_to_string(&log_path)
+        .expect("settlement log")
+        .replace("command-override", "live-service-api");
+    std::fs::write(log_path, log).expect("relabeled settlement log");
 }
 
 fn verify_latest(root: &Path) -> Result<String, String> {

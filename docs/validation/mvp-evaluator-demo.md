@@ -109,6 +109,15 @@ cargo run -p kamn-e2e-harness -- \
   verify-mvp-demo --report .kamn/demo/latest/proof/report.json
 ```
 
+The run bundle includes `proof/settlement-evidence.json`, a digest-bearing
+offline record derived from the confirmed Solana CLI/RPC response and balance
+queries. The standalone verifier does not trust copied report fields: it
+cross-checks this artifact against the task-bound settlement claim, indexed
+settlement log, finalized signature, recipient, amount, and exact recipient
+balance movement. It also rejects proof paths outside the recorded run. The
+human report links the verified signature directly to Solana Explorer with
+`cluster=devnet`.
+
 ## Optional Pi Agent Harness
 KAMN includes a project-local Pi extension at `.pi/extensions/kamn-mvp/index.ts`.
 It registers named local proof tools:
@@ -411,4 +420,11 @@ The verifier command:
 cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
 ```
 
-returns `{"status":"PASS"}` only when the report schema, artifacts, required local proof claims, claim labels, and value-movement boundaries are valid. For a live bound three-agent report it also revalidates all four Pi sources, the binding digest, the v2 funding request, the request-derived service escrow ID, and every task/binding/escrow reference across transcript, views, and receipts.
+returns `{"status":"PASS"}` only when the report schema, artifacts, required
+local proof claims, claim labels, and value-movement boundaries are valid. For
+a live bound three-agent report it also revalidates all four Pi sources, the
+binding digest, the v2 funding request, the request-derived service escrow ID,
+every task/binding/escrow reference across transcript, views, and receipts, the
+digest-bearing offline settlement evidence, the indexed settlement log, and
+the signature-derived Solana Explorer devnet link. Verification is
+proof-bundle-only and remains valid after the node and agent processes exit.

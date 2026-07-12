@@ -190,7 +190,7 @@ fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
         pi_transaction_actor_paths: Some(actors.paths()),
     })
     .expect_err("runtime actors must not validate a generated transcript");
-    assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID");
+    assert_eq!(error, "RECEIPT_CHAIN_INVALID");
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn spec_c12_verifier_rebuilds_chain_from_actor_receipts() {
         pi_transaction_actor_paths: Some(actors.paths()),
     })
     .expect_err("self-consistent forged chain must not pass");
-    assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_ARTIFACT_MISMATCH");
+    assert_eq!(error, "RECEIPT_CHAIN_INVALID");
 }
 
 fn rewrite_chain_and_claim(root: &Path) {

@@ -32,6 +32,7 @@ pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), S
     validate_report_shape(report_json)?;
     let claims = parse_claims(report_json)?;
     validate_required_claims(&claims)?;
+    validate_agent_transaction_claim_presence(report_json, &claims)?;
     for claim in &claims {
         validate_claim_label(claim.label.as_str())?;
         validate_required_label(claim)?;
@@ -41,6 +42,22 @@ pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), S
     validate_agent_harness_claim_shape(&claims)?;
     validate_three_agent_escrow_verification(&claims)?;
     validate_no_go(report_json)
+}
+
+fn validate_agent_transaction_claim_presence(
+    report: &str,
+    claims: &[ClaimView<'_>],
+) -> Result<(), String> {
+    let has_artifacts = report.contains("\"three_agent_transcript\":\"")
+        || report.contains("\"live_task_settlement_binding\":\"")
+        || report.contains("\"runtime_agent_a_evidence\":\"");
+    let has_claim = claims
+        .iter()
+        .any(|claim| claim.id == "three_agent_escrow_verification");
+    if !has_artifacts || has_claim {
+        return Ok(());
+    }
+    Err("AGENT_TRANSACTION_CLAIM_INVALID".to_owned())
 }
 
 fn validate_report_shape(report_json: &str) -> Result<(), String> {
@@ -110,6 +127,14 @@ fn validate_claim_label(label: &str) -> Result<(), String> {
 fn validate_required_label(claim: &ClaimView<'_>) -> Result<(), String> {
     if !claim.required {
         return Ok(());
+    }
+    if claim.id == "three_agent_escrow_verification"
+        && matches!(
+            claim.label.as_str(),
+            CLAIM_LABEL_DRY_RUN | CLAIM_LABEL_PLACEHOLDER | CLAIM_LABEL_LOCAL_ONLY
+        )
+    {
+        return Err("AGENT_TRANSACTION_CLAIM_INVALID".to_owned());
     }
     match claim.label.as_str() {
         CLAIM_LABEL_DRY_RUN => Err("required MVP claim cannot be dry-run".to_owned()),

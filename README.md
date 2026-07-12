@@ -48,7 +48,11 @@ Expected top-level artifacts:
 .kamn/demo/latest/proof/report.md
 ```
 
-The report links to the concrete run directory under `.kamn/demo/<run-id>/`, including local signed-flow, service API, websocket, audit, and settlement proof files where applicable.
+The report links to the concrete run directory under `.kamn/demo/<run-id>/`,
+including local signed-flow, service API, websocket, audit, and settlement proof
+files where applicable. A successful devnet-backed transaction report also
+includes a direct Solana Explorer devnet link and digest-bearing offline
+settlement evidence that the verifier checks after all demo processes exit.
 
 ### Canonical three-agent transaction demo
 

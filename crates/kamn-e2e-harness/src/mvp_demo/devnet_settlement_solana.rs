@@ -1,3 +1,5 @@
+use serde_json::Value;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::devnet_settlement_live::LiveSettlementConfig;
@@ -47,6 +49,48 @@ pub(super) fn validate_balance_movement(
         return Err("payer balance did not decrease after settlement transfer".to_owned());
     }
     Ok(())
+}
+
+pub(super) fn capture_confirmation(
+    rpc_url: &str,
+    commitment: &str,
+    signature: &str,
+    run_dir: &Path,
+) -> Result<PathBuf, String> {
+    let output = Command::new("solana")
+        .args([
+            "confirm",
+            "--url",
+            rpc_url,
+            "--commitment",
+            commitment,
+            "--verbose",
+            "--output",
+            "json",
+            signature,
+        ])
+        .output()
+        .map_err(|error| format!("failed to run solana confirm: {error}"))?;
+    let value = parse_confirmation(&output)?;
+    let path = run_dir.join("state/live-solana-confirmation.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec(&value).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("failed to persist Solana confirmation: {error}"))?;
+    Ok(path)
+}
+
+fn parse_confirmation(output: &std::process::Output) -> Result<Value, String> {
+    if !output.status.success() {
+        return Err("solana confirm failed".to_owned());
+    }
+    let value: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("solana confirm JSON invalid: {error}"))?;
+    if value["confirmationStatus"] == "finalized" && value["meta"]["err"].is_null() {
+        return Ok(value);
+    }
+    Err("solana confirmation is not finalized success".to_owned())
 }
 
 fn solana_balance_lamports(rpc_url: &str, pubkey: &str, commitment: &str) -> Result<u64, String> {

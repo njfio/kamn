@@ -26,6 +26,10 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     let run_id = build_run_id()?;
     let run_dir = output_root.join(run_id.as_str());
     create_demo_artifacts(&run_dir)?;
+    super::runtime_actor_bundle::copy_runtime_actor_sources(
+        config.pi_transaction_actor_paths.as_ref(),
+        &run_dir,
+    )?;
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
     let bound = create_bound_settlement(config, run_id.as_str(), &run_dir)?;
@@ -53,8 +57,14 @@ pub fn execute_verify_mvp_demo_contract(
     validate_local_artifact_files(report.as_str())?;
     validate_embedded_agent_harness_evidence(report.as_str(), config.report.as_str())?;
     let pi_actor_summary = validate_direct_evidence(config, report.as_str())?;
-    validate_three_agent_transcript_file(report.as_str())?;
-    validate_live_task_binding_file(report.as_str())?;
+    super::independent_verifier::validate_independent_bundle(
+        report.as_str(),
+        config.report.as_str(),
+    )?;
+    let map = super::independent_verifier_errors::map_three_agent_verification_error;
+    super::runtime_actor_bundle::validate_runtime_actor_bundle(report.as_str()).map_err(map)?;
+    validate_three_agent_transcript_file(report.as_str()).map_err(map)?;
+    validate_live_task_binding_file(report.as_str()).map_err(map)?;
     Ok(render_verify_output(config, pi_actor_summary))
 }
 
@@ -68,10 +78,15 @@ fn validate_direct_evidence(
     let Some(paths) = config.pi_transaction_actor_paths.as_ref() else {
         return Ok(None);
     };
+    let map = super::independent_verifier_errors::map_actor_verification_error;
     let expected =
-        super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(paths)?;
-    super::three_agent_transcript::require_runtime_chain_source(report, expected.as_str())?;
-    super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths(paths).map(Some)
+        super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(paths)
+            .map_err(map)?;
+    super::three_agent_transcript::require_runtime_chain_source(report, expected.as_str())
+        .map_err(map)?;
+    super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths(paths)
+        .map_err(map)
+        .map(Some)
 }
 
 fn render_verify_output(config: &VerifyMvpDemoCommandConfig, summary: Option<String>) -> String {
