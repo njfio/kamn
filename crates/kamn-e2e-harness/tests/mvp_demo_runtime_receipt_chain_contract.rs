@@ -54,6 +54,28 @@ fn spec_c04_verifier_private_data_fails_with_chain_reason() {
     assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_VERIFIER_PRIVATE_LEAK");
 }
 
+#[test]
+fn spec_c05_duplicate_successful_mutation_fails_closed() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides {
+        agent_a_duplicate_fund: true,
+        ..Overrides::default()
+    });
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_STEP_DUPLICATED");
+}
+
+#[test]
+fn spec_c06_failed_release_cannot_satisfy_success_step() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides {
+        agent_a_release_error: true,
+        ..Overrides::default()
+    });
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_OUTCOME_INVALID");
+}
+
 fn assert_chain_error(fixture: &ActorFixture, code: &str) {
     let error = build_runtime_receipt_chain_from_actor_paths(&fixture.paths())
         .expect_err("tampered runtime evidence must fail");

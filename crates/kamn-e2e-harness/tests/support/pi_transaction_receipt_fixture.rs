@@ -8,6 +8,8 @@ pub(crate) struct ActorInput<'a> {
     pub(crate) handoff_authorized: bool,
     pub(crate) handoff_as_string: bool,
     pub(crate) include_release: bool,
+    pub(crate) duplicate_fund: bool,
+    pub(crate) release_error: bool,
 }
 
 impl<'a> ActorInput<'a> {
@@ -28,6 +30,8 @@ impl<'a> ActorInput<'a> {
             handoff_authorized: false,
             handoff_as_string: false,
             include_release: true,
+            duplicate_fund: false,
+            release_error: false,
         }
     }
 
@@ -50,6 +54,16 @@ impl<'a> ActorInput<'a> {
         self.include_release = value;
         self
     }
+
+    pub(crate) fn with_duplicate_fund(mut self, value: bool) -> Self {
+        self.duplicate_fund = value;
+        self
+    }
+
+    pub(crate) fn with_release_error(mut self, value: bool) -> Self {
+        self.release_error = value;
+        self
+    }
 }
 
 pub(crate) fn runtime_receipts(input: &ActorInput<'_>) -> String {
@@ -67,7 +81,9 @@ fn tools(input: &ActorInput<'_>) -> [&'static str; 5] {
             "register",
             "create_task",
             "fund_escrow",
-            if input.include_release {
+            if input.duplicate_fund {
+                "fund_escrow"
+            } else if input.include_release {
                 "release_escrow"
             } else {
                 "query_task"
@@ -92,12 +108,18 @@ fn tools(input: &ActorInput<'_>) -> [&'static str; 5] {
 }
 
 fn receipt_json(input: &ActorInput<'_>, index: usize, tool: &str) -> String {
+    let is_error = input.release_error && tool == "release_escrow";
+    let outcome = if is_error { "error" } else { "success" };
+    let public_result = if is_error {
+        "{}".to_owned()
+    } else {
+        public_result_json(input.role, tool)
+    };
     format!(
-        r#"{{"request_id":{},"tool":"{}","outcome":"success","digest":"{}","public_result":{}}}"#,
+        r#"{{"request_id":{},"tool":"{}","outcome":"{outcome}","digest":"{}","public_result":{public_result}}}"#,
         index + 1,
         tool,
         response_digests(input)[index],
-        public_result_json(input.role, tool),
     )
 }
 
