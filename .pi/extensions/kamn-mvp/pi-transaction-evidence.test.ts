@@ -83,6 +83,7 @@ test("actor evidence accepts interim and final successful projection reads", asy
 	const receipts = runtimeReceipts("agent_b");
 	receipts.splice(4, 0, {
 		request_id: 5, tool: "query_participant_task_projection", outcome: "success", digest: `sha256:${"8".repeat(64)}`,
+		public_result: publicResult("agent_b", "query_participant_task_projection"),
 	});
 	receipts[5] = { ...receipts[5], request_id: 6, digest: finalDigest };
 	await writeActors(paths, { agent_b: {
