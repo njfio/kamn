@@ -1,11 +1,11 @@
 import { McpSession, readLiveMcpConfig, type McpSessionProvenance } from "./mcp-session.ts";
 import {
-	agentLabel, configRole, delay, requiredString, requiredText, validImportedTaskId,
+	agentLabel, configRole, requiredString, requiredText, validImportedTaskId,
 	buildActorEvidence, validateEscrowResult, validateProjection, validateTaskProjection, validateTaskResult, validateWaitOptions,
 } from "./live-task-workflow-support.ts";
 import { LiveSettlementAgreement } from "./live-settlement-agreement.ts";
 import type { AgreementIdentity } from "./live-settlement-agreement.ts";
-import { reconcileAmbiguousRelease, waitForEscrowProjection, waitForFinalProjection } from "./live-task-workflow-retry.ts";
+import { reconcileAmbiguousRelease, waitForEscrowProjection, waitForFinalProjection, waitForTaskState } from "./live-task-workflow-retry.ts";
 
 export type AgentRole = "agent_a" | "agent_b" | "agent_c";
 export type WorkflowResult = Record<string, unknown>;
@@ -146,19 +146,20 @@ export class LiveTaskWorkflow {
 		validateWaitOptions(options);
 		this.registeredDid(role);
 		const taskId = this.createdTaskId();
-		const deadline = Date.now() + options.timeoutMs;
-		while (Date.now() <= deadline) {
-			if (signal?.aborted) throw new Error(`${agentLabel(role)} task acceptance wait aborted`);
-			const result = await this.session(role).call("query_task", { task_id: taskId }, signal);
-			const state = validateTaskProjection(result, taskId, `${agentLabel(role)} task acceptance wait`);
-			if (state === "accepted") {
-				this.observations[role] = result;
-				return result;
-			}
-			if (state !== "submitted") throw new Error(`${agentLabel(role)} task acceptance wait returned unexpected state ${state}`);
-			await delay(options.pollMs, signal);
-		}
-		throw new Error(`${agentLabel(role)} task acceptance wait timed out`);
+		const call = () => this.session(role).call("query_task", { task_id: taskId }, signal);
+		const result = await waitForTaskState(call, "accepted", ["submitted"], options, signal);
+		validateTaskProjection(result, taskId, `${agentLabel(role)} task acceptance wait`);
+		this.observations[role] = result;
+		return result;
+	}
+	async waitForCompleted(role: "agent_a", options: WaitOptions, signal?: AbortSignal): Promise<WorkflowResult> {
+		validateWaitOptions(options);
+		this.registeredDid(role);
+		const taskId = this.createdTaskId();
+		const call = () => this.session(role).call("query_task", { task_id: taskId }, signal);
+		const result = await waitForTaskState(call, "completed", ["accepted"], options, signal);
+		validateTaskProjection(result, taskId, "Agent A task completion wait");
+		return result;
 	}
 	async shutdown(): Promise<void> {
 		await Promise.all(Object.values(this.agents).map((agent) => agent.session?.shutdown()));

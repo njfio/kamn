@@ -1,6 +1,7 @@
 import { delay } from "./live-task-workflow-support.ts";
 
 type WorkflowResult = Record<string, unknown>;
+type WaitOptions = { timeoutMs: number; pollMs: number };
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
 
@@ -43,6 +44,24 @@ export async function waitForEscrowProjection(
 		if (attempt < MAX_ATTEMPTS) await delay(RETRY_DELAY_MS, signal);
 	}
 	throw new Error("Task-bound escrow projection was not available");
+}
+
+export async function waitForTaskState(
+	call: () => Promise<WorkflowResult>,
+	expectedState: string,
+	pendingStates: string[],
+	options: WaitOptions,
+	signal?: AbortSignal,
+): Promise<WorkflowResult> {
+	const deadline = Date.now() + options.timeoutMs;
+	while (Date.now() <= deadline) {
+		if (signal?.aborted) throw new Error("Task state wait aborted");
+		const result = await call();
+		if (result.state === expectedState) return result;
+		if (!pendingStates.includes(String(result.state))) throw new Error(`Task state wait returned unexpected state ${result.state}`);
+		await delay(options.pollMs, signal);
+	}
+	throw new Error(`Task ${expectedState} wait timed out`);
 }
 
 function isAmbiguousSettlement(error: unknown): boolean {

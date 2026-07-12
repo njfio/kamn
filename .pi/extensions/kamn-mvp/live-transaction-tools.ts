@@ -8,10 +8,21 @@ export function registerLiveTransactionTools(pi: ExtensionAPI, workflow: Workflo
 	registerFund(pi, workflow);
 	registerComplete(pi, workflow);
 	registerFundingBarrier(pi, workflow);
+	registerCompletionBarrier(pi, workflow);
 	registerRelease(pi, workflow);
 	registerParticipantProjection(pi, workflow, "agent_a", "kamn_live_agent_a_query_participant_projection");
 	registerParticipantProjection(pi, workflow, "agent_b", "kamn_live_agent_b_query_participant_projection");
 	registerVerifierProjection(pi, workflow);
+}
+
+function registerCompletionBarrier(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {
+	registerTool(pi, {
+		name: "kamn_live_agent_a_wait_for_task_completion",
+		label: "KAMN Agent A Wait For Task Completion",
+		parameters: Type.Object({}),
+		run: (workflow, _params, signal) => workflow.waitForCompleted("agent_a", { timeoutMs: 180000, pollMs: 1000 }, signal),
+		role: "agent_a",
+	}, resolveWorkflow);
 }
 
 function registerFundingBarrier(pi: ExtensionAPI, resolveWorkflow: WorkflowResolver) {
