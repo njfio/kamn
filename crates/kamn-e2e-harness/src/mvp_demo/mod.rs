@@ -28,6 +28,7 @@ mod local_artifacts;
 mod localhost_signed;
 mod pi_transaction_actor_model;
 mod pi_transaction_actor_verify;
+mod pi_transaction_public_result;
 mod report;
 mod report_artifacts;
 mod report_devnet;
