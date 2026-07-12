@@ -38,6 +38,10 @@ fn spec_c01_success_writes_one_runtime_chain_report_after_children_exit() {
     assert!(!report.contains("agent_a_registered"));
     assert_eq!(run_directories(&root.join("demo")).len(), 1);
     assert!(!root.join("demo/latest/NO-GO.txt").exists());
+    let bootstrap = std::fs::read_to_string(root.join("staging/service-api-state.json"))
+        .expect("local authorization bootstrap");
+    assert!(bootstrap.contains(r#""action":"task:create""#));
+    assert!(!bootstrap.contains(r#""action":"escrow:release""#));
     verify_latest(&root).expect("canonical verifier should pass after child exit");
 }
 
