@@ -47,14 +47,14 @@ drift. No alias comments or hidden markers should substitute for clear headings.
 
 ## Acceptance Criteria
 
-- [ ] README is 200 lines or fewer.
-- [ ] Opening explains what KAMN is, why it exists, and current MVP scope.
-- [ ] Canonical evaluator path is `make demo-agent-transaction`.
-- [ ] Local bounded proof and standalone verifier commands remain visible.
-- [ ] Settlement success remains explicitly Solana devnet-backed.
-- [ ] Non-claims and all six claim labels remain clear.
-- [ ] Detailed setup links to `docs/validation/mvp-evaluator-demo.md`.
-- [ ] Architecture, contract-reference, and `AGENTS.md` links remain visible.
+- [x] README is 200 lines or fewer.
+- [x] Opening explains what KAMN is, why it exists, and current MVP scope.
+- [x] Canonical evaluator path is `make demo-agent-transaction`.
+- [x] Local bounded proof and standalone verifier commands remain visible.
+- [x] Settlement success remains explicitly Solana devnet-backed.
+- [x] Non-claims and all six claim labels remain clear.
+- [x] Detailed setup links to `docs/validation/mvp-evaluator-demo.md`.
+- [x] Architecture, contract-reference, and `AGENTS.md` links remain visible.
 - [ ] README contract tests, formatting, strict clippy, `make check`, and
       `make test` pass.
 
@@ -82,3 +82,10 @@ CARGO_TARGET_DIR=target/mvp-demo-proof cargo clippy \
 CARGO_TARGET_DIR=target/mvp-demo-proof make check
 CARGO_TARGET_DIR=target/mvp-demo-proof make test
 ```
+
+## Completion Evidence
+
+- README is 147 lines and both README contract binaries pass all 6 tests.
+- `cargo fmt --check`, strict workspace clippy, and `make check` pass.
+- Full `make test` passes both README binaries, then fails the unrelated
+  `test_file_size_policy` inventory baseline (`1317` actual versus `1288`).
