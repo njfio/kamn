@@ -9,9 +9,7 @@ mod mvp_demo_command;
 #[test]
 fn spec_c33_verifier_rejects_conflicting_explorer_link() {
     let fixture = Fixture::new("conflicting-explorer-link");
-    fixture.append_markdown(
-        "\nhttps://explorer.solana.com/tx/foreign-signature?cluster=devnet\n",
-    );
+    fixture.append_markdown("\nhttps://explorer.solana.com/tx/foreign-signature?cluster=devnet\n");
 
     fixture.assert_error("EXPLORER_LINK_INVALID");
 }
@@ -30,7 +28,10 @@ fn spec_c35_view_index_mismatch_uses_public_scope_code() {
     let fixture = Fixture::new("view-index-public-code");
     let view = fixture.run_dir.join("proof/agent-c-verifier-view.json");
     let replacement = fixture.run_dir.join("proof/agent-a-view.json");
-    fixture.replace_report_once(&view.display().to_string(), &replacement.display().to_string());
+    fixture.replace_report_once(
+        &view.display().to_string(),
+        &replacement.display().to_string(),
+    );
 
     fixture.assert_error("PROJECTION_SCOPE_INVALID");
 }
@@ -72,10 +73,7 @@ impl Fixture {
     }
 
     fn rename_agent_transaction_indexes(&self) {
-        for marker in [
-            "three_agent_transcript",
-            "live_task_settlement_binding",
-        ] {
+        for marker in ["three_agent_transcript", "live_task_settlement_binding"] {
             self.replace_report_once(marker, format!("removed_{marker}").as_str());
         }
     }
