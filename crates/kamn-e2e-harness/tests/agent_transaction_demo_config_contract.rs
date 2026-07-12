@@ -2,7 +2,14 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::Command;
 
-use kamn_e2e_harness::parse_agent_transaction_demo_config;
+use kamn_e2e_harness::{parse_agent_transaction_demo_config, parse_command_args, HarnessCommand};
+
+#[test]
+fn spec_c00_parser_routes_canonical_agent_transaction_command() {
+    let parsed = parse_command_args(["demo-agent-transaction"])
+        .expect("canonical agent transaction command should parse");
+    assert_eq!(parsed, HarnessCommand::DemoAgentTransaction);
+}
 
 #[test]
 fn spec_c01_canonical_make_target_invokes_rust_supervisor() {
