@@ -37,6 +37,7 @@ mod report_writer;
 mod runner;
 mod runner_settlement;
 mod runtime_receipt_chain;
+mod runtime_receipt_chain_precheck;
 mod service_api_proof;
 mod three_agent_claim;
 mod three_agent_receipt_spec;

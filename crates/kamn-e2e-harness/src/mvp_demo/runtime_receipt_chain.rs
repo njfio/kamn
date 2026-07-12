@@ -4,6 +4,7 @@ use super::artifact_digest::attach_json_digest;
 use super::pi_transaction_actor_model::{Actor, Outcome, RuntimeReceipt};
 use super::pi_transaction_actor_verify::read_and_validate_actors;
 use super::pi_transaction_public_result::PublicResult;
+use super::runtime_receipt_chain_precheck::precheck_required_operations;
 
 const SCHEMA: &str = "kamn.mvp.runtime-receipt-chain.v1";
 
@@ -38,6 +39,7 @@ struct RequiredStep {
 
 /// Builds a digested transaction chain from three verified Pi actor artifacts.
 pub fn build_runtime_receipt_chain_from_actor_paths(paths: &[String; 3]) -> Result<String, String> {
+    precheck_required_operations(paths)?;
     let actors = read_and_validate_actors(paths).map_err(map_actor_error)?;
     let steps = required_steps()
         .iter()
