@@ -175,9 +175,14 @@ test("Agent B imports an external task while Agent A polls accepted state", asyn
 	await agentA.register("agent_a");
 	await agentB.register("agent_b");
 	const created = await agentA.createTask("title", "description", "kamn:did:agent-b");
-	agentB.importTask(String(created.task_id));
+	agentB.importTask(String(created.task_id), {
+		transaction_id: String(created.transaction_id),
+		terms_digest: String(created.terms_digest),
+		provider_did: String(created.provider_did),
+	});
 
-	await agentB.acceptTask();
+	const accepted = await agentB.acceptTask();
+	assert.equal(accepted.idempotency_key, `${created.transaction_id}-accept`);
 	await agentB.queryTask("agent_b");
 	const observed = await agentA.waitForAccepted("agent_a", { timeoutMs: 100, pollMs: 5 });
 	assert.deepEqual(agentA.acceptedObservation("agent_a"), observed);
