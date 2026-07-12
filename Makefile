@@ -10,7 +10,7 @@ PRE_PUSH_WORKSPACE_TIMEOUT_SECONDS ?= 14400
 LOCAL_GATE_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(LOCAL_GATE_BASH_DIR):$(PATH)"
 PRE_PUSH_ENV = PATH="$(PRE_PUSH_PYTHON3_DIR):$(LOCAL_GATE_BASH_DIR):$(PATH)"
 
-.PHONY: help check test pre-push smoke-live-network deep-live-network demo demo-mvp demo-localhost-transport ci-tools kolme-local-heavy kolme-fork-rust-tests-local
+.PHONY: help check test pre-push smoke-live-network deep-live-network demo demo-mvp demo-agent-transaction demo-localhost-transport ci-tools kolme-local-heavy kolme-fork-rust-tests-local
 
 help:
 	@echo "KAMN developer lanes"
@@ -21,6 +21,7 @@ help:
 	@echo "  make deep-live-network - scheduled/manual pilot deep lane summary report"
 	@echo "  make demo   - two-process localhost signed-message demo"
 	@echo "  make demo-mvp - evaluator MVP demo proof report"
+	@echo "  make demo-agent-transaction - canonical three-agent devnet transaction demo"
 	@echo "  make demo-localhost-transport - explicit localhost sender/listener transport demo"
 	@echo "  make ci-tools - CI helper regression suite"
 	@echo "  make kolme-local-heavy - local-only Kolme heavy validation matrix (requires explicit opt-in for run mode)"
@@ -69,6 +70,12 @@ demo:
 
 demo-mvp:
 	CARGO_TARGET_DIR=target/mvp-demo-proof cargo run -p kamn-e2e-harness -- demo-mvp
+
+demo-agent-transaction:
+	CARGO_TARGET_DIR=target/mvp-demo-proof cargo build -p kamn-node -p kamn-mcp-server
+	KAMN_MVP_LOCAL_NODE_BINARY="$${KAMN_MVP_LOCAL_NODE_BINARY:-target/mvp-demo-proof/debug/kamn-node}" \
+	KAMN_MVP_LIVE_MCP_BINARY="$${KAMN_MVP_LIVE_MCP_BINARY:-target/mvp-demo-proof/debug/kamn-mcp-server}" \
+	CARGO_TARGET_DIR=target/mvp-demo-proof cargo run -p kamn-e2e-harness -- demo-agent-transaction
 
 demo-localhost-transport:
 	bash scripts/sdk/run_localhost_signed_demo.sh

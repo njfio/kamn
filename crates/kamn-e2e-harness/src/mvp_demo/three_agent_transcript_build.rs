@@ -15,7 +15,7 @@ pub(crate) fn transcript_json(
     attach_json_digest(
         format!(
             "{{\"schema_version\":\"kamn.mvp.three-agent-transcript.v1\",\"proof_label\":\"local-only\",\"devnet_settlement_linked\":true,\"transaction_id\":\"{}\",\"escrow_id\":\"{}\",\"task_binding_digest\":\"{}\",{},\"views\":{},\"agent_a_private_field_count\":3,\"agent_b_private_field_count\":3,\"verifier_private_field_count\":0,\"private_payload_redacted\":true,{},\"transcript_digest\":\"\",{}}}",
-            escape_json(binding.task_id.as_str()),
+            escape_json(binding.transaction_id.as_str()),
             escape_json(evidence.escrow_id.as_str()),
             escape_json(binding.digest.as_str()),
             steps_json(),

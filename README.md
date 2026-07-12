@@ -29,7 +29,7 @@ Prerequisites:
 - Python 3
 - Solana CLI only for independently confirming devnet transactions
 
-Run the local-only MVP demo:
+Run the bounded local proof demo without autonomous Pi actors:
 
 ```bash
 make demo-mvp
@@ -50,6 +50,44 @@ Expected top-level artifacts:
 
 The report links to the concrete run directory under `.kamn/demo/<run-id>/`, including local signed-flow, service API, websocket, audit, and settlement proof files where applicable.
 
+### Canonical three-agent transaction demo
+
+The evaluator-facing product demo is `make demo-agent-transaction`. It starts
+the local KAMN node, launches three independent persistent Pi processes using
+existing Codex OAuth and `gpt-5.5`, drives the task and escrow lifecycle, makes
+one Solana devnet transfer on release, verifies all three actor views, and
+writes the canonical report.
+
+Create three local KAMN identity keys in an ignored directory once:
+
+```bash
+mkdir -p .kamn/devnet
+openssl rand -hex 32 > .kamn/devnet/mvp-agent-a.key
+openssl rand -hex 32 > .kamn/devnet/mvp-agent-b.key
+openssl rand -hex 32 > .kamn/devnet/mvp-agent-c.key
+chmod 600 .kamn/devnet/mvp-agent-*.key
+```
+
+Then run with a funded Solana devnet payer and recipient:
+
+```bash
+KAMN_MVP_AGENT_DRIVER=pi \
+KAMN_MVP_DEVNET_MODE=required \
+KAMN_MVP_SOLANA_RPC_URL=https://api.devnet.solana.com \
+KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL=https://api.devnet.solana.com \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE=/absolute/path/to/devnet-payer.json \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY=<devnet-recipient-pubkey> \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS=1000000 \
+KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT=finalized \
+KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-a.key" \
+KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-b.key" \
+KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE="$PWD/.kamn/devnet/mvp-agent-c.key" \
+make demo-agent-transaction
+```
+
+The command returns `GO` only after the standalone report verifier passes. A
+failure returns a stable reason and writes `.kamn/demo/latest/NO-GO.txt`.
+
 For the funded Solana devnet-backed path:
 
 ```bash
@@ -65,13 +103,12 @@ make demo-mvp
 
 If the devnet path is fully configured and funded, the report can return `GO` with a `devnet_settlement_asset_movement` claim labelled `devnet-backed`. If devnet evidence is unavailable, the honest result is `NO-GO`, not a local-only settlement pass.
 
-To produce the full three-agent story, first create fresh independent Agent A,
-Agent B, and restricted Agent C artifacts using the evaluator runbook, then
-provide all four `KAMN_MVP_LIVE_TASK_*_FILE` variables to the funded command.
-KAMN validates those sources, places their task ID and binding digest in the
-live service escrow request, and propagates the request-derived `escrow-local-*`
-ID through the transcript, participant views, restricted verifier view, and
-receipts. A settlement-only run does not claim three-agent verification.
+In the canonical transaction report, `execution_surface:"command-override"`
+describes the bounded report adapter, not a simulated transfer. The transfer is
+initiated by Agent A through the live local KAMN service. The adapter confirms
+that exact actor signature with `solana confirm`, verifies finalized payer and
+recipient balance movement, and reuses the evidence without submitting a
+second transaction.
 
 Detailed evaluator runbook:
 

@@ -104,6 +104,17 @@ fn spec_c05_live_service_claim_requires_request_derived_escrow_id() {
     assert!(err.contains("devnet escrow funding request"), "{err}");
 }
 
+#[test]
+fn spec_c06_bound_demo_accepts_transaction_aware_handoff_v2() {
+    let root = temp_root("handoff-v2");
+    let mut config = mvp_demo_command::devnet_required_demo_config(&root);
+    config.live_task_evidence = Some(mvp_demo_command::live_task_evidence::write_v2(
+        &root.join("handoff-v2"),
+    ));
+
+    execute_mvp_demo_contract(&config).expect("v2 handoff should bind to the demo");
+}
+
 fn relabel_report_as_live_service(root: &Path, request: Option<&Path>) {
     let report_path = root.join("latest/proof/report.json");
     let mut report = std::fs::read_to_string(&report_path)

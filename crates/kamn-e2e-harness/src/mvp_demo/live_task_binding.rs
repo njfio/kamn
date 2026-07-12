@@ -12,6 +12,8 @@ pub(crate) struct LiveTaskBinding {
     pub(crate) artifact_path: String,
     pub(crate) digest: String,
     pub(crate) task_id: String,
+    pub(crate) transaction_id: String,
+    pub(crate) terms_digest: String,
     pub(crate) agent_a_pid: u64,
     pub(crate) agent_b_pid: u64,
     pub(crate) agent_c_pid: u64,
@@ -32,10 +34,16 @@ pub(crate) fn create_live_task_binding(
 }
 
 fn binding(path: PathBuf, digest: String, found: ValidatedSources) -> LiveTaskBinding {
+    let transaction_id = found
+        .transaction_id
+        .unwrap_or_else(|| found.task_id.clone());
+    let terms_digest = found.terms_digest.unwrap_or_else(|| digest.clone());
     LiveTaskBinding {
         artifact_path: path.display().to_string(),
         digest,
         task_id: found.task_id,
+        transaction_id,
+        terms_digest,
         agent_a_pid: found.agent_a_pid,
         agent_b_pid: found.agent_b_pid,
         agent_c_pid: found.agent_c_pid,

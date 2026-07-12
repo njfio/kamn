@@ -20,6 +20,8 @@ impl Sources {
 
 pub(crate) struct ValidatedSources {
     pub(crate) task_id: String,
+    pub(crate) transaction_id: Option<String>,
+    pub(crate) terms_digest: Option<String>,
     pub(crate) agent_a_pid: u64,
     pub(crate) agent_b_pid: u64,
     pub(crate) agent_c_pid: u64,
@@ -61,7 +63,7 @@ pub(super) fn validate_sources(sources: &Sources) -> Result<ValidatedSources, St
 }
 
 fn validate_source_shapes(sources: &Sources) -> Result<(), String> {
-    validate_shape(&sources.handoff, "kamn.mvp.live-task-handoff.v1", 3)?;
+    validate_handoff_shape(&sources.handoff)?;
     validate_shape(&sources.agent_a, "kamn.mvp.live-task-actor-receipt.v1", 6)?;
     validate_shape(&sources.agent_b, "kamn.mvp.live-task-actor-receipt.v1", 6)?;
     validate_shape(
@@ -71,9 +73,35 @@ fn validate_source_shapes(sources: &Sources) -> Result<(), String> {
     )
 }
 
+fn validate_handoff_shape(raw: &str) -> Result<(), String> {
+    match extract_string(raw, "schema_version")?.as_str() {
+        "kamn.mvp.live-task-handoff.v1" => validate_shape(raw, "kamn.mvp.live-task-handoff.v1", 3),
+        "kamn.mvp.live-task-handoff.v2" => validate_handoff_v2(raw),
+        _ => Err("live task evidence schema_version mismatch".to_owned()),
+    }
+}
+
+fn validate_handoff_v2(raw: &str) -> Result<(), String> {
+    validate_shape(raw, "kamn.mvp.live-task-handoff.v2", 6)?;
+    let transaction = extract_string(raw, "transaction_id")?;
+    let terms = extract_string(raw, "terms_digest")?;
+    let provider = extract_string(raw, "provider_did")?;
+    let valid = !transaction.is_empty()
+        && terms.len() == 64
+        && terms.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && provider.starts_with("kamn:did:agent:");
+    valid
+        .then_some(())
+        .ok_or_else(|| "live task handoff v2 fields invalid".to_owned())
+}
+
 fn source_fields(sources: &Sources, task_id: String) -> Result<ValidatedSources, String> {
+    let version_two =
+        extract_string(&sources.handoff, "schema_version")? == "kamn.mvp.live-task-handoff.v2";
     Ok(ValidatedSources {
         task_id,
+        transaction_id: optional_v2_field(&sources.handoff, "transaction_id", version_two)?,
+        terms_digest: optional_v2_field(&sources.handoff, "terms_digest", version_two)?,
         agent_a_pid: receipt_pid(&sources.agent_a, "agent_a")?,
         agent_b_pid: receipt_pid(&sources.agent_b, "agent_b")?,
         agent_c_pid: extract_u64(&sources.agent_c, "agent_c_pi_process_id")?,
@@ -83,6 +111,10 @@ fn source_fields(sources: &Sources, task_id: String) -> Result<ValidatedSources,
         agent_c_digest: artifact_digest(&sources.agent_c)?,
         public_commitment: extract_string(&sources.agent_c, "public_commitment")?,
     })
+}
+
+fn optional_v2_field(raw: &str, field: &str, version_two: bool) -> Result<Option<String>, String> {
+    version_two.then(|| extract_string(raw, field)).transpose()
 }
 
 fn validate_source_agreement(sources: &Sources, found: &ValidatedSources) -> Result<(), String> {

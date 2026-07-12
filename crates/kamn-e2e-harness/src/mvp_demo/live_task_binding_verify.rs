@@ -107,8 +107,13 @@ fn validate_claim_fields(
     sources: &ValidatedSources,
     digest: &str,
 ) -> Result<(), String> {
-    require_string(claim.raw, "transaction_id", sources.task_id.as_str())?;
-    require_string(claim.raw, "terms_digest", digest)?;
+    let transaction_id = sources
+        .transaction_id
+        .as_deref()
+        .unwrap_or(&sources.task_id);
+    let terms_digest = sources.terms_digest.as_deref().unwrap_or(digest);
+    require_string(claim.raw, "transaction_id", transaction_id)?;
+    require_string(claim.raw, "terms_digest", terms_digest)?;
     require_string(claim.raw, "task_binding_digest", digest)?;
     let devnet = devnet_claim(report)?;
     require_string(devnet.raw, "task_id", sources.task_id.as_str())?;
