@@ -23,6 +23,7 @@ fn spec_c01_canonical_make_target_invokes_rust_supervisor() {
         .expect("make dry run");
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("cargo build -p kamn-node -p kamn-mcp-server"));
     assert!(stdout.contains("kamn-e2e-harness -- demo-agent-transaction"));
 }
 

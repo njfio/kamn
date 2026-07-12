@@ -91,6 +91,11 @@ for arg in "$@"; do
   if [ "$previous" = "--name" ]; then role="$arg"; fi
   previous="$arg"
 done
+test -n "$KAMN_MVP_LIVE_MCP_BINARY" || exit 41
+test -n "$KAMN_MVP_LIVE_MCP_ENDPOINT" || exit 42
+test -n "$KAMN_MVP_LIVE_MCP_AGENT_A_NAME" || exit 43
+test -n "$KAMN_MVP_LIVE_MCP_AGENT_B_NAME" || exit 44
+test -n "$KAMN_MVP_LIVE_MCP_AGENT_C_NAME" || exit 45
 while read line; do
   mkdir -p "$(dirname "$KAMN_MVP_PI_TRANSACTION_AGENT_A_FILE")"
   cp "{}" "$KAMN_MVP_PI_TRANSACTION_AGENT_A_FILE"
