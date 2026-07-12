@@ -111,6 +111,9 @@ After task acceptance, Agent B waits on the authenticated participant
 projection until it proves the task-bound escrow exists. Agent B cannot submit
 completion before this runtime-backed funding barrier passes; coordination
 files are not used for the barrier.
+After escrow funding, Agent A waits on its authenticated task projection until
+the task is completed before invoking release. This barrier prevents release
+eligibility races without retrying unrelated release failures.
 
 All failures hard-fail at the tool or verifier boundary. Existing artifacts are
 written idempotently and conflicting replay is rejected.
@@ -129,6 +132,8 @@ written idempotently and conflicting replay is rejected.
       complete finalized settlement fields and fail closed on exhaustion.
 - [ ] Agent B proves escrow funding from its authenticated runtime projection
       before completing the task, preventing acceptance/completion races.
+- [ ] Agent A proves completed task state through its authenticated MCP session
+      before invoking escrow release.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
 - [ ] Create, accept, complete, fund, and release payloads are derived from one
