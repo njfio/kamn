@@ -31,6 +31,8 @@ pub struct AgentTransactionDemoConfig {
     pub pi_extension: String,
     /// Canonical proof output root.
     pub output_root: String,
+    /// Maximum wait for one Pi RPC phase.
+    pub rpc_timeout_ms: u64,
 }
 
 /// Parses and validates canonical demo configuration without performing work.
@@ -58,6 +60,11 @@ pub fn parse_agent_transaction_demo_config(
             ".pi/extensions/kamn-mvp/index.ts",
         ),
         output_root: optional(env, "KAMN_MVP_AGENT_TRANSACTION_OUTPUT_ROOT", ".kamn/demo"),
+        rpc_timeout_ms: optional_positive_u64(
+            env,
+            "KAMN_MVP_AGENT_TRANSACTION_RPC_TIMEOUT_MS",
+            180_000,
+        )?,
     };
     validate_config(&config)?;
     Ok(config)
@@ -109,6 +116,17 @@ fn positive_u64(env: &BTreeMap<String, String>, name: &str) -> Result<u64, Strin
         .ok()
         .filter(|parsed| *parsed > 0)
         .ok_or_else(|| config_error(format!("{name} must be a positive integer")))
+}
+
+fn optional_positive_u64(
+    env: &BTreeMap<String, String>,
+    name: &str,
+    default: u64,
+) -> Result<u64, String> {
+    match env.get(name) {
+        Some(_) => positive_u64(env, name),
+        None => Ok(default),
+    }
 }
 
 fn validate_config(config: &AgentTransactionDemoConfig) -> Result<(), String> {

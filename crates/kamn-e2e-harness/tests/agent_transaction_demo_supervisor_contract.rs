@@ -34,9 +34,10 @@ fn spec_c02_unresponsive_actor_times_out_and_cleans_every_child() {
         .expect_err("unresponsive actor must fail");
     assert!(error.starts_with("AGENT_TRANSACTION_CHILD_FAILED"));
     assert!(started.elapsed() < std::time::Duration::from_secs(1));
-    for role in ["kamn-mvp-agent-a", "kamn-mvp-agent-b", "kamn-mvp-agent-c"] {
+    for role in ["kamn-mvp-agent-a", "kamn-mvp-agent-c"] {
         assert!(fixture.root.join(format!("{role}.cleaned")).is_file());
     }
+    assert_no_processes(&fixture.root);
 }
 
 struct SupervisorFixture {
@@ -100,6 +101,7 @@ for arg in "$@"; do
   if [ "$previous" = "--name" ]; then role="$arg"; fi
   previous="$arg"
 done
+echo $$ > "{}/$role.pid"
 trap 'echo cleaned > "{}/$role.cleaned"; exit 0' TERM INT
 if [ "$role" = "kamn-mvp-agent-b" ]; then read line; {b_action}; fi
 while read line; do
@@ -109,6 +111,7 @@ done
 echo cleaned > "{}/$role.cleaned"
 "#,
         root.display(),
+        root.display(),
         root.display()
     );
     let path = root.join("pi");
@@ -116,6 +119,20 @@ echo cleaned > "{}/$role.cleaned"
     let mut permissions = std::fs::metadata(&path).expect("metadata").permissions();
     permissions.set_mode(0o700);
     std::fs::set_permissions(path, permissions).expect("permissions");
+}
+
+fn assert_no_processes(root: &std::path::Path) {
+    for role in ["kamn-mvp-agent-a", "kamn-mvp-agent-b", "kamn-mvp-agent-c"] {
+        let pid = std::fs::read_to_string(root.join(format!("{role}.pid")))
+            .expect("child pid")
+            .trim()
+            .to_owned();
+        let status = std::process::Command::new("kill")
+            .args(["-0", pid.as_str()])
+            .status()
+            .expect("kill probe");
+        assert!(!status.success(), "child {pid} survived cleanup");
+    }
 }
 
 fn base_env() -> BTreeMap<String, String> {
