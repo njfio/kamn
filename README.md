@@ -10,7 +10,7 @@ harness for KAMN. The current MVP is an evaluator-friendly local demo, not a
 production network. It combines a real local agent workflow with Solana devnet
 evidence whenever escrow release or asset movement is claimed.
 
-## What Works Today
+## What This Repository Contains
 
 The canonical demo proves one bounded product story:
 
@@ -99,7 +99,7 @@ Any exchange, escrow, settlement, transfer, lamport, asset-movement, or
 value-movement claim counts as success only when labeled `devnet-backed`. Missing or
 ambiguous devnet evidence produces `NO-GO`, never a simulated success.
 
-## Repository Map
+## Architecture Map
 
 - `crates/kamn-core`: protocol and domain contracts
 - `crates/kamn-node`: local runtime and service API
@@ -113,7 +113,7 @@ ambiguous devnet evidence produces `NO-GO`, never a simulated success.
 Start with the [architecture index](docs/architecture/README.md) for system
 boundaries and diagrams.
 
-## Development
+## Workflow
 
 Run the local quality gates before publishing changes:
 
@@ -121,9 +121,6 @@ Run the local quality gates before publishing changes:
 make check
 make test
 ```
-
-The detailed command, policy, and validation inventory lives in the
-[README contract reference](docs/developer/readme-contract-reference.md).
 
 ## For AI Agents And Maintainers
 
@@ -134,6 +131,11 @@ before completion, and PR review before merge.
 Do not weaken tests or claim boundaries. Do not commit secrets, keypairs,
 `.kamn/` artifacts, generated package metadata, or unrelated local files.
 Prefer consolidating existing surfaces over adding architecture.
+
+## Contract Reference
+
+Detailed command, policy, and validation markers live in the
+[README contract reference](docs/developer/readme-contract-reference.md).
 
 ## Key Links
 
