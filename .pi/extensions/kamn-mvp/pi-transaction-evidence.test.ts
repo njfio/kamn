@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -95,6 +95,17 @@ test("actor evidence accepts interim and final successful projection reads", asy
 	await assert.doesNotReject(verifyPiTransactionActors(paths));
 });
 
+test("actor evidence preserves strict public runtime result projections", async () => {
+	const paths = await actorPaths();
+	await writePiTransactionActor(paths.agent_a, actor("agent_a"));
+	const written = JSON.parse(await readFile(paths.agent_a, "utf8"));
+
+	assert.deepEqual(written.runtime_response_receipts[1].public_result, {
+		task_id: "task-live-7099", state: "submitted", transaction_id: "transaction-live-7099",
+	});
+	assert.equal("private_receipt_digest" in written.runtime_response_receipts.at(-1).public_result, false);
+});
+
 type Role = "agent_a" | "agent_b" | "agent_c";
 type Overrides = Partial<Record<Role, Record<string, unknown>>>;
 
@@ -146,7 +157,19 @@ function runtimeReceipts(role: Role) {
 		tool,
 		outcome: "success",
 		digest: `sha256:${String(index + 1 === 5 ? { agent_a: 1, agent_b: 2, agent_c: 3 }[role] : index + 1).repeat(64)}`,
+		public_result: publicResult(role, tool),
 	}));
+}
+
+function publicResult(role: Role, tool: string): Record<string, unknown> {
+	if (tool === "register") return { did: `kamn:did:${({ agent_a: "a", agent_b: "b", agent_c: "c" })[role]}` };
+	if (tool === "create_task") return { task_id: "task-live-7099", state: "submitted", transaction_id: "transaction-live-7099" };
+	if (tool === "accept_task") return { task_id: "task-live-7099", state: "accepted", transaction_id: "transaction-live-7099" };
+	if (tool === "complete_task") return { task_id: "task-live-7099", state: "completed", transaction_id: "transaction-live-7099" };
+	if (tool === "fund_escrow") return { task_id: "task-live-7099", escrow_id: "escrow-live-7099", state: "funded", amount_lamports: 1000000, network: "solana-devnet" };
+	if (tool === "release_escrow") return { escrow_id: "escrow-live-7099", state: "released", settlement_tx_signature: "devnet-signature-7099", settlement_commitment: "finalized" };
+	if (tool.includes("projection")) return { task_id: "task-live-7099", escrow_id: "escrow-live-7099", settlement_tx_signature: "devnet-signature-7099", settlement_commitment: "finalized", public_commitment: `sha256:${"d".repeat(64)}`, view_scope: role === "agent_c" ? "restricted-public" : "participant-private", ...(role === "agent_c" ? {} : { participant_role: role === "agent_a" ? "creator" : "provider" }) };
+	return { task_id: "task-live-7099", state: "accepted" };
 }
 
 async function actorPaths(): Promise<Record<Role, string>> {
