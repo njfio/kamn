@@ -103,6 +103,7 @@ fn prompt(child: &mut RpcChild, message: &str, timeout_ms: u64) -> Result<Value,
 
 fn read_agent_end(child: &mut RpcChild, timeout_ms: u64) -> Result<Value, String> {
     let timeout = Duration::from_millis(timeout_ms);
+    let mut tool_result = None;
     loop {
         let event = receive_event(child, timeout)?;
         if event["type"] == "extension_error" {
@@ -111,8 +112,11 @@ fn read_agent_end(child: &mut RpcChild, timeout_ms: u64) -> Result<Value, String
         if let Some(tool) = failed_tool(&event) {
             return Err(child_error(format!("Pi tool failed: {tool}").as_str()));
         }
+        if event["type"] == "tool_execution_end" {
+            tool_result = Some(event.clone());
+        }
         if event["type"] == "agent_end" {
-            return Ok(event);
+            return Ok(tool_result.unwrap_or(event));
         }
     }
 }
