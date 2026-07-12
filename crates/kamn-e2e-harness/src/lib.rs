@@ -8,6 +8,7 @@ pub use agent_transaction_demo::{
     execute_agent_transaction_demo_contract, parse_agent_transaction_demo_config,
     AgentTransactionDemoConfig,
 };
+pub use agent_transaction_pi_command::{build_pi_actor_command, AgentTransactionRole};
 pub use mvp_demo::{
     build_runtime_receipt_chain_from_actor_paths, execute_mvp_demo_contract,
     execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths, LiveTaskEvidencePaths,
@@ -15,6 +16,7 @@ pub use mvp_demo::{
 };
 
 mod agent_transaction_demo;
+mod agent_transaction_pi_command;
 
 /// Driver implementations for each execution mode.
 pub mod drivers;

@@ -21,6 +21,14 @@ pub struct AgentTransactionDemoConfig {
     pub solana_lamports: u64,
     /// Required settlement commitment.
     pub solana_commitment: String,
+    /// Pi executable path or command name.
+    pub pi_binary: String,
+    /// Pi OAuth-backed provider name.
+    pub pi_provider: String,
+    /// Pi model identifier.
+    pub pi_model: String,
+    /// Explicit project-local Pi extension path.
+    pub pi_extension: String,
 }
 
 /// Parses and validates canonical demo configuration without performing work.
@@ -39,6 +47,14 @@ pub fn parse_agent_transaction_demo_config(
         )?,
         solana_lamports: positive_u64(env, "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS")?,
         solana_commitment: required(env, "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT")?,
+        pi_binary: optional(env, "KAMN_MVP_PI_BINARY", "pi"),
+        pi_provider: optional(env, "KAMN_MVP_PI_PROVIDER", "openai-codex"),
+        pi_model: optional(env, "KAMN_MVP_PI_MODEL", "gpt-5.5"),
+        pi_extension: optional(
+            env,
+            "KAMN_MVP_PI_EXTENSION",
+            ".pi/extensions/kamn-mvp/index.ts",
+        ),
     };
     validate_config(&config)?;
     Ok(config)
@@ -65,6 +81,14 @@ fn required(env: &BTreeMap<String, String>, name: &str) -> Result<String, String
         .filter(|value| !value.is_empty())
         .map(str::to_owned)
         .ok_or_else(|| config_error(format!("missing {name}")))
+}
+
+fn optional(env: &BTreeMap<String, String>, name: &str, default: &str) -> String {
+    env.get(name)
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .unwrap_or(default)
+        .to_owned()
 }
 
 fn positive_u64(env: &BTreeMap<String, String>, name: &str) -> Result<u64, String> {
