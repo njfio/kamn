@@ -8,7 +8,7 @@ use kamn_e2e_harness::{
 
 #[test]
 fn spec_c01_actor_failure_cleans_every_child_and_writes_no_go() {
-    let fixture = SupervisorFixture::new();
+    let fixture = SupervisorFixture::new("fail");
     let config = parse_agent_transaction_demo_config(&fixture.env()).expect("configuration");
 
     let error = execute_agent_transaction_demo_with_config(&config)
@@ -24,12 +24,27 @@ fn spec_c01_actor_failure_cleans_every_child_and_writes_no_go() {
     assert!(!fixture.root.join("demo/latest/proof/report.json").exists());
 }
 
+#[test]
+fn spec_c02_unresponsive_actor_times_out_and_cleans_every_child() {
+    let fixture = SupervisorFixture::new("hang");
+    let config = parse_agent_transaction_demo_config(&fixture.env()).expect("configuration");
+    let started = std::time::Instant::now();
+
+    let error = execute_agent_transaction_demo_with_config(&config)
+        .expect_err("unresponsive actor must fail");
+    assert!(error.starts_with("AGENT_TRANSACTION_CHILD_FAILED"));
+    assert!(started.elapsed() < std::time::Duration::from_secs(1));
+    for role in ["kamn-mvp-agent-a", "kamn-mvp-agent-b", "kamn-mvp-agent-c"] {
+        assert!(fixture.root.join(format!("{role}.cleaned")).is_file());
+    }
+}
+
 struct SupervisorFixture {
     root: PathBuf,
 }
 
 impl SupervisorFixture {
-    fn new() -> Self {
+    fn new(pi_mode: &str) -> Self {
         let root = unique_root();
         std::fs::create_dir_all(root.join("extension")).expect("fixture root");
         for name in ["agent-a.key", "agent-b.key", "agent-c.key"] {
@@ -42,7 +57,7 @@ impl SupervisorFixture {
         )
         .expect("payer file");
         std::fs::write(root.join("extension/index.ts"), "export default {}").expect("extension");
-        write_fake_pi(&root);
+        write_fake_pi(&root, pi_mode);
         Self { root }
     }
 
@@ -62,11 +77,20 @@ impl SupervisorFixture {
         ] {
             env.insert(name.to_owned(), self.root.join(path).display().to_string());
         }
+        env.insert(
+            "KAMN_MVP_AGENT_TRANSACTION_RPC_TIMEOUT_MS".to_owned(),
+            "100".to_owned(),
+        );
         env
     }
 }
 
-fn write_fake_pi(root: &std::path::Path) {
+fn write_fake_pi(root: &std::path::Path, mode: &str) {
+    let b_action = if mode == "hang" {
+        "sleep 2; exit 9"
+    } else {
+        "exit 9"
+    };
     let script = format!(
         r#"#!/bin/sh
 case " $* " in *" --print "*) echo KAMN_PI_PREFLIGHT_OK; exit 0;; esac
@@ -77,7 +101,7 @@ for arg in "$@"; do
   previous="$arg"
 done
 trap 'echo cleaned > "{}/$role.cleaned"; exit 0' TERM INT
-if [ "$role" = "kamn-mvp-agent-b" ]; then read line; exit 9; fi
+if [ "$role" = "kamn-mvp-agent-b" ]; then read line; {b_action}; fi
 while read line; do
   echo '{{"type":"response","command":"prompt","success":true}}'
   echo '{{"type":"agent_end","messages":[]}}'
