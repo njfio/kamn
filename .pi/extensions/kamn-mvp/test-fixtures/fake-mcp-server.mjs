@@ -67,6 +67,9 @@ function toolResult(request) {
 		if (resultMode === "pending-first-projection" && participantProjectionAttempts++ === 0) {
 			return pendingParticipantProjection(request.task_id, agentName);
 		}
+		if (resultMode === "missing-first-escrow" && participantProjectionAttempts++ === 0) {
+			return unboundParticipantProjection(request.task_id, agentName);
+		}
 		return participantProjection(request.task_id, agentName);
 	}
 	if (request.tool === "query_verifier_task_projection") {
@@ -79,6 +82,12 @@ function pendingParticipantProjection(taskId, name) {
 	const projection = participantProjection(taskId, name);
 	delete projection.settlement_tx_signature;
 	delete projection.settlement_commitment;
+	return projection;
+}
+
+function unboundParticipantProjection(taskId, name) {
+	const projection = participantProjection(taskId, name);
+	delete projection.escrow_id;
 	return projection;
 }
 

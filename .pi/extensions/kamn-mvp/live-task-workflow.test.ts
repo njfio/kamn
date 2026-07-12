@@ -128,6 +128,20 @@ test("participant projection waits for finalized settlement fields", async () =>
 	await workflow.shutdown();
 });
 
+test("Agent B waits for a runtime escrow binding before completion", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "missing-first-escrow" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_b");
+	workflow.importTask("task-live-1", {
+		transaction_id: "transaction-live-1", terms_digest: "a".repeat(64), provider_did: "kamn:did:agent-b",
+	});
+	const projection = await workflow.waitForEscrowFunding("agent_b");
+
+	assert.equal(projection.escrow_id, "escrow-live-1");
+	assert.equal(workflow.provenance("agent_b").last_request_id, 3);
+	await workflow.shutdown();
+});
+
 test("actor evidence requires a registered identity and final runtime projection", async () => {
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
