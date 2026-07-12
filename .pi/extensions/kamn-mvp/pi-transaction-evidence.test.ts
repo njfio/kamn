@@ -77,6 +77,24 @@ test("actor evidence rejects unknown top-level fields", async () => {
 	);
 });
 
+test("actor evidence accepts interim and final successful projection reads", async () => {
+	const paths = await actorPaths();
+	const finalDigest = `sha256:${"9".repeat(64)}`;
+	const receipts = runtimeReceipts("agent_b");
+	receipts.splice(4, 0, {
+		request_id: 5, tool: "query_participant_task_projection", outcome: "success", digest: `sha256:${"8".repeat(64)}`,
+	});
+	receipts[5] = { ...receipts[5], request_id: 6, digest: finalDigest };
+	await writeActors(paths, { agent_b: {
+		last_request_id: 6,
+		runtime_response_digests: receipts.map((receipt) => receipt.digest),
+		runtime_response_receipts: receipts,
+		runtime_projection_digest: finalDigest,
+	} });
+
+	await assert.doesNotReject(verifyPiTransactionActors(paths));
+});
+
 type Role = "agent_a" | "agent_b" | "agent_c";
 type Overrides = Partial<Record<Role, Record<string, unknown>>>;
 
