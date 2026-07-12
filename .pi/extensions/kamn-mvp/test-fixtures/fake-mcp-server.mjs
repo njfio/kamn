@@ -8,6 +8,7 @@ const startFile = process.env.KAMN_MVP_FAKE_MCP_START_FILE;
 const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
 const agentName = argumentValue("--agent-name") ?? "agent-a";
 let releaseAttempts = 0;
+let participantProjectionAttempts = 0;
 if (startFile) appendFileSync(startFile, `${process.pid}\n`);
 
 process.on("SIGTERM", () => {
@@ -63,12 +64,22 @@ function toolResult(request) {
 		return { escrow_id: request.escrow_id, state: "released", settlement_tx_signature: "devnet-signature-1", ...JSON.parse(request.payload) };
 	}
 	if (request.tool === "query_participant_task_projection") {
+		if (resultMode === "pending-first-projection" && participantProjectionAttempts++ === 0) {
+			return pendingParticipantProjection(request.task_id, agentName);
+		}
 		return participantProjection(request.task_id, agentName);
 	}
 	if (request.tool === "query_verifier_task_projection") {
 		return { ...sharedProjection(request.task_id), view_scope: "restricted-public" };
 	}
 	return {};
+}
+
+function pendingParticipantProjection(taskId, name) {
+	const projection = participantProjection(taskId, name);
+	delete projection.settlement_tx_signature;
+	delete projection.settlement_commitment;
+	return projection;
 }
 
 function participantProjection(taskId, name) {
