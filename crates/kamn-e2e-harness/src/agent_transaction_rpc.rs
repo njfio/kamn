@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde_json::Value;
 
 use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
-use super::agent_transaction_process::{start_process, take_pipes, wait_or_kill};
+use super::agent_transaction_process::{start_process, take_pipes, terminate_process_group};
 use super::{build_pi_actor_command, AgentTransactionDemoConfig, AgentTransactionRole};
 
 const CHILD_ERROR: &str = "AGENT_TRANSACTION_CHILD_FAILED";
@@ -39,7 +39,7 @@ impl RpcGroup {
             match spawn_child(config, paths, role) {
                 Ok(child) => children.push(child),
                 Err(error) => {
-                    cleanup_children(children.as_mut_slice(), config.rpc_timeout_ms);
+                    cleanup_children(children.as_mut_slice());
                     return Err(error);
                 }
             }
@@ -60,7 +60,7 @@ impl RpcGroup {
             return;
         }
         self.cleaned = true;
-        cleanup_children(self.children.as_mut_slice(), self.timeout_ms);
+        cleanup_children(self.children.as_mut_slice());
     }
 }
 
@@ -145,12 +145,12 @@ fn read_events(stdout: ChildStdout, sender: mpsc::Sender<Result<Value, String>>)
     }
 }
 
-fn cleanup_children(children: &mut [RpcChild], timeout_ms: u64) {
+fn cleanup_children(children: &mut [RpcChild]) {
     for child in children.iter_mut() {
         child.stdin.take();
     }
     for child in children.iter_mut() {
-        wait_or_kill(&mut child.child, timeout_ms);
+        terminate_process_group(&mut child.child);
         if let Some(reader) = child.reader.take() {
             let _ = reader.join();
         }

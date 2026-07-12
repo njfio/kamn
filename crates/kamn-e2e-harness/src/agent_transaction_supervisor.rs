@@ -5,6 +5,7 @@ use serde_json::Value;
 use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
 use super::agent_transaction_finalize::finalize;
 use super::agent_transaction_rpc::RpcGroup;
+use super::agent_transaction_runtime::LocalRuntime;
 use super::AgentTransactionDemoConfig;
 
 const PROOF_ERROR: &str = "AGENT_TRANSACTION_PROOF_INVALID";
@@ -16,12 +17,20 @@ pub(super) fn run_supervised_registration(
         Ok(paths) => paths,
         Err(error) => return fail_no_go(config, error.as_str()),
     };
+    let mut runtime = match LocalRuntime::start(config) {
+        Ok(runtime) => runtime,
+        Err(error) => return fail_no_go(config, error.as_str()),
+    };
     let mut group = match RpcGroup::spawn(config, &paths) {
         Ok(group) => group,
-        Err(error) => return fail_no_go(config, error.as_str()),
+        Err(error) => {
+            runtime.cleanup();
+            return fail_no_go(config, error.as_str());
+        }
     };
     let result = run_phases(&mut group);
     group.cleanup();
+    runtime.cleanup();
     match result {
         Ok(()) => match finalize(config, &paths) {
             Ok(output) => Ok(output),

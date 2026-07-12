@@ -29,6 +29,12 @@ pub struct AgentTransactionDemoConfig {
     pub pi_model: String,
     /// Explicit project-local Pi extension path.
     pub pi_extension: String,
+    /// Local KAMN node executable path.
+    pub local_node_binary: String,
+    /// Local KAMN MCP server executable path exposed to Pi tools.
+    pub mcp_binary: String,
+    /// Local KAMN service API endpoint used by the MCP server.
+    pub mcp_endpoint: String,
     /// Canonical proof output root.
     pub output_root: String,
     /// Maximum wait for one Pi RPC phase.
@@ -69,6 +75,13 @@ pub fn parse_agent_transaction_demo_config(
             "KAMN_MVP_PI_EXTENSION",
             ".pi/extensions/kamn-mvp/index.ts",
         ),
+        local_node_binary: optional(env, "KAMN_MVP_LOCAL_NODE_BINARY", "target/debug/kamn-node"),
+        mcp_binary: optional(
+            env,
+            "KAMN_MVP_LIVE_MCP_BINARY",
+            "target/debug/kamn-mcp-server",
+        ),
+        mcp_endpoint: optional(env, "KAMN_MVP_LIVE_MCP_ENDPOINT", "http://127.0.0.1:18278"),
         output_root: optional(env, "KAMN_MVP_AGENT_TRANSACTION_OUTPUT_ROOT", ".kamn/demo"),
         rpc_timeout_ms: optional_positive_u64(
             env,

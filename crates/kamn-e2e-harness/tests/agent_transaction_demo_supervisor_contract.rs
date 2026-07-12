@@ -8,6 +8,7 @@ use kamn_e2e_harness::{
 
 #[test]
 fn spec_c01_actor_failure_cleans_every_child_and_writes_no_go() {
+    let _guard = test_lock();
     let fixture = SupervisorFixture::new("fail");
     let config = parse_agent_transaction_demo_config(&fixture.env()).expect("configuration");
 
@@ -28,6 +29,7 @@ fn spec_c01_actor_failure_cleans_every_child_and_writes_no_go() {
 
 #[test]
 fn spec_c02_unresponsive_actor_times_out_and_cleans_every_child() {
+    let _guard = test_lock();
     let fixture = SupervisorFixture::new("hang");
     let config = parse_agent_transaction_demo_config(&fixture.env()).expect("configuration");
     let started = std::time::Instant::now();
@@ -44,6 +46,7 @@ fn spec_c02_unresponsive_actor_times_out_and_cleans_every_child() {
 
 #[test]
 fn spec_c03_successful_rpc_children_run_the_canonical_phase_order() {
+    let _guard = test_lock();
     let fixture = SupervisorFixture::new("success");
     let config = parse_agent_transaction_demo_config(&fixture.env()).expect("configuration");
 
@@ -123,7 +126,10 @@ impl SupervisorFixture {
             "KAMN_MVP_LIVE_MCP_BINARY".to_owned(),
             self.root.join("kamn-mcp-server").display().to_string(),
         );
-        env.insert("KAMN_MVP_LIVE_MCP_ENDPOINT".to_owned(), self.endpoint.clone());
+        env.insert(
+            "KAMN_MVP_LIVE_MCP_ENDPOINT".to_owned(),
+            self.endpoint.clone(),
+        );
         env
     }
 }
@@ -185,8 +191,11 @@ echo cleaned > "{}/$role.cleaned"
         root.display(),
         root.display()
     );
-    let path = root.join("pi");
-    std::fs::write(&path, script).expect("fake Pi");
+    write_executable(root.join("pi"), script.as_str());
+}
+
+fn write_executable(path: PathBuf, contents: &str) {
+    std::fs::write(&path, contents).expect("fake executable");
     let mut permissions = std::fs::metadata(&path).expect("metadata").permissions();
     permissions.set_mode(0o700);
     std::fs::set_permissions(path, permissions).expect("permissions");
@@ -230,12 +239,14 @@ fn base_env() -> BTreeMap<String, String> {
 }
 
 fn unique_root() -> PathBuf {
+    static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
+    let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     std::env::temp_dir().join(format!(
-        "kamn-agent-supervisor-{}-{nanos}",
+        "kamn-agent-supervisor-{}-{nanos}-{id}",
         std::process::id()
     ))
 }
@@ -246,4 +257,9 @@ fn free_port() -> u16 {
         .local_addr()
         .expect("local address")
         .port()
+}
+
+fn test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().expect("supervisor test lock")
 }

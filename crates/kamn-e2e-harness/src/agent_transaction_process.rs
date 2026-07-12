@@ -47,13 +47,47 @@ pub(super) fn wait_or_kill(child: &mut Child, timeout_ms: u64) {
     let _ = child.wait();
 }
 
+pub(super) fn terminate_process_group(child: &mut Child) {
+    if child.try_wait().ok().flatten().is_some() {
+        return;
+    }
+    signal_process_group(child.id(), "-TERM");
+    wait_after_signal(child);
+}
+
+pub(super) fn terminate_process(child: &mut Child) {
+    if child.try_wait().ok().flatten().is_some() {
+        return;
+    }
+    let pid = child.id().to_string();
+    let _ = Command::new("kill").args(["-TERM", pid.as_str()]).status();
+    wait_after_signal(child);
+}
+
+fn wait_after_signal(child: &mut Child) {
+    let deadline = Instant::now() + Duration::from_millis(50);
+    while Instant::now() < deadline {
+        if child.try_wait().ok().flatten().is_some() {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    wait_or_kill(child, 0);
+}
+
 #[cfg(unix)]
 fn kill_process_group(pid: u32) {
-    let group = format!("-{pid}");
-    let _ = Command::new("kill")
-        .args(["-KILL", group.as_str()])
-        .status();
+    signal_process_group(pid, "-KILL");
 }
+
+#[cfg(unix)]
+fn signal_process_group(pid: u32, signal: &str) {
+    let group = format!("-{pid}");
+    let _ = Command::new("kill").args([signal, group.as_str()]).status();
+}
+
+#[cfg(not(unix))]
+fn signal_process_group(_pid: u32, _signal: &str) {}
 
 #[cfg(not(unix))]
 fn kill_process_group(_pid: u32) {}

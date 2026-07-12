@@ -54,6 +54,8 @@ impl PreflightFixture {
         )
         .expect("extension");
         write_fake_pi(root.join("pi"), pi_mode);
+        write_fake_pi(root.join("kamn-node"), "pass");
+        std::fs::write(root.join("kamn-mcp-server"), "stub").expect("MCP binary");
         Self { root }
     }
 
@@ -69,6 +71,8 @@ impl PreflightFixture {
             ),
             ("KAMN_MVP_PI_BINARY", "pi"),
             ("KAMN_MVP_PI_EXTENSION", ".pi/extensions/kamn-mvp/index.ts"),
+            ("KAMN_MVP_LOCAL_NODE_BINARY", "kamn-node"),
+            ("KAMN_MVP_LIVE_MCP_BINARY", "kamn-mcp-server"),
         ] {
             env.insert(name.to_owned(), self.root.join(file).display().to_string());
         }

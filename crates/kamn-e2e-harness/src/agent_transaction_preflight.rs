@@ -18,8 +18,26 @@ pub fn validate_agent_transaction_preflight(
     }
     validate_payer_keypair(config.solana_keypair_file.as_str())?;
     require_nonempty_file(config.pi_extension.as_str(), PI_ERROR)?;
+    require_executable(config.local_node_binary.as_str())?;
+    require_nonempty_file(config.mcp_binary.as_str(), AGENT_ERROR)?;
     validate_recipient(config.solana_recipient_pubkey.as_str())?;
     probe_pi_auth(config)
+}
+
+fn require_executable(path: &str) -> Result<(), String> {
+    require_nonempty_file(path, AGENT_ERROR)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(path)
+            .map_err(|_| format!("{AGENT_ERROR}: local node metadata unavailable"))?
+            .permissions()
+            .mode();
+        if mode & 0o111 == 0 {
+            return Err(format!("{AGENT_ERROR}: local node is not executable"));
+        }
+    }
+    Ok(())
 }
 
 fn require_nonempty_file(path: &str, code: &str) -> Result<(), String> {
