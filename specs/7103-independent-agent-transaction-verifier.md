@@ -171,7 +171,7 @@ are no longer running.
   retained the finalized raw Solana confirmation response in the proof bundle.
 - Standalone verification passed for both `.kamn/demo/latest/proof/report.json`
   and the immutable run report after all KAMN and Pi processes exited.
-- The focused negative matrix passed 39 tests; `cargo fmt --check`, strict
+- The focused negative matrix passed 42 tests; `cargo fmt --check`, strict
   workspace clippy, and `make check` passed on the final implementation.
 - The broader `make test` remains blocked by the pre-existing
   `current_branch_head_restores_ratio_compliance` branch-history baseline, which
