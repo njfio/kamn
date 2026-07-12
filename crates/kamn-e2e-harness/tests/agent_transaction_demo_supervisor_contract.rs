@@ -40,6 +40,30 @@ fn spec_c02_unresponsive_actor_times_out_and_cleans_every_child() {
     assert_no_processes(&fixture.root);
 }
 
+#[test]
+fn spec_c03_successful_rpc_children_run_the_canonical_phase_order() {
+    let fixture = SupervisorFixture::new("success");
+    let config = parse_agent_transaction_demo_config(&fixture.env()).expect("configuration");
+
+    let error = execute_agent_transaction_demo_with_config(&config)
+        .expect_err("missing proof artifacts must fail after actor phases");
+    assert!(error.starts_with("AGENT_TRANSACTION_PROOF_INVALID"));
+    let phases = std::fs::read_to_string(fixture.root.join("prompts.log")).expect("phase log");
+    assert_eq!(
+        phases.lines().collect::<Vec<_>>(),
+        [
+            "kamn-mvp-agent-b",
+            "kamn-mvp-agent-a",
+            "kamn-mvp-agent-b",
+            "kamn-mvp-agent-a",
+            "kamn-mvp-agent-b",
+            "kamn-mvp-agent-a",
+            "kamn-mvp-agent-c",
+        ]
+    );
+    assert_no_processes(&fixture.root);
+}
+
 struct SupervisorFixture {
     root: PathBuf,
 }
@@ -87,10 +111,10 @@ impl SupervisorFixture {
 }
 
 fn write_fake_pi(root: &std::path::Path, mode: &str) {
-    let b_action = if mode == "hang" {
-        "sleep 2; exit 9"
-    } else {
-        "exit 9"
+    let b_action = match mode {
+        "hang" => "sleep 2; exit 9",
+        "fail" => "exit 9",
+        _ => "",
     };
     let script = format!(
         r#"#!/bin/sh
@@ -103,13 +127,19 @@ for arg in "$@"; do
 done
 echo $$ > "{}/$role.pid"
 trap 'echo cleaned > "{}/$role.cleaned"; exit 0' TERM INT
-if [ "$role" = "kamn-mvp-agent-b" ]; then read line; {b_action}; fi
+if [ "$role" = "kamn-mvp-agent-b" ] && [ -n "{b_action}" ]; then read line; {b_action}; fi
 while read line; do
+  echo "$role" >> "{}/prompts.log"
   echo '{{"type":"response","command":"prompt","success":true}}'
-  echo '{{"type":"agent_end","messages":[]}}'
+  if [ "$role" = "kamn-mvp-agent-b" ]; then
+    echo '{{"type":"agent_end","messages":[{{"did":"kamn:did:agent:b"}}]}}'
+  else
+    echo '{{"type":"agent_end","messages":[]}}'
+  fi
 done
 echo cleaned > "{}/$role.cleaned"
 "#,
+        root.display(),
         root.display(),
         root.display(),
         root.display()
