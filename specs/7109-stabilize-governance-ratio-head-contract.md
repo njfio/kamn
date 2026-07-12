@@ -48,13 +48,13 @@ counts. Checker failures are never converted to success or ignored.
 
 ## Acceptance Criteria
 
-- [ ] Current `main` passes without hard-coded governance or feature counts.
-- [ ] The test requires checker success and `status=ok`.
-- [ ] Governance, feature, and unknown counts sum to the non-merge total.
-- [ ] Reported governance and feature ratios equal ratios derived from counts.
-- [ ] Governance ratio is at or below `0.20` and the total remains 50.
-- [ ] Synthetic threshold and classification contracts remain green unchanged.
-- [ ] Formatting, strict workspace clippy, the full governance contract binary,
+- [x] Current `main` passes without hard-coded governance or feature counts.
+- [x] The test requires checker success and `status=ok`.
+- [x] Governance, feature, and unknown counts sum to the non-merge total.
+- [x] Reported governance and feature ratios equal ratios derived from counts.
+- [x] Governance ratio is at or below `0.20` and the total remains 50.
+- [x] Synthetic threshold and classification contracts remain green unchanged.
+- [x] Formatting, strict workspace clippy, the full governance contract binary,
       and `make check` pass.
 
 ## Files To Touch
@@ -86,3 +86,12 @@ CARGO_TARGET_DIR=target/mvp-demo-proof cargo clippy \
   --workspace --all-targets --all-features -- -D warnings
 CARGO_TARGET_DIR=target/mvp-demo-proof make check
 ```
+
+## Completion Evidence
+
+- The exact current-head contract passes with the live compliant commit mix.
+- All 28 governance feature-commit ratio contracts pass unchanged outside the
+  current-head assertion.
+- `cargo fmt --check`, strict workspace clippy, and `make check` pass.
+- Full `make test` now passes this governance binary and proceeds until the
+  unrelated pre-existing `readme_compact_contract` line-cap failure.
