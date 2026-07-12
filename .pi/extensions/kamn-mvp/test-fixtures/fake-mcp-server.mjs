@@ -9,6 +9,7 @@ const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
 const agentName = argumentValue("--agent-name") ?? "agent-a";
 let releaseAttempts = 0;
 let participantProjectionAttempts = 0;
+let taskQueryAttempts = 0;
 if (startFile) appendFileSync(startFile, `${process.pid}\n`);
 
 process.on("SIGTERM", () => {
@@ -55,6 +56,9 @@ function toolResult(request) {
 		return { task_id: taskId, state: "accepted", ...JSON.parse(request.payload) };
 	}
 	if (request.tool === "query_task") {
+		if (resultMode === "completed-second-query") {
+			return { task_id: request.task_id, state: taskQueryAttempts++ === 0 ? "accepted" : "completed" };
+		}
 		const state = resultMode === "wrong-query-state" ? "submitted" : "accepted";
 		return { task_id: request.task_id, state };
 	}

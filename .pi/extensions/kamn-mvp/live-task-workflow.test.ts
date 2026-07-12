@@ -142,6 +142,18 @@ test("Agent B waits for a runtime escrow binding before completion", async () =>
 	await workflow.shutdown();
 });
 
+test("Agent A waits for completed task state before release", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "completed-second-query" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+	workflow.importTask("task-live-1");
+	const task = await workflow.waitForCompleted("agent_a", { timeoutMs: 100, pollMs: 5 });
+
+	assert.equal(task.state, "completed");
+	assert.equal(workflow.provenance("agent_a").last_request_id, 3);
+	await workflow.shutdown();
+});
+
 test("actor evidence requires a registered identity and final runtime projection", async () => {
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
