@@ -24,7 +24,8 @@ while read line; do
   echo "$role" >> "{}/prompts.log"
   echo '{{"type":"response","command":"prompt","success":true}}'
   if [ "$role" = "kamn-mvp-agent-b" ]; then
-    echo '{{"type":"agent_end","messages":[{{"did":"kamn:did:agent:b"}}]}}'
+    echo '{{"type":"tool_execution_end","toolName":"kamn_live_agent_b_register","result":{{"isError":false,"details":{{"result":{{"did":"kamn:did:agent:b"}}}}}}}}'
+    echo '{{"type":"agent_end","messages":[]}}'
   else
     echo '{{"type":"agent_end","messages":[]}}'
   fi
