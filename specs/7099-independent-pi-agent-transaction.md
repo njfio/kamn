@@ -107,6 +107,10 @@ Participant and verifier projection operations likewise poll boundedly when the
 runtime view is valid but settlement fields are not finalized yet. Every
 interim projection remains in contiguous provenance, and actor evidence uses
 only the first complete finalized projection.
+Projection polling may therefore retain multiple successful read receipts.
+Mutation operations must still have exactly one successful receipt, while the
+actor claim binds its runtime projection digest to the final successful
+projection receipt in the contiguous stream.
 After task acceptance, Agent B waits on the authenticated participant
 projection until it proves the task-bound escrow exists. Agent B cannot submit
 completion before this runtime-backed funding barrier passes; coordination
