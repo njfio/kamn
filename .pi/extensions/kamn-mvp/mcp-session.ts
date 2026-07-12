@@ -12,6 +12,12 @@ export type McpSessionProvenance = {
 	runtime_response_digests: string[];
 };
 const PROCESS_ENV_ALLOWLIST = new Set(["HOME", "PATH", "RUST_LOG", "TMPDIR"]);
+const FIXTURE_ENV_ALLOWLIST = new Set([
+	"KAMN_MVP_FAKE_MCP_MODE",
+	"KAMN_MVP_FAKE_MCP_RESULT_MODE",
+	"KAMN_MVP_FAKE_MCP_START_FILE",
+	"KAMN_MVP_FAKE_MCP_STOP_FILE",
+]);
 const AGENT_ENV = {
 	AGENT_A: { name: "KAMN_MVP_LIVE_MCP_AGENT_A_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE" },
 	AGENT_B: { name: "KAMN_MVP_LIVE_MCP_AGENT_B_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE" },
@@ -170,7 +176,7 @@ export function readLiveMcpConfig(agent: LiveMcpAgent, env: Environment = proces
 function childEnvironment(env: Environment): NodeJS.ProcessEnv {
 	return Object.fromEntries(
 		Object.entries({ ...process.env, ...env }).filter(
-			([name, value]) => value !== undefined && (name.startsWith("KAMN_") || PROCESS_ENV_ALLOWLIST.has(name)),
+			([name, value]) => value !== undefined && (PROCESS_ENV_ALLOWLIST.has(name) || FIXTURE_ENV_ALLOWLIST.has(name)),
 		),
 	);
 }
