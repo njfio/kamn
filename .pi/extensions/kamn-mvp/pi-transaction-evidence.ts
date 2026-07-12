@@ -8,6 +8,11 @@ const SHARED = [
 	"task_id", "transaction_id", "escrow_id", "amount_lamports", "network",
 	"settlement_tx_signature", "settlement_commitment", "public_commitment",
 ] as const;
+const INPUT_FIELDS = new Set([
+	"actor", "pi_process_id", "did", "mcp_child_process_id", "first_request_id", "last_request_id",
+	"runtime_response_digests", "runtime_response_receipts", "runtime_projection_digest", ...SHARED,
+	"view_scope", "participant_role", "private_receipt_digest", "source_handoff_digest", "handoff_authorized",
+]);
 type ActorArtifact = {
 	schema_version: string;
 	actor: Role;
@@ -66,6 +71,7 @@ export async function verifyPiTransactionActors(paths: Record<Role, string>) {
 }
 
 function normalizeActor(input: Record<string, unknown>): Omit<ActorArtifact, "artifact_digest"> {
+	assertKnownInputFields(input);
 	const artifact = {
 		schema_version: SCHEMA,
 		...identityFields(input),
@@ -77,6 +83,9 @@ function normalizeActor(input: Record<string, unknown>): Omit<ActorArtifact, "ar
 	};
 	validateActor(artifact as ActorArtifact);
 	return artifact;
+}
+function assertKnownInputFields(input: Record<string, unknown>) {
+	if (Object.keys(input).some((field) => !INPUT_FIELDS.has(field))) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
 }
 function identityFields(input: Record<string, unknown>) {
 	return {
@@ -120,7 +129,9 @@ async function readActor(path: string, role: Role): Promise<ActorArtifact> {
 	const digestValue = shaDigest(parsed.artifact_digest, "PI_RUNTIME_RECEIPT_MISMATCH");
 	const unsigned = Object.fromEntries(Object.entries(parsed).filter(([key]) => key !== "artifact_digest"));
 	if (digest(unsigned) !== digestValue) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
-	const normalized = normalizeActor(unsigned) as ActorArtifact;
+	if (unsigned.schema_version !== SCHEMA) throw new Error("PI_RUNTIME_RECEIPT_MISMATCH");
+	const input = Object.fromEntries(Object.entries(unsigned).filter(([key]) => key !== "schema_version"));
+	const normalized = normalizeActor(input) as ActorArtifact;
 	if (normalized.actor !== role) throw new Error("PI_ACTOR_IDENTITY_INVALID");
 	return { ...normalized, artifact_digest: digestValue };
 }
