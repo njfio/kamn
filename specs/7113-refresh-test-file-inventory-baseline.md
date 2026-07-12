@@ -42,10 +42,10 @@ declarative evidence only; no fallback or tolerance is introduced.
 
 ## Acceptance Criteria
 
-- [ ] Baseline `test_file_total` equals the recomputed current inventory.
-- [ ] Soft, severe, and hard counts match current files.
-- [ ] Severe allowlist remains exact and no hard offender exists.
-- [ ] Threshold and Rust policy files remain unchanged.
+- [x] Baseline `test_file_total` equals the recomputed current inventory.
+- [x] Soft, severe, and hard counts match current files.
+- [x] Severe allowlist remains exact and no hard offender exists.
+- [x] Threshold and Rust policy files remain unchanged.
 - [ ] `test_file_size_policy`, formatting, strict clippy, `make check`, and
       `make test` pass.
 
@@ -75,3 +75,13 @@ CARGO_TARGET_DIR=target/mvp-demo-proof cargo clippy \
 CARGO_TARGET_DIR=target/mvp-demo-proof make check
 CARGO_TARGET_DIR=target/mvp-demo-proof make test
 ```
+
+## Completion Evidence
+
+- Recomputed inventory: 1,317 files, 2 soft warnings, 0 severe, 0 hard.
+- The two soft warnings are named in the fixture and remain below the budget 37.
+- All 4 test-file size policy contracts pass; thresholds and Rust policy are
+  unchanged.
+- Formatting, strict workspace clippy, and `make check` pass.
+- Full `make test` passes this policy, then fails two unrelated legacy
+  agent-harness fixture paths with `PROOF_ARTIFACT_PATH_INVALID`.
