@@ -69,6 +69,14 @@ test("actor verification rejects a participant role that does not match the acto
 	);
 });
 
+test("actor evidence rejects unknown top-level fields", async () => {
+	const paths = await actorPaths();
+	await assert.rejects(
+		writeActors(paths, { agent_a: { synthetic_success_label: "release passed" } }),
+		/PI_RUNTIME_RECEIPT_MISMATCH/,
+	);
+});
+
 type Role = "agent_a" | "agent_b" | "agent_c";
 type Overrides = Partial<Record<Role, Record<string, unknown>>>;
 
