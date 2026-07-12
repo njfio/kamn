@@ -22,6 +22,8 @@ fn spec_c01_actor_failure_cleans_every_child_and_writes_no_go() {
     assert!(no_go.contains("decision=NO-GO"));
     assert!(no_go.contains("AGENT_TRANSACTION_CHILD_FAILED"));
     assert!(!fixture.root.join("demo/latest/proof/report.json").exists());
+    assert!(fixture.root.join("runtime.started").is_file());
+    assert!(fixture.root.join("runtime.stopped").is_file());
 }
 
 #[test]
@@ -69,6 +71,7 @@ fn spec_c03_successful_rpc_children_run_the_canonical_phase_order() {
 
 struct SupervisorFixture {
     root: PathBuf,
+    endpoint: String,
 }
 
 impl SupervisorFixture {
@@ -86,7 +89,10 @@ impl SupervisorFixture {
         .expect("payer file");
         std::fs::write(root.join("extension/index.ts"), "export default {}").expect("extension");
         write_fake_pi(&root, pi_mode);
-        Self { root }
+        let endpoint = format!("http://127.0.0.1:{}", free_port());
+        write_fake_runtime(&root);
+        std::fs::write(root.join("kamn-mcp-server"), "stub").expect("MCP binary");
+        Self { root, endpoint }
     }
 
     fn env(&self) -> BTreeMap<String, String> {
@@ -109,8 +115,40 @@ impl SupervisorFixture {
             "KAMN_MVP_AGENT_TRANSACTION_RPC_TIMEOUT_MS".to_owned(),
             "100".to_owned(),
         );
+        env.insert(
+            "KAMN_MVP_LOCAL_NODE_BINARY".to_owned(),
+            self.root.join("kamn-node").display().to_string(),
+        );
+        env.insert(
+            "KAMN_MVP_LIVE_MCP_BINARY".to_owned(),
+            self.root.join("kamn-mcp-server").display().to_string(),
+        );
+        env.insert("KAMN_MVP_LIVE_MCP_ENDPOINT".to_owned(), self.endpoint.clone());
         env
     }
+}
+
+fn write_fake_runtime(root: &std::path::Path) {
+    let script = format!(
+        r#"#!/bin/sh
+port=""
+previous=""
+for arg in "$@"; do
+  if [ "$previous" = "--api-bind" ]; then port="${{arg##*:}}"; fi
+  previous="$arg"
+done
+exec python3 -c 'import signal,socket,sys,time
+root=sys.argv[1]; port=int(sys.argv[2])
+open(root+"/runtime.started","w").write(str(__import__("os").getpid()))
+server=socket.socket(); server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); server.bind(("127.0.0.1",port)); server.listen()
+def stop(*_):
+ open(root+"/runtime.stopped","w").write("stopped"); server.close(); sys.exit(0)
+signal.signal(signal.SIGTERM,stop)
+while True: time.sleep(.05)' "{}" "$port"
+"#,
+        root.display()
+    );
+    write_executable(root.join("kamn-node"), script.as_str());
 }
 
 fn write_fake_pi(root: &std::path::Path, mode: &str) {
@@ -200,4 +238,12 @@ fn unique_root() -> PathBuf {
         "kamn-agent-supervisor-{}-{nanos}",
         std::process::id()
     ))
+}
+
+fn free_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .expect("free port")
+        .local_addr()
+        .expect("local address")
+        .port()
 }
