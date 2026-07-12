@@ -68,6 +68,19 @@ pub(crate) fn validate_three_agent_transcript_claim(claim: &ClaimView<'_>) -> Re
     Ok(())
 }
 
+pub(crate) fn require_runtime_chain_source(report_json: &str) -> Result<(), String> {
+    let claims = parse_claims(report_json)?;
+    let claim = three_agent_claim(claims.as_slice())
+        .ok_or_else(|| "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())?;
+    let artifact = extract_string(claim.raw, "three_agent_transcript_artifact")?;
+    let raw = std::fs::read_to_string(artifact)
+        .map_err(|_| "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())?;
+    if raw.contains("\"schema_version\":\"kamn.mvp.runtime-receipt-chain.v1\"") {
+        return Ok(());
+    }
+    Err("RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())
+}
+
 fn three_agent_claim<'a>(claims: &'a [ClaimView<'a>]) -> Option<&'a ClaimView<'a>> {
     claims.iter().find(|claim| claim.id == CLAIM_ID)
 }

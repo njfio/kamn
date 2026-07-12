@@ -65,11 +65,11 @@ fn validate_direct_evidence(
     if let Some(path) = config.agent_harness_evidence_path.as_deref() {
         validate_agent_harness_evidence_path(report, config.report.as_str(), path)?;
     }
-    config
-        .pi_transaction_actor_paths
-        .as_ref()
-        .map(super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths)
-        .transpose()
+    let Some(paths) = config.pi_transaction_actor_paths.as_ref() else {
+        return Ok(None);
+    };
+    super::three_agent_transcript::require_runtime_chain_source(report)?;
+    super::pi_transaction_actor_verify::verify_pi_transaction_actor_paths(paths).map(Some)
 }
 
 fn render_verify_output(config: &VerifyMvpDemoCommandConfig, summary: Option<String>) -> String {
