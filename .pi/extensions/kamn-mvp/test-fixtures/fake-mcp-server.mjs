@@ -68,6 +68,9 @@ function toolResult(request) {
 		return { escrow_id: request.escrow_id, state: "released", settlement_tx_signature: "devnet-signature-1", ...JSON.parse(request.payload) };
 	}
 	if (request.tool === "query_participant_task_projection") {
+		if (resultMode === "pending-three-projections" && participantProjectionAttempts++ < 3) {
+			return pendingParticipantProjection(request.task_id, agentName);
+		}
 		if (resultMode === "pending-first-projection" && participantProjectionAttempts++ === 0) {
 			return pendingParticipantProjection(request.task_id, agentName);
 		}

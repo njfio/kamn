@@ -113,8 +113,8 @@ test("ambiguous release reconciles through the same MCP child and idempotency ke
 	await workflow.shutdown();
 });
 
-test("participant projection waits for finalized settlement fields", async () => {
-	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "pending-first-projection" });
+test("participant projection waits through multiple interim views for finalized settlement fields", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "pending-three-projections" });
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 	await workflow.register("agent_a");
 	const agentB = await workflow.register("agent_b");
@@ -122,9 +122,9 @@ test("participant projection waits for finalized settlement fields", async () =>
 	const projection = await workflow.queryParticipantProjection("agent_a");
 
 	assert.equal(projection.settlement_tx_signature, "devnet-signature-1");
-	assert.deepEqual(workflow.provenance("agent_a").runtime_response_receipts.slice(-2).map((receipt) => receipt.tool), [
-		"query_participant_task_projection", "query_participant_task_projection",
-	]);
+	assert.equal(workflow.provenance("agent_a").runtime_response_receipts.filter(
+		(receipt) => receipt.tool === "query_participant_task_projection",
+	).length, 4);
 	await workflow.shutdown();
 });
 
