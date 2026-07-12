@@ -107,6 +107,10 @@ Participant and verifier projection operations likewise poll boundedly when the
 runtime view is valid but settlement fields are not finalized yet. Every
 interim projection remains in contiguous provenance, and actor evidence uses
 only the first complete finalized projection.
+After task acceptance, Agent B waits on the authenticated participant
+projection until it proves the task-bound escrow exists. Agent B cannot submit
+completion before this runtime-backed funding barrier passes; coordination
+files are not used for the barrier.
 
 All failures hard-fail at the tool or verifier boundary. Existing artifacts are
 written idempotently and conflicting replay is rejected.
@@ -123,6 +127,8 @@ written idempotently and conflicting replay is rejected.
       `SETTLEMENT_OUTCOME_AMBIGUOUS` and fails closed if confirmation is absent.
 - [ ] Final projection operations retain the same MCP child while waiting for
       complete finalized settlement fields and fail closed on exhaustion.
+- [ ] Agent B proves escrow funding from its authenticated runtime projection
+      before completing the task, preventing acceptance/completion races.
 - [ ] Agent A performs create, release, and participant-view operations.
 - [ ] Agent B performs accept, completion, and participant-view operations.
 - [ ] Create, accept, complete, fund, and release payloads are derived from one
