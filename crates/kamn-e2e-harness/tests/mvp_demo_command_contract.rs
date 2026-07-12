@@ -172,6 +172,24 @@ fn spec_c10_demo_consumes_runtime_actor_chain_when_configured() {
     assert!(!transcript.contains("agent_a_registered"));
 }
 
+#[test]
+fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
+    let temp = temp_dir("mvp-demo-legacy-source");
+    let actors = ActorFixture::new();
+    actors.write_all(Overrides::default());
+    actors.rebind_shared_facts();
+    execute_mvp_demo_contract(&mvp_demo_command::devnet_required_demo_config(&temp))
+        .expect("legacy fixture report");
+
+    let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
+        report: temp.join("latest/proof/report.json").display().to_string(),
+        agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: Some(actors.paths()),
+    })
+    .expect_err("runtime actors must not validate a generated transcript");
+    assert_eq!(error, "RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID");
+}
+
 fn devnet_settlement_markers() -> [&'static str; 6] {
     [
         r#""settlement_tx_signature":"devnet-signature-111""#,
