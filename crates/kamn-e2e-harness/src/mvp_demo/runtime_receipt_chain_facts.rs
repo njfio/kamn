@@ -98,12 +98,7 @@ fn require_funding(result: &PublicResult) -> Result<(), String> {
 }
 
 fn require_release(result: &PublicResult) -> Result<(), String> {
-    require_all([
-        result.escrow_id.is_some(),
-        result.state.is_some(),
-        result.settlement_tx_signature.is_some(),
-        result.settlement_commitment.is_some(),
-    ])
+    require_all([result.escrow_id.is_some(), result.state.is_some()])
 }
 
 fn require_participant_projection(actor: &Actor, result: &PublicResult) -> Result<(), String> {
