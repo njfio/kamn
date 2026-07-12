@@ -98,6 +98,15 @@ fn spec_c08_public_receipt_fact_drift_fails_closed() {
     assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_FACT_MISMATCH");
 }
 
+#[test]
+fn spec_c09_actor_local_mutation_order_fails_closed() {
+    let fixture = ActorFixture::new();
+    fixture.write_all(Overrides::default());
+    fixture.reorder_agent_a_mutations();
+
+    assert_chain_error(&fixture, "RUNTIME_RECEIPT_CHAIN_ORDER_INVALID");
+}
+
 fn assert_chain_error(fixture: &ActorFixture, code: &str) {
     let error = build_runtime_receipt_chain_from_actor_paths(&fixture.paths())
         .expect_err("tampered runtime evidence must fail");
