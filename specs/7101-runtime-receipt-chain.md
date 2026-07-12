@@ -16,7 +16,7 @@ claim, and runtime-owned participant/restricted projection artifacts.
 The #7099 receipt shape currently carries request ID, tool, outcome, and exact
 response digest. That proves provenance but is insufficient to prove state
 transitions. This issue extends each receipt with a strict allowlisted
-`public_result` projection containing only applicable public fields: task ID,
+`public_result` projection containing only applicable public fields: actor DID, task ID,
 task state, transaction ID, escrow ID, escrow state, amount, network,
 settlement signature/commitment, public commitment, view scope, and participant
 role. Raw response bodies, private receipt digests, payloads, auth material, and
