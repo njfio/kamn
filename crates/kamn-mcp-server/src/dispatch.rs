@@ -16,6 +16,10 @@ pub trait McpToolBackend {
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError>;
     /// Queries one task status by identifier.
     fn query_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one participant-private task projection.
+    fn query_participant_task_projection(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one restricted-public task projection.
+    fn query_verifier_task_projection(&self, task_id: &str) -> Result<String, AgentLibError>;
     /// Queries one agent profile by DID.
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError>;
     /// Registers one content lifecycle record.
@@ -35,13 +39,13 @@ pub trait McpToolBackend {
     /// Creates one task payload.
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Accepts one task by identifier.
-    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    fn accept_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError>;
     /// Completes one task by identifier.
-    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    fn complete_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError>;
     /// Funds escrow with payload contract.
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Releases one escrow by identifier.
-    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError>;
+    fn release_escrow(&self, escrow_id: &str, payload: &str) -> Result<String, AgentLibError>;
     /// Reads service health.
     fn health(&self) -> Result<String, AgentLibError>;
     /// Verifies one proof receipt projection.
@@ -109,6 +113,14 @@ impl McpToolBackend for KamnAgentHandle {
             escape_json(status.task_id.as_str()),
             escape_json(status.state.as_str()),
         ))
+    }
+
+    fn query_participant_task_projection(&self, task_id: &str) -> Result<String, AgentLibError> {
+        KamnAgentHandle::query_participant_task_projection(self, task_id)
+    }
+
+    fn query_verifier_task_projection(&self, task_id: &str) -> Result<String, AgentLibError> {
+        KamnAgentHandle::query_verifier_task_projection(self, task_id)
     }
 
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
@@ -202,8 +214,8 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
-    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        let receipt = KamnAgentHandle::accept_task(self, task_id)?;
+    fn accept_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::accept_task_with_payload(self, task_id, payload)?;
         Ok(format!(
             r#"{{"task_id":"{}","state":"{}"}}"#,
             escape_json(receipt.task_id.as_str()),
@@ -211,8 +223,8 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
-    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
-        let receipt = KamnAgentHandle::complete_task(self, task_id)?;
+    fn complete_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::complete_task_with_payload(self, task_id, payload)?;
         Ok(format!(
             r#"{{"task_id":"{}","state":"{}"}}"#,
             escape_json(receipt.task_id.as_str()),
@@ -229,8 +241,8 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
-    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
-        let receipt = KamnAgentHandle::release_escrow(self, escrow_id)?;
+    fn release_escrow(&self, escrow_id: &str, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::release_escrow_with_payload(self, escrow_id, payload)?;
         Ok(format!(
             r#"{{"escrow_id":"{}","state":"{}"}}"#,
             escape_json(receipt.escrow_id.as_str()),
@@ -307,6 +319,20 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
             };
             backend.query_task(task_id.as_str())
         }
+        "query_participant_task_projection" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_participant_task_projection(task_id.as_str())
+        }
+        "query_verifier_task_projection" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_verifier_task_projection(task_id.as_str())
+        }
         "query_agent_profile" => {
             let did = match required_string_arg(request_json, "did") {
                 Ok(value) => value,
@@ -371,14 +397,16 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Ok(value) => value,
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
-            backend.accept_task(task_id.as_str())
+            let payload = required_string_arg(request_json, "payload")?;
+            backend.accept_task(task_id.as_str(), payload.as_str())
         }
         "complete_task" => {
             let task_id = match required_string_arg(request_json, "task_id") {
                 Ok(value) => value,
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
-            backend.complete_task(task_id.as_str())
+            let payload = required_string_arg(request_json, "payload")?;
+            backend.complete_task(task_id.as_str(), payload.as_str())
         }
         "fund_escrow" => {
             let payload = match required_string_arg(request_json, "payload") {
@@ -392,7 +420,8 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Ok(value) => value,
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
-            backend.release_escrow(escrow_id.as_str())
+            let payload = required_string_arg(request_json, "payload")?;
+            backend.release_escrow(escrow_id.as_str(), payload.as_str())
         }
         "health" => backend.health(),
         "verify_proof" => {

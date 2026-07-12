@@ -129,6 +129,7 @@ fn verify_latest(root: &Path) -> Result<String, String> {
     execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
         report: root.join("latest/proof/report.json").display().to_string(),
         agent_harness_evidence_path: None,
+        pi_transaction_actor_paths: None,
     })
 }
 

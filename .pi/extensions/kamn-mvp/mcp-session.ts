@@ -1,17 +1,27 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { McpProvenanceTracker, type McpSessionProvenance } from "./mcp-provenance.ts";
+export type { McpSessionProvenance } from "./mcp-provenance.ts";
 
 type Environment = Record<string, string | undefined>;
-export type LiveMcpAgent = "AGENT_A" | "AGENT_B";
+export type LiveMcpAgent = "AGENT_A" | "AGENT_B" | "AGENT_C";
 const PROCESS_ENV_ALLOWLIST = new Set(["HOME", "PATH", "RUST_LOG", "TMPDIR"]);
+const FIXTURE_ENV_ALLOWLIST = new Set([
+	"KAMN_MVP_FAKE_MCP_MODE",
+	"KAMN_MVP_FAKE_MCP_RESULT_MODE",
+	"KAMN_MVP_FAKE_MCP_START_FILE",
+	"KAMN_MVP_FAKE_MCP_STOP_FILE",
+]);
 const AGENT_ENV = {
 	AGENT_A: { name: "KAMN_MVP_LIVE_MCP_AGENT_A_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE" },
 	AGENT_B: { name: "KAMN_MVP_LIVE_MCP_AGENT_B_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_B_KEY_FILE" },
+	AGENT_C: { name: "KAMN_MVP_LIVE_MCP_AGENT_C_NAME", keyFile: "KAMN_MVP_LIVE_MCP_AGENT_C_KEY_FILE" },
 } as const;
 type JsonObject = Record<string, unknown>;
 type PendingRequest = {
 	id: string;
+	tool: string;
 	resolve: (result: JsonObject) => void;
 	reject: (error: Error) => void;
 	timer: NodeJS.Timeout;
@@ -29,6 +39,7 @@ export class McpSession {
 	private pending?: PendingRequest;
 	private terminalError?: Error;
 	private sequence = 0;
+	private readonly provenanceTracker = new McpProvenanceTracker();
 	private stdoutBuffer = "";
 	private shutdownPromise?: Promise<void>;
 	private readonly config: LiveMcpConfig;
@@ -44,7 +55,7 @@ export class McpSession {
 		const child = this.start();
 		const id = String(++this.sequence);
 		return new Promise((resolveRequest, rejectRequest) => {
-			this.pending = this.pendingRequest(id, resolveRequest, rejectRequest, signal);
+			this.pending = this.pendingRequest(id, tool, resolveRequest, rejectRequest, signal);
 			child.stdin.write(`${JSON.stringify({ id, tool, ...fields })}\n`, (error) => {
 				if (error) this.failSession(new Error(`KAMN live MCP write failed: ${error.message}`));
 			});
@@ -54,6 +65,11 @@ export class McpSession {
 		if (this.shutdownPromise) return this.shutdownPromise;
 		this.shutdownPromise = this.stopChild();
 		return this.shutdownPromise;
+	}
+	provenance(): McpSessionProvenance {
+		const childProcessId = this.child?.pid;
+		if (!childProcessId) throw new Error("KAMN live MCP session has no successful runtime provenance");
+		return this.provenanceTracker.provenance(childProcessId);
 	}
 	private start(): ChildProcessWithoutNullStreams {
 		if (this.child) return this.child;
@@ -66,11 +82,11 @@ export class McpSession {
 		child.once("exit", (code, signal) => this.handleExit(code, signal));
 		return child;
 	}
-	private pendingRequest(id: string, resolveRequest: PendingRequest["resolve"], reject: PendingRequest["reject"], signal?: AbortSignal): PendingRequest {
+	private pendingRequest(id: string, tool: string, resolveRequest: PendingRequest["resolve"], reject: PendingRequest["reject"], signal?: AbortSignal): PendingRequest {
 		const timer = setTimeout(() => this.failSession(new Error(`KAMN live MCP request ${id} timed out`)), this.options.timeoutMs);
 		const abort = () => this.failSession(new Error(`KAMN live MCP request ${id} aborted`));
 		signal?.addEventListener("abort", abort, { once: true });
-		return { id, resolve: resolveRequest, reject, timer, removeAbort: () => signal?.removeEventListener("abort", abort) };
+		return { id, tool, resolve: resolveRequest, reject, timer, removeAbort: () => signal?.removeEventListener("abort", abort) };
 	}
 	private consumeStdout(chunk: string) {
 		this.stdoutBuffer += chunk;
@@ -90,8 +106,12 @@ export class McpSession {
 		const pending = this.pending;
 		if (!pending || response.id !== pending.id) return this.failSession(new Error("KAMN live MCP response ID mismatch"));
 		this.clearPending();
-		if (response.ok !== true) return pending.reject(toolError(response));
+		if (response.ok !== true) {
+			this.provenanceTracker.record(pending.id, pending.tool, "error", isObject(response.error) ? response.error : {});
+			return pending.reject(toolError(response));
+		}
 		if (!isObject(response.result)) return pending.reject(new Error("KAMN live MCP success response omitted result"));
+		this.provenanceTracker.record(pending.id, pending.tool, "success", response.result);
 		pending.resolve(response.result);
 	}
 	private handleExit(code: number | null, signal: NodeJS.Signals | null) {
@@ -139,7 +159,7 @@ export function readLiveMcpConfig(agent: LiveMcpAgent, env: Environment = proces
 function childEnvironment(env: Environment): NodeJS.ProcessEnv {
 	return Object.fromEntries(
 		Object.entries({ ...process.env, ...env }).filter(
-			([name, value]) => value !== undefined && (name.startsWith("KAMN_") || PROCESS_ENV_ALLOWLIST.has(name)),
+			([name, value]) => value !== undefined && (PROCESS_ENV_ALLOWLIST.has(name) || FIXTURE_ENV_ALLOWLIST.has(name)),
 		),
 	);
 }

@@ -2168,6 +2168,8 @@ dependencies = [
  "kamn-agent-lib",
  "kamn-cli",
  "kamn-mcp-server",
+ "serde",
+ "serde_json",
  "sha2",
 ]
 

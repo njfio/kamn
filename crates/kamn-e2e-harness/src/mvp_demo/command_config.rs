@@ -41,4 +41,6 @@ pub struct VerifyMvpDemoCommandConfig {
     pub report: String,
     /// Optional agent-harness evidence validated directly against the report.
     pub agent_harness_evidence_path: Option<String>,
+    /// Optional complete Agent A, Agent B, and Agent C transaction evidence set.
+    pub pi_transaction_actor_paths: Option<[String; 3]>,
 }

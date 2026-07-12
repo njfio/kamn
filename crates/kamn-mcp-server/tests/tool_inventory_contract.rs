@@ -2,7 +2,7 @@ use kamn_mcp_server::tools::{build_tool_registry, MCP_TOOL_NAMES};
 use serde_json::Value;
 
 #[test]
-fn spec_c03_mcp_tool_registry_contains_required_21_tools() {
+fn spec_c03_mcp_tool_registry_contains_required_23_tools() {
     let required = [
         "register",
         "send_message",
@@ -10,6 +10,8 @@ fn spec_c03_mcp_tool_registry_contains_required_21_tools() {
         "list_messages",
         "query_message",
         "query_task",
+        "query_participant_task_projection",
+        "query_verifier_task_projection",
         "query_agent_profile",
         "register_content",
         "expire_content",
@@ -250,4 +252,23 @@ fn spec_c11_mcp_tool_registry_input_schemas_expose_required_fields_for_represent
         Some(false),
         "health input schema should reject undeclared fields"
     );
+}
+
+#[test]
+fn spec_7099_agreement_sensitive_tools_require_payloads() {
+    let registry = build_tool_registry();
+    for (tool_name, identifier) in [
+        ("accept_task", "task_id"),
+        ("complete_task", "task_id"),
+        ("release_escrow", "escrow_id"),
+    ] {
+        let tool = registry
+            .iter()
+            .find(|tool| tool.name == tool_name)
+            .expect("agreement-sensitive tool should exist");
+        let input: Value = serde_json::from_str(tool.input_schema).expect("schema should parse");
+        let required = input["required"].as_array().expect("required fields");
+        assert!(required.iter().any(|value| value == identifier));
+        assert!(required.iter().any(|value| value == "payload"));
+    }
 }

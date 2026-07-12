@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub use mvp_demo::{
-    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, LiveTaskEvidencePaths,
-    MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
+    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths,
+    LiveTaskEvidencePaths, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
 /// Driver implementations for each execution mode.
@@ -460,30 +460,87 @@ fn parse_demo_mvp_command(args: &[String]) -> Result<HarnessCommand, String> {
 }
 
 fn parse_verify_mvp_demo_command(args: &[String]) -> Result<HarnessCommand, String> {
-    let mut report = None;
-    let mut agent_harness_evidence_path = None;
-    let mut index = 1;
-    while index < args.len() {
-        let (parsed_report, advanced) = parse_flag_value(args, index, "--report")?;
-        if let Some(value) = parsed_report {
-            report = Some(value);
-            index = advanced + 1;
-            continue;
-        }
-        let (parsed_evidence, advanced) =
-            parse_flag_value(args, index, "--agent-harness-evidence")?;
-        if let Some(value) = parsed_evidence {
-            agent_harness_evidence_path = Some(value);
-            index = advanced + 1;
-            continue;
-        }
-        return Err(format!("unknown verify-mvp-demo flag: {}", args[index]));
-    }
-    let report = report.ok_or_else(|| "missing required flag --report".to_owned())?;
+    let parsed = parse_verify_mvp_demo_args(args)?;
+    let report = parsed
+        .report
+        .ok_or_else(|| "missing required flag --report".to_owned())?;
     Ok(HarnessCommand::VerifyMvpDemo(VerifyMvpDemoCommandConfig {
         report,
-        agent_harness_evidence_path,
+        agent_harness_evidence_path: parsed.agent_harness,
+        pi_transaction_actor_paths: complete_pi_actor_paths(parsed.pi_actors)?,
     }))
+}
+
+struct VerifyMvpDemoArgs {
+    report: Option<String>,
+    agent_harness: Option<String>,
+    pi_actors: [Option<String>; 3],
+}
+
+fn parse_verify_mvp_demo_args(args: &[String]) -> Result<VerifyMvpDemoArgs, String> {
+    let mut parsed = VerifyMvpDemoArgs {
+        report: None,
+        agent_harness: None,
+        pi_actors: [None, None, None],
+    };
+    let mut index = 1;
+    while index < args.len() {
+        index = parse_verify_mvp_demo_flag(args, index, &mut parsed)?;
+    }
+    Ok(parsed)
+}
+
+fn parse_verify_mvp_demo_flag(
+    args: &[String],
+    index: usize,
+    parsed: &mut VerifyMvpDemoArgs,
+) -> Result<usize, String> {
+    for (flag, target) in [
+        ("--report", &mut parsed.report),
+        ("--agent-harness-evidence", &mut parsed.agent_harness),
+    ] {
+        let (value, advanced) = parse_flag_value(args, index, flag)?;
+        if value.is_some() {
+            *target = value;
+            return Ok(advanced + 1);
+        }
+    }
+    parse_pi_actor_flag(args, index, &mut parsed.pi_actors)
+}
+
+fn parse_pi_actor_flag(
+    args: &[String],
+    index: usize,
+    paths: &mut [Option<String>; 3],
+) -> Result<usize, String> {
+    for (slot, flag) in [
+        "--pi-agent-a-evidence",
+        "--pi-agent-b-evidence",
+        "--pi-agent-c-evidence",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let (value, advanced) = parse_flag_value(args, index, flag)?;
+        if value.is_some() {
+            paths[slot] = value;
+            return Ok(advanced + 1);
+        }
+    }
+    Err(format!("unknown verify-mvp-demo flag: {}", args[index]))
+}
+
+fn complete_pi_actor_paths(paths: [Option<String>; 3]) -> Result<Option<[String; 3]>, String> {
+    if paths.iter().all(Option::is_none) {
+        return Ok(None);
+    }
+    let [a, b, c] = paths;
+    match (a, b, c) {
+        (Some(a), Some(b), Some(c)) => Ok(Some([a, b, c])),
+        _ => {
+            Err("verify-mvp-demo requires all three Pi transaction actor evidence paths".to_owned())
+        }
+    }
 }
 
 fn mvp_devnet_mode_from_env() -> String {

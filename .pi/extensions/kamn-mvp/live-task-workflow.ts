@@ -1,15 +1,26 @@
-import { McpSession, readLiveMcpConfig, type LiveMcpAgent } from "./mcp-session.ts";
-
-export type AgentRole = "agent_a" | "agent_b";
+import { McpSession, readLiveMcpConfig, type McpSessionProvenance } from "./mcp-session.ts";
+import {
+	agentLabel, configRole, requiredString, requiredText, validImportedTaskId,
+	buildActorEvidence, validateEscrowResult, validateProjection, validateTaskProjection, validateTaskResult, validateWaitOptions,
+} from "./live-task-workflow-support.ts";
+import { LiveSettlementAgreement } from "./live-settlement-agreement.ts";
+import type { AgreementIdentity } from "./live-settlement-agreement.ts";
+import { reconcileAmbiguousRelease, waitForEscrowProjection, waitForFinalProjection, waitForTaskState } from "./live-task-workflow-retry.ts";
+import { callWithAntiSpamBackoff } from "./mcp-call-retry.ts";
+export type AgentRole = "agent_a" | "agent_b" | "agent_c";
 export type WorkflowResult = Record<string, unknown>;
 type Environment = Record<string, string | undefined>;
 type AgentState = { did?: string; session?: McpSession };
 type WaitOptions = { timeoutMs: number; pollMs: number };
 
 export class LiveTaskWorkflow {
-	private readonly agents: Record<AgentRole, AgentState> = { agent_a: {}, agent_b: {} };
+	private readonly agents: Record<AgentRole, AgentState> = { agent_a: {}, agent_b: {}, agent_c: {} };
 	private readonly observations: Partial<Record<AgentRole, WorkflowResult>> = {};
+	private readonly projections: Partial<Record<AgentRole, WorkflowResult>> = {};
 	private taskId?: string;
+	private escrowId?: string;
+	private agreement?: LiveSettlementAgreement;
+	private agreementIdentity?: AgreementIdentity;
 	private readonly env: Environment;
 	private readonly cwd: string;
 	constructor(env: Environment, cwd: string) {
@@ -17,7 +28,7 @@ export class LiveTaskWorkflow {
 		this.cwd = cwd;
 	}
 	async register(role: AgentRole, signal?: AbortSignal): Promise<WorkflowResult> {
-		const result = await this.session(role).call("register", {}, signal);
+		const result = await this.call(role, "register", {}, signal);
 		const did = requiredString(result, "did", `${agentLabel(role)} registration`);
 		this.assertDistinctDid(role, did);
 		this.agents[role].did = did;
@@ -25,34 +36,103 @@ export class LiveTaskWorkflow {
 	}
 	async queryProfile(role: AgentRole, signal?: AbortSignal): Promise<WorkflowResult> {
 		const did = this.registeredDid(role);
-		return this.session(role).call("query_agent_profile", { did }, signal);
+		return this.call(role, "query_agent_profile", { did }, signal);
 	}
-	async createTask(title: string, description: string, signal?: AbortSignal): Promise<WorkflowResult> {
-		this.registeredDid("agent_a");
-		const payload = JSON.stringify({ title: requiredText(title, "title"), description: requiredText(description, "description") });
-		const result = await this.session("agent_a").call("create_task", { payload }, signal);
+	async createTask(title: string, description: string, providerDid: string, signal?: AbortSignal): Promise<WorkflowResult> {
+		const creatorDid = this.registeredDid("agent_a");
+		this.agreement = new LiveSettlementAgreement(creatorDid, requiredText(providerDid, "provider DID"), this.env);
+		this.agreementIdentity = this.agreement.identity();
+		const payload = this.agreement.taskPayload(requiredText(title, "title"), requiredText(description, "description"));
+		const result = await this.call("agent_a", "create_task", { payload }, signal);
 		this.taskId = validateTaskResult(result, undefined, "submitted", "task creation");
 		return result;
 	}
 	async acceptTask(signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid("agent_b");
 		const taskId = this.createdTaskId();
-		const result = await this.session("agent_b").call("accept_task", { task_id: taskId }, signal);
+		const payload = LiveSettlementAgreement.taskOperationPayload(this.transitionAgreement(), "accept");
+		const result = await this.call("agent_b", "accept_task", { task_id: taskId, payload }, signal);
 		validateTaskResult(result, taskId, "accepted", "task acceptance");
 		return result;
+	}
+	async completeTask(signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid("agent_b");
+		const taskId = this.createdTaskId();
+		const payload = LiveSettlementAgreement.taskOperationPayload(this.transitionAgreement(), "complete");
+		const result = await this.call("agent_b", "complete_task", { task_id: taskId, payload }, signal);
+		validateTaskResult(result, taskId, "completed", "task completion");
+		return result;
+	}
+	async waitForEscrowFunding(signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid("agent_b");
+		const taskId = this.createdTaskId();
+		return waitForEscrowProjection(
+			() => this.call("agent_b", "query_participant_task_projection", { task_id: taskId }, signal), signal,
+		);
+	}
+	async fundEscrow(signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid("agent_a");
+		const payload = this.currentAgreement().fundPayload(this.createdTaskId());
+		const result = await this.call("agent_a", "fund_escrow", { payload }, signal);
+		this.escrowId = validateEscrowResult(result, undefined, "funded", "escrow funding");
+		return result;
+	}
+	async releaseEscrow(signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid("agent_a");
+		const escrowId = this.fundedEscrowId();
+		const payload = this.currentAgreement().releasePayload();
+		const result = await reconcileAmbiguousRelease(
+			() => this.call("agent_a", "release_escrow", { escrow_id: escrowId, payload }, signal), signal,
+		);
+		validateEscrowResult(result, escrowId, "released", "escrow release");
+		return result;
+	}
+	async queryParticipantProjection(role: "agent_a" | "agent_b", signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid(role);
+		const taskId = this.createdTaskId();
+		const result = await waitForFinalProjection(
+			() => this.call(role, "query_participant_task_projection", { task_id: taskId }, signal), signal,
+		);
+		validateProjection(result, taskId, "participant-private", `${agentLabel(role)} participant projection`);
+		this.projections[role] = result;
+		return result;
+	}
+	async queryVerifierProjection(signal?: AbortSignal): Promise<WorkflowResult> {
+		this.registeredDid("agent_c");
+		const taskId = this.createdTaskId();
+		const result = await waitForFinalProjection(
+			() => this.call("agent_c", "query_verifier_task_projection", { task_id: taskId }, signal), signal,
+		);
+		validateProjection(result, taskId, "restricted-public", "Agent C verifier projection");
+		this.projections.agent_c = result;
+		return result;
+	}
+	provenance(role: AgentRole): McpSessionProvenance {
+		return this.session(role).provenance();
+	}
+	actorEvidence(role: AgentRole, piProcessId: number, handoffDigest: string): Record<string, unknown> {
+		const did = this.registeredDid(role);
+		const projection = this.projections[role];
+		if (!projection) throw new Error(`${agentLabel(role)} final runtime projection is missing`);
+		return buildActorEvidence(role, piProcessId, did, this.provenance(role), projection, handoffDigest);
 	}
 	async queryTask(role: AgentRole, signal?: AbortSignal): Promise<WorkflowResult> {
 		this.registeredDid(role);
 		const taskId = this.createdTaskId();
-		const result = await this.session(role).call("query_task", { task_id: taskId }, signal);
+		const result = await this.call(role, "query_task", { task_id: taskId }, signal);
 		validateTaskResult(result, taskId, "accepted", `${agentLabel(role)} task query`);
 		this.observations[role] = result;
 		return result;
 	}
-	importTask(taskId: string) {
+	importTask(taskId: string, agreement?: AgreementIdentity) {
 		const imported = validImportedTaskId(taskId);
 		if (this.taskId && this.taskId !== imported) throw new Error("Imported task ID conflicts with current task");
+		if (agreement && this.registeredDid("agent_b") !== agreement.provider_did) throw new Error("Imported agreement provider differs from registered Agent B");
 		this.taskId = imported;
+		this.agreementIdentity = agreement ?? this.agreementIdentity;
+	}
+	taskHandoff() {
+		return { task_id: this.createdTaskId(), ...this.transitionAgreement() };
 	}
 	currentTaskId(): string {
 		return this.createdTaskId();
@@ -66,19 +146,20 @@ export class LiveTaskWorkflow {
 		validateWaitOptions(options);
 		this.registeredDid(role);
 		const taskId = this.createdTaskId();
-		const deadline = Date.now() + options.timeoutMs;
-		while (Date.now() <= deadline) {
-			if (signal?.aborted) throw new Error(`${agentLabel(role)} task acceptance wait aborted`);
-			const result = await this.session(role).call("query_task", { task_id: taskId }, signal);
-			const state = validateTaskProjection(result, taskId, `${agentLabel(role)} task acceptance wait`);
-			if (state === "accepted") {
-				this.observations[role] = result;
-				return result;
-			}
-			if (state !== "submitted") throw new Error(`${agentLabel(role)} task acceptance wait returned unexpected state ${state}`);
-			await delay(options.pollMs, signal);
-		}
-		throw new Error(`${agentLabel(role)} task acceptance wait timed out`);
+		const call = () => this.call(role, "query_task", { task_id: taskId }, signal);
+		const result = await waitForTaskState(call, "accepted", ["submitted"], options, signal);
+		validateTaskProjection(result, taskId, `${agentLabel(role)} task acceptance wait`);
+		this.observations[role] = result;
+		return result;
+	}
+	async waitForCompleted(role: "agent_a", options: WaitOptions, signal?: AbortSignal): Promise<WorkflowResult> {
+		validateWaitOptions(options);
+		this.registeredDid(role);
+		const taskId = this.createdTaskId();
+		const call = () => this.call(role, "query_task", { task_id: taskId }, signal);
+		const result = await waitForTaskState(call, "completed", ["accepted"], options, signal);
+		validateTaskProjection(result, taskId, "Agent A task completion wait");
+		return result;
 	}
 	async shutdown(): Promise<void> {
 		await Promise.all(Object.values(this.agents).map((agent) => agent.session?.shutdown()));
@@ -87,6 +168,9 @@ export class LiveTaskWorkflow {
 		const state = this.agents[role];
 		state.session ??= new McpSession(readLiveMcpConfig(configRole(role), this.env, this.cwd));
 		return state.session;
+	}
+	private call(role: AgentRole, tool: string, fields: Record<string, unknown>, signal?: AbortSignal) {
+		return callWithAntiSpamBackoff(this.session(role), tool, fields, signal);
 	}
 	private registeredDid(role: AgentRole): string {
 		const did = this.agents[role].did;
@@ -97,56 +181,20 @@ export class LiveTaskWorkflow {
 		if (!this.taskId) throw new Error("Create a task before continuing");
 		return this.taskId;
 	}
-	private assertDistinctDid(role: AgentRole, did: string) {
-		const other = role === "agent_a" ? "agent_b" : "agent_a";
-		if (this.agents[other].did === did) throw new Error("Agent A and Agent B registration DIDs must be distinct");
+	private fundedEscrowId(): string {
+		if (!this.escrowId) throw new Error("Fund escrow before release");
+		return this.escrowId;
 	}
-}
-
-function validateTaskResult(result: WorkflowResult, expectedId: string | undefined, expectedState: string, step: string): string {
-	const taskId = requiredString(result, "task_id", step);
-	const state = validateTaskProjection(result, expectedId, step);
-	if (state !== expectedState) throw new Error(`${step} returned state ${state}; expected ${expectedState}`);
-	return taskId;
-}
-function validateTaskProjection(result: WorkflowResult, expectedId: string | undefined, step: string): string {
-	const taskId = requiredString(result, "task_id", step);
-	if (expectedId && taskId !== expectedId) throw new Error(`${step} returned a different task ID`);
-	return requiredString(result, "state", step);
-}
-function requiredString(result: WorkflowResult, field: string, step: string): string {
-	const value = result[field];
-	if (typeof value !== "string" || !value.trim()) throw new Error(`${step} omitted ${field}`);
-	return value;
-}
-function requiredText(value: string, field: string): string {
-	const trimmed = value.trim();
-	if (!trimmed) throw new Error(`Task ${field} must not be blank`);
-	return trimmed;
-}
-function configRole(role: AgentRole): LiveMcpAgent {
-	return role === "agent_a" ? "AGENT_A" : "AGENT_B";
-}
-function agentLabel(role: AgentRole): string {
-	return role === "agent_a" ? "Agent A" : "Agent B";
-}
-function validImportedTaskId(taskId: string): string {
-	if (!/^[A-Za-z0-9._:-]{1,200}$/.test(taskId)) throw new Error("Imported task ID is invalid");
-	return taskId;
-}
-function delay(milliseconds: number, signal?: AbortSignal): Promise<void> {
-	return new Promise((resolveDelay, reject) => {
-		const finish = () => { signal?.removeEventListener("abort", abort); resolveDelay(); };
-		const timer = setTimeout(finish, milliseconds);
-		const abort = () => {
-			clearTimeout(timer);
-			signal?.removeEventListener("abort", abort);
-			reject(new Error("Task acceptance wait aborted"));
-		};
-		signal?.addEventListener("abort", abort, { once: true });
-	});
-}
-function validateWaitOptions(options: WaitOptions) {
-	if (!Number.isInteger(options.timeoutMs) || options.timeoutMs <= 0) throw new Error("Task acceptance timeout must be positive");
-	if (!Number.isInteger(options.pollMs) || options.pollMs <= 0) throw new Error("Task acceptance poll interval must be positive");
+	private currentAgreement(): LiveSettlementAgreement {
+		if (!this.agreement) throw new Error("Create a canonical settlement agreement before continuing");
+		return this.agreement;
+	}
+	private transitionAgreement(): AgreementIdentity {
+		if (!this.agreementIdentity) throw new Error("Import the canonical settlement agreement before continuing");
+		return this.agreementIdentity;
+	}
+	private assertDistinctDid(role: AgentRole, did: string) {
+		const duplicate = Object.entries(this.agents).some(([otherRole, state]) => otherRole !== role && state.did === did);
+		if (duplicate) throw new Error("Agent A, Agent B, and Agent C registration DIDs must be distinct");
+	}
 }

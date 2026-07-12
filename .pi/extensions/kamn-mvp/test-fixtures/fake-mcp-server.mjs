@@ -7,6 +7,9 @@ const resultMode = process.env.KAMN_MVP_FAKE_MCP_RESULT_MODE ?? "success";
 const startFile = process.env.KAMN_MVP_FAKE_MCP_START_FILE;
 const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
 const agentName = argumentValue("--agent-name") ?? "agent-a";
+let releaseAttempts = 0;
+let participantProjectionAttempts = 0;
+let taskQueryAttempts = 0;
 if (startFile) appendFileSync(startFile, `${process.pid}\n`);
 
 process.on("SIGTERM", () => {
@@ -20,6 +23,14 @@ createInterface({ input: process.stdin }).on("line", (line) => {
 	if (mode === "malformed") return process.stdout.write("not-json\n");
 	const request = JSON.parse(line);
 	if (mode === "error") return write(errorResponse(request));
+	if (mode === "error-on-second" && request.id === "2") return write(errorResponse(request));
+	if (mode === "rate-limit-on-second" && request.id === "2") return write(rateLimitResponse(request));
+	if (mode === "ambiguous-first-release" && request.tool === "release_escrow" && releaseAttempts++ === 0) {
+		return write(ambiguousReleaseResponse(request));
+	}
+	if (mode === "ambiguous-three-releases" && request.tool === "release_escrow" && releaseAttempts++ < 3) {
+		return write(ambiguousReleaseResponse(request));
+	}
 	write(successResponse(request));
 });
 
@@ -46,13 +57,72 @@ function toolResult(request) {
 	}
 	if (request.tool === "accept_task") {
 		const taskId = resultMode === "wrong-accept-id" ? "task-other" : request.task_id;
-		return { task_id: taskId, state: "accepted" };
+		return { task_id: taskId, state: "accepted", ...JSON.parse(request.payload) };
 	}
 	if (request.tool === "query_task") {
+		if (resultMode === "completed-second-query") {
+			return { task_id: request.task_id, state: taskQueryAttempts++ === 0 ? "accepted" : "completed" };
+		}
 		const state = resultMode === "wrong-query-state" ? "submitted" : "accepted";
 		return { task_id: request.task_id, state };
 	}
+	if (request.tool === "complete_task") return { task_id: request.task_id, state: "completed", ...JSON.parse(request.payload) };
+	if (request.tool === "fund_escrow") return { escrow_id: "escrow-live-1", state: "funded", ...JSON.parse(request.payload) };
+	if (request.tool === "release_escrow") {
+		return { escrow_id: request.escrow_id, state: "released", settlement_tx_signature: "devnet-signature-1", ...JSON.parse(request.payload) };
+	}
+	if (request.tool === "query_participant_task_projection") {
+		if (resultMode === "pending-three-projections" && participantProjectionAttempts++ < 3) {
+			return pendingParticipantProjection(request.task_id, agentName);
+		}
+		if (resultMode === "pending-first-projection" && participantProjectionAttempts++ === 0) {
+			return pendingParticipantProjection(request.task_id, agentName);
+		}
+		if (resultMode === "missing-first-escrow" && participantProjectionAttempts++ === 0) {
+			return unboundParticipantProjection(request.task_id, agentName);
+		}
+		return participantProjection(request.task_id, agentName);
+	}
+	if (request.tool === "query_verifier_task_projection") {
+		return { ...sharedProjection(request.task_id), view_scope: "restricted-public" };
+	}
 	return {};
+}
+
+function pendingParticipantProjection(taskId, name) {
+	const projection = participantProjection(taskId, name);
+	delete projection.settlement_tx_signature;
+	delete projection.settlement_commitment;
+	return projection;
+}
+
+function unboundParticipantProjection(taskId, name) {
+	const projection = participantProjection(taskId, name);
+	delete projection.escrow_id;
+	return projection;
+}
+
+function participantProjection(taskId, name) {
+	const suffix = name.endsWith("b") ? "b" : "a";
+	return {
+		...sharedProjection(taskId),
+		view_scope: "participant-private",
+		participant_role: suffix === "a" ? "creator" : "provider",
+		private_receipt_digest: `sha256:participant-${suffix}`,
+	};
+}
+
+function sharedProjection(taskId) {
+	return {
+		task_id: taskId,
+		transaction_id: "transaction-live-1",
+		escrow_id: "escrow-live-1",
+		amount_lamports: 1000000,
+		network: "solana-devnet",
+		settlement_tx_signature: "devnet-signature-1",
+		settlement_commitment: "finalized",
+		public_commitment: "sha256:shared",
+	};
 }
 
 function errorResponse(request) {
@@ -61,6 +131,24 @@ function errorResponse(request) {
 		id: request.id,
 		tool: request.tool,
 		error: { kind: "backend_error", message: "forced backend failure" },
+	};
+}
+
+function ambiguousReleaseResponse(request) {
+	return {
+		ok: false,
+		id: request.id,
+		tool: request.tool,
+		error: { kind: "backend_error", message: "SETTLEMENT_OUTCOME_AMBIGUOUS: reconciliation required" },
+	};
+}
+
+function rateLimitResponse(request) {
+	return {
+		ok: false,
+		id: request.id,
+		tool: request.tool,
+		error: { kind: "backend_error", message: "sender anti-spam rate limit exceeded: observed=3, limit=3, window_seconds=1" },
 	};
 }
 

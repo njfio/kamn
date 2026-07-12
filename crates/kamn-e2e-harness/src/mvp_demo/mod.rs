@@ -26,6 +26,8 @@ mod local_artifact_paths;
 mod local_artifact_verify;
 mod local_artifacts;
 mod localhost_signed;
+mod pi_transaction_actor_model;
+mod pi_transaction_actor_verify;
 mod report;
 mod report_artifacts;
 mod report_devnet;
@@ -50,6 +52,7 @@ mod verify;
 mod verify_support;
 
 pub use command_config::{LiveTaskEvidencePaths, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
+pub use pi_transaction_actor_verify::verify_pi_transaction_actor_paths;
 pub use report::{
     CLAIM_LABEL_DEVNET_BACKED, CLAIM_LABEL_DRY_RUN, CLAIM_LABEL_LOCAL_ONLY,
     CLAIM_LABEL_PLACEHOLDER, CLAIM_LABEL_REAL, CLAIM_LABEL_ROADMAP, MVP_DEMO_REPORT_SCHEMA_VERSION,
