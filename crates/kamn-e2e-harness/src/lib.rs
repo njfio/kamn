@@ -4,11 +4,14 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+pub use agent_transaction_demo::{parse_agent_transaction_demo_config, AgentTransactionDemoConfig};
 pub use mvp_demo::{
     build_runtime_receipt_chain_from_actor_paths, execute_mvp_demo_contract,
     execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths, LiveTaskEvidencePaths,
     MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
+
+mod agent_transaction_demo;
 
 /// Driver implementations for each execution mode.
 pub mod drivers;
