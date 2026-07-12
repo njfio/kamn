@@ -108,10 +108,19 @@ fn read_agent_end(child: &mut RpcChild, timeout_ms: u64) -> Result<Value, String
         if event["type"] == "extension_error" {
             return Err(child_error("Pi extension failed"));
         }
+        if let Some(tool) = failed_tool(&event) {
+            return Err(child_error(format!("Pi tool failed: {tool}").as_str()));
+        }
         if event["type"] == "agent_end" {
             return Ok(event);
         }
     }
+}
+
+fn failed_tool(event: &Value) -> Option<&str> {
+    let failed =
+        event["type"] == "tool_execution_end" && event["result"]["isError"].as_bool() == Some(true);
+    failed.then(|| event["toolName"].as_str()).flatten()
 }
 
 fn receive_event(child: &RpcChild, timeout: Duration) -> Result<Value, String> {
