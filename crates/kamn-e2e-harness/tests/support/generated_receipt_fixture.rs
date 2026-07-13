@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 #[path = "artifact_digest.rs"]
 #[allow(dead_code)]
-mod artifact_digest;
+pub(crate) mod artifact_digest;
 
 use crate::mvp_demo_command;
 
@@ -106,7 +106,7 @@ impl Fixture {
         self.replace_claim_field(receipt_digest(agent).as_str(), digest);
     }
 
-    fn replace_claim_field(&self, field: &str, value: &str) {
+    pub(crate) fn replace_claim_field(&self, field: &str, value: &str) {
         let raw = std::fs::read_to_string(&self.report).expect("report should read");
         let report = read_json(self.report.as_path());
         let old = transaction_claim(&report)[field]
@@ -117,6 +117,10 @@ impl Fixture {
             format!(r#""{field}":"{value}""#).as_str(),
         );
         std::fs::write(&self.report, updated).expect("report should write");
+    }
+
+    pub(crate) fn run_dir(&self) -> PathBuf {
+        only_run_dir(&self.output_root)
     }
 }
 
