@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GENERATOR="$ROOT_DIR/scripts/deploy/generate_staging_rehearsal_bundle.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_staging_rehearsal_policy.sh"
-CONTRACT_LANE="$ROOT_DIR/scripts/deploy/run_staging_rehearsal_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+CONTRACT_MANIFEST="$ROOT_DIR/scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -46,7 +47,7 @@ fi
 
 STAGING_REHEARSAL_REPORT="$TMP_DIR/staging-rehearsal-report.json"
 
-bash "$CONTRACT_LANE" --max-seconds 120
+bash "$MANIFEST_RUNNER" --manifest "$CONTRACT_MANIFEST" --phase contract -- --max-seconds 120
 
 generator_output="$(
   bash "$GENERATOR" \

@@ -2,19 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected local fork real-process contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected local fork real-process contract lane to dispatch through manifest wrapper" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -66,8 +61,8 @@ for marker in "${required_lifecycle_finality_markers[@]}"; do
   fi
 done
 
-if ! grep -q "run_local_kolme_fork_real_process_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local fork real-process contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_real_process_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork real-process manifest" >&2
   exit 1
 fi
 
@@ -106,8 +101,8 @@ if ! grep -q -- "--lifecycle-recovery-evidence-file" "$DOC_FILE"; then
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_real_process_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local fork real-process contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_real_process_contract_lane.json" "$README_FILE"; then
+  echo "expected README to reference local fork real-process contract manifest" >&2
   exit 1
 fi
 
@@ -132,7 +127,7 @@ if ! grep -q -- "--lifecycle-recovery-evidence-file" "$README_FILE"; then
 fi
 
 lane_output="$(
-  bash "$CONTRACT_LANE" \
+  bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
     --mode dry-run \
     --max-seconds 180
 )"

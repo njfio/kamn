@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_runtime_commit_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/runtime_commit_contract_lane.py"
 PARITY_CHECKER="$ROOT_DIR/scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py"
@@ -20,13 +20,8 @@ case "$RUNTIME_COMMIT_MAX_SECONDS" in
     ;;
 esac
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected Kolme runtime commit contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected Kolme runtime commit contract lane to dispatch through manifest wrapper" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -123,7 +118,7 @@ fi
 set +e
 lane_output="$(
   KAMN_KOLME_RUNTIME_COMMIT_MAX_SECONDS="$RUNTIME_COMMIT_MAX_SECONDS" \
-    bash "$CONTRACT_LANE" 2>&1
+    bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract 2>&1
 )"
 lane_code=$?
 set -e

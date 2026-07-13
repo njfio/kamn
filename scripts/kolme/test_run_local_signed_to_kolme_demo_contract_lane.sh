@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_signed_to_kolme_demo_contract_lane.py"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_signed_to_kolme_demo_policy.py"
@@ -40,13 +40,8 @@ case "$RUN_MAX_SECONDS" in
     ;;
 esac
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected local signed-to-Kolme demo contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected local signed-to-Kolme demo contract lane to dispatch through manifest wrapper" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -84,8 +79,8 @@ if [ ! -x "$CHECKER" ]; then
   exit 1
 fi
 
-if ! grep -q "run_local_signed_to_kolme_demo_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local signed-to-Kolme demo contract lane" >&2
+if ! grep -q "kolme_local_signed_to_kolme_demo_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference signed-to-Kolme contract manifest" >&2
   exit 1
 fi
 
@@ -164,13 +159,13 @@ if ! grep -q "Regression: #4498" "$RELEASE_GONOGO_DOC"; then
   exit 1
 fi
 
-if ! grep -q "run_local_signed_to_kolme_demo_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local signed-to-Kolme demo contract lane" >&2
+if ! grep -q "kolme_local_signed_to_kolme_demo_contract_lane.json" "$README_FILE"; then
+  echo "expected README to reference signed-to-Kolme contract manifest" >&2
   exit 1
 fi
 
 lane_output="$(
-  bash "$CONTRACT_LANE" \
+  bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
     --mode dry-run \
     --output-json "$TMP_SUMMARY_DRY_RUN" \
     --policy-output-json "$TMP_POLICY_DRY_RUN" \
@@ -250,7 +245,7 @@ PY
 
 run_output="$(
   KAMN_KOLME_LOCAL_HEAVY=1 \
-    bash "$CONTRACT_LANE" \
+    bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
       --mode run \
       --output-json "$TMP_SUMMARY_RUN" \
       --policy-output-json "$TMP_POLICY_RUN" \

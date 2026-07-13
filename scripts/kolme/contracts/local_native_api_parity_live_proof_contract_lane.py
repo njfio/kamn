@@ -60,14 +60,14 @@ def main() -> int:
     for marker in (
         "run_local_native_api_parity_live_proof_lane.sh",
         "check_local_native_api_parity_live_proof_policy.py",
-        "run_local_native_api_parity_live_proof_contract_lane.sh",
+        "kolme_local_native_api_parity_live_proof_contract_lane.json",
         "Regression: #1465",
     ):
         if marker not in doc_text:
             print(f"expected Kolme devnet ops doc marker: {marker}", file=sys.stderr)
             return 1
-    if "run_local_native_api_parity_live_proof_contract_lane.sh" not in readme_text:
-        print("expected README to reference local native parity contract lane", file=sys.stderr)
+    if "kolme_local_native_api_parity_live_proof_contract_lane.json" not in readme_text:
+        print("expected README to reference local native parity contract manifest", file=sys.stderr)
         return 1
 
     start_epoch = time.monotonic()

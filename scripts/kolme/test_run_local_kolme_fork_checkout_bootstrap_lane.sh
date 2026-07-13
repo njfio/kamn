@@ -6,7 +6,8 @@ ROOT_DIR="$KAMN_ROOT"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh"
 RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane_impl.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
+CONTRACT_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
@@ -31,8 +32,8 @@ if [ ! -x "$CHECKER" ]; then
   exit 1
 fi
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected local fork checkout bootstrap contract lane runner to be executable" >&2
+if [ ! -f "$CONTRACT_MANIFEST" ] || [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected checkout bootstrap contract manifest and executable runner" >&2
   exit 1
 fi
 
@@ -51,8 +52,8 @@ if ! grep -q "check_local_kolme_fork_checkout_bootstrap_policy.py" "$DOC_FILE"; 
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local fork checkout bootstrap contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference checkout bootstrap contract manifest" >&2
   exit 1
 fi
 

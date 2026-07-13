@@ -135,7 +135,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
     fixture_file = ROOT_DIR / "fixtures/runtime/localhost_signed_integration_cases.json"
     live_network_doc = ROOT_DIR / "docs/planning/live-network-wave.md"
     runtime_network_doc = ROOT_DIR / "docs/foundation/runtime-network.md"
-    readme_file = ROOT_DIR / "README.md"
+    readme_file = ROOT_DIR / "docs/developer/readme-contract-reference.md"
 
     if not _is_executable(harness_runner):
         fail("expected localhost signed integration harness runner to be executable")

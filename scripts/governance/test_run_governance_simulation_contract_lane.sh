@@ -2,14 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+CONTRACT_WRAPPER="run_governance_simulation_contract_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 DEEP_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/governance/governance_simulation_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/governance_simulation_contract_lane.json"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected governance simulation contract lane script to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -26,20 +27,16 @@ if [ ! -f "$MANIFEST" ]; then
   exit 1
 fi
 
-lane_output="$(bash "$CONTRACT_LANE")"
+lane_output="$(bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract)"
 if ! printf '%s\n' "$lane_output" | grep -q "governance simulation contract lane tests passed."; then
   echo "expected governance simulation contract lane success marker" >&2
-  exit 1
-fi
-if ! grep -q "run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected governance simulation contract lane wrapper to dispatch via manifest runner" >&2
   exit 1
 fi
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected shared non-Kolme dispatcher to be executable" >&2
   exit 1
 fi
-resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$CONTRACT_WRAPPER" --resolve-manifest-path)"
 if [ "$resolved_manifest" != "$MANIFEST" ]; then
   echo "expected governance simulation contract lane wrapper to resolve governance manifest via dispatcher" >&2
   exit 1
@@ -69,8 +66,8 @@ if ! grep -q "from framework.contract_lane_helpers import" "$SHARED_CONTRACT"; t
   exit 1
 fi
 
-if ! grep -Fq "run_governance_simulation_contract_lane.sh" "$DEEP_LANE"; then
-  echo "expected deep lane script to invoke governance contract lane checks first" >&2
+if ! grep -Fq "governance_simulation_contract_lane.json" "$DEEP_LANE"; then
+  echo "expected deep lane script to invoke governance contract manifest first" >&2
   exit 1
 fi
 

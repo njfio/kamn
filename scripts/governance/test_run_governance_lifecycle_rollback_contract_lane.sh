@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_SCRIPT="$ROOT_DIR/scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+CONTRACT_WRAPPER="run_governance_lifecycle_rollback_contract_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/governance/run_governance_lifecycle_rollback_lane.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/governance/check_governance_lifecycle_rollback_policy.sh"
@@ -10,8 +11,8 @@ SHARED_CONTRACT="$ROOT_DIR/scripts/governance/governance_lifecycle_rollback_cont
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json"
 CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 
-if [ ! -x "$CONTRACT_SCRIPT" ]; then
-  echo "expected governance lifecycle/rollback contract lane script to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 if [ ! -x "$LANE_SCRIPT" ]; then
@@ -39,21 +40,17 @@ tmp_out="$(mktemp)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -f "$tmp_out"; rm -rf "$TMP_DIR"' EXIT
 
-bash "$CONTRACT_SCRIPT" >"$tmp_out"
+bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract >"$tmp_out"
 if ! grep -q "governance lifecycle/rollback contract lane tests passed." "$tmp_out"; then
   echo "expected governance lifecycle/rollback contract lane success marker" >&2
   exit 1
 fi
 
-if ! grep -q "run_manifest_lane.sh" "$CONTRACT_SCRIPT"; then
-  echo "expected governance lifecycle/rollback contract lane wrapper to dispatch via manifest runner" >&2
-  exit 1
-fi
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected shared non-Kolme dispatcher to be executable" >&2
   exit 1
 fi
-resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_SCRIPT")" --resolve-manifest-path)"
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$CONTRACT_WRAPPER" --resolve-manifest-path)"
 if [ "$resolved_manifest" != "$MANIFEST" ]; then
   echo "expected governance lifecycle/rollback contract lane wrapper to resolve lifecycle manifest via dispatcher" >&2
   exit 1
@@ -157,7 +154,7 @@ fi
 set +e
 oversized_budget_output="$(
   KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS=241 \
-    bash "$CONTRACT_SCRIPT" 2>&1
+    bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract 2>&1
 )"
 oversized_budget_code=$?
 set -e

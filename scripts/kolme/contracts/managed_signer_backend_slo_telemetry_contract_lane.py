@@ -15,7 +15,7 @@ GENERATOR = ROOT_DIR / "scripts/kolme/generate_managed_signer_backend_slo_teleme
 DOC_FILES = [
     ROOT_DIR / "docs/ci/ci-cost-and-lane-framework.md",
     ROOT_DIR / "docs/planning/kolme-devnet-ops.md",
-    ROOT_DIR / "README.md",
+    ROOT_DIR / "docs/developer/readme-contract-reference.md",
 ]
 
 

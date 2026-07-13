@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_api_conformance_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_live_api_conformance_contract_lane.py"
@@ -12,18 +12,13 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
 
-if [ ! -x "$RUNNER" ]; then
-  echo "expected local live API conformance contract lane runner to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected local live API conformance policy checker to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected local live API conformance contract lane to dispatch through manifest wrapper" >&2
   exit 1
 fi
 
@@ -69,8 +64,8 @@ if ! grep -q "check_local_kolme_live_api_conformance_policy.py" "$DOC_FILE"; the
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_live_api_conformance_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local live API conformance contract lane" >&2
+if ! grep -q "kolme_local_kolme_live_api_conformance_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local live API conformance manifest" >&2
   exit 1
 fi
 
@@ -79,8 +74,8 @@ if ! grep -q "check_local_kolme_live_api_conformance_policy.py" "$README_FILE"; 
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_live_api_conformance_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local live API conformance contract lane" >&2
+if ! grep -q "kolme_local_kolme_live_api_conformance_contract_lane.json" "$README_FILE"; then
+  echo "expected README to reference local live API conformance contract manifest" >&2
   exit 1
 fi
 
@@ -90,7 +85,8 @@ if ! grep -q "Regression: #1483" "$DOC_FILE"; then
   exit 1
 fi
 
-bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
+bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
+  --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json

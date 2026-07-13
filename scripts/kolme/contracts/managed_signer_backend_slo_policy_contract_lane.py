@@ -16,7 +16,7 @@ POLICY_CHECKER = ROOT_DIR / "scripts/kolme/check_managed_signer_backend_slo_poli
 DOC_FILES = [
     ROOT_DIR / "docs/ci/ci-cost-and-lane-framework.md",
     ROOT_DIR / "docs/planning/kolme-devnet-ops.md",
-    ROOT_DIR / "README.md",
+    ROOT_DIR / "docs/developer/readme-contract-reference.md",
 ]
 
 DOC_MARKERS = [
