@@ -31,6 +31,71 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
 }
 
 #[test]
+fn integration_service_api_endpoint_rejects_previously_accepted_nonce_after_restart_reload() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-ingress-replay-restart-{}-{}.json",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
+    ));
+    let _state_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_STATE_FILE",
+        Some(state_file.to_string_lossy().as_ref()),
+    );
+    let sender_did = "kamn:did:agent:test-client-replay-restart";
+    let body = "{\"message\":\"replay-after-restart\"}";
+
+    let first_snapshot = build_ingress_snapshot("127.0.0.1:34072");
+    let first_server = spawn_ingress_server(
+        &first_snapshot,
+        1,
+        2_000,
+        DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    );
+    let first_response = send_signed_message_request(
+        &first_snapshot,
+        first_server.bind_addr.as_str(),
+        sender_did,
+        17,
+        body,
+    );
+    assert!(first_response.contains("HTTP/1.1 202 Accepted"));
+    assert_server_ok(
+        first_server.server,
+        "first ingress server should stop cleanly after accepting the nonce",
+    );
+
+    let restarted_snapshot = build_ingress_snapshot("127.0.0.1:34073");
+    let restarted_server = spawn_ingress_server(
+        &restarted_snapshot,
+        1,
+        2_000,
+        DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    );
+    let replay_response = send_signed_message_request(
+        &restarted_snapshot,
+        restarted_server.bind_addr.as_str(),
+        sender_did,
+        17,
+        body,
+    );
+
+    assert_replay_rejection(replay_response.as_str());
+    assert_server_ok(
+        restarted_server.server,
+        "restarted ingress server should stop cleanly after rejecting the replayed nonce",
+    );
+    let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
 fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_spam_enforcement() {
     let _env = acquire_service_api_test_env();
     let snapshot = build_ingress_snapshot("127.0.0.1:34066");
