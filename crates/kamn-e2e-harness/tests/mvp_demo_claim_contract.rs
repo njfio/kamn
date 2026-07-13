@@ -37,7 +37,7 @@ fn spec_c04_verifier_rejects_required_placeholder_claim() {
         "placeholder",
     ))
     .expect_err("placeholder required claim must fail");
-    assert!(err.contains("required MVP claim cannot be placeholder"));
+    assert_eq!(err, "canonical MVP claim cannot be placeholder");
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn spec_c05_verifier_rejects_required_dry_run_claim() {
     let err =
         verify_mvp_demo_report_json(local_report_with_label("durable_state_written", "dry-run"))
             .expect_err("dry-run required claim must fail");
-    assert!(err.contains("required MVP claim cannot be dry-run"));
+    assert_eq!(err, "canonical MVP claim cannot be dry-run");
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn spec_c12_verifier_rejects_optional_placeholder_claim_in_go_report() {
     let report = local_report_with_optional_claim("placeholder");
     let err = verify_mvp_demo_report_json(report)
         .expect_err("optional placeholder claim must fail canonical GO");
-    assert!(err.contains("MVP claim cannot be placeholder"));
+    assert_eq!(err, "canonical MVP claim cannot be placeholder");
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn spec_c13_verifier_rejects_optional_dry_run_claim_in_go_report() {
     let report = local_report_with_optional_claim("dry-run");
     let err = verify_mvp_demo_report_json(report)
         .expect_err("optional dry-run claim must fail canonical GO");
-    assert!(err.contains("MVP claim cannot be dry-run"));
+    assert_eq!(err, "canonical MVP claim cannot be dry-run");
 }
 
 #[test]
