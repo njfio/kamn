@@ -13,7 +13,9 @@ Inputs:
 
 - Persisted task, authorization grant, escrow agreement, settlement intent,
   signed Solana devnet transaction, and runtime actor receipts.
-- Two independently authorized release requests carrying the same release key.
+- Two separately signed release requests from the configured release authority,
+  carrying distinct fresh nonces and the same release key. Multiple release
+  principals are not claimed by the current single-authority schema.
 - Solana signature status, prepared transaction blockhash validity, and bounded
   submit/confirmation outcomes.
 - Canonical demo proof generation after settlement has already completed.
@@ -37,6 +39,9 @@ Outputs:
   refund/dispute handling, and economic-value claims remain out of scope.
 - A never-landed expired transaction is terminal for this bounded intent. An
   operator-created replacement transaction is roadmap work and is not claimed.
+- While the persisted recent blockhash remains valid, recovery may rebroadcast
+  the exact persisted signed bytes. This preserves the signature and transaction
+  identity; building or signing a replacement transaction remains prohibited.
 - Test-only adapters may model RPC boundaries, but integration tests must use
   the real service API persistence and request paths.
 
@@ -57,8 +62,9 @@ Outputs:
 
 ## Error Semantics
 
-- Signature status unknown while the persisted blockhash is still valid:
-  `SETTLEMENT_OUTCOME_AMBIGUOUS` (503), with no release claim.
+- Signature status unknown while the persisted blockhash is still valid: the
+  exact persisted signed bytes may be rebroadcast, but the outcome remains
+  `SETTLEMENT_OUTCOME_AMBIGUOUS` (503) until confirmation, with no release claim.
 - Signature absent and the persisted transaction blockhash is expired:
   `SETTLEMENT_TRANSACTION_EXPIRED` (409), intent state `failed`, no resubmission,
   and no replacement signature.
@@ -72,22 +78,22 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Restart after task creation preserves agreement and authorization state.
-- [ ] Restart after escrow funding preserves the task-bound funded escrow.
-- [ ] Restart from prepared, ambiguous, or submitted-equivalent intent queries
+- [x] Restart after task creation preserves agreement and authorization state.
+- [x] Restart after escrow funding preserves the task-bound funded escrow.
+- [x] Restart from prepared, ambiguous, or submitted-equivalent intent queries
   the known signature before any same-transaction resubmission.
-- [ ] Crash/ambiguity after transfer submission cannot create a second
+- [x] Crash/ambiguity after transfer submission cannot create a second
   transaction identity or duplicate asset movement.
-- [ ] Two independently authorized concurrent releases converge on one persisted
-  signature and at most one network submission.
-- [ ] Stale nonce/replay remains rejected after state reload.
-- [ ] RPC timeout followed by later confirmation reconciles to released.
-- [ ] A never-landed expired transaction becomes
+- [x] Two separately signed, fresh-nonce concurrent releases from the configured
+  authority converge on one persisted signature and at most one submission.
+- [x] Stale nonce/replay remains rejected after state reload.
+- [x] RPC timeout followed by later confirmation reconciles to released.
+- [x] A never-landed expired transaction becomes
   `SETTLEMENT_TRANSACTION_EXPIRED` without resubmission or replacement.
-- [ ] Agent exit mid-flow emits `NO-GO` and cleans every child process.
-- [ ] Proof generation failure and retry perform zero settlement submissions.
-- [ ] Settled intent and escrow state cannot roll back on restart or retry.
-- [ ] Focused failure matrix, funded devnet rehearsal, security review,
+- [x] Agent exit mid-flow emits `NO-GO` and cleans every child process.
+- [x] Proof generation failure and retry perform zero settlement submissions.
+- [x] Settled intent and escrow state cannot roll back on restart or retry.
+- [x] Focused failure matrix, funded devnet rehearsal, security review,
   formatting, strict clippy, `make check`, and `make test` pass.
 
 ## Files To Touch
@@ -154,6 +160,28 @@ existing configured payer/recipient. Record signature, recipient, lamports,
 commitment, balances, persisted intent, canonical verifier output, and proof
 report. If devnet RPC, faucet, or funding blocks the run, record explicit
 `NO-GO`; do not claim live completion.
+
+## Completion Evidence
+
+- `cargo test -p kamn-node --bin kamn-node -- --test-threads=1`: 683 passed,
+  0 failed, 1 ignored live-only test.
+- Focused `task_escrow_settlement` node tests: 7 passed, including restart,
+  expiration, concurrency, and monotonic settlement contracts.
+- Harness success, supervisor, proof-retry, formatting, strict workspace clippy,
+  `make check`, touched-Rust size policy, and full `make test`: PASS.
+- Funded Pi-driven rehearsal `run-92170-1783942418124`: `GO`, Solana devnet
+  transfer of 1,000,000 lamports finalized as signature
+  `VhsBkxsv71vyLakUrWvdgLidUjed31WFMVzYhPPwwp7M2or2XxnS9HMSaBxCuzWfmDGqZ8LpZwFfrm9zuqzNnVB`.
+- Payer balance moved from 2,456,785,000 to 2,455,780,000 lamports; recipient
+  balance moved from 2,543,000,000 to 2,544,000,000 lamports. The 5,000-lamport
+  payer delta beyond the transfer amount is the Solana transaction fee.
+- Agents A and B produced `participant-private` projections with three private
+  fields each. Agent C produced a `restricted-public` projection with zero
+  private fields while independently matching the task, escrow, amount, public
+  commitment, finalized signature, and network.
+- Canonical `verify-mvp-demo` against `.kamn/demo/latest/proof/report.json`:
+  `PASS`.
+- Production readiness remains explicitly `NOT_CLAIMED`.
 
 ## Rollback
 
