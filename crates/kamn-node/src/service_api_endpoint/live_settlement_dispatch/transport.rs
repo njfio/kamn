@@ -84,6 +84,7 @@ fn submit_or_reconcile_live_settlement_via_rpc(
             prepared,
         ));
     }
+    require_resubmittable_blockhash(blockhash_is_valid(&client, &transaction, config)?)?;
     let signature = submit_live_settlement_transaction(&client, &transaction)?;
     if signature.to_string() != prepared.expected_signature {
         return Err("live solana settlement submitted signature mismatch".to_owned());
@@ -95,6 +96,25 @@ fn submit_or_reconcile_live_settlement_via_rpc(
         config.commitment_label.as_str(),
         prepared,
     ))
+}
+
+fn blockhash_is_valid(
+    client: &RpcClient,
+    transaction: &solana_sdk::transaction::Transaction,
+    config: &LiveSolanaSettlementConfig,
+) -> Result<bool, String> {
+    client
+        .is_blockhash_valid(&transaction.message.recent_blockhash, config.commitment)
+        .map_err(|error| {
+            format!("SETTLEMENT_OUTCOME_AMBIGUOUS: blockhash validity lookup failed: {error}")
+        })
+}
+
+fn require_resubmittable_blockhash(valid: bool) -> Result<(), String> {
+    if valid {
+        return Ok(());
+    }
+    Err("SETTLEMENT_TRANSACTION_EXPIRED".to_owned())
 }
 
 fn require_confirmation(confirmed: bool, commitment: &str) -> Result<(), String> {
