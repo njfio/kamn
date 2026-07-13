@@ -23,6 +23,17 @@ The 2026-07-13 canonical MVP cleanup inventory identified a bounded first wave:
 This baseline does not approve broader script, fixture, spec, or documentation
 deletion.
 
+## Issue 7105 Result
+
+- Approved symlink entrypoints removed: 25 of 25.
+- Remaining deletion-manifest entrypoints in the working tree: 0.
+- Physical shell source LOC removed: 0.
+- Historical docs-marker Rust test LOC removed: 68.
+- Replacement manifest, stale-reference, and command-surface checks: passing.
+
+The reduction removes callable aliases and one non-authoritative test binary;
+it does not claim deletion of the shared dispatcher implementations.
+
 This candidate matrix prioritizes short-wrapper consolidation opportunities by
 category using deterministic thresholds:
 
