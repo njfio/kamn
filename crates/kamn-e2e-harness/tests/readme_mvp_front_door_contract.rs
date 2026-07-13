@@ -81,6 +81,20 @@ fn spec_c03_superseded_manifest_entrypoints_are_absent() {
     }
 }
 
+#[test]
+fn spec_c04_developer_reference_separates_canonical_and_local_demo_lanes() {
+    let reference = read_repo_file("docs/developer/readme-contract-reference.md");
+
+    require_all(
+        "docs/developer/readme-contract-reference.md",
+        &reference,
+        &[
+            "make demo-agent-transaction - canonical Pi/devnet transaction demo",
+            "make demo-mvp - local-only compatibility proof",
+        ],
+    );
+}
+
 fn read_root_readme() -> String {
     std::fs::read_to_string(root_readme()).expect("root README.md should be readable")
 }
