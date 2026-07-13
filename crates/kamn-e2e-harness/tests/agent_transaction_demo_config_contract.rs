@@ -28,6 +28,19 @@ fn spec_c01_canonical_make_target_invokes_rust_supervisor() {
 }
 
 #[test]
+fn spec_c05_make_help_separates_canonical_and_local_only_demo_lanes() {
+    let output = Command::new("make")
+        .arg("help")
+        .current_dir(repo_root())
+        .output()
+        .expect("make help");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("canonical Pi/devnet transaction demo"));
+    assert!(stdout.contains("local-only compatibility proof"));
+}
+
+#[test]
 fn spec_c02_preflight_parses_complete_pi_devnet_configuration() {
     let config = parse_agent_transaction_demo_config(&complete_env())
         .expect("complete canonical configuration");

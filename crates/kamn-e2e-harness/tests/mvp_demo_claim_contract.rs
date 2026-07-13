@@ -49,6 +49,22 @@ fn spec_c05_verifier_rejects_required_dry_run_claim() {
 }
 
 #[test]
+fn spec_c12_verifier_rejects_optional_placeholder_claim_in_go_report() {
+    let report = local_report_with_optional_claim("placeholder");
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("optional placeholder claim must fail canonical GO");
+    assert!(err.contains("MVP claim cannot be placeholder"));
+}
+
+#[test]
+fn spec_c13_verifier_rejects_optional_dry_run_claim_in_go_report() {
+    let report = local_report_with_optional_claim("dry-run");
+    let err = verify_mvp_demo_report_json(report)
+        .expect_err("optional dry-run claim must fail canonical GO");
+    assert!(err.contains("MVP claim cannot be dry-run"));
+}
+
+#[test]
 fn spec_c06_verifier_rejects_settlement_claim_without_devnet_backing() {
     let err = verify_mvp_demo_report_json(settlement_report_with_label("local-only"))
         .expect_err("settlement claims must be devnet-backed");
@@ -151,5 +167,15 @@ fn settlement_report_with_label(label: &str) -> String {
     valid_devnet_settlement_report().replace(
         r#""id":"devnet_settlement_asset_movement","label":"devnet-backed""#,
         &format!(r#""id":"devnet_settlement_asset_movement","label":"{label}""#),
+    )
+}
+
+fn local_report_with_optional_claim(label: &str) -> String {
+    let claim = format!(
+        r#"{{"id":"non_authoritative_scenario","label":"{label}","required":false,"status":"NOT_CLAIMED","summary":"not canonical"}},"#
+    );
+    valid_local_only_report().replace(
+        r#"{"id":"production_readiness"#,
+        &format!(r#"{claim}{{"id":"production_readiness"#),
     )
 }
