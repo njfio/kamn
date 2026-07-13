@@ -1,30 +1,11 @@
 use super::agent_harness::validate_agent_harness_claim_shape;
-use super::report::{
-    CLAIM_LABEL_DEVNET_BACKED, CLAIM_LABEL_DRY_RUN, CLAIM_LABEL_LOCAL_ONLY,
-    CLAIM_LABEL_PLACEHOLDER, CLAIM_LABEL_REAL, CLAIM_LABEL_ROADMAP, MVP_DEMO_REPORT_SCHEMA_VERSION,
-};
+use super::report::{CLAIM_LABEL_DEVNET_BACKED, MVP_DEMO_REPORT_SCHEMA_VERSION};
 use super::three_agent_verify::validate_three_agent_escrow_verification;
+use super::verify_claims::{
+    validate_authoritative_label, validate_claim_label, validate_required_claims,
+    validate_value_movement_label,
+};
 use super::verify_support::{parse_claims, require_marker, validate_json_delimiters, ClaimView};
-
-const REQUIRED_CLAIMS: &[&str] = &[
-    "local_runtime_startup",
-    "authenticated_agent_identities",
-    "signed_message_or_task_flow",
-    "durable_state_written",
-    "relay_projection_visible",
-    "websocket_event_visibility",
-    "audit_proof_export",
-];
-
-const VALUE_TERMS: &[&str] = &[
-    "exchange",
-    "escrow",
-    "settlement",
-    "transfer",
-    "lamports",
-    "asset",
-    "value movement",
-];
 
 /// Verifies a rendered MVP demo proof report JSON payload.
 pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), String> {
@@ -108,45 +89,6 @@ fn required_artifact_markers() -> [(&'static str, &'static str); 5] {
     ]
 }
 
-fn validate_required_claims(claims: &[ClaimView<'_>]) -> Result<(), String> {
-    for required in REQUIRED_CLAIMS {
-        if !claims.iter().any(|claim| claim.id == *required) {
-            return Err(format!("missing required MVP claim: {required}"));
-        }
-    }
-    Ok(())
-}
-
-fn validate_claim_label(label: &str) -> Result<(), String> {
-    if allowed_labels().contains(&label) {
-        return Ok(());
-    }
-    Err(format!("unknown MVP claim label: {label}"))
-}
-
-fn validate_authoritative_label(claim: &ClaimView<'_>) -> Result<(), String> {
-    if claim.id == "three_agent_escrow_verification"
-        && matches!(
-            claim.label.as_str(),
-            CLAIM_LABEL_DRY_RUN | CLAIM_LABEL_PLACEHOLDER | CLAIM_LABEL_LOCAL_ONLY
-        )
-    {
-        return Err("AGENT_TRANSACTION_CLAIM_INVALID".to_owned());
-    }
-    match claim.label.as_str() {
-        CLAIM_LABEL_DRY_RUN => Err("required MVP claim cannot be dry-run".to_owned()),
-        CLAIM_LABEL_PLACEHOLDER => Err("required MVP claim cannot be placeholder".to_owned()),
-        _ => Ok(()),
-    }
-}
-
-fn validate_value_movement_label(claim: &ClaimView<'_>) -> Result<(), String> {
-    if !mentions_value_movement(claim.raw) || claim.label == CLAIM_LABEL_DEVNET_BACKED {
-        return Ok(());
-    }
-    Err("value movement claim must be devnet-backed".to_owned())
-}
-
 fn validate_devnet_evidence(claim: &ClaimView<'_>) -> Result<(), String> {
     if claim.label != CLAIM_LABEL_DEVNET_BACKED {
         return Ok(());
@@ -172,22 +114,6 @@ fn validate_no_go(report_json: &str) -> Result<(), String> {
         return Err("devnet-required report must include explicit NO-GO evidence".to_owned());
     }
     Ok(())
-}
-
-fn allowed_labels() -> [&'static str; 6] {
-    [
-        CLAIM_LABEL_REAL,
-        CLAIM_LABEL_DEVNET_BACKED,
-        CLAIM_LABEL_LOCAL_ONLY,
-        CLAIM_LABEL_DRY_RUN,
-        CLAIM_LABEL_PLACEHOLDER,
-        CLAIM_LABEL_ROADMAP,
-    ]
-}
-
-fn mentions_value_movement(raw: &str) -> bool {
-    let lowercase = raw.to_ascii_lowercase();
-    VALUE_TERMS.iter().any(|term| lowercase.contains(term))
 }
 
 fn devnet_success_markers() -> [&'static str; 15] {

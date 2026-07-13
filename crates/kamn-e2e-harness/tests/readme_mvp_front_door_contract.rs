@@ -7,6 +7,7 @@ fn spec_c01_readme_opens_with_current_mvp_front_door() {
     let readme = read_root_readme();
 
     require_all(
+        "README.md",
         &readme,
         &[
             "KAMN (Kolme AI Agent Messaging Network)",
@@ -45,6 +46,7 @@ fn spec_c02_architecture_index_classifies_mvp_and_test_surfaces() {
     let architecture = read_repo_file("docs/architecture/README.md");
 
     require_all(
+        "docs/architecture/README.md",
         &architecture,
         &[
             "## MVP Surface Classes",
@@ -96,16 +98,16 @@ fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn require_all(readme: &str, needles: &[&str]) {
+fn require_all(label: &str, content: &str, needles: &[&str]) {
     for needle in needles {
-        require_contains(readme, needle);
+        require_contains(label, content, needle);
     }
 }
 
-fn require_contains(readme: &str, needle: &str) {
+fn require_contains(label: &str, content: &str, needle: &str) {
     assert!(
-        readme.contains(needle),
-        "README.md is missing required MVP front-door content: {needle}"
+        content.contains(needle),
+        "{label} is missing required MVP front-door content: {needle}"
     );
 }
 
