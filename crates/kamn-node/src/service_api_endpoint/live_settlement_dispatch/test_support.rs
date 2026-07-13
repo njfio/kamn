@@ -9,10 +9,12 @@ static AMBIGUOUS_AFTER_SUBMIT: AtomicBool = AtomicBool::new(false);
 static RECONCILE_CONFIRMED: AtomicBool = AtomicBool::new(false);
 static SUBMISSION_COUNT: AtomicU64 = AtomicU64::new(0);
 static EVIDENCE_MISMATCH: AtomicBool = AtomicBool::new(false);
+static EXPIRED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) struct TestLiveSolanaSettlementOverrideGuard {
     previous: bool,
     previous_ambiguous: bool,
+    previous_expired: bool,
 }
 
 pub(crate) fn set_test_live_solana_settlement_override(
@@ -23,6 +25,7 @@ pub(crate) fn set_test_live_solana_settlement_override(
         .expect("override lock should not poison");
     let previous = *guard;
     let previous_ambiguous = AMBIGUOUS_AFTER_SUBMIT.swap(false, Ordering::SeqCst);
+    let previous_expired = EXPIRED.swap(false, Ordering::SeqCst);
     *guard = enabled;
     OBSERVED_PREPARED_INTENT.store(false, Ordering::SeqCst);
     RECONCILE_CONFIRMED.store(false, Ordering::SeqCst);
@@ -31,6 +34,7 @@ pub(crate) fn set_test_live_solana_settlement_override(
     TestLiveSolanaSettlementOverrideGuard {
         previous,
         previous_ambiguous,
+        previous_expired,
     }
 }
 
@@ -41,6 +45,11 @@ pub(crate) fn set_test_live_solana_settlement_reconcile_confirmed() {
 
 pub(crate) fn set_test_live_solana_settlement_evidence_mismatch() {
     EVIDENCE_MISMATCH.store(true, Ordering::SeqCst);
+}
+
+pub(crate) fn set_test_live_solana_settlement_expired() {
+    AMBIGUOUS_AFTER_SUBMIT.store(false, Ordering::SeqCst);
+    EXPIRED.store(true, Ordering::SeqCst);
 }
 
 pub(crate) fn test_live_solana_settlement_submission_count() -> u64 {
@@ -89,6 +98,9 @@ pub(crate) fn maybe_submit_test_live_settlement(
     if RECONCILE_CONFIRMED.load(Ordering::SeqCst) {
         return Some(Ok(success_evidence(config, prepared)));
     }
+    if EXPIRED.load(Ordering::SeqCst) {
+        return Some(Err("SETTLEMENT_TRANSACTION_EXPIRED".to_owned()));
+    }
     SUBMISSION_COUNT.fetch_add(1, Ordering::SeqCst);
     if AMBIGUOUS_AFTER_SUBMIT.load(Ordering::SeqCst) {
         return Some(Err("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned()));
@@ -125,6 +137,7 @@ impl Drop for TestLiveSolanaSettlementOverrideGuard {
             .expect("override lock should not poison");
         *guard = self.previous;
         AMBIGUOUS_AFTER_SUBMIT.store(self.previous_ambiguous, Ordering::SeqCst);
+        EXPIRED.store(self.previous_expired, Ordering::SeqCst);
     }
 }
 

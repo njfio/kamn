@@ -108,6 +108,10 @@ fn integration_settlement_rejects_mismatched_confirmed_evidence_without_release(
         "{response}"
     );
     assert_eq!(state["settlement_intents"][&escrow_id]["state"], "failed");
+    assert_eq!(
+        state["settlement_intents"][&escrow_id]["submission_attempt_count"],
+        1
+    );
     assert_ne!(state["escrows"][&escrow_id]["state"], "released");
 }
 

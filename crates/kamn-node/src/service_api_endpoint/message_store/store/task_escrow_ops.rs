@@ -76,6 +76,10 @@ impl ServiceApiMessageStore {
         settlement_intent::mark_failed(self, escrow_id, error_code)
     }
 
+    pub(crate) fn mark_settlement_expired(&mut self, escrow_id: &str) -> Result<(), String> {
+        settlement_intent::mark_expired(self, escrow_id)
+    }
+
     pub(crate) fn fund_bound_escrow(
         &mut self,
         actor: &str,
