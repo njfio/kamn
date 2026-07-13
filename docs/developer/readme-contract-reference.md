@@ -148,12 +148,21 @@ Canonical runtime integration flow and module ownership mapping are documented i
 
 ### Fast Make Lanes
 
+- `make demo-agent-transaction - canonical Pi/devnet transaction demo`
+- `make demo-mvp - local-only compatibility proof`
+
 ```bash
 # Fast static gates
 make check
 
 # Default bounded test lane
 make test
+
+# Canonical three-agent transaction with required devnet settlement
+make demo-agent-transaction
+
+# Local runtime/proof compatibility lane without settlement success
+make demo-mvp
 
 # Two-process localhost signed-message demo
 make demo
