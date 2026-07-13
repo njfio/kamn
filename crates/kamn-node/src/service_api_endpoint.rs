@@ -8,6 +8,8 @@ mod message_store;
 mod middleware_impl;
 mod models;
 mod payload;
+#[cfg(test)]
+mod post_auth_test_gate;
 mod projection_models;
 mod runtime_observability;
 mod scope_fixture;
@@ -20,6 +22,8 @@ mod websocket;
 
 #[cfg(test)]
 pub(crate) use grant_test_support::provision_test_transaction_grant;
+#[cfg(test)]
+pub(crate) use post_auth_test_gate::{set_test_post_auth_gate, TestPostAuthGate};
 
 use crate::{
     logging::{log_info, log_warn},

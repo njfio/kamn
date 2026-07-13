@@ -1,6 +1,10 @@
 use super::super::*;
 use super::support::*;
 
+#[path = "settlement_concurrency_support.rs"]
+mod concurrency_support;
+use concurrency_support::{concurrent_release_requests, ordered_authenticated_release_race};
+
 const ACTOR: &str = "kamn:did:agent:test-client-settlement-concurrency";
 const KEYPAIR_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE";
 const RECIPIENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY";
@@ -66,8 +70,9 @@ fn integration_distinct_release_nonces_with_same_key_converge_on_one_persisted_s
         extra_headers: &[],
     });
 
+    let gate = crate::service_api_endpoint::set_test_post_auth_gate();
     let responses =
-        concurrent_release_requests_for_nonces(&context.harness.snapshot, &path, body, [193, 194]);
+        ordered_authenticated_release_race(&context.harness.snapshot, &path, body, &gate);
     let successes: Vec<Value> = responses
         .iter()
         .filter(|response| response.contains("HTTP/1.1 200 OK"))
@@ -80,101 +85,21 @@ fn integration_distinct_release_nonces_with_same_key_converge_on_one_persisted_s
 
     assert_eq!(
         successes.len(),
-        1,
-        "expected exactly one successful raced release: {responses:?}"
+        2,
+        "both authorized retries should succeed: {responses:?}"
     );
-    assert_eq!(
-        responses
+    let persisted_signature = settlement_tx_signature(&state["escrows"][&escrow_id]);
+    assert!(
+        successes
             .iter()
-            .filter(|response| response.contains("HTTP/1.1 409 Conflict"))
-            .count(),
-        1,
-        "expected exactly one raced release conflict: {responses:?}"
-    );
-    let conflict = responses
-        .iter()
-        .find(|response| response.contains("HTTP/1.1 409 Conflict"))
-        .expect("one raced response should conflict");
-    let conflict_payload = parse_error_envelope_from_http_response(conflict);
-    assert_ne!(
-        conflict_payload.reason_code, "service_api_auth_replay_nonce_detected",
-        "distinct nonces must not collapse into replay rejection"
-    );
-    let success = &successes[0];
-    assert_eq!(
-        settlement_tx_signature(&state["escrows"][&escrow_id]),
-        settlement_tx_signature(success),
-        "persisted release state should keep the converged signature"
+            .all(|success| settlement_tx_signature(success) == persisted_signature),
+        "both responses must converge on the persisted signature"
     );
     assert_eq!(
         crate::service_api_endpoint::test_live_solana_settlement_submission_count(),
         1,
         "same-key retries with fresh nonces must not resubmit the adapter transfer"
     );
-}
-
-fn concurrent_release_requests(
-    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
-    path: &str,
-    body: &str,
-) -> Vec<String> {
-    concurrent_release_requests_for_nonces(snapshot, path, body, [183, 183])
-}
-
-fn concurrent_release_requests_for_nonces(
-    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
-    path: &str,
-    body: &str,
-    nonces: [u64; 2],
-) -> Vec<String> {
-    let bind_addr = reserve_loopback_addr();
-    with_api_server(snapshot, bind_addr.as_str(), 2, |addr| {
-        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
-        thread::scope(|scope| {
-            nonces
-                .into_iter()
-                .map(|nonce| {
-                    spawn_release(scope, barrier.clone(), snapshot, addr, path, body, nonce)
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|handle| handle.join().expect("release request should complete"))
-                .collect()
-        })
-    })
-}
-
-fn spawn_release<'scope>(
-    scope: &'scope thread::Scope<'scope, '_>,
-    barrier: std::sync::Arc<std::sync::Barrier>,
-    snapshot: &'scope crate::service_api_endpoint::ServiceApiSnapshot,
-    addr: &'scope str,
-    path: &'scope str,
-    body: &'scope str,
-    nonce: u64,
-) -> thread::ScopedJoinHandle<'scope, String> {
-    scope.spawn(move || {
-        let nonce_text = nonce.to_string();
-        let signature = service_api_request_signature_for_fields(
-            ACTOR,
-            nonce,
-            state_hash(snapshot).as_str(),
-            body,
-        );
-        barrier.wait();
-        send_http_request_with_headers(
-            addr,
-            "POST",
-            path,
-            body,
-            &[
-                ("X-KAMN-Sender-DID", ACTOR),
-                ("X-KAMN-Request-Nonce", nonce_text.as_str()),
-                ("X-KAMN-Request-Signature", signature.as_str()),
-                ("X-KAMN-Authz-Scope", "escrow:write"),
-            ],
-        )
-    })
 }
 
 fn params() -> LiveSolanaAssetMovementParams<'static> {
