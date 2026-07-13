@@ -3,7 +3,7 @@ use super::*;
 mod errors;
 use errors::{
     invalid_release_key, settlement_evidence_mismatch_error, settlement_intent_conflict_error,
-    settlement_outcome_ambiguous_error,
+    settlement_outcome_ambiguous_error, settlement_transaction_expired_error,
 };
 
 pub(super) async fn release(
@@ -70,17 +70,39 @@ fn submit(
     {
         Ok(evidence) => Ok(evidence),
         Err(error) if error.starts_with("SETTLEMENT_OUTCOME_AMBIGUOUS") => {
-            store
-                .mark_settlement_outcome_ambiguous(escrow_id)
-                .map_err(|persist_error| {
-                    Box::new(super::super::super::super::persistence_error(
-                        persist_error.as_str(),
-                    ))
-                })?;
+            persist_ambiguous(store, escrow_id)?;
             Err(Box::new(settlement_outcome_ambiguous_error()))
+        }
+        Err(error) if error == "SETTLEMENT_TRANSACTION_EXPIRED" => {
+            persist_expired(store, escrow_id)?;
+            Err(Box::new(settlement_transaction_expired_error()))
         }
         Err(error) => Err(Box::new(live_settlement_evidence_error(error.as_str()))),
     }
+}
+
+fn persist_ambiguous(
+    store: &mut ServiceApiMessageStore,
+    escrow_id: &str,
+) -> Result<(), Box<Response>> {
+    store
+        .mark_settlement_outcome_ambiguous(escrow_id)
+        .map_err(persistence_error)
+}
+
+fn persist_expired(
+    store: &mut ServiceApiMessageStore,
+    escrow_id: &str,
+) -> Result<(), Box<Response>> {
+    store
+        .mark_settlement_expired(escrow_id)
+        .map_err(persistence_error)
+}
+
+fn persistence_error(error: String) -> Box<Response> {
+    Box::new(super::super::super::super::persistence_error(
+        error.as_str(),
+    ))
 }
 
 fn validate_evidence(

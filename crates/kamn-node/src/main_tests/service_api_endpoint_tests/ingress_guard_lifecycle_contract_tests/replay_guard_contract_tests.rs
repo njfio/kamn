@@ -31,6 +31,50 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
 }
 
 #[test]
+fn integration_service_api_endpoint_rejects_previously_accepted_nonce_after_restart_reload() {
+    let _env = acquire_service_api_test_env();
+    let state_file = unique_replay_state_file();
+    let _state_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_STATE_FILE",
+        Some(state_file.to_string_lossy().as_ref()),
+    );
+    let sender_did = "kamn:did:agent:test-client-replay-restart";
+    let body = "{\"message\":\"replay-after-restart\"}";
+    let first_response = send_restart_nonce_request("127.0.0.1:34072", sender_did, body);
+    assert!(first_response.contains("HTTP/1.1 202 Accepted"));
+    let replay_response = send_restart_nonce_request("127.0.0.1:34073", sender_did, body);
+    assert_replay_rejection(replay_response.as_str());
+    let _ = std::fs::remove_file(state_file);
+}
+
+fn send_restart_nonce_request(api_bind: &str, sender_did: &str, body: &str) -> String {
+    let snapshot = build_ingress_snapshot(api_bind);
+    let server = spawn_ingress_server(
+        &snapshot,
+        1,
+        2_000,
+        DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    );
+    let response =
+        send_signed_message_request(&snapshot, server.bind_addr.as_str(), sender_did, 17, body);
+    assert_server_ok(server.server, "restart nonce server should stop cleanly");
+    response
+}
+
+fn unique_replay_state_file() -> std::path::PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    std::env::temp_dir().join(format!(
+        "kamn-node-ingress-replay-restart-{}-{nanos}.json",
+        std::process::id()
+    ))
+}
+
+#[test]
 fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_spam_enforcement() {
     let _env = acquire_service_api_test_env();
     let snapshot = build_ingress_snapshot("127.0.0.1:34066");

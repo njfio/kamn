@@ -9,6 +9,11 @@ use std::time::Duration;
 
 mod transaction;
 use transaction::{build_live_settlement_transaction, validate_prepared_transaction};
+#[path = "transport_recovery.rs"]
+mod transport_recovery;
+use transport_recovery::{
+    blockhash_is_valid, reconcile_known_signature, require_resubmittable_blockhash,
+};
 
 pub(super) fn prepare_live_settlement(
     config: &LiveSolanaSettlementConfig,
@@ -67,34 +72,37 @@ fn submit_or_reconcile_live_settlement_via_rpc(
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, String> {
-    validate_prepared_config(config, prepared)?;
-    let transaction: solana_sdk::transaction::Transaction =
-        serde_json::from_str(prepared.signed_transaction_json.as_str()).map_err(|error| {
-            format!("live solana settlement transaction decode failed: {error}")
-        })?;
-    validate_prepared_transaction(&transaction, prepared, escrow_id)?;
+    let (transaction, expected_signature) = validated_transaction(config, prepared, escrow_id)?;
     let client = settlement_rpc_client(config);
-    let expected_signature =
-        solana_sdk::signature::Signature::from_str(prepared.expected_signature.as_str())
-            .map_err(|error| format!("live solana settlement signature decode failed: {error}"))?;
     if reconcile_known_signature(&client, &expected_signature, config)? {
-        return Ok(build_live_settlement_evidence(
-            prepared.expected_signature.clone(),
-            config.commitment_label.as_str(),
-            prepared,
-        ));
+        return Ok(settlement_evidence(config, prepared));
     }
+    require_resubmittable_blockhash(blockhash_is_valid(&client, &transaction, config)?)?;
     let signature = submit_live_settlement_transaction(&client, &transaction)?;
-    if signature.to_string() != prepared.expected_signature {
-        return Err("live solana settlement submitted signature mismatch".to_owned());
-    }
+    require_expected_signature(&signature, prepared)?;
     let confirmed = confirm_live_settlement_signature(&client, &signature, config)?;
     require_confirmation(confirmed, config.commitment_label.as_str())?;
-    Ok(build_live_settlement_evidence(
-        signature.to_string(),
-        config.commitment_label.as_str(),
-        prepared,
-    ))
+    Ok(settlement_evidence(config, prepared))
+}
+
+fn validated_transaction(
+    config: &LiveSolanaSettlementConfig,
+    prepared: &PreparedLiveSettlement,
+    escrow_id: &str,
+) -> Result<
+    (
+        solana_sdk::transaction::Transaction,
+        solana_sdk::signature::Signature,
+    ),
+    String,
+> {
+    validate_prepared_config(config, prepared)?;
+    let transaction = serde_json::from_str(prepared.signed_transaction_json.as_str())
+        .map_err(|error| format!("live solana settlement transaction decode failed: {error}"))?;
+    validate_prepared_transaction(&transaction, prepared, escrow_id)?;
+    let signature = solana_sdk::signature::Signature::from_str(&prepared.expected_signature)
+        .map_err(|error| format!("live solana settlement signature decode failed: {error}"))?;
+    Ok((transaction, signature))
 }
 
 fn require_confirmation(confirmed: bool, commitment: &str) -> Result<(), String> {
@@ -106,19 +114,25 @@ fn require_confirmation(confirmed: bool, commitment: &str) -> Result<(), String>
     ))
 }
 
-fn reconcile_known_signature(
-    client: &RpcClient,
+fn require_expected_signature(
     signature: &solana_sdk::signature::Signature,
-    config: &LiveSolanaSettlementConfig,
-) -> Result<bool, String> {
-    let status = client
-        .get_signature_status_with_commitment_and_history(signature, config.commitment, true)
-        .map_err(|error| format!("live solana settlement status lookup failed: {error}"))?;
-    match status {
-        Some(Ok(())) => Ok(true),
-        Some(Err(error)) => Err(format!("SETTLEMENT_TRANSACTION_FAILED: {error}")),
-        None => Ok(false),
+    prepared: &PreparedLiveSettlement,
+) -> Result<(), String> {
+    if signature.to_string() == prepared.expected_signature {
+        return Ok(());
     }
+    Err("live solana settlement submitted signature mismatch".to_owned())
+}
+
+fn settlement_evidence(
+    config: &LiveSolanaSettlementConfig,
+    prepared: &PreparedLiveSettlement,
+) -> LiveSettlementEvidence {
+    build_live_settlement_evidence(
+        prepared.expected_signature.clone(),
+        config.commitment_label.as_str(),
+        prepared,
+    )
 }
 
 fn validate_prepared_config(

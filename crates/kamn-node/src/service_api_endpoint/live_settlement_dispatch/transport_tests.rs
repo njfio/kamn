@@ -24,6 +24,18 @@ fn escrow_binding_makes_same_blockhash_transfers_unique() {
 }
 
 #[test]
+fn expired_persisted_transaction_is_not_resubmittable() {
+    let error = require_resubmittable_blockhash(false).expect_err("expired blockhash must fail");
+
+    assert_eq!(error, "SETTLEMENT_TRANSACTION_EXPIRED");
+}
+
+#[test]
+fn valid_persisted_transaction_remains_resubmittable() {
+    require_resubmittable_blockhash(true).expect("valid blockhash should remain resubmittable");
+}
+
+#[test]
 fn persisted_transaction_integrity_rejects_tampering() {
     let payer = Keypair::new();
     let recipient = Pubkey::new_unique();

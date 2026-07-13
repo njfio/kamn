@@ -1,6 +1,10 @@
 use super::super::*;
 use super::support::*;
 
+#[path = "settlement_concurrency_support.rs"]
+mod concurrency_support;
+use concurrency_support::{concurrent_release_requests, ordered_authenticated_release_race};
+
 const ACTOR: &str = "kamn:did:agent:test-client-settlement-concurrency";
 const KEYPAIR_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_KEYPAIR_FILE";
 const RECIPIENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY";
@@ -47,59 +51,81 @@ fn integration_concurrent_settlement_release_submits_one_transaction_identity() 
     );
 }
 
-fn concurrent_release_requests(
-    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
-    path: &str,
-    body: &str,
-) -> Vec<String> {
-    let bind_addr = reserve_loopback_addr();
-    with_api_server(snapshot, bind_addr.as_str(), 2, |addr| {
-        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
-        thread::scope(|scope| {
-            [183_u64, 183_u64]
-                .into_iter()
-                .map(|nonce| {
-                    spawn_release(scope, barrier.clone(), snapshot, addr, path, body, nonce)
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|handle| handle.join().expect("release request should complete"))
-                .collect()
-        })
-    })
+#[test]
+fn integration_distinct_release_nonces_with_same_key_converge_on_one_persisted_signature() {
+    let outcome = run_distinct_release_race();
+    assert_eq!(
+        outcome.successes.len(),
+        2,
+        "both authorized retries should succeed: {:?}",
+        outcome.responses
+    );
+    let persisted = settlement_tx_signature(&outcome.state["escrows"][&outcome.escrow_id]);
+    assert!(outcome
+        .successes
+        .iter()
+        .all(|item| settlement_tx_signature(item) == persisted));
+    assert_eq!(
+        outcome.submissions, 1,
+        "fresh nonces must not resubmit transfer"
+    );
 }
 
-fn spawn_release<'scope>(
-    scope: &'scope thread::Scope<'scope, '_>,
-    barrier: std::sync::Arc<std::sync::Barrier>,
-    snapshot: &'scope crate::service_api_endpoint::ServiceApiSnapshot,
-    addr: &'scope str,
-    path: &'scope str,
-    body: &'scope str,
-    nonce: u64,
-) -> thread::ScopedJoinHandle<'scope, String> {
-    scope.spawn(move || {
-        let nonce_text = nonce.to_string();
-        let signature = service_api_request_signature_for_fields(
-            ACTOR,
-            nonce,
-            state_hash(snapshot).as_str(),
-            body,
-        );
-        barrier.wait();
-        send_http_request_with_headers(
-            addr,
-            "POST",
-            path,
-            body,
-            &[
-                ("X-KAMN-Sender-DID", ACTOR),
-                ("X-KAMN-Request-Nonce", nonce_text.as_str()),
-                ("X-KAMN-Request-Signature", signature.as_str()),
-                ("X-KAMN-Authz-Scope", "escrow:write"),
-            ],
-        )
-    })
+struct DistinctRaceOutcome {
+    responses: Vec<String>,
+    successes: Vec<Value>,
+    state: Value,
+    escrow_id: String,
+    submissions: u64,
+}
+
+fn run_distinct_release_race() -> DistinctRaceOutcome {
+    let _env = acquire_service_api_test_env();
+    let _override_guard =
+        crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
+    let context = build_live_solana_asset_movement_context(params());
+    let escrow_id = fund_live_escrow(&context.harness, 191, 43);
+    let responses = distinct_release_responses(&context, &escrow_id);
+    let successes = successful_payloads(&responses);
+    let state = read_state_json(context.harness.state_file.as_path());
+    let submissions = crate::service_api_endpoint::test_live_solana_settlement_submission_count();
+    DistinctRaceOutcome {
+        responses,
+        successes,
+        state,
+        escrow_id,
+        submissions,
+    }
+}
+
+fn distinct_release_responses(
+    context: &LiveSolanaAssetMovementContext,
+    escrow_id: &str,
+) -> Vec<String> {
+    let path = format!("/v1/escrow/{escrow_id}/release");
+    let body = r#"{"idempotency_key":"settlement-distinct-nonce-shared-key"}"#;
+    provision_signed_request_grant(&SignedRequest {
+        max_requests: 2,
+        method: "POST",
+        path: path.as_str(),
+        caller_did: ACTOR,
+        nonce: 193,
+        body,
+        extra_headers: &[],
+    });
+    let gate = crate::service_api_endpoint::set_test_post_auth_gate(path.as_str());
+    ordered_authenticated_release_race(&context.harness.snapshot, &path, body, &gate)
+}
+
+fn successful_payloads(responses: &[String]) -> Vec<Value> {
+    responses
+        .iter()
+        .filter(|response| response.contains("HTTP/1.1 200 OK"))
+        .map(|response| {
+            parse_service_api_payload(extract_http_response_body(response))
+                .expect("success payload")
+        })
+        .collect()
 }
 
 fn params() -> LiveSolanaAssetMovementParams<'static> {

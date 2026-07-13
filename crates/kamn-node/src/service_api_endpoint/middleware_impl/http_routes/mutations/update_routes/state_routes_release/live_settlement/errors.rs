@@ -27,6 +27,15 @@ pub(super) fn settlement_intent_conflict_error() -> Response {
     )
 }
 
+pub(super) fn settlement_transaction_expired_error() -> Response {
+    json_error(
+        StatusCode::CONFLICT,
+        "conflict",
+        "SETTLEMENT_TRANSACTION_EXPIRED",
+        "persisted settlement transaction expired before confirmation",
+    )
+}
+
 pub(super) fn invalid_release_key(message: &str) -> Response {
     json_error(
         StatusCode::BAD_REQUEST,

@@ -86,6 +86,20 @@ fn integration_settlement_intent_rejects_conflicting_release_key_without_submiss
 
 #[test]
 fn integration_settlement_rejects_mismatched_confirmed_evidence_without_release() {
+    let (response, state, escrow_id) = mismatched_evidence_outcome();
+    assert!(
+        response.contains("SETTLEMENT_EVIDENCE_MISMATCH"),
+        "{response}"
+    );
+    assert_eq!(state["settlement_intents"][&escrow_id]["state"], "failed");
+    assert_eq!(
+        state["settlement_intents"][&escrow_id]["submission_attempt_count"],
+        1
+    );
+    assert_ne!(state["escrows"][&escrow_id]["state"], "released");
+}
+
+fn mismatched_evidence_outcome() -> (String, Value, String) {
     let _env = acquire_service_api_test_env();
     let _override_guard =
         crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
@@ -93,22 +107,70 @@ fn integration_settlement_rejects_mismatched_confirmed_evidence_without_release(
     let context = build_live_solana_asset_movement_context(params_for("evidence-mismatch", 41));
     let escrow_id = fund_live_escrow(&context.harness, 171, 41);
 
-    let response = release_escrow_response_with_key(
+    let response = release_with_key(&context, 173, &escrow_id, "settlement-evidence-mismatch");
+    let state = read_state_json(context.harness.state_file.as_path());
+    (response, state, escrow_id)
+}
+
+#[test]
+fn integration_expired_ambiguous_settlement_fails_without_resubmission() {
+    let outcome = expired_settlement_outcome();
+    assert!(outcome.first.contains("SETTLEMENT_OUTCOME_AMBIGUOUS"));
+    assert!(outcome.retry.contains("HTTP/1.1 409 Conflict"));
+    assert!(outcome.retry.contains("SETTLEMENT_TRANSACTION_EXPIRED"));
+    assert_eq!(
+        outcome.state["settlement_intents"][&outcome.escrow_id]["state"],
+        "failed"
+    );
+    assert_ne!(
+        outcome.state["escrows"][&outcome.escrow_id]["state"],
+        "released"
+    );
+    assert_eq!(outcome.submissions, 1);
+}
+
+struct ExpiredOutcome {
+    first: String,
+    retry: String,
+    state: Value,
+    escrow_id: String,
+    submissions: u64,
+}
+
+fn expired_settlement_outcome() -> ExpiredOutcome {
+    let _env = acquire_service_api_test_env();
+    let _override_guard =
+        crate::service_api_endpoint::set_test_live_solana_settlement_ambiguous_after_submit();
+    let context = build_live_solana_asset_movement_context(params_for("expired", 47));
+    let escrow_id = fund_live_escrow(&context.harness, 181, 47);
+    let first = release_with_key(&context, 183, &escrow_id, "settlement-expired");
+    crate::service_api_endpoint::set_test_live_solana_settlement_expired();
+    let retry = release_with_key(&context, 184, &escrow_id, "settlement-expired");
+    let state = read_state_json(context.harness.state_file.as_path());
+    let submissions = crate::service_api_endpoint::test_live_solana_settlement_submission_count();
+    ExpiredOutcome {
+        first,
+        retry,
+        state,
+        escrow_id,
+        submissions,
+    }
+}
+
+fn release_with_key(
+    context: &LiveSolanaAssetMovementContext,
+    nonce: u64,
+    escrow_id: &str,
+    key: &str,
+) -> String {
+    release_escrow_response_with_key(
         &context.harness.snapshot,
         context.harness.bind_addr.as_str(),
         context.harness.caller_did,
-        173,
-        escrow_id.as_str(),
-        "settlement-evidence-mismatch",
-    );
-    let state = read_state_json(context.harness.state_file.as_path());
-
-    assert!(
-        response.contains("SETTLEMENT_EVIDENCE_MISMATCH"),
-        "{response}"
-    );
-    assert_eq!(state["settlement_intents"][&escrow_id]["state"], "failed");
-    assert_ne!(state["escrows"][&escrow_id]["state"], "released");
+        nonce,
+        escrow_id,
+        key,
+    )
 }
 
 fn params() -> LiveSolanaAssetMovementParams<'static> {
