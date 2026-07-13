@@ -1,13 +1,15 @@
 use kamn_e2e_harness::mvp_demo::verify_mvp_demo_report_json;
-use kamn_e2e_harness::{execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+#[path = "support/generated_receipt_fixture.rs"]
+mod generated_receipt_fixture;
+
+#[path = "support/mvp_demo_command.rs"]
+mod mvp_demo_command;
 
 #[path = "support/mvp_local_artifacts.rs"]
-mod mvp_local_artifacts;
-
 #[allow(dead_code)]
-#[path = "support/three_agent_view_artifacts.rs"]
-mod three_agent_view_artifacts;
+mod mvp_local_artifacts;
 
 #[test]
 fn spec_c01_report_rejects_missing_transcript_fields() {
@@ -27,109 +29,50 @@ fn spec_c01_report_rejects_missing_transcript_fields() {
 
 #[test]
 fn spec_c02_command_rejects_missing_transcript_artifact() {
-    let root = temp_root("missing-artifact");
-    mvp_local_artifacts::write_valid_local_artifacts(&root);
-    let transcript = root.join("proof/three-agent-transcript.json");
-    let report = write_report(
-        &root,
-        report_with_claim(three_agent_claim(&transcript), &root, &transcript),
-    );
+    let fixture = generated_receipt_fixture::Fixture::new("missing-transcript");
+    fixture.remove_transcript();
 
-    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+    let err = fixture
+        .verify()
         .expect_err("missing transcript artifact must fail");
 
-    assert!(err.contains("three-agent transcript artifact"));
+    assert_eq!(err, "PROOF_ARTIFACT_MISSING");
 }
 
 #[test]
 fn spec_c03_command_rejects_mismatched_transcript_settlement() {
-    let root = temp_root("mismatched-settlement");
-    mvp_local_artifacts::write_valid_local_artifacts(&root);
-    let transcript = write_transcript(&root, valid_transcript().replace(SIGNATURE, "mismatch"));
-    let report = write_report(
-        &root,
-        report_with_claim(three_agent_claim(&transcript), &root, &transcript),
-    );
+    let fixture = generated_receipt_fixture::Fixture::new("mismatched-transcript-settlement");
+    fixture.replace_transcript_field("settlement_tx_signature", "mismatch");
 
-    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+    let err = fixture
+        .verify()
         .expect_err("mismatched transcript settlement must fail");
 
-    assert!(err.contains("three-agent transcript settlement_tx_signature"));
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 #[test]
 fn spec_c04_command_rejects_raw_private_payload_transcript() {
-    let root = temp_root("raw-private");
-    mvp_local_artifacts::write_valid_local_artifacts(&root);
-    let leaked = valid_transcript().replace(
-        r#""private_payload_redacted":true"#,
-        r#""raw_private_payload":"secret","private_payload_redacted":true"#,
-    );
-    let transcript = write_transcript(&root, leaked);
-    let report = write_report(
-        &root,
-        report_with_claim(three_agent_claim(&transcript), &root, &transcript),
-    );
+    let fixture = generated_receipt_fixture::Fixture::new("raw-private-transcript");
+    fixture.replace_transcript_field("raw_private_payload", "secret");
 
-    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+    let err = fixture
+        .verify()
         .expect_err("raw private payload transcript must fail");
 
-    assert!(err.contains("raw private payload"));
+    assert_eq!(err, "PROJECTION_SCOPE_INVALID");
 }
 
 #[test]
 fn spec_c05_command_rejects_stale_transcript_digest_after_content_tamper() {
-    let root = three_agent_view_artifacts::temp_root("stale-transcript-digest");
-    mvp_local_artifacts::write_valid_local_artifacts(&root);
-    three_agent_view_artifacts::write_view_artifacts(&root, None);
-    let tampered = append_json_marker(
-        three_agent_view_artifacts::transcript(Some(&root)),
-        "transcript-tampered",
-    );
-    three_agent_view_artifacts::write_transcript(&root, tampered);
-    let report = three_agent_view_artifacts::write_report(
-        &root,
-        three_agent_view_artifacts::report_json(&root, Some(&root)),
-    );
+    let fixture = generated_receipt_fixture::Fixture::new("stale-transcript-digest");
+    fixture.tamper_transcript();
 
-    let err = execute_verify_mvp_demo_contract(&config(report.as_path()))
+    let err = fixture
+        .verify()
         .expect_err("stale transcript digest must fail");
 
-    assert!(err.contains("three-agent transcript digest"));
-}
-
-fn temp_root(stem: &str) -> PathBuf {
-    let millis = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("clock should be after epoch")
-        .as_millis();
-    std::env::temp_dir().join(format!("kamn-7056-{stem}-{}-{millis}", std::process::id()))
-}
-
-fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
-    VerifyMvpDemoCommandConfig {
-        report: report.display().to_string(),
-        agent_harness_evidence_path: None,
-        pi_transaction_actor_paths: None,
-    }
-}
-
-fn write_report(root: &Path, report: String) -> PathBuf {
-    let path = root.join("proof/report.json");
-    write_file(path.as_path(), report);
-    path
-}
-
-fn write_transcript(root: &Path, transcript: String) -> PathBuf {
-    let path = root.join("proof/three-agent-transcript.json");
-    write_file(path.as_path(), transcript);
-    path
-}
-
-fn write_file(path: &Path, content: String) {
-    std::fs::create_dir_all(path.parent().expect("parent should exist"))
-        .expect("fixture directory should be created");
-    std::fs::write(path, content).expect("fixture should be written");
+    assert_eq!(err, "TRANSACTION_AGREEMENT_INVALID");
 }
 
 fn report_with_claim(three_agent_claim: String, root: &Path, transcript_path: &Path) -> String {
@@ -147,21 +90,8 @@ fn local_claims() -> &'static str {
     r#"{"id":"local_runtime_startup","label":"real","required":true,"status":"PASS","summary":"local runtime"},{"id":"authenticated_agent_identities","label":"local-only","required":true,"status":"PASS","summary":"agent identities"},{"id":"signed_message_or_task_flow","label":"local-only","required":true,"status":"PASS","summary":"message flow"},{"id":"durable_state_written","label":"local-only","required":true,"status":"PASS","summary":"durable state"},{"id":"relay_projection_visible","label":"local-only","required":true,"status":"PASS","summary":"relay projection"},{"id":"websocket_event_visibility","label":"local-only","required":true,"status":"PASS","summary":"websocket events"},{"id":"audit_proof_export","label":"local-only","required":true,"status":"PASS","summary":"audit export"}"#
 }
 
-const SIGNATURE: &str = "5nSgnDevnetSignature111111111111111111111111111";
-
 fn devnet_settlement_claim() -> &'static str {
     r#"{"id":"devnet_settlement_asset_movement","label":"devnet-backed","required":true,"status":"PASS","summary":"Solana devnet escrow settlement transfer observed","network":"solana:devnet","execution_surface":"command-override","rpc_url":"https://api.devnet.solana.com","payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","lamports":1,"escrow_id":"escrow-command-fixture","settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","settlement_commitment":"finalized","payer_balance_before":20,"payer_balance_after":19,"recipient_balance_before":10,"recipient_balance_after":11,"persisted_settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111"}"#
-}
-
-fn three_agent_claim(path: &Path) -> String {
-    transcript_fields(path) + three_agent_claim_without_transcript(path).trim_start_matches('{')
-}
-
-fn transcript_fields(path: &Path) -> String {
-    format!(
-        r#"{{"three_agent_transcript_artifact":"{}","three_agent_transcript_digest":"three-agent-transcript-digest-7045","#,
-        path.display()
-    )
 }
 
 fn three_agent_claim_without_transcript(path: &Path) -> String {
@@ -186,17 +116,6 @@ fn view_fields(path: &Path) -> String {
     )
 }
 
-fn valid_transcript() -> String {
-    r#"{"schema_version":"kamn.mvp.three-agent-transcript.v1","proof_label":"local-only","devnet_settlement_linked":true,"transaction_id":"tx-three-agent-7045","escrow_id":"escrow-three-agent-7045","steps":["agent_a_registered","agent_b_registered","agent_a_invoked_transaction","agent_b_accepted_task","escrow_funded","escrow_released","agent_c_verifier_verified"],"views":{"agent_a":"participant-private","agent_b":"participant-private","agent_c_verifier":"restricted-public"},"agent_a_private_field_count":3,"agent_b_private_field_count":3,"verifier_private_field_count":0,"private_payload_redacted":true,"settlement_tx_signature":"5nSgnDevnetSignature111111111111111111111111111","amount_lamports":1,"payer_pubkey":"payer111111111111111111111111111111111111111","recipient_pubkey":"recipient11111111111111111111111111111111111","settlement_commitment":"finalized","transcript_digest":"three-agent-transcript-digest-7045"}"#.to_owned()
-}
-
 fn roadmap_claim() -> &'static str {
     r#"{"id":"production_readiness","label":"roadmap","required":false,"status":"NOT_CLAIMED","summary":"production readiness is not claimed"}"#
-}
-
-fn append_json_marker(raw: String, marker: &str) -> String {
-    raw.strip_suffix(" }")
-        .or_else(|| raw.strip_suffix('}'))
-        .map(|prefix| format!("{prefix},\"tamper_marker\":\"{marker}\"}}"))
-        .expect("transcript fixture should be a JSON object")
 }

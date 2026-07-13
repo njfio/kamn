@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use kamn_e2e_harness::{
     execute_mvp_demo_contract, execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig,
 };
@@ -45,6 +47,30 @@ impl Fixture {
         write_json(path.as_path(), &receipt);
     }
 
+    pub(crate) fn remove_transcript(&self) {
+        std::fs::remove_file(self.transcript_path()).expect("transcript should remove");
+    }
+
+    pub(crate) fn tamper_transcript(&self) {
+        let path = self.transcript_path();
+        let mut transcript = read_json(path.as_path());
+        transcript["tamper_marker"] = Value::String("transcript-tampered".to_owned());
+        write_json(path.as_path(), &transcript);
+    }
+
+    pub(crate) fn replace_transcript_field(&self, field: &str, value: &str) {
+        let path = self.transcript_path();
+        let mut transcript = read_json(path.as_path());
+        transcript[field] = Value::String(value.to_owned());
+        let refreshed = artifact_digest::with_digest(
+            serde_json::to_string(&transcript).expect("transcript JSON"),
+            "transcript_digest",
+        );
+        std::fs::write(path, &refreshed).expect("refreshed transcript");
+        let digest = artifact_digest::digest_field(&refreshed, "transcript_digest");
+        self.replace_claim_field("three_agent_transcript_digest", digest.as_str());
+    }
+
     pub(crate) fn replace_receipt_field(&self, agent: &str, field: &str, value: &str) {
         let path = self.receipt_path(agent);
         let mut receipt = read_json(path.as_path());
@@ -72,16 +98,23 @@ impl Fixture {
             .join(format!("{agent}-observation-receipt.json").replace('_', "-"))
     }
 
+    fn transcript_path(&self) -> PathBuf {
+        only_run_dir(&self.output_root).join("proof/three-agent-transcript.json")
+    }
+
     fn replace_claim_digest(&self, agent: &str, digest: &str) {
+        self.replace_claim_field(receipt_digest(agent).as_str(), digest);
+    }
+
+    fn replace_claim_field(&self, field: &str, value: &str) {
         let raw = std::fs::read_to_string(&self.report).expect("report should read");
         let report = read_json(self.report.as_path());
-        let field = receipt_digest(agent);
-        let old = transaction_claim(&report)[field.as_str()]
+        let old = transaction_claim(&report)[field]
             .as_str()
-            .expect("receipt digest");
+            .expect("claim string field");
         let updated = raw.replace(
             format!(r#""{field}":"{old}""#).as_str(),
-            format!(r#""{field}":"{digest}""#).as_str(),
+            format!(r#""{field}":"{value}""#).as_str(),
         );
         std::fs::write(&self.report, updated).expect("report should write");
     }
