@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
@@ -16,6 +18,14 @@ impl Fixture {
 
     pub(crate) fn remove_view(&self, agent: &str) {
         std::fs::remove_file(self.view_path(agent)).expect("view should remove");
+    }
+
+    pub(crate) fn tamper_view(&self, agent: &str) {
+        let path = self.view_path(agent);
+        let mut view = read_json(path.as_path());
+        view["tamper_marker"] = Value::String(format!("{agent}-tampered"));
+        std::fs::write(path, serde_json::to_string(&view).expect("view JSON"))
+            .expect("tampered view");
     }
 
     pub(crate) fn replace_view_field(&self, agent: &str, field: &str, value: &str) {
