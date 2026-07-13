@@ -35,7 +35,7 @@ pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), S
     validate_agent_transaction_claim_presence(report_json, &claims)?;
     for claim in &claims {
         validate_claim_label(claim.label.as_str())?;
-        validate_required_label(claim)?;
+        validate_authoritative_label(claim)?;
         validate_value_movement_label(claim)?;
         validate_devnet_evidence(claim)?;
     }
@@ -124,10 +124,7 @@ fn validate_claim_label(label: &str) -> Result<(), String> {
     Err(format!("unknown MVP claim label: {label}"))
 }
 
-fn validate_required_label(claim: &ClaimView<'_>) -> Result<(), String> {
-    if !claim.required {
-        return Ok(());
-    }
+fn validate_authoritative_label(claim: &ClaimView<'_>) -> Result<(), String> {
     if claim.id == "three_agent_escrow_verification"
         && matches!(
             claim.label.as_str(),

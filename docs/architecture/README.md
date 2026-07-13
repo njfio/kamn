@@ -2,10 +2,39 @@
 
 schema_version=kamn.docs.architecture-navigation-index.v1
 diagram_catalog_status=active
-index_last_reviewed=2026-02-25
+index_last_reviewed=2026-07-13
 
 This index is the canonical navigation entrypoint for architecture artifacts and
 diagram references.
+
+## MVP Surface Classes
+
+- **canonical runtime:** `make demo-agent-transaction` drives three Pi actors
+  through the local service API and requires finalized Solana devnet settlement
+  evidence before `GO`.
+- **compatibility:** `make demo-mvp`, SDK/CLI compatibility lanes, and generic
+  harness commands remain supported but do not replace the canonical story.
+- **local-only:** local runtime, identity, task, persistence, relay, websocket,
+  and audit proof are real without claiming external value movement.
+- **dry-run:** planning and policy lanes execute no live settlement and cannot
+  contribute claims to canonical `GO`.
+- **placeholder:** generic run-contract orchestration markers are illustrative,
+  non-authoritative, and disconnected from `demo-agent-transaction` success.
+- **roadmap:** production readiness, mainnet custody, multi-authority release,
+  disputes, and generalized exchange are not claimed.
+
+## Test Taxonomy
+
+- **behavior:** deterministic domain rules, authorization, state transitions,
+  idempotency, and verifier rejection contracts.
+- **integration:** real in-process or process-boundary wiring across KAMN
+  components, persistence, SDK, MCP, CLI, and proof surfaces.
+- **live:** explicitly configured external runtime or devnet execution with
+  fail-closed evidence requirements.
+- **docs-contract:** navigation, command, schema, and policy text markers; these
+  do not substitute for runtime behavior proof.
+- **legacy compatibility:** retained old-format and old-command boundaries that
+  cannot contribute to canonical MVP success.
 
 ## Module Maps
 
