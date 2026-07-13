@@ -1,6 +1,6 @@
 use super::finalize;
 
-#[path = "agent_transaction_finalize_test_support.rs"]
+#[path = "agent_transaction_finalize_tests_support.rs"]
 mod support;
 use support::ProofRetryFixture;
 

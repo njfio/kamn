@@ -8,11 +8,11 @@ use crate::{parse_agent_transaction_demo_config, AgentTransactionDemoConfig};
 mod actor_fixture;
 use actor_fixture::{ActorFixture, Overrides};
 
-#[path = "agent_transaction_finalize_fake_solana.rs"]
+#[path = "agent_transaction_finalize_tests_fake_solana.rs"]
 mod fake_solana;
 use fake_solana::install_fake_solana;
 
-#[path = "agent_transaction_finalize_live_evidence.rs"]
+#[path = "agent_transaction_finalize_tests_live_evidence.rs"]
 mod live_evidence;
 use live_evidence::write_live_evidence;
 

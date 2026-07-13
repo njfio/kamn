@@ -124,6 +124,7 @@ Run the local quality gates before publishing changes:
 ```bash
 make check
 make test
+bash scripts/ci/check_kamn_core_missing_docs_policy.sh
 ```
 
 ## For AI Agents And Maintainers
@@ -136,6 +137,21 @@ Do not weaken tests or claim boundaries. Do not commit secrets, keypairs,
 `.kamn/` artifacts, generated package metadata, or unrelated local files.
 Prefer consolidating existing surfaces over adding architecture.
 
+### Transport build profile
+
+`kamn-core` uses these dependencies for live HTTPS transport:
+
+- `rustls`
+- `rustls-pemfile`
+- `webpki-roots`
+
+The [live TLS transport ADR](docs/architecture/adr-kamn-core-live-tls-transport.md)
+records that boundary. Verify the local-only profile separately:
+
+```bash
+cargo check -p kamn-core --no-default-features
+```
+
 ## Contract Reference
 
 Detailed command, policy, and validation markers live in the
@@ -145,6 +161,9 @@ Detailed command, policy, and validation markers live in the
 
 - [Evaluator runbook](docs/validation/mvp-evaluator-demo.md)
 - [Architecture index](docs/architecture/README.md)
+- [kamn-core module map](docs/architecture/kamn-core-module-map.md)
+- [Engineering hardening wave](docs/planning/engineering-hardening-wave.md)
+- [Rustdoc publishing](docs/developer/rustdoc-publishing.md)
 - [README contract reference](docs/developer/readme-contract-reference.md)
 - [CI strategy](docs/ci/strategy.md)
 - [Kolme devnet operations](docs/planning/kolme-devnet-ops.md)
