@@ -6,6 +6,10 @@ use super::{
     MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
+#[cfg(test)]
+#[path = "agent_transaction_finalize_tests.rs"]
+mod tests;
+
 pub(super) fn finalize(
     config: &AgentTransactionDemoConfig,
     paths: &AgentTransactionEvidencePaths,
