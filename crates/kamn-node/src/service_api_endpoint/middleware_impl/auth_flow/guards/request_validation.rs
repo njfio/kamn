@@ -30,7 +30,9 @@ pub(super) async fn validate_request(
     .await?;
     drop(replay_guard);
     #[cfg(test)]
-    super::super::super::super::post_auth_test_gate::wait_at_test_post_auth_gate();
+    super::super::super::super::post_auth_test_gate::wait_at_test_post_auth_gate(
+        parsed_request.path.as_str(),
+    );
     policy_checks::validate_websocket_requirements(
         state,
         parsed_request,

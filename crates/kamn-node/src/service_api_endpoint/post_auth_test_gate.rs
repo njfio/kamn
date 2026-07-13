@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 static ACTIVE_GATE: Mutex<Option<Arc<GateState>>> = Mutex::new(None);
 
 struct GateState {
+    target_path: String,
     state: Mutex<GateProgress>,
     changed: Condvar,
 }
@@ -18,8 +19,9 @@ pub(crate) struct TestPostAuthGate {
     state: Arc<GateState>,
 }
 
-pub(crate) fn set_test_post_auth_gate() -> TestPostAuthGate {
+pub(crate) fn set_test_post_auth_gate(target_path: &str) -> TestPostAuthGate {
     let state = Arc::new(GateState {
+        target_path: target_path.to_owned(),
         state: Mutex::new(GateProgress::default()),
         changed: Condvar::new(),
     });
@@ -29,12 +31,12 @@ pub(crate) fn set_test_post_auth_gate() -> TestPostAuthGate {
     TestPostAuthGate { state }
 }
 
-pub(crate) fn wait_at_test_post_auth_gate() {
+pub(crate) fn wait_at_test_post_auth_gate(request_path: &str) {
     let state = active_gate()
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .clone();
-    if let Some(state) = state {
+    if let Some(state) = state.filter(|gate| gate.target_path == request_path) {
         state.arrive_and_wait();
     }
 }
