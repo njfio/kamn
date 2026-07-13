@@ -7,6 +7,9 @@ fn spec_c01_mvp_runbook_documents_pi_tool_harness_boundaries() {
     let runbook = read_runbook();
 
     for needle in [
+        "## Canonical Pi/Devnet Transaction",
+        "the sole canonical settlement and asset-movement demo",
+        "`make demo-mvp` remains local-only compatibility proof",
         "## Optional Pi Agent Harness",
         ".pi/extensions/kamn-mvp/index.ts",
         "kamn_write_agent_harness_evidence",

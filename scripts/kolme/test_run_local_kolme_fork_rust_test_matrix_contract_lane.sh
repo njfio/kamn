@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_fork_rust_test_matrix_contract_lane.py"
@@ -18,8 +18,8 @@ TMP_POLICY_REPORT="$(mktemp)"
 TMP_REPO="$(mktemp -d)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"; rm -rf "$TMP_REPO"' EXIT
 
-if [ ! -x "$RUNNER" ]; then
-  echo "expected local fork rust test matrix contract lane runner to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -83,11 +83,6 @@ if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_rust_test_matr
   exit 1
 fi
 
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected local fork rust test matrix contract lane to dispatch through manifest wrapper" >&2
-  exit 1
-fi
-
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local fork rust test matrix contract lane manifest to exist" >&2
   exit 1
@@ -141,8 +136,8 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to reference fork rust test matrix run manifest in $docs_file" >&2
     exit 1
   fi
-  if ! grep -q "run_local_kolme_fork_rust_test_matrix_contract_lane.sh" "$docs_file"; then
-    echo "expected docs parity to reference fork rust test matrix contract lane in $docs_file" >&2
+  if ! grep -q "kolme_local_fork_rust_test_matrix_contract_lane.json" "$docs_file"; then
+    echo "expected docs parity to reference fork rust test matrix contract manifest in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "check_local_kolme_fork_rust_test_matrix_policy.py" "$docs_file"; then
@@ -179,7 +174,7 @@ git -C "$TMP_REPO" add README.md
 git -C "$TMP_REPO" commit -q -m "init matrix contract fixture"
 git -C "$TMP_REPO" remote add origin "https://github.com/njfio/kolme_fork.git"
 
-bash "$RUNNER" \
+bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
   --checkout-path "$TMP_REPO" \
   --output-json "$TMP_REPORT" \
   --policy-output-json "$TMP_POLICY_REPORT" \

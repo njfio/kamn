@@ -2,24 +2,19 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_nonce_broadcast_parity_matrix.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected nonce/broadcast parity contract lane script to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
 if [ ! -x "$MATRIX_RUNNER" ]; then
   echo "expected nonce/broadcast parity matrix runner to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected nonce/broadcast parity contract lane to dispatch through manifest wrapper" >&2
   exit 1
 fi
 
@@ -48,7 +43,7 @@ if ! grep -q "test_run_nonce_broadcast_parity_contract_lane.sh" "$ROOT_DIR/docs/
   exit 1
 fi
 
-contract_output="$(bash "$CONTRACT_LANE")"
+contract_output="$(bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract)"
 if ! printf '%s\n' "$contract_output" | grep -q "Kolme nonce/broadcast parity contract lane tests passed."; then
   echo "expected nonce/broadcast parity contract lane success marker" >&2
   exit 1

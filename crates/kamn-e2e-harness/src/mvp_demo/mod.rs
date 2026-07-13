@@ -62,6 +62,7 @@ mod three_agent_view_artifacts;
 mod three_agent_view_verify;
 mod three_agent_views;
 mod verify;
+mod verify_claims;
 mod verify_support;
 
 pub use command_config::{LiveTaskEvidencePaths, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};

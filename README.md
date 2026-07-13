@@ -35,7 +35,10 @@ OAuth, three local KAMN identity keys, and funded Solana devnet payer/recipient
 keypairs. The exact one-time key and environment setup is in the
 [evaluator runbook](docs/validation/mvp-evaluator-demo.md).
 
-Run the canonical evaluator demo after applying that configuration:
+### Canonical Pi/devnet transaction
+
+Run the sole canonical settlement and asset-movement demo after applying that
+configuration:
 
 ```bash
 make demo-agent-transaction
@@ -60,7 +63,8 @@ signature-derived Solana Explorer devnet link.
 
 ### Local bounded proof
 
-To inspect KAMN's local runtime and proof surfaces without autonomous Pi actors:
+`make demo-mvp` is a local-only compatibility proof. Use it to inspect KAMN's
+local runtime and proof surfaces without autonomous Pi actors:
 
 ```bash
 make demo-mvp
@@ -91,7 +95,7 @@ Every report labels claims explicitly:
 | `real` | Local runtime or proof behavior that actually ran. |
 | `local-only` | Real local behavior without external value movement. |
 | `devnet-backed` | Solana devnet evidence proves the settlement or movement. |
-| `dry-run` | Intentional non-live execution; never required-claim success. |
+| `dry-run` | Intentional non-live execution; never canonical MVP success. |
 | `placeholder` | Illustrative or unimplemented; never MVP success. |
 | `roadmap` | Future work, including production readiness. |
 
@@ -120,6 +124,7 @@ Run the local quality gates before publishing changes:
 ```bash
 make check
 make test
+bash scripts/ci/check_kamn_core_missing_docs_policy.sh
 ```
 
 ## For AI Agents And Maintainers
@@ -132,6 +137,21 @@ Do not weaken tests or claim boundaries. Do not commit secrets, keypairs,
 `.kamn/` artifacts, generated package metadata, or unrelated local files.
 Prefer consolidating existing surfaces over adding architecture.
 
+### Transport build profile
+
+`kamn-core` uses these dependencies for live HTTPS transport:
+
+- `rustls`
+- `rustls-pemfile`
+- `webpki-roots`
+
+The [live TLS transport ADR](docs/architecture/adr-kamn-core-live-tls-transport.md)
+records that boundary. Verify the local-only profile separately:
+
+```bash
+cargo check -p kamn-core --no-default-features
+```
+
 ## Contract Reference
 
 Detailed command, policy, and validation markers live in the
@@ -141,6 +161,9 @@ Detailed command, policy, and validation markers live in the
 
 - [Evaluator runbook](docs/validation/mvp-evaluator-demo.md)
 - [Architecture index](docs/architecture/README.md)
+- [kamn-core module map](docs/architecture/kamn-core-module-map.md)
+- [Engineering hardening wave](docs/planning/engineering-hardening-wave.md)
+- [Rustdoc publishing](docs/developer/rustdoc-publishing.md)
 - [README contract reference](docs/developer/readme-contract-reference.md)
 - [CI strategy](docs/ci/strategy.md)
 - [Kolme devnet operations](docs/planning/kolme-devnet-ops.md)

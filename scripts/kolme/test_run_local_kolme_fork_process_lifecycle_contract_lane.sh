@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py"
@@ -17,8 +17,8 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
 
-if [ ! -x "$RUNNER" ]; then
-  echo "expected local fork process lifecycle contract lane runner to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -79,11 +79,6 @@ fi
 
 if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_process_lifecycle_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
   echo "expected local run lane dispatcher to fail closed for unknown local fork process lifecycle wrapper" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected local fork process lifecycle contract lane to dispatch through manifest wrapper" >&2
   exit 1
 fi
 
@@ -181,8 +176,8 @@ if ! grep -q "kolme_local_kolme_fork_process_lifecycle_lane.json" "$DOC_FILE"; t
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local fork process lifecycle contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_process_lifecycle_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference process lifecycle contract manifest" >&2
   exit 1
 fi
 
@@ -231,8 +226,8 @@ if ! grep -q "kolme_local_kolme_fork_process_lifecycle_lane.json" "$README_FILE"
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local fork process lifecycle contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_process_lifecycle_contract_lane.json" "$README_FILE"; then
+  echo "expected README to reference process lifecycle contract manifest" >&2
   exit 1
 fi
 
@@ -302,7 +297,8 @@ if ! grep -q "Regression: #1494" "$DOC_FILE"; then
   exit 1
 fi
 
-bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
+bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
+  --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json

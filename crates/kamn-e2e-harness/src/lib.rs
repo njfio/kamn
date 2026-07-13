@@ -622,16 +622,18 @@ fn mvp_live_task_evidence_from_env() -> Result<Option<LiveTaskEvidencePaths>, St
     if values.iter().all(Option::is_none) {
         return Ok(None);
     }
-    if values.iter().any(Option::is_none) {
+    let [Some(handoff), Some(agent_a_receipt), Some(agent_b_receipt), Some(agent_c_observation)] =
+        values
+    else {
         return Err(
             "live task evidence configuration must provide all four artifact paths".to_owned(),
         );
-    }
+    };
     Ok(Some(LiveTaskEvidencePaths {
-        handoff: values[0].clone().expect("all values checked"),
-        agent_a_receipt: values[1].clone().expect("all values checked"),
-        agent_b_receipt: values[2].clone().expect("all values checked"),
-        agent_c_observation: values[3].clone().expect("all values checked"),
+        handoff,
+        agent_a_receipt,
+        agent_b_receipt,
+        agent_c_observation,
     }))
 }
 

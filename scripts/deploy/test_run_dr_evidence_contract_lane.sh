@@ -2,14 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-FAST_SCRIPT="$ROOT_DIR/scripts/deploy/run_dr_evidence_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+WRAPPER_NAME="run_dr_evidence_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/deploy/run_dr_evidence_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/deploy/dr_evidence_contract_lane_contract.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/deploy_dr_evidence_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
-  echo "expected DR evidence fast-lane runner to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -25,23 +26,13 @@ fi
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
-bash "$FAST_SCRIPT" >"$TMP_OUT"
+bash "$MANIFEST_RUNNER" --manifest "$MANIFEST_FILE" --phase contract >"$TMP_OUT"
 if ! grep -q "dr evidence contract lane tests passed." "$TMP_OUT"; then
   echo "expected DR evidence contract lane success marker" >&2
   exit 1
 fi
 
-if [ ! -L "$FAST_SCRIPT" ]; then
-  echo "expected DR evidence contract lane wrapper to be a dispatcher symlink" >&2
-  exit 1
-fi
-
-if [ "$(readlink "$FAST_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
-  echo "expected DR evidence contract lane wrapper to target shared non-Kolme dispatcher" >&2
-  exit 1
-fi
-
-resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$FAST_SCRIPT")" --resolve-manifest-path)"
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$WRAPPER_NAME" --resolve-manifest-path)"
 if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
   echo "expected DR evidence wrapper to resolve deploy manifest via dispatcher" >&2
   exit 1
@@ -62,8 +53,8 @@ if ! grep -q "check_release_slo_gates.sh" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
-if ! grep -Fq "run_dr_evidence_contract_lane.sh" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to execute fast-lane DR checks first" >&2
+if ! grep -Fq "deploy_dr_evidence_contract_lane.json" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to execute DR contract manifest first" >&2
   exit 1
 fi
 

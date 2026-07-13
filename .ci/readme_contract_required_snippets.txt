@@ -54,12 +54,12 @@ kamn.kolme.local-api-smoke-summary.v1
 run_local_kolme_live_api_conformance_harness.sh --mode dry-run
 run_local_kolme_live_api_conformance_harness.sh --mode run
 check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json
-run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json
+run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json
 kamn.kolme.local-live-api-conformance-summary.v1
 run_local_kolme_fork_bootstrap_readiness_lane.sh --mode dry-run
 run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run
 check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json
-run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json
+run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json
 kamn.kolme.local-fork-bootstrap-readiness-summary.v1
 run_local_kamn_live_runtime_integration_lane.sh --mode dry-run
 run_local_kamn_live_runtime_integration_lane.sh --mode run
@@ -101,7 +101,7 @@ Regression: #2226
 run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run
 run_local_kolme_fork_process_lifecycle_lane.sh --mode run
 check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json
-run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
+run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
 kamn.kolme.local-fork-process-lifecycle-summary.v1
 run_local_kolme_fork_profile_preflight_lane.sh --mode dry-run
 check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json
@@ -154,7 +154,7 @@ scripts/kolme/test_check_local_e2e_integration_policy.sh
 scripts/kolme/test_run_local_e2e_integration_contract_lane.sh
 scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh
 scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh
-run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json
+run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json --phase contract --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json
 check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json
 KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120
 run_local_native_api_parity_live_proof_lane.sh --mode run

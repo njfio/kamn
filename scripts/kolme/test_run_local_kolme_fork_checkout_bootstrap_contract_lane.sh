@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py"
 RUN_WRAPPER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh"
@@ -13,8 +13,8 @@ DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected local fork checkout bootstrap contract lane script to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -73,11 +73,6 @@ if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_checkout_boots
   exit 1
 fi
 
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected local fork checkout bootstrap contract lane to dispatch through manifest wrapper" >&2
-  exit 1
-fi
-
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local fork checkout bootstrap contract lane manifest to exist" >&2
   exit 1
@@ -126,8 +121,8 @@ for marker in "${required_coverage_markers[@]}"; do
 done
 
 for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
-  if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$docs_file"; then
-    echo "expected docs parity to reference local fork checkout bootstrap contract lane in $docs_file" >&2
+  if ! grep -q "kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json" "$docs_file"; then
+    echo "expected docs parity to reference checkout bootstrap contract manifest in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "run_local_kolme_fork_checkout_bootstrap_lane.sh" "$docs_file"; then
@@ -174,7 +169,7 @@ if ! grep -q "Regression: #1663" "$DOC_FILE"; then
 fi
 
 lane_output="$(
-  bash "$CONTRACT_LANE" \
+  bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
     --mode dry-run \
     --max-seconds 90
 )"

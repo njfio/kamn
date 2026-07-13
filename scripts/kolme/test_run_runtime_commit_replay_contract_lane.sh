@@ -2,19 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_replay_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/runtime_commit_replay_contract_lane.py"
 ROADMAP_DOC="$ROOT_DIR/docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected runtime commit replay contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected runtime commit replay contract lane to dispatch through manifest wrapper" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -86,7 +81,7 @@ fi
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 replay_status=0
-if ! bash "$CONTRACT_LANE" >"$TMP_OUT" 2>&1; then
+if ! bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract >"$TMP_OUT" 2>&1; then
   replay_status=$?
 fi
 if [ "$replay_status" -ne 0 ]; then

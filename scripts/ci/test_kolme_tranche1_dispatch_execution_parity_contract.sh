@@ -4,12 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CONFIG_FILE="$ROOT_DIR/fixtures/ci/kolme_manifest_migration_contract_groups.json"
+DELETION_MANIFEST="$ROOT_DIR/fixtures/ci/superseded_script_deletion_manifest.json"
 MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 GROUP_KEY="tranche1"
 MAX_SECONDS_ENV="KAMN_KOLME_TRANCHE1_DISPATCH_PARITY_MAX_SECONDS"
 DEFAULT_MAX_SECONDS=360
 
 test_harness_require_file "$CONFIG_FILE" "expected migration group config file to exist: $CONFIG_FILE"
+test_harness_require_file "$DELETION_MANIFEST" "expected deletion manifest to exist: $DELETION_MANIFEST"
 
 test_harness_require_file "$MANIFEST_RUNNER" "expected manifest runner script to exist: $MANIFEST_RUNNER"
 
@@ -42,9 +44,10 @@ for lane in lanes:
     lane_script = lane.get("lane_script")
     manifest_file = lane.get("manifest_file")
     lane_id = lane.get("lane_id")
-    if not all(isinstance(field, str) and field for field in (lane_script, manifest_file, lane_id)):
+    contract_script = lane.get("contract_script")
+    if not all(isinstance(field, str) and field for field in (lane_script, manifest_file, lane_id, contract_script)):
         raise SystemExit(f"invalid lane entry in group {group_key}")
-    print(f"{lane_script}|{manifest_file}|{lane_id}")
+    print(f"{lane_script}|{manifest_file}|{lane_id}|{contract_script}")
 PY
 )
 
@@ -130,13 +133,19 @@ fi
 start_epoch="$(date +%s)"
 
 for spec in "${lane_specs[@]}"; do
-  IFS='|' read -r lane_script manifest_file lane_id <<<"$spec"
+  IFS='|' read -r lane_script manifest_file lane_id contract_script <<<"$spec"
 
   lane_script_path="$ROOT_DIR/$lane_script"
   manifest_path="$ROOT_DIR/$manifest_file"
+  contract_script_path="$ROOT_DIR/$contract_script"
 
-  if [ ! -f "$lane_script_path" ]; then
-    echo "expected lane script file for parity check: $lane_script_path" >&2
+  if [ -e "$lane_script_path" ]; then
+    echo "expected superseded lane script to remain deleted: $lane_script_path" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "\"script_path\": \"$lane_script\"" "$DELETION_MANIFEST"; then
+    echo "expected deleted lane script in deletion manifest: $lane_script" >&2
     exit 1
   fi
 
@@ -145,53 +154,48 @@ for spec in "${lane_specs[@]}"; do
     exit 1
   fi
 
-  wrapper_output="$TMP_DIR/${lane_id//./_}.wrapper.out"
+  if [ ! -f "$contract_script_path" ]; then
+    echo "expected contract implementation for parity check: $contract_script_path" >&2
+    exit 1
+  fi
+
+  wrapper_output="$TMP_DIR/${lane_id//./_}.manifest.out"
   direct_output="$TMP_DIR/${lane_id//./_}.direct.out"
-  wrapper_normalized="$TMP_DIR/${lane_id//./_}.wrapper.normalized.out"
+  wrapper_normalized="$TMP_DIR/${lane_id//./_}.manifest.normalized.out"
+  wrapper_contract_normalized="$TMP_DIR/${lane_id//./_}.manifest-contract.normalized.out"
   direct_normalized="$TMP_DIR/${lane_id//./_}.direct.normalized.out"
 
-  if ! run_parity_lane_command "$lane_id" bash "$lane_script_path" >"$wrapper_output" 2>&1; then
-    echo "expected wrapper lane command to pass for parity check: $lane_script" >&2
+  if ! run_parity_lane_command "$lane_id" bash "$MANIFEST_RUNNER" --manifest "$manifest_path" --phase contract >"$wrapper_output" 2>&1; then
+    echo "expected manifest lane command to pass for parity check: $manifest_file" >&2
     cat "$wrapper_output" >&2 || true
     exit 1
   fi
 
-  if ! run_parity_lane_command "$lane_id" bash "$MANIFEST_RUNNER" --manifest "$manifest_path" --phase contract >"$direct_output" 2>&1; then
-    echo "expected direct manifest lane command to pass for parity check: $manifest_file" >&2
+  if ! run_parity_lane_command "$lane_id" python3 "$contract_script_path" >"$direct_output" 2>&1; then
+    echo "expected direct contract command to pass for parity check: $contract_script" >&2
     cat "$direct_output" >&2 || true
     exit 1
   fi
 
   normalize_output "$wrapper_output" >"$wrapper_normalized"
   normalize_output "$direct_output" >"$direct_normalized"
+  grep -Ev '^(lane_id|phase|exit_code|status)=' "$wrapper_normalized" >"$wrapper_contract_normalized"
 
   if ! grep -Fxq "lane_id=$lane_id" "$wrapper_normalized"; then
-    echo "expected wrapper output to include lane_id marker: $lane_id" >&2
+    echo "expected manifest output to include lane_id marker: $lane_id" >&2
     cat "$wrapper_normalized" >&2 || true
-    exit 1
-  fi
-
-  if ! grep -Fxq "lane_id=$lane_id" "$direct_normalized"; then
-    echo "expected direct output to include lane_id marker: $lane_id" >&2
-    cat "$direct_normalized" >&2 || true
     exit 1
   fi
 
   if ! grep -Fxq "status=ok" "$wrapper_normalized"; then
-    echo "expected wrapper output to include status=ok for lane: $lane_id" >&2
+    echo "expected manifest output to include status=ok for lane: $lane_id" >&2
     cat "$wrapper_normalized" >&2 || true
     exit 1
   fi
 
-  if ! grep -Fxq "status=ok" "$direct_normalized"; then
-    echo "expected direct output to include status=ok for lane: $lane_id" >&2
-    cat "$direct_normalized" >&2 || true
-    exit 1
-  fi
-
-  if ! diff -u "$wrapper_normalized" "$direct_normalized" >/dev/null; then
-    echo "expected wrapper/direct normalized outputs to match for lane: $lane_id" >&2
-    diff -u "$wrapper_normalized" "$direct_normalized" >&2 || true
+  if ! diff -u "$wrapper_contract_normalized" "$direct_normalized" >/dev/null; then
+    echo "expected manifest/direct contract outputs to match for lane: $lane_id" >&2
+    diff -u "$wrapper_contract_normalized" "$direct_normalized" >&2 || true
     exit 1
   fi
 

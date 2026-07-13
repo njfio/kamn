@@ -393,7 +393,7 @@ def main() -> int:
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
     for marker in (
-        "run_local_signed_to_kolme_demo_contract_lane.sh",
+        "kolme_local_signed_to_kolme_demo_contract_lane.json",
         "check_local_signed_to_kolme_demo_policy.py",
         "run_local_kamn_live_runtime_integration_lane.sh",
         "runtime_commit_submit_evidence_marker_present",
@@ -408,7 +408,7 @@ def main() -> int:
             return 1
 
     for marker in (
-        "run_local_signed_to_kolme_demo_contract_lane.sh",
+        "kolme_local_signed_to_kolme_demo_contract_lane.json",
         "check_local_signed_to_kolme_demo_policy.py",
         "runtime_commit_submit_evidence_marker_present",
         "runtime_commit_finality_evidence_marker_present",

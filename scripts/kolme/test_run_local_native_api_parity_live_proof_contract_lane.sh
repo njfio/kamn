@@ -2,19 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/docs/developer/readme-contract-reference.md"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected local native API parity live proof contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected local native API parity live proof contract lane to dispatch through manifest wrapper" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -47,8 +42,8 @@ if [ ! -f "$CONTRACT_IMPL" ]; then
   exit 1
 fi
 
-if ! grep -q "run_local_native_api_parity_live_proof_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local native API parity contract lane" >&2
+if ! grep -q "kolme_local_native_api_parity_live_proof_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local native API parity manifest" >&2
   exit 1
 fi
 
@@ -62,12 +57,12 @@ if ! grep -q "Regression: #1465" "$DOC_FILE"; then
   exit 1
 fi
 
-if ! grep -q "run_local_native_api_parity_live_proof_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local native API parity contract lane" >&2
+if ! grep -q "kolme_local_native_api_parity_live_proof_contract_lane.json" "$README_FILE"; then
+  echo "expected README to reference local native API parity contract manifest" >&2
   exit 1
 fi
 
-lane_output="$(bash "$CONTRACT_LANE" --max-seconds 120)"
+lane_output="$(bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- --max-seconds 120)"
 if ! printf '%s\n' "$lane_output" | grep -q "local native API parity live proof contract lane tests passed."; then
   echo "expected local native API parity live proof contract lane success marker" >&2
   exit 1

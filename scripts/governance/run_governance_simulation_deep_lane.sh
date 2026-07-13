@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+CONTRACT_MANIFEST="$ROOT_DIR/scripts/framework/manifests/governance_simulation_contract_lane.json"
 MATRIX_SCRIPT="$ROOT_DIR/scripts/governance/run_governance_simulation_matrix.py"
 FIXTURE_FILE="$ROOT_DIR/fixtures/governance_simulation/veto_timelock_cases.json"
 
@@ -27,7 +28,7 @@ fi
 
 mkdir -p "$(dirname "$output_json")"
 
-bash "$CONTRACT_LANE" >/dev/null
+bash "$MANIFEST_RUNNER" --manifest "$CONTRACT_MANIFEST" --phase contract >/dev/null
 
 matrix_output="$(
   python3 "$MATRIX_SCRIPT" \
@@ -41,4 +42,3 @@ if ! printf '%s\n' "$matrix_output" | grep -q '^status=pass;'; then
 fi
 
 echo "governance simulation deep lane tests passed."
-

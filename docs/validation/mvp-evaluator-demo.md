@@ -1,9 +1,14 @@
 # MVP Evaluator Demo
 
-This runbook documents the evaluator-facing KAMN MVP demo command. It packages current bounded local proof surfaces into one local artifact bundle and verifies the proof report's claim boundaries.
+This runbook documents the evaluator-facing KAMN MVP demo commands. The Pi/devnet
+transaction is the canonical product story; the local-only compatibility proof
+remains available for bounded runtime inspection.
 
 ## What This Proves
-- `make demo-mvp` creates a fresh local demo run directory under `.kamn/demo/<run-id>/`.
+- `make demo-agent-transaction` drives three Pi actors through one local KAMN
+  transaction and requires finalized Solana devnet settlement evidence.
+- `make demo-mvp` creates a local-only compatibility proof under
+  `.kamn/demo/<run-id>/`.
 - The demo writes `.kamn/demo/latest/proof/report.json` and `.kamn/demo/latest/proof/report.md`.
 - The report includes required local MVP claims for runtime startup, authenticated Alice/Bob identities, signed flow, durable state, relay/projection, websocket visibility, and audit/proof export.
 - The proof bundle captures the SDK localhost signed demo artifact, service-api working vertical slice output, and service-api websocket output.
@@ -20,43 +25,9 @@ This runbook documents the evaluator-facing KAMN MVP demo command. It packages c
 - not broad bridge finality
 - not real economic value; Solana devnet tokens are developer-test tokens only
 
-## Local Demo
-Run from a normal checkout:
+## Canonical Pi/Devnet Transaction
 
-```bash
-make demo-mvp
-```
-
-Expected artifacts:
-
-```bash
-.kamn/demo/latest/proof/report.json
-.kamn/demo/latest/proof/report.md
-```
-
-The report links the concrete run artifacts under `.kamn/demo/<run-id>/proof/`, including:
-
-```bash
-localhost-signed-demo.json
-localhost-signed-demo-output.txt
-service-api-vertical-slice-output.txt
-service-api-websocket-output.txt
-audit-export.json
-devnet-settlement-output.txt
-three-agent-transcript.json
-```
-
-Verify the generated report:
-
-```bash
-cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
-```
-
-The default demo is local-only for runtime, auth, message/task, state, relay, websocket, and audit proof. It does not claim settlement or asset movement success.
-
-## Canonical Three-Agent Devnet Demo
-
-Use this path for the complete evaluator story. It requires Pi `0.80.3` or
+This is the sole canonical settlement and asset-movement demo. It requires Pi `0.80.3` or
 compatible, an existing `openai-codex` OAuth login with `gpt-5.5`, three local
 KAMN identity keys, and a funded Solana devnet payer/recipient pair.
 
@@ -117,6 +88,20 @@ settlement log, finalized signature, recipient, amount, and exact recipient
 balance movement. It also rejects proof paths outside the recorded run. The
 human report links the verified signature directly to Solana Explorer with
 `cluster=devnet`.
+
+## Local-Only Compatibility Proof
+
+`make demo-mvp` remains local-only compatibility proof. Run it from a normal
+checkout to inspect bounded runtime behavior without autonomous Pi actors:
+
+```bash
+make demo-mvp
+```
+
+It writes `.kamn/demo/latest/proof/report.json` and `report.md`, covering local
+runtime, auth, message/task, state, relay, websocket, and audit proof. It does
+not claim settlement or asset movement success. Verify it with the same
+`verify-mvp-demo` command shown above.
 
 ## Optional Pi Agent Harness
 KAMN includes a project-local Pi extension at `.pi/extensions/kamn-mvp/index.ts`.

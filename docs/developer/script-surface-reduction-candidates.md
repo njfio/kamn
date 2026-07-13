@@ -8,6 +8,38 @@ script_surface_short_wrapper_category_count=24
 script_surface_short_wrapper_total_candidates=62
 script_surface_short_wrapper_priority_categories_csv=ci,sdk,runtime,kolme,bridge,framework
 
+## Issue 7105 Baseline
+
+The 2026-07-13 canonical MVP cleanup inventory identified a bounded first wave:
+
+- 25 present symlink entrypoints already listed in
+  `fixtures/ci/superseded_script_deletion_manifest.json`.
+- 0 physical shell source lines owned by those symlinks; target-file lines must
+  not be counted once per link.
+- 68 Rust test lines in one historical evaluator-rehearsal marker binary.
+- `scripts/framework/run_manifest_lane.sh` plus checked-in manifests and
+  replacement evidence as the required behavior-preserving path.
+
+This baseline does not approve broader script, fixture, spec, or documentation
+deletion.
+
+## Issue 7105 Result
+
+- Approved symlink entrypoints removed: 25 of 25.
+- Remaining deletion-manifest entrypoints in the working tree: 0.
+- Physical shell source LOC attributable to symlink removal alone: 0.
+- Physical shell source diff after manifest replacement rewiring: net -85
+  lines (`+198/-308` raw shell diff, excluding 25 deleted symlink entries).
+- Historical docs-marker Rust test LOC removed: 68.
+- Replacement manifest, stale-reference, and command-surface checks: passing.
+- Canonical Pi/devnet demo and standalone report verifier: passing.
+- Critical-path coverage: passing without threshold reduction; service API
+  function coverage is 26.19% against a 25% minimum.
+- Critical-path mutation gate: 10 of 10 bounded mutants caught.
+
+The reduction removes callable aliases and one non-authoritative test binary;
+it does not claim deletion of the shared dispatcher implementations.
+
 This candidate matrix prioritizes short-wrapper consolidation opportunities by
 category using deterministic thresholds:
 

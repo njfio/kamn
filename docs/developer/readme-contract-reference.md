@@ -108,7 +108,7 @@ cargo run -p kamn-node -- --role processor --runtime-mode bootstrap
 
 ```bash
 # Fast-gate native parity contract lane (PR-safe, bounded)
-bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json --phase contract --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json
 python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json
 # budget marker
 KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120
@@ -117,7 +117,7 @@ KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120
 KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run --nonce-command "curl --silent --show-error --fail http://127.0.0.1:3000/get-next-nonce?pubkey=test-key" --broadcast-command "curl --silent --show-error --fail --request PUT --data '{\"message\":\"native-parity\",\"signature\":\"sig\",\"recovery_id\":1}' http://127.0.0.1:3000/broadcast" --finality-command "curl --silent --show-error --fail http://127.0.0.1:3000/block/1" --max-seconds 180 --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json
 
 # Contract lane wrapper (manifest-backed)
-bash scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json --policy-output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json --phase contract --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json --policy-output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json
 python3 scripts/kolme/check_local_native_api_parity_live_proof_policy.py --report-file /tmp/kolme-local-native-api-parity-live-proof-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json
 ```
 
@@ -148,12 +148,21 @@ Canonical runtime integration flow and module ownership mapping are documented i
 
 ### Fast Make Lanes
 
+- `make demo-agent-transaction - canonical Pi/devnet transaction demo`
+- `make demo-mvp - local-only compatibility proof`
+
 ```bash
 # Fast static gates
 make check
 
 # Default bounded test lane
 make test
+
+# Canonical three-agent transaction with required devnet settlement
+make demo-agent-transaction
+
+# Local runtime/proof compatibility lane without settlement success
+make demo-mvp
 
 # Two-process localhost signed-message demo
 make demo
@@ -298,10 +307,10 @@ bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh \
 ### Run Unified Local Signed-to-Kolme Demo Contract Lane
 
 ```bash
-bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh \
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json --phase contract \
   --mode dry-run \
   --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json
-KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh \
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json --phase contract \
   --mode run \
   --max-seconds 240 \
   --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json
@@ -360,7 +369,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootst
 scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_checkout_bootstrap_lane.sh --resolve-manifest-path
 # resolved: scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_lane.json
 python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json
-bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json
 # schema: kamn.kolme.local-fork-checkout-bootstrap-summary.v1
 # fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1
 # head_commit_mismatch
@@ -371,11 +380,11 @@ bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh --ou
 ### Run Real Fork Local Process Wrapper Contract Lane
 
 ```bash
-bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract \
   --mode dry-run \
   --checkout-path /tmp/kolme_fork \
   --output-json /tmp/kolme-local-fork-real-process-summary.json
-KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract \
   --mode run \
   --checkout-path /tmp/kolme_fork \
   --fork-remote-url https://github.com/njfio/kolme_fork.git \
@@ -394,7 +403,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_co
   --lifecycle-runtime-commit-max-seconds 30 \
   --output-json /tmp/kolme-local-fork-real-process-summary.json
 # optional lifecycle runtime finality pass-through into nested process lifecycle lane
-KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract \
   --mode run \
   --checkout-path /tmp/kolme_fork \
   --lifecycle-mode run \
@@ -557,7 +566,7 @@ scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_rust_test
 python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json
 
 # bounded contract lane (dry-run + local-only run + fail-closed policy checks)
-bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json
 # evidence bundle marker contract: evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1
 # evidence bundle payload contract: evidence_bundle includes schema linkage, status, reason_code, budget_status, command_count, artifact_paths
 # Regression: #1541
@@ -636,7 +645,7 @@ bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --
 python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json
 
 # bounded contract lane (spawns local mock API server for deterministic integration validation)
-bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json
 ```
 
 ### Run Local Kolme Fork Bootstrap/Readiness Lane
@@ -653,7 +662,7 @@ bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run -
 python3 scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json
 
 # bounded contract lane (spawns local mock API server + pinned checkout fixture)
-bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json
 # schema: kamn.kolme.local-fork-bootstrap-readiness-summary.v1
 ```
 
@@ -1166,7 +1175,7 @@ scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_process_l
 python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
 
 # bounded contract lane (spawns local mock API process command + pinned checkout fixture)
-bash scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
 # schema: kamn.kolme.local-fork-process-lifecycle-summary.v1
 ```
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json"
 RUN_WRAPPER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh"
@@ -16,8 +16,8 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
 
-if [ ! -x "$RUNNER" ]; then
-  echo "expected local fork bootstrap/readiness contract lane runner to be executable" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -81,11 +81,6 @@ if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_bootstrap_read
   exit 1
 fi
 
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected local fork bootstrap/readiness contract lane to dispatch through manifest wrapper" >&2
-  exit 1
-fi
-
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local fork bootstrap/readiness contract lane manifest to exist" >&2
   exit 1
@@ -128,8 +123,8 @@ if ! grep -q "check_local_kolme_fork_bootstrap_readiness_policy.py" "$DOC_FILE";
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_bootstrap_readiness_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local fork bootstrap/readiness contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference bootstrap/readiness contract manifest" >&2
   exit 1
 fi
 
@@ -138,8 +133,8 @@ if ! grep -q "check_local_kolme_fork_bootstrap_readiness_policy.py" "$README_FIL
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_bootstrap_readiness_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local fork bootstrap/readiness contract lane" >&2
+if ! grep -q "kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json" "$README_FILE"; then
+  echo "expected README to reference bootstrap/readiness contract manifest" >&2
   exit 1
 fi
 
@@ -149,7 +144,8 @@ if ! grep -q "Regression: #1488" "$DOC_FILE"; then
   exit 1
 fi
 
-bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
+bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract -- \
+  --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json

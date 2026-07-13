@@ -2,16 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_adapter_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected runtime commit adapter contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$CONTRACT_LANE"; then
-  echo "expected runtime commit adapter contract lane to dispatch through manifest wrapper" >&2
+if [ ! -x "$MANIFEST_RUNNER" ]; then
+  echo "expected manifest runner to be executable" >&2
   exit 1
 fi
 
@@ -50,7 +45,7 @@ if ! grep -q "run_runtime_commit_adapter_contract_lane.sh" "$ROOT_DIR/docs/found
   exit 1
 fi
 
-lane_output="$(bash "$CONTRACT_LANE")"
+lane_output="$(bash "$MANIFEST_RUNNER" --manifest "$MANIFEST" --phase contract)"
 if ! printf '%s\n' "$lane_output" | grep -q "Kolme runtime commit adapter contract lane tests passed."; then
   echo "expected runtime commit adapter contract lane success marker" >&2
   exit 1

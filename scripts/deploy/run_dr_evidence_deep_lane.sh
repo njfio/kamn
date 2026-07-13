@@ -4,13 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GENERATOR="$ROOT_DIR/scripts/deploy/generate_dr_evidence_bundle.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_release_slo_gates.sh"
-CONTRACT_LANE="$ROOT_DIR/scripts/deploy/run_dr_evidence_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+CONTRACT_MANIFEST="$ROOT_DIR/scripts/framework/manifests/deploy_dr_evidence_contract_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 DR_EVIDENCE_REPORT="$TMP_DIR/dr-evidence-report.json"
 
-bash "$CONTRACT_LANE"
+bash "$MANIFEST_RUNNER" --manifest "$CONTRACT_MANIFEST" --phase contract
 
 generator_output="$(
   bash "$GENERATOR" \

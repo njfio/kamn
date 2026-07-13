@@ -25,7 +25,7 @@ RUNNER = ROOT_DIR / "scripts/kolme/run_local_runtime_commit_live_lane.sh"
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
 DOC_FILES = [
     ROOT_DIR / "docs/planning/kolme-devnet-ops.md",
-    ROOT_DIR / "README.md",
+    ROOT_DIR / "docs/developer/readme-contract-reference.md",
 ]
 
 DOC_MARKERS = [

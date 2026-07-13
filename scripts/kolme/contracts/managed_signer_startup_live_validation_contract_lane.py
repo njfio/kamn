@@ -23,7 +23,7 @@ DOC_FILES = [
     ROOT_DIR / "docs/planning/kolme-devnet-ops.md",
     ROOT_DIR / "docs/ci/ci-cost-and-lane-framework.md",
     ROADMAP_DOC,
-    ROOT_DIR / "README.md",
+    ROOT_DIR / "docs/developer/readme-contract-reference.md",
 ]
 DOC_MARKERS = [
     "run_managed_signer_startup_live_validation_contract_lane.sh",

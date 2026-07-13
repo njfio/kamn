@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GENERATOR="$ROOT_DIR/scripts/deploy/generate_gonogo_evidence_bundle.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_gonogo_evidence_policy.sh"
-CONTRACT_LANE="$ROOT_DIR/scripts/deploy/run_gonogo_evidence_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
+CONTRACT_MANIFEST="$ROOT_DIR/scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -55,7 +56,8 @@ if [ "$MAX_SECONDS" -gt "$INCIDENT_GONOGO_LOCAL_HEAVY_MAX_SECONDS" ]; then
   exit 1
 fi
 
-bash "$CONTRACT_LANE" --max-seconds "$INCIDENT_GONOGO_CI_SMOKE_MAX_SECONDS"
+bash "$MANIFEST_RUNNER" --manifest "$CONTRACT_MANIFEST" --phase contract -- \
+  --max-seconds "$INCIDENT_GONOGO_CI_SMOKE_MAX_SECONDS"
 
 NO_GO_BUNDLE="$TMP_DIR/gonogo-deep-no-go.json"
 

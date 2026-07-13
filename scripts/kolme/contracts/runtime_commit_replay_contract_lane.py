@@ -13,7 +13,8 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[3]
 POLICY_CHECKER = ROOT_DIR / "scripts/kolme/check_runtime_commit_replay_policy.py"
 MATRIX_RUNNER = ROOT_DIR / "scripts/kolme/run_runtime_commit_replay_tamper_matrix.py"
-ADAPTER_CONTRACT_LANE = ROOT_DIR / "scripts/kolme/run_runtime_commit_adapter_contract_lane.sh"
+MANIFEST_RUNNER = ROOT_DIR / "scripts/framework/run_manifest_lane.sh"
+ADAPTER_MANIFEST = ROOT_DIR / "scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json"
 FIXTURE_FILE = ROOT_DIR / "fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"
 ROADMAP_DOC = ROOT_DIR / "docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC = ROOT_DIR / "docs/foundation/release-gonogo-checklist.md"
@@ -53,8 +54,8 @@ def main() -> int:
     if not os.access(MATRIX_RUNNER, os.X_OK):
         print("expected runtime commit replay matrix runner to be executable", file=sys.stderr)
         return 1
-    if not os.access(ADAPTER_CONTRACT_LANE, os.X_OK):
-        print("expected runtime commit adapter contract lane script to be executable", file=sys.stderr)
+    if not os.access(MANIFEST_RUNNER, os.X_OK) or not ADAPTER_MANIFEST.is_file():
+        print("expected runtime commit adapter manifest and runner", file=sys.stderr)
         return 1
     if not FIXTURE_FILE.is_file():
         print("expected runtime commit replay fixture file to exist", file=sys.stderr)
@@ -221,7 +222,14 @@ def main() -> int:
 
         if not skip_adapter_contract_lane:
             adapter_code, adapter_output = command_output(
-                ["bash", str(ADAPTER_CONTRACT_LANE)]
+                [
+                    "bash",
+                    str(MANIFEST_RUNNER),
+                    "--manifest",
+                    str(ADAPTER_MANIFEST),
+                    "--phase",
+                    "contract",
+                ]
             )
             if adapter_code != 0:
                 print(adapter_output, file=sys.stderr)
