@@ -171,6 +171,8 @@ cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$no
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
   main_tests::service_api_endpoint_tests::residual_root_contract_tests::error_envelope_contract_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
+  main_tests::service_api_endpoint_tests::ingress_guard_lifecycle_contract_tests::lifecycle_projection_contract_tests::unit_service_api_endpoint_lifecycle_rejection_projection_is_deterministic --exact
+cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
   signer::tests::nonce_contract_tests::unit_nonce_retry_classifier_marks_transient_provider_errors --exact
 cargo llvm-cov -p kamn-node --bin kamn-node --no-clean --json --output-path "$node_json" -- \
   signer::tests::nonce_contract_tests::unit_nonce_retry_backoff_policy_is_deterministic_and_bounded --exact
