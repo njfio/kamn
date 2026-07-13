@@ -45,8 +45,8 @@ pub(super) fn validate_authoritative_label(claim: &ClaimView<'_>) -> Result<(), 
         return Err("AGENT_TRANSACTION_CLAIM_INVALID".to_owned());
     }
     match claim.label.as_str() {
-        CLAIM_LABEL_DRY_RUN => Err("required MVP claim cannot be dry-run".to_owned()),
-        CLAIM_LABEL_PLACEHOLDER => Err("required MVP claim cannot be placeholder".to_owned()),
+        CLAIM_LABEL_DRY_RUN => Err("canonical MVP claim cannot be dry-run".to_owned()),
+        CLAIM_LABEL_PLACEHOLDER => Err("canonical MVP claim cannot be placeholder".to_owned()),
         _ => Ok(()),
     }
 }
