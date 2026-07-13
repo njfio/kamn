@@ -111,6 +111,43 @@ fn integration_settlement_rejects_mismatched_confirmed_evidence_without_release(
     assert_ne!(state["escrows"][&escrow_id]["state"], "released");
 }
 
+#[test]
+fn integration_expired_ambiguous_settlement_fails_without_resubmission() {
+    let _env = acquire_service_api_test_env();
+    let _override_guard =
+        crate::service_api_endpoint::set_test_live_solana_settlement_ambiguous_after_submit();
+    let context = build_live_solana_asset_movement_context(params_for("expired", 47));
+    let escrow_id = fund_live_escrow(&context.harness, 181, 47);
+    let first = release_escrow_response_with_key(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.caller_did,
+        183,
+        escrow_id.as_str(),
+        "settlement-expired",
+    );
+    crate::service_api_endpoint::set_test_live_solana_settlement_expired();
+    let retry = release_escrow_response_with_key(
+        &context.harness.snapshot,
+        context.harness.bind_addr.as_str(),
+        context.harness.caller_did,
+        184,
+        escrow_id.as_str(),
+        "settlement-expired",
+    );
+    let state = read_state_json(context.harness.state_file.as_path());
+
+    assert!(first.contains("SETTLEMENT_OUTCOME_AMBIGUOUS"), "{first}");
+    assert!(retry.contains("HTTP/1.1 409 Conflict"), "{retry}");
+    assert!(retry.contains("SETTLEMENT_TRANSACTION_EXPIRED"), "{retry}");
+    assert_eq!(state["settlement_intents"][&escrow_id]["state"], "failed");
+    assert_ne!(state["escrows"][&escrow_id]["state"], "released");
+    assert_eq!(
+        crate::service_api_endpoint::test_live_solana_settlement_submission_count(),
+        1
+    );
+}
+
 fn params() -> LiveSolanaAssetMovementParams<'static> {
     params_for("reconciliation", 31)
 }
