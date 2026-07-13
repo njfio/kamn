@@ -8,6 +8,21 @@ script_surface_short_wrapper_category_count=24
 script_surface_short_wrapper_total_candidates=62
 script_surface_short_wrapper_priority_categories_csv=ci,sdk,runtime,kolme,bridge,framework
 
+## Issue 7105 Baseline
+
+The 2026-07-13 canonical MVP cleanup inventory identified a bounded first wave:
+
+- 25 present symlink entrypoints already listed in
+  `fixtures/ci/superseded_script_deletion_manifest.json`.
+- 0 physical shell source lines owned by those symlinks; target-file lines must
+  not be counted once per link.
+- 68 Rust test lines in one historical evaluator-rehearsal marker binary.
+- `scripts/framework/run_manifest_lane.sh` plus checked-in manifests and
+  replacement evidence as the required behavior-preserving path.
+
+This baseline does not approve broader script, fixture, spec, or documentation
+deletion.
+
 This candidate matrix prioritizes short-wrapper consolidation opportunities by
 category using deterministic thresholds:
 
