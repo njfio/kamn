@@ -187,8 +187,9 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
 
 #[test]
 fn spec_c22_cli_verifies_direct_pi_evidence_without_mutating_report() {
-    let root = temp_root("direct-pi-evidence");
-    let report = write_report(&root, direct_report_with_three_agent_claim(&root));
+    let root = canonical_run_root("direct-pi-evidence", "run-7074");
+    let report_json = direct_report_with_three_agent_claim(&root);
+    let report = write_canonical_report(&root, report_json);
     let artifact = write_artifact(
         &root,
         agent_artifact_with_canonical_observation_receipts(&root),

@@ -50,12 +50,13 @@ fn spec_c17_command_rejects_agent_c_private_actor_tool_receipt_digest() {
 
 #[test]
 fn spec_c18_command_accepts_actor_tool_receipts_bound_to_report_views() {
-    let root = temp_root("valid-actor-tool-receipts");
+    let root = canonical_run_root("valid-actor-tool-receipts", "run-7047");
     let artifact = write_artifact(
         &root,
         agent_artifact_with_canonical_observation_receipts(&root),
     );
-    let report = write_report(&root, report_with_three_agent_claim(&root, &artifact));
+    let report_json = report_with_three_agent_claim(&root, &artifact);
+    let report = write_canonical_report(&root, report_json);
 
     execute_verify_mvp_demo_contract(&config(report.as_path()))
         .expect("actor tool receipts bound to report views should verify");

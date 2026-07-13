@@ -1,10 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use kamn_e2e_harness::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
+use kamn_e2e_harness::MvpDemoCommandConfig;
 
 mod actor_receipts;
 mod artifact;
+mod canonical_bundle_fixture;
 mod canonical_receipts;
+mod fixture_io;
 mod live_binding_fixture;
 #[path = "../support/live_task_evidence.rs"]
 mod live_task_evidence;
@@ -13,42 +15,8 @@ mod mvp_local_artifacts;
 mod three_agent;
 
 pub(crate) use artifact::*;
+pub(crate) use fixture_io::*;
 pub(crate) use three_agent::view_digest_for;
-
-pub(crate) fn temp_root(stem: &str) -> PathBuf {
-    let millis = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("clock should be after epoch")
-        .as_millis();
-    std::env::temp_dir().join(format!("kamn-7047-{stem}-{}-{millis}", std::process::id()))
-}
-
-pub(crate) fn config(report: &Path) -> VerifyMvpDemoCommandConfig {
-    VerifyMvpDemoCommandConfig {
-        report: report.display().to_string(),
-        agent_harness_evidence_path: None,
-        pi_transaction_actor_paths: None,
-    }
-}
-
-pub(crate) fn write_report(root: &Path, report: String) -> PathBuf {
-    let path = root.join("proof/report.json");
-    mvp_local_artifacts::write_valid_local_artifacts(root);
-    write_file(path.as_path(), report);
-    path
-}
-
-pub(crate) fn write_artifact(root: &Path, artifact: String) -> PathBuf {
-    let path = root.join("proof/agent-harness-evidence.json");
-    write_file(path.as_path(), artifact);
-    path
-}
-
-pub(crate) fn write_latest_artifact(root: &Path, artifact: String) -> PathBuf {
-    let path = root.join("agent-harness-evidence.json");
-    write_file(path.as_path(), artifact);
-    path
-}
 
 pub(crate) fn demo_config(root: &Path, artifact: &Path) -> MvpDemoCommandConfig {
     MvpDemoCommandConfig {

@@ -8,10 +8,11 @@ fn spec_c01_readme_opens_with_current_mvp_front_door() {
         &readme,
         &[
             "KAMN (Kolme AI Agent Messaging Network)",
-            "## What KAMN Proves Today",
-            "## MVP Demo Quickstart",
+            "## What This Repository Contains",
+            "## Quickstart",
             "make demo-mvp",
-        "cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json",
+            "cargo run -p kamn-e2e-harness -- verify-mvp-demo",
+            "--report .kamn/demo/latest/proof/report.json",
             "docs/validation/mvp-evaluator-demo.md",
             "## Claim Boundaries",
             "local-only",
@@ -19,7 +20,7 @@ fn spec_c01_readme_opens_with_current_mvp_front_door() {
             "Solana devnet",
             "developer-test tokens",
             "production readiness",
-            "## Repository Map",
+            "## Architecture Map",
             "## For AI Agents And Maintainers",
         ],
     );
@@ -27,10 +28,10 @@ fn spec_c01_readme_opens_with_current_mvp_front_door() {
     require_ordered_pairs(
         &readme,
         &[
-            ("## What KAMN Proves Today", "## MVP Demo Quickstart"),
-            ("## MVP Demo Quickstart", "## Claim Boundaries"),
-            ("## Claim Boundaries", "## Repository Map"),
-            ("## Repository Map", "## For AI Agents And Maintainers"),
+            ("## What This Repository Contains", "## Quickstart"),
+            ("## Quickstart", "## Claim Boundaries"),
+            ("## Claim Boundaries", "## Architecture Map"),
+            ("## Architecture Map", "## For AI Agents And Maintainers"),
         ],
     );
 }

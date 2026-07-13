@@ -42,7 +42,7 @@ fn spec_c05_verifier_rejects_local_only_three_agent_settlement_claim() {
     );
     let err = verify_mvp_demo_report_json(report)
         .expect_err("three-agent settlement claim must stay devnet-backed");
-    assert!(err.contains("value movement claim must be devnet-backed"));
+    assert_eq!(err, "AGENT_TRANSACTION_CLAIM_INVALID");
 }
 
 #[test]
@@ -110,28 +110,41 @@ fn spec_c11_verifier_rejects_mismatched_public_view_digest() {
 }
 
 fn valid_three_agent_report() -> String {
-    report_with_claims(&[
-        local_claims(),
-        devnet_settlement_claim(),
-        three_agent_claim(),
-        roadmap_claim(),
-    ])
+    report_with_claims(
+        &[
+            local_claims(),
+            devnet_settlement_claim(),
+            three_agent_claim(),
+            roadmap_claim(),
+        ],
+        three_agent_artifacts_json().as_str(),
+    )
 }
 
 fn devnet_report_without_three_agent_claim() -> String {
-    report_with_claims(&[local_claims(), devnet_settlement_claim(), roadmap_claim()])
+    report_with_claims(
+        &[local_claims(), devnet_settlement_claim(), roadmap_claim()],
+        settlement_artifacts_json(),
+    )
 }
 
-fn report_with_claims(claims: &[&str]) -> String {
+fn report_with_claims(claims: &[&str], artifacts: &str) -> String {
     format!(
         r#"{{"schema_version":"kamn.mvp.demo.proof-report.v1","run_id":"demo-three-agent","status":"GO","devnet_mode":"required","artifacts":{},"claim_matrix":[{}],"no_go":{{"active":false,"reason":""}}}}"#,
-        artifacts_json(),
+        artifacts,
         claims.join(",")
     )
 }
 
-fn artifacts_json() -> &'static str {
-    r#"{"report_json":".kamn/demo/latest/proof/report.json","report_md":".kamn/demo/latest/proof/report.md","state_dir":".kamn/demo/demo-three-agent/state","audit_export":".kamn/demo/demo-three-agent/proof/audit-export.json","localhost_signed_demo_artifact":".kamn/demo/demo-three-agent/proof/localhost-signed-demo.json","localhost_signed_demo_output":".kamn/demo/demo-three-agent/proof/localhost-signed-demo-output.txt","service_api_vertical_slice_output":".kamn/demo/demo-three-agent/proof/service-api-vertical-slice-output.txt","service_api_websocket_output":".kamn/demo/demo-three-agent/proof/service-api-websocket-output.txt","devnet_settlement_output":".kamn/demo/demo-three-agent/proof/devnet-settlement-output.txt","three_agent_transcript":".kamn/demo/demo-three-agent/proof/three-agent-transcript.json","agent_a_view":".kamn/demo/demo-three-agent/proof/agent-a-view.json","agent_b_view":".kamn/demo/demo-three-agent/proof/agent-b-view.json","agent_c_verifier_view":".kamn/demo/demo-three-agent/proof/agent-c-verifier-view.json"}"#
+fn settlement_artifacts_json() -> &'static str {
+    r#"{"report_json":".kamn/demo/latest/proof/report.json","report_md":".kamn/demo/latest/proof/report.md","state_dir":".kamn/demo/demo-three-agent/state","audit_export":".kamn/demo/demo-three-agent/proof/audit-export.json","localhost_signed_demo_artifact":".kamn/demo/demo-three-agent/proof/localhost-signed-demo.json","localhost_signed_demo_output":".kamn/demo/demo-three-agent/proof/localhost-signed-demo-output.txt","service_api_vertical_slice_output":".kamn/demo/demo-three-agent/proof/service-api-vertical-slice-output.txt","service_api_websocket_output":".kamn/demo/demo-three-agent/proof/service-api-websocket-output.txt","devnet_settlement_output":".kamn/demo/demo-three-agent/proof/devnet-settlement-output.txt"}"#
+}
+
+fn three_agent_artifacts_json() -> String {
+    let base = settlement_artifacts_json().trim_end_matches('}');
+    format!(
+        r#"{base},"three_agent_transcript":".kamn/demo/demo-three-agent/proof/three-agent-transcript.json","agent_a_view":".kamn/demo/demo-three-agent/proof/agent-a-view.json","agent_b_view":".kamn/demo/demo-three-agent/proof/agent-b-view.json","agent_c_verifier_view":".kamn/demo/demo-three-agent/proof/agent-c-verifier-view.json"}}"#
+    )
 }
 
 fn local_claims() -> &'static str {
