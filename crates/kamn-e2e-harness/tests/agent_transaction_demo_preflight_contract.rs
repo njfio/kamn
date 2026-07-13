@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use kamn_e2e_harness::{parse_agent_transaction_demo_config, validate_agent_transaction_preflight};
 
@@ -116,12 +117,14 @@ fn base_env() -> BTreeMap<String, String> {
 }
 
 fn unique_root() -> PathBuf {
+    static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
     std::env::temp_dir().join(format!(
-        "kamn-agent-preflight-{}-{nanos}",
-        std::process::id()
+        "kamn-agent-preflight-{}-{nanos}-{}",
+        std::process::id(),
+        FIXTURE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
     ))
 }
