@@ -73,25 +73,26 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] README leads with `make demo-agent-transaction` and explicitly classifies
+- [x] README leads with `make demo-agent-transaction` and explicitly classifies
   `make demo-mvp` as local-only compatibility proof.
-- [ ] Make help uses the same canonical/local-only command taxonomy.
-- [ ] Architecture index classifies canonical runtime, compatibility,
+- [x] Make help uses the same canonical/local-only command taxonomy.
+- [x] Architecture index classifies canonical runtime, compatibility,
   local-only, dry-run, placeholder, and roadmap surfaces.
-- [ ] Evaluator runbook uses the same command and claim language.
-- [ ] Canonical verifier rejects optional as well as required `placeholder` and
+- [x] Evaluator runbook uses the same command and claim language.
+- [x] Canonical verifier rejects optional as well as required `placeholder` and
   `dry-run` claims in `GO` reports.
-- [ ] Generic placeholder orchestration remains outside the canonical command
+- [x] Generic placeholder orchestration remains outside the canonical command
   and verifier success path.
-- [ ] Test taxonomy distinguishes behavior, integration, live, docs-contract,
+- [x] Test taxonomy distinguishes behavior, integration, live, docs-contract,
   and legacy compatibility tests.
-- [ ] Twenty-five manifest-declared superseded symlinks are removed while their
+- [x] Twenty-five manifest-declared superseded symlinks are removed while their
   inventory and manifest-runner replacement evidence remain green.
-- [ ] The 68-line historical evaluator rehearsal marker test is removed after
+- [x] The 68-line historical evaluator rehearsal marker test is removed after
   canonical runtime/verifier contracts remain green.
-- [ ] Measured reduction reports 26 files/entrypoints removed, 25 symlinks
-  removed, 68 Rust test LOC removed, and zero claimed shell source LOC removed.
-- [ ] Formatting, strict clippy, `make check`, `make test`, `make pre-push`,
+- [x] Measured reduction reports 26 files/entrypoints removed, 25 symlinks
+  removed, 68 Rust test LOC removed, and a net 85-line physical shell-source
+  reduction after manifest replacement wiring.
+- [x] Formatting, strict clippy, `make check`, `make test`, `make pre-push`,
   canonical demo, and canonical verifier pass.
 
 ## Files To Touch
@@ -160,6 +161,40 @@ make demo-agent-transaction
 cargo run -p kamn-e2e-harness -- verify-mvp-demo \
   --report .kamn/demo/latest/proof/report.json
 ```
+
+## Completion Evidence
+
+- `make pre-push`: GO, including all-feature workspace tests, critical-path
+  coverage, and 10 of 10 bounded mutants caught.
+- `make test`: GO across the default-feature workspace and doc tests.
+- `make demo-agent-transaction`: GO for run
+  `run-80948-1783979249039` with Pi actors and required Solana devnet mode.
+- `verify-mvp-demo`: PASS for `.kamn/demo/latest/proof/report.json`.
+- Solana RPC independently reports signature
+  `kw4qvHj6teN9CHckJd4VsJu5TMeSF3i9QikybhLHYZPnDKhwYxuPDXzW1T1hRXBuSrLGMKpiR4ABXD7tNZySXai`
+  finalized at slot `476061506` with no transaction error.
+- The devnet transfer moved `1000000` lamports; the payer delta is `1005000`
+  lamports including the `5000` lamport fee, and the recipient delta is
+  `1000000` lamports.
+- Agents A and B expose `participant-private` views with three private fields
+  each. Agent C exposes a `restricted-public` view with zero private fields;
+  all three views share the same public digest.
+- Diff accounting versus `origin/main`: shell `+198/-308` (net `-110`), of
+  which 25 removed symlink entries account for `-25`; physical shell source is
+  therefore net `-85`. Python is net `+8`, Rust is net `+51`, and combined
+  shell/Python/Rust code is net `-51`.
+
+## Deviations
+
+- Replacement parity checks exposed stale callers that still executed removed
+  symlink names. Their existing contract lanes now call retained manifests via
+  `scripts/framework/run_manifest_lane.sh`; no wrapper was restored.
+- The reduced test inventory required an exact baseline change from `1319` to
+  `1318`. No size threshold or offender allowance changed.
+- The service API critical-path probe fell below its function floor after the
+  endpoint surface grew. The probe now runs an existing lifecycle projection
+  unit test, raising measured function coverage to `26.19%` without lowering
+  the `25%` threshold.
 
 ## Rollback
 

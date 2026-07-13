@@ -27,9 +27,15 @@ deletion.
 
 - Approved symlink entrypoints removed: 25 of 25.
 - Remaining deletion-manifest entrypoints in the working tree: 0.
-- Physical shell source LOC removed: 0.
+- Physical shell source LOC attributable to symlink removal alone: 0.
+- Physical shell source diff after manifest replacement rewiring: net -85
+  lines (`+198/-308` raw shell diff, excluding 25 deleted symlink entries).
 - Historical docs-marker Rust test LOC removed: 68.
 - Replacement manifest, stale-reference, and command-surface checks: passing.
+- Canonical Pi/devnet demo and standalone report verifier: passing.
+- Critical-path coverage: passing without threshold reduction; service API
+  function coverage is 26.19% against a 25% minimum.
+- Critical-path mutation gate: 10 of 10 bounded mutants caught.
 
 The reduction removes callable aliases and one non-authoritative test binary;
 it does not claim deletion of the shared dispatcher implementations.
