@@ -68,18 +68,18 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] The three tracker-referenced documents are tracked and publicly
+- [x] The three tracker-referenced documents are tracked and publicly
   resolvable at their existing paths.
-- [ ] Each document identifies itself as a historical decision artifact and
+- [x] Each document identifies itself as a historical decision artifact and
   does not claim production or mainnet readiness.
-- [ ] No document contains a real private path, secret, credential, key
+- [x] No document contains a real private path, secret, credential, key
   material, `.kamn` run payload, or generated proof artifact.
-- [ ] `uv.lock` is tracked as reproducible Python project metadata.
-- [ ] `*.egg-info/` is ignored as generated Python build metadata.
-- [ ] A bounded Rust docs contract fails on missing paths, broken lineage,
+- [x] `uv.lock` is tracked as reproducible Python project metadata.
+- [x] `*.egg-info/` is ignored as generated Python build metadata.
+- [x] A bounded Rust docs contract fails on missing paths, broken lineage,
   unsafe claim markers, or packaging-policy drift.
-- [ ] Existing README/runbook claim contracts remain green.
-- [ ] The intentional working tree is clean after publication.
+- [x] Existing README/runbook claim contracts remain green.
+- [x] The intentional working tree is clean after publication.
 
 ## Files To Touch
 
@@ -126,6 +126,19 @@ make check
 make test
 make pre-push
 ```
+
+## Completion Evidence
+
+- RED: the new contract failed three cases for missing historical markers,
+  bounded claim language, and generated metadata policy.
+- GREEN/REFACTOR: the targeted contract passed all four cases; the README and
+  evaluator runbook contracts also passed.
+- Repository gates: `cargo fmt --check`, strict workspace clippy,
+  `make check`, and `make test` passed.
+- Local pre-push: workspace tests and critical-path coverage returned `GO`;
+  mutation testing caught 10 of 10 mutants with zero misses or timeouts.
+- Inventory deviation: the tracked Rust test-file baseline increased from
+  1,318 to 1,319 for the new artifact contract. No runtime behavior changed.
 
 ## Rollback
 
