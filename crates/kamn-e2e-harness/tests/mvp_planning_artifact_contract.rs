@@ -3,12 +3,18 @@ use std::path::PathBuf;
 const BRAINSTORM: &str = "docs/brainstorms/2026-06-26-kamn-forward-strategy-requirements.md";
 const MVP_PLAN: &str = "docs/plans/2026-06-26-001-kamn-mvp-demo-readiness-plan.md";
 const RAIL_PLAN: &str = "docs/plans/2026-07-10-001-kamn-agent-transaction-rail-mega-plan.md";
+const ARTIFACTS: [(&str, &str); 3] = [
+    (BRAINSTORM, "superseded"),
+    (MVP_PLAN, "superseded"),
+    (RAIL_PLAN, "completed"),
+];
 
 #[test]
 fn spec_c01_historical_artifacts_are_explicitly_bounded() {
-    require_markers(BRAINSTORM, &["artifact_status: historical", "current_status: superseded"]);
-    require_markers(MVP_PLAN, &["artifact_status: historical", "current_status: superseded"]);
-    require_markers(RAIL_PLAN, &["artifact_status: historical", "current_status: completed"]);
+    for (path, status) in ARTIFACTS {
+        require_markers(path, &["artifact_status: historical"]);
+        require_markers(path, &[&format!("current_status: {status}")]);
+    }
 }
 
 #[test]
@@ -19,10 +25,13 @@ fn spec_c02_plan_lineage_resolves_at_repository_paths() {
 
 #[test]
 fn spec_c03_public_artifacts_exclude_private_path_placeholders() {
-    for path in [BRAINSTORM, MVP_PLAN, RAIL_PLAN] {
+    for (path, _) in ARTIFACTS {
         let content = read_repo_file(path);
         assert!(!content.contains("/Users/"), "private user path in {path}");
-        assert!(!content.contains("/absolute/path/"), "absolute path placeholder in {path}");
+        assert!(
+            !content.contains("/absolute/path/"),
+            "absolute path placeholder in {path}"
+        );
         require_markers(path, &["not production", "devnet"]);
     }
 }
