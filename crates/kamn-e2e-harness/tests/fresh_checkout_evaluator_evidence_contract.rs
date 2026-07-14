@@ -1,6 +1,19 @@
 use std::path::PathBuf;
 
 const EVIDENCE: &str = "docs/validation/evidence/7123-fresh-checkout-evaluator-rehearsal.md";
+const FORBIDDEN: [&str; 5] = [
+    "/Users/",
+    "/private/",
+    "PRIVATE KEY",
+    "secret=",
+    ".kamn/devnet/",
+];
+const BOUNDED_CLAIMS: [&str; 4] = [
+    "not production",
+    "not mainnet",
+    "not custody",
+    "devnet test tokens",
+];
 
 #[test]
 fn spec_c01_evidence_binds_fresh_clone_and_live_commands() {
@@ -52,11 +65,17 @@ fn spec_c03_evidence_preserves_actor_and_disclosure_boundaries() {
 #[test]
 fn spec_c04_evidence_is_secret_safe_and_claim_bounded() {
     let content = read_evidence();
-    for forbidden in ["/Users/", "/private/", "PRIVATE KEY", "secret=", ".kamn/devnet/"] {
-        assert!(!content.contains(forbidden), "forbidden marker `{forbidden}`");
+    for forbidden in FORBIDDEN {
+        assert!(
+            !content.contains(forbidden),
+            "forbidden marker `{forbidden}`"
+        );
     }
-    for marker in ["not production", "not mainnet", "not custody", "devnet test tokens"] {
-        assert!(content.contains(marker), "missing bounded marker `{marker}`");
+    for marker in BOUNDED_CLAIMS {
+        assert!(
+            content.contains(marker),
+            "missing bounded marker `{marker}`"
+        );
     }
 }
 
