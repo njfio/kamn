@@ -118,6 +118,16 @@ fn spec_c06_bound_demo_accepts_transaction_aware_handoff_v2() {
     execute_mvp_demo_contract(&config).expect("v2 handoff should bind to the demo");
 }
 
+#[test]
+fn spec_c07_required_verifier_rejects_command_override_settlement() {
+    let root = temp_root("command-override-rejected");
+    execute_mvp_demo_contract(&mvp_demo_command::devnet_required_demo_config(&root))
+        .expect("compatibility adapter should still create a fixture report");
+
+    let error = verify_latest(&root).expect_err("override-only required-devnet proof must fail");
+    assert_eq!(error, "SETTLEMENT_EVIDENCE_INVALID");
+}
+
 fn relabel_report_as_live_service(root: &Path, request: Option<&Path>) {
     let report_path = root.join("latest/proof/report.json");
     let mut report = std::fs::read_to_string(&report_path)

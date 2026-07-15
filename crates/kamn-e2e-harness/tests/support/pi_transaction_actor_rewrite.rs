@@ -7,7 +7,7 @@ pub(super) fn rebind_actor(path: &Path) {
         path,
         &[
             ("task-live-7099", "task-local-bound-7086"),
-            ("transaction-live-7099", "task-local-bound-7086"),
+            ("transaction-live-7099", "transaction-live-7086"),
             ("escrow-live-7099", "escrow-local-bound-7086"),
             ("devnet-signature-7099", "devnet-signature-111"),
         ],
