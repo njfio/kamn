@@ -46,8 +46,7 @@ fn integration_ambiguous_settlement_retry_reconciles_without_resubmission() {
     );
     assert_eq!(state["escrows"][&escrow_id]["state"], "released");
     assert_eq!(
-        state["settlement_intents"][&escrow_id]["submission_attempt_count"],
-        1,
+        state["settlement_intents"][&escrow_id]["submission_attempt_count"], 1,
         "reconciliation must persist one submission attempt"
     );
 }
