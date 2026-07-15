@@ -6,7 +6,7 @@ use super::agent_harness::{
 };
 use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
-use super::devnet_settlement::DevnetSettlementAttempt;
+use super::devnet_settlement::{DevnetSettlementAttempt, DevnetSettlementEvidence};
 use super::live_task_binding::LiveTaskBinding;
 use super::live_task_binding_verify::validate_live_task_binding_file;
 use super::local_artifact_verify::validate_local_artifact_files;
@@ -21,6 +21,20 @@ use super::verify::verify_mvp_demo_report_json;
 
 /// Executes the MVP demo command and writes proof artifacts.
 pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String, String> {
+    execute_mvp_demo(config, None)
+}
+
+pub(crate) fn execute_mvp_demo_contract_with_settlement(
+    config: &MvpDemoCommandConfig,
+    settlement: DevnetSettlementEvidence,
+) -> Result<String, String> {
+    execute_mvp_demo(config, Some(settlement))
+}
+
+fn execute_mvp_demo(
+    config: &MvpDemoCommandConfig,
+    settlement: Option<DevnetSettlementEvidence>,
+) -> Result<String, String> {
     validate_devnet_mode(config.devnet_mode.as_str())?;
     let output_root = Path::new(config.output_root.as_str());
     let run_id = build_run_id()?;
@@ -32,7 +46,7 @@ pub fn execute_mvp_demo_contract(config: &MvpDemoCommandConfig) -> Result<String
     )?;
     create_localhost_signed_artifact(config, &run_dir)?;
     create_service_api_artifacts(config, &run_dir)?;
-    let bound = create_bound_settlement(config, run_id.as_str(), &run_dir)?;
+    let bound = create_bound_settlement(config, run_id.as_str(), &run_dir, settlement)?;
     let input = report_input(
         config,
         output_root,

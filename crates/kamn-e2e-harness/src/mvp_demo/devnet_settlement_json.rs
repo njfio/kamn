@@ -13,6 +13,8 @@ pub(crate) fn parse_devnet_settlement_evidence(
         lamports: json_u64_value(json, "lamports")?,
         escrow_id: json_string_value(json, "escrow_id")?,
         task_id: None,
+        transaction_id: None,
+        terms_digest: None,
         task_binding_digest: None,
         settlement_tx_signature: json_string_value(json, "settlement_tx_signature")?,
         settlement_commitment: json_string_value(json, "settlement_commitment")?,
@@ -20,10 +22,14 @@ pub(crate) fn parse_devnet_settlement_evidence(
         payer_balance_after: json_u64_value(json, "payer_balance_after")?,
         recipient_balance_before: json_u64_value(json, "recipient_balance_before")?,
         recipient_balance_after: json_u64_value(json, "recipient_balance_after")?,
+        fee_lamports: None,
+        settlement_receipt_hash: None,
         persisted_settlement_tx_signature: json_string_value(
             json,
             "persisted_settlement_tx_signature",
         )?,
+        service_state_digest: None,
+        settlement_intent_digest: None,
         authoritative_rpc_artifact: optional_json_string_value(json, "authoritative_rpc_artifact"),
     };
     validate_devnet_settlement_evidence(&evidence)?;
@@ -37,7 +43,11 @@ fn optional_json_string_value(json: &str, key: &str) -> Option<String> {
 }
 
 pub(crate) fn devnet_settlement_claim_json(evidence: &DevnetSettlementEvidence) -> String {
-    let binding = binding_fields(evidence);
+    let suffix = format!(
+        "{}{}",
+        binding_fields(evidence),
+        provenance_fields(evidence)
+    );
     format!(
         "{{\"id\":\"devnet_settlement_asset_movement\",\"label\":\"devnet-backed\",\"required\":true,\"status\":\"PASS\",\"summary\":\"Solana devnet escrow settlement transfer observed\",\"network\":\"{}\",\"execution_surface\":\"{}\",\"rpc_url\":\"{}\",\"payer_pubkey\":\"{}\",\"recipient_pubkey\":\"{}\",\"lamports\":{},\"escrow_id\":\"{}\",\"settlement_tx_signature\":\"{}\",\"settlement_commitment\":\"{}\",\"payer_balance_before\":{},\"payer_balance_after\":{},\"recipient_balance_before\":{},\"recipient_balance_after\":{},\"persisted_settlement_tx_signature\":\"{}\"{}}}",
         escape_json(evidence.network.as_str()),
@@ -54,7 +64,28 @@ pub(crate) fn devnet_settlement_claim_json(evidence: &DevnetSettlementEvidence) 
         evidence.recipient_balance_before,
         evidence.recipient_balance_after,
         escape_json(evidence.persisted_settlement_tx_signature.as_str()),
-        binding,
+        suffix,
+    )
+}
+
+fn provenance_fields(evidence: &DevnetSettlementEvidence) -> String {
+    let values = (
+        evidence.transaction_id.as_deref(),
+        evidence.terms_digest.as_deref(),
+        evidence.fee_lamports,
+        evidence.settlement_receipt_hash.as_deref(),
+        evidence.service_state_digest.as_deref(),
+        evidence.settlement_intent_digest.as_deref(),
+    );
+    let (Some(transaction), Some(terms), Some(fee), Some(receipt), Some(state), Some(intent)) =
+        values
+    else {
+        return String::new();
+    };
+    format!(
+        ",\"transaction_id\":\"{}\",\"terms_digest\":\"{}\",\"fee_lamports\":{},\"settlement_receipt_hash\":\"{}\",\"service_state_digest\":\"{}\",\"settlement_intent_digest\":\"{}\"",
+        escape_json(transaction), escape_json(terms), fee, escape_json(receipt),
+        escape_json(state), escape_json(intent),
     )
 }
 

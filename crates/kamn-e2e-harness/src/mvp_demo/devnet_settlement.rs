@@ -26,6 +26,8 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) lamports: u64,
     pub(crate) escrow_id: String,
     pub(crate) task_id: Option<String>,
+    pub(crate) transaction_id: Option<String>,
+    pub(crate) terms_digest: Option<String>,
     pub(crate) task_binding_digest: Option<String>,
     pub(crate) settlement_tx_signature: String,
     pub(crate) settlement_commitment: String,
@@ -33,7 +35,11 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) payer_balance_after: u64,
     pub(crate) recipient_balance_before: u64,
     pub(crate) recipient_balance_after: u64,
+    pub(crate) fee_lamports: Option<u64>,
+    pub(crate) settlement_receipt_hash: Option<String>,
     pub(crate) persisted_settlement_tx_signature: String,
+    pub(crate) service_state_digest: Option<String>,
+    pub(crate) settlement_intent_digest: Option<String>,
     pub(crate) authoritative_rpc_artifact: Option<String>,
 }
 
@@ -143,12 +149,12 @@ fn write_live_no_go_log(run_dir: &Path, error: &str) -> Result<(), String> {
     write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
 }
 
-fn write_live_success_log(
+pub(super) fn write_live_success_log(
     run_dir: &Path,
     evidence: &DevnetSettlementEvidence,
 ) -> Result<(), String> {
     write_settlement_evidence_artifact(run_dir, evidence)?;
-    let content = format!(
+    let mut content = format!(
         "devnet_settlement_status=PASS\nnetwork={}\nexecution_surface={}\nrpc_url={}\npayer_pubkey={}\nrecipient_pubkey={}\nlamports={}\nescrow_id={}\nsettlement_tx_signature={}\nsettlement_commitment={}\npayer_balance_before={}\npayer_balance_after={}\nrecipient_balance_before={}\nrecipient_balance_after={}\npersisted_settlement_tx_signature={}\ntask_id={}\ntask_binding_digest={}\n",
         evidence.network,
         evidence.execution_surface,
@@ -167,7 +173,27 @@ fn write_live_success_log(
         evidence.task_id.as_deref().unwrap_or("not-bound"),
         evidence.task_binding_digest.as_deref().unwrap_or("not-bound"),
     );
+    content.push_str(provenance_log(evidence).as_str());
     write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
+}
+
+fn provenance_log(evidence: &DevnetSettlementEvidence) -> String {
+    let values = (
+        evidence.transaction_id.as_deref(),
+        evidence.terms_digest.as_deref(),
+        evidence.fee_lamports,
+        evidence.settlement_receipt_hash.as_deref(),
+        evidence.service_state_digest.as_deref(),
+        evidence.settlement_intent_digest.as_deref(),
+    );
+    let (Some(transaction), Some(terms), Some(fee), Some(receipt), Some(state), Some(intent)) =
+        values
+    else {
+        return String::new();
+    };
+    format!(
+        "transaction_id={transaction}\nterms_digest={terms}\nfee_lamports={fee}\nsettlement_receipt_hash={receipt}\nservice_state_digest={state}\nsettlement_intent_digest={intent}\n"
+    )
 }
 
 fn write_proof_file(run_dir: &Path, name: &str, content: &str) -> Result<(), String> {

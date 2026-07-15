@@ -9,8 +9,64 @@ pub(super) fn validate_settlement(
     let claim = claim(report)?;
     validate_claim_strings(claim, evidence)?;
     require_claim_u64(claim, "lamports", evidence.lamports)?;
+    validate_direct_provenance(claim, evidence)?;
     validate_finality(evidence)?;
     validate_balances(evidence)
+}
+
+fn validate_direct_provenance(
+    claim: &Value,
+    evidence: &SettlementEvidenceArtifact,
+) -> Result<(), String> {
+    if evidence.execution_surface != "live-service-persisted-receipt" {
+        return Ok(());
+    }
+    let fields = [
+        ("transaction_id", evidence.transaction_id.as_deref()),
+        ("terms_digest", evidence.terms_digest.as_deref()),
+        (
+            "settlement_receipt_hash",
+            evidence.settlement_receipt_hash.as_deref(),
+        ),
+        (
+            "service_state_digest",
+            evidence.service_state_digest.as_deref(),
+        ),
+        (
+            "settlement_intent_digest",
+            evidence.settlement_intent_digest.as_deref(),
+        ),
+    ];
+    for (field, expected) in fields {
+        require_claim_string(claim, field, expected.ok_or_else(invalid)?)?;
+    }
+    require_claim_u64(
+        claim,
+        "fee_lamports",
+        evidence.fee_lamports.ok_or_else(invalid)?,
+    )?;
+    validate_provenance_shape(evidence)
+}
+
+fn validate_provenance_shape(evidence: &SettlementEvidenceArtifact) -> Result<(), String> {
+    let valid_digests = [
+        evidence.service_state_digest.as_deref(),
+        evidence.settlement_intent_digest.as_deref(),
+    ]
+    .into_iter()
+    .all(|value| value.is_some_and(is_sha256));
+    let receipt_matches = evidence.settlement_receipt_hash.as_deref()
+        == Some(evidence.settlement_tx_signature.as_str());
+    if valid_digests && receipt_matches {
+        return Ok(());
+    }
+    Err(invalid())
+}
+
+fn is_sha256(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn validate_claim_strings(
@@ -90,7 +146,14 @@ fn validate_balances(evidence: &SettlementEvidenceArtifact) -> Result<(), String
         .recipient_balance_after
         .checked_sub(evidence.recipient_balance_before)
         .ok_or_else(invalid)?;
-    if payer_delta >= evidence.lamports && recipient_delta == evidence.lamports {
+    let expected_payer = evidence
+        .fee_lamports
+        .and_then(|fee| evidence.lamports.checked_add(fee));
+    let valid_payer = match evidence.execution_surface.as_str() {
+        "live-service-persisted-receipt" => Some(payer_delta) == expected_payer,
+        _ => payer_delta >= evidence.lamports,
+    };
+    if valid_payer && recipient_delta == evidence.lamports {
         return Ok(());
     }
     Err(invalid())

@@ -21,12 +21,12 @@ fn proof_retry_reuses_persisted_settlement_without_submission() {
 
     let report = fixture.report();
     assert!(
-        report.contains(r#"\"execution_surface\":\"live-service-persisted-receipt\""#),
+        report.contains(r#""execution_surface":"live-service-persisted-receipt""#),
         "canonical proof must use the persisted service receipt: {report}"
     );
-    assert!(report.contains(r#"\"service_state_digest\":\"sha256:"#));
-    assert!(report.contains(r#"\"settlement_intent_digest\":\"sha256:"#));
-    assert!(report.contains(r#"\"fee_lamports\":5000"#));
+    assert!(report.contains(r#""service_state_digest":"sha256:"#));
+    assert!(report.contains(r#""settlement_intent_digest":"sha256:"#));
+    assert!(report.contains(r#""fee_lamports":5000"#));
     assert!(!report.contains("signed-transaction-secret"));
 
     let calls = fixture.solana_calls();

@@ -14,6 +14,7 @@ pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), S
     let claims = parse_claims(report_json)?;
     validate_required_claims(&claims)?;
     validate_agent_transaction_claim_presence(report_json, &claims)?;
+    validate_canonical_settlement_surface(report_json, &claims)?;
     for claim in &claims {
         validate_claim_label(claim.label.as_str())?;
         validate_authoritative_label(claim)?;
@@ -23,6 +24,25 @@ pub fn verify_mvp_demo_report_json(report_json: impl AsRef<str>) -> Result<(), S
     validate_agent_harness_claim_shape(&claims)?;
     validate_three_agent_escrow_verification(&claims)?;
     validate_no_go(report_json)
+}
+
+fn validate_canonical_settlement_surface(
+    report: &str,
+    claims: &[ClaimView<'_>],
+) -> Result<(), String> {
+    if !report.contains("\"runtime_agent_a_evidence\":\"") {
+        return Ok(());
+    }
+    let override_used = claims.iter().any(|claim| {
+        claim.id == "devnet_settlement_asset_movement"
+            && claim
+                .raw
+                .contains("\"execution_surface\":\"command-override\"")
+    });
+    if override_used {
+        return Err("SETTLEMENT_EVIDENCE_INVALID".to_owned());
+    }
+    Ok(())
 }
 
 fn validate_agent_transaction_claim_presence(

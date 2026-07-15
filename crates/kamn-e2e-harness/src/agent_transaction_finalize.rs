@@ -5,6 +5,7 @@ use super::{
     execute_verify_mvp_demo_contract, AgentTransactionDemoConfig, LiveTaskEvidencePaths,
     MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
+use crate::mvp_demo::execute_mvp_demo_contract_with_settlement;
 
 #[cfg(test)]
 #[path = "agent_transaction_finalize_tests.rs"]
@@ -15,13 +16,8 @@ pub(super) fn finalize(
     paths: &AgentTransactionEvidencePaths,
 ) -> Result<String, String> {
     build_runtime_receipt_chain_from_actor_paths(&paths.actors)?;
-    let mut demo = demo_config(config, paths);
-    if demo.devnet_settlement_command.is_none() {
-        let evidence = collect_actor_settlement_evidence(config, paths)?;
-        demo.devnet_settlement_command =
-            Some(vec!["cat".to_owned(), evidence.display().to_string()]);
-    }
-    let report = execute_mvp_demo_contract(&demo)?;
+    let demo = demo_config(config, paths);
+    let report = execute_demo(config, paths, &demo)?;
     execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
         report: format!("{}/latest/proof/report.json", config.output_root),
         agent_harness_evidence_path: None,
@@ -30,6 +26,18 @@ pub(super) fn finalize(
     Ok(format!(
         "{{\"decision\":\"GO\",\"proof_schema\":\"kamn.mvp.runtime-receipt-chain.v1\",\"report\":{report}}}"
     ))
+}
+
+fn execute_demo(
+    config: &AgentTransactionDemoConfig,
+    paths: &AgentTransactionEvidencePaths,
+    demo: &MvpDemoCommandConfig,
+) -> Result<String, String> {
+    if demo.devnet_settlement_command.is_some() {
+        return execute_mvp_demo_contract(demo);
+    }
+    let evidence = collect_actor_settlement_evidence(config, paths)?;
+    execute_mvp_demo_contract_with_settlement(demo, evidence)
 }
 
 fn demo_config(

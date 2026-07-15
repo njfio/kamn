@@ -10,6 +10,13 @@ pub(super) fn validate_funding_request(
 ) -> Result<(), String> {
     let surface = extract_string(devnet.raw, "execution_surface")?;
     if surface == "command-override" {
+        return if report.contains("\"runtime_agent_a_evidence\":\"") {
+            funding_error("command override cannot satisfy canonical execution".to_owned())
+        } else {
+            Ok(())
+        };
+    }
+    if surface == "live-service-persisted-receipt" {
         return Ok(());
     }
     if surface != "live-service-api" {

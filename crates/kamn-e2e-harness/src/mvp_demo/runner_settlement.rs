@@ -3,7 +3,8 @@ use std::path::Path;
 use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::command_config::MvpDemoCommandConfig;
 use super::devnet_settlement::{
-    collect_devnet_settlement_evidence, DevnetSettlementAttempt, DevnetSettlementInput,
+    collect_devnet_settlement_evidence, write_live_success_log, DevnetSettlementAttempt,
+    DevnetSettlementEvidence, DevnetSettlementInput,
 };
 use super::live_task_binding::{create_live_task_binding, LiveTaskBinding};
 use super::three_agent_receipts::write_three_agent_receipts;
@@ -20,9 +21,10 @@ pub(super) fn create_bound_settlement(
     config: &MvpDemoCommandConfig,
     run_id: &str,
     run_dir: &Path,
+    provided: Option<DevnetSettlementEvidence>,
 ) -> Result<BoundSettlement, String> {
     let binding = create_binding(config, run_dir)?;
-    let settlement = create_settlement(config, run_dir, binding.as_ref())?;
+    let settlement = create_settlement(config, run_dir, binding.as_ref(), provided)?;
     let artifact_digests =
         create_three_agent_artifacts(config, run_id, &settlement, binding.as_ref(), run_dir)?;
     Ok(BoundSettlement {
@@ -47,10 +49,14 @@ fn create_settlement(
     config: &MvpDemoCommandConfig,
     run_dir: &Path,
     binding: Option<&LiveTaskBinding>,
+    provided: Option<DevnetSettlementEvidence>,
 ) -> Result<DevnetSettlementAttempt, String> {
     if config.devnet_mode != "required" {
         write_skipped_log(run_dir, "devnet_mode_optional")?;
         return Ok(DevnetSettlementAttempt::default());
+    }
+    if let Some(evidence) = provided {
+        return bind_provided_settlement(evidence, binding, run_dir);
     }
     collect_devnet_settlement_evidence(&DevnetSettlementInput {
         command: config.devnet_settlement_command.as_deref(),
@@ -58,6 +64,42 @@ fn create_settlement(
         run_dir,
         live_task_binding: binding,
     })
+}
+
+fn bind_provided_settlement(
+    mut evidence: DevnetSettlementEvidence,
+    binding: Option<&LiveTaskBinding>,
+    run_dir: &Path,
+) -> Result<DevnetSettlementAttempt, String> {
+    let binding = binding.ok_or_else(|| "persisted settlement task binding missing".to_owned())?;
+    require_binding_fact(&evidence.task_id, binding.task_id.as_str(), "task_id")?;
+    require_binding_fact(
+        &evidence.transaction_id,
+        binding.transaction_id.as_str(),
+        "transaction_id",
+    )?;
+    require_binding_fact(
+        &evidence.terms_digest,
+        binding.terms_digest.as_str(),
+        "terms_digest",
+    )?;
+    evidence.task_binding_digest = Some(binding.digest.clone());
+    write_live_success_log(run_dir, &evidence)?;
+    Ok(DevnetSettlementAttempt {
+        evidence: Some(evidence),
+        no_go_reason: None,
+    })
+}
+
+fn require_binding_fact(
+    actual: &Option<String>,
+    expected: &str,
+    field: &str,
+) -> Result<(), String> {
+    if actual.as_deref() == Some(expected) {
+        return Ok(());
+    }
+    Err(format!("persisted settlement {field} binding mismatch"))
 }
 
 fn create_three_agent_artifacts(

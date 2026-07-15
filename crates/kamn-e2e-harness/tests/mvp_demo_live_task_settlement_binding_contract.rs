@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 mod artifact_digest;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
+#[path = "support/pi_transaction_actor_fixture.rs"]
+mod pi_transaction_actor_fixture;
 
 #[test]
 fn spec_c00_bound_demo_rejects_altered_live_task_source() {
@@ -121,10 +123,13 @@ fn spec_c06_bound_demo_accepts_transaction_aware_handoff_v2() {
 #[test]
 fn spec_c07_required_verifier_rejects_command_override_settlement() {
     let root = temp_root("command-override-rejected");
-    execute_mvp_demo_contract(&mvp_demo_command::devnet_required_demo_config(&root))
-        .expect("compatibility adapter should still create a fixture report");
-
-    let error = verify_latest(&root).expect_err("override-only required-devnet proof must fail");
+    let actors = pi_transaction_actor_fixture::ActorFixture::new();
+    actors.write_all(pi_transaction_actor_fixture::Overrides::default());
+    actors.rebind_shared_facts();
+    let mut config = mvp_demo_command::devnet_required_demo_config(&root);
+    config.pi_transaction_actor_paths = Some(actors.paths());
+    let error = execute_mvp_demo_contract(&config)
+        .expect_err("override-only required-devnet proof must fail before publication");
     assert_eq!(error, "SETTLEMENT_EVIDENCE_INVALID");
 }
 

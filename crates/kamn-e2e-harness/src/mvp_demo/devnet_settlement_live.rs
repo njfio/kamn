@@ -85,6 +85,8 @@ fn evidence(
         lamports: config.lamports,
         escrow_id: result.service_api.escrow_id,
         task_id: Some(result.service_api.task_id),
+        transaction_id: None,
+        terms_digest: None,
         task_binding_digest: binding.map(|value| value.digest.clone()),
         settlement_tx_signature: result.persisted.clone(),
         settlement_commitment: config.commitment,
@@ -92,7 +94,11 @@ fn evidence(
         payer_balance_after: after.payer,
         recipient_balance_before: before.recipient,
         recipient_balance_after: after.recipient,
+        fee_lamports: None,
+        settlement_receipt_hash: Some(result.persisted.clone()),
         persisted_settlement_tx_signature: result.persisted,
+        service_state_digest: None,
+        settlement_intent_digest: None,
         authoritative_rpc_artifact: Some(result.confirmation.display().to_string()),
     }
 }
