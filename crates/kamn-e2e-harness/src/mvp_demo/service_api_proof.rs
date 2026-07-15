@@ -57,7 +57,16 @@ fn build_command(override_command: Option<&[String]>, test_name: &str) -> Result
         return Ok(built);
     }
     let mut built = Command::new("cargo");
-    built.args(["test", "-p", "kamn-node", test_name, "--", "--nocapture"]);
+    built.args([
+        "test",
+        "-p",
+        "kamn-node",
+        "--bin",
+        "kamn-node",
+        test_name,
+        "--",
+        "--nocapture",
+    ]);
     Ok(built)
 }
 
