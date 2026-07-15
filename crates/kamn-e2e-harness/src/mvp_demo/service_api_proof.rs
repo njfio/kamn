@@ -95,3 +95,7 @@ fn validate_output(
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
+
+#[cfg(test)]
+#[path = "service_api_proof_tests.rs"]
+mod tests;
