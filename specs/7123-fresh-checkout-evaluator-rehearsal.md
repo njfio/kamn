@@ -58,20 +58,20 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] A temporary clone starts from the recorded merged `origin/main` SHA with
+- [x] A temporary clone starts from the recorded merged `origin/main` SHA with
   no inherited build or proof state.
-- [ ] `make demo-agent-transaction` produces a new required-devnet run.
-- [ ] The standalone verifier returns `GO` after all child processes exit.
-- [ ] Independent RPC confirms signature, finalized commitment, slot,
+- [x] `make demo-agent-transaction` produces a new required-devnet run.
+- [x] The standalone verifier returns `GO` after all child processes exit.
+- [x] Independent RPC confirms signature, finalized commitment, slot,
   recipient, 1,000,000 lamports, and exact recipient balance movement.
-- [ ] Evidence shows three distinct authenticated Pi actors and the complete
+- [x] Evidence shows three distinct authenticated Pi actors and the complete
   task, authorization, escrow funding, completion, and release lifecycle.
-- [ ] Evidence shows exactly one transfer and retry/recovery idempotency.
-- [ ] Agent A and B participant-private projections differ from Agent C's
+- [x] Evidence shows exactly one transfer and retry/recovery idempotency.
+- [x] Agent A and B participant-private projections differ from Agent C's
   restricted-public projection; Agent C has zero participant-private fields.
-- [ ] Durable receipts, relay, websocket visibility, audit export, proof report,
+- [x] Durable receipts, relay, websocket visibility, audit export, proof report,
   and a devnet Explorer link are recorded.
-- [ ] The tracked evidence passes secret/path and bounded-claim contracts.
+- [x] The tracked evidence passes secret/path and bounded-claim contracts.
 
 ## Files To Touch
 
@@ -109,6 +109,30 @@ make check
 make test
 make pre-push
 ```
+
+## Completion Evidence
+
+- Clean clone: `/tmp/kamn-7123-clean.47zt8r` at merged SHA
+  `6428f9f88a9aab4af248753c994070042416cebe`, without inherited `target/` or
+  `.kamn/` state.
+- Canonical run: `run-32638-1784027703311`; `make demo-agent-transaction`
+  exited zero in required Solana devnet mode.
+- Standalone verifier after child shutdown: `PASS` with exit zero.
+- Independent Solana RPC: finalized signature
+  `29ct6LCWQx5L9sEQ3WSWoBVbQReRP1gpVcbcPXm7D1UjYYMjannkr8s58AaMhYbhRdFv2yYRWupdYynd1TbjLdRh`
+  at slot `476189316`; recipient delta `1,000,000` lamports; fee `5,000`
+  lamports; transaction error `null`.
+- Actor evidence: three distinct key-bound DIDs and Pi process IDs; Agent A and
+  B each expose three participant-private fields while Agent C exposes zero.
+- Idempotency evidence: one submitted transfer, zero retry duplicates, plus
+  focused persisted-settlement retry and restart tests.
+- Quality gates: targeted contract `4/4`, `cargo fmt --check`, strict workspace
+  clippy, `make check`, and `make test` passed.
+- `make pre-push` first reached the standard 14,400-second workspace timeout
+  under host load without an assertion failure. The documented local timeout
+  override `PRE_PUSH_WORKSPACE_TIMEOUT_SECONDS=28800` then passed the unchanged
+  locked all-feature workspace suite on its first attempt, critical-path
+  coverage `GO` (`6/6` targets), and mutation `GO` (`10/10` caught).
 
 ## Rollback
 
