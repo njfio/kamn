@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use kamn_e2e_harness::{
@@ -7,12 +6,16 @@ use kamn_e2e_harness::{
     parse_agent_transaction_demo_config, LiveTaskEvidencePaths, VerifyMvpDemoCommandConfig,
 };
 
+#[path = "support/direct_settlement_fixture.rs"]
+mod direct_settlement_fixture;
 #[path = "support/fake_local_runtime.rs"]
 mod fake_local_runtime;
 #[path = "support/mvp_demo_command.rs"]
 mod mvp_demo_command;
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
+#[path = "support/agent_transaction_success_pi.rs"]
+mod success_pi;
 use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 
 #[test]
@@ -22,12 +25,9 @@ fn spec_c01_success_writes_one_runtime_chain_report_after_children_exit() {
     actors.write_all(Overrides::default());
     actors.rebind_shared_facts();
     let demo_stub = mvp_demo_command::devnet_required_demo_config(&root.join("stub"));
-    let live = demo_stub
-        .live_task_evidence
-        .as_ref()
-        .expect("live evidence");
-    let mut config = configured_fixture(&root, &actors.paths(), live);
-    config.devnet_settlement_command = demo_stub.devnet_settlement_command;
+    let live = mvp_demo_command::live_task_evidence::write_v2(&root.join("live"));
+    let _path_guard = direct_settlement_fixture::install(&root);
+    let mut config = configured_fixture(&root, &actors.paths(), &live);
     config.localhost_signed_demo_command = demo_stub.localhost_signed_demo_command;
     config.service_api_vertical_slice_command = demo_stub.service_api_vertical_slice_command;
     config.service_api_websocket_command = demo_stub.service_api_websocket_command;
@@ -65,7 +65,12 @@ fn configured_fixture(
     )
     .expect("payer file");
     std::fs::write(root.join("extension/index.ts"), "export default {}").expect("extension");
-    write_success_pi(root, actor_sources, live);
+    success_pi::write(
+        root,
+        actor_sources,
+        live,
+        direct_settlement_fixture::state_source(root).as_path(),
+    );
     parse_agent_transaction_demo_config(&fixture_env(root)).expect("configuration")
 }
 
@@ -90,49 +95,6 @@ fn fixture_env(root: &Path) -> BTreeMap<String, String> {
     env
 }
 
-fn write_success_pi(root: &Path, actors: &[String; 3], live: &LiveTaskEvidencePaths) {
-    let script = format!(
-        r#"#!/bin/sh
-case " $* " in *" --print "*) echo KAMN_PI_PREFLIGHT_OK; exit 0;; esac
-role=""; previous=""
-for arg in "$@"; do
-  if [ "$previous" = "--name" ]; then role="$arg"; fi
-  previous="$arg"
-done
-test -n "$KAMN_MVP_LIVE_MCP_BINARY" || exit 41
-test -n "$KAMN_MVP_LIVE_MCP_ENDPOINT" || exit 42
-test -n "$KAMN_MVP_LIVE_MCP_AGENT_A_NAME" || exit 43
-test -n "$KAMN_MVP_LIVE_MCP_AGENT_B_NAME" || exit 44
-test -n "$KAMN_MVP_LIVE_MCP_AGENT_C_NAME" || exit 45
-while read line; do
-  case "$line" in *'"type":"abort"'*) continue;; esac
-  mkdir -p "$(dirname "$KAMN_MVP_PI_TRANSACTION_AGENT_A_FILE")"
-  cp "{}" "$KAMN_MVP_PI_TRANSACTION_AGENT_A_FILE"
-  cp "{}" "$KAMN_MVP_PI_TRANSACTION_AGENT_B_FILE"
-  cp "{}" "$KAMN_MVP_PI_TRANSACTION_AGENT_C_FILE"
-  cp "{}" "$KAMN_MVP_LIVE_TASK_HANDOFF_FILE"
-  cp "{}" "$KAMN_MVP_LIVE_TASK_AGENT_A_RECEIPT_FILE"
-  cp "{}" "$KAMN_MVP_LIVE_TASK_AGENT_B_RECEIPT_FILE"
-  cp "{}" "$KAMN_MVP_LIVE_TASK_AGENT_C_OBSERVATION_FILE"
-  echo '{{"type":"response","command":"prompt","success":true}}'
-  if [ "$role" = "kamn-mvp-agent-b" ]; then
-    echo '{{"type":"agent_end","messages":[{{"did":"kamn:did:agent:b"}}]}}'
-  else
-    echo '{{"type":"agent_end","messages":[]}}'
-  fi
-done
-"#,
-        actors[0],
-        actors[1],
-        actors[2],
-        live.handoff,
-        live.agent_a_receipt,
-        live.agent_b_receipt,
-        live.agent_c_observation,
-    );
-    write_executable(root.join("pi"), script.as_str());
-}
-
 fn base_env() -> BTreeMap<String, String> {
     [
         ("KAMN_MVP_AGENT_DRIVER", "pi"),
@@ -154,13 +116,6 @@ fn base_env() -> BTreeMap<String, String> {
     .into_iter()
     .map(|(key, value)| (key.to_owned(), value.to_owned()))
     .collect()
-}
-
-fn write_executable(path: PathBuf, body: &str) {
-    std::fs::write(&path, body).expect("fake Pi");
-    let mut permissions = std::fs::metadata(&path).expect("metadata").permissions();
-    permissions.set_mode(0o700);
-    std::fs::set_permissions(path, permissions).expect("permissions");
 }
 
 fn run_directories(root: &Path) -> Vec<PathBuf> {

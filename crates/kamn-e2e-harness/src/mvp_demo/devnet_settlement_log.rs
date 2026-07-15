@@ -8,7 +8,12 @@ pub(super) fn write_live_success_log(
     evidence: &DevnetSettlementEvidence,
 ) -> Result<(), String> {
     write_settlement_evidence_artifact(run_dir, evidence)?;
-    let mut content = format!(
+    let content = format!("{}{}", base_log(evidence), provenance_log(evidence));
+    write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
+}
+
+fn base_log(evidence: &DevnetSettlementEvidence) -> String {
+    format!(
         "devnet_settlement_status=PASS\nnetwork={}\nexecution_surface={}\nrpc_url={}\npayer_pubkey={}\nrecipient_pubkey={}\nlamports={}\nescrow_id={}\nsettlement_tx_signature={}\nsettlement_commitment={}\npayer_balance_before={}\npayer_balance_after={}\nrecipient_balance_before={}\nrecipient_balance_after={}\npersisted_settlement_tx_signature={}\ntask_id={}\ntask_binding_digest={}\n",
         evidence.network,
         evidence.execution_surface,
@@ -26,9 +31,7 @@ pub(super) fn write_live_success_log(
         evidence.persisted_settlement_tx_signature,
         evidence.task_id.as_deref().unwrap_or("not-bound"),
         evidence.task_binding_digest.as_deref().unwrap_or("not-bound"),
-    );
-    content.push_str(provenance_log(evidence).as_str());
-    write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
+    )
 }
 
 fn provenance_log(evidence: &DevnetSettlementEvidence) -> String {
