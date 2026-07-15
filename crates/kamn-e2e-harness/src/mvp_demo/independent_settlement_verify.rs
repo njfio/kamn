@@ -21,7 +21,19 @@ fn validate_direct_provenance(
     if evidence.execution_surface != "live-service-persisted-receipt" {
         return Ok(());
     }
-    let fields = [
+    for (field, expected) in provenance_fields(evidence) {
+        require_claim_string(claim, field, expected.ok_or_else(invalid)?)?;
+    }
+    require_claim_u64(
+        claim,
+        "fee_lamports",
+        evidence.fee_lamports.ok_or_else(invalid)?,
+    )?;
+    validate_provenance_shape(evidence)
+}
+
+fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 5] {
+    [
         ("transaction_id", evidence.transaction_id.as_deref()),
         ("terms_digest", evidence.terms_digest.as_deref()),
         (
@@ -36,16 +48,7 @@ fn validate_direct_provenance(
             "settlement_intent_digest",
             evidence.settlement_intent_digest.as_deref(),
         ),
-    ];
-    for (field, expected) in fields {
-        require_claim_string(claim, field, expected.ok_or_else(invalid)?)?;
-    }
-    require_claim_u64(
-        claim,
-        "fee_lamports",
-        evidence.fee_lamports.ok_or_else(invalid)?,
-    )?;
-    validate_provenance_shape(evidence)
+    ]
 }
 
 fn validate_provenance_shape(evidence: &SettlementEvidenceArtifact) -> Result<(), String> {

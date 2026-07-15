@@ -16,6 +16,9 @@ use fake_solana::install_fake_solana;
 mod live_evidence;
 use live_evidence::write_live_evidence;
 
+#[path = "agent_transaction_finalize_tests_state.rs"]
+mod state_fixture;
+
 const RECIPIENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY";
 const LAMPORTS_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS";
 const COMMITMENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT";
@@ -36,7 +39,7 @@ impl ProofRetryFixture {
         actors.rebind_shared_facts();
         let paths = evidence_paths(actors.paths(), write_live_evidence(&root));
         let config = config(&root);
-        write_persisted_state(&root);
+        state_fixture::write(&root, RECIPIENT);
         let original_path = install_fake_solana(&root);
         std::fs::create_dir_all(&config.output_root).expect("output root");
         Self {
@@ -141,36 +144,6 @@ fn evidence_paths(actors: [String; 3], live: [String; 4]) -> AgentTransactionEvi
         actors,
         run_id: "proof-retry".to_owned(),
     }
-}
-
-fn write_persisted_state(root: &Path) {
-    let path = root.join("staging/service-api-state.json");
-    let state = serde_json::json!({
-        "schema_version": "kamn.runtime.service-api-message-store.v4",
-        "tasks": {"task-local-bound-7086": {
-            "task_id": "task-local-bound-7086", "state": "completed",
-            "transaction_id": "transaction-live-7086", "terms_digest": "a".repeat(64),
-        }},
-        "escrows": {"escrow-local-bound-7086": {
-            "escrow_id": "escrow-local-bound-7086", "state": "released",
-            "task_id": "task-local-bound-7086", "transaction_id": "transaction-live-7086",
-            "amount_lamports": 1000000, "network": "solana-devnet",
-            "terms_digest": "a".repeat(64), "settlement_receipt_hash": "devnet-signature-111",
-            "settlement_tx_signature": "devnet-signature-111",
-            "settlement_network": "solana:devnet", "settlement_commitment": "finalized",
-        }},
-        "settlement_intents": {"escrow-local-bound-7086": {
-            "settlement_intent_id": "intent-local-bound-7086", "escrow_id": "escrow-local-bound-7086",
-            "actor_did": "kamn:did:a", "idempotency_key": "release-local-bound-7086",
-            "recipient_pubkey": RECIPIENT, "amount_lamports": 1000000,
-            "network": "solana:devnet", "expected_signature": "devnet-signature-111",
-            "signed_transaction_digest": format!("sha256:{}", "b".repeat(64)),
-            "signed_transaction_json": "signed-transaction-secret", "state": "confirmed",
-            "submission_attempt_count": 1,
-        }},
-    });
-    std::fs::write(path, serde_json::to_vec(&state).expect("state JSON"))
-        .expect("persisted service state");
 }
 
 fn localhost_command() -> Vec<String> {

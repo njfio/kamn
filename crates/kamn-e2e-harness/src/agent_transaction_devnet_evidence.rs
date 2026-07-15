@@ -83,31 +83,49 @@ fn evidence(
     persisted: PersistedSettlement,
     rpc: ConfirmedTransfer,
 ) -> DevnetSettlementEvidence {
+    let mut evidence = core_evidence(config, &actor, &rpc);
+    apply_provenance(&mut evidence, actor, persisted, rpc);
+    evidence
+}
+
+fn core_evidence(
+    config: &AgentTransactionDemoConfig,
+    actor: &ActorSettlement,
+    rpc: &ConfirmedTransfer,
+) -> DevnetSettlementEvidence {
     DevnetSettlementEvidence {
         network: "solana:devnet".to_owned(),
         execution_surface: "live-service-persisted-receipt".to_owned(),
         rpc_url: config.solana_rpc_url.clone(),
-        payer_pubkey: rpc.payer,
+        payer_pubkey: rpc.payer.clone(),
         recipient_pubkey: config.solana_recipient_pubkey.clone(),
         lamports: actor.lamports,
-        escrow_id: actor.escrow_id,
-        task_id: Some(actor.task_id),
-        transaction_id: Some(persisted.transaction_id),
-        terms_digest: Some(persisted.terms_digest),
-        task_binding_digest: None,
+        escrow_id: actor.escrow_id.clone(),
         settlement_tx_signature: actor.signature.clone(),
         settlement_commitment: "finalized".to_owned(),
         payer_balance_before: rpc.payer_before,
         payer_balance_after: rpc.payer_after,
         recipient_balance_before: rpc.recipient_before,
         recipient_balance_after: rpc.recipient_after,
-        fee_lamports: Some(rpc.fee_lamports),
-        settlement_receipt_hash: Some(persisted.receipt_hash),
-        persisted_settlement_tx_signature: actor.signature,
-        service_state_digest: Some(persisted.state_digest),
-        settlement_intent_digest: Some(persisted.intent_digest),
-        authoritative_rpc_artifact: Some(rpc.artifact_path.display().to_string()),
+        persisted_settlement_tx_signature: actor.signature.clone(),
+        ..DevnetSettlementEvidence::default()
     }
+}
+
+fn apply_provenance(
+    evidence: &mut DevnetSettlementEvidence,
+    actor: ActorSettlement,
+    persisted: PersistedSettlement,
+    rpc: ConfirmedTransfer,
+) {
+    evidence.task_id = Some(actor.task_id);
+    evidence.transaction_id = Some(persisted.transaction_id);
+    evidence.terms_digest = Some(persisted.terms_digest);
+    evidence.fee_lamports = Some(rpc.fee_lamports);
+    evidence.settlement_receipt_hash = Some(persisted.receipt_hash);
+    evidence.service_state_digest = Some(persisted.state_digest);
+    evidence.settlement_intent_digest = Some(persisted.intent_digest);
+    evidence.authoritative_rpc_artifact = Some(rpc.artifact_path.display().to_string());
 }
 
 fn string_field(value: &Value, field: &str) -> Result<String, String> {

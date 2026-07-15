@@ -4,16 +4,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use super::agent_harness::{
     validate_agent_harness_evidence_path, validate_embedded_agent_harness_evidence,
 };
-use super::artifact_digest::ThreeAgentArtifactDigests;
 use super::command_config::{MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
-use super::devnet_settlement::{DevnetSettlementAttempt, DevnetSettlementEvidence};
-use super::live_task_binding::LiveTaskBinding;
+use super::devnet_settlement::DevnetSettlementEvidence;
 use super::live_task_binding_verify::validate_live_task_binding_file;
 use super::local_artifact_verify::validate_local_artifact_files;
 use super::local_artifacts::create_demo_artifacts;
 use super::localhost_signed::{run_localhost_signed_demo, LocalhostSignedDemoInput};
-use super::report::{escape_json, render_report_json, DemoReportInput};
+use super::report::{escape_json, render_report_json};
 use super::report_writer::write_reports;
+use super::runner_report_input::build_report_input;
 use super::runner_settlement::create_bound_settlement;
 use super::service_api_proof::{run_service_api_proofs, ServiceApiProofInput};
 use super::three_agent_transcript::validate_three_agent_transcript_file;
@@ -39,15 +38,9 @@ fn execute_mvp_demo(
     let output_root = Path::new(config.output_root.as_str());
     let run_id = build_run_id()?;
     let run_dir = output_root.join(run_id.as_str());
-    create_demo_artifacts(&run_dir)?;
-    super::runtime_actor_bundle::copy_runtime_actor_sources(
-        config.pi_transaction_actor_paths.as_ref(),
-        &run_dir,
-    )?;
-    create_localhost_signed_artifact(config, &run_dir)?;
-    create_service_api_artifacts(config, &run_dir)?;
+    prepare_run(config, &run_dir)?;
     let bound = create_bound_settlement(config, run_id.as_str(), &run_dir, settlement)?;
-    let input = report_input(
+    let input = build_report_input(
         config,
         output_root,
         run_id.as_str(),
@@ -59,6 +52,16 @@ fn execute_mvp_demo(
     validate_generated_report(report_json.as_str(), output_root)?;
     write_reports(output_root, run_id.as_str(), report_json.as_str(), &input)?;
     Ok(report_json)
+}
+
+fn prepare_run(config: &MvpDemoCommandConfig, run_dir: &Path) -> Result<(), String> {
+    create_demo_artifacts(run_dir)?;
+    super::runtime_actor_bundle::copy_runtime_actor_sources(
+        config.pi_transaction_actor_paths.as_ref(),
+        run_dir,
+    )?;
+    create_localhost_signed_artifact(config, run_dir)?;
+    create_service_api_artifacts(config, run_dir)
 }
 
 /// Executes the MVP demo verifier command.
@@ -146,27 +149,6 @@ fn build_run_id() -> Result<String, String> {
         std::process::id(),
         elapsed.as_millis()
     ))
-}
-
-fn report_input<'a>(
-    config: &'a MvpDemoCommandConfig,
-    output_root: &'a Path,
-    run_id: &'a str,
-    settlement: &'a DevnetSettlementAttempt,
-    binding: Option<&'a LiveTaskBinding>,
-    three_agent_artifact_digests: Option<&'a ThreeAgentArtifactDigests>,
-) -> DemoReportInput<'a> {
-    DemoReportInput {
-        run_id,
-        devnet_mode: config.devnet_mode.as_str(),
-        solana_rpc_url: config.solana_rpc_url.as_deref(),
-        output_root,
-        devnet_settlement: settlement.evidence.as_ref(),
-        live_task_binding: binding,
-        devnet_no_go_reason: settlement.no_go_reason.as_deref(),
-        agent_harness_evidence_path: config.agent_harness_evidence_path.as_deref(),
-        three_agent_artifact_digests,
-    }
 }
 
 fn latest_report_path(output_root: &Path) -> String {

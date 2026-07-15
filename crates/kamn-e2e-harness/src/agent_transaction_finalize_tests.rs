@@ -18,8 +18,11 @@ fn proof_retry_reuses_persisted_settlement_without_submission() {
     );
     fixture.unblock_latest_publication();
     finalize(&fixture.config, &fixture.paths).expect("proof retry should pass");
+    assert_direct_report(fixture.report().as_str());
+    assert_no_submission(fixture.solana_calls().as_str());
+}
 
-    let report = fixture.report();
+fn assert_direct_report(report: &str) {
     assert!(
         report.contains(r#""execution_surface":"live-service-persisted-receipt""#),
         "canonical proof must use the persisted service receipt: {report}"
@@ -28,8 +31,9 @@ fn proof_retry_reuses_persisted_settlement_without_submission() {
     assert!(report.contains(r#""settlement_intent_digest":"sha256:"#));
     assert!(report.contains(r#""fee_lamports":5000"#));
     assert!(!report.contains("signed-transaction-secret"));
+}
 
-    let calls = fixture.solana_calls();
+fn assert_no_submission(calls: &str) {
     assert_eq!(
         calls
             .lines()

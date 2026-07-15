@@ -34,6 +34,15 @@ pub(super) fn read_persisted_settlement(
     validate_task(task, expected)?;
     validate_escrow(escrow, expected)?;
     validate_intent(intent, expected)?;
+    build_persisted_settlement(raw.as_str(), task, escrow, intent)
+}
+
+fn build_persisted_settlement(
+    raw: &str,
+    task: &Value,
+    escrow: &Value,
+    intent: &Value,
+) -> Result<PersistedSettlement, String> {
     let terms_digest = string(escrow, "terms_digest")?;
     if string(task, "terms_digest")? != terms_digest {
         return Err("persisted settlement terms_digest mismatch".to_owned());
@@ -42,7 +51,7 @@ pub(super) fn read_persisted_settlement(
         transaction_id: string(escrow, "transaction_id")?,
         terms_digest,
         receipt_hash: string(escrow, "settlement_receipt_hash")?,
-        state_digest: digest(raw.as_str()),
+        state_digest: digest(raw),
         intent_digest: digest(&serde_json::to_string(intent).map_err(json_error)?),
     })
 }

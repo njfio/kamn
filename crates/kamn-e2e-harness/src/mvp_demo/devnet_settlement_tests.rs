@@ -39,12 +39,8 @@ fn sample_evidence() -> DevnetSettlementEvidence {
         payer_balance_after: 2_498_995_000,
         recipient_balance_before: 2_500_000_000,
         recipient_balance_after: 2_501_000_000,
-        fee_lamports: None,
-        settlement_receipt_hash: None,
         persisted_settlement_tx_signature: "devnet-signature-111".to_owned(),
-        service_state_digest: None,
-        settlement_intent_digest: None,
-        authoritative_rpc_artifact: None,
+        ..DevnetSettlementEvidence::default()
     }
 }
 
