@@ -84,21 +84,21 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Canonical agent-transaction `GO` reports
+- [x] Canonical agent-transaction `GO` reports
   `execution_surface: live-service-persisted-receipt`.
-- [ ] The canonical supervisor does not execute `cat` or another command to
+- [x] The canonical supervisor does not execute `cat` or another command to
   inject settlement evidence.
-- [ ] Durable escrow and confirmed intent fields match task, transaction,
+- [x] Durable escrow and confirmed intent fields match task, transaction,
   terms, payer/recipient, amount, signature, commitment, and actor projections.
-- [ ] Evidence records exact recipient movement and payer movement equal to
+- [x] Evidence records exact recipient movement and payer movement equal to
   amount plus the RPC-reported fee.
-- [ ] Evidence exposes only digests and safe public receipt fields, not signed
+- [x] Evidence exposes only digests and safe public receipt fields, not signed
   transaction JSON, key paths, or credentials.
-- [ ] Required-devnet verification rejects `command-override`, missing state,
+- [x] Required-devnet verification rejects `command-override`, missing state,
   mismatched state, dry-run, placeholder, copied, and path-escaped evidence.
-- [ ] Retry/restart proof reuses the persisted settlement and submits no second
+- [x] Retry/restart proof reuses the persisted settlement and submits no second
   transfer.
-- [ ] The canonical demo, standalone verifier, and independent Solana RPC
+- [x] The canonical demo, standalone verifier, and independent Solana RPC
   confirmation agree on one finalized transaction.
 
 ## Files To Touch
@@ -152,6 +152,36 @@ make pre-push
 make demo-agent-transaction
 cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proof/report.json
 ```
+
+## Completion Evidence
+
+- Canonical required-devnet run `run-28784-1784155964664` returned `GO` with
+  `execution_surface: live-service-persisted-receipt`.
+- Solana devnet signature
+  `2Tayz1Gi5pT7w6ajtpFbZzUPDKuapKdjvK5RPf97EVpdCGAXb8CnQ6vd5VbMdikqMratqYnJ7HJ7HxEr2QsXev2u`
+  finalized in slot `476538109` for `1,000,000` lamports with a `5,000`
+  lamport fee. The payer delta was `1,005,000`; the recipient delta was
+  `1,000,000`.
+- The standalone verifier returned `PASS` for
+  `.kamn/demo/latest/proof/report.json` after all supervised processes exited.
+- Agent A and B private views each retained three private fields; Agent C's
+  restricted public view retained none and still verified the public receipt
+  chain.
+- Proof artifact inspection found no signed transaction JSON or private key
+  material.
+- Formatting, strict workspace clippy, touched Rust size policy, focused
+  settlement contracts, canonical success integration, service vertical slice,
+  and websocket proof passed locally. Full repository gates are recorded in
+  the pull request closeout.
+
+## Deviations
+
+- No product or claim-boundary deviations were required.
+- On this host, Cargo processes using a cold default target can remain blocked
+  in the macOS loader for extended periods. The strict workspace clippy command
+  completed with the same flags and `-D warnings` using the warmed
+  `target/mvp-demo-proof` target directory; this changes build storage only,
+  not lint scope or semantics.
 
 ## Rollback
 
