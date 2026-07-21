@@ -31,35 +31,63 @@ pub(super) fn create_bound_task(
     let input = parse_create(payload, actor_did)?;
     require_registered_provider(store, input.provider_did.as_str())?;
     if let Some(existing) = find_create_retry(store, actor_did, &input)? {
-        let record = existing.clone();
-        let receipt = creation_receipt(store, record.task_id.as_str())?;
-        return Ok(create_response(&record, receipt));
+        return create_retry_response(store, existing.clone());
     }
+    create_new_task(store, actor_did, payload, correlation_id, input)
+}
+
+fn create_new_task(
+    store: &mut ServiceApiMessageStore,
+    actor: &str,
+    payload: &str,
+    correlation_id: &str,
+    input: input::CreateInput,
+) -> Result<ServiceApiTaskCreateBody, TaskLifecycleError> {
     let task_id = next_task_id(store, payload);
-    let record = build_record(task_id.as_str(), actor_did, &input);
-    let receipt = receipt::build(
-        &record,
+    let record = build_record(task_id.as_str(), actor, &input);
+    let receipt = creation_receipt_record(store, &record, actor, correlation_id, &input)?;
+    store.snapshot.tasks.insert(task_id.clone(), record);
+    store.snapshot.task_transition_receipts.push(receipt);
+    issue_grants(store, task_id.as_str(), actor, input.provider_did.as_str());
+    store.persist().map_err(persistence)?;
+    persist_task_created_audit_export(store, task_id.as_str()).map_err(persistence)?;
+    create_task_response(store, task_id.as_str())
+}
+
+fn creation_receipt_record(
+    store: &ServiceApiMessageStore,
+    record: &ServiceApiPersistedTaskRecord,
+    actor: &str,
+    correlation_id: &str,
+    input: &input::CreateInput,
+) -> Result<ServiceApiTaskTransitionReceiptRecord, TaskLifecycleError> {
+    receipt::build(
+        record,
         ReceiptInput {
-            actor: actor_did,
+            actor,
             action: "task:create",
             prior_state: "none".to_owned(),
             idempotency_key: input.idempotency_key.clone(),
             correlation_id,
             sequence: store.snapshot.task_transition_receipts.len() + 1,
         },
-    )?;
-    store.snapshot.tasks.insert(task_id.clone(), record);
-    store.snapshot.task_transition_receipts.push(receipt);
-    issue_grants(
-        store,
-        task_id.as_str(),
-        actor_did,
-        input.provider_did.as_str(),
-    );
-    store.persist().map_err(persistence)?;
-    persist_task_created_audit_export(store, task_id.as_str()).map_err(persistence)?;
-    let record = &store.snapshot.tasks[&task_id];
-    let receipt = creation_receipt(store, task_id.as_str())?;
+    )
+}
+
+fn create_retry_response(
+    store: &ServiceApiMessageStore,
+    record: ServiceApiPersistedTaskRecord,
+) -> Result<ServiceApiTaskCreateBody, TaskLifecycleError> {
+    let receipt = creation_receipt(store, record.task_id.as_str())?;
+    Ok(create_response(&record, receipt))
+}
+
+fn create_task_response(
+    store: &ServiceApiMessageStore,
+    task_id: &str,
+) -> Result<ServiceApiTaskCreateBody, TaskLifecycleError> {
+    let record = &store.snapshot.tasks[task_id];
+    let receipt = creation_receipt(store, task_id)?;
     Ok(create_response(record, receipt))
 }
 

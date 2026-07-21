@@ -45,30 +45,57 @@ fn mutation(
     expected_actor: &str,
 ) -> Result<String, &'static str> {
     let value = parse(payload)?;
-    let actor = required(&value, "actor_did")?;
-    let resource = required(&value, resource_key)?;
-    let state = required(&value, "state")?;
-    let receipt_id = required(&value, "receipt_id")?;
-    let digest = required(&value, "receipt_digest")?;
-    let action = required(&value, "action")?;
-    validate_digest(digest)?;
-    validate_equal(actor, expected_actor)?;
-    validate_equal(action, expected_action(tool)?)?;
-    validate_state(tool, state)?;
-    validate_requested_resource(request, resource_key, resource)?;
+    let fields = MutationFields::parse(&value, resource_key)?;
+    fields.validate(request, tool, resource_key, expected_actor)?;
     Ok(json!({
         "schema_version": "kamn.mcp.authority-receipt.v1",
         "authority_kind": "service-receipt",
         "source": "kamn-service",
-        "actor_did": actor,
+        "actor_did": fields.actor,
         "tool": tool,
-        "resource_id": resource,
-        "resulting_state": state,
-        "service_receipt_id": receipt_id,
-        "service_receipt_digest": digest,
+        "resource_id": fields.resource,
+        "resulting_state": fields.state,
+        "service_receipt_id": fields.receipt_id,
+        "service_receipt_digest": fields.digest,
         "service_result": value,
     })
     .to_string())
+}
+
+struct MutationFields<'a> {
+    actor: &'a str,
+    resource: &'a str,
+    state: &'a str,
+    receipt_id: &'a str,
+    digest: &'a str,
+    action: &'a str,
+}
+
+impl<'a> MutationFields<'a> {
+    fn parse(value: &'a Value, resource_key: &str) -> Result<Self, &'static str> {
+        Ok(Self {
+            actor: required(value, "actor_did")?,
+            resource: required(value, resource_key)?,
+            state: required(value, "state")?,
+            receipt_id: required(value, "receipt_id")?,
+            digest: required(value, "receipt_digest")?,
+            action: required(value, "action")?,
+        })
+    }
+
+    fn validate(
+        &self,
+        request: &str,
+        tool: &str,
+        resource_key: &str,
+        expected_actor: &str,
+    ) -> Result<(), &'static str> {
+        validate_digest(self.digest)?;
+        validate_equal(self.actor, expected_actor)?;
+        validate_equal(self.action, expected_action(tool)?)?;
+        validate_state(tool, self.state)?;
+        validate_requested_resource(request, resource_key, self.resource)
+    }
 }
 
 fn parse(payload: &str) -> Result<Value, &'static str> {

@@ -59,11 +59,13 @@ pub(super) fn fund(
     let receipt = receipt::append(
         store,
         &record,
-        actor,
-        "escrow:fund",
-        "unfunded",
-        key,
-        correlation_id,
+        receipt::ReceiptInput {
+            actor,
+            action: "escrow:fund",
+            prior_state: "unfunded",
+            key,
+            correlation_id,
+        },
     )?;
     store.snapshot.escrows.insert(escrow_id.clone(), record);
     issue_release_grant(store, escrow_id.as_str(), actor);
@@ -99,11 +101,13 @@ pub(super) fn authorize_release(
     let receipt = receipt::append(
         store,
         &updated,
-        actor,
-        "escrow:release-authorize",
-        "funded",
-        key,
-        correlation_id,
+        receipt::ReceiptInput {
+            actor,
+            action: "escrow:release-authorize",
+            prior_state: "funded",
+            key,
+            correlation_id,
+        },
     )?;
     store.snapshot.escrows.insert(escrow_id.to_owned(), updated);
     let response = receipt::response(&store.snapshot.escrows[escrow_id], Some(&receipt));
