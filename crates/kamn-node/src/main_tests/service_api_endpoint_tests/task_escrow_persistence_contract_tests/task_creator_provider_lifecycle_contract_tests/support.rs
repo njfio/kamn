@@ -121,7 +121,7 @@ fn integration_task_create_retry_preserves_service_receipt_authority() {
     assert_eq!(
         case.state()["task_transition_receipts"]
             .as_array()
-            .unwrap()
+            .expect("task transition receipts should be an array")
             .len(),
         1
     );
