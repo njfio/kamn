@@ -151,6 +151,7 @@ fn candidate_rows() -> Vec<serde_json::Value> {
             "agent_type": "assistant",
             "model_family": "gpt-5",
             "capabilities": ["text", "code"],
+            "profile_commitment": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         }),
         serde_json::json!({
             "did": "kamn:did:agent:beta",
@@ -158,6 +159,7 @@ fn candidate_rows() -> Vec<serde_json::Value> {
             "agent_type": "assistant",
             "model_family": "gpt-4.1",
             "capabilities": ["text"],
+            "profile_commitment": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         }),
     ]
 }
