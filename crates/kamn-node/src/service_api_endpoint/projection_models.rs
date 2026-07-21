@@ -1,7 +1,7 @@
 use super::*;
 
 pub(crate) const TASK_PROJECTION_SCHEMA_VERSION: &str =
-    "kamn.runtime.task-disclosure-projection.v1";
+    "kamn.runtime.task-disclosure-projection.v2";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiTaskPublicProjection {
@@ -17,7 +17,17 @@ pub(crate) struct ServiceApiTaskPublicProjection {
     pub(crate) settlement_tx_signature: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) settlement_commitment: Option<String>,
+    pub(crate) receipt_chain_commitment: String,
     pub(crate) public_commitment: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiParticipantReceiptProjection {
+    pub(crate) receipt_id: String,
+    pub(crate) receipt_digest: String,
+    pub(crate) action: String,
+    pub(crate) resource_id: String,
+    pub(crate) resulting_state: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,6 +37,7 @@ pub(crate) struct ServiceApiParticipantTaskProjection {
     #[serde(flatten)]
     pub(crate) public: ServiceApiTaskPublicProjection,
     pub(crate) task_receipt_ids: Vec<String>,
+    pub(crate) receipt_chain_receipts: Vec<ServiceApiParticipantReceiptProjection>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) completion_evidence_digest: Option<String>,
 }

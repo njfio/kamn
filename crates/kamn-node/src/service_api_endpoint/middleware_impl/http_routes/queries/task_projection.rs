@@ -81,6 +81,11 @@ fn projection_contract_error(error: message_store::TaskProjectionError) -> Respo
             "TRANSACTION_PROJECTION_INCONSISTENT",
             "projection inconsistent",
         ),
+        ReceiptChainInvalid => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "SERVICE_RECEIPT_CHAIN_INVALID",
+            "receipt chain invalid",
+        ),
         Persistence(error) => return super::persistence_error("task projection failed", error),
     };
     super::super::payload::json_error_response(status, "task-projection", code, message)

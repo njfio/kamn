@@ -4,6 +4,7 @@ use crate::service_api_endpoint::projection_models::{
 };
 
 mod commitment;
+mod receipt_chain;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TaskProjectionError {
@@ -11,6 +12,7 @@ pub(crate) enum TaskProjectionError {
     Forbidden,
     EscrowBindingMissing,
     Inconsistent,
+    ReceiptChainInvalid,
     Persistence(String),
 }
 
@@ -27,13 +29,13 @@ pub(crate) fn participant(
         return Ok(None);
     };
     let role = participant_role(task, requester_did).ok_or(TaskProjectionError::Forbidden)?;
-    let public = build_public_projection(&store.snapshot, task)?;
-    let receipts = task_receipt_ids(&store.snapshot, task_id);
+    let (public, chain) = build_projection(&store.snapshot, task)?;
     Ok(Some(ServiceApiParticipantTaskProjection {
         view_scope: "participant-private".to_owned(),
         participant_role: role.to_owned(),
         public,
-        task_receipt_ids: receipts,
+        task_receipt_ids: chain.task_receipt_ids(requester_did),
+        receipt_chain_receipts: chain.participant_receipts(requester_did),
         completion_evidence_digest: task.completion_evidence_digest.clone(),
     }))
 }
@@ -50,9 +52,10 @@ pub(crate) fn verifier(
     let Some(task) = store.snapshot.tasks.get(task_id) else {
         return Ok(None);
     };
+    let (public, _) = build_projection(&store.snapshot, task)?;
     Ok(Some(ServiceApiVerifierTaskProjection {
         view_scope: "restricted-public".to_owned(),
-        public: build_public_projection(&store.snapshot, task)?,
+        public,
     }))
 }
 
@@ -80,16 +83,17 @@ fn participant_role<'a>(
     (task.provider_did.as_deref() == Some(requester)).then_some("provider")
 }
 
-fn build_public_projection(
+fn build_projection(
     snapshot: &ServiceApiPersistedMessageStoreSnapshot,
     task: &ServiceApiPersistedTaskRecord,
-) -> Result<ServiceApiTaskPublicProjection, TaskProjectionError> {
+) -> Result<(ServiceApiTaskPublicProjection, receipt_chain::ReceiptChain), TaskProjectionError> {
     let escrow = bound_escrow(snapshot, task)?;
     let transaction_id = matching_transaction_id(task, escrow)?;
-    require_settlement_consistency(snapshot, escrow)?;
     let mut projection = public_fields(task, escrow, transaction_id)?;
+    let chain = receipt_chain::derive(snapshot, task, escrow)?;
+    projection.receipt_chain_commitment = chain.commitment.clone();
     projection.public_commitment = commitment::public_commitment(&projection);
-    Ok(projection)
+    Ok((projection, chain))
 }
 
 fn bound_escrow<'a>(
@@ -122,28 +126,6 @@ fn matching_transaction_id<'a>(
     }
 }
 
-fn require_settlement_consistency(
-    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
-    escrow: &ServiceApiPersistedEscrowRecord,
-) -> Result<(), TaskProjectionError> {
-    let Some(signature) = escrow.settlement.settlement_tx_signature.as_deref() else {
-        return Ok(());
-    };
-    let intent = snapshot
-        .settlement_intents
-        .get(&escrow.escrow_id)
-        .ok_or(TaskProjectionError::Inconsistent)?;
-    if intent.state == "confirmed"
-        && intent.expected_signature == signature
-        && Some(intent.amount_lamports) == escrow.amount_lamports
-        && intent.network == "solana:devnet"
-        && escrow.network.as_deref() == Some("solana-devnet")
-    {
-        return Ok(());
-    }
-    Err(TaskProjectionError::Inconsistent)
-}
-
 fn public_fields(
     task: &ServiceApiPersistedTaskRecord,
     escrow: &ServiceApiPersistedEscrowRecord,
@@ -167,18 +149,7 @@ fn public_fields(
         network,
         settlement_tx_signature: escrow.settlement.settlement_tx_signature.clone(),
         settlement_commitment: escrow.settlement.settlement_commitment.clone(),
+        receipt_chain_commitment: String::new(),
         public_commitment: String::new(),
     })
-}
-
-fn task_receipt_ids(
-    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
-    task_id: &str,
-) -> Vec<String> {
-    snapshot
-        .task_transition_receipts
-        .iter()
-        .filter(|receipt| receipt.task_id == task_id)
-        .map(|receipt| receipt.receipt_id.clone())
-        .collect()
 }

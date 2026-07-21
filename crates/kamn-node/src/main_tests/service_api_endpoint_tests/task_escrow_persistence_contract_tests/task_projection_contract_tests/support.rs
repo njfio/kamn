@@ -2,7 +2,7 @@ use super::super::super::*;
 use super::super::support::*;
 use super::{CREATOR, OUTSIDER, PROVIDER, VERIFIER};
 
-pub(super) struct ProjectionCase {
+pub(crate) struct ProjectionCase {
     _env: ServiceApiTestEnvGuards,
     _state_guard: EnvVarGuard,
     snapshot: crate::service_api_endpoint::ServiceApiSnapshot,
@@ -10,7 +10,7 @@ pub(super) struct ProjectionCase {
 }
 
 impl ProjectionCase {
-    pub(super) fn new(label: &str) -> Self {
+    pub(crate) fn new(label: &str) -> Self {
         let env = acquire_service_api_test_env();
         let state_file = unique_named_state_file(format!("kamn-projection-{label}").as_str());
         let (_, state_guard) = set_state_file_env(state_file.as_path());
@@ -22,7 +22,7 @@ impl ProjectionCase {
         }
     }
 
-    pub(super) fn seed_transaction(&self) -> String {
+    pub(crate) fn seed_transaction(&self) -> String {
         let task_id = self.seed_task();
         let escrow = serde_json::json!({"task_id": task_id, "amount_lamports": 10_000});
         fund_escrow(
@@ -35,7 +35,7 @@ impl ProjectionCase {
         task_id
     }
 
-    pub(super) fn seed_task(&self) -> String {
+    pub(crate) fn seed_task(&self) -> String {
         self.register_actors();
         let body = task_body();
         let task = create_task(
@@ -55,7 +55,7 @@ impl ProjectionCase {
         task.task_id
     }
 
-    pub(super) fn query(&self, actor: &str, nonce: u64, task_id: &str, view: &str) -> String {
+    pub(crate) fn query(&self, actor: &str, nonce: u64, task_id: &str, view: &str) -> String {
         let path = format!("/v1/tasks/{task_id}/{view}");
         raw_signed_request(
             &self.snapshot,
@@ -88,6 +88,38 @@ impl ProjectionCase {
         self.write_state(&state);
     }
 
+    pub(crate) fn seed_completed_transaction(&self) -> String {
+        let task_id = self.seed_transaction();
+        complete_task(
+            &self.snapshot,
+            reserve_loopback_addr().as_str(),
+            PROVIDER,
+            3,
+            task_id.as_str(),
+        );
+        task_id
+    }
+
+    pub(crate) fn retry_task_create(&self, nonce: u64) {
+        create_task(
+            &self.snapshot,
+            reserve_loopback_addr().as_str(),
+            CREATOR,
+            nonce,
+            task_body().to_string().as_str(),
+        );
+    }
+
+    pub(crate) fn state(&self) -> serde_json::Value {
+        read_state_json(self.state_file.as_path())
+    }
+
+    pub(crate) fn mutate_state(&self, mutate: impl FnOnce(&mut serde_json::Value)) {
+        let mut state = self.state();
+        mutate(&mut state);
+        self.write_state(&state);
+    }
+
     fn write_state(&self, state: &serde_json::Value) {
         fs::write(
             self.state_file.as_path(),
@@ -96,7 +128,7 @@ impl ProjectionCase {
         .expect("write tampered state");
     }
 
-    pub(super) fn cleanup(self) {
+    pub(crate) fn cleanup(self) {
         let _ = fs::remove_file(self.state_file);
     }
 

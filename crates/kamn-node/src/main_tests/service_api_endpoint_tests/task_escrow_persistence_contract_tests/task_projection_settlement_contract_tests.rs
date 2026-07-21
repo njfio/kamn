@@ -17,13 +17,19 @@ fn integration_participant_projection_uses_persisted_settlement_evidence() {
     let task_id = escrow_task_id(&context.harness, &escrow_id);
     let (response, projection) = query_projection(&context.harness, &task_id, 184);
     assert_settlement_projection(&response, &projection, &released);
-    assert_failed_intent_is_rejected(
-        &context.harness.snapshot,
-        context.harness.bind_addr.as_str(),
-        context.harness.state_file.as_path(),
-        &task_id,
-        &escrow_id,
-    );
+    for (nonce, field, value) in [
+        (185, "actor_did", "kamn:did:agent:foreign-settler"),
+        (186, "state", "failed"),
+    ] {
+        assert_tampered_intent_is_rejected(
+            &context.harness,
+            &task_id,
+            &escrow_id,
+            nonce,
+            field,
+            value,
+        );
+    }
 }
 
 fn projection_context() -> LiveSolanaAssetMovementContext {
@@ -69,6 +75,10 @@ fn query_projection(harness: &AssetMovementHarness, task_id: &str, nonce: u64) -
 
 fn assert_settlement_projection(response: &str, projection: &Value, released: &Value) {
     assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
+    assert_eq!(
+        projection["schema_version"],
+        "kamn.runtime.task-disclosure-projection.v2"
+    );
     assert_eq!(projection["escrow_state"], "released");
     assert_eq!(projection["network"], "solana-devnet");
     assert_eq!(
@@ -76,37 +86,55 @@ fn assert_settlement_projection(response: &str, projection: &Value, released: &V
         released["settlement_tx_signature"]
     );
     assert_eq!(projection["settlement_commitment"], "finalized");
+    assert_eq!(
+        participant_receipt_actions(projection),
+        expected_receipt_actions()
+    );
 }
 
-fn assert_failed_intent_is_rejected(
-    snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
-    bind_addr: &str,
-    state_file: &std::path::Path,
+fn participant_receipt_actions(projection: &Value) -> Vec<&str> {
+    projection["receipt_chain_receipts"]
+        .as_array()
+        .expect("participant receipt chain")
+        .iter()
+        .map(|receipt| receipt["action"].as_str().expect("receipt action"))
+        .collect()
+}
+
+fn expected_receipt_actions() -> Vec<&'static str> {
+    vec![
+        "task:create",
+        "task:accept",
+        "escrow:fund",
+        "task:complete",
+        "escrow:release-authorize",
+        "settlement:confirmed",
+    ]
+}
+
+fn assert_tampered_intent_is_rejected(
+    harness: &AssetMovementHarness,
     task_id: &str,
     escrow_id: &str,
+    nonce: u64,
+    field: &str,
+    value: &str,
 ) {
-    mark_intent_failed(state_file, escrow_id);
-    let path = format!("/v1/tasks/{task_id}/participant-view");
-    let response = raw_signed_request(
-        snapshot,
-        bind_addr,
-        SignedRequest {
-            max_requests: 1,
-            method: "GET",
-            path: path.as_str(),
-            caller_did: ACTOR,
-            nonce: 185,
-            body: "",
-            extra_headers: &[("X-KAMN-Authz-Scope", "tasks:read")],
-        },
-    );
+    let original = read_state_json(harness.state_file.as_path());
+    mutate_intent(harness.state_file.as_path(), escrow_id, field, value);
+    let (response, _) = query_projection(harness, task_id, nonce);
     assert!(response.contains("500 Internal Server Error"), "{response}");
-    assert!(response.contains("TRANSACTION_PROJECTION_INCONSISTENT"));
+    assert!(response.contains("SERVICE_RECEIPT_CHAIN_INVALID"));
+    write_state(harness.state_file.as_path(), &original);
 }
 
-fn mark_intent_failed(state_file: &std::path::Path, escrow_id: &str) {
+fn mutate_intent(state_file: &std::path::Path, escrow_id: &str, field: &str, value: &str) {
     let mut state = read_state_json(state_file);
-    state["settlement_intents"][escrow_id]["state"] = Value::String("failed".to_owned());
-    fs::write(state_file, serde_json::to_vec(&state).expect("state json"))
-        .expect("write tampered settlement intent");
+    state["settlement_intents"][escrow_id][field] = Value::String(value.to_owned());
+    write_state(state_file, &state);
+}
+
+fn write_state(state_file: &std::path::Path, state: &Value) {
+    fs::write(state_file, serde_json::to_vec(state).expect("state json"))
+        .expect("write settlement intent state");
 }

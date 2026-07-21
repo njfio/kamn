@@ -1,35 +1,42 @@
 use super::*;
 
 mod errors;
+mod release_authority;
 use errors::{
     invalid_release_key, settlement_evidence_mismatch_error, settlement_intent_conflict_error,
     settlement_outcome_ambiguous_error, settlement_transaction_expired_error,
 };
+
+type ReleaseResult = Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>>;
 
 pub(super) async fn release(
     state: &Arc<ServiceApiRuntimeState>,
     context: &ServiceApiRequestContext,
     escrow_id: &str,
     config: &LiveSolanaSettlementConfig,
-) -> Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>> {
+) -> ReleaseResult {
     let mut store = state.message_store.lock().await;
     validate_release_eligibility(&mut store, context, escrow_id)?;
     if let Some(existing) = released_escrow(&mut store, escrow_id)? {
         return Ok(Ok(Some(existing)));
     }
-    let actor = super::super::super::super::task_actor(context)?;
-    let key = release_idempotency_key(context)?;
+    release_authority::persist(&mut store, context, escrow_id)?;
     let prepared = resolve_prepared(&mut store, config, escrow_id)?;
-    persist_intent(
-        &mut store,
-        actor.as_str(),
-        escrow_id,
-        key.as_str(),
-        &prepared,
-    )?;
+    persist_request_intent(&mut store, context, escrow_id, &prepared)?;
     let evidence = submit(&mut store, config, &prepared, escrow_id)?;
     validate_evidence(&mut store, config, &prepared, &evidence, escrow_id)?;
     Ok(store.finalize_settlement_intent(escrow_id, &settlement_metadata_from_evidence(evidence)))
+}
+
+fn persist_request_intent(
+    store: &mut ServiceApiMessageStore,
+    context: &ServiceApiRequestContext,
+    escrow_id: &str,
+    prepared: &PreparedLiveSettlement,
+) -> Result<(), Box<Response>> {
+    let actor = super::super::super::super::task_actor(context)?;
+    let key = release_idempotency_key(context)?;
+    persist_intent(store, actor.as_str(), escrow_id, key.as_str(), prepared)
 }
 
 fn released_escrow(
