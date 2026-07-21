@@ -101,25 +101,39 @@ recompute them as an authority source.
 
 ## Acceptance Criteria
 
-- [ ] Task create appends and returns one durable service receipt with a
+- [x] Task create appends and returns one durable service receipt with a
   service-origin digest.
-- [ ] Task accept/complete and escrow fund/release return their existing exact
+- [x] Task accept/complete and escrow fund/release return their existing exact
   durable receipt IDs plus service-origin digests.
-- [ ] Idempotent retry returns the original receipt ID and digest byte-for-byte.
-- [ ] Registration returns a deterministic service-profile commitment bound to
+- [x] Idempotent retry returns the original receipt ID and digest byte-for-byte.
+- [x] Registration returns a deterministic service-profile commitment bound to
   the authenticated DID and persisted profile.
-- [ ] SDK and agent-lib mutation models preserve every authority field without
+- [x] SDK and agent-lib mutation models preserve every authority field without
   substitution; query models remain authority-free.
-- [ ] MCP returns `kamn.mcp.authority-receipt.v1` for every canonical mutation
+- [x] MCP returns `kamn.mcp.authority-receipt.v1` for every canonical mutation
   and the approved registration commitment variant.
-- [ ] MCP structured results separate service authority from request/process
+- [x] MCP structured results separate service authority from request/process
   transport provenance and compatible text is derived from the same value.
-- [ ] Missing, empty, malformed, cross-tool, cross-actor, cross-resource, or
+- [x] Missing, empty, malformed, cross-tool, cross-actor, cross-resource, or
   legacy mutation results fail closed with the specified error code.
-- [ ] A real-backend MCP contract proves the returned receipt ID and digest
+- [x] A real-backend MCP contract proves the returned receipt ID and digest
   equal the durable service response byte-for-byte.
-- [ ] Formatting, strict Clippy, focused SDK/agent-lib/MCP tests, and the real
+- [x] Formatting, strict Clippy, focused SDK/agent-lib/MCP tests, and the real
   backend MCP path pass.
+
+## Validation Evidence
+
+- Ubuntu fast-gate run `29843773248` passed formatting, strict Clippy, touched
+  Rust size policy, live transport, and service HTTP/WebSocket/TLS lanes.
+- The same run passed the #7132-focused agent-lib, CLI, MCP authority, real
+  backend, node durable-retry, SDK live task/escrow, and inventory contracts.
+- The broad job reached its 20-minute ceiling after retrying five unrelated
+  targets: rolling governance-history compliance, one supervisor timing test,
+  and three pre-existing settlement actor-evidence targets returning
+  `SETTLEMENT_EVIDENCE_INVALID`. No #7132 target remained failing.
+- Local Rust compilation was not used as authority because rustc repeatedly
+  stalled in the macOS loader while linking `kamn-sdk`; formatting and policy
+  checks completed locally.
 
 ## Files To Touch
 
