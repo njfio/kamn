@@ -17,7 +17,9 @@ allowlisted shared facts without participant-private evidence.
 - The single escrow bound to that task and its funding, release authority,
   amount, network, policy, and lifecycle state.
 - Durable allowed authorization receipts matched to mutation receipts by
-  correlation ID, actor, action, and resource.
+  actor, action, and resource. The earliest matching allowed receipt is
+  canonical because ingress and route revalidation may persist more than one
+  authorization check for the same mutation.
 - Durable task and escrow transition receipts, including their service-derived
   receipt digests.
 - The #7125 settlement intent and finalized escrow evidence when settlement is
@@ -84,8 +86,7 @@ is an authority source.
   prefix for the persisted task and escrow states.
 - A receipt bound to another task, escrow, transaction, actor, action, terms,
   amount, network, or release policy.
-- A missing, denied, duplicate, or mismatched authorization receipt for a
-  mutation entry.
+- A missing, denied, or mismatched authorization receipt for a mutation entry.
 - Duplicate receipt IDs or conflicting actor-scoped idempotency keys.
 - Settlement evidence that is missing, non-confirmed, cross-escrow,
   cross-actor, or inconsistent with the finalized escrow evidence.
@@ -130,8 +131,13 @@ is an authority source.
 - `crates/kamn-node/src/service_api_endpoint/message_store/task_projection.rs`
 - `crates/kamn-node/src/service_api_endpoint/message_store/task_projection/commitment.rs`
 - `crates/kamn-node/src/service_api_endpoint/message_store/task_projection/receipt_chain.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/task_projection/receipt_chain/*.rs`
 - `crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/queries/task_projection.rs`
+- `crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/mutations/update_routes/state_routes_release/live_settlement.rs`
+- `crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/mutations/update_routes/state_routes_release/live_settlement/release_authority.rs`
 - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/task_projection_contract_tests.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/task_projection_receipt_chain_contract_tests.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/task_projection_settlement_contract_tests.rs`
 - Focused test support or extracted contract files when required by size gates.
 
 ## Test Plan

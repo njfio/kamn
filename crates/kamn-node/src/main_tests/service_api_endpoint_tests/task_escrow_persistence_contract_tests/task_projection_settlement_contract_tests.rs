@@ -75,6 +75,10 @@ fn query_projection(harness: &AssetMovementHarness, task_id: &str, nonce: u64) -
 
 fn assert_settlement_projection(response: &str, projection: &Value, released: &Value) {
     assert!(response.contains("HTTP/1.1 200 OK"), "{response}");
+    assert_eq!(
+        projection["schema_version"],
+        "kamn.runtime.task-disclosure-projection.v2"
+    );
     assert_eq!(projection["escrow_state"], "released");
     assert_eq!(projection["network"], "solana-devnet");
     assert_eq!(
@@ -82,6 +86,30 @@ fn assert_settlement_projection(response: &str, projection: &Value, released: &V
         released["settlement_tx_signature"]
     );
     assert_eq!(projection["settlement_commitment"], "finalized");
+    assert_eq!(
+        participant_receipt_actions(projection),
+        expected_receipt_actions()
+    );
+}
+
+fn participant_receipt_actions(projection: &Value) -> Vec<&str> {
+    projection["receipt_chain_receipts"]
+        .as_array()
+        .expect("participant receipt chain")
+        .iter()
+        .map(|receipt| receipt["action"].as_str().expect("receipt action"))
+        .collect()
+}
+
+fn expected_receipt_actions() -> Vec<&'static str> {
+    vec![
+        "task:create",
+        "task:accept",
+        "escrow:fund",
+        "task:complete",
+        "escrow:release-authorize",
+        "settlement:confirmed",
+    ]
 }
 
 fn assert_tampered_intent_is_rejected(
