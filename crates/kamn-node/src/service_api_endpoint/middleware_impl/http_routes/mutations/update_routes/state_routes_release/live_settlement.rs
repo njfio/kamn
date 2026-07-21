@@ -17,10 +17,10 @@ pub(super) async fn release(
 ) -> ReleaseResult {
     let mut store = state.message_store.lock().await;
     validate_release_eligibility(&mut store, context, escrow_id)?;
-    release_authority::persist(&mut store, context, escrow_id)?;
     if let Some(existing) = released_escrow(&mut store, escrow_id)? {
         return Ok(Ok(Some(existing)));
     }
+    release_authority::persist(&mut store, context, escrow_id)?;
     let prepared = resolve_prepared(&mut store, config, escrow_id)?;
     persist_request_intent(&mut store, context, escrow_id, &prepared)?;
     let evidence = submit(&mut store, config, &prepared, escrow_id)?;
