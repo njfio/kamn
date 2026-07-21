@@ -90,7 +90,7 @@ impl McpToolBackend for AuthorityBackend {
 
 fn unsupported() -> Result<String, AgentLibError> {
     Err(AgentLibError::UnsupportedOperation(
-        "unused test backend method".to_owned(),
+        "unused test backend method",
     ))
 }
 
