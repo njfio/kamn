@@ -1,9 +1,14 @@
-use super::{ServiceApiEscrowTransitionReceiptRecord, ServiceApiTaskTransitionReceiptRecord};
+use super::{
+    ServiceApiAuthorizationReceiptRecord, ServiceApiEscrowTransitionReceiptRecord,
+    ServiceApiSettlementIntentRecord, ServiceApiTaskTransitionReceiptRecord,
+};
 use k256::sha2::{Digest, Sha256};
 
 const PROFILE_DOMAIN: &str = "kamn.service.profile-authority.v1";
 const TASK_DOMAIN: &str = "kamn.service.task-receipt.v1";
 const ESCROW_DOMAIN: &str = "kamn.service.escrow-receipt.v1";
+const AUTHORIZATION_DOMAIN: &str = "kamn.service.authorization-receipt.v1";
+const SETTLEMENT_DOMAIN: &str = "kamn.service.settlement-intent.v1";
 
 pub(super) fn profile(
     did: &str,
@@ -69,6 +74,40 @@ pub(super) fn escrow(receipt: &ServiceApiEscrowTransitionReceiptRecord) -> Strin
             amount.as_str(),
             receipt.terms_digest.as_str(),
             receipt.release_policy.as_str(),
+        ],
+    )
+}
+
+pub(super) fn authorization(receipt: &ServiceApiAuthorizationReceiptRecord) -> String {
+    digest(
+        AUTHORIZATION_DOMAIN,
+        &[
+            receipt.receipt_id.as_str(),
+            receipt.correlation_id.as_str(),
+            receipt.actor_did.as_str(),
+            receipt.resource.as_str(),
+            receipt.action.as_str(),
+            receipt.role.as_str(),
+            receipt.decision.as_str(),
+            receipt.reason_code.as_str(),
+        ],
+    )
+}
+
+pub(super) fn settlement(intent: &ServiceApiSettlementIntentRecord) -> String {
+    let amount = intent.amount_lamports.to_string();
+    digest(
+        SETTLEMENT_DOMAIN,
+        &[
+            intent.settlement_intent_id.as_str(),
+            intent.escrow_id.as_str(),
+            intent.actor_did.as_str(),
+            intent.idempotency_key.as_str(),
+            amount.as_str(),
+            intent.network.as_str(),
+            intent.expected_signature.as_str(),
+            intent.signed_transaction_digest.as_str(),
+            intent.state.as_str(),
         ],
     )
 }
