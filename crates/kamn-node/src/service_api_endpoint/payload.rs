@@ -155,6 +155,9 @@ pub(super) fn render_service_api_endpoint_response(
             creator_did: None,
             provider_did: None,
             terms_digest: None,
+            receipt_id: "render-only".to_owned(),
+            receipt_digest: "render-only".to_owned(),
+            action: "task:create".to_owned(),
         };
         return ServiceApiEndpointResponse {
             status_code: 201,
@@ -183,6 +186,7 @@ pub(super) fn render_service_api_endpoint_response(
             agent_type: "service-agent".to_owned(),
             model_family: "service-api".to_owned(),
             capabilities: vec!["profile:read".to_owned()],
+            profile_commitment: "render-only".to_owned(),
         };
         return ServiceApiEndpointResponse {
             status_code: 201,
@@ -221,6 +225,8 @@ pub(super) fn render_service_api_endpoint_response(
                 provider_did: None,
                 terms_digest: None,
                 receipt_id: None,
+                receipt_digest: None,
+                action: "task:accept".to_owned(),
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,
@@ -237,6 +243,8 @@ pub(super) fn render_service_api_endpoint_response(
                 provider_did: None,
                 terms_digest: None,
                 receipt_id: None,
+                receipt_digest: None,
+                action: "task:complete".to_owned(),
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,
@@ -260,6 +268,8 @@ pub(super) fn render_service_api_endpoint_response(
                 release_policy: None,
                 claim_scope: "render-only".to_owned(),
                 receipt_id: None,
+                receipt_digest: None,
+                action: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
@@ -283,6 +293,8 @@ pub(super) fn render_service_api_endpoint_response(
                 release_policy: None,
                 claim_scope: "render-only".to_owned(),
                 receipt_id: None,
+                receipt_digest: None,
+                action: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
@@ -414,6 +426,7 @@ pub(super) fn render_service_api_endpoint_response(
                     agent_type: "service-agent".to_owned(),
                     model_family: "service-api".to_owned(),
                     capabilities: vec!["profile:read".to_owned()],
+                    profile_commitment: "render-only".to_owned(),
                 };
                 return ServiceApiEndpointResponse {
                     status_code: 200,

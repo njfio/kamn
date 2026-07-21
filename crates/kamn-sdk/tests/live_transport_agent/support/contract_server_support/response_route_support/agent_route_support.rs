@@ -123,7 +123,7 @@ fn registration_payload(
     let capabilities_json = serde_json::to_string(capabilities)
         .map_err(|error| format!("capability serialization failed: {error}"))?;
     Ok(format!(
-        "{{\"did\":\"{did}\",\"reputation_score\":777,\"agent_type\":\"{agent_type}\",\"model_family\":\"{model_family}\",\"capabilities\":{capabilities_json}}}"
+        "{{\"did\":\"{did}\",\"reputation_score\":777,\"agent_type\":\"{agent_type}\",\"model_family\":\"{model_family}\",\"capabilities\":{capabilities_json},\"profile_commitment\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}"
     ))
 }
 

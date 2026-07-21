@@ -44,7 +44,7 @@ pub use service::{
     ServiceApiClient, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages,
     ServiceChannelReceipt, ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus,
     ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth,
-    ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus, ServiceTaskTransitionReceipt,
 };
 /// Re-exported canonical service-backed agent registration payload helper.
 pub use service_agent_registration::service_agent_registration_payload;

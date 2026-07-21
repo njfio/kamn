@@ -2,7 +2,9 @@ use super::super::{
     expect_status, json_string_array_field, json_string_field, normalize_route_segment, SdkError,
     ServiceChannelMessages, ServiceChannelReceipt, ServiceMessageDelivery, ServiceMessageReceipt,
     ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceTaskTransitionReceipt,
 };
+use super::receipt_fields;
 use super::ServiceApiClient;
 use serde_json::Value;
 
@@ -88,9 +90,13 @@ impl ServiceApiClient {
     ) -> Result<ServiceTaskReceipt, SdkError> {
         let response = self.request("POST", "/v1/tasks/create", payload, Some(auth))?;
         expect_status(response.status, 201)?;
+        let (receipt_id, receipt_digest) = receipt_fields(response.body.as_str())?;
         Ok(ServiceTaskReceipt {
             task_id: json_string_field(response.body.as_str(), "task_id")?,
             state: json_string_field(response.body.as_str(), "state")?,
+            receipt_id,
+            receipt_digest,
+            action: json_string_field(response.body.as_str(), "action")?,
         })
     }
 
@@ -115,7 +121,7 @@ impl ServiceApiClient {
         &self,
         task_id: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
+    ) -> Result<ServiceTaskTransitionReceipt, SdkError> {
         self.accept_task_with_payload(task_id, "{}", auth)
     }
 
@@ -125,14 +131,18 @@ impl ServiceApiClient {
         task_id: &str,
         payload: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
+    ) -> Result<ServiceTaskTransitionReceipt, SdkError> {
         let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}/accept");
         let response = self.request("POST", route.as_str(), payload, Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceTaskStatus {
+        let (receipt_id, receipt_digest) = receipt_fields(response.body.as_str())?;
+        Ok(ServiceTaskTransitionReceipt {
             task_id: json_string_field(response.body.as_str(), "task_id")?,
             state: json_string_field(response.body.as_str(), "state")?,
+            receipt_id,
+            receipt_digest,
+            action: json_string_field(response.body.as_str(), "action")?,
         })
     }
 
@@ -141,7 +151,7 @@ impl ServiceApiClient {
         &self,
         task_id: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
+    ) -> Result<ServiceTaskTransitionReceipt, SdkError> {
         self.complete_task_with_payload(task_id, "{}", auth)
     }
 
@@ -151,14 +161,18 @@ impl ServiceApiClient {
         task_id: &str,
         payload: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, SdkError> {
+    ) -> Result<ServiceTaskTransitionReceipt, SdkError> {
         let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}/complete");
         let response = self.request("POST", route.as_str(), payload, Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceTaskStatus {
+        let (receipt_id, receipt_digest) = receipt_fields(response.body.as_str())?;
+        Ok(ServiceTaskTransitionReceipt {
             task_id: json_string_field(response.body.as_str(), "task_id")?,
             state: json_string_field(response.body.as_str(), "state")?,
+            receipt_id,
+            receipt_digest,
+            action: json_string_field(response.body.as_str(), "action")?,
         })
     }
 }

@@ -1,7 +1,8 @@
 use super::super::{
     expect_status, json_string_array_field, json_string_field, json_u64_field,
-    normalize_route_segment, SdkError, ServiceAgentBalance, ServiceAgentProfile,
-    ServiceBridgeStatus, ServiceBridgeSubmission, ServiceHealthStatus, ServiceRequestAuth,
+    normalize_route_segment, profile_commitment, SdkError, ServiceAgentBalance,
+    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceHealthStatus,
+    ServiceRequestAuth,
 };
 use super::ServiceApiClient;
 use crate::{service_agent_registration_payload, AgentDid, AgentMetadata, AgentQuery};
@@ -147,6 +148,7 @@ fn parse_agent_profile_response(body: &str) -> Result<ServiceAgentProfile, SdkEr
         agent_type: json_string_field(body, "agent_type")?,
         model_family: json_string_field(body, "model_family")?,
         capabilities: json_string_array_field(body, "capabilities")?,
+        profile_commitment: profile_commitment(body)?,
     })
 }
 

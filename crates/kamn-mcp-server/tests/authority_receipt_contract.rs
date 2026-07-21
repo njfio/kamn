@@ -71,6 +71,10 @@ macro_rules! unsupported_backend_methods {
 struct AuthorityBackend;
 
 impl McpToolBackend for AuthorityBackend {
+    fn actor_did(&self) -> &str {
+        "kamn:did:agent:test"
+    }
+
     fn register(&self) -> Result<String, AgentLibError> {
         Ok(format!(
             r#"{{"did":"kamn:did:agent:test","profile_commitment":"{DIGEST}"}}"#
@@ -78,7 +82,19 @@ impl McpToolBackend for AuthorityBackend {
     }
 
     fn accept_task(&self, task_id: &str, _payload: &str) -> Result<String, AgentLibError> {
-        Ok(task_authority(task_id, "accepted"))
+        let authority = match task_id {
+            "wrong-resource" => task_authority("other-task", "accepted"),
+            "wrong-actor" => task_authority(task_id, "accepted")
+                .replace("kamn:did:agent:test", "kamn:did:agent:other"),
+            "wrong-action" => {
+                task_authority(task_id, "accepted").replace("task:accept", "task:complete")
+            }
+            "wrong-state" => task_authority(task_id, "accepted")
+                .replace(r#""state":"accepted""#, r#""state":"submitted""#),
+            "bad-digest" => task_authority(task_id, "accepted").replace(DIGEST, "sha256:BAD"),
+            _ => task_authority(task_id, "accepted"),
+        };
+        Ok(authority)
     }
 
     fn complete_task(&self, task_id: &str, _payload: &str) -> Result<String, AgentLibError> {
@@ -95,8 +111,13 @@ fn unsupported() -> Result<String, AgentLibError> {
 }
 
 fn task_authority(task_id: &str, state: &str) -> String {
+    let action = if state == "accepted" {
+        "task:accept"
+    } else {
+        "task:complete"
+    };
     format!(
-        r#"{{"actor_did":"kamn:did:agent:test","task_id":"{task_id}","state":"{state}","receipt_id":"task-transition-receipt-1","receipt_digest":"{DIGEST}"}}"#
+        r#"{{"actor_did":"kamn:did:agent:test","task_id":"{task_id}","state":"{state}","receipt_id":"task-transition-receipt-1","receipt_digest":"{DIGEST}","action":"{action}"}}"#
     )
 }
 
@@ -136,4 +157,26 @@ fn registration_uses_service_profile_commitment_authority() {
     assert!(response.contains(r#""schema_version":"kamn.mcp.authority-receipt.v1""#));
     assert!(response.contains(r#""authority_kind":"service-profile-commitment""#));
     assert!(response.contains(r#""profile_commitment":"sha256:""#));
+}
+
+#[test]
+fn mismatched_or_malformed_mutation_authority_fails_closed() {
+    for task_id in [
+        "wrong-resource",
+        "wrong-actor",
+        "wrong-action",
+        "wrong-state",
+        "bad-digest",
+    ] {
+        let request = format!(
+            r#"{{"id":"invalid","tool":"accept_task","task_id":"{task_id}","payload":"{{}}"}}"#
+        );
+        let response = dispatch_tool_request_json(&AuthorityBackend, request.as_str())
+            .expect("dispatch should return an authority error");
+        assert!(response.contains(r#""ok":false"#), "{response}");
+        assert!(
+            response.contains("MCP_AUTHORITY_RECEIPT_INVALID"),
+            "{response}"
+        );
+    }
 }

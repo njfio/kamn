@@ -15,12 +15,23 @@ pub(super) fn default_agent_record(agent_did: &str) -> ServiceApiPersistedAgentR
 pub(super) fn agent_profile_body(
     record: &ServiceApiPersistedAgentRecord,
 ) -> ServiceApiAgentGetBody {
+    let agent_type = record_agent_type(record);
+    let model_family = record_model_family(record);
+    let capabilities = record_capabilities(record);
+    let profile_commitment = super::super::super::authority_digest::profile(
+        record.did.as_str(),
+        record.reputation_score,
+        agent_type.as_str(),
+        model_family.as_str(),
+        &capabilities,
+    );
     ServiceApiAgentGetBody {
         did: record.did.clone(),
         reputation_score: record.reputation_score,
-        agent_type: record_agent_type(record),
-        model_family: record_model_family(record),
-        capabilities: record_capabilities(record),
+        agent_type,
+        model_family,
+        capabilities,
+        profile_commitment,
     }
 }
 

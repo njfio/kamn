@@ -632,6 +632,9 @@ mod tests {
             creator_did: None,
             provider_did: None,
             terms_digest: None,
+            receipt_id: "task-transition-receipt-1".to_owned(),
+            receipt_digest: "sha256:websocket-test".to_owned(),
+            action: "task:create".to_owned(),
         });
         fanout.publish_task_transition_event(&ServiceApiTaskTransitionBody {
             task_id: "task-1".to_owned(),
@@ -641,6 +644,8 @@ mod tests {
             provider_did: None,
             terms_digest: None,
             receipt_id: None,
+            receipt_digest: None,
+            action: "task:accept".to_owned(),
         });
         fanout.publish_bridge_submitted_event(&ServiceApiBridgeSubmitBody {
             bridge_id: "bridge-1".to_owned(),

@@ -55,7 +55,11 @@ async fn create_task(
         {
             return *response;
         }
-        store.create_bound_task(actor_did.as_str(), context.parsed_request.body.as_str())
+        store.create_bound_task(
+            actor_did.as_str(),
+            context.parsed_request.body.as_str(),
+            context.correlation_id.as_str(),
+        )
     };
     match result {
         Ok(payload) => {

@@ -1,12 +1,20 @@
 use kamn_agent_lib::AgentLibError;
 use kamn_mcp_server::{dispatch_tool_request_json, McpToolBackend};
 
+const DIGEST: &str = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 #[derive(Debug, Default)]
 struct TestBackend;
 
 impl McpToolBackend for TestBackend {
+    fn actor_did(&self) -> &str {
+        "kamn:did:agent:test"
+    }
+
     fn register(&self) -> Result<String, AgentLibError> {
-        Ok(r#"{"did":"kamn:did:agent:test"}"#.to_owned())
+        Ok(format!(
+            r#"{{"did":"kamn:did:agent:test","profile_commitment":"{DIGEST}"}}"#
+        ))
     }
 
     fn send_message(&self, payload: &str) -> Result<String, AgentLibError> {
@@ -97,27 +105,33 @@ impl McpToolBackend for TestBackend {
 
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         let payload_len = payload.len();
-        Ok(format!(r#"{{"task_id":"task-{payload_len}"}}"#))
+        Ok(format!(
+            r#"{{"actor_did":"kamn:did:agent:test","task_id":"task-{payload_len}","state":"submitted","receipt_id":"task-create","receipt_digest":"{DIGEST}","action":"task:create"}}"#
+        ))
     }
 
     fn accept_task(&self, task_id: &str, _payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{task_id}","state":"accepted"}}"#))
+        Ok(format!(
+            r#"{{"actor_did":"kamn:did:agent:test","task_id":"{task_id}","state":"accepted","receipt_id":"task-accept","receipt_digest":"{DIGEST}","action":"task:accept"}}"#
+        ))
     }
 
     fn complete_task(&self, task_id: &str, _payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(r#"{{"task_id":"{task_id}","state":"completed"}}"#))
+        Ok(format!(
+            r#"{{"actor_did":"kamn:did:agent:test","task_id":"{task_id}","state":"completed","receipt_id":"task-complete","receipt_digest":"{DIGEST}","action":"task:complete"}}"#
+        ))
     }
 
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
         let payload_len = payload.len();
         Ok(format!(
-            r#"{{"escrow_id":"escrow-{payload_len}","state":"funded"}}"#
+            r#"{{"actor_did":"kamn:did:agent:test","escrow_id":"escrow-{payload_len}","state":"funded","receipt_id":"escrow-fund","receipt_digest":"{DIGEST}","action":"escrow:fund"}}"#
         ))
     }
 
     fn release_escrow(&self, escrow_id: &str, _payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(
-            r#"{{"escrow_id":"{escrow_id}","state":"released"}}"#
+            r#"{{"actor_did":"kamn:did:agent:test","escrow_id":"{escrow_id}","state":"released","receipt_id":"escrow-release","receipt_digest":"{DIGEST}","action":"escrow:release-authorize"}}"#
         ))
     }
 

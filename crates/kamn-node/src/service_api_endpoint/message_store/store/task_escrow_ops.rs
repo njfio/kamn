@@ -110,8 +110,9 @@ impl ServiceApiMessageStore {
         &mut self,
         actor_did: &str,
         payload: &str,
+        correlation_id: &str,
     ) -> Result<ServiceApiTaskCreateBody, TaskLifecycleError> {
-        lifecycle::create_bound_task(self, actor_did, payload)
+        lifecycle::create_bound_task(self, actor_did, payload, correlation_id)
     }
 
     pub(crate) fn transition_bound_task(

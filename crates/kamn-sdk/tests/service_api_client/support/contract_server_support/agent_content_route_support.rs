@@ -15,19 +15,19 @@ pub(super) fn write_response(
 
 fn write_agent_response(stream: &mut TcpStream, method: &str, path: &str) -> Result<bool, String> {
     if method == "POST" && path == "/v1/agents/register" {
-        let payload = r#"{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}"#;
+        let payload = r#"{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"],"profile_commitment":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#;
         write_http_response(stream, 201, payload)?;
         return Ok(true);
     }
     if method == "POST" && path == "/v1/agents/search" {
-        let payload = r#"[{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"]}]"#;
+        let payload = r#"[{"did":"kamn:did:agent:sdk-register","reputation_score":500,"agent_type":"assistant","model_family":"gpt-5","capabilities":["text","code"],"profile_commitment":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]"#;
         write_http_response(stream, 200, payload)?;
         return Ok(true);
     }
     if method == "GET" && path.starts_with("/v1/agents/") {
         let did = path.trim_start_matches("/v1/agents/");
         let payload = format!(
-            "{{\"did\":\"{did}\",\"reputation_score\":500,\"agent_type\":\"service-agent\",\"model_family\":\"service-api\",\"capabilities\":[\"profile:read\"]}}"
+            "{{\"did\":\"{did}\",\"reputation_score\":500,\"agent_type\":\"service-agent\",\"model_family\":\"service-api\",\"capabilities\":[\"profile:read\"],\"profile_commitment\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}"
         );
         write_http_response(stream, 200, payload.as_str())?;
         return Ok(true);

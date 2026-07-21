@@ -35,6 +35,7 @@ const INITIAL_SERVICE_API_AGENT_REPUTATION_SCORE: u64 = 500;
 const INITIAL_SERVICE_API_AGENT_BALANCE: u64 = 100;
 
 mod audit_export;
+mod authority_digest;
 mod models;
 mod persistence;
 mod runtime_evidence;

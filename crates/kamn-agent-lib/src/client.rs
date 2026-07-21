@@ -5,7 +5,7 @@ use kamn_sdk::{
     ServiceBridgeSubmission, ServiceChannelMessages, ServiceChannelReceipt,
     ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus,
     ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
-    ServiceTaskStatus,
+    ServiceTaskStatus, ServiceTaskTransitionReceipt,
 };
 use std::env;
 
@@ -151,7 +151,7 @@ impl ServiceApiHttpClient {
         &self,
         task_id: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, AgentLibError> {
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         Ok(self.inner.accept_task(task_id, auth)?)
     }
 
@@ -161,7 +161,7 @@ impl ServiceApiHttpClient {
         task_id: &str,
         payload: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, AgentLibError> {
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         Ok(self
             .inner
             .accept_task_with_payload(task_id, payload, auth)?)
@@ -172,7 +172,7 @@ impl ServiceApiHttpClient {
         &self,
         task_id: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, AgentLibError> {
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         Ok(self.inner.complete_task(task_id, auth)?)
     }
 
@@ -182,7 +182,7 @@ impl ServiceApiHttpClient {
         task_id: &str,
         payload: &str,
         auth: &ServiceRequestAuth,
-    ) -> Result<ServiceTaskStatus, AgentLibError> {
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         Ok(self
             .inner
             .complete_task_with_payload(task_id, payload, auth)?)

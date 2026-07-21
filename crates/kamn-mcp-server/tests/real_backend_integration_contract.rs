@@ -155,11 +155,11 @@ fn write_public_or_task_response(
         }
         ("GET", "/v1/agents/kamn:did:agent:alice") => Some((
             200,
-            r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
+            r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"],"profile_commitment":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
         )),
         ("POST", "/v1/agents/register") if body == mcp_registration_payload() => Some((
             201,
-            r#"{"did":"kamn:did:agent:pkh-038394c7f7ffdc1bfd761be5740fd3aeb46fdea8a79c1b9384d79c03c50fc44248--keyh-67726c2c9ade28652475e1b8fa00855e","reputation_score":0,"agent_type":"autonomous","model_family":"mcp-agent","capabilities":["mcp"]}"#,
+            r#"{"did":"kamn:did:agent:pkh-038394c7f7ffdc1bfd761be5740fd3aeb46fdea8a79c1b9384d79c03c50fc44248--keyh-67726c2c9ade28652475e1b8fa00855e","reputation_score":0,"agent_type":"autonomous","model_family":"mcp-agent","capabilities":["mcp"],"profile_commitment":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
         )),
         ("POST", "/v1/agents/register") => Some((
             400,
