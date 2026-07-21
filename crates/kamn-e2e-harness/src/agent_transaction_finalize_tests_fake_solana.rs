@@ -18,7 +18,7 @@ fn solana_script(root: &Path) -> String {
         r#"#!/bin/sh
 echo "$*" >> "{}/solana-calls.log"
 cat <<'JSON'
-{{"confirmationStatus":"finalized","meta":{{"err":null,"preBalances":[2500000000,2500000000],"postBalances":[2498995000,2501000000]}},"transaction":{{"signatures":["devnet-signature-111"],"message":{{"accountKeys":["2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe"]}}}}}}
+{{"confirmationStatus":"finalized","meta":{{"err":null,"fee":5000,"preBalances":[2500000000,2500000000],"postBalances":[2498995000,2501000000]}},"transaction":{{"signatures":["devnet-signature-111"],"message":{{"accountKeys":["2FjUiacAXtokhA8YzGiyfVEdu5D9LxKFhjptJLrz4V9T","FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe"]}}}}}}
 JSON
 "#,
         root.display()

@@ -4,8 +4,8 @@ use std::process::Command;
 pub(crate) use super::devnet_settlement_json::devnet_settlement_claim_json;
 use super::devnet_settlement_json::parse_devnet_settlement_evidence;
 use super::devnet_settlement_live::collect_live_devnet_settlement;
+pub(super) use super::devnet_settlement_log::write_live_success_log;
 use super::live_task_binding::LiveTaskBinding;
-use super::settlement_evidence_artifact::write_settlement_evidence_artifact;
 
 const NO_GO_RPC_MISSING: &str = "devnet_rpc_url_missing";
 const NO_GO_KEYPAIR_MISSING: &str = "devnet_keypair_not_configured";
@@ -16,7 +16,7 @@ pub(crate) struct DevnetSettlementAttempt {
     pub(crate) no_go_reason: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct DevnetSettlementEvidence {
     pub(crate) network: String,
     pub(crate) execution_surface: String,
@@ -26,6 +26,8 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) lamports: u64,
     pub(crate) escrow_id: String,
     pub(crate) task_id: Option<String>,
+    pub(crate) transaction_id: Option<String>,
+    pub(crate) terms_digest: Option<String>,
     pub(crate) task_binding_digest: Option<String>,
     pub(crate) settlement_tx_signature: String,
     pub(crate) settlement_commitment: String,
@@ -33,7 +35,11 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) payer_balance_after: u64,
     pub(crate) recipient_balance_before: u64,
     pub(crate) recipient_balance_after: u64,
+    pub(crate) fee_lamports: Option<u64>,
+    pub(crate) settlement_receipt_hash: Option<String>,
     pub(crate) persisted_settlement_tx_signature: String,
+    pub(crate) service_state_digest: Option<String>,
+    pub(crate) settlement_intent_digest: Option<String>,
     pub(crate) authoritative_rpc_artifact: Option<String>,
 }
 
@@ -143,34 +149,7 @@ fn write_live_no_go_log(run_dir: &Path, error: &str) -> Result<(), String> {
     write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
 }
 
-fn write_live_success_log(
-    run_dir: &Path,
-    evidence: &DevnetSettlementEvidence,
-) -> Result<(), String> {
-    write_settlement_evidence_artifact(run_dir, evidence)?;
-    let content = format!(
-        "devnet_settlement_status=PASS\nnetwork={}\nexecution_surface={}\nrpc_url={}\npayer_pubkey={}\nrecipient_pubkey={}\nlamports={}\nescrow_id={}\nsettlement_tx_signature={}\nsettlement_commitment={}\npayer_balance_before={}\npayer_balance_after={}\nrecipient_balance_before={}\nrecipient_balance_after={}\npersisted_settlement_tx_signature={}\ntask_id={}\ntask_binding_digest={}\n",
-        evidence.network,
-        evidence.execution_surface,
-        evidence.rpc_url,
-        evidence.payer_pubkey,
-        evidence.recipient_pubkey,
-        evidence.lamports,
-        evidence.escrow_id,
-        evidence.settlement_tx_signature,
-        evidence.settlement_commitment,
-        evidence.payer_balance_before,
-        evidence.payer_balance_after,
-        evidence.recipient_balance_before,
-        evidence.recipient_balance_after,
-        evidence.persisted_settlement_tx_signature,
-        evidence.task_id.as_deref().unwrap_or("not-bound"),
-        evidence.task_binding_digest.as_deref().unwrap_or("not-bound"),
-    );
-    write_proof_file(run_dir, "devnet-settlement-output.txt", content.as_str())
-}
-
-fn write_proof_file(run_dir: &Path, name: &str, content: &str) -> Result<(), String> {
+pub(super) fn write_proof_file(run_dir: &Path, name: &str, content: &str) -> Result<(), String> {
     std::fs::write(run_dir.join("proof").join(name), content).map_err(|error| {
         format!(
             "failed to write devnet settlement proof log {}/proof/{name}: {error}",

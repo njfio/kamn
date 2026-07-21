@@ -61,11 +61,13 @@ view; and Agent C verifies the restricted public view. The command then
 confirms the exact release signature and balance movement on Solana devnet,
 builds one runtime receipt chain, and runs the canonical verifier.
 
-The report may label settlement evidence `execution_surface:"command-override"`
-because a bounded adapter feeds already-confirmed actor evidence into the
-existing report collector. It does not execute or simulate settlement. The
-actual transfer is the live service release transaction named by all actor
-projections and independently confirmed by the adapter.
+Canonical `GO` reports label settlement evidence
+`execution_surface:"live-service-persisted-receipt"`. The collector reads the
+released escrow and confirmed settlement intent from durable service state,
+binds them to all three actor projections, and independently confirms the same
+signature through Solana devnet RPC. A command adapter remains available for
+isolated compatibility fixtures, but `command-override` cannot satisfy
+canonical actor-backed success.
 
 Expected terminal result:
 
@@ -81,13 +83,13 @@ cargo run -p kamn-e2e-harness -- \
 ```
 
 The run bundle includes `proof/settlement-evidence.json`, a digest-bearing
-offline record derived from the confirmed Solana CLI/RPC response and balance
-queries. The standalone verifier does not trust copied report fields: it
-cross-checks this artifact against the task-bound settlement claim, indexed
-settlement log, finalized signature, recipient, amount, and exact recipient
-balance movement. It also rejects proof paths outside the recorded run. The
-human report links the verified signature directly to Solana Explorer with
-`cluster=devnet`.
+offline record derived from the persisted live-service receipt and confirmed
+Solana CLI/RPC response. The standalone verifier does not trust copied report
+fields: it cross-checks task, transaction, terms, receipt, service-state and
+intent digests, finalized signature, amount, fee, exact payer/recipient balance
+deltas, and the indexed settlement log. It also rejects proof paths outside the
+recorded run. The human report links the verified signature directly to Solana
+Explorer with `cluster=devnet`.
 
 ## Local-Only Compatibility Proof
 
@@ -408,8 +410,9 @@ cargo run -p kamn-e2e-harness -- verify-mvp-demo --report .kamn/demo/latest/proo
 returns `{"status":"PASS"}` only when the report schema, artifacts, required
 local proof claims, claim labels, and value-movement boundaries are valid. For
 a live bound three-agent report it also revalidates all four Pi sources, the
-binding digest, the v2 funding request, the request-derived service escrow ID,
-every task/binding/escrow reference across transcript, views, and receipts, the
-digest-bearing offline settlement evidence, the indexed settlement log, and
-the signature-derived Solana Explorer devnet link. Verification is
-proof-bundle-only and remains valid after the node and agent processes exit.
+binding digest, persisted service receipt provenance, every
+task/transaction/terms/escrow reference across transcript, views, and receipts,
+the digest-bearing settlement evidence, fee-aware Solana RPC confirmation, the
+indexed settlement log, and the signature-derived Solana Explorer devnet link.
+Verification is proof-bundle-only and remains valid after the node and agent
+processes exit.

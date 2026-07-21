@@ -20,6 +20,7 @@ mod agent_transaction_demo;
 mod agent_transaction_devnet_evidence;
 mod agent_transaction_evidence;
 mod agent_transaction_finalize;
+mod agent_transaction_persisted_settlement;
 mod agent_transaction_pi_command;
 mod agent_transaction_preflight;
 mod agent_transaction_process;

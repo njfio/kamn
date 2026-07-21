@@ -14,6 +14,7 @@ mod devnet_settlement_build;
 mod devnet_settlement_grant_bootstrap;
 mod devnet_settlement_json;
 mod devnet_settlement_live;
+mod devnet_settlement_log;
 mod devnet_settlement_node;
 mod devnet_settlement_service;
 mod devnet_settlement_solana;
@@ -40,6 +41,7 @@ mod report_devnet;
 mod report_markdown;
 mod report_writer;
 mod runner;
+mod runner_report_input;
 mod runner_settlement;
 mod runtime_actor_bundle;
 mod runtime_receipt_chain;
@@ -66,11 +68,13 @@ mod verify_claims;
 mod verify_support;
 
 pub use command_config::{LiveTaskEvidencePaths, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig};
+pub(crate) use devnet_settlement::DevnetSettlementEvidence;
 pub use pi_transaction_actor_verify::verify_pi_transaction_actor_paths;
 pub use report::{
     CLAIM_LABEL_DEVNET_BACKED, CLAIM_LABEL_DRY_RUN, CLAIM_LABEL_LOCAL_ONLY,
     CLAIM_LABEL_PLACEHOLDER, CLAIM_LABEL_REAL, CLAIM_LABEL_ROADMAP, MVP_DEMO_REPORT_SCHEMA_VERSION,
 };
+pub(crate) use runner::execute_mvp_demo_contract_with_settlement;
 pub use runner::{execute_mvp_demo_contract, execute_verify_mvp_demo_contract};
 pub use runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths;
 pub use verify::verify_mvp_demo_report_json;

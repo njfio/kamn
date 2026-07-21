@@ -14,7 +14,45 @@ pub(super) fn validate_settlement_log(
     require_context(&log, evidence)?;
     require_signatures(&log, evidence)?;
     require_binding(&log, evidence)?;
+    require_provenance(&log, evidence)?;
     require_balances(&log, evidence)
+}
+
+fn require_provenance(log: &str, evidence: &SettlementEvidenceArtifact) -> Result<(), String> {
+    if evidence.execution_surface != "live-service-persisted-receipt" {
+        return Ok(());
+    }
+    for (field, value) in provenance_fields(evidence) {
+        require(log, field, value.ok_or_else(invalid)?)?;
+    }
+    require(
+        log,
+        "fee_lamports",
+        evidence
+            .fee_lamports
+            .ok_or_else(invalid)?
+            .to_string()
+            .as_str(),
+    )
+}
+
+fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 5] {
+    [
+        ("transaction_id", evidence.transaction_id.as_deref()),
+        ("terms_digest", evidence.terms_digest.as_deref()),
+        (
+            "settlement_receipt_hash",
+            evidence.settlement_receipt_hash.as_deref(),
+        ),
+        (
+            "service_state_digest",
+            evidence.service_state_digest.as_deref(),
+        ),
+        (
+            "settlement_intent_digest",
+            evidence.settlement_intent_digest.as_deref(),
+        ),
+    ]
 }
 
 fn require_context(log: &str, evidence: &SettlementEvidenceArtifact) -> Result<(), String> {

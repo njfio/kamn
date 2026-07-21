@@ -1,48 +1,35 @@
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
 use serde_json::Value;
 
 use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
+use super::agent_transaction_persisted_settlement::{
+    read_persisted_settlement, ExpectedSettlement, PersistedSettlement,
+};
+use super::agent_transaction_rpc_artifact::{confirm_transfer, ConfirmedTransfer};
 use super::AgentTransactionDemoConfig;
+use crate::mvp_demo::{verify_pi_transaction_actor_paths, DevnetSettlementEvidence};
 
 const EVIDENCE_ERROR: &str = "AGENT_TRANSACTION_SETTLEMENT_INVALID";
 
 pub(super) fn collect_actor_settlement_evidence(
     config: &AgentTransactionDemoConfig,
     paths: &AgentTransactionEvidencePaths,
-) -> Result<PathBuf, String> {
+) -> Result<DevnetSettlementEvidence, String> {
+    verify_pi_transaction_actor_paths(&paths.actors).map_err(settlement_error)?;
     let actor = read_actor(paths.actors[0].as_str())?;
-    let payer =
-        super::agent_transaction_rpc_artifact::payer_pubkey(config.solana_keypair_file.as_str())?;
-    let confirmation = confirm(config, actor.signature.as_str())?;
-    let confirmation_path =
-        super::agent_transaction_rpc_artifact::write_confirmation(config, &confirmation)?;
-    let balances = transaction_balances(&confirmation, payer.as_str(), config)?;
-    let evidence = evidence_json(
-        config,
-        &actor,
-        payer.as_str(),
-        &balances,
-        confirmation_path.as_path(),
-    );
-    let path = Path::new(config.staging_root.as_str()).join("actor-devnet-evidence.json");
-    std::fs::write(&path, evidence)
-        .map_err(|error| settlement_error(format!("evidence write failed: {error}")))?;
-    Ok(path)
+    validate_actor_config(config, &actor)?;
+    let persisted = persisted(config, &actor)?;
+    let rpc = confirm_transfer(config, actor.signature.as_str())?;
+    Ok(evidence(config, actor, persisted, rpc))
 }
 
 struct ActorSettlement {
+    task_id: String,
+    transaction_id: String,
     signature: String,
     escrow_id: String,
     lamports: u64,
-}
-
-struct TransactionBalances {
-    payer_before: u64,
-    payer_after: u64,
-    recipient_before: u64,
-    recipient_after: u64,
+    network: String,
+    commitment: String,
 }
 
 fn read_actor(path: &str) -> Result<ActorSettlement, String> {
@@ -51,124 +38,94 @@ fn read_actor(path: &str) -> Result<ActorSettlement, String> {
     let value: Value = serde_json::from_str(raw.as_str())
         .map_err(|error| settlement_error(format!("actor JSON failed: {error}")))?;
     Ok(ActorSettlement {
+        task_id: string_field(&value, "task_id")?,
+        transaction_id: string_field(&value, "transaction_id")?,
         signature: string_field(&value, "settlement_tx_signature")?,
         escrow_id: string_field(&value, "escrow_id")?,
         lamports: u64_field(&value, "amount_lamports")?,
+        network: string_field(&value, "network")?,
+        commitment: string_field(&value, "settlement_commitment")?,
     })
 }
 
-fn confirm(config: &AgentTransactionDemoConfig, signature: &str) -> Result<Value, String> {
-    let output = Command::new("solana")
-        .args([
-            "confirm",
-            "--url",
-            config.solana_rpc_url.as_str(),
-            "--commitment",
-            "finalized",
-            "--verbose",
-            "--output",
-            "json",
-            signature,
-        ])
-        .output()
-        .map_err(|error| settlement_error(format!("solana confirm failed: {error}")))?;
-    if !output.status.success() {
-        return Err(settlement_error("Solana did not confirm actor settlement"));
-    }
-    serde_json::from_slice(&output.stdout)
-        .map_err(|error| settlement_error(format!("confirmation JSON failed: {error}")))
-}
-
-fn transaction_balances(
-    value: &Value,
-    payer: &str,
-    config: &AgentTransactionDemoConfig,
-) -> Result<TransactionBalances, String> {
-    require_finalized(value)?;
-    let keys = value["transaction"]["message"]["accountKeys"]
-        .as_array()
-        .ok_or_else(|| settlement_error("confirmation account keys missing"))?;
-    let payer_index = account_index(keys, payer)?;
-    let recipient_index = account_index(keys, config.solana_recipient_pubkey.as_str())?;
-    let pre = balance_array(value, "preBalances")?;
-    let post = balance_array(value, "postBalances")?;
-    let balances = balances(pre, post, payer_index, recipient_index)?;
-    validate_movement(&balances, config.solana_lamports)?;
-    Ok(balances)
-}
-
-fn require_finalized(value: &Value) -> Result<(), String> {
-    if value["confirmationStatus"] == "finalized" && value["meta"]["err"].is_null() {
-        return Ok(());
-    }
-    Err(settlement_error(
-        "actor transaction is not finalized success",
-    ))
-}
-
-fn account_index(keys: &[Value], expected: &str) -> Result<usize, String> {
-    keys.iter()
-        .position(|key| key.as_str() == Some(expected))
-        .ok_or_else(|| settlement_error(format!("transaction account missing: {expected}")))
-}
-
-fn balance_array<'a>(value: &'a Value, field: &str) -> Result<&'a [Value], String> {
-    value["meta"][field]
-        .as_array()
-        .map(Vec::as_slice)
-        .ok_or_else(|| settlement_error(format!("confirmation {field} missing")))
-}
-
-fn balances(
-    pre: &[Value],
-    post: &[Value],
-    payer: usize,
-    recipient: usize,
-) -> Result<TransactionBalances, String> {
-    Ok(TransactionBalances {
-        payer_before: indexed_balance(pre, payer)?,
-        payer_after: indexed_balance(post, payer)?,
-        recipient_before: indexed_balance(pre, recipient)?,
-        recipient_after: indexed_balance(post, recipient)?,
-    })
-}
-
-fn indexed_balance(values: &[Value], index: usize) -> Result<u64, String> {
-    values
-        .get(index)
-        .and_then(Value::as_u64)
-        .ok_or_else(|| settlement_error("transaction balance missing"))
-}
-
-fn validate_movement(found: &TransactionBalances, lamports: u64) -> Result<(), String> {
-    let recipient_moved = found.recipient_after >= found.recipient_before.saturating_add(lamports);
-    if recipient_moved && found.payer_after < found.payer_before {
-        return Ok(());
-    }
-    Err(settlement_error(
-        "actor transaction balance movement invalid",
-    ))
-}
-
-fn evidence_json(
+fn validate_actor_config(
     config: &AgentTransactionDemoConfig,
     actor: &ActorSettlement,
-    payer: &str,
-    balances: &TransactionBalances,
-    confirmation_path: &Path,
-) -> String {
-    serde_json::json!({
-        "network": "solana:devnet", "rpc_url": config.solana_rpc_url,
-        "payer_pubkey": payer, "recipient_pubkey": config.solana_recipient_pubkey,
-        "lamports": actor.lamports, "escrow_id": actor.escrow_id,
-        "settlement_tx_signature": actor.signature, "settlement_commitment": "finalized",
-        "payer_balance_before": balances.payer_before, "payer_balance_after": balances.payer_after,
-        "recipient_balance_before": balances.recipient_before,
-        "recipient_balance_after": balances.recipient_after,
-        "persisted_settlement_tx_signature": actor.signature,
-        "authoritative_rpc_artifact": confirmation_path,
-    })
-    .to_string()
+) -> Result<(), String> {
+    if actor.lamports == config.solana_lamports
+        && actor.network == "solana-devnet"
+        && actor.commitment == config.solana_commitment
+    {
+        return Ok(());
+    }
+    Err(settlement_error("actor settlement configuration mismatch"))
+}
+
+fn persisted(
+    config: &AgentTransactionDemoConfig,
+    actor: &ActorSettlement,
+) -> Result<PersistedSettlement, String> {
+    let state = std::path::Path::new(config.staging_root.as_str()).join("service-api-state.json");
+    let expected = ExpectedSettlement {
+        task_id: actor.task_id.as_str(),
+        transaction_id: actor.transaction_id.as_str(),
+        escrow_id: actor.escrow_id.as_str(),
+        signature: actor.signature.as_str(),
+        recipient: config.solana_recipient_pubkey.as_str(),
+        amount: actor.lamports,
+    };
+    read_persisted_settlement(state.as_path(), &expected).map_err(settlement_error)
+}
+
+fn evidence(
+    config: &AgentTransactionDemoConfig,
+    actor: ActorSettlement,
+    persisted: PersistedSettlement,
+    rpc: ConfirmedTransfer,
+) -> DevnetSettlementEvidence {
+    let mut evidence = core_evidence(config, &actor, &rpc);
+    apply_provenance(&mut evidence, actor, persisted, rpc);
+    evidence
+}
+
+fn core_evidence(
+    config: &AgentTransactionDemoConfig,
+    actor: &ActorSettlement,
+    rpc: &ConfirmedTransfer,
+) -> DevnetSettlementEvidence {
+    DevnetSettlementEvidence {
+        network: "solana:devnet".to_owned(),
+        execution_surface: "live-service-persisted-receipt".to_owned(),
+        rpc_url: config.solana_rpc_url.clone(),
+        payer_pubkey: rpc.payer.clone(),
+        recipient_pubkey: config.solana_recipient_pubkey.clone(),
+        lamports: actor.lamports,
+        escrow_id: actor.escrow_id.clone(),
+        settlement_tx_signature: actor.signature.clone(),
+        settlement_commitment: "finalized".to_owned(),
+        payer_balance_before: rpc.payer_before,
+        payer_balance_after: rpc.payer_after,
+        recipient_balance_before: rpc.recipient_before,
+        recipient_balance_after: rpc.recipient_after,
+        persisted_settlement_tx_signature: actor.signature.clone(),
+        ..DevnetSettlementEvidence::default()
+    }
+}
+
+fn apply_provenance(
+    evidence: &mut DevnetSettlementEvidence,
+    actor: ActorSettlement,
+    persisted: PersistedSettlement,
+    rpc: ConfirmedTransfer,
+) {
+    evidence.task_id = Some(actor.task_id);
+    evidence.transaction_id = Some(persisted.transaction_id);
+    evidence.terms_digest = Some(persisted.terms_digest);
+    evidence.fee_lamports = Some(rpc.fee_lamports);
+    evidence.settlement_receipt_hash = Some(persisted.receipt_hash);
+    evidence.service_state_digest = Some(persisted.state_digest);
+    evidence.settlement_intent_digest = Some(persisted.intent_digest);
+    evidence.authoritative_rpc_artifact = Some(rpc.artifact_path.display().to_string());
 }
 
 fn string_field(value: &Value, field: &str) -> Result<String, String> {

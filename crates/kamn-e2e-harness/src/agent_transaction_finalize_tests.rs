@@ -18,8 +18,22 @@ fn proof_retry_reuses_persisted_settlement_without_submission() {
     );
     fixture.unblock_latest_publication();
     finalize(&fixture.config, &fixture.paths).expect("proof retry should pass");
+    assert_direct_report(fixture.report().as_str());
+    assert_no_submission(fixture.solana_calls().as_str());
+}
 
-    let calls = fixture.solana_calls();
+fn assert_direct_report(report: &str) {
+    assert!(
+        report.contains(r#""execution_surface":"live-service-persisted-receipt""#),
+        "canonical proof must use the persisted service receipt: {report}"
+    );
+    assert!(report.contains(r#""service_state_digest":"sha256:"#));
+    assert!(report.contains(r#""settlement_intent_digest":"sha256:"#));
+    assert!(report.contains(r#""fee_lamports":5000"#));
+    assert!(!report.contains("signed-transaction-secret"));
+}
+
+fn assert_no_submission(calls: &str) {
     assert_eq!(
         calls
             .lines()
@@ -29,6 +43,20 @@ fn proof_retry_reuses_persisted_settlement_without_submission() {
     );
     assert!(!calls.contains("transfer"));
     assert!(!calls.contains("send"));
+}
+
+#[test]
+fn proof_rejects_mismatched_persisted_settlement_intent() {
+    let _guard = test_lock();
+    let fixture = ProofRetryFixture::new();
+    fixture.tamper_persisted_recipient();
+
+    let error = finalize(&fixture.config, &fixture.paths)
+        .expect_err("persisted recipient mismatch must fail closed");
+    assert!(
+        error.contains("persisted settlement recipient mismatch"),
+        "{error}"
+    );
 }
 
 fn test_lock() -> std::sync::MutexGuard<'static, ()> {

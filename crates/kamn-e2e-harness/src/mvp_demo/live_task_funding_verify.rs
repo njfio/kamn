@@ -9,21 +9,29 @@ pub(super) fn validate_funding_request(
     escrow_id: &str,
 ) -> Result<(), String> {
     let surface = extract_string(devnet.raw, "execution_surface")?;
-    if surface == "command-override" {
+    if !requires_funding_request(report, &surface)? {
         return Ok(());
     }
-    if surface != "live-service-api" {
-        return funding_error(format!("unsupported execution surface: {surface}"));
-    }
     let request = read_funding_request(report)?;
-    require_request_string(
-        request.as_str(),
-        "schema_version",
-        "kamn.mvp.devnet-settlement.v2",
-    )?;
-    require_request_string(request.as_str(), "task_id", task_id)?;
-    require_request_string(request.as_str(), "task_binding_digest", digest)?;
-    require_request_escrow(request.as_str(), escrow_id)
+    validate_request(request.as_str(), task_id, digest, escrow_id)
+}
+
+fn requires_funding_request(report: &str, surface: &str) -> Result<bool, String> {
+    match surface {
+        "command-override" if report.contains("\"runtime_agent_a_evidence\":\"") => {
+            funding_error("command override cannot satisfy canonical execution".to_owned())
+        }
+        "command-override" | "live-service-persisted-receipt" => Ok(false),
+        "live-service-api" => Ok(true),
+        _ => funding_error(format!("unsupported execution surface: {surface}")),
+    }
+}
+
+fn validate_request(raw: &str, task_id: &str, digest: &str, escrow_id: &str) -> Result<(), String> {
+    require_request_string(raw, "schema_version", "kamn.mvp.devnet-settlement.v2")?;
+    require_request_string(raw, "task_id", task_id)?;
+    require_request_string(raw, "task_binding_digest", digest)?;
+    require_request_escrow(raw, escrow_id)
 }
 
 fn read_funding_request(report: &str) -> Result<String, String> {

@@ -11,7 +11,7 @@ const SCHEMA: &str = "kamn.mvp.offline-settlement-evidence.v1";
 #[derive(Deserialize, Serialize)]
 pub(super) struct SettlementEvidenceArtifact {
     schema_version: String,
-    evidence_source: String,
+    pub(super) evidence_source: String,
     pub(super) execution_surface: String,
     pub(super) network: String,
     pub(super) rpc_url: String,
@@ -20,6 +20,8 @@ pub(super) struct SettlementEvidenceArtifact {
     pub(super) lamports: u64,
     pub(super) escrow_id: String,
     pub(super) task_id: Option<String>,
+    pub(super) transaction_id: Option<String>,
+    pub(super) terms_digest: Option<String>,
     pub(super) task_binding_digest: Option<String>,
     pub(super) settlement_tx_signature: String,
     pub(super) settlement_commitment: String,
@@ -27,7 +29,11 @@ pub(super) struct SettlementEvidenceArtifact {
     pub(super) payer_balance_after: u64,
     pub(super) recipient_balance_before: u64,
     pub(super) recipient_balance_after: u64,
+    pub(super) fee_lamports: Option<u64>,
+    pub(super) settlement_receipt_hash: Option<String>,
     pub(super) persisted_settlement_tx_signature: String,
+    pub(super) service_state_digest: Option<String>,
+    pub(super) settlement_intent_digest: Option<String>,
     pub(super) authoritative_rpc_digest: Option<String>,
     evidence_digest: String,
 }
@@ -59,7 +65,7 @@ fn artifact_from_evidence(
 ) -> SettlementEvidenceArtifact {
     SettlementEvidenceArtifact {
         schema_version: SCHEMA.to_owned(),
-        evidence_source: "solana-cli-confirm-and-balance-rpc".to_owned(),
+        evidence_source: evidence_source(evidence).to_owned(),
         execution_surface: evidence.execution_surface.clone(),
         network: evidence.network.clone(),
         rpc_url: evidence.rpc_url.clone(),
@@ -68,6 +74,8 @@ fn artifact_from_evidence(
         lamports: evidence.lamports,
         escrow_id: evidence.escrow_id.clone(),
         task_id: evidence.task_id.clone(),
+        transaction_id: evidence.transaction_id.clone(),
+        terms_digest: evidence.terms_digest.clone(),
         task_binding_digest: evidence.task_binding_digest.clone(),
         settlement_tx_signature: evidence.settlement_tx_signature.clone(),
         settlement_commitment: evidence.settlement_commitment.clone(),
@@ -75,7 +83,11 @@ fn artifact_from_evidence(
         payer_balance_after: evidence.payer_balance_after,
         recipient_balance_before: evidence.recipient_balance_before,
         recipient_balance_after: evidence.recipient_balance_after,
+        fee_lamports: evidence.fee_lamports,
+        settlement_receipt_hash: evidence.settlement_receipt_hash.clone(),
         persisted_settlement_tx_signature: evidence.persisted_settlement_tx_signature.clone(),
+        service_state_digest: evidence.service_state_digest.clone(),
+        settlement_intent_digest: evidence.settlement_intent_digest.clone(),
         authoritative_rpc_digest,
         evidence_digest: String::new(),
     }
@@ -95,9 +107,7 @@ fn copy_authoritative_rpc(
 }
 
 fn validate_artifact(raw: &str, artifact: &SettlementEvidenceArtifact) -> Result<(), String> {
-    if artifact.schema_version != SCHEMA
-        || artifact.evidence_source != "solana-cli-confirm-and-balance-rpc"
-    {
+    if artifact.schema_version != SCHEMA || !valid_source(artifact) {
         return Err(invalid());
     }
     validate_json_digest(
@@ -107,6 +117,23 @@ fn validate_artifact(raw: &str, artifact: &SettlementEvidenceArtifact) -> Result
         "settlement evidence",
     )
     .map_err(|_| invalid())
+}
+
+fn evidence_source(evidence: &DevnetSettlementEvidence) -> &'static str {
+    if evidence.execution_surface == "live-service-persisted-receipt" {
+        "kamn-live-service-persisted-receipt+solana-rpc"
+    } else {
+        "solana-cli-confirm-and-balance-rpc"
+    }
+}
+
+fn valid_source(artifact: &SettlementEvidenceArtifact) -> bool {
+    match artifact.execution_surface.as_str() {
+        "live-service-persisted-receipt" => {
+            artifact.evidence_source == "kamn-live-service-persisted-receipt+solana-rpc"
+        }
+        _ => artifact.evidence_source == "solana-cli-confirm-and-balance-rpc",
+    }
 }
 
 fn invalid() -> String {

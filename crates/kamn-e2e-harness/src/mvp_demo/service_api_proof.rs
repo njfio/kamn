@@ -57,7 +57,16 @@ fn build_command(override_command: Option<&[String]>, test_name: &str) -> Result
         return Ok(built);
     }
     let mut built = Command::new("cargo");
-    built.args(["test", "-p", "kamn-node", test_name, "--", "--nocapture"]);
+    built.args([
+        "test",
+        "-p",
+        "kamn-node",
+        "--bin",
+        "kamn-node",
+        test_name,
+        "--",
+        "--nocapture",
+    ]);
     Ok(built)
 }
 
@@ -95,3 +104,7 @@ fn validate_output(
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
+
+#[cfg(test)]
+#[path = "service_api_proof_tests.rs"]
+mod tests;

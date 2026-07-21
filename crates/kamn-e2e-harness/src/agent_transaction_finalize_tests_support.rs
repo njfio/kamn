@@ -16,9 +16,13 @@ use fake_solana::install_fake_solana;
 mod live_evidence;
 use live_evidence::write_live_evidence;
 
+#[path = "agent_transaction_finalize_tests_state.rs"]
+mod state_fixture;
+
 const RECIPIENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_RECIPIENT_PUBKEY";
 const LAMPORTS_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS";
 const COMMITMENT_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_COMMITMENT";
+const RECIPIENT: &str = "FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe";
 
 pub(super) struct ProofRetryFixture {
     root: PathBuf,
@@ -35,6 +39,7 @@ impl ProofRetryFixture {
         actors.rebind_shared_facts();
         let paths = evidence_paths(actors.paths(), write_live_evidence(&root));
         let config = config(&root);
+        state_fixture::write(&root, RECIPIENT);
         let original_path = install_fake_solana(&root);
         std::fs::create_dir_all(&config.output_root).expect("output root");
         Self {
@@ -56,6 +61,18 @@ impl ProofRetryFixture {
 
     pub(super) fn solana_calls(&self) -> String {
         std::fs::read_to_string(self.root.join("solana-calls.log")).expect("Solana call log")
+    }
+
+    pub(super) fn report(&self) -> String {
+        std::fs::read_to_string(self.root.join("demo/latest/proof/report.json"))
+            .expect("latest report")
+    }
+
+    pub(super) fn tamper_persisted_recipient(&self) {
+        let path = self.root.join("staging/service-api-state.json");
+        let raw = std::fs::read_to_string(&path).expect("persisted state");
+        std::fs::write(path, raw.replace(RECIPIENT, "foreign-recipient"))
+            .expect("tampered persisted state");
     }
 }
 
@@ -108,10 +125,7 @@ fn core_config_env() -> BTreeMap<String, String> {
             "KAMN_MVP_SOLANA_RPC_URL",
             "https://api.devnet.solana.com".to_owned(),
         ),
-        (
-            RECIPIENT_ENV,
-            "FV5LvudLjZQGCrPwXUY2JaVr26sQE15K25BGvsKWvyFe".to_owned(),
-        ),
+        (RECIPIENT_ENV, RECIPIENT.to_owned()),
         (LAMPORTS_ENV, "1000000".to_owned()),
         (COMMITMENT_ENV, "finalized".to_owned()),
     ];

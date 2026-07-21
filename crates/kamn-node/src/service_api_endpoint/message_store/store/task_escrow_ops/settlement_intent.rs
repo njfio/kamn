@@ -50,7 +50,7 @@ pub(super) fn finalize(
         return Err("settlement intent missing during finalize".to_owned());
     };
     intent.state = "confirmed".to_owned();
-    intent.submission_attempt_count += 1;
+    record_submission(intent);
     intent.last_error_code = None;
     let response = release_without_refresh(store, escrow_id, settlement)?;
     store.persist()?;
@@ -68,7 +68,7 @@ pub(super) fn mark_ambiguous(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement intent missing during ambiguous outcome".to_owned())?;
     intent.state = "ambiguous".to_owned();
-    intent.submission_attempt_count += 1;
+    record_submission(intent);
     intent.last_error_code = Some("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned());
     store.persist()
 }
@@ -85,9 +85,13 @@ pub(super) fn mark_failed(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement intent missing during failed outcome".to_owned())?;
     intent.state = "failed".to_owned();
-    intent.submission_attempt_count += 1;
+    record_submission(intent);
     intent.last_error_code = Some(error_code.to_owned());
     store.persist()
+}
+
+fn record_submission(intent: &mut ServiceApiSettlementIntentRecord) {
+    intent.submission_attempt_count = intent.submission_attempt_count.max(1);
 }
 
 pub(super) fn mark_expired(

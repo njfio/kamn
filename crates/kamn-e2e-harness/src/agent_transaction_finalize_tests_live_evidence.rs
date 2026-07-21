@@ -12,7 +12,10 @@ pub(super) fn write_live_evidence(root: &Path) -> [String; 4] {
     .map(|name| staging.join(name));
     let handoff = write_digest(
         &paths[0],
-        r#"{"schema_version":"kamn.mvp.live-task-handoff.v1","task_id":"task-local-bound-7086"}"#,
+        &format!(
+            r#"{{"schema_version":"kamn.mvp.live-task-handoff.v2","task_id":"task-local-bound-7086","transaction_id":"transaction-live-7086","terms_digest":"{}","provider_did":"kamn:did:agent:provider"}}"#,
+            "a".repeat(64)
+        ),
     );
     let agent_a = write_receipt(&paths[1], "agent_a", 101);
     let agent_b = write_receipt(&paths[2], "agent_b", 202);

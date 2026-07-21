@@ -37,7 +37,18 @@ fn validate_confirmation(
     let keys = array(response, &["transaction", "message", "accountKeys"])?;
     let payer = account_index(keys, evidence.payer_pubkey.as_str())?;
     let recipient = account_index(keys, evidence.recipient_pubkey.as_str())?;
+    validate_fee(response, evidence)?;
     validate_response_balances(response, evidence, payer, recipient)
+}
+
+fn validate_fee(response: &Value, evidence: &SettlementEvidenceArtifact) -> Result<(), String> {
+    let Some(expected) = evidence.fee_lamports else {
+        return Ok(());
+    };
+    if response["meta"]["fee"].as_u64() == Some(expected) {
+        return Ok(());
+    }
+    Err(invalid())
 }
 
 fn validate_response_balances(
