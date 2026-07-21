@@ -2,8 +2,8 @@ use super::*;
 use std::collections::BTreeSet;
 
 const TASK_PHASES: &[(&str, &str, &str)] = &[
-    ("task:create", "none", "created"),
-    ("task:accept", "created", "accepted"),
+    ("task:create", "none", "submitted"),
+    ("task:accept", "submitted", "accepted"),
     ("task:complete", "accepted", "completed"),
 ];
 const ESCROW_PHASES: &[(&str, &str, &str)] = &[
