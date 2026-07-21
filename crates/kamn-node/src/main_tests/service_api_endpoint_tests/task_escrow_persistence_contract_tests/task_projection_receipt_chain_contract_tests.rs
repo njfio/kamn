@@ -150,7 +150,7 @@ fn assert_actions(projection: &Value, expected: &[&str]) {
         .expect("participant receipt details");
     let actions: Vec<_> = receipts
         .iter()
-        .map(|receipt| receipt["action"].as_str().unwrap())
+        .map(|receipt| receipt["action"].as_str().expect("receipt action"))
         .collect();
     assert_eq!(actions, expected);
     for receipt in receipts {
