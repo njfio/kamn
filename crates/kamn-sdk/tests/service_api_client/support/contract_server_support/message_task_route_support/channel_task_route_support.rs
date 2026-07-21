@@ -65,7 +65,9 @@ fn write_create_task_response(
         return Ok(false);
     }
     let task_id = format!("task-local-{:016x}", deterministic_tag(body.as_bytes()));
-    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"submitted\"}}");
+    let payload = format!(
+        "{{\"task_id\":\"{task_id}\",\"state\":\"submitted\",\"receipt_id\":\"task-transition-receipt-create\",\"receipt_digest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}"
+    );
     write_http_response(stream, 201, payload.as_str())?;
     Ok(true)
 }

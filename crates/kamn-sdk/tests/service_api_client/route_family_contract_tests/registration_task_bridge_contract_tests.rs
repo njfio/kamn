@@ -95,6 +95,7 @@ fn assert_task_routes(client: &ServiceApiClient, sender: &AgentDid) {
         )
         .expect("accept task should succeed");
     assert_eq!(accepted.state, "accepted");
+    assert_service_authority(&accepted.receipt_id, &accepted.receipt_digest);
     let completed = client
         .complete_task(
             "task-local-123",
@@ -102,6 +103,7 @@ fn assert_task_routes(client: &ServiceApiClient, sender: &AgentDid) {
         )
         .expect("complete task should succeed");
     assert_eq!(completed.state, "completed");
+    assert_service_authority(&completed.receipt_id, &completed.receipt_digest);
 }
 
 fn assert_escrow_routes(client: &ServiceApiClient, sender: &AgentDid) {
@@ -113,6 +115,7 @@ fn assert_escrow_routes(client: &ServiceApiClient, sender: &AgentDid) {
         )
         .expect("fund escrow should succeed");
     assert!(funded.escrow_id.starts_with("escrow-local-"));
+    assert_service_authority(&funded.receipt_id, &funded.receipt_digest);
     let released = client
         .release_escrow(
             funded.escrow_id.as_str(),
@@ -121,6 +124,13 @@ fn assert_escrow_routes(client: &ServiceApiClient, sender: &AgentDid) {
         .expect("release escrow should succeed");
     assert_eq!(released.escrow_id, funded.escrow_id);
     assert_eq!(released.state, "released");
+    assert_service_authority(&released.receipt_id, &released.receipt_digest);
+}
+
+fn assert_service_authority(receipt_id: &str, receipt_digest: &str) {
+    assert!(!receipt_id.is_empty());
+    assert!(receipt_digest.starts_with("sha256:"));
+    assert_eq!(receipt_digest.len(), 71);
 }
 
 fn assert_server_result(server: thread::JoinHandle<Result<(), String>>, message: &str) {
