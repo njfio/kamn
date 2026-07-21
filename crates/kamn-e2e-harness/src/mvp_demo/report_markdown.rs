@@ -47,8 +47,7 @@ fn markdown_agent_harness(input: &DemoReportInput<'_>) -> Result<String, String>
     };
     let execution_surface = agent_harness_execution_surface(path)?;
     Ok(format!(
-        "## Agent Harness Evidence\n\n- Claim: `mcp_agent_harness_verification`\n- Agent harness evidence: `{}`\n- Execution surface: `{}`\n",
-        path, execution_surface
+        "## Agent Harness Evidence\n\n- Claim: `mcp_agent_harness_verification`\n- Agent harness evidence: `{path}`\n- Execution surface: `{execution_surface}`\n"
     ))
 }
 
