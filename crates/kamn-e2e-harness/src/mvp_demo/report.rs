@@ -131,8 +131,7 @@ fn claim(id: &str, label: &str, status: &str, summary: &str) -> String {
 
 fn roadmap_claim() -> String {
     format!(
-        "{{\"id\":\"production_readiness\",\"label\":\"{}\",\"required\":false,\"status\":\"NOT_CLAIMED\",\"summary\":\"production readiness is not claimed\"}}",
-        CLAIM_LABEL_ROADMAP
+        "{{\"id\":\"production_readiness\",\"label\":\"{CLAIM_LABEL_ROADMAP}\",\"required\":false,\"status\":\"NOT_CLAIMED\",\"summary\":\"production readiness is not claimed\"}}"
     )
 }
 
