@@ -2,7 +2,7 @@ use super::super::*;
 use serde_json::Value;
 
 #[path = "task_projection_contract_tests/support.rs"]
-mod projection_support;
+pub(crate) mod projection_support;
 use projection_support::ProjectionCase;
 
 pub(super) const CREATOR: &str = "kamn:did:agent:projection-creator";

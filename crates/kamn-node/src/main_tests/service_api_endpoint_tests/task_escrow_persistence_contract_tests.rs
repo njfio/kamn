@@ -28,5 +28,7 @@ mod task_escrow_solana_asset_movement_contract_tests;
 mod task_escrow_solana_asset_movement_live_contract_tests;
 #[path = "task_escrow_persistence_contract_tests/task_projection_contract_tests.rs"]
 mod task_projection_contract_tests;
+#[path = "task_escrow_persistence_contract_tests/task_projection_receipt_chain_contract_tests.rs"]
+mod task_projection_receipt_chain_contract_tests;
 #[path = "task_escrow_persistence_contract_tests/task_projection_settlement_contract_tests.rs"]
 mod task_projection_settlement_contract_tests;
