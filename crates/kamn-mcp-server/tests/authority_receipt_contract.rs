@@ -133,7 +133,8 @@ fn mutation_result_is_wrapped_as_service_authority_v1() {
     assert!(response.contains(r#""authority_kind":"service-receipt""#));
     assert!(response.contains(r#""source":"kamn-service""#));
     assert!(response.contains(r#""service_receipt_id":"task-transition-receipt-1""#));
-    assert!(response.contains(r#""service_receipt_digest":"sha256:""#));
+    let digest_field = format!(r#""service_receipt_digest":"{DIGEST}""#);
+    assert!(response.contains(digest_field.as_str()));
 }
 
 #[test]
@@ -156,7 +157,8 @@ fn registration_uses_service_profile_commitment_authority() {
 
     assert!(response.contains(r#""schema_version":"kamn.mcp.authority-receipt.v1""#));
     assert!(response.contains(r#""authority_kind":"service-profile-commitment""#));
-    assert!(response.contains(r#""profile_commitment":"sha256:""#));
+    let commitment_field = format!(r#""profile_commitment":"{DIGEST}""#);
+    assert!(response.contains(commitment_field.as_str()));
 }
 
 #[test]
