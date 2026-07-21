@@ -18,7 +18,7 @@ pub use kamn_sdk::{
     AgentMetadata, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
     ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
     ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus, ServiceTaskTransitionReceipt,
 };
 
 /// Authentication helpers.
@@ -222,7 +222,10 @@ impl KamnAgentHandle {
     }
 
     /// Accepts one task through the service API.
-    pub fn accept_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+    pub fn accept_task(
+        &self,
+        task_id: &str,
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         self.accept_task_with_payload(task_id, "{}")
     }
 
@@ -231,7 +234,7 @@ impl KamnAgentHandle {
         &self,
         task_id: &str,
         payload: &str,
-    ) -> Result<ServiceTaskStatus, AgentLibError> {
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),
@@ -245,7 +248,10 @@ impl KamnAgentHandle {
     }
 
     /// Completes one task through the service API.
-    pub fn complete_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+    pub fn complete_task(
+        &self,
+        task_id: &str,
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         self.complete_task_with_payload(task_id, "{}")
     }
 
@@ -254,7 +260,7 @@ impl KamnAgentHandle {
         &self,
         task_id: &str,
         payload: &str,
-    ) -> Result<ServiceTaskStatus, AgentLibError> {
+    ) -> Result<ServiceTaskTransitionReceipt, AgentLibError> {
         let nonce = self.next_nonce()?;
         let auth = self.service_client.build_auth(
             self.identity.did(),

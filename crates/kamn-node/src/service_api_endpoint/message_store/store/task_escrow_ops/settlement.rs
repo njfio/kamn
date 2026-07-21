@@ -42,6 +42,8 @@ pub(super) fn escrow_status_response(
         release_policy: record.release_policy.clone(),
         claim_scope: escrow_claim_scope(record).to_owned(),
         receipt_id: None,
+        receipt_digest: None,
+        action: None,
         settlement: record.settlement.clone(),
     }
 }

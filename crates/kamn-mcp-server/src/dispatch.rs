@@ -4,6 +4,10 @@ use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
 
 /// Backend abstraction used by MCP tool dispatch.
 pub trait McpToolBackend {
+    /// Returns the authenticated backend actor DID.
+    fn actor_did(&self) -> &str {
+        ""
+    }
     /// Registers the local agent identity.
     fn register(&self) -> Result<String, AgentLibError>;
     /// Sends one message payload.
@@ -59,6 +63,10 @@ pub trait McpToolBackend {
 }
 
 impl McpToolBackend for KamnAgentHandle {
+    fn actor_did(&self) -> &str {
+        self.identity().did().as_str()
+    }
+
     fn register(&self) -> Result<String, AgentLibError> {
         register_service_backed_mcp_agent(self)
     }
@@ -208,45 +216,65 @@ impl McpToolBackend for KamnAgentHandle {
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         let receipt = KamnAgentHandle::create_task(self, payload)?;
         Ok(format!(
-            r#"{{"task_id":"{}","state":"{}"}}"#,
+            r#"{{"actor_did":"{}","task_id":"{}","state":"{}","receipt_id":"{}","receipt_digest":"{}","action":"{}"}}"#,
+            escape_json(self.identity().did().as_str()),
             escape_json(receipt.task_id.as_str()),
             escape_json(receipt.state.as_str()),
+            escape_json(receipt.receipt_id.as_str()),
+            escape_json(receipt.receipt_digest.as_str()),
+            escape_json(receipt.action.as_str()),
         ))
     }
 
     fn accept_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError> {
         let receipt = KamnAgentHandle::accept_task_with_payload(self, task_id, payload)?;
         Ok(format!(
-            r#"{{"task_id":"{}","state":"{}"}}"#,
+            r#"{{"actor_did":"{}","task_id":"{}","state":"{}","receipt_id":"{}","receipt_digest":"{}","action":"{}"}}"#,
+            escape_json(self.identity().did().as_str()),
             escape_json(receipt.task_id.as_str()),
             escape_json(receipt.state.as_str()),
+            escape_json(receipt.receipt_id.as_str()),
+            escape_json(receipt.receipt_digest.as_str()),
+            escape_json(receipt.action.as_str()),
         ))
     }
 
     fn complete_task(&self, task_id: &str, payload: &str) -> Result<String, AgentLibError> {
         let receipt = KamnAgentHandle::complete_task_with_payload(self, task_id, payload)?;
         Ok(format!(
-            r#"{{"task_id":"{}","state":"{}"}}"#,
+            r#"{{"actor_did":"{}","task_id":"{}","state":"{}","receipt_id":"{}","receipt_digest":"{}","action":"{}"}}"#,
+            escape_json(self.identity().did().as_str()),
             escape_json(receipt.task_id.as_str()),
             escape_json(receipt.state.as_str()),
+            escape_json(receipt.receipt_id.as_str()),
+            escape_json(receipt.receipt_digest.as_str()),
+            escape_json(receipt.action.as_str()),
         ))
     }
 
     fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
         let receipt = KamnAgentHandle::fund_escrow(self, payload)?;
         Ok(format!(
-            r#"{{"escrow_id":"{}","state":"{}"}}"#,
+            r#"{{"actor_did":"{}","escrow_id":"{}","state":"{}","receipt_id":"{}","receipt_digest":"{}","action":"{}"}}"#,
+            escape_json(self.identity().did().as_str()),
             escape_json(receipt.escrow_id.as_str()),
             escape_json(receipt.state.as_str()),
+            escape_json(receipt.receipt_id.as_str()),
+            escape_json(receipt.receipt_digest.as_str()),
+            escape_json(receipt.action.as_str()),
         ))
     }
 
     fn release_escrow(&self, escrow_id: &str, payload: &str) -> Result<String, AgentLibError> {
         let receipt = KamnAgentHandle::release_escrow_with_payload(self, escrow_id, payload)?;
         Ok(format!(
-            r#"{{"escrow_id":"{}","state":"{}"}}"#,
+            r#"{{"actor_did":"{}","escrow_id":"{}","state":"{}","receipt_id":"{}","receipt_digest":"{}","action":"{}"}}"#,
+            escape_json(self.identity().did().as_str()),
             escape_json(receipt.escrow_id.as_str()),
             escape_json(receipt.state.as_str()),
+            escape_json(receipt.receipt_id.as_str()),
+            escape_json(receipt.receipt_digest.as_str()),
+            escape_json(receipt.action.as_str()),
         ))
     }
 
@@ -458,11 +486,28 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
     };
 
     match operation {
-        Ok(result) => Ok(success_response_json(
-            request_id.as_str(),
+        Ok(result) => match crate::authority::wrap(
             tool.as_str(),
             result.as_str(),
-        )),
+            request_json,
+            backend.actor_did(),
+        ) {
+            Ok(Some(authority)) => Ok(success_response_json(
+                request_id.as_str(),
+                tool.as_str(),
+                authority.as_str(),
+            )),
+            Ok(None) => Ok(success_response_json(
+                request_id.as_str(),
+                tool.as_str(),
+                result.as_str(),
+            )),
+            Err(code) => Ok(authority_error_response_json(
+                request_id.as_str(),
+                tool.as_str(),
+                code,
+            )),
+        },
         Err(AgentLibError::UnsupportedOperation(message)) => Ok(unsupported_response_json(
             request_id.as_str(),
             tool.as_str(),
@@ -518,5 +563,14 @@ fn backend_error_response_json(request_id: &str, tool: &str, message: &str) -> S
         escape_json(request_id),
         escape_json(tool),
         escape_json(message),
+    )
+}
+
+fn authority_error_response_json(request_id: &str, tool: &str, code: &str) -> String {
+    format!(
+        r#"{{"ok":false,"id":"{}","tool":"{}","error":{{"kind":"authority_error","code":"{}","message":"service authority receipt validation failed"}}}}"#,
+        escape_json(request_id),
+        escape_json(tool),
+        escape_json(code),
     )
 }

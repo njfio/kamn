@@ -23,7 +23,7 @@ const CONTENT_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["cont
 const BRIDGE_ID_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["bridge_id"],"properties":{"bridge_id":{"type":"string"}},"additionalProperties":false}"#;
 const ESCROW_PAYLOAD_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["escrow_id","payload"],"properties":{"escrow_id":{"type":"string"},"payload":{"type":"string"}},"additionalProperties":false}"#;
 const VERIFY_PROOF_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["message_id","tx_hash","block_height","finality"],"properties":{"message_id":{"type":"string"},"tx_hash":{"type":"string"},"block_height":{"type":"string"},"finality":{"type":"string"}},"additionalProperties":false}"#;
-const MCP_ENVELOPE_OUTPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"},"id":{"type":"string"},"tool":{"type":"string"},"result":{"type":"object"},"error":{"type":"object","required":["kind","message"],"properties":{"kind":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}"#;
+const MCP_ENVELOPE_OUTPUT_SCHEMA_JSON: &str = r#"{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"},"id":{"type":"string"},"tool":{"type":"string"},"result":{"type":"object"},"error":{"type":"object","required":["kind","message"],"properties":{"kind":{"type":"string"},"code":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}"#;
 
 /// Required PRD phase-2 MCP tool names.
 pub const MCP_TOOL_NAMES: [&str; 23] = [

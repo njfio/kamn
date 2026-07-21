@@ -33,23 +33,28 @@ fn task_and_profile_routes(method: &str, path: &str) -> Option<(u16, &'static st
         }
         ("GET", "/v1/agents/kamn:did:agent:alice") => Some((
             200,
-            r#"{"did":"kamn:did:agent:alice","reputation_score":777,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"]}"#,
+            r#"{"did":"kamn:did:agent:alice","reputation_score":777,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"],"profile_commitment":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
         )),
-        ("POST", "/v1/tasks/create") => {
-            Some((201, r#"{"task_id":"task-cli","state":"submitted"}"#))
-        }
-        ("POST", "/v1/tasks/task-cli/accept") => {
-            Some((200, r#"{"task_id":"task-cli","state":"accepted"}"#))
-        }
-        ("POST", "/v1/tasks/task-cli/complete") => {
-            Some((200, r#"{"task_id":"task-cli","state":"completed"}"#))
-        }
-        ("POST", "/v1/escrow/fund") => {
-            Some((200, r#"{"escrow_id":"escrow-cli","state":"funded"}"#))
-        }
-        ("POST", "/v1/escrow/escrow-cli/release") => {
-            Some((200, r#"{"escrow_id":"escrow-cli","state":"released"}"#))
-        }
+        ("POST", "/v1/tasks/create") => Some((
+            201,
+            r#"{"task_id":"task-cli","state":"submitted","receipt_id":"task-receipt-1","receipt_digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","action":"task:create"}"#,
+        )),
+        ("POST", "/v1/tasks/task-cli/accept") => Some((
+            200,
+            r#"{"task_id":"task-cli","state":"accepted","receipt_id":"task-receipt-2","receipt_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","action":"task:accept"}"#,
+        )),
+        ("POST", "/v1/tasks/task-cli/complete") => Some((
+            200,
+            r#"{"task_id":"task-cli","state":"completed","receipt_id":"task-receipt-3","receipt_digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","action":"task:complete"}"#,
+        )),
+        ("POST", "/v1/escrow/fund") => Some((
+            200,
+            r#"{"escrow_id":"escrow-cli","state":"funded","receipt_id":"escrow-receipt-1","receipt_digest":"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","action":"escrow:fund"}"#,
+        )),
+        ("POST", "/v1/escrow/escrow-cli/release") => Some((
+            200,
+            r#"{"escrow_id":"escrow-cli","state":"released","receipt_id":"escrow-receipt-2","receipt_digest":"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","action":"escrow:release-authorize"}"#,
+        )),
         _ => None,
     }
 }

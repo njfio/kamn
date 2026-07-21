@@ -104,6 +104,9 @@ pub(crate) struct ServiceApiTaskCreateBody {
     pub(crate) provider_did: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) terms_digest: Option<String>,
+    pub(crate) receipt_id: String,
+    pub(crate) receipt_digest: String,
+    pub(crate) action: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -126,6 +129,9 @@ pub(crate) struct ServiceApiTaskTransitionBody {
     pub(crate) terms_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) receipt_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) receipt_digest: Option<String>,
+    pub(crate) action: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,6 +171,7 @@ pub(crate) struct ServiceApiAgentGetBody {
     pub(crate) agent_type: String,
     pub(crate) model_family: String,
     pub(crate) capabilities: Vec<String>,
+    pub(crate) profile_commitment: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

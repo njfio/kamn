@@ -31,7 +31,9 @@ fn write_accept_task_response(
         return Ok(false);
     }
     let task_id = strip_suffix_id(path, "/v1/tasks/", "/accept");
-    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"accepted\"}}");
+    let payload = format!(
+        "{{\"task_id\":\"{task_id}\",\"state\":\"accepted\",\"receipt_id\":\"task-transition-receipt-accept\",\"receipt_digest\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"action\":\"task:accept\"}}"
+    );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
@@ -45,7 +47,9 @@ fn write_complete_task_response(
         return Ok(false);
     }
     let task_id = strip_suffix_id(path, "/v1/tasks/", "/complete");
-    let payload = format!("{{\"task_id\":\"{task_id}\",\"state\":\"completed\"}}");
+    let payload = format!(
+        "{{\"task_id\":\"{task_id}\",\"state\":\"completed\",\"receipt_id\":\"task-transition-receipt-complete\",\"receipt_digest\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"action\":\"task:complete\"}}"
+    );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
@@ -60,7 +64,9 @@ fn write_fund_escrow_response(
         return Ok(false);
     }
     let escrow_id = format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
-    let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"funded\"}}");
+    let payload = format!(
+        "{{\"escrow_id\":\"{escrow_id}\",\"state\":\"funded\",\"receipt_id\":\"escrow-transition-receipt-fund\",\"receipt_digest\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"action\":\"escrow:fund\"}}"
+    );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }
@@ -74,7 +80,9 @@ fn write_release_escrow_response(
         return Ok(false);
     }
     let escrow_id = strip_suffix_id(path, "/v1/escrow/", "/release");
-    let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"released\"}}");
+    let payload = format!(
+        "{{\"escrow_id\":\"{escrow_id}\",\"state\":\"released\",\"receipt_id\":\"escrow-transition-receipt-release\",\"receipt_digest\":\"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"action\":\"escrow:release-authorize\"}}"
+    );
     write_http_response(stream, 200, payload.as_str())?;
     Ok(true)
 }

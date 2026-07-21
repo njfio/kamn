@@ -43,7 +43,7 @@ pub(super) fn fund(
     if let Some(existing) = retry::funding(store, actor, &input)? {
         return Ok(receipt::response(
             existing,
-            funding_receipt_id(store, existing).as_deref(),
+            Some(funding_receipt(store, existing)?),
         ));
     }
     let task = store
@@ -56,21 +56,23 @@ pub(super) fn fund(
     let escrow_id = next_escrow_id(store, payload);
     let key = input.idempotency_key.clone();
     let record = build_record(escrow_id.as_str(), actor, input);
-    let receipt_id = receipt::append(
+    let receipt = receipt::append(
         store,
         &record,
-        actor,
-        "escrow:fund",
-        "unfunded",
-        key,
-        correlation_id,
+        receipt::ReceiptInput {
+            actor,
+            action: "escrow:fund",
+            prior_state: "unfunded",
+            key,
+            correlation_id,
+        },
     )?;
     store.snapshot.escrows.insert(escrow_id.clone(), record);
     issue_release_grant(store, escrow_id.as_str(), actor);
     store.persist().map_err(persistence)?;
     Ok(receipt::response(
         &store.snapshot.escrows[&escrow_id],
-        Some(&receipt_id),
+        Some(&receipt),
     ))
 }
 
@@ -91,25 +93,24 @@ pub(super) fn authorize_release(
     let key = parse_release_key(payload)?;
     if let Some(existing) = retry::release(store, actor, escrow_id, key.as_str())? {
         let record = &store.snapshot.escrows[escrow_id];
-        return Ok(receipt::response(
-            record,
-            Some(existing.receipt_id.as_str()),
-        ));
+        return Ok(receipt::response(record, Some(existing)));
     }
     validate_release(store, actor, &escrow)?;
     let mut updated = escrow.clone();
     updated.state = "release-authorized".to_owned();
-    let receipt_id = receipt::append(
+    let receipt = receipt::append(
         store,
         &updated,
-        actor,
-        "escrow:release-authorize",
-        "funded",
-        key,
-        correlation_id,
+        receipt::ReceiptInput {
+            actor,
+            action: "escrow:release-authorize",
+            prior_state: "funded",
+            key,
+            correlation_id,
+        },
     )?;
     store.snapshot.escrows.insert(escrow_id.to_owned(), updated);
-    let response = receipt::response(&store.snapshot.escrows[escrow_id], Some(&receipt_id));
+    let response = receipt::response(&store.snapshot.escrows[escrow_id], Some(&receipt));
     store.persist().map_err(persistence)?;
     Ok(response)
 }
@@ -129,16 +130,21 @@ pub(super) fn validate_release_eligibility(
     validate_release(store, actor, &escrow)
 }
 
-fn funding_receipt_id(
-    store: &ServiceApiMessageStore,
+fn funding_receipt<'a>(
+    store: &'a ServiceApiMessageStore,
     escrow: &ServiceApiPersistedEscrowRecord,
-) -> Option<String> {
+) -> Result<&'a ServiceApiEscrowTransitionReceiptRecord, EscrowLifecycleError> {
     store
         .snapshot
         .escrow_transition_receipts
         .iter()
         .find(|receipt| receipt.escrow_id == escrow.escrow_id && receipt.action == "escrow:fund")
-        .map(|receipt| receipt.receipt_id.clone())
+        .ok_or_else(|| {
+            conflict(
+                "ESCROW_RECEIPT_MISSING",
+                "escrow funding receipt is missing",
+            )
+        })
 }
 
 fn migration_required() -> EscrowLifecycleError {

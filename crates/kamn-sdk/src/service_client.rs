@@ -1,4 +1,5 @@
 use super::parse_unmasked_text_frame_payload;
+use super::service_authority::receipt_fields;
 use super::{
     json_string_field, json_u64_field, map_non_success_response, parse_http_response,
     status_from_header,
@@ -121,8 +122,12 @@ impl ServiceApiClient {
 }
 
 pub(super) fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, SdkError> {
+    let (receipt_id, receipt_digest) = receipt_fields(body)?;
     Ok(ServiceEscrowStatus {
         escrow_id: json_string_field(body, "escrow_id")?,
         state: json_string_field(body, "state")?,
+        receipt_id,
+        receipt_digest,
+        action: json_string_field(body, "action")?,
     })
 }

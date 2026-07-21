@@ -3,44 +3,62 @@ use super::*;
 pub(super) fn append(
     store: &mut ServiceApiMessageStore,
     record: &ServiceApiPersistedEscrowRecord,
-    actor: &str,
-    action: &str,
-    prior_state: &str,
-    key: String,
-    correlation_id: &str,
-) -> Result<String, EscrowLifecycleError> {
+    input: ReceiptInput<'_>,
+) -> Result<ServiceApiEscrowTransitionReceiptRecord, EscrowLifecycleError> {
     let receipt_id = format!(
         "escrow-transition-receipt-{:08}",
         store.snapshot.escrow_transition_receipts.len() + 1
     );
+    let receipt = build(record, receipt_id, input)?;
     store
         .snapshot
         .escrow_transition_receipts
-        .push(ServiceApiEscrowTransitionReceiptRecord {
-            receipt_id: receipt_id.clone(),
-            correlation_id: correlation_id.to_owned(),
-            idempotency_key: key,
-            actor_did: actor.to_owned(),
-            escrow_id: record.escrow_id.clone(),
-            task_id: required(&record.task_id)?,
-            transaction_id: required(&record.transaction_id)?,
-            action: action.to_owned(),
-            prior_state: prior_state.to_owned(),
-            resulting_state: record.state.clone(),
-            network: required(&record.network)?,
-            amount_lamports: record.amount_lamports.ok_or_else(migration_required)?,
-            terms_digest: required(&record.terms_digest)?,
-            release_policy: required(&record.release_policy)?,
-        });
-    Ok(receipt_id)
+        .push(receipt.clone());
+    Ok(receipt)
+}
+
+pub(super) struct ReceiptInput<'a> {
+    pub(super) actor: &'a str,
+    pub(super) action: &'a str,
+    pub(super) prior_state: &'a str,
+    pub(super) key: String,
+    pub(super) correlation_id: &'a str,
+}
+
+fn build(
+    record: &ServiceApiPersistedEscrowRecord,
+    receipt_id: String,
+    input: ReceiptInput<'_>,
+) -> Result<ServiceApiEscrowTransitionReceiptRecord, EscrowLifecycleError> {
+    Ok(ServiceApiEscrowTransitionReceiptRecord {
+        receipt_id,
+        correlation_id: input.correlation_id.to_owned(),
+        idempotency_key: input.key,
+        actor_did: input.actor.to_owned(),
+        escrow_id: record.escrow_id.clone(),
+        task_id: required(&record.task_id)?,
+        transaction_id: required(&record.transaction_id)?,
+        action: input.action.to_owned(),
+        prior_state: input.prior_state.to_owned(),
+        resulting_state: record.state.clone(),
+        network: required(&record.network)?,
+        amount_lamports: record.amount_lamports.ok_or_else(migration_required)?,
+        terms_digest: required(&record.terms_digest)?,
+        release_policy: required(&record.release_policy)?,
+    })
 }
 
 pub(super) fn response(
     record: &ServiceApiPersistedEscrowRecord,
-    receipt_id: Option<&str>,
+    receipt: Option<&ServiceApiEscrowTransitionReceiptRecord>,
 ) -> ServiceApiEscrowStatusBody {
     let mut response = escrow_status_response(record);
-    response.receipt_id = receipt_id.map(str::to_owned);
+    response.receipt_id = receipt.map(|value| value.receipt_id.clone());
+    response.receipt_digest = receipt.map(authority_digest::escrow);
+    response.action = receipt.map(|value| value.action.clone());
+    if let Some(receipt) = receipt {
+        response.state = receipt.resulting_state.clone();
+    }
     response
 }
 

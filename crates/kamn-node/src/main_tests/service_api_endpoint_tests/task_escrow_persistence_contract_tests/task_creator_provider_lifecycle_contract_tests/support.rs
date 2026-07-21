@@ -106,3 +106,24 @@ fn signed_request(
     }
     raw_signed_request(snapshot, bind_addr.as_str(), request)
 }
+
+#[test]
+fn integration_task_create_retry_preserves_service_receipt_authority() {
+    let case = LifecycleCase::new("create-receipt-authority");
+    case.register(PROVIDER, 1);
+    let first = case.create_valid_task(1);
+    let retried = case.create_valid_task(2);
+
+    assert_eq!(retried.receipt_id, first.receipt_id);
+    assert_eq!(retried.receipt_digest, first.receipt_digest);
+    assert!(first.receipt_id.starts_with("task-transition-receipt-"));
+    assert!(first.receipt_digest.starts_with("sha256:"));
+    assert_eq!(
+        case.state()["task_transition_receipts"]
+            .as_array()
+            .expect("task transition receipts should be an array")
+            .len(),
+        1
+    );
+    case.cleanup();
+}

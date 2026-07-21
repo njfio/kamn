@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
 //! MCP tool-server scaffold for KAMN.
 
+mod authority;
 /// MCP configuration scaffold.
 pub mod config;
 /// MCP tool dispatch and backend adapters.

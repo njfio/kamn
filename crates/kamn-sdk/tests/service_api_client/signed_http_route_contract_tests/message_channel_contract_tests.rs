@@ -39,6 +39,10 @@ fn assert_channel_and_task_routes(client: &ServiceApiClient, sender: &AgentDid) 
         )
         .expect("create task should succeed");
     assert!(task_response.task_id.starts_with("task-local-"));
+    assert!(task_response
+        .receipt_id
+        .starts_with("task-transition-receipt-"));
+    assert!(task_response.receipt_digest.starts_with("sha256:"));
     assert_task_status(client, sender, task_response.task_id.as_str());
 }
 

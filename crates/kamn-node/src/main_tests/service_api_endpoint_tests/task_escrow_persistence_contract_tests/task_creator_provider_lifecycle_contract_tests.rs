@@ -151,9 +151,9 @@ fn integration_task_transition_retry_returns_one_durable_receipt() {
     let receipts = state["task_transition_receipts"]
         .as_array()
         .expect("transition receipts should be an array");
-    assert_eq!(receipts.len(), 1);
-    assert_eq!(receipts[0]["action"], "task:accept");
-    assert_eq!(receipts[0]["transaction_id"], "transaction-lifecycle-001");
+    assert_eq!(receipts.len(), 2);
+    assert_eq!(receipts[1]["action"], "task:accept");
+    assert_eq!(receipts[1]["transaction_id"], "transaction-lifecycle-001");
     case.cleanup();
 }
 
@@ -192,7 +192,7 @@ fn integration_task_completion_evidence_and_receipts_survive_restart() {
             .as_array()
             .expect("transition receipts should be an array")
             .len(),
-        2
+        3
     );
     case.cleanup();
 }

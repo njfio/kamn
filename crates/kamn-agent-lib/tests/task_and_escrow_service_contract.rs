@@ -198,10 +198,10 @@ fn serve_task_escrow_connection(stream: &mut TcpStream) -> Result<(), String> {
 fn write_task_response(stream: &mut TcpStream, method: &str, path: &str) -> Result<bool, String> {
     let body = match (method, path) {
         ("POST", "/v1/tasks/task-contract-1/accept") => {
-            r#"{"task_id":"task-contract-1","state":"accepted"}"#
+            r#"{"task_id":"task-contract-1","state":"accepted","receipt_id":"task-receipt-1","receipt_digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","action":"task:accept"}"#
         }
         ("POST", "/v1/tasks/task-contract-1/complete") => {
-            r#"{"task_id":"task-contract-1","state":"completed"}"#
+            r#"{"task_id":"task-contract-1","state":"completed","receipt_id":"task-receipt-2","receipt_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","action":"task:complete"}"#
         }
         _ => return Ok(false),
     };
@@ -215,22 +215,33 @@ fn write_escrow_response(
     path: &str,
     body: &str,
 ) -> Result<bool, String> {
-    if method == "POST" && path == "/v1/escrow/fund" {
+    let Some(payload) = escrow_response_payload(method, path, body) else {
+        return Ok(false);
+    };
+    write_http_response(stream, 200, payload.as_str())?;
+    Ok(true)
+}
+
+fn escrow_response_payload(method: &str, path: &str, body: &str) -> Option<String> {
+    if method != "POST" {
+        return None;
+    }
+    if path == "/v1/escrow/fund" {
         let escrow_id = format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
-        let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"funded\"}}");
-        write_http_response(stream, 200, payload.as_str())?;
-        return Ok(true);
+        return Some(format!(
+            r#"{{"escrow_id":"{escrow_id}","state":"funded","receipt_id":"escrow-receipt-1","receipt_digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","action":"escrow:fund"}}"#
+        ));
     }
-    if method == "POST" && path.starts_with("/v1/escrow/") && path.ends_with("/release") {
-        let escrow_id = path
-            .trim_start_matches("/v1/escrow/")
-            .trim_end_matches("/release")
-            .trim_end_matches('/');
-        let payload = format!("{{\"escrow_id\":\"{escrow_id}\",\"state\":\"released\"}}");
-        write_http_response(stream, 200, payload.as_str())?;
-        return Ok(true);
-    }
-    Ok(false)
+    let escrow_id = release_escrow_id(path)?;
+    Some(format!(
+        r#"{{"escrow_id":"{escrow_id}","state":"released","receipt_id":"escrow-receipt-2","receipt_digest":"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","action":"escrow:release-authorize"}}"#
+    ))
+}
+
+fn release_escrow_id(path: &str) -> Option<&str> {
+    path.strip_prefix("/v1/escrow/")?
+        .strip_suffix("/release")
+        .map(|value| value.trim_end_matches('/'))
 }
 
 #[test]

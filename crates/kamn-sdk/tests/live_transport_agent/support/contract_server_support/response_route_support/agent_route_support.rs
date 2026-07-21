@@ -123,7 +123,7 @@ fn registration_payload(
     let capabilities_json = serde_json::to_string(capabilities)
         .map_err(|error| format!("capability serialization failed: {error}"))?;
     Ok(format!(
-        "{{\"did\":\"{did}\",\"reputation_score\":777,\"agent_type\":\"{agent_type}\",\"model_family\":\"{model_family}\",\"capabilities\":{capabilities_json}}}"
+        "{{\"did\":\"{did}\",\"reputation_score\":777,\"agent_type\":\"{agent_type}\",\"model_family\":\"{model_family}\",\"capabilities\":{capabilities_json},\"profile_commitment\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}"
     ))
 }
 
@@ -151,6 +151,7 @@ fn candidate_rows() -> Vec<serde_json::Value> {
             "agent_type": "assistant",
             "model_family": "gpt-5",
             "capabilities": ["text", "code"],
+            "profile_commitment": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         }),
         serde_json::json!({
             "did": "kamn:did:agent:beta",
@@ -158,6 +159,7 @@ fn candidate_rows() -> Vec<serde_json::Value> {
             "agent_type": "assistant",
             "model_family": "gpt-4.1",
             "capabilities": ["text"],
+            "profile_commitment": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         }),
     ]
 }

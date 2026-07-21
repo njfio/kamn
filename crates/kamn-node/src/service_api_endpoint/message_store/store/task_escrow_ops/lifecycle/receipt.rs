@@ -29,20 +29,26 @@ pub(super) fn build(
     })
 }
 
-pub(super) fn create_response(record: &ServiceApiPersistedTaskRecord) -> ServiceApiTaskCreateBody {
+pub(super) fn create_response(
+    record: &ServiceApiPersistedTaskRecord,
+    receipt: &ServiceApiTaskTransitionReceiptRecord,
+) -> ServiceApiTaskCreateBody {
     ServiceApiTaskCreateBody {
         task_id: record.task_id.clone(),
-        state: record.state.clone(),
+        state: receipt.resulting_state.clone(),
         transaction_id: record.transaction_id.clone(),
         creator_did: record.creator_did.clone(),
         provider_did: record.provider_did.clone(),
         terms_digest: record.terms_digest.clone(),
+        receipt_id: receipt.receipt_id.clone(),
+        receipt_digest: authority_digest::task(receipt),
+        action: receipt.action.clone(),
     }
 }
 
 pub(super) fn transition_response(
     record: &ServiceApiPersistedTaskRecord,
-    receipt_id: &str,
+    receipt: &ServiceApiTaskTransitionReceiptRecord,
 ) -> ServiceApiTaskTransitionBody {
     ServiceApiTaskTransitionBody {
         task_id: record.task_id.clone(),
@@ -51,7 +57,9 @@ pub(super) fn transition_response(
         creator_did: record.creator_did.clone(),
         provider_did: record.provider_did.clone(),
         terms_digest: record.terms_digest.clone(),
-        receipt_id: Some(receipt_id.to_owned()),
+        receipt_id: Some(receipt.receipt_id.clone()),
+        receipt_digest: Some(authority_digest::task(receipt)),
+        action: receipt.action.clone(),
     }
 }
 
@@ -59,5 +67,7 @@ pub(super) fn retry_response(
     store: &ServiceApiMessageStore,
     receipt: &ServiceApiTaskTransitionReceiptRecord,
 ) -> ServiceApiTaskTransitionBody {
-    transition_response(&store.snapshot.tasks[&receipt.task_id], &receipt.receipt_id)
+    let mut response = transition_response(&store.snapshot.tasks[&receipt.task_id], receipt);
+    response.state = receipt.resulting_state.clone();
+    response
 }

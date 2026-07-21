@@ -2,6 +2,10 @@ use crate::SdkError;
 
 #[path = "service_auth_crypto.rs"]
 mod service_auth_crypto;
+#[path = "service_authority.rs"]
+mod service_authority;
+#[path = "service_authority_models.rs"]
+mod service_authority_models;
 #[path = "service_client.rs"]
 mod service_client;
 #[path = "service_endpoint.rs"]
@@ -21,6 +25,8 @@ pub use self::service_auth_crypto::{
     service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
     service_verify_signature_with_public_key,
 };
+use self::service_authority::profile_commitment;
+pub use self::service_authority_models::ServiceTaskTransitionReceipt;
 pub(crate) use self::service_client::service_client_bridge_misc_routes::agent_search_payload;
 use self::service_client::HttpResponse;
 pub use self::service_client::ServiceApiClient;

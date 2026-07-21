@@ -51,6 +51,12 @@ pub struct ServiceTaskReceipt {
     pub task_id: String,
     /// Initial lifecycle state.
     pub state: String,
+    /// Service-issued durable receipt identifier.
+    pub receipt_id: String,
+    /// Digest of the durable service receipt.
+    pub receipt_digest: String,
+    /// Canonical durable receipt action.
+    pub action: String,
 }
 
 /// Parsed response for `GET /v1/tasks/{id}`.
@@ -69,6 +75,12 @@ pub struct ServiceEscrowStatus {
     pub escrow_id: String,
     /// Current lifecycle state.
     pub state: String,
+    /// Service-issued durable receipt identifier.
+    pub receipt_id: String,
+    /// Digest of the durable service receipt.
+    pub receipt_digest: String,
+    /// Canonical durable receipt action.
+    pub action: String,
 }
 
 /// Parsed response for `POST /v1/content/register`.
@@ -132,6 +144,8 @@ pub struct ServiceAgentProfile {
     pub model_family: String,
     /// Registered capability labels.
     pub capabilities: Vec<String>,
+    /// Deterministic commitment to the service-owned profile.
+    pub profile_commitment: String,
 }
 
 /// Parsed response for `GET /v1/agents/{did}/balance`.

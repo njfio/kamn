@@ -11,6 +11,7 @@ pub(crate) fn register_service_backed_mcp_agent(
         "agent_type": profile.agent_type,
         "model_family": profile.model_family,
         "capabilities": profile.capabilities,
+        "profile_commitment": profile.profile_commitment,
     })
     .to_string())
 }
