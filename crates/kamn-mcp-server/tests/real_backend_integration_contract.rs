@@ -9,6 +9,9 @@ const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HE
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "1111111111111111111111111111111111111111111111111111111111111111";
 const TEST_MCP_AGENT_DID: &str = "kamn:did:agent:pkh-038394c7f7ffdc1bfd761be5740fd3aeb46fdea8a79c1b9384d79c03c50fc44248--keyh-67726c2c9ade28652475e1b8fa00855e";
+const TEST_TASK_RECEIPT_ID: &str = "task-receipt-service-00000001";
+const TEST_TASK_RECEIPT_DIGEST: &str =
+    "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 fn bind_loopback_listener() -> TcpListener {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
@@ -153,6 +156,10 @@ fn write_public_or_task_response(
         ("GET", "/v1/tasks/task-contract-1") => {
             Some((200, r#"{"task_id":"task-contract-1","state":"submitted"}"#))
         }
+        ("POST", "/v1/tasks/create") => Some((
+            201,
+            r#"{"task_id":"task-authority-1","state":"submitted","receipt_id":"task-receipt-service-00000001","receipt_digest":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","action":"task:create"}"#,
+        )),
         ("GET", "/v1/agents/kamn:did:agent:alice") => Some((
             200,
             r#"{"did":"kamn:did:agent:alice","reputation_score":42,"agent_type":"service-agent","model_family":"service-api","capabilities":["profile:read"],"profile_commitment":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
@@ -275,6 +282,19 @@ fn parse_framed_json(response: &str) -> String {
         "declared content length should match JSON body bytes",
     );
     body.to_owned()
+}
+
+fn assert_service_task_receipt_authority(response: &str) {
+    let value: serde_json::Value = serde_json::from_str(response).expect("valid response json");
+    let result = &value["result"];
+    assert_eq!(result["service_receipt_id"], TEST_TASK_RECEIPT_ID);
+    assert_eq!(result["service_receipt_digest"], TEST_TASK_RECEIPT_DIGEST);
+    assert_eq!(result["service_result"]["receipt_id"], TEST_TASK_RECEIPT_ID);
+    assert_eq!(
+        result["service_result"]["receipt_digest"],
+        TEST_TASK_RECEIPT_DIGEST
+    );
+    assert_eq!(result["actor_did"], TEST_MCP_AGENT_DID);
 }
 
 #[test]
@@ -530,5 +550,23 @@ fn spec_c10_real_backend_register_persists_mcp_agent_profile() {
     assert!(
         server_result.is_ok(),
         "register must consume the HTTP request"
+    );
+}
+
+#[test]
+fn spec_c11_real_backend_preserves_service_task_receipt_authority() {
+    let (bind_addr, server) = spawn_real_backend_service_server(1);
+    let backend = real_backend(bind_addr.as_str());
+    let response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-11","tool":"create_task","payload":"{\"title\":\"authority\"}"}"#,
+    )
+    .expect("create_task dispatch should use the service backend");
+    assert_service_task_receipt_authority(response.as_str());
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "create task must consume the HTTP request"
     );
 }
