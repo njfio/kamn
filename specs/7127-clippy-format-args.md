@@ -2,12 +2,12 @@
 
 ## Objective
 
-Restore the strict workspace Clippy gate by converting four legacy positional
+Restore the strict workspace Clippy gate by converting five legacy positional
 format arguments in the MVP demo harness to Rust captured format arguments.
 
 ## Inputs/Outputs
 
-- Input: the existing strings and local values passed to four `format!` calls.
+- Input: the existing strings and local values passed to five `format!` calls.
 - Output: byte-for-byte equivalent formatted strings and errors.
 - Verification: strict Clippy, formatting, and focused MVP demo harness tests.
 
@@ -25,7 +25,7 @@ format arguments in the MVP demo harness to Rust captured format arguments.
 
 ## Acceptance Criteria
 
-- [ ] All four reported `uninlined_format_args` findings are removed.
+- [ ] All five reported `uninlined_format_args` findings are removed.
 - [ ] Existing formatted output remains unchanged.
 - [ ] `cargo fmt --check` passes.
 - [ ] Strict workspace Clippy passes with all targets and features.
@@ -37,6 +37,7 @@ format arguments in the MVP demo harness to Rust captured format arguments.
 - `crates/kamn-e2e-harness/src/mvp_demo/report.rs`
 - `crates/kamn-e2e-harness/src/mvp_demo/report_markdown.rs`
 - `crates/kamn-e2e-harness/src/mvp_demo/three_agent_claim.rs`
+- `crates/kamn-e2e-harness/tests/mvp_demo_agent_harness_claim_contract/artifact.rs`
 - `specs/7127-clippy-format-args.md`
 
 ## Error Semantics
@@ -49,11 +50,12 @@ agent-harness file-read error must render the same path and underlying error.
 ### RED
 
 Run `cargo clippy --workspace --all-targets --all-features -- -D warnings` and
-observe the four `clippy::uninlined_format_args` failures.
+observe the five `clippy::uninlined_format_args` failures. The fifth all-targets
+fixture finding becomes visible only after the four library findings are fixed.
 
 ### GREEN
 
-Use captured arguments in only the four reported `format!` calls, then rerun
+Use captured arguments in only the five reported `format!` calls, then rerun
 strict Clippy.
 
 ### REFACTOR
