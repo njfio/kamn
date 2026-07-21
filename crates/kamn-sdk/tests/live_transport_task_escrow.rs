@@ -74,7 +74,7 @@ fn transition_routes_preserve_canonical_payloads() {
             sender_did: "kamn:did:agent:transition-contract".to_owned(),
             scope: "tasks:write",
             response_status: 200,
-            response_body: r#"{"task_id":"task-1","state":"completed"}"#.to_owned(),
+            response_body: r#"{"task_id":"task-1","state":"completed","receipt_id":"task-receipt-1","receipt_digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","action":"task:complete"}"#.to_owned(),
         },
         support::ExpectedRequest {
             method: "POST",
@@ -83,7 +83,7 @@ fn transition_routes_preserve_canonical_payloads() {
             sender_did: "kamn:did:agent:transition-contract".to_owned(),
             scope: "escrow:write",
             response_status: 200,
-            response_body: r#"{"escrow_id":"escrow-1","state":"released"}"#.to_owned(),
+            response_body: r#"{"escrow_id":"escrow-1","state":"released","receipt_id":"escrow-receipt-1","receipt_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","action":"escrow:release-authorize"}"#.to_owned(),
         },
     ];
     let (bind_addr, server) = support::spawn_expected_server(requests);

@@ -29,7 +29,7 @@ pub(crate) fn create_task_request() -> ExpectedRequest {
         "kamn:did:agent:creator-live",
         "tasks:write",
         201,
-        r#"{"task_id":"task-local-abc","state":"submitted"}"#,
+        r#"{"task_id":"task-local-abc","state":"submitted","receipt_id":"task-receipt-1","receipt_digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","action":"task:create"}"#,
     )
 }
 
@@ -39,7 +39,7 @@ pub(crate) fn accept_task_request() -> ExpectedRequest {
         "kamn:did:agent:assignee-live",
         "tasks:write",
         200,
-        r#"{"task_id":"task-local-abc","state":"accepted"}"#,
+        r#"{"task_id":"task-local-abc","state":"accepted","receipt_id":"task-receipt-2","receipt_digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","action":"task:accept"}"#,
     )
 }
 
@@ -49,7 +49,7 @@ pub(crate) fn complete_task_request() -> ExpectedRequest {
         "kamn:did:agent:assignee-live",
         "tasks:write",
         200,
-        r#"{"task_id":"task-local-abc","state":"completed"}"#,
+        r#"{"task_id":"task-local-abc","state":"completed","receipt_id":"task-receipt-3","receipt_digest":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","action":"task:complete"}"#,
     )
 }
 
@@ -89,7 +89,7 @@ pub(crate) fn create_escrow_request() -> ExpectedRequest {
         "kamn:did:agent:payer-live",
         "escrow:write",
         200,
-        r#"{"escrow_id":"escrow-local-xyz","state":"funded"}"#,
+        r#"{"escrow_id":"escrow-local-xyz","state":"funded","receipt_id":"escrow-receipt-1","receipt_digest":"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","action":"escrow:fund"}"#,
     )
 }
 
@@ -116,7 +116,7 @@ pub(crate) fn release_escrow_request() -> ExpectedRequest {
         "kamn:did:agent:payer-live",
         "escrow:write",
         200,
-        r#"{"escrow_id":"escrow-local-xyz","state":"released"}"#,
+        r#"{"escrow_id":"escrow-local-xyz","state":"released","receipt_id":"escrow-receipt-2","receipt_digest":"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","action":"escrow:release-authorize"}"#,
     )
 }
 
