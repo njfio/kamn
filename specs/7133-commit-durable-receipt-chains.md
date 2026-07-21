@@ -105,23 +105,23 @@ is an authority source.
 
 ## Acceptance Criteria
 
-- [ ] The service deterministically derives the versioned chain commitment from
+- [x] The service deterministically derives the versioned chain commitment from
   durable authorization, task, escrow, and conditional settlement facts.
-- [ ] Canonical entries bind order, actor, action, state, resource, and service
+- [x] Canonical entries bind order, actor, action, state, resource, and service
   receipt digest.
-- [ ] Retry and restart preserve receipt identity and chain commitment without
+- [x] Retry and restart preserve receipt identity and chain commitment without
   duplicating a transition or settlement.
-- [ ] Duplicate, reordered, cross-resource, cross-actor, and conflicting-key
+- [x] Duplicate, reordered, cross-resource, cross-actor, and conflicting-key
   chains fail with `SERVICE_RECEIPT_CHAIN_INVALID`.
-- [ ] Creator and provider projections expose only requester-owned receipt
+- [x] Creator and provider projections expose only requester-owned receipt
   identity, digest, action, resource, and resulting-state details.
-- [ ] Restricted-public output exposes the shared chain commitment and existing
+- [x] Restricted-public output exposes the shared chain commitment and existing
   allowlisted facts without receipt or participant-private detail.
-- [ ] Participant and restricted-public projections share the same chain and
+- [x] Participant and restricted-public projections share the same chain and
   public commitments.
-- [ ] Persisted-state tests cover tampered order, actor, action, state, resource,
+- [x] Persisted-state tests cover tampered order, actor, action, state, resource,
   retry, restart, authorization, and settlement cases.
-- [ ] Formatting, strict Clippy, focused tests, and real service projection
+- [x] Formatting, strict Clippy, focused tests, and real service projection
   wiring pass.
 
 ## Files To Touch
@@ -168,3 +168,19 @@ is an authority source.
   retry and service restart.
 - Prove both scopes return the same chain/public commitments and that the
   restricted-public serialized field set is exact.
+
+## Validation Evidence
+
+- Ubuntu run `29856598101` passed formatting, strict Clippy, touched Rust size,
+  service/runtime integration, all receipt-chain contracts, the settlement
+  projection contract, and both repeated/restart release contracts. The job
+  was later cancelled by its 20-minute cap during unrelated workspace work.
+- Ubuntu run `29858368256` passed formatting, strict Clippy, touched Rust size,
+  production panic/expect, and service/runtime integration after refactor. Its
+  workspace test step failed while linking unrelated `kamn-e2e-harness` tests
+  because the runner reported `No space left on device`.
+- The post-refactor focused local settlement projection contract passed with
+  `1 passed; 0 failed; 689 filtered out`. Cargo was then interrupted while
+  loading unrelated integration binaries containing no matching test.
+- No shell, Python, workflow, or template surface changed. Rust LOC delta is
+  `+804`; shell-to-Rust ratio delta is `0.0` (neutral).
