@@ -89,9 +89,9 @@ fn build_projection(
 ) -> Result<(ServiceApiTaskPublicProjection, receipt_chain::ReceiptChain), TaskProjectionError> {
     let escrow = bound_escrow(snapshot, task)?;
     let transaction_id = matching_transaction_id(task, escrow)?;
-    require_settlement_consistency(snapshot, escrow)?;
-    let chain = receipt_chain::derive(snapshot, task, escrow)?;
     let mut projection = public_fields(task, escrow, transaction_id)?;
+    let chain = receipt_chain::derive(snapshot, task, escrow)?;
+    require_settlement_consistency(snapshot, escrow)?;
     projection.receipt_chain_commitment = chain.commitment.clone();
     projection.public_commitment = commitment::public_commitment(&projection);
     Ok((projection, chain))
