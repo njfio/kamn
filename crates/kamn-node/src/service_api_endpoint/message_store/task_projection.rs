@@ -91,7 +91,6 @@ fn build_projection(
     let transaction_id = matching_transaction_id(task, escrow)?;
     let mut projection = public_fields(task, escrow, transaction_id)?;
     let chain = receipt_chain::derive(snapshot, task, escrow)?;
-    require_settlement_consistency(snapshot, escrow)?;
     projection.receipt_chain_commitment = chain.commitment.clone();
     projection.public_commitment = commitment::public_commitment(&projection);
     Ok((projection, chain))
@@ -125,28 +124,6 @@ fn matching_transaction_id<'a>(
         (Some(task_id), Some(escrow_id)) if task_id == escrow_id => Ok(task_id),
         _ => Err(TaskProjectionError::Inconsistent),
     }
-}
-
-fn require_settlement_consistency(
-    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
-    escrow: &ServiceApiPersistedEscrowRecord,
-) -> Result<(), TaskProjectionError> {
-    let Some(signature) = escrow.settlement.settlement_tx_signature.as_deref() else {
-        return Ok(());
-    };
-    let intent = snapshot
-        .settlement_intents
-        .get(&escrow.escrow_id)
-        .ok_or(TaskProjectionError::Inconsistent)?;
-    if intent.state == "confirmed"
-        && intent.expected_signature == signature
-        && Some(intent.amount_lamports) == escrow.amount_lamports
-        && intent.network == "solana:devnet"
-        && escrow.network.as_deref() == Some("solana-devnet")
-    {
-        return Ok(());
-    }
-    Err(TaskProjectionError::Inconsistent)
 }
 
 fn public_fields(
