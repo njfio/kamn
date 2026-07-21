@@ -1,4 +1,5 @@
 use super::parse_unmasked_text_frame_payload;
+use super::service_authority::receipt_fields;
 use super::{
     json_string_field, json_u64_field, map_non_success_response, parse_http_response,
     status_from_header,

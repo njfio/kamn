@@ -25,7 +25,7 @@ pub use self::service_auth_crypto::{
     service_signature_for_state_hash_with_private_key, service_signer_public_key_for_fields,
     service_verify_signature_with_public_key,
 };
-use self::service_authority::{profile_commitment, receipt_fields};
+use self::service_authority::profile_commitment;
 pub use self::service_authority_models::ServiceTaskTransitionReceipt;
 pub(crate) use self::service_client::service_client_bridge_misc_routes::agent_search_payload;
 use self::service_client::HttpResponse;
