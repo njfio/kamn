@@ -40,10 +40,7 @@ pub(crate) fn validate_agent_harness_evidence_path(
     artifact_path: &str,
 ) -> Result<(), String> {
     let artifact = std::fs::read_to_string(artifact_path).map_err(|error| {
-        format!(
-            "failed to read agent harness evidence {}: {error}",
-            artifact_path
-        )
+        format!("failed to read agent harness evidence {artifact_path}: {error}")
     })?;
     validate_agent_harness_evidence(artifact.as_str(), report_path, report_json)
 }

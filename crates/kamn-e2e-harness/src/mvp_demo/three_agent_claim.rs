@@ -79,8 +79,7 @@ fn receipt_artifact_fields(
 
 fn claim_header() -> String {
     format!(
-        "\"id\":\"three_agent_escrow_verification\",\"label\":\"{}\",\"required\":true,\"status\":\"PASS\",\"summary\":\"Agent C verifies escrow settlement from restricted proof view\"",
-        CLAIM_LABEL_DEVNET_BACKED,
+        "\"id\":\"three_agent_escrow_verification\",\"label\":\"{CLAIM_LABEL_DEVNET_BACKED}\",\"required\":true,\"status\":\"PASS\",\"summary\":\"Agent C verifies escrow settlement from restricted proof view\""
     )
 }
 
