@@ -55,12 +55,12 @@ pub(super) fn parse_and_validate_actor(raw: &str, expected_role: &str) -> Result
 
 fn validate_actor(actor: &Actor, expected_role: &str) -> Result<(), String> {
     if actor.schema_version != SCHEMA || actor.actor != expected_role || actor.did.is_empty() {
-        return Err("PI_ACTOR_IDENTITY_INVALID".to_owned());
+        return Err(authority_error());
     }
     validate_transport(actor)?;
     validate_authority(actor)?;
     if actor.handoff_authorized {
-        return Err("PI_HANDOFF_AUTHORIZATION_FORBIDDEN".to_owned());
+        return Err(authority_error());
     }
     validate_shared_digests(actor)?;
     validate_scope(actor)
@@ -89,9 +89,7 @@ fn validate_shared_digests(actor: &Actor) -> Result<(), String> {
 fn validate_scope(actor: &Actor) -> Result<(), String> {
     if actor.actor == "agent_c" {
         let valid = actor.view_scope == "restricted-public" && actor.participant_role.is_none();
-        return valid
-            .then_some(())
-            .ok_or_else(|| "PI_VERIFIER_PRIVATE_LEAK".to_owned());
+        return valid.then_some(()).ok_or_else(authority_error);
     }
     let expected = if actor.actor == "agent_a" {
         "creator"

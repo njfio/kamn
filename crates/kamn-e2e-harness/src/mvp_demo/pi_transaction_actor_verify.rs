@@ -75,7 +75,7 @@ fn require_distinct_u64(actors: &[Actor; 3], field: fn(&Actor) -> u64) -> Result
     {
         return Ok(());
     }
-    Err("PI_ACTOR_PROCESS_REUSED".to_owned())
+    Err("PI_TRANSPORT_PROVENANCE_INVALID".to_owned())
 }
 
 fn require_distinct_dids(actors: &[Actor; 3]) -> Result<(), String> {
@@ -85,7 +85,7 @@ fn require_distinct_dids(actors: &[Actor; 3]) -> Result<(), String> {
     {
         return Ok(());
     }
-    Err("PI_ACTOR_IDENTITY_INVALID".to_owned())
+    Err("PI_SERVICE_AUTHORITY_MISMATCH".to_owned())
 }
 
 fn require_shared_facts(actors: &[Actor; 3]) -> Result<(), String> {
@@ -93,7 +93,7 @@ fn require_shared_facts(actors: &[Actor; 3]) -> Result<(), String> {
     if shared_fact_key(&actors[1]) == first && shared_fact_key(&actors[2]) == first {
         return Ok(());
     }
-    Err("PI_TRANSACTION_FACT_MISMATCH".to_owned())
+    Err(mismatch())
 }
 
 fn require_globally_unique_receipts(actors: &[Actor; 3]) -> Result<(), String> {

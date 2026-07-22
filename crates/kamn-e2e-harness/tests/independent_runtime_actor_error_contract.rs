@@ -1,59 +1,57 @@
-use kamn_e2e_harness::{
-    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig,
-};
+use kamn_e2e_harness::{execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig};
 use std::path::{Path, PathBuf};
 
-#[path = "support/mvp_demo_command.rs"]
-mod mvp_demo_command;
+#[path = "support/agent_transaction_demo_fixture.rs"]
+mod agent_transaction_demo_fixture;
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
 use pi_transaction_actor_fixture::{sha, ActorFixture, Overrides};
 
 #[test]
-fn spec_c27_bundled_identity_drift_keeps_public_category() {
+fn spec_c27_bundled_identity_drift_keeps_authority_category() {
     assert_bundled_error(
         "identity",
         Overrides {
             agent_c_did: "kamn:did:a",
             ..Overrides::default()
         },
-        "AGENT_IDENTITY_INVALID",
+        "PI_SERVICE_AUTHORITY_MISMATCH",
     );
 }
 
 #[test]
-fn spec_c28_bundled_authorization_drift_keeps_public_category() {
+fn spec_c28_bundled_authorization_drift_keeps_authority_category() {
     assert_bundled_error(
         "authorization",
         Overrides {
             agent_a_handoff_authorized: true,
             ..Overrides::default()
         },
-        "AUTHORIZATION_EVIDENCE_INVALID",
+        "PI_SERVICE_AUTHORITY_MISMATCH",
     );
 }
 
 #[test]
-fn spec_c29_bundled_projection_leak_keeps_public_category() {
+fn spec_c29_bundled_projection_leak_keeps_authority_category() {
     assert_bundled_error(
         "projection",
         Overrides {
             agent_c_private: Some(sha('f')),
             ..Overrides::default()
         },
-        "PROJECTION_SCOPE_INVALID",
+        "PI_SERVICE_AUTHORITY_MISMATCH",
     );
 }
 
 #[test]
-fn spec_c30_bundled_shared_fact_drift_keeps_public_category() {
+fn spec_c30_bundled_shared_fact_drift_keeps_authority_category() {
     assert_bundled_error(
         "agreement",
         Overrides {
             agent_b_escrow: "escrow-foreign",
             ..Overrides::default()
         },
-        "TRANSACTION_AGREEMENT_INVALID",
+        "PI_SERVICE_AUTHORITY_MISMATCH",
     );
 }
 
@@ -84,18 +82,15 @@ impl Fixture {
     fn new(stem: &str) -> Self {
         let root = temp_root(stem);
         let actors = ActorFixture::new();
-        actors.write_all(Overrides::default());
-        actors.rebind_shared_facts();
-        let mut config = mvp_demo_command::devnet_required_demo_config(&root);
-        config.pi_transaction_actor_paths = Some(actors.paths());
-        execute_mvp_demo_contract(&config).expect("valid runtime bundle");
+        actors.write_bound_v2_all();
+        agent_transaction_demo_fixture::execute(&root, &actors.paths())
+            .expect("valid runtime bundle");
         Self { root, actors }
     }
 
     fn replace_bundled(&self, overrides: Overrides) {
-        self.actors.write_all(overrides);
-        self.actors.rebind_shared_facts();
-        let proof = only_run_dir(&self.root).join("proof");
+        self.actors.write_bound_v2(overrides);
+        let proof = only_run_dir(&self.root.join("demo")).join("proof");
         for (source, name) in self.actors.paths().iter().zip([
             "runtime-agent-a-evidence.json",
             "runtime-agent-b-evidence.json",
@@ -109,7 +104,7 @@ impl Fixture {
         execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
             report: self
                 .root
-                .join("latest/proof/report.json")
+                .join("demo/latest/proof/report.json")
                 .display()
                 .to_string(),
             agent_harness_evidence_path: None,
@@ -118,7 +113,7 @@ impl Fixture {
     }
 
     fn downgrade_transcript_schema(&self) {
-        let path = only_run_dir(&self.root).join("proof/three-agent-transcript.json");
+        let path = only_run_dir(&self.root.join("demo")).join("proof/three-agent-transcript.json");
         let raw = std::fs::read_to_string(&path).expect("runtime transcript");
         std::fs::write(
             path,

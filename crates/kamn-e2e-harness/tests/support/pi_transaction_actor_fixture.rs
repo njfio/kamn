@@ -93,6 +93,11 @@ impl ActorFixture {
         actor_v2_fixture::write_bound_all(self.root.as_path());
     }
 
+    pub(crate) fn write_bound_v2(&self, overrides: Overrides) {
+        actor_v2_fixture::write_bound_all(self.root.as_path());
+        actor_v2_fixture::apply_overrides(self.root.as_path(), &overrides);
+    }
+
     #[allow(dead_code)]
     pub(crate) fn rebind_shared_facts(&self) {
         for path in self.paths() {

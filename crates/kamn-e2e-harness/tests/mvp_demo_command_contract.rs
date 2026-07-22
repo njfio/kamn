@@ -7,6 +7,8 @@ use kamn_e2e_harness::{
     HarnessCommand, MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
+#[path = "support/agent_transaction_demo_fixture.rs"]
+mod agent_transaction_demo_fixture;
 #[path = "support/artifact_digest.rs"]
 #[allow(dead_code)]
 mod artifact_digest;
@@ -161,14 +163,12 @@ fn spec_c06_demo_mvp_devnet_required_records_settlement_evidence() {
 fn spec_c10_demo_consumes_runtime_actor_chain_when_configured() {
     let temp = temp_dir("mvp-demo-runtime-chain");
     let actors = ActorFixture::new();
-    actors.write_all(Overrides::default());
-    actors.rebind_shared_facts();
-    let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
-    config.pi_transaction_actor_paths = Some(actors.paths());
+    actors.write_bound_v2_all();
 
-    execute_mvp_demo_contract(&config).expect("runtime-backed demo should pass");
+    agent_transaction_demo_fixture::execute(&temp, &actors.paths())
+        .expect("runtime-backed demo should pass");
     let transcript = std::fs::read_to_string(
-        run_directories(&temp)[0].join("proof/three-agent-transcript.json"),
+        run_directories(&temp.join("demo"))[0].join("proof/three-agent-transcript.json"),
     )
     .expect("canonical transaction proof");
     assert!(transcript.contains("kamn.service.receipt-chain.v1"));
@@ -197,15 +197,15 @@ fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
 fn spec_c12_verifier_rebuilds_chain_from_actor_receipts() {
     let temp = temp_dir("mvp-demo-rebuilt-chain");
     let actors = ActorFixture::new();
-    actors.write_all(Overrides::default());
-    actors.rebind_shared_facts();
-    let mut config = mvp_demo_command::devnet_required_demo_config(&temp);
-    config.pi_transaction_actor_paths = Some(actors.paths());
-    execute_mvp_demo_contract(&config).expect("runtime-backed report");
+    actors.write_bound_v2_all();
+    agent_transaction_demo_fixture::execute(&temp, &actors.paths()).expect("runtime-backed report");
 
-    rewrite_chain_and_claim(&temp);
+    rewrite_chain_and_claim(&temp.join("demo"));
     let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
-        report: temp.join("latest/proof/report.json").display().to_string(),
+        report: temp
+            .join("demo/latest/proof/report.json")
+            .display()
+            .to_string(),
         agent_harness_evidence_path: None,
         pi_transaction_actor_paths: Some(actors.paths()),
     })
@@ -218,9 +218,13 @@ fn rewrite_chain_and_claim(root: &Path) {
     let raw = std::fs::read_to_string(&chain_path).expect("runtime chain");
     let old_digest = artifact_digest::digest_field(raw.as_str(), "chain_digest");
     let changed = raw.replacen(
-        r#""after_state":"submitted""#,
-        r#""after_state":"forged""#,
+        r#""resulting_state":"submitted""#,
+        r#""resulting_state":"forged""#,
         1,
+    );
+    assert_ne!(
+        changed, raw,
+        "service receipt mutation must change the chain"
     );
     let changed = artifact_digest::with_digest(changed, "chain_digest");
     let new_digest = artifact_digest::digest_field(changed.as_str(), "chain_digest");
