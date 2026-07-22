@@ -61,23 +61,23 @@ authority substitute.
 
 ## Acceptance Criteria
 
-- [ ] The harness recomputes `kamn.service.receipt-chain.v1` from finalized durable state
+- [x] The harness recomputes `kamn.service.receipt-chain.v1` from finalized durable state
   after all Pi and MCP children have exited.
-- [ ] The recomputation matches the node's canonical ordering and length-prefixed digest
+- [x] The recomputation matches the node's canonical ordering and length-prefixed digest
   algorithm for create, accept, fund, complete, release, and confirmed settlement.
-- [ ] All three v2 actor artifacts bind one receipt-chain commitment and one public
+- [x] All three v2 actor artifacts bind one receipt-chain commitment and one public
   commitment; A and B expose only their exact role receipts and C exposes none.
-- [ ] V1, client-only, missing, copied, reordered, cross-role, replayed, path-escaped,
+- [x] V1, client-only, missing, copied, reordered, cross-role, replayed, path-escaped,
   malformed, and projection-mismatched evidence fails closed.
-- [ ] The canonical supervisor continues to use persistent role-scoped authenticated MCP
+- [x] The canonical supervisor continues to use persistent role-scoped authenticated MCP
   children and cannot fall back to v1 Pi-local authority.
-- [ ] Retry, restart, and ambiguous-response verification prove stable service receipt
+- [x] Retry, restart, and ambiguous-response verification prove stable service receipt
   identity, one settlement attempt, and no duplicate task, escrow, or Solana action.
-- [ ] The existing settlement receipt and independent Solana RPC proof remain mandatory
+- [x] The existing settlement receipt and independent Solana RPC proof remain mandatory
   and prove exactly one finalized transfer.
 - [ ] `make demo-agent-transaction` and standalone proof verification use service-backed
   authority from a fresh checkout.
-- [ ] Tamper, crash, replay, privacy, and restart cases fail closed or pass only with the
+- [x] Tamper, crash, replay, privacy, and restart cases fail closed or pass only with the
   expected stable durable authority.
 - [ ] Formatting, strict Clippy, `make check`, package-aware tests, pre-push checks,
   mutation gates, and CI evidence are recorded.
@@ -149,3 +149,34 @@ authority substitute.
   restart variants.
 - Run fresh-checkout canonical demo and standalone verification, pre-push checks, mutation
   gates, and repository CI.
+
+## Verification Evidence
+
+### Local Passes
+
+- `CARGO_BUILD_JOBS=1 cargo clippy -p kamn-e2e-harness --all-targets -- -D warnings`
+- `CARGO_BUILD_JOBS=1 make check`
+- Touched Rust size policy: `GO`, with no oversized touched files or functions.
+- Critical-path mutation gate: `GO`; 10 of 10 mutants caught across six slices, with no
+  misses, timeouts, or unviable mutants.
+- Canonical post-child-exit agent transaction and standalone verifier contract.
+- Focused service-authority, v2 actor, portable receipt-chain, settlement, retry/restart,
+  privacy, tamper, path, and error-boundary contracts.
+- Package library tests: 259 passed before integration-binary startup.
+
+### Incomplete Local Lanes
+
+- The package-wide test run was stopped after all 259 library tests passed because the
+  macOS host stalled while starting integration binaries already covered by focused runs.
+- `make ci-tools` completed multiple shell-contract families, then stopped making progress
+  with no remaining child process and was terminated. It is not counted as a pass.
+- Fresh-checkout `make demo-agent-transaction`, the complete `make pre-push` sequence, and
+  repository CI remain pending at this closeout checkpoint.
+
+### Deviations
+
+- No service receipt generation, public projection, dependency, database, CI, or public
+  command contract was changed.
+- Runtime-actor integration fixtures were migrated from command-override settlement to the
+  canonical persisted-service settlement path because command overrides are not settlement
+  authority when actor evidence is present.
