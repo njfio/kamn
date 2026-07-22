@@ -48,19 +48,28 @@ fn actor(role: &str, process_id: u64, did: &str) -> Value {
         "transport_response_digests": [sha('1'), sha('2'), sha('3'), sha('4'), sha('5')],
         "service_profile_commitment": sha(profile_marker(role)),
         "service_receipts": receipts(role, did),
-        "task_id": "task-live-7099",
-        "transaction_id": "transaction-live-7099",
-        "escrow_id": "escrow-live-7099",
-        "amount_lamports": 1000000,
-        "network": "solana-devnet",
-        "settlement_tx_signature": "devnet-signature-7099",
-        "settlement_commitment": "finalized",
-        "receipt_chain_commitment": sha('c'),
-        "public_commitment": sha('d'),
-        "view_scope": scope(role),
-        "source_handoff_digest": sha('b'),
-        "handoff_authorized": false,
     });
+    add_transaction_fields(&mut value);
+    add_projection_fields(&mut value, role);
+    value
+}
+
+fn add_transaction_fields(value: &mut Value) {
+    value["task_id"] = json!("task-live-7099");
+    value["transaction_id"] = json!("transaction-live-7099");
+    value["escrow_id"] = json!("escrow-live-7099");
+    value["amount_lamports"] = json!(1000000);
+    value["network"] = json!("solana-devnet");
+    value["settlement_tx_signature"] = json!("devnet-signature-7099");
+    value["settlement_commitment"] = json!("finalized");
+    value["receipt_chain_commitment"] = json!(sha('c'));
+}
+
+fn add_projection_fields(value: &mut Value, role: &str) {
+    value["public_commitment"] = json!(sha('d'));
+    value["view_scope"] = json!(scope(role));
+    value["source_handoff_digest"] = json!(sha('b'));
+    value["handoff_authorized"] = json!(false);
     if role != "agent_c" {
         value["participant_role"] = json!(if role == "agent_a" {
             "creator"
@@ -68,62 +77,77 @@ fn actor(role: &str, process_id: u64, did: &str) -> Value {
             "provider"
         });
     }
-    value
 }
 
 fn receipts(role: &str, did: &str) -> Vec<Value> {
     match role {
-        "agent_a" => vec![
-            receipt(
-                did,
-                "create_task",
-                "task:create",
-                "task-live-7099",
-                "submitted",
-                "01",
-                '6',
-            ),
-            receipt(
-                did,
-                "fund_escrow",
-                "escrow:fund",
-                "escrow-live-7099",
-                "funded",
-                "02",
-                '7',
-            ),
-            receipt(
-                did,
-                "release_escrow",
-                "escrow:release-authorize",
-                "escrow-live-7099",
-                "release-authorized",
-                "05",
-                'a',
-            ),
-        ],
-        "agent_b" => vec![
-            receipt(
-                did,
-                "accept_task",
-                "task:accept",
-                "task-live-7099",
-                "accepted",
-                "03",
-                '8',
-            ),
-            receipt(
-                did,
-                "complete_task",
-                "task:complete",
-                "task-live-7099",
-                "completed",
-                "04",
-                '9',
-            ),
-        ],
+        "agent_a" => agent_a_receipts(did),
+        "agent_b" => agent_b_receipts(did),
         _ => Vec::new(),
     }
+}
+
+fn agent_a_receipts(did: &str) -> Vec<Value> {
+    vec![create_receipt(did), fund_receipt(did), release_receipt(did)]
+}
+
+fn create_receipt(did: &str) -> Value {
+    receipt(
+        did,
+        "create_task",
+        "task:create",
+        "task-live-7099",
+        "submitted",
+        "01",
+        '6',
+    )
+}
+
+fn fund_receipt(did: &str) -> Value {
+    receipt(
+        did,
+        "fund_escrow",
+        "escrow:fund",
+        "escrow-live-7099",
+        "funded",
+        "02",
+        '7',
+    )
+}
+
+fn release_receipt(did: &str) -> Value {
+    receipt(
+        did,
+        "release_escrow",
+        "escrow:release-authorize",
+        "escrow-live-7099",
+        "release-authorized",
+        "05",
+        'a',
+    )
+}
+
+fn agent_b_receipts(did: &str) -> Vec<Value> {
+    vec![
+        receipt(
+            did,
+            "accept_task",
+            "task:accept",
+            "task-live-7099",
+            "accepted",
+            "03",
+            '8',
+        ),
+        receipt(
+            did,
+            "complete_task",
+            "task:complete",
+            "task-live-7099",
+            "completed",
+            "04",
+            '9',
+        ),
+    ]
 }
 
 fn receipt(
@@ -161,10 +185,9 @@ pub(super) fn write_actor(root: &Path, name: &str, mut value: Value) {
 }
 
 fn scope(role: &str) -> &'static str {
-    if role == "agent_c" {
-        "restricted-public"
-    } else {
-        "participant-private"
+    match role {
+        "agent_c" => "restricted-public",
+        _ => "participant-private",
     }
 }
 

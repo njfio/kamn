@@ -69,6 +69,8 @@ fn escrow() -> Value {
 }
 
 pub(super) fn authorizations() -> Vec<Value> {
+    let task = format!("task:{TASK}");
+    let escrow = format!("escrow:{ESCROW}");
     vec![
         authorization(
             "01",
@@ -77,34 +79,10 @@ pub(super) fn authorizations() -> Vec<Value> {
             "task:create",
             "creator",
         ),
-        authorization(
-            "02",
-            "kamn:did:b",
-            &format!("task:{TASK}"),
-            "task:accept",
-            "provider",
-        ),
-        authorization(
-            "03",
-            "kamn:did:a",
-            &format!("task:{TASK}"),
-            "escrow:fund",
-            "creator",
-        ),
-        authorization(
-            "04",
-            "kamn:did:b",
-            &format!("task:{TASK}"),
-            "task:complete",
-            "provider",
-        ),
-        authorization(
-            "05",
-            "kamn:did:a",
-            &format!("escrow:{ESCROW}"),
-            "escrow:release",
-            "creator",
-        ),
+        authorization("02", "kamn:did:b", &task, "task:accept", "provider"),
+        authorization("03", "kamn:did:a", &task, "escrow:fund", "creator"),
+        authorization("04", "kamn:did:b", &task, "task:complete", "provider"),
+        authorization("05", "kamn:did:a", &escrow, "escrow:release", "creator"),
     ]
 }
 

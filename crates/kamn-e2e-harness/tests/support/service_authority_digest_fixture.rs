@@ -101,9 +101,13 @@ pub(super) fn entry(
 
 pub(super) fn settlement_entry() -> Vec<String> {
     let value = intent("unused");
-    let digest = record_digest(
+    settlement_fields(&value, settlement_digest(&value))
+}
+
+fn settlement_digest(value: &Value) -> String {
+    record_digest(
         "kamn.service.settlement-intent.v1",
-        &value,
+        value,
         &[
             "settlement_intent_id",
             "escrow_id",
@@ -116,7 +120,10 @@ pub(super) fn settlement_entry() -> Vec<String> {
             "state",
         ],
         false,
-    );
+    )
+}
+
+fn settlement_fields(value: &Value, digest: String) -> Vec<String> {
     vec![
         text(&value["settlement_intent_id"]),
         digest,

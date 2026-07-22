@@ -70,24 +70,7 @@ pub(crate) fn devnet_settlement_claim_json(evidence: &DevnetSettlementEvidence) 
 }
 
 fn provenance_fields(evidence: &DevnetSettlementEvidence) -> String {
-    let values = (
-        evidence.transaction_id.as_deref(),
-        evidence.terms_digest.as_deref(),
-        evidence.fee_lamports,
-        evidence.settlement_receipt_hash.as_deref(),
-        evidence.service_state_digest.as_deref(),
-        evidence.settlement_intent_digest.as_deref(),
-        evidence.receipt_chain_commitment.as_deref(),
-    );
-    let (
-        Some(transaction),
-        Some(terms),
-        Some(fee),
-        Some(receipt),
-        Some(state),
-        Some(intent),
-        Some(chain),
-    ) = values
+    let Some((transaction, terms, fee, receipt, state, intent, chain)) = provenance(evidence)
     else {
         return String::new();
     };
@@ -96,6 +79,20 @@ fn provenance_fields(evidence: &DevnetSettlementEvidence) -> String {
         escape_json(transaction), escape_json(terms), fee, escape_json(receipt),
         escape_json(state), escape_json(intent), escape_json(chain),
     )
+}
+
+type Provenance<'a> = (&'a str, &'a str, u64, &'a str, &'a str, &'a str, &'a str);
+
+fn provenance(evidence: &DevnetSettlementEvidence) -> Option<Provenance<'_>> {
+    Some((
+        evidence.transaction_id.as_deref()?,
+        evidence.terms_digest.as_deref()?,
+        evidence.fee_lamports?,
+        evidence.settlement_receipt_hash.as_deref()?,
+        evidence.service_state_digest.as_deref()?,
+        evidence.settlement_intent_digest.as_deref()?,
+        evidence.receipt_chain_commitment.as_deref()?,
+    ))
 }
 
 fn binding_fields(evidence: &DevnetSettlementEvidence) -> String {
