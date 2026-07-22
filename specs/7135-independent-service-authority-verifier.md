@@ -170,8 +170,15 @@ authority substitute.
   macOS host stalled while starting integration binaries already covered by focused runs.
 - `make ci-tools` completed multiple shell-contract families, then stopped making progress
   with no remaining child process and was terminated. It is not counted as a pass.
-- Fresh-checkout `make demo-agent-transaction`, the complete `make pre-push` sequence, and
-  repository CI remain pending at this closeout checkpoint.
+- Fresh-checkout `make demo-agent-transaction` and the complete `make pre-push` sequence
+  remain pending at this closeout checkpoint.
+
+### Pull Request CI
+
+- E2E CLI Smoke: passed in GitHub Actions run `29964677139`.
+- E2E MCP Agent: passed in GitHub Actions run `29964677139`.
+- E2E SDK-Direct: passed in GitHub Actions run `29964677139`.
+- Supply-chain advisory: passed in GitHub Actions run `29964677117`.
 
 ### Deviations
 
