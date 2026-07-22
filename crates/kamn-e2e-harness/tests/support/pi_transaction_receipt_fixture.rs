@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub(crate) struct ActorInput<'a> {
     pub(crate) role: &'a str,
     pub(crate) pid: u64,

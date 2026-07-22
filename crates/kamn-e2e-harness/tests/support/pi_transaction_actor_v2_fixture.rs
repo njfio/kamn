@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(clippy::duplicate_mod)]
+
 use std::path::Path;
 
 use serde_json::{json, Value};

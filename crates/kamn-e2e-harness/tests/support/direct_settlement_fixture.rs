@@ -1,3 +1,5 @@
+#![allow(clippy::duplicate_mod)]
+
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
