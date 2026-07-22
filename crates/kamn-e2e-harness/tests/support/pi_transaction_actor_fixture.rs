@@ -6,6 +6,8 @@ use sha2::{Digest, Sha256};
 
 #[path = "pi_transaction_actor_rewrite.rs"]
 mod actor_rewrite;
+#[path = "pi_transaction_actor_v2_fixture.rs"]
+mod actor_v2_fixture;
 #[path = "pi_transaction_receipt_fixture.rs"]
 mod receipt_fixture;
 use actor_rewrite::{rebind_actor, reorder_actor_mutations};
@@ -74,6 +76,10 @@ impl ActorFixture {
         self.write_a(&overrides);
         self.write_b(&overrides);
         self.write_c(overrides);
+    }
+
+    pub(crate) fn write_v2_all(&self) {
+        actor_v2_fixture::write_all(self.root.as_path());
     }
 
     #[allow(dead_code)]

@@ -34,7 +34,8 @@ fn spec_c01_success_writes_one_runtime_chain_report_after_children_exit() {
 
     let report = execute_agent_transaction_demo_with_config(&config)
         .expect("canonical deterministic demo should pass");
-    assert!(report.contains("kamn.mvp.runtime-receipt-chain.v1"));
+    assert!(report.contains("kamn.service.receipt-chain.v1"));
+    assert!(report.contains(r#""receipt_chain_commitment":"sha256:"#));
     assert!(!report.contains("agent_a_registered"));
     assert_eq!(run_directories(&root.join("demo")).len(), 1);
     assert!(!root.join("demo/latest/NO-GO.txt").exists());
