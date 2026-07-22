@@ -70,9 +70,9 @@ test("three agents drive one completed escrow transaction through independent MC
 	assert.equal(viewC.task_id, created.task_id);
 	assert.equal(viewA.public_commitment, viewB.public_commitment);
 	assert.equal(viewB.public_commitment, viewC.public_commitment);
-	assert.equal(viewA.private_receipt_digest, "sha256:participant-a");
-	assert.equal(viewB.private_receipt_digest, "sha256:participant-b");
-	assert.equal("private_receipt_digest" in viewC, false);
+	assert.deepEqual(viewA.receipt_chain_receipts, workflow.provenance("agent_a").service_authority_receipts.map(projectedReceipt));
+	assert.deepEqual(viewB.receipt_chain_receipts, workflow.provenance("agent_b").service_authority_receipts.map(projectedReceipt));
+	assert.equal("receipt_chain_receipts" in viewC, false);
 	for (const [role, pid, scope] of [
 		["agent_a", 101, "participant-private"],
 		["agent_b", 202, "participant-private"],
@@ -83,14 +83,16 @@ test("three agents drive one completed escrow transaction through independent MC
 		assert.equal(evidence.did, `kamn:did:${role.replace("agent_", "agent-")}`);
 		assert.equal(evidence.view_scope, scope);
 		if (role !== "agent_c") assert.equal(evidence.participant_role, role === "agent_a" ? "creator" : "provider");
-		assert.equal(evidence.runtime_projection_digest, workflow.provenance(role).runtime_response_digests.at(-1));
+		assert.deepEqual(evidence.service_receipts, workflow.provenance(role).service_authority_receipts);
+		assert.equal(evidence.receipt_chain_commitment, viewC.receipt_chain_commitment);
 		assert.equal(evidence.handoff_authorized, false);
 	}
 	for (const role of ["agent_a", "agent_b", "agent_c"] as const) {
 		const provenance = workflow.provenance(role);
 		assert.ok(provenance.child_process_id > 0);
 		assert.ok(provenance.last_request_id >= provenance.first_request_id);
-		assert.equal(provenance.runtime_response_digests.every((value) => value.startsWith("sha256:")), true);
+		assert.equal(provenance.transport_response_digests.every((value) => value.startsWith("sha256:")), true);
+		assert.match(provenance.service_profile_commitment, /^sha256:[0-9a-f]{64}$/);
 	}
 	await workflow.shutdown();
 });
@@ -105,10 +107,10 @@ test("ambiguous release survives multiple observations on the same MCP child and
 	const released = await workflow.releaseEscrow();
 	const provenance = workflow.provenance("agent_a");
 
-	assert.equal(released.state, "released");
-	assert.deepEqual(provenance.runtime_response_receipts.slice(-4).map((receipt) => receipt.outcome), ["error", "error", "error", "success"]);
-	assert.equal(provenance.runtime_response_receipts.slice(-4).every((receipt) => receipt.tool === "release_escrow"), true);
-	assert.equal(provenance.runtime_response_receipts.at(-2)?.digest.startsWith("sha256:"), true);
+	assert.equal(released.state, "release-authorized");
+	assert.deepEqual(provenance.transport_response_receipts.slice(-4).map((receipt) => receipt.outcome), ["error", "error", "error", "success"]);
+	assert.equal(provenance.transport_response_receipts.slice(-4).every((receipt) => receipt.tool === "release_escrow"), true);
+	assert.equal(provenance.transport_response_receipts.at(-2)?.digest.startsWith("sha256:"), true);
 	assert.equal(provenance.last_request_id, 7);
 	await workflow.shutdown();
 });
@@ -122,7 +124,7 @@ test("participant projection waits through multiple interim views for finalized 
 	const projection = await workflow.queryParticipantProjection("agent_a");
 
 	assert.equal(projection.settlement_tx_signature, "devnet-signature-1");
-	assert.equal(workflow.provenance("agent_a").runtime_response_receipts.filter(
+	assert.equal(workflow.provenance("agent_a").transport_response_receipts.filter(
 		(receipt) => receipt.tool === "query_participant_task_projection",
 	).length, 4);
 	await workflow.shutdown();
@@ -159,7 +161,7 @@ test("authenticated workflow calls retain and back off after a typed rate limit"
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
 	await workflow.register("agent_a");
 	const created = await workflow.createTask("Rate proof", "Respect server backoff", "kamn:did:provider");
-	const receipts = workflow.provenance("agent_a").runtime_response_receipts;
+	const receipts = workflow.provenance("agent_a").transport_response_receipts;
 
 	assert.equal(created.task_id, "task-live-1");
 	assert.deepEqual(receipts.slice(-2).map((receipt) => receipt.outcome), ["error", "success"]);
@@ -200,8 +202,8 @@ test("workflow rejects duplicate participant DIDs", async () => {
 });
 
 for (const [mode, expected] of [
-	["missing-task-id", /omitted task_id/],
-	["wrong-create-state", /expected submitted/],
+	["missing-task-id", /MCP_AUTHORITY_RECEIPT_INVALID/],
+	["wrong-create-state", /MCP_AUTHORITY_RECEIPT_INVALID/],
 ] as const) {
 	test(`workflow rejects ${mode} creation result`, async () => {
 		const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: mode });
@@ -278,6 +280,16 @@ test("external task import and acceptance polling fail closed", async () => {
 	await assert.rejects(workflow.waitForAccepted("agent_a", { timeoutMs: 20, pollMs: 5 }, controller.signal), /aborted/);
 	await workflow.shutdown();
 });
+
+function projectedReceipt(receipt: Record<string, unknown>) {
+	return {
+		receipt_id: receipt.service_receipt_id,
+		receipt_digest: receipt.service_receipt_digest,
+		action: receipt.action,
+		resource_id: receipt.resource_id,
+		resulting_state: receipt.resulting_state,
+	};
+}
 
 async function testSetup(extra: Record<string, string> = {}) {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-live-task-"));

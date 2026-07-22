@@ -1,19 +1,21 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 import { verifyPiTransactionActors, writePiTransactionActor } from "./pi-transaction-evidence.ts";
 
-test("three actor artifacts bind independent runtime provenance to one transaction", async () => {
+type Role = "agent_a" | "agent_b" | "agent_c";
+type Overrides = Partial<Record<Role, Record<string, unknown>>>;
+
+test("three actor artifacts bind independent processes to one receipt chain", async () => {
 	const paths = await actorPaths();
 	await writeActors(paths);
 	const verified = await verifyPiTransactionActors(paths);
 
 	assert.equal(verified.task_id, "task-live-7099");
 	assert.equal(verified.escrow_id, "escrow-live-7099");
-	assert.equal(verified.settlement_tx_signature, "devnet-signature-7099");
-	assert.equal(verified.public_commitment, `sha256:${"d".repeat(64)}`);
+	assert.equal(verified.receipt_chain_commitment, digest("c"));
 	assert.deepEqual(verified.pi_process_ids, [101, 202, 303]);
 	assert.deepEqual(verified.dids, ["kamn:did:a", "kamn:did:b", "kamn:did:c"]);
 });
@@ -26,89 +28,32 @@ test("actor verification rejects process, DID, and MCP child reuse", async () =>
 	}
 });
 
-test("actor verification rejects missing runtime projection provenance and private verifier data", async () => {
-	const missing = await actorPaths();
-	await assert.rejects(
-		writeActors(missing, { agent_c: { runtime_projection_digest: `sha256:${"f".repeat(64)}` } }),
-		/PI_RUNTIME_RECEIPT_MISMATCH/,
-	);
-
-	const leaked = await actorPaths();
-	await assert.rejects(
-		writeActors(leaked, { agent_c: { private_receipt_digest: `sha256:${"e".repeat(64)}` } }),
-		/PI_VERIFIER_PRIVATE_LEAK/,
-	);
-});
-
 test("actor verification rejects copied facts and handoff authorization", async () => {
 	const mismatch = await actorPaths();
-	await writeActors(mismatch, { agent_b: { escrow_id: "escrow-other" } });
+	await writeActors(mismatch, { agent_b: { receipt_chain_commitment: digest("9") } });
 	await assert.rejects(verifyPiTransactionActors(mismatch), /PI_TRANSACTION_FACT_MISMATCH/);
 
 	const handoff = await actorPaths();
-	await assert.rejects(
-		writeActors(handoff, { agent_a: { handoff_authorized: true } }),
-		/PI_HANDOFF_AUTHORIZATION_FORBIDDEN/,
-	);
+	await assert.rejects(writeActors(handoff, { agent_a: { handoff_authorized: true } }), /PI_HANDOFF_AUTHORIZATION_FORBIDDEN/);
 });
 
-test("actor verification rejects a missing successful role operation", async () => {
-	const paths = await actorPaths();
-	const receipts = runtimeReceipts("agent_a").filter((receipt) => receipt.tool !== "release_escrow");
-	await assert.rejects(
-		writeActors(paths, { agent_a: { runtime_response_receipts: receipts } }),
-		/PI_RUNTIME_RECEIPT_MISMATCH/,
-	);
+test("actor evidence rejects verifier private fields and unknown ambient evidence", async () => {
+	const privateField = await actorPaths();
+	await assert.rejects(writeActors(privateField, { agent_c: { participant_role: "creator" } }), /PI_VERIFIER_PRIVATE_LEAK/);
+
+	const unknown = await actorPaths();
+	await assert.rejects(writeActors(unknown, { agent_a: { actor_evidence: "trusted" } }), /PI_SERVICE_AUTHORITY_MISMATCH/);
 });
 
-test("actor verification rejects a participant role that does not match the actor", async () => {
-	const paths = await actorPaths();
-	await assert.rejects(
-		writeActors(paths, { agent_b: { participant_role: "creator" } }),
-		/PI_ACTOR_IDENTITY_INVALID/,
-	);
-});
-
-test("actor evidence rejects unknown top-level fields", async () => {
-	const paths = await actorPaths();
-	await assert.rejects(
-		writeActors(paths, { agent_a: { synthetic_success_label: "release passed" } }),
-		/PI_RUNTIME_RECEIPT_MISMATCH/,
-	);
-});
-
-test("actor evidence accepts interim and final successful projection reads", async () => {
-	const paths = await actorPaths();
-	const finalDigest = `sha256:${"9".repeat(64)}`;
-	const receipts = runtimeReceipts("agent_b");
-	receipts.splice(4, 0, {
-		request_id: 5, tool: "query_participant_task_projection", outcome: "success", digest: `sha256:${"8".repeat(64)}`,
-		public_result: publicResult("agent_b", "query_participant_task_projection"),
-	});
-	receipts[5] = { ...receipts[5], request_id: 6, digest: finalDigest };
-	await writeActors(paths, { agent_b: {
-		last_request_id: 6,
-		runtime_response_digests: receipts.map((receipt) => receipt.digest),
-		runtime_response_receipts: receipts,
-		runtime_projection_digest: finalDigest,
-	} });
-
-	await assert.doesNotReject(verifyPiTransactionActors(paths));
-});
-
-test("actor evidence preserves strict public runtime result projections", async () => {
+test("actor artifact writes are idempotent and conflicts fail closed", async () => {
 	const paths = await actorPaths();
 	await writePiTransactionActor(paths.agent_a, actor("agent_a"));
-	const written = JSON.parse(await readFile(paths.agent_a, "utf8"));
-
-	assert.deepEqual(written.runtime_response_receipts[1].public_result, {
-		task_id: "task-live-7099", state: "submitted", transaction_id: "transaction-live-7099",
-	});
-	assert.equal("private_receipt_digest" in written.runtime_response_receipts.at(-1).public_result, false);
+	await assert.doesNotReject(writePiTransactionActor(paths.agent_a, actor("agent_a")));
+	await assert.rejects(
+		writePiTransactionActor(paths.agent_a, { ...actor("agent_a"), amount_lamports: 2_000_000 }),
+		/PI_ACTOR_ARTIFACT_CONFLICT/,
+	);
 });
-
-type Role = "agent_a" | "agent_b" | "agent_c";
-type Overrides = Partial<Record<Role, Record<string, unknown>>>;
 
 async function writeActors(paths: Record<Role, string>, overrides: Overrides = {}) {
 	for (const role of ["agent_a", "agent_b", "agent_c"] as const) {
@@ -116,68 +61,58 @@ async function writeActors(paths: Record<Role, string>, overrides: Overrides = {
 	}
 }
 
-function actor(role: Role) {
+function actor(role: Role): Record<string, unknown> {
 	const index = { agent_a: 1, agent_b: 2, agent_c: 3 }[role];
-	const projectionDigest = `sha256:${String(index).repeat(64)}`;
 	return {
 		actor: role,
 		pi_process_id: index * 101,
 		did: `kamn:did:${String.fromCharCode(96 + index)}`,
 		mcp_child_process_id: 1000 + index,
 		first_request_id: 1,
-		last_request_id: 5,
-		runtime_response_digests: [1, 2, 3, 4].map((value) => `sha256:${String(value).repeat(64)}`).concat(projectionDigest),
-		runtime_response_receipts: runtimeReceipts(role),
-		runtime_projection_digest: projectionDigest,
+		last_request_id: 2,
+		transport_response_digests: [digest(String(index)), digest(String(index + 3))],
+		service_profile_commitment: digest("f"),
+		service_receipts: receipts(role),
 		task_id: "task-live-7099",
 		transaction_id: "transaction-live-7099",
 		escrow_id: "escrow-live-7099",
-		amount_lamports: 1000000,
+		amount_lamports: 1_000_000,
 		network: "solana-devnet",
 		settlement_tx_signature: "devnet-signature-7099",
 		settlement_commitment: "finalized",
-		public_commitment: `sha256:${"d".repeat(64)}`,
+		receipt_chain_commitment: digest("c"),
+		public_commitment: digest("d"),
 		view_scope: role === "agent_c" ? "restricted-public" : "participant-private",
-		...(role === "agent_c" ? {} : {
-			participant_role: role === "agent_a" ? "creator" : "provider",
-			private_receipt_digest: `sha256:${"e".repeat(64)}`,
-		}),
-		source_handoff_digest: `sha256:${"b".repeat(64)}`,
+		...(role === "agent_c" ? {} : { participant_role: role === "agent_a" ? "creator" : "provider" }),
+		source_handoff_digest: digest("b"),
 		handoff_authorized: false,
 	};
 }
 
-function runtimeReceipts(role: Role) {
-	const tools = {
-		agent_a: ["register", "create_task", "fund_escrow", "release_escrow", "query_participant_task_projection"],
-		agent_b: ["register", "accept_task", "complete_task", "query_task", "query_participant_task_projection"],
-		agent_c: ["register", "query_task", "query_task", "query_task", "query_verifier_task_projection"],
-	}[role];
-	return tools.map((tool, index) => ({
-		request_id: index + 1,
-		tool,
-		outcome: "success",
-		digest: `sha256:${String(index + 1 === 5 ? { agent_a: 1, agent_b: 2, agent_c: 3 }[role] : index + 1).repeat(64)}`,
-		public_result: publicResult(role, tool),
-	}));
+function receipts(role: Role) {
+	if (role === "agent_a") return [
+		receipt(role, "create_task", "task:create", "task-live-7099", "submitted", "1"),
+		receipt(role, "fund_escrow", "escrow:fund", "escrow-live-7099", "funded", "2"),
+		receipt(role, "release_escrow", "escrow:release-authorize", "escrow-live-7099", "release-authorized", "3"),
+	];
+	if (role === "agent_b") return [
+		receipt(role, "accept_task", "task:accept", "task-live-7099", "accepted", "4"),
+		receipt(role, "complete_task", "task:complete", "task-live-7099", "completed", "5"),
+	];
+	return [];
 }
 
-function publicResult(role: Role, tool: string): Record<string, unknown> {
-	if (tool === "register") return { did: `kamn:did:${({ agent_a: "a", agent_b: "b", agent_c: "c" })[role]}` };
-	if (tool === "create_task") return { task_id: "task-live-7099", state: "submitted", transaction_id: "transaction-live-7099" };
-	if (tool === "accept_task") return { task_id: "task-live-7099", state: "accepted", transaction_id: "transaction-live-7099" };
-	if (tool === "complete_task") return { task_id: "task-live-7099", state: "completed", transaction_id: "transaction-live-7099" };
-	if (tool === "fund_escrow") return { task_id: "task-live-7099", escrow_id: "escrow-live-7099", state: "funded", amount_lamports: 1000000, network: "solana-devnet" };
-	if (tool === "release_escrow") return { escrow_id: "escrow-live-7099", state: "released", settlement_tx_signature: "devnet-signature-7099", settlement_commitment: "finalized" };
-	if (tool.includes("projection")) return { task_id: "task-live-7099", escrow_id: "escrow-live-7099", settlement_tx_signature: "devnet-signature-7099", settlement_commitment: "finalized", public_commitment: `sha256:${"d".repeat(64)}`, view_scope: role === "agent_c" ? "restricted-public" : "participant-private", ...(role === "agent_c" ? {} : { participant_role: role === "agent_a" ? "creator" : "provider" }) };
-	return { task_id: "task-live-7099", state: "accepted" };
+function receipt(role: Role, tool: string, action: string, resource_id: string, resulting_state: string, id: string) {
+	return {
+		actor_did: `kamn:did:${role === "agent_a" ? "a" : "b"}`,
+		tool, action, resource_id, resulting_state,
+		service_receipt_id: `service-receipt-${id}`,
+		service_receipt_digest: digest(id),
+	};
 }
 
 async function actorPaths(): Promise<Record<Role, string>> {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-pi-transaction-"));
-	return {
-		agent_a: resolve(root, "agent-a.json"),
-		agent_b: resolve(root, "agent-b.json"),
-		agent_c: resolve(root, "agent-c.json"),
-	};
+	return { agent_a: resolve(root, "agent-a.json"), agent_b: resolve(root, "agent-b.json"), agent_c: resolve(root, "agent-c.json") };
 }
+function digest(character: string): string { return `sha256:${character.repeat(64)}`; }

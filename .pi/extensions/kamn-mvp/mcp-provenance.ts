@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { ServiceAuthorityReceipt } from "./mcp-authority.ts";
 
 type JsonObject = Record<string, unknown>;
 const PUBLIC_RESULT_FIELDS = new Set([
@@ -16,12 +17,16 @@ export type McpSessionProvenance = {
 	child_process_id: number;
 	first_request_id: number;
 	last_request_id: number;
-	runtime_response_digests: string[];
-	runtime_response_receipts: McpResponseReceipt[];
+	transport_response_digests: string[];
+	transport_response_receipts: McpResponseReceipt[];
+	service_profile_commitment: string;
+	service_authority_receipts: ServiceAuthorityReceipt[];
 };
 
 export class McpProvenanceTracker {
 	private readonly receipts: McpResponseReceipt[] = [];
+	private profileCommitment?: string;
+	private readonly authorityReceipts: ServiceAuthorityReceipt[] = [];
 	record(id: string, tool: string, outcome: McpResponseReceipt["outcome"], payload: JsonObject) {
 		const requestId = Number(id);
 		if (!Number.isSafeInteger(requestId) || requestId <= 0) throw new Error("KAMN live MCP request ID is invalid");
@@ -31,16 +36,24 @@ export class McpProvenanceTracker {
 			public_result: outcome === "success" ? publicResult(payload) : {},
 		});
 	}
+	recordProfileCommitment(commitment: string) {
+		this.profileCommitment = commitment;
+	}
+	recordAuthorityReceipt(receipt: ServiceAuthorityReceipt) {
+		this.authorityReceipts.push({ ...receipt });
+	}
 	provenance(childProcessId: number): McpSessionProvenance {
 		const first = this.receipts[0];
 		const last = this.receipts.at(-1);
-		if (!first || !last) throw new Error("KAMN live MCP session has no successful runtime provenance");
+		if (!first || !last || !this.profileCommitment) throw new Error("KAMN live MCP session has no successful authority provenance");
 		return {
 			child_process_id: childProcessId,
 			first_request_id: first.request_id,
 			last_request_id: last.request_id,
-			runtime_response_digests: this.receipts.map(({ digest }) => digest),
-			runtime_response_receipts: this.receipts.map((receipt) => ({ ...receipt })),
+			transport_response_digests: this.receipts.map(({ digest }) => digest),
+			transport_response_receipts: this.receipts.map((receipt) => ({ ...receipt })),
+			service_profile_commitment: this.profileCommitment,
+			service_authority_receipts: this.authorityReceipts.map((receipt) => ({ ...receipt })),
 		};
 	}
 }

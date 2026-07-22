@@ -23,7 +23,8 @@ export function validateEscrowResult(result: WorkflowResult, expectedId: string 
 export function validateProjection(result: WorkflowResult, taskId: string, scope: string, step: string) {
 	if (requiredString(result, "task_id", step) !== taskId) throw new Error(`${step} returned a different task ID`);
 	if (requiredString(result, "view_scope", step) !== scope) throw new Error(`${step} returned a different view scope`);
-	requiredString(result, "public_commitment", step);
+	requiredDigest(result, "receipt_chain_commitment", step);
+	requiredDigest(result, "public_commitment", step);
 }
 export function buildActorEvidence(
 	role: AgentRole,
@@ -33,16 +34,13 @@ export function buildActorEvidence(
 	projection: WorkflowResult,
 	handoffDigest: string,
 ) {
-	const runtimeProjectionDigest = provenance.runtime_response_digests.at(-1);
-	if (!runtimeProjectionDigest) throw new Error(`${agentLabel(role)} runtime projection provenance is missing`);
+	validateProjectedReceipts(role, provenance, projection);
 	return {
 		...actorProvenance(role, piProcessId, did, provenance),
-		runtime_projection_digest: runtimeProjectionDigest,
 		...sharedProjectionFields(projection),
 		view_scope: requiredString(projection, "view_scope", `${agentLabel(role)} projection`),
 		...(role === "agent_c" ? {} : {
 			participant_role: requiredString(projection, "participant_role", `${agentLabel(role)} projection`),
-			private_receipt_digest: runtimeProjectionDigest,
 		}),
 		source_handoff_digest: handoffDigest,
 		handoff_authorized: false,
@@ -56,8 +54,9 @@ function actorProvenance(role: AgentRole, piProcessId: number, did: string, prov
 		mcp_child_process_id: provenance.child_process_id,
 		first_request_id: provenance.first_request_id,
 		last_request_id: provenance.last_request_id,
-		runtime_response_digests: provenance.runtime_response_digests,
-		runtime_response_receipts: provenance.runtime_response_receipts,
+		transport_response_digests: provenance.transport_response_digests,
+		service_profile_commitment: provenance.service_profile_commitment,
+		service_receipts: provenance.service_authority_receipts,
 	};
 }
 function sharedProjectionFields(projection: WorkflowResult) {
@@ -69,8 +68,38 @@ function sharedProjectionFields(projection: WorkflowResult) {
 		network: requiredString(projection, "network", "runtime projection"),
 		settlement_tx_signature: requiredString(projection, "settlement_tx_signature", "runtime projection"),
 		settlement_commitment: requiredString(projection, "settlement_commitment", "runtime projection"),
-		public_commitment: requiredString(projection, "public_commitment", "runtime projection"),
+		receipt_chain_commitment: requiredDigest(projection, "receipt_chain_commitment", "runtime projection"),
+		public_commitment: requiredDigest(projection, "public_commitment", "runtime projection"),
 	};
+}
+function validateProjectedReceipts(role: AgentRole, provenance: McpSessionProvenance, projection: WorkflowResult) {
+	if (role === "agent_c") {
+		if (projection.receipt_chain_receipts !== undefined) throw new Error("Agent C projection leaked private receipt authority");
+		return;
+	}
+	if (!Array.isArray(projection.receipt_chain_receipts)) throw new Error(`${agentLabel(role)} projection omitted receipt_chain_receipts`);
+	const projected = projection.receipt_chain_receipts.map((entry) => projectedReceipt(entry, role));
+	const authoritative = provenance.service_authority_receipts.map((receipt) => ({
+		receipt_id: receipt.service_receipt_id, receipt_digest: receipt.service_receipt_digest,
+		action: receipt.action, resource_id: receipt.resource_id, resulting_state: receipt.resulting_state,
+	}));
+	if (JSON.stringify(projected) !== JSON.stringify(authoritative)) throw new Error(`${agentLabel(role)} projection receipt authority mismatch`);
+}
+function projectedReceipt(value: unknown, role: AgentRole) {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${agentLabel(role)} projection receipt is invalid`);
+	const receipt = value as WorkflowResult;
+	return {
+		receipt_id: requiredString(receipt, "receipt_id", "projection receipt"),
+		receipt_digest: requiredDigest(receipt, "receipt_digest", "projection receipt"),
+		action: requiredString(receipt, "action", "projection receipt"),
+		resource_id: requiredString(receipt, "resource_id", "projection receipt"),
+		resulting_state: requiredString(receipt, "resulting_state", "projection receipt"),
+	};
+}
+function requiredDigest(result: WorkflowResult, field: string, step: string): string {
+	const value = requiredString(result, field, step);
+	if (/^sha256:[0-9a-f]{64}$/.test(value)) return value;
+	throw new Error(`${step} returned invalid ${field}`);
 }
 function requiredPositiveNumber(result: WorkflowResult, field: string): number {
 	const value = result[field];
