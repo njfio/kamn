@@ -84,7 +84,7 @@ export class LiveTaskWorkflow {
 		const result = await reconcileAmbiguousRelease(
 			() => this.call("agent_a", "release_escrow", { escrow_id: escrowId, payload }, signal), signal,
 		);
-		validateEscrowResult(result, escrowId, "released", "escrow release");
+		validateEscrowResult(result, escrowId, "release-authorized", "escrow release");
 		return result;
 	}
 	async queryParticipantProjection(role: "agent_a" | "agent_b", signal?: AbortSignal): Promise<WorkflowResult> {

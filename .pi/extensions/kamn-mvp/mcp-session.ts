@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { McpProvenanceTracker, type McpSessionProvenance } from "./mcp-provenance.ts";
+import { validateAuthority } from "./mcp-authority.ts";
 export type { McpSessionProvenance } from "./mcp-provenance.ts";
 
 type Environment = Record<string, string | undefined>;
@@ -39,6 +40,7 @@ export class McpSession {
 	private pending?: PendingRequest;
 	private terminalError?: Error;
 	private sequence = 0;
+	private registeredActor?: string;
 	private readonly provenanceTracker = new McpProvenanceTracker();
 	private stdoutBuffer = "";
 	private shutdownPromise?: Promise<void>;
@@ -105,14 +107,28 @@ export class McpSession {
 		}
 		const pending = this.pending;
 		if (!pending || response.id !== pending.id) return this.failSession(new Error("KAMN live MCP response ID mismatch"));
-		this.clearPending();
 		if (response.ok !== true) {
+			this.clearPending();
 			this.provenanceTracker.record(pending.id, pending.tool, "error", isObject(response.error) ? response.error : {});
 			return pending.reject(toolError(response));
 		}
-		if (!isObject(response.result)) return pending.reject(new Error("KAMN live MCP success response omitted result"));
+		if (!isObject(response.result)) return this.failSession(new Error("KAMN live MCP success response omitted result"));
 		this.provenanceTracker.record(pending.id, pending.tool, "success", response.result);
-		pending.resolve(response.result);
+		this.resolveSuccess(pending, response.result);
+	}
+	private resolveSuccess(pending: PendingRequest, result: JsonObject) {
+		try {
+			const authority = validateAuthority(pending.tool, result, this.registeredActor);
+			if (authority.profileCommitment) {
+				this.registeredActor = String(authority.serviceResult.did);
+				this.provenanceTracker.recordProfileCommitment(authority.profileCommitment);
+			}
+			if (authority.receipt) this.provenanceTracker.recordAuthorityReceipt(authority.receipt);
+			this.clearPending();
+			pending.resolve(authority.serviceResult);
+		} catch (error) {
+			this.failSession(error instanceof Error ? error : new Error("MCP_AUTHORITY_RECEIPT_INVALID"));
+		}
 	}
 	private handleExit(code: number | null, signal: NodeJS.Signals | null) {
 		if (this.shutdownPromise) return;

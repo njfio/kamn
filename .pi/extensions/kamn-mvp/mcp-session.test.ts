@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { chmod, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -25,22 +24,24 @@ test("session starts lazily and reuses one child for ordered calls", async () =>
 	assert.equal((await readFile(paths.stopFile, "utf8")).trim(), String(registered.pid));
 });
 
-test("session provenance binds child process, request range, and runtime response digests", async () => {
+test("session provenance separates service authority from transport diagnostics", async () => {
 	const paths = await testPaths();
 	const session = sessionFor(paths, "success");
 	const registered = await session.call("register");
 	const queried = await session.call("query_agent_profile", { did: registered.did });
 
-	assert.deepEqual(session.provenance(), {
-		child_process_id: registered.pid,
-		first_request_id: 1,
-		last_request_id: 2,
-		runtime_response_digests: [responseDigest(registered), responseDigest(queried)],
-		runtime_response_receipts: [
-			{ request_id: 1, tool: "register", outcome: "success", digest: responseDigest(registered), public_result: { did: registered.did } },
-			{ request_id: 2, tool: "query_agent_profile", outcome: "success", digest: responseDigest(queried), public_result: { did: queried.did } },
-		],
-	});
+	const provenance = session.provenance();
+	assert.equal(provenance.child_process_id, registered.pid);
+	assert.equal(provenance.first_request_id, 1);
+	assert.equal(provenance.last_request_id, 2);
+	assert.equal(provenance.transport_response_digests.length, 2);
+	assert.equal(provenance.transport_response_digests.every(isDigest), true);
+	assert.deepEqual(provenance.transport_response_receipts.map(({ request_id, tool, outcome }) => ({ request_id, tool, outcome })), [
+		{ request_id: 1, tool: "register", outcome: "success" },
+		{ request_id: 2, tool: "query_agent_profile", outcome: "success" },
+	]);
+	assert.match(provenance.service_profile_commitment, /^sha256:[0-9a-f]{64}$/);
+	assert.deepEqual(provenance.service_authority_receipts, []);
 	await session.shutdown();
 });
 
@@ -51,21 +52,16 @@ test("session provenance keeps handled error responses in the contiguous request
 	await assert.rejects(session.call("release_escrow"), /forced backend failure/);
 	const queried = await session.call("query_agent_profile", { did: registered.did });
 
-	assert.deepEqual(session.provenance(), {
-		child_process_id: registered.pid,
-		first_request_id: 1,
-		last_request_id: 3,
-		runtime_response_digests: [
-			responseDigest(registered),
-			responseDigest({ kind: "backend_error", message: "forced backend failure" }),
-			responseDigest(queried),
-		],
-		runtime_response_receipts: [
-			{ request_id: 1, tool: "register", outcome: "success", digest: responseDigest(registered), public_result: { did: registered.did } },
-			{ request_id: 2, tool: "release_escrow", outcome: "error", digest: responseDigest({ kind: "backend_error", message: "forced backend failure" }), public_result: {} },
-			{ request_id: 3, tool: "query_agent_profile", outcome: "success", digest: responseDigest(queried), public_result: { did: queried.did } },
-		],
-	});
+	const provenance = session.provenance();
+	assert.equal(provenance.child_process_id, registered.pid);
+	assert.equal(provenance.first_request_id, 1);
+	assert.equal(provenance.last_request_id, 3);
+	assert.deepEqual(provenance.transport_response_receipts.map(({ request_id, tool, outcome }) => ({ request_id, tool, outcome })), [
+		{ request_id: 1, tool: "register", outcome: "success" },
+		{ request_id: 2, tool: "release_escrow", outcome: "error" },
+		{ request_id: 3, tool: "query_agent_profile", outcome: "success" },
+	]);
+	assert.equal(provenance.transport_response_digests.every(isDigest), true);
 	await session.shutdown();
 });
 
@@ -175,6 +171,4 @@ function configEnv(keyFile: string, extra: Record<string, string>) {
 	};
 }
 
-function responseDigest(response: Record<string, unknown>): string {
-	return `sha256:${createHash("sha256").update(JSON.stringify(response)).digest("hex")}`;
-}
+function isDigest(value: string): boolean { return /^sha256:[0-9a-f]{64}$/.test(value); }
