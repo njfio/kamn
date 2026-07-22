@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { appendFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import { createInterface } from "node:readline";
+import { createProjections, digest } from "./fake-mcp-projections.mjs";
 
 const mode = process.env.KAMN_MVP_FAKE_MCP_MODE ?? "success";
 const resultMode = process.env.KAMN_MVP_FAKE_MCP_RESULT_MODE ?? "success";
@@ -9,8 +9,8 @@ const startFile = process.env.KAMN_MVP_FAKE_MCP_START_FILE;
 const stopFile = process.env.KAMN_MVP_FAKE_MCP_STOP_FILE;
 const agentName = argumentValue("--agent-name") ?? "agent-a";
 let releaseAttempts = 0;
-let participantProjectionAttempts = 0;
 let taskQueryAttempts = 0;
+const projections = createProjections(resultMode);
 if (startFile) appendFileSync(startFile, `${process.pid}\n`);
 
 process.on("SIGTERM", () => {
@@ -107,19 +107,10 @@ function toolResult(request) {
 		}, "3");
 	}
 	if (request.tool === "query_participant_task_projection") {
-		if (resultMode === "pending-three-projections" && participantProjectionAttempts++ < 3) {
-			return pendingParticipantProjection(request.task_id, agentName);
-		}
-		if (resultMode === "pending-first-projection" && participantProjectionAttempts++ === 0) {
-			return pendingParticipantProjection(request.task_id, agentName);
-		}
-		if (resultMode === "missing-first-escrow" && participantProjectionAttempts++ === 0) {
-			return unboundParticipantProjection(request.task_id, agentName);
-		}
-		return participantProjection(request.task_id, agentName);
+		return projections.participant(request.task_id, agentName);
 	}
 	if (request.tool === "query_verifier_task_projection") {
-		return { ...sharedProjection(request.task_id), view_scope: "restricted-public" };
+		return projections.verifier(request.task_id);
 	}
 	return {};
 }
@@ -139,57 +130,6 @@ function isAuthorityTool(tool) {
 	return ["register", "create_task", "accept_task", "complete_task", "fund_escrow", "release_escrow"].includes(tool);
 }
 function actorDid() { return `kamn:did:${agentName}`; }
-function digest(character) { return `sha256:${character.repeat(64)}`; }
-
-function pendingParticipantProjection(taskId, name) {
-	const projection = participantProjection(taskId, name);
-	delete projection.settlement_tx_signature;
-	delete projection.settlement_commitment;
-	return projection;
-}
-
-function unboundParticipantProjection(taskId, name) {
-	const projection = participantProjection(taskId, name);
-	delete projection.escrow_id;
-	return projection;
-}
-
-function participantProjection(taskId, name) {
-	const suffix = name.endsWith("b") ? "b" : "a";
-	const receipts = roleReceiptEntries(suffix);
-	if (resultMode === "projection-authority-mismatch") receipts[0].receipt_digest = digest("9");
-	return {
-		...sharedProjection(taskId),
-		view_scope: "participant-private",
-		participant_role: suffix === "a" ? "creator" : "provider",
-		task_receipt_ids: receipts.filter((receipt) => receipt.action.startsWith("task:")).map((receipt) => receipt.receipt_id),
-		receipt_chain_receipts: receipts,
-	};
-}
-
-function roleReceiptEntries(suffix) {
-	const entries = suffix === "a"
-		? [["1", "task:create", "task-live-1", "submitted"], ["2", "escrow:fund", "escrow-live-1", "funded"], ["3", "escrow:release-authorize", "escrow-live-1", "release-authorized"]]
-		: [["4", "task:accept", "task-live-1", "accepted"], ["5", "task:complete", "task-live-1", "completed"]];
-	return entries.map(([id, action, resource_id, resulting_state]) => ({
-		receipt_id: `task-transition-receipt-${id}`, receipt_digest: digest(id), action, resource_id, resulting_state,
-	}));
-}
-
-function sharedProjection(taskId) {
-	return {
-		task_id: taskId,
-		transaction_id: "transaction-live-1",
-		escrow_id: "escrow-live-1",
-		amount_lamports: 1000000,
-		network: "solana-devnet",
-		settlement_tx_signature: "devnet-signature-1",
-		settlement_commitment: "finalized",
-		receipt_chain_commitment: digest("c"),
-		public_commitment: digest("d"),
-	};
-}
-
 function errorResponse(request) {
 	return {
 		ok: false,
