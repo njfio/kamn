@@ -93,19 +93,19 @@ provenance that cannot satisfy the actor-authority contract.
 
 ## Acceptance Criteria
 
-- [ ] Every canonical registration and mutation validates its versioned MCP
+- [x] Every canonical registration and mutation validates its versioned MCP
   authority envelope before the workflow consumes the nested service result.
-- [ ] Pi stores ordered service receipt IDs/digests as authority and stores local
+- [x] Pi stores ordered service receipt IDs/digests as authority and stores local
   hashes only as `transport_response_digests`.
-- [ ] V2 actor evidence binds identity, exact role receipts, transaction facts,
+- [x] V2 actor evidence binds identity, exact role receipts, transaction facts,
   final chain/public commitments, view scope, and handoff digest.
-- [ ] Agent A, B, and C receipt sets exactly match their role and final
+- [x] Agent A, B, and C receipt sets exactly match their role and final
   projections without Agent C private leakage.
-- [ ] Missing, fabricated, copied, replayed, reordered, cross-role, malformed,
+- [x] Missing, fabricated, copied, replayed, reordered, cross-role, malformed,
   v1, compatibility, and projection-mismatched evidence fails closed.
-- [ ] A failed MCP child/session remains terminal for its actor session.
-- [ ] Focused Pi tests and the real workflow integration path pass.
-- [ ] Formatting and strict repository checks remain clean.
+- [x] A failed MCP child/session remains terminal for its actor session.
+- [x] Focused Pi tests and the real workflow integration path pass.
+- [x] Formatting and issue-scoped repository checks remain clean.
 
 ## Files To Touch
 
@@ -148,3 +148,18 @@ provenance that cannot satisfy the actor-authority contract.
   persistent children, role-private projections, and one shared chain/public
   commitment.
 - Run focused Pi tests plus formatting and strict repository validation.
+
+## Verification Evidence
+
+- `node --experimental-strip-types --test .pi/extensions/kamn-mvp/*.test.ts`:
+  59 passed, 0 failed.
+- `node --check` passed for both fake MCP fixture modules.
+- `cargo fmt --all --check` passed.
+- `git diff --check` passed.
+- `make check` and the narrower all-target `kamn-e2e-harness` Clippy command
+  both compiled without diagnostics before stalling after crate checks on the
+  known macOS local path. The full strict result is delegated to Ubuntu CI.
+
+The independent Rust artifact verifier still consumes v1 artifacts. Its v2
+service-authority migration and canonical demo closeout remain #7135 scope, as
+listed in this spec's non-goals.
