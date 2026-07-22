@@ -6,7 +6,7 @@ use crate::{parse_agent_transaction_demo_config, AgentTransactionDemoConfig};
 
 #[path = "../tests/support/pi_transaction_actor_fixture.rs"]
 mod actor_fixture;
-use actor_fixture::{ActorFixture, Overrides};
+use actor_fixture::ActorFixture;
 
 #[path = "agent_transaction_finalize_tests_fake_solana.rs"]
 mod fake_solana;
@@ -35,8 +35,7 @@ impl ProofRetryFixture {
     pub(super) fn new() -> Self {
         let root = unique_root();
         let actors = ActorFixture::new();
-        actors.write_all(Overrides::default());
-        actors.rebind_shared_facts();
+        actors.write_bound_v2_all();
         let paths = evidence_paths(actors.paths(), write_live_evidence(&root));
         let config = config(&root);
         state_fixture::write(&root, RECIPIENT);
@@ -73,6 +72,18 @@ impl ProofRetryFixture {
         let raw = std::fs::read_to_string(&path).expect("persisted state");
         std::fs::write(path, raw.replace(RECIPIENT, "foreign-recipient"))
             .expect("tampered persisted state");
+    }
+
+    pub(super) fn reorder_persisted_task_receipts(&self) {
+        let path = self.root.join("staging/service-api-state.json");
+        let raw = std::fs::read_to_string(&path).expect("persisted state");
+        let mut state: serde_json::Value = serde_json::from_str(raw.as_str()).expect("state JSON");
+        let receipts = state["task_transition_receipts"]
+            .as_array_mut()
+            .expect("task receipts");
+        receipts.swap(0, 1);
+        std::fs::write(path, serde_json::to_vec(&state).expect("tampered state"))
+            .expect("persisted state tamper");
     }
 }
 

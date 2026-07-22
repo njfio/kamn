@@ -24,7 +24,7 @@ pub(super) fn finalize(
         pi_transaction_actor_paths: Some(paths.actors.clone()),
     })?;
     Ok(format!(
-        "{{\"decision\":\"GO\",\"proof_schema\":\"kamn.mvp.runtime-receipt-chain.v1\",\"report\":{report}}}"
+        "{{\"decision\":\"GO\",\"proof_schema\":\"kamn.service.receipt-chain.v1\",\"report\":{report}}}"
     ))
 }
 

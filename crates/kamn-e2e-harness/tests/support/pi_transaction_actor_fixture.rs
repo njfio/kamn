@@ -73,6 +73,11 @@ impl ActorFixture {
     }
 
     pub(crate) fn write_all(&self, overrides: Overrides) {
+        actor_v2_fixture::write_all(self.root.as_path());
+        actor_v2_fixture::apply_overrides(self.root.as_path(), &overrides);
+    }
+
+    pub(crate) fn write_v1_all(&self, overrides: Overrides) {
         self.write_a(&overrides);
         self.write_b(&overrides);
         self.write_c(overrides);
@@ -80,6 +85,10 @@ impl ActorFixture {
 
     pub(crate) fn write_v2_all(&self) {
         actor_v2_fixture::write_all(self.root.as_path());
+    }
+
+    pub(crate) fn write_bound_v2_all(&self) {
+        actor_v2_fixture::write_bound_all(self.root.as_path());
     }
 
     #[allow(dead_code)]

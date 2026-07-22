@@ -1,5 +1,6 @@
 use serde_json::Value;
 
+use super::agent_transaction_actor_authority::validate as validate_actor_authority;
 use super::agent_transaction_evidence::AgentTransactionEvidencePaths;
 use super::agent_transaction_persisted_settlement::{
     read_persisted_settlement, ExpectedSettlement, PersistedSettlement,
@@ -18,6 +19,12 @@ pub(super) fn collect_actor_settlement_evidence(
     let actor = read_actor(paths.actors[0].as_str())?;
     validate_actor_config(config, &actor)?;
     let persisted = persisted(config, &actor)?;
+    validate_actor_authority(
+        &paths.actors,
+        persisted.receipt_chain_commitment.as_str(),
+        &persisted.service_receipts,
+    )
+    .map_err(settlement_error)?;
     let rpc = confirm_transfer(config, actor.signature.as_str())?;
     Ok(evidence(config, actor, persisted, rpc))
 }
@@ -125,6 +132,7 @@ fn apply_provenance(
     evidence.settlement_receipt_hash = Some(persisted.receipt_hash);
     evidence.service_state_digest = Some(persisted.state_digest);
     evidence.settlement_intent_digest = Some(persisted.intent_digest);
+    evidence.receipt_chain_commitment = Some(persisted.receipt_chain_commitment);
     evidence.authoritative_rpc_artifact = Some(rpc.artifact_path.display().to_string());
 }
 

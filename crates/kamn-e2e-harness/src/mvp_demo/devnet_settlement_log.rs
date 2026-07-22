@@ -42,13 +42,21 @@ fn provenance_log(evidence: &DevnetSettlementEvidence) -> String {
         evidence.settlement_receipt_hash.as_deref(),
         evidence.service_state_digest.as_deref(),
         evidence.settlement_intent_digest.as_deref(),
+        evidence.receipt_chain_commitment.as_deref(),
     );
-    let (Some(transaction), Some(terms), Some(fee), Some(receipt), Some(state), Some(intent)) =
-        values
+    let (
+        Some(transaction),
+        Some(terms),
+        Some(fee),
+        Some(receipt),
+        Some(state),
+        Some(intent),
+        Some(chain),
+    ) = values
     else {
         return String::new();
     };
     format!(
-        "transaction_id={transaction}\nterms_digest={terms}\nfee_lamports={fee}\nsettlement_receipt_hash={receipt}\nservice_state_digest={state}\nsettlement_intent_digest={intent}\n"
+        "transaction_id={transaction}\nterms_digest={terms}\nfee_lamports={fee}\nsettlement_receipt_hash={receipt}\nservice_state_digest={state}\nsettlement_intent_digest={intent}\nreceipt_chain_commitment={chain}\n"
     )
 }

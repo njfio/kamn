@@ -99,6 +99,7 @@ fn evidence(
         persisted_settlement_tx_signature: result.persisted,
         service_state_digest: None,
         settlement_intent_digest: None,
+        receipt_chain_commitment: None,
         authoritative_rpc_artifact: Some(result.confirmation.display().to_string()),
     }
 }

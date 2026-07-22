@@ -34,6 +34,7 @@ pub(super) struct SettlementEvidenceArtifact {
     pub(super) persisted_settlement_tx_signature: String,
     pub(super) service_state_digest: Option<String>,
     pub(super) settlement_intent_digest: Option<String>,
+    pub(super) receipt_chain_commitment: Option<String>,
     pub(super) authoritative_rpc_digest: Option<String>,
     evidence_digest: String,
 }
@@ -88,6 +89,7 @@ fn artifact_from_evidence(
         persisted_settlement_tx_signature: evidence.persisted_settlement_tx_signature.clone(),
         service_state_digest: evidence.service_state_digest.clone(),
         settlement_intent_digest: evidence.settlement_intent_digest.clone(),
+        receipt_chain_commitment: evidence.receipt_chain_commitment.clone(),
         authoritative_rpc_digest,
         evidence_digest: String::new(),
     }
@@ -131,9 +133,19 @@ fn valid_source(artifact: &SettlementEvidenceArtifact) -> bool {
     match artifact.execution_surface.as_str() {
         "live-service-persisted-receipt" => {
             artifact.evidence_source == "kamn-live-service-persisted-receipt+solana-rpc"
+                && artifact
+                    .receipt_chain_commitment
+                    .as_deref()
+                    .is_some_and(is_sha256)
         }
         _ => artifact.evidence_source == "solana-cli-confirm-and-balance-rpc",
     }
+}
+
+fn is_sha256(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn invalid() -> String {

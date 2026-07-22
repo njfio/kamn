@@ -3,6 +3,9 @@ use std::path::Path;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use super::agent_transaction_receipt_chain::recompute;
+use super::agent_transaction_receipt_chain_model::DurableReceipt;
+
 pub(super) struct ExpectedSettlement<'a> {
     pub(super) task_id: &'a str,
     pub(super) transaction_id: &'a str,
@@ -18,6 +21,8 @@ pub(super) struct PersistedSettlement {
     pub(super) receipt_hash: String,
     pub(super) state_digest: String,
     pub(super) intent_digest: String,
+    pub(super) receipt_chain_commitment: String,
+    pub(super) service_receipts: Vec<DurableReceipt>,
 }
 
 pub(super) fn read_persisted_settlement(
@@ -34,7 +39,7 @@ pub(super) fn read_persisted_settlement(
     validate_task(task, expected)?;
     validate_escrow(escrow, expected)?;
     validate_intent(intent, expected)?;
-    build_persisted_settlement(raw.as_str(), task, escrow, intent)
+    build_persisted_settlement(raw.as_str(), task, escrow, intent, expected)
 }
 
 fn build_persisted_settlement(
@@ -42,17 +47,21 @@ fn build_persisted_settlement(
     task: &Value,
     escrow: &Value,
     intent: &Value,
+    expected: &ExpectedSettlement<'_>,
 ) -> Result<PersistedSettlement, String> {
     let terms_digest = string(escrow, "terms_digest")?;
     if string(task, "terms_digest")? != terms_digest {
         return Err("persisted settlement terms_digest mismatch".to_owned());
     }
+    let authority = recompute(raw, expected)?;
     Ok(PersistedSettlement {
         transaction_id: string(escrow, "transaction_id")?,
         terms_digest,
         receipt_hash: string(escrow, "settlement_receipt_hash")?,
         state_digest: digest(raw),
         intent_digest: digest(&serde_json::to_string(intent).map_err(json_error)?),
+        receipt_chain_commitment: authority.commitment,
+        service_receipts: authority.receipts,
     })
 }
 

@@ -29,6 +29,7 @@ pub(super) fn validate_runtime_actor_bundle(report: &str) -> Result<(), String> 
     let paths = actor_paths(&report_json)?;
     let chain = super::runtime_receipt_chain::build_runtime_receipt_chain_from_actor_paths(&paths)
         .map_err(super::independent_verifier_errors::map_actor_verification_error)?;
+    require_settlement_commitment(&report_json, chain.as_str())?;
     super::three_agent_transcript::require_runtime_chain_source(report, chain.as_str())
         .map_err(super::independent_verifier_errors::map_actor_verification_error)
 }
@@ -68,8 +69,22 @@ fn has_runtime_chain(report: &Value) -> Result<bool, String> {
         return Err(invalid());
     };
     let raw = std::fs::read_to_string(path).map_err(|_| invalid())?;
-    if raw.contains("kamn.mvp.runtime-receipt-chain.v1") {
+    if raw.contains("kamn.service.receipt-chain.v1") {
         return Ok(true);
+    }
+    Err(invalid())
+}
+
+fn require_settlement_commitment(report: &Value, chain: &str) -> Result<(), String> {
+    let path = report["artifacts"]["devnet_settlement_evidence"]
+        .as_str()
+        .ok_or_else(invalid)?;
+    let evidence =
+        super::settlement_evidence_artifact::read_settlement_evidence_artifact(Path::new(path))?;
+    let chain: Value = serde_json::from_str(chain).map_err(|_| invalid())?;
+    let expected = chain["receipt_chain_commitment"].as_str();
+    if evidence.receipt_chain_commitment.as_deref() == expected {
+        return Ok(());
     }
     Err(invalid())
 }

@@ -57,7 +57,7 @@ fn read_view(
 }
 
 fn validate_transcript_bindings(transcript: &str, claim: &ClaimView<'_>) -> Result<(), String> {
-    if transcript.contains("\"schema_version\":\"kamn.mvp.runtime-receipt-chain.v1\"") {
+    if transcript.contains("\"schema_version\":\"kamn.service.receipt-chain.v1\"") {
         return Ok(());
     }
     for field in view_claim_fields() {

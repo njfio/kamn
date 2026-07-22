@@ -59,6 +59,17 @@ fn proof_rejects_mismatched_persisted_settlement_intent() {
     );
 }
 
+#[test]
+fn proof_rejects_reordered_durable_service_receipts() {
+    let _guard = test_lock();
+    let fixture = ProofRetryFixture::new();
+    fixture.reorder_persisted_task_receipts();
+
+    let error = finalize(&fixture.config, &fixture.paths)
+        .expect_err("reordered durable receipt chain must fail closed");
+    assert!(error.contains("SERVICE_RECEIPT_CHAIN_INVALID"), "{error}");
+}
+
 fn test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     LOCK.lock()

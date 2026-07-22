@@ -171,7 +171,7 @@ fn spec_c10_demo_consumes_runtime_actor_chain_when_configured() {
         run_directories(&temp)[0].join("proof/three-agent-transcript.json"),
     )
     .expect("canonical transaction proof");
-    assert!(transcript.contains("kamn.mvp.runtime-receipt-chain.v1"));
+    assert!(transcript.contains("kamn.service.receipt-chain.v1"));
     assert!(!transcript.contains("agent_a_registered"));
 }
 

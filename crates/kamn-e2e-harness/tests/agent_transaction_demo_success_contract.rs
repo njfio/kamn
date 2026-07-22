@@ -16,14 +16,13 @@ mod mvp_demo_command;
 mod pi_transaction_actor_fixture;
 #[path = "support/agent_transaction_success_pi.rs"]
 mod success_pi;
-use pi_transaction_actor_fixture::{ActorFixture, Overrides};
+use pi_transaction_actor_fixture::ActorFixture;
 
 #[test]
 fn spec_c01_success_writes_one_runtime_chain_report_after_children_exit() {
     let root = unique_root();
     let actors = ActorFixture::new();
-    actors.write_all(Overrides::default());
-    actors.rebind_shared_facts();
+    actors.write_bound_v2_all();
     let demo_stub = mvp_demo_command::devnet_required_demo_config(&root.join("stub"));
     let live = mvp_demo_command::live_task_evidence::write_v2(&root.join("live"));
     let _path_guard = direct_settlement_fixture::install(&root);

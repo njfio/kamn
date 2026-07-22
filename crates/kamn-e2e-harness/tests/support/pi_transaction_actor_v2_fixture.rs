@@ -4,11 +4,33 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use super::receipt_fixture::sha;
+#[path = "pi_transaction_actor_v2_overrides.rs"]
+mod actor_overrides;
+pub(crate) use actor_overrides::apply_overrides;
+#[path = "service_authority_fixture.rs"]
+mod service_authority_fixture;
 
 pub(super) fn write_all(root: &Path) {
     write_actor(root, "agent-a.json", actor("agent_a", 101, "kamn:did:a"));
     write_actor(root, "agent-b.json", actor("agent_b", 202, "kamn:did:b"));
     write_actor(root, "agent-c.json", actor("agent_c", 303, "kamn:did:c"));
+}
+
+pub(super) fn write_bound_all(root: &Path) {
+    for (name, role, pid, did) in [
+        ("agent-a.json", "agent_a", 101, "kamn:did:a"),
+        ("agent-b.json", "agent_b", 202, "kamn:did:b"),
+        ("agent-c.json", "agent_c", 303, "kamn:did:c"),
+    ] {
+        let mut value = actor(role, pid, did);
+        value["task_id"] = json!(service_authority_fixture::TASK);
+        value["transaction_id"] = json!(service_authority_fixture::TRANSACTION);
+        value["escrow_id"] = json!(service_authority_fixture::ESCROW);
+        value["settlement_tx_signature"] = json!(service_authority_fixture::SIGNATURE);
+        value["service_receipts"] = json!(service_authority_fixture::actor_receipts(role));
+        value["receipt_chain_commitment"] = json!(service_authority_fixture::commitment());
+        write_actor(root, name, value);
+    }
 }
 
 fn actor(role: &str, process_id: u64, did: &str) -> Value {
@@ -121,14 +143,18 @@ fn receipt(
     })
 }
 
-fn write_actor(root: &Path, name: &str, mut value: Value) {
+pub(super) fn write_actor(root: &Path, name: &str, mut value: Value) {
+    value
+        .as_object_mut()
+        .expect("v2 actor object")
+        .remove("artifact_digest");
     let unsigned = serde_json::to_string(&value).expect("v2 actor JSON");
-    value["artifact_digest"] = json!(format!("sha256:{:x}", Sha256::digest(unsigned.as_bytes())));
-    std::fs::write(
-        root.join(name),
-        serde_json::to_string(&value).expect("v2 artifact"),
-    )
-    .expect("write v2 actor fixture");
+    let digest = format!("sha256:{:x}", Sha256::digest(unsigned.as_bytes()));
+    let artifact = format!(
+        "{},\"artifact_digest\":\"{digest}\"}}",
+        &unsigned[..unsigned.len() - 1]
+    );
+    std::fs::write(root.join(name), artifact).expect("write v2 actor fixture");
 }
 
 fn scope(role: &str) -> &'static str {

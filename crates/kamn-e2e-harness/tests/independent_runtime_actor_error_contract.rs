@@ -123,7 +123,7 @@ impl Fixture {
         std::fs::write(
             path,
             raw.replace(
-                "kamn.mvp.runtime-receipt-chain.v1",
+                "kamn.service.receipt-chain.v1",
                 "kamn.mvp.three-agent-transcript.v1",
             ),
         )

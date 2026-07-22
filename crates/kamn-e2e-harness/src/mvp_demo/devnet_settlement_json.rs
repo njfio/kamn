@@ -30,6 +30,7 @@ pub(crate) fn parse_devnet_settlement_evidence(
         )?,
         service_state_digest: None,
         settlement_intent_digest: None,
+        receipt_chain_commitment: None,
         authoritative_rpc_artifact: optional_json_string_value(json, "authoritative_rpc_artifact"),
     };
     validate_devnet_settlement_evidence(&evidence)?;
@@ -76,16 +77,24 @@ fn provenance_fields(evidence: &DevnetSettlementEvidence) -> String {
         evidence.settlement_receipt_hash.as_deref(),
         evidence.service_state_digest.as_deref(),
         evidence.settlement_intent_digest.as_deref(),
+        evidence.receipt_chain_commitment.as_deref(),
     );
-    let (Some(transaction), Some(terms), Some(fee), Some(receipt), Some(state), Some(intent)) =
-        values
+    let (
+        Some(transaction),
+        Some(terms),
+        Some(fee),
+        Some(receipt),
+        Some(state),
+        Some(intent),
+        Some(chain),
+    ) = values
     else {
         return String::new();
     };
     format!(
-        ",\"transaction_id\":\"{}\",\"terms_digest\":\"{}\",\"fee_lamports\":{},\"settlement_receipt_hash\":\"{}\",\"service_state_digest\":\"{}\",\"settlement_intent_digest\":\"{}\"",
+        ",\"transaction_id\":\"{}\",\"terms_digest\":\"{}\",\"fee_lamports\":{},\"settlement_receipt_hash\":\"{}\",\"service_state_digest\":\"{}\",\"settlement_intent_digest\":\"{}\",\"receipt_chain_commitment\":\"{}\"",
         escape_json(transaction), escape_json(terms), fee, escape_json(receipt),
-        escape_json(state), escape_json(intent),
+        escape_json(state), escape_json(intent), escape_json(chain),
     )
 }
 

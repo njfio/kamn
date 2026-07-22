@@ -18,7 +18,7 @@ fn spec_c01_accepts_role_scoped_v2_service_authority() {
 #[test]
 fn spec_c02_rejects_v1_client_local_receipt_authority() {
     let fixture = ActorFixture::new();
-    fixture.write_all(Overrides::default());
+    fixture.write_v1_all(Overrides::default());
 
     let error = verify_pi_transaction_actor_paths(&fixture.paths())
         .expect_err("v1 Pi-local authority must not satisfy the canonical verifier");

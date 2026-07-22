@@ -32,7 +32,7 @@ fn validate_direct_provenance(
     validate_provenance_shape(evidence)
 }
 
-fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 5] {
+fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 6] {
     [
         ("transaction_id", evidence.transaction_id.as_deref()),
         ("terms_digest", evidence.terms_digest.as_deref()),
@@ -48,6 +48,10 @@ fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, O
             "settlement_intent_digest",
             evidence.settlement_intent_digest.as_deref(),
         ),
+        (
+            "receipt_chain_commitment",
+            evidence.receipt_chain_commitment.as_deref(),
+        ),
     ]
 }
 
@@ -55,6 +59,7 @@ fn validate_provenance_shape(evidence: &SettlementEvidenceArtifact) -> Result<()
     let valid_digests = [
         evidence.service_state_digest.as_deref(),
         evidence.settlement_intent_digest.as_deref(),
+        evidence.receipt_chain_commitment.as_deref(),
     ]
     .into_iter()
     .all(|value| value.is_some_and(is_sha256));
