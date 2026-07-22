@@ -74,19 +74,19 @@ function sharedProjectionFields(projection: WorkflowResult) {
 }
 function validateProjectedReceipts(role: AgentRole, provenance: McpSessionProvenance, projection: WorkflowResult) {
 	if (role === "agent_c") {
-		if (projection.receipt_chain_receipts !== undefined) throw new Error("Agent C projection leaked private receipt authority");
+		if (projection.receipt_chain_receipts !== undefined) authorityMismatch();
 		return;
 	}
-	if (!Array.isArray(projection.receipt_chain_receipts)) throw new Error(`${agentLabel(role)} projection omitted receipt_chain_receipts`);
+	if (!Array.isArray(projection.receipt_chain_receipts)) authorityMismatch();
 	const projected = projection.receipt_chain_receipts.map((entry) => projectedReceipt(entry, role));
 	const authoritative = provenance.service_authority_receipts.map((receipt) => ({
 		receipt_id: receipt.service_receipt_id, receipt_digest: receipt.service_receipt_digest,
 		action: receipt.action, resource_id: receipt.resource_id, resulting_state: receipt.resulting_state,
 	}));
-	if (JSON.stringify(projected) !== JSON.stringify(authoritative)) throw new Error(`${agentLabel(role)} projection receipt authority mismatch`);
+	if (JSON.stringify(projected) !== JSON.stringify(authoritative)) authorityMismatch();
 }
 function projectedReceipt(value: unknown, role: AgentRole) {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${agentLabel(role)} projection receipt is invalid`);
+	if (typeof value !== "object" || value === null || Array.isArray(value)) authorityMismatch();
 	const receipt = value as WorkflowResult;
 	return {
 		receipt_id: requiredString(receipt, "receipt_id", "projection receipt"),
@@ -96,6 +96,7 @@ function projectedReceipt(value: unknown, role: AgentRole) {
 		resulting_state: requiredString(receipt, "resulting_state", "projection receipt"),
 	};
 }
+function authorityMismatch(): never { throw new Error("PI_SERVICE_AUTHORITY_MISMATCH"); }
 function requiredDigest(result: WorkflowResult, field: string, step: string): string {
 	const value = requiredString(result, field, step);
 	if (/^sha256:[0-9a-f]{64}$/.test(value)) return value;

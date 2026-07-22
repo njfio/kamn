@@ -114,8 +114,11 @@ export class McpSession {
 		}
 		if (!isObject(response.result)) return this.failSession(new Error("KAMN live MCP success response omitted result"));
 		this.provenanceTracker.record(pending.id, pending.tool, "success", response.result);
+		this.resolveSuccess(pending, response.result);
+	}
+	private resolveSuccess(pending: PendingRequest, result: JsonObject) {
 		try {
-			const authority = validateAuthority(pending.tool, response.result, this.registeredActor);
+			const authority = validateAuthority(pending.tool, result, this.registeredActor);
 			if (authority.profileCommitment) {
 				this.registeredActor = String(authority.serviceResult.did);
 				this.provenanceTracker.recordProfileCommitment(authority.profileCommitment);

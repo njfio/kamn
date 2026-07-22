@@ -179,6 +179,19 @@ test("actor evidence requires a registered identity and final runtime projection
 	await workflow.shutdown();
 });
 
+test("actor evidence rejects projection receipts that disagree with service authority", async () => {
+	const setup = await testSetup({ KAMN_MVP_FAKE_MCP_RESULT_MODE: "projection-authority-mismatch" });
+	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
+	await workflow.register("agent_a");
+	const agentB = await workflow.register("agent_b");
+	await workflow.createTask("Authority", "Reject copied projection receipt", String(agentB.did));
+	await workflow.fundEscrow();
+	await workflow.releaseEscrow();
+	await workflow.queryParticipantProjection("agent_a");
+	assert.throws(() => workflow.actorEvidence("agent_a", 101, `sha256:${"b".repeat(64)}`), /PI_SERVICE_AUTHORITY_MISMATCH/);
+	await workflow.shutdown();
+});
+
 test("workflow rejects calls that violate registration and task order", async () => {
 	const setup = await testSetup();
 	const workflow = new LiveTaskWorkflow(setup.env, process.cwd());
@@ -202,7 +215,7 @@ test("workflow rejects duplicate participant DIDs", async () => {
 });
 
 for (const [mode, expected] of [
-	["missing-task-id", /MCP_AUTHORITY_RECEIPT_INVALID/],
+	["missing-task-id", /MCP_AUTHORITY_RECEIPT_MISSING/],
 	["wrong-create-state", /MCP_AUTHORITY_RECEIPT_INVALID/],
 ] as const) {
 	test(`workflow rejects ${mode} creation result`, async () => {

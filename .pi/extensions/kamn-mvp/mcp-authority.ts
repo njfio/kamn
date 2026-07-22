@@ -38,7 +38,8 @@ export function validateAuthority(tool: string, result: JsonObject, expectedActo
 }
 
 function validateEnvelopeHeader(result: JsonObject) {
-	if (result.schema_version === undefined || result.authority_kind === undefined || result.source === undefined) {
+	if (result.schema_version === undefined || result.authority_kind === undefined || result.source === undefined
+		|| result.service_result === undefined) {
 		throw new Error("MCP_AUTHORITY_RECEIPT_MISSING");
 	}
 	if (result.schema_version !== SCHEMA || result.source !== SOURCE || !isObject(result.service_result)) {
@@ -80,11 +81,13 @@ function validateMutation(tool: keyof typeof MUTATIONS, result: JsonObject, expe
 }
 
 function objectField(value: JsonObject, field: string): JsonObject {
+	if (value[field] === undefined) throw new Error("MCP_AUTHORITY_RECEIPT_MISSING");
 	if (isObject(value[field])) return value[field];
 	throw new Error("MCP_AUTHORITY_RECEIPT_INVALID");
 }
 function stringField(value: JsonObject, field: string): string {
 	const parsed = value[field];
+	if (parsed === undefined) throw new Error("MCP_AUTHORITY_RECEIPT_MISSING");
 	if (typeof parsed === "string" && parsed.length > 0) return parsed;
 	throw new Error("MCP_AUTHORITY_RECEIPT_INVALID");
 }

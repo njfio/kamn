@@ -59,6 +59,25 @@ test("session rejects copied cross-role mutation authority", async (context) => 
 	await assert.rejects(session.call("query_agent_profile"), /MCP_AUTHORITY_RECEIPT_INVALID/);
 });
 
+for (const mode of ["wrong-tool-authority", "copied-resource-authority"] as const) {
+	test(`session rejects ${mode}`, async (context) => {
+		const setup = await testSetup();
+		const session = sessionFor(setup, mode);
+		context.after(() => session.shutdown());
+		await session.call("register");
+		await assert.rejects(session.call("create_task", { payload: taskPayload() }), /MCP_AUTHORITY_RECEIPT_INVALID/);
+	});
+}
+
+test("child exit is sticky and cannot create a replacement session", async (context) => {
+	const setup = await testSetup();
+	const session = sessionFor(setup, "success", "exit");
+	context.after(() => session.shutdown());
+	await assert.rejects(session.call("register"), /exited.*7/);
+	await assert.rejects(session.call("register"), /exited.*7/);
+	assert.equal((await readFile(setup.startFile, "utf8")).trim().split("\n").length, 1);
+});
+
 async function testSetup() {
 	const root = await mkdtemp(resolve(tmpdir(), "kamn-mcp-authority-"));
 	const keyFile = resolve(root, "agent.key");
@@ -67,13 +86,13 @@ async function testSetup() {
 	return { keyFile, startFile: resolve(root, "start"), stopFile: resolve(root, "stop") };
 }
 
-function sessionFor(setup: Awaited<ReturnType<typeof testSetup>>, resultMode: string) {
+function sessionFor(setup: Awaited<ReturnType<typeof testSetup>>, resultMode: string, fakeMode = "success") {
 	const env = {
 		KAMN_MVP_LIVE_MCP_BINARY: fixture,
 		KAMN_MVP_LIVE_MCP_ENDPOINT: "http://127.0.0.1:18278",
 		KAMN_MVP_LIVE_MCP_AGENT_A_NAME: "agent-a",
 		KAMN_MVP_LIVE_MCP_AGENT_A_KEY_FILE: setup.keyFile,
-		KAMN_MVP_FAKE_MCP_MODE: "success",
+		KAMN_MVP_FAKE_MCP_MODE: fakeMode,
 		KAMN_MVP_FAKE_MCP_RESULT_MODE: resultMode,
 		KAMN_MVP_FAKE_MCP_START_FILE: setup.startFile,
 		KAMN_MVP_FAKE_MCP_STOP_FILE: setup.stopFile,

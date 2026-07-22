@@ -54,6 +54,8 @@ function authorityResult(request, serviceResult) {
 	if (resultMode === "malformed-authority" && request.tool !== "register") envelope.service_receipt_digest = "invalid";
 	if (resultMode === "mixed-authority-version") envelope.schema_version = "kamn.mcp.authority-receipt.v2";
 	if (resultMode === "cross-role-authority" && request.tool !== "register") envelope.actor_did = "kamn:did:agent-b";
+	if (resultMode === "wrong-tool-authority" && request.tool !== "register") envelope.tool = "query_task";
+	if (resultMode === "copied-resource-authority" && request.tool !== "register") envelope.resource_id = "task-copied";
 	return envelope;
 }
 
@@ -154,12 +156,14 @@ function unboundParticipantProjection(taskId, name) {
 
 function participantProjection(taskId, name) {
 	const suffix = name.endsWith("b") ? "b" : "a";
+	const receipts = roleReceiptEntries(suffix);
+	if (resultMode === "projection-authority-mismatch") receipts[0].receipt_digest = digest("9");
 	return {
 		...sharedProjection(taskId),
 		view_scope: "participant-private",
 		participant_role: suffix === "a" ? "creator" : "provider",
-		task_receipt_ids: roleReceiptEntries(suffix).filter((receipt) => receipt.action.startsWith("task:")).map((receipt) => receipt.receipt_id),
-		receipt_chain_receipts: roleReceiptEntries(suffix),
+		task_receipt_ids: receipts.filter((receipt) => receipt.action.startsWith("task:")).map((receipt) => receipt.receipt_id),
+		receipt_chain_receipts: receipts,
 	};
 }
 

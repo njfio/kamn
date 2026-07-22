@@ -15,7 +15,14 @@ const INPUT_FIELDS = new Set([
 	"transport_response_digests", "service_profile_commitment", "service_receipts", ...SHARED,
 	"view_scope", "participant_role", "source_handoff_digest", "handoff_authorized",
 ]);
-type ActorArtifact = ReturnType<typeof normalizeActor> & { artifact_digest: string };
+type ActorArtifact = {
+	schema_version: string; actor: Role; pi_process_id: number; did: string; mcp_child_process_id: number;
+	first_request_id: number; last_request_id: number; transport_response_digests: string[];
+	service_profile_commitment: string; service_receipts: ServiceReceipt[]; task_id: string; transaction_id: string;
+	escrow_id: string; amount_lamports: number; network: string; settlement_tx_signature: string;
+	settlement_commitment: string; receipt_chain_commitment: string; public_commitment: string; view_scope: string;
+	participant_role?: string; source_handoff_digest: string; handoff_authorized: boolean; artifact_digest: string;
+};
 
 export async function writePiTransactionActor(path: string, input: Record<string, unknown>) {
 	const unsigned = normalizeActor(input);
@@ -47,7 +54,7 @@ export async function verifyPiTransactionActors(paths: Record<Role, string>) {
 	};
 }
 
-function normalizeActor(input: Record<string, unknown>) {
+function normalizeActor(input: Record<string, unknown>): Omit<ActorArtifact, "artifact_digest"> {
 	if (Object.keys(input).some((field) => !INPUT_FIELDS.has(field))) authorityFail();
 	const actor = requiredRole(input.actor);
 	const artifact = {
@@ -56,8 +63,8 @@ function normalizeActor(input: Record<string, unknown>) {
 		pi_process_id: positiveInteger(input.pi_process_id, "PI_ACTOR_PROCESS_REUSED"),
 		did: requiredString(input.did, "PI_ACTOR_IDENTITY_INVALID"),
 		mcp_child_process_id: positiveInteger(input.mcp_child_process_id, "PI_ACTOR_PROCESS_REUSED"),
-		first_request_id: positiveInteger(input.first_request_id, "PI_ACTOR_NONCE_STREAM_INVALID"),
-		last_request_id: positiveInteger(input.last_request_id, "PI_ACTOR_NONCE_STREAM_INVALID"),
+		first_request_id: positiveInteger(input.first_request_id, "PI_TRANSPORT_PROVENANCE_INVALID"),
+		last_request_id: positiveInteger(input.last_request_id, "PI_TRANSPORT_PROVENANCE_INVALID"),
 		transport_response_digests: digestList(input.transport_response_digests),
 		service_profile_commitment: shaDigest(input.service_profile_commitment, "PI_SERVICE_AUTHORITY_MISMATCH"),
 		service_receipts: normalizeServiceReceipts(input.service_receipts),
@@ -69,9 +76,9 @@ function normalizeActor(input: Record<string, unknown>) {
 	return artifact;
 }
 
-function validateActor(actor: ReturnType<typeof normalizeActor>) {
+function validateActor(actor: Omit<ActorArtifact, "artifact_digest">) {
 	const expectedCount = actor.last_request_id - actor.first_request_id + 1;
-	if (expectedCount !== actor.transport_response_digests.length) throw new Error("PI_ACTOR_NONCE_STREAM_INVALID");
+	if (expectedCount !== actor.transport_response_digests.length) throw new Error("PI_TRANSPORT_PROVENANCE_INVALID");
 	validateRoleAuthority(actor.actor, actor.did, actor.task_id, actor.escrow_id, actor.service_receipts);
 	if (actor.handoff_authorized) throw new Error("PI_HANDOFF_AUTHORIZATION_FORBIDDEN");
 	if (actor.actor === "agent_c") {
@@ -140,8 +147,8 @@ function shaDigest(value: unknown, code: string): string {
 	throw new Error(code);
 }
 function digestList(value: unknown): string[] {
-	if (!Array.isArray(value) || value.length === 0) authorityFail();
-	return value.map((entry) => shaDigest(entry, "PI_SERVICE_AUTHORITY_MISMATCH"));
+	if (!Array.isArray(value) || value.length === 0) throw new Error("PI_TRANSPORT_PROVENANCE_INVALID");
+	return value.map((entry) => shaDigest(entry, "PI_TRANSPORT_PROVENANCE_INVALID"));
 }
 function digest(value: unknown): string {
 	return `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
