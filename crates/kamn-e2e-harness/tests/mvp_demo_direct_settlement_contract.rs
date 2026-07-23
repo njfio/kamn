@@ -8,7 +8,7 @@ mod mvp_demo_command;
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
 
-const DIRECT_SETTLEMENT_OVERRIDE_ERROR: &str = "SETTLEMENT_EVIDENCE_INVALID";
+const DIRECT_SETTLEMENT_OVERRIDE_ERROR: &str = "PI_SERVICE_AUTHORITY_MISMATCH";
 
 #[test]
 fn spec_c07_required_verifier_rejects_command_override_settlement() {
