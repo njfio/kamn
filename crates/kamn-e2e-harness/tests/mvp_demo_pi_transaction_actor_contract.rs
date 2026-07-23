@@ -3,10 +3,13 @@ use kamn_e2e_harness::verify_pi_transaction_actor_paths;
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
 use pi_transaction_actor_fixture::{sha, ActorFixture, Overrides};
+
+const PROCESS_OR_IDENTITY_ERROR: &str = "PI_ACTOR_";
+
 #[test]
 fn spec_c01_rust_verifier_accepts_three_runtime_bound_pi_actors() {
     let fixture = ActorFixture::new();
-    fixture.write_all(Overrides::default());
+    write_actor_fixture(&fixture, Overrides::default());
 
     let summary = verify_pi_transaction_actor_paths(&fixture.paths())
         .expect("three independent actor artifacts should verify");
@@ -27,10 +30,10 @@ fn spec_c02_rust_verifier_rejects_reused_process_and_identity() {
         },
     ] {
         let fixture = ActorFixture::new();
-        fixture.write_all(overrides);
+        write_actor_fixture(&fixture, overrides);
         let error = verify_pi_transaction_actor_paths(&fixture.paths())
             .expect_err("reused actor identity must fail");
-        assert!(error.contains("PI_ACTOR_"));
+        assert!(error.contains(PROCESS_OR_IDENTITY_ERROR));
     }
 }
 
@@ -67,7 +70,7 @@ fn spec_c03_rust_verifier_rejects_runtime_privacy_and_shared_fact_drift() {
         ),
     ] {
         let fixture = ActorFixture::new();
-        fixture.write_all(overrides);
+        write_actor_fixture(&fixture, overrides);
         let error = verify_pi_transaction_actor_paths(&fixture.paths())
             .expect_err("tampered actor evidence must fail");
         assert!(error.contains(code), "unexpected error: {error}");
@@ -87,9 +90,13 @@ fn spec_c04_rust_verifier_rejects_missing_operation_and_type_confusion() {
         },
     ] {
         let fixture = ActorFixture::new();
-        fixture.write_all(overrides);
+        write_actor_fixture(&fixture, overrides);
         let error = verify_pi_transaction_actor_paths(&fixture.paths())
             .expect_err("incomplete or type-confused actor evidence must fail");
         assert!(error.contains("PI_"), "unexpected error: {error}");
     }
+}
+
+fn write_actor_fixture(fixture: &ActorFixture, overrides: Overrides) {
+    fixture.write_all(overrides);
 }
