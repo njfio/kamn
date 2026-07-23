@@ -18,7 +18,7 @@ mod mvp_demo_command;
 mod pi_transaction_actor_fixture;
 use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 
-const LEGACY_TRANSCRIPT_RUNTIME_ACTOR_ERROR: &str = "PI_SERVICE_AUTHORITY_MISMATCH";
+const LEGACY_TRANSCRIPT_AUTHORITY_ERROR: &str = "PI_SERVICE_AUTHORITY_MISMATCH";
 
 #[test]
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
@@ -192,7 +192,7 @@ fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
         pi_transaction_actor_paths: Some(actors.paths()),
     })
     .expect_err("runtime actors must not validate a generated transcript");
-    assert_eq!(error, LEGACY_TRANSCRIPT_RUNTIME_ACTOR_ERROR);
+    assert_eq!(error, LEGACY_TRANSCRIPT_AUTHORITY_ERROR);
 }
 
 #[test]
