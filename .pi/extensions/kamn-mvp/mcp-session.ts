@@ -35,6 +35,7 @@ export type LiveMcpConfig = {
 	endpoint: string;
 	agentName: string;
 	keyFile: string;
+	requestTimeoutMs: number;
 	env: NodeJS.ProcessEnv;
 };
 export class McpSession {
@@ -48,7 +49,7 @@ export class McpSession {
 	private shutdownPromise?: Promise<void>;
 	private readonly config: LiveMcpConfig;
 	private readonly options: { timeoutMs: number };
-	constructor(config: LiveMcpConfig, options = { timeoutMs: 10000 }) {
+	constructor(config: LiveMcpConfig, options = { timeoutMs: config.requestTimeoutMs }) {
 		this.config = config;
 		this.options = options;
 	}
@@ -171,8 +172,18 @@ export function readLiveMcpConfig(agent: LiveMcpAgent, env: Environment = proces
 		keyFile,
 		endpoint: requiredEnv(env, "KAMN_MVP_LIVE_MCP_ENDPOINT"),
 		agentName: requiredEnv(env, agentEnv.name),
+		requestTimeoutMs: requestTimeoutMs(env),
 		env: childEnvironment(env),
 	};
+}
+function requestTimeoutMs(env: Environment): number {
+	const raw = env.KAMN_SDK_SERVICE_TIMEOUT_SECONDS;
+	if (raw === undefined) return 10000;
+	const seconds = Number(raw);
+	if (!/^\d+$/.test(raw) || !Number.isSafeInteger(seconds) || seconds <= 0) {
+		throw new Error("KAMN_SDK_SERVICE_TIMEOUT_SECONDS must be a positive integer");
+	}
+	return seconds * 1000;
 }
 function childEnvironment(env: Environment): NodeJS.ProcessEnv {
 	return Object.fromEntries(
