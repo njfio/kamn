@@ -18,6 +18,8 @@ mod mvp_demo_command;
 mod pi_transaction_actor_fixture;
 use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 
+const LEGACY_TRANSCRIPT_RUNTIME_ACTOR_ERROR: &str = "RECEIPT_CHAIN_INVALID";
+
 #[test]
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
     let parsed = parse_command_args(["demo-mvp", "--output-root", "/tmp/kamn-demo"])
@@ -190,7 +192,7 @@ fn spec_c11_verifier_rejects_legacy_transcript_with_runtime_actors() {
         pi_transaction_actor_paths: Some(actors.paths()),
     })
     .expect_err("runtime actors must not validate a generated transcript");
-    assert_eq!(error, "RECEIPT_CHAIN_INVALID");
+    assert_eq!(error, LEGACY_TRANSCRIPT_RUNTIME_ACTOR_ERROR);
 }
 
 #[test]
