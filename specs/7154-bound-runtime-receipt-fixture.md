@@ -27,12 +27,12 @@ authority while preserving its negative and privacy contracts.
 
 ## Acceptance Criteria
 
-- [ ] The success case uses transaction-bound v2 actor receipts.
-- [ ] The summary retains canonical actions and commitment fields.
-- [ ] Private transport and participant-role fields remain absent.
-- [ ] All negative authority cases remain rejected.
-- [ ] The complete four-case target passes.
-- [ ] Formatting and strict Clippy pass.
+- [x] The success case uses transaction-bound v2 actor receipts.
+- [x] The summary retains canonical actions and commitment fields.
+- [x] Private transport and participant-role fields remain absent.
+- [x] All negative authority cases remain rejected.
+- [x] The complete four-case target passes.
+- [x] Formatting and strict Clippy pass.
 
 ## Files To Touch
 
@@ -63,3 +63,10 @@ authority while preserving its negative and privacy contracts.
 
 - Run the complete target, formatting, strict Clippy, and adjacent service-authority
   contracts.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_runtime_receipt_chain_contract --test mvp_demo_pi_service_authority_contract --test mvp_demo_pi_transaction_actor_contract`
+  passed 10 tests.
+- `cargo clippy -p kamn-e2e-harness --test mvp_demo_runtime_receipt_chain_contract --test mvp_demo_pi_service_authority_contract --test mvp_demo_pi_transaction_actor_contract -- -D warnings`
