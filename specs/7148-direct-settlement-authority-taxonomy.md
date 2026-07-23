@@ -26,11 +26,11 @@ service-authority verification order established by #7135.
 
 ## Acceptance Criteria
 
-- [ ] The direct-settlement override regression expects
+- [x] The direct-settlement override regression expects
   `PI_SERVICE_AUTHORITY_MISMATCH`.
-- [ ] Genuine settlement evidence drift retains `SETTLEMENT_EVIDENCE_INVALID`.
-- [ ] The focused direct-settlement and settlement-evidence targets pass.
-- [ ] Formatting and strict Clippy pass.
+- [x] Genuine settlement evidence drift retains `SETTLEMENT_EVIDENCE_INVALID`.
+- [x] The focused direct-settlement and settlement-evidence targets pass.
+- [x] Formatting and strict Clippy pass.
 
 ## Files To Touch
 
@@ -62,3 +62,14 @@ service-authority verification order established by #7135.
 
 - Run the direct-settlement target, focused genuine-settlement drift tests, formatting,
   and strict Clippy.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_direct_settlement_contract
+  --test independent_settlement_evidence_verifier_contract
+  --test independent_agent_transaction_verifier_contract`
+  - Result: 17 passed, 0 failed.
+- `cargo clippy -p kamn-e2e-harness --test mvp_demo_direct_settlement_contract
+  --test independent_settlement_evidence_verifier_contract
+  --test independent_agent_transaction_verifier_contract -- -D warnings`
