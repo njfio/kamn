@@ -100,6 +100,19 @@ test("configuration forwards the SDK request timeout to the MCP child", async ()
 	}), process.cwd());
 
 	assert.equal(config.env.KAMN_SDK_SERVICE_TIMEOUT_SECONDS, "181");
+	assert.equal(config.requestTimeoutMs, 181000);
+});
+
+test("configuration rejects invalid SDK request timeouts", async () => {
+	const paths = await testPaths();
+	for (const value of ["", "0", "invalid"]) {
+		assert.throws(
+			() => readLiveMcpConfig("AGENT_A", configEnv(paths.keyFile, {
+				KAMN_SDK_SERVICE_TIMEOUT_SECONDS: value,
+			}), process.cwd()),
+			/KAMN_SDK_SERVICE_TIMEOUT_SECONDS/,
+		);
+	}
 });
 
 test("configuration selects independent Agent B identity inputs", async () => {
