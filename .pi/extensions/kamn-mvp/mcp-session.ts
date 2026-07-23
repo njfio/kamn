@@ -103,7 +103,7 @@ export class McpSession {
 				this.registeredActor = String(authority.serviceResult.did);
 				this.provenanceTracker.recordProfileCommitment(authority.profileCommitment);
 			}
-			if (authority.receipt) this.provenanceTracker.recordAuthorityReceipt(authority.receipt);
+			for (const receipt of authority.receipts ?? []) this.provenanceTracker.recordAuthorityReceipt(receipt);
 			this.clearPending();
 			pending.resolve(authority.serviceResult);
 		} catch (error) {

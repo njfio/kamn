@@ -15,6 +15,7 @@ const ROLE_CONTRACTS = {
 		["create_task", "task:create", "task", "submitted"],
 		["fund_escrow", "escrow:fund", "escrow", "funded"],
 		["release_escrow", "escrow:release-authorize", "escrow", "release-authorized"],
+		["release_escrow", "settlement:confirmed", "escrow", "confirmed"],
 	],
 	agent_b: [
 		["accept_task", "task:accept", "task", "accepted"],

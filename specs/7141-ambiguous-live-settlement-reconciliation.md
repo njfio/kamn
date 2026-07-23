@@ -124,6 +124,7 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - `crates/kamn-mcp-server/src/dispatch.rs`
 - `crates/kamn-sdk/src/service_client.rs`
 - `crates/kamn-sdk/src/service_models.rs`
+- `crates/kamn-sdk/src/service_settlement_receipt.rs`
 - `crates/kamn-node/src/service_api_endpoint/escrow_models.rs`
 - `crates/kamn-node/src/service_api_endpoint/message_store/store/task_escrow_ops/settlement.rs`
 

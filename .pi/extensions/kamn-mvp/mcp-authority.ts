@@ -7,7 +7,7 @@ const MUTATIONS = {
 	accept_task: { action: "task:accept", resource: "task_id", states: ["accepted"] },
 	complete_task: { action: "task:complete", resource: "task_id", states: ["completed"] },
 	fund_escrow: { action: "escrow:fund", resource: "escrow_id", states: ["funded"] },
-	release_escrow: { action: "escrow:release-authorize", resource: "escrow_id", states: ["release-authorized", "released"] },
+	release_escrow: { action: "escrow:release-authorize", resource: "escrow_id", states: ["release-authorized"] },
 } as const;
 
 export type ServiceAuthorityReceipt = {
@@ -22,7 +22,7 @@ export type ServiceAuthorityReceipt = {
 export type ValidatedAuthority = {
 	serviceResult: JsonObject;
 	profileCommitment?: string;
-	receipt?: ServiceAuthorityReceipt;
+	receipts?: ServiceAuthorityReceipt[];
 };
 
 export function requiresAuthority(tool: string): boolean {
@@ -73,11 +73,34 @@ function validateMutation(tool: keyof typeof MUTATIONS, result: JsonObject, expe
 		|| !contract.states.some((candidate) => candidate === state)) {
 		throw new Error("MCP_AUTHORITY_RECEIPT_INVALID");
 	}
-	return {
-		serviceResult,
-		receipt: { actor_did: actor, tool, action: contract.action, resource_id: resource, resulting_state: state,
-			service_receipt_id: receiptId, service_receipt_digest: receiptDigest },
-	};
+	const primary = receipt(actor, tool, contract.action, resource, state, receiptId, receiptDigest);
+	return { serviceResult, receipts: [primary, ...settlementReceipts(result, serviceResult, actor, tool, resource)] };
+}
+
+function settlementReceipts(result: JsonObject, service: JsonObject, actor: string, tool: string, resource: string): ServiceAuthorityReceipt[] {
+	const authority = result.settlement_service_receipt;
+	const serviceFieldsPresent = ["settlement_receipt_id", "settlement_receipt_digest", "settlement_receipt_action",
+		"settlement_receipt_resource_id", "settlement_receipt_state"].some((field) => service[field] !== undefined);
+	if (authority === undefined && !serviceFieldsPresent) return [];
+	if (tool !== "release_escrow" || !isObject(authority)) throw new Error("MCP_AUTHORITY_RECEIPT_INVALID");
+	const parsed = receipt(
+		stringField(authority, "actor_did"), stringField(authority, "tool"), stringField(authority, "action"),
+		stringField(authority, "resource_id"), stringField(authority, "resulting_state"),
+		stringField(authority, "service_receipt_id"), digestField(authority, "service_receipt_digest"),
+	);
+	if (parsed.actor_did !== actor || parsed.tool !== tool || parsed.action !== "settlement:confirmed"
+		|| parsed.resource_id !== resource || parsed.resulting_state !== "confirmed"
+		|| parsed.service_receipt_id !== service.settlement_receipt_id
+		|| parsed.service_receipt_digest !== service.settlement_receipt_digest
+		|| parsed.action !== service.settlement_receipt_action
+		|| parsed.resource_id !== service.settlement_receipt_resource_id
+		|| parsed.resulting_state !== service.settlement_receipt_state) throw new Error("MCP_AUTHORITY_RECEIPT_INVALID");
+	return [parsed];
+}
+
+function receipt(actor_did: string, tool: string, action: string, resource_id: string, resulting_state: string,
+	service_receipt_id: string, service_receipt_digest: string): ServiceAuthorityReceipt {
+	return { actor_did, tool, action, resource_id, resulting_state, service_receipt_id, service_receipt_digest };
 }
 
 function objectField(value: JsonObject, field: string): JsonObject {

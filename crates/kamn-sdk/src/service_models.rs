@@ -81,6 +81,8 @@ pub struct ServiceEscrowStatus {
     pub receipt_digest: String,
     /// Canonical durable receipt action.
     pub action: String,
+    /// Distinct durable settlement receipt for finalized live releases.
+    pub settlement_receipt: Option<ServiceSettlementReceipt>,
 }
 
 /// Parsed response for `POST /v1/content/register`.
@@ -184,3 +186,4 @@ pub struct ServiceRouteEvent {
     /// Event sequence identifier.
     pub sequence: u64,
 }
+use super::ServiceSettlementReceipt;

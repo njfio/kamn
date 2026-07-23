@@ -1,6 +1,7 @@
 use crate::json_helpers::{escape_json, json_optional_string_field, json_required_string_field};
 use crate::registration::register_service_backed_mcp_agent;
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
+use serde_json::json;
 
 /// Backend abstraction used by MCP tool dispatch.
 pub trait McpToolBackend {
@@ -267,15 +268,19 @@ impl McpToolBackend for KamnAgentHandle {
 
     fn release_escrow(&self, escrow_id: &str, payload: &str) -> Result<String, AgentLibError> {
         let receipt = KamnAgentHandle::release_escrow_with_payload(self, escrow_id, payload)?;
-        Ok(format!(
-            r#"{{"actor_did":"{}","escrow_id":"{}","state":"{}","receipt_id":"{}","receipt_digest":"{}","action":"{}"}}"#,
-            escape_json(self.identity().did().as_str()),
-            escape_json(receipt.escrow_id.as_str()),
-            escape_json(receipt.state.as_str()),
-            escape_json(receipt.receipt_id.as_str()),
-            escape_json(receipt.receipt_digest.as_str()),
-            escape_json(receipt.action.as_str()),
-        ))
+        let mut result = json!({
+            "actor_did": self.identity().did().as_str(), "escrow_id": receipt.escrow_id,
+            "state": receipt.state, "receipt_id": receipt.receipt_id,
+            "receipt_digest": receipt.receipt_digest, "action": receipt.action,
+        });
+        if let Some(settlement) = receipt.settlement_receipt {
+            result["settlement_receipt_id"] = json!(settlement.receipt_id);
+            result["settlement_receipt_digest"] = json!(settlement.receipt_digest);
+            result["settlement_receipt_action"] = json!(settlement.action);
+            result["settlement_receipt_resource_id"] = json!(settlement.resource_id);
+            result["settlement_receipt_state"] = json!(settlement.state);
+        }
+        Ok(result.to_string())
     }
 
     fn health(&self) -> Result<String, AgentLibError> {
