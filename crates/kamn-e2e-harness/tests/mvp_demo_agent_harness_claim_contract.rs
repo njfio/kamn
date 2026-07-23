@@ -14,6 +14,20 @@ use std::path::Path;
 use std::process::Command;
 use support::*;
 
+const PI_EXTENSION_SOURCES: &[&str] = &[
+    ".pi/extensions/kamn-mvp/index.ts",
+    ".pi/extensions/kamn-mvp/evidence.ts",
+    ".pi/extensions/kamn-mvp/actor-receipts.ts",
+    ".pi/extensions/kamn-mvp/live-mcp-tools.ts",
+    ".pi/extensions/kamn-mvp/live-transaction-tools.ts",
+    ".pi/extensions/kamn-mvp/pi-transaction-tools.ts",
+    ".pi/extensions/kamn-mvp/mcp-session.ts",
+    ".pi/extensions/kamn-mvp/live-task-workflow.ts",
+    ".pi/extensions/kamn-mvp/live-task-coordination.ts",
+    ".pi/extensions/kamn-mvp/live-task-coordination-tools.ts",
+    ".pi/extensions/kamn-mvp/restricted-task-observation.ts",
+];
+
 #[test]
 fn spec_c01_direct_report_without_agent_harness_still_passes() {
     let root = temp_root("direct");
@@ -186,6 +200,14 @@ fn spec_c08_project_local_pi_extension_registers_kamn_tools() {
 }
 
 #[test]
+fn spec_c08_pi_extension_inventory_includes_delegated_mcp_config() {
+    assert!(
+        PI_EXTENSION_SOURCES.contains(&".pi/extensions/kamn-mvp/mcp-session-config.ts"),
+        "Pi extension source inventory must include delegated MCP configuration"
+    );
+}
+
+#[test]
 fn spec_c22_cli_verifies_direct_pi_evidence_without_mutating_report() {
     let root = canonical_run_root("direct-pi-evidence", "run-7074");
     let report_json = direct_report_with_three_agent_claim(&root);
@@ -245,24 +267,14 @@ fn command_output(output: &std::process::Output) -> String {
 }
 
 fn pi_extension_source() -> String {
-    [
-        ".pi/extensions/kamn-mvp/index.ts",
-        ".pi/extensions/kamn-mvp/evidence.ts",
-        ".pi/extensions/kamn-mvp/actor-receipts.ts",
-        ".pi/extensions/kamn-mvp/live-mcp-tools.ts",
-        ".pi/extensions/kamn-mvp/live-transaction-tools.ts",
-        ".pi/extensions/kamn-mvp/pi-transaction-tools.ts",
-        ".pi/extensions/kamn-mvp/mcp-session.ts",
-        ".pi/extensions/kamn-mvp/live-task-workflow.ts",
-        ".pi/extensions/kamn-mvp/live-task-coordination.ts",
-        ".pi/extensions/kamn-mvp/live-task-coordination-tools.ts",
-        ".pi/extensions/kamn-mvp/restricted-task-observation.ts",
-    ]
-    .map(|path| {
-        std::fs::read_to_string(workspace_root().join(path))
-            .unwrap_or_else(|_| panic!("KAMN Pi extension file should exist: {path}"))
-    })
-    .join("\n")
+    PI_EXTENSION_SOURCES
+        .iter()
+        .map(|path| {
+            std::fs::read_to_string(workspace_root().join(path))
+                .unwrap_or_else(|_| panic!("KAMN Pi extension file should exist: {path}"))
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn workspace_root() -> &'static Path {
