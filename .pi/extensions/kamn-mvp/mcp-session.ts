@@ -7,7 +7,13 @@ export type { McpSessionProvenance } from "./mcp-provenance.ts";
 
 type Environment = Record<string, string | undefined>;
 export type LiveMcpAgent = "AGENT_A" | "AGENT_B" | "AGENT_C";
-const PROCESS_ENV_ALLOWLIST = new Set(["HOME", "PATH", "RUST_LOG", "TMPDIR"]);
+const PROCESS_ENV_ALLOWLIST = new Set([
+	"HOME",
+	"PATH",
+	"RUST_LOG",
+	"TMPDIR",
+	"KAMN_SDK_SERVICE_TIMEOUT_SECONDS",
+]);
 const FIXTURE_ENV_ALLOWLIST = new Set([
 	"KAMN_MVP_FAKE_MCP_MODE",
 	"KAMN_MVP_FAKE_MCP_RESULT_MODE",
