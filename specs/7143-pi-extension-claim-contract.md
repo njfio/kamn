@@ -40,12 +40,12 @@ tool boundary.
 
 ## Acceptance Criteria
 
-- [ ] The source inventory includes
+- [x] The source inventory includes
   `.pi/extensions/kamn-mvp/mcp-session-config.ts`.
-- [ ] The contract asserts that the delegated module path remains in the inventory.
-- [ ] `spec_c08_project_local_pi_extension_registers_kamn_tools` passes.
-- [ ] The complete `mvp_demo_agent_harness_claim_contract` test target passes.
-- [ ] No production Pi extension source changes.
+- [x] The contract asserts that the delegated module path remains in the inventory.
+- [x] `spec_c08_project_local_pi_extension_registers_kamn_tools` passes.
+- [x] The complete `mvp_demo_agent_harness_claim_contract` test target passes.
+- [x] No production Pi extension source changes.
 
 ## Files To Touch
 
@@ -83,3 +83,11 @@ tool boundary.
 
 - Run the real `kamn-e2e-harness` claim-contract integration test target from a clean
   checkout.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo clippy -p kamn-e2e-harness --tests -- -D warnings`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_agent_harness_claim_contract`
+  passes all 24 tests.
+- Both touched Rust test files remain below 200 lines.
