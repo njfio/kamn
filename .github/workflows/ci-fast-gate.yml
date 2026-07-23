@@ -93,13 +93,13 @@ jobs:
           if grep -Fq -- "--base-sha" "$tmp_dir/check_governance_feature_commit_ratio.py"; then
             python3 "$tmp_dir/check_governance_feature_commit_ratio.py" \
               --repo-root "$PWD" \
-              --base-sha "$GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA" \
+              --base-sha "${{ github.event.pull_request.base.sha }}" \
               --head-sha "${{ github.event.pull_request.head.sha }}" \
               --window-size "$GOVERNANCE_FEATURE_COMMIT_RATIO_WINDOW_SIZE" \
               --max-governance-ratio "$GOVERNANCE_FEATURE_COMMIT_RATIO_MAX_GOVERNANCE_RATIO" \
               --output-json ci-governance-feature-commit-ratio.json
           else
-            git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..${{ github.event.pull_request.head.sha }}" > ci-pr-commit-subjects.txt
+            git log --no-merges --pretty=format:%s "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" > ci-pr-commit-subjects.txt
             python3 "$tmp_dir/check_governance_feature_commit_ratio.py" \
               --commit-subjects-file ci-pr-commit-subjects.txt \
               --window-size "$GOVERNANCE_FEATURE_COMMIT_RATIO_WINDOW_SIZE" \

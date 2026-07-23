@@ -339,22 +339,30 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - load the checker/config from `origin/${base_ref}` so PRs are judged by the base-branch policy, not by their own modified copy.
 - Fast-gate governance-ratio contract command:
   - `python3 scripts/ci/check_governance_feature_commit_ratio.py --commit-subjects-file /tmp/pr-commit-subjects.txt --window-size 50 --max-governance-ratio 0.20 --output-json /tmp/governance-feature-commit-ratio-report.json`
-- Deterministic coverage command:
-  - `git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..HEAD"`
+- Deterministic PR coverage command:
+  - `git log --no-merges --pretty=format:%s "${PR_BASE_SHA}..${PR_HEAD_SHA}"`
 - Contract test command:
   - `bash scripts/ci/test_check_governance_feature_commit_ratio.sh`
 - Evidence artifact:
   - `ci-governance-feature-commit-ratio.json`
-- Temporary capability moratorium semantics:
-  - start counting after `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` so pre-moratorium governance debt does not cause retroactive failures.
+- Pull request range semantics:
+  - classify only non-merge commits introduced between the explicit pull request base
+    and head SHAs, so unrelated base-branch history cannot fail a new pull request.
+  - retain `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` for direct historical
+    audits and compatibility tests; it does not define the pull request gate range.
+  - a compliant spec-first TDD history has at most one governance-only commit for every
+    four commits that touch capability or mixed surfaces.
+- Historical activation semantics:
   - the current activation file anchors at the restored base-branch compliance head from issue `#6661`, superseding the prior reset from `#6657` once the rolling window on `main` drifted below policy again after `#6648`.
   - `head == GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` returns `status=ok` with `activation_scope_status=head_at_activation_base`.
   - `head` values that are ancestors of `GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA` return `status=ok` with `activation_scope_status=head_precedes_activation_base`.
   - post-activation windows continue to emit `activation_scope_status=post_activation_window` and fail closed on governance-ratio breaches.
   - classify commits from changed-path surfaces: governance-only paths stay governance, while any mixed or capability path counts as capability work regardless of commit prefix.
-  - evaluate the latest 50 non-merge commits in newest-first `git log` order.
-  - require at least 40 of those 50 commits to classify as feature/capability work.
-  - fail closed when governance-classified commits exceed 10 of the evaluated 50-commit window.
+  - cap evaluation at the latest 50 non-merge commits in newest-first `git log` order.
+  - require at least 80 percent of evaluated commits to classify as feature/capability
+    work.
+  - fail closed when governance-classified commits exceed 20 percent of the evaluated
+    pull request range.
 - Policy markers:
   - `governance_feature_commit_ratio_schema_version=kamn.ci.governance-feature-commit-ratio-report.v1`
   - `governance_feature_commit_ratio_reason_taxonomy_version=kamn.ci.governance-feature-commit-ratio-reason-taxonomy.v1`
@@ -362,7 +370,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `governance_feature_commit_ratio_threshold_max=0.20`
   - `governance_feature_commit_ratio_feature_ratio_min=0.80`
   - `governance_feature_commit_ratio_window_size=50`
-  - `governance_feature_commit_ratio_scope=rolling_latest_non_merge_commits`
+  - `governance_feature_commit_ratio_scope=pull_request_non_merge_commits`
   - `governance_feature_commit_ratio_policy_source=base_branch`
   - `governance_feature_commit_ratio_classification_mode=changed_path_surface`
   - `governance_feature_commit_ratio_activation_base_sha_file=.ci/governance-feature-commit-ratio-moratorium.env`
