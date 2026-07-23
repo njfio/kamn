@@ -71,6 +71,7 @@ fn ordered_receipts(actors: &[Actor; 3]) -> Vec<&ServiceReceipt> {
         &actors[0].service_receipts[1],
         &actors[1].service_receipts[1],
         &actors[0].service_receipts[2],
+        &actors[0].service_receipts[3],
     ]
 }
 
