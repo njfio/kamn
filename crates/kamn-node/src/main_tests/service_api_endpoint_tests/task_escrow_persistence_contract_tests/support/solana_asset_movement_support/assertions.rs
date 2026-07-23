@@ -2,14 +2,14 @@ use super::SolanaSettlementFixture;
 use super::Value;
 
 pub(crate) fn assert_released_escrow_has_solana_signature_metadata(released_escrow: &Value) {
-    assert_eq!(released_escrow["state"], "released");
+    assert_eq!(released_escrow["state"], "release-authorized");
     assert_eq!(released_escrow["settlement_network"], "solana:devnet");
     assert_eq!(released_escrow["settlement_commitment"], "finalized");
     assert_base58ish_signature(settlement_tx_signature(released_escrow));
 }
 
 pub(crate) fn assert_released_escrow_has_durable_authority(released_escrow: &Value) {
-    assert_eq!(released_escrow["state"], "released");
+    assert_eq!(released_escrow["state"], "release-authorized");
     assert_eq!(released_escrow["action"], "escrow:release-authorize");
     assert!(released_escrow["receipt_id"]
         .as_str()
