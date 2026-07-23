@@ -26,5 +26,5 @@ fn spec_c02_rejects_v1_client_local_receipt_authority() {
 }
 
 fn write_valid_service_authority_fixture(fixture: &ActorFixture) {
-    fixture.write_v2_all();
+    fixture.write_bound_v2_all();
 }
