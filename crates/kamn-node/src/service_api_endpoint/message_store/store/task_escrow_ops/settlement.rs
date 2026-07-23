@@ -48,7 +48,7 @@ pub(super) fn escrow_status_response(
     }
 }
 
-pub(super) fn status_response(
+pub(super) fn released_response(
     snapshot: &ServiceApiPersistedMessageStoreSnapshot,
     escrow_id: &str,
 ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
@@ -56,10 +56,10 @@ pub(super) fn status_response(
         return Ok(None);
     };
     if record.state != "released" {
-        return Ok(Some(escrow_status_response(record)));
+        return Ok(None);
     }
     let receipt = release_authority_receipt(snapshot, escrow_id)?;
-    Ok(Some(status_response_with_receipt(record, receipt)))
+    Ok(Some(receipt_status_response(record, receipt)))
 }
 
 pub(super) fn release_authority_receipt<'a>(
@@ -86,6 +86,15 @@ pub(super) fn status_response_with_receipt(
     response
 }
 
+pub(super) fn receipt_status_response(
+    record: &ServiceApiPersistedEscrowRecord,
+    receipt: &ServiceApiEscrowTransitionReceiptRecord,
+) -> ServiceApiEscrowStatusBody {
+    let mut response = status_response_with_receipt(record, receipt);
+    response.state = receipt.resulting_state.clone();
+    response
+}
+
 pub(super) fn release_with_metadata(
     snapshot: &mut ServiceApiPersistedMessageStoreSnapshot,
     escrow_id: &str,
@@ -100,7 +109,7 @@ pub(super) fn release_with_metadata(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement escrow missing during release".to_owned())?;
     release_escrow_record(record, Some(settlement));
-    Ok(Some(status_response_with_receipt(record, &receipt)))
+    Ok(Some(receipt_status_response(record, &receipt)))
 }
 
 fn escrow_claim_scope(record: &ServiceApiPersistedEscrowRecord) -> &'static str {

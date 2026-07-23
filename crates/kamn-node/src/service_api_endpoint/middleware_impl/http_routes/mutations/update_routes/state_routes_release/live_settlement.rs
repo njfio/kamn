@@ -45,9 +45,9 @@ fn released_escrow(
     escrow_id: &str,
 ) -> Result<Option<ServiceApiEscrowStatusBody>, Box<Response>> {
     let existing = store
-        .get_escrow_status(escrow_id)
+        .get_released_escrow_status(escrow_id)
         .map_err(persistence_error)?;
-    Ok(existing.filter(|payload| payload.state == "released"))
+    Ok(existing)
 }
 
 fn persist_intent(

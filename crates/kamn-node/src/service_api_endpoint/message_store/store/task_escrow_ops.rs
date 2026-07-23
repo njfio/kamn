@@ -145,12 +145,12 @@ impl ServiceApiMessageStore {
         }))
     }
 
-    pub(crate) fn get_escrow_status(
+    pub(crate) fn get_released_escrow_status(
         &mut self,
         escrow_id: &str,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
         self.refresh_from_disk()?;
-        settlement::status_response(&self.snapshot, escrow_id)
+        settlement::released_response(&self.snapshot, escrow_id)
     }
 
     pub(crate) fn release_escrow(
