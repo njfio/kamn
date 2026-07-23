@@ -42,7 +42,7 @@ fn spec_c03_rust_verifier_rejects_runtime_privacy_and_shared_fact_drift() {
                 agent_c_projection: sha('f'),
                 ..Overrides::default()
             },
-            "PI_RUNTIME_RECEIPT_MISMATCH",
+            "PI_TRANSACTION_FACT_MISMATCH",
         ),
         (
             Overrides {

@@ -81,7 +81,7 @@ pub(crate) fn require_runtime_chain_source(
     if raw == expected_chain {
         return Ok(());
     }
-    if raw.contains("\"schema_version\":\"kamn.mvp.runtime-receipt-chain.v1\"") {
+    if raw.contains("\"schema_version\":\"kamn.service.receipt-chain.v1\"") {
         return Err("RUNTIME_RECEIPT_CHAIN_ARTIFACT_MISMATCH".to_owned());
     }
     Err("RUNTIME_RECEIPT_CHAIN_SOURCE_INVALID".to_owned())
@@ -102,7 +102,7 @@ fn validate_artifact_entry(report_json: &str, artifact: &str) -> Result<(), Stri
 
 fn validate_transcript(raw: &str, claim: &ClaimView<'_>) -> Result<(), String> {
     validate_json_delimiters(raw)?;
-    if raw.contains("\"schema_version\":\"kamn.mvp.runtime-receipt-chain.v1\"") {
+    if raw.contains("\"schema_version\":\"kamn.service.receipt-chain.v1\"") {
         return validate_runtime_chain(raw, claim);
     }
     reject_raw_private_payload(raw)?;

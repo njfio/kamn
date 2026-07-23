@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -6,6 +8,8 @@ use sha2::{Digest, Sha256};
 
 #[path = "pi_transaction_actor_rewrite.rs"]
 mod actor_rewrite;
+#[path = "pi_transaction_actor_v2_fixture.rs"]
+mod actor_v2_fixture;
 #[path = "pi_transaction_receipt_fixture.rs"]
 mod receipt_fixture;
 use actor_rewrite::{rebind_actor, reorder_actor_mutations};
@@ -71,9 +75,27 @@ impl ActorFixture {
     }
 
     pub(crate) fn write_all(&self, overrides: Overrides) {
+        actor_v2_fixture::write_all(self.root.as_path());
+        actor_v2_fixture::apply_overrides(self.root.as_path(), &overrides);
+    }
+
+    pub(crate) fn write_v1_all(&self, overrides: Overrides) {
         self.write_a(&overrides);
         self.write_b(&overrides);
         self.write_c(overrides);
+    }
+
+    pub(crate) fn write_v2_all(&self) {
+        actor_v2_fixture::write_all(self.root.as_path());
+    }
+
+    pub(crate) fn write_bound_v2_all(&self) {
+        actor_v2_fixture::write_bound_all(self.root.as_path());
+    }
+
+    pub(crate) fn write_bound_v2(&self, overrides: Overrides) {
+        actor_v2_fixture::write_bound_all(self.root.as_path());
+        actor_v2_fixture::apply_overrides(self.root.as_path(), &overrides);
     }
 
     #[allow(dead_code)]

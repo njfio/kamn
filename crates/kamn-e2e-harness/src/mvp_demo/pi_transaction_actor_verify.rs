@@ -16,6 +16,7 @@ pub(super) fn read_and_validate_actors(paths: &[String; 3]) -> Result<[Actor; 3]
     require_distinct_u64(&actors, |actor| actor.mcp_child_process_id)?;
     require_distinct_dids(&actors)?;
     require_shared_facts(&actors)?;
+    require_globally_unique_receipts(&actors)?;
     Ok(actors)
 }
 
@@ -32,6 +33,8 @@ fn shared_summary(actors: &[Actor; 3]) -> Result<String, String> {
         "task_id": actors[0].task_id,
         "escrow_id": actors[0].escrow_id,
         "settlement_tx_signature": actors[0].settlement_tx_signature,
+        "receipt_chain_commitment": actors[0].receipt_chain_commitment,
+        "public_commitment": actors[0].public_commitment,
     }))
     .map_err(|_| mismatch())
 }
@@ -72,7 +75,7 @@ fn require_distinct_u64(actors: &[Actor; 3], field: fn(&Actor) -> u64) -> Result
     {
         return Ok(());
     }
-    Err("PI_ACTOR_PROCESS_REUSED".to_owned())
+    Err("PI_TRANSPORT_PROVENANCE_INVALID".to_owned())
 }
 
 fn require_distinct_dids(actors: &[Actor; 3]) -> Result<(), String> {
@@ -82,7 +85,7 @@ fn require_distinct_dids(actors: &[Actor; 3]) -> Result<(), String> {
     {
         return Ok(());
     }
-    Err("PI_ACTOR_IDENTITY_INVALID".to_owned())
+    Err("PI_SERVICE_AUTHORITY_MISMATCH".to_owned())
 }
 
 fn require_shared_facts(actors: &[Actor; 3]) -> Result<(), String> {
@@ -90,12 +93,28 @@ fn require_shared_facts(actors: &[Actor; 3]) -> Result<(), String> {
     if shared_fact_key(&actors[1]) == first && shared_fact_key(&actors[2]) == first {
         return Ok(());
     }
-    Err("PI_TRANSACTION_FACT_MISMATCH".to_owned())
+    Err(mismatch())
+}
+
+fn require_globally_unique_receipts(actors: &[Actor; 3]) -> Result<(), String> {
+    let receipts = actors
+        .iter()
+        .flat_map(|actor| actor.service_receipts.iter())
+        .collect::<Vec<_>>();
+    for (index, receipt) in receipts.iter().enumerate() {
+        if receipts[index + 1..]
+            .iter()
+            .any(|other| other.service_receipt_id == receipt.service_receipt_id)
+        {
+            return Err("PI_SERVICE_AUTHORITY_MISMATCH".to_owned());
+        }
+    }
+    Ok(())
 }
 
 fn shared_fact_key(actor: &Actor) -> String {
     format!(
-        "{}|{}|{}|{}|{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}|{}|{}",
         actor.task_id,
         actor.transaction_id,
         actor.escrow_id,
@@ -103,10 +122,11 @@ fn shared_fact_key(actor: &Actor) -> String {
         actor.network,
         actor.settlement_tx_signature,
         actor.settlement_commitment,
+        actor.receipt_chain_commitment,
         actor.public_commitment
     )
 }
 
 fn mismatch() -> String {
-    "PI_RUNTIME_RECEIPT_MISMATCH".to_owned()
+    "PI_SERVICE_AUTHORITY_MISMATCH".to_owned()
 }

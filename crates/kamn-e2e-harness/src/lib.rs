@@ -16,6 +16,7 @@ pub use mvp_demo::{
     MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
 
+mod agent_transaction_actor_authority;
 mod agent_transaction_demo;
 mod agent_transaction_devnet_evidence;
 mod agent_transaction_evidence;
@@ -24,6 +25,12 @@ mod agent_transaction_persisted_settlement;
 mod agent_transaction_pi_command;
 mod agent_transaction_preflight;
 mod agent_transaction_process;
+mod agent_transaction_receipt_chain;
+mod agent_transaction_receipt_chain_digest;
+mod agent_transaction_receipt_chain_entries;
+mod agent_transaction_receipt_chain_fields;
+mod agent_transaction_receipt_chain_model;
+mod agent_transaction_receipt_chain_settlement;
 mod agent_transaction_rpc;
 mod agent_transaction_rpc_artifact;
 mod agent_transaction_rpc_events;
@@ -46,6 +53,7 @@ pub mod mvp_demo;
 mod run_contract;
 /// Scenario inventory and definitions.
 pub mod scenarios;
+mod service_receipt_commitment;
 /// Offline manifest verification contracts.
 pub mod verify;
 

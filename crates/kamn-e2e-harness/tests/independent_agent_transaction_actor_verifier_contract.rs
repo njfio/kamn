@@ -1,64 +1,62 @@
-use kamn_e2e_harness::{
-    execute_mvp_demo_contract, execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig,
-};
+use kamn_e2e_harness::{execute_verify_mvp_demo_contract, VerifyMvpDemoCommandConfig};
 use std::path::PathBuf;
 
-#[path = "support/mvp_demo_command.rs"]
-mod mvp_demo_command;
+#[path = "support/agent_transaction_demo_fixture.rs"]
+mod agent_transaction_demo_fixture;
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
 use pi_transaction_actor_fixture::{sha, ActorFixture, Overrides};
 
 #[test]
-fn spec_c07_missing_actor_receipt_fails_with_public_chain_code() {
+fn spec_c07_missing_actor_receipt_fails_with_service_authority_code() {
     let fixture = Fixture::new("missing-receipt");
     fixture.rewrite(Overrides {
         agent_a_include_release: false,
         ..Overrides::default()
     });
 
-    fixture.assert_error("RECEIPT_CHAIN_INVALID");
+    fixture.assert_error("PI_SERVICE_AUTHORITY_MISMATCH");
 }
 
 #[test]
-fn spec_c08_reordered_operations_fail_with_public_chain_code() {
+fn spec_c08_reordered_operations_fail_with_service_authority_code() {
     let fixture = Fixture::new("operation-order");
     fixture.actors.reorder_agent_a_mutations();
 
-    fixture.assert_error("RECEIPT_CHAIN_INVALID");
+    fixture.assert_error("PI_SERVICE_AUTHORITY_MISMATCH");
 }
 
 #[test]
-fn spec_c09_verifier_private_projection_fails_with_public_scope_code() {
+fn spec_c09_verifier_private_projection_fails_with_service_authority_code() {
     let fixture = Fixture::new("projection-scope");
     fixture.rewrite(Overrides {
         agent_c_private: Some(sha('f')),
         ..Overrides::default()
     });
 
-    fixture.assert_error("PROJECTION_SCOPE_INVALID");
+    fixture.assert_error("PI_SERVICE_AUTHORITY_MISMATCH");
 }
 
 #[test]
-fn spec_c10_duplicate_agent_identity_fails_with_public_identity_code() {
+fn spec_c10_duplicate_agent_identity_fails_with_service_authority_code() {
     let fixture = Fixture::new("identity-drift");
     fixture.rewrite(Overrides {
         agent_c_did: "kamn:did:a",
         ..Overrides::default()
     });
 
-    fixture.assert_error("AGENT_IDENTITY_INVALID");
+    fixture.assert_error("PI_SERVICE_AUTHORITY_MISMATCH");
 }
 
 #[test]
-fn spec_c24_duplicate_agent_process_fails_with_public_identity_code() {
+fn spec_c24_duplicate_agent_process_fails_with_transport_provenance_code() {
     let fixture = Fixture::new("process-reuse");
     fixture.rewrite(Overrides {
         agent_c_pid: 101,
         ..Overrides::default()
     });
 
-    fixture.assert_error("AGENT_IDENTITY_INVALID");
+    fixture.assert_error("PI_TRANSPORT_PROVENANCE_INVALID");
 }
 
 #[test]
@@ -92,7 +90,7 @@ fn spec_c18_standalone_verifier_rejects_tampered_runtime_actor_source() {
     std::fs::write(path, raw.replace("kamn:did:a", "kamn:did:forged"))
         .expect("tampered actor source");
 
-    fixture.assert_standalone_error("RECEIPT_CHAIN_INVALID");
+    fixture.assert_standalone_error("PI_SERVICE_AUTHORITY_MISMATCH");
 }
 
 struct Fixture {
@@ -104,26 +102,19 @@ impl Fixture {
     fn new(stem: &str) -> Self {
         let root = temp_root(stem);
         let actors = ActorFixture::new();
-        actors.write_all(Overrides::default());
-        actors.rebind_shared_facts();
-        let mut config = mvp_demo_command::devnet_required_demo_config(&root);
-        config.pi_transaction_actor_paths = Some(actors.paths());
-        execute_mvp_demo_contract(&config).expect("valid actor proof bundle");
+        actors.write_bound_v2_all();
+        agent_transaction_demo_fixture::execute(&root, &actors.paths())
+            .expect("valid actor proof bundle");
         Self { root, actors }
     }
 
     fn rewrite(&self, overrides: Overrides) {
-        self.actors.write_all(overrides);
-        self.actors.rebind_shared_facts();
+        self.actors.write_bound_v2(overrides);
     }
 
     fn assert_error(&self, expected: &str) {
         let error = execute_verify_mvp_demo_contract(&VerifyMvpDemoCommandConfig {
-            report: self
-                .root
-                .join("latest/proof/report.json")
-                .display()
-                .to_string(),
+            report: self.report_path().display().to_string(),
             agent_harness_evidence_path: None,
             pi_transaction_actor_paths: Some(self.actors.paths()),
         })
@@ -142,11 +133,11 @@ impl Fixture {
     }
 
     fn report_path(&self) -> PathBuf {
-        self.root.join("latest/proof/report.json")
+        self.root.join("demo/latest/proof/report.json")
     }
 
     fn run_proof(&self) -> PathBuf {
-        only_run_dir(&self.root).join("proof")
+        only_run_dir(&self.root.join("demo")).join("proof")
     }
 }
 

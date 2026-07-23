@@ -35,20 +35,36 @@ fn base_log(evidence: &DevnetSettlementEvidence) -> String {
 }
 
 fn provenance_log(evidence: &DevnetSettlementEvidence) -> String {
-    let values = (
-        evidence.transaction_id.as_deref(),
-        evidence.terms_digest.as_deref(),
-        evidence.fee_lamports,
-        evidence.settlement_receipt_hash.as_deref(),
-        evidence.service_state_digest.as_deref(),
-        evidence.settlement_intent_digest.as_deref(),
-    );
-    let (Some(transaction), Some(terms), Some(fee), Some(receipt), Some(state), Some(intent)) =
-        values
+    let Some((transaction, terms, fee, receipt, state, intent, chain, projected)) =
+        provenance(evidence)
     else {
         return String::new();
     };
     format!(
-        "transaction_id={transaction}\nterms_digest={terms}\nfee_lamports={fee}\nsettlement_receipt_hash={receipt}\nservice_state_digest={state}\nsettlement_intent_digest={intent}\n"
+        "transaction_id={transaction}\nterms_digest={terms}\nfee_lamports={fee}\nsettlement_receipt_hash={receipt}\nservice_state_digest={state}\nsettlement_intent_digest={intent}\nreceipt_chain_commitment={chain}\nservice_receipt_commitment={projected}\n"
     )
+}
+
+type Provenance<'a> = (
+    &'a str,
+    &'a str,
+    u64,
+    &'a str,
+    &'a str,
+    &'a str,
+    &'a str,
+    &'a str,
+);
+
+fn provenance(evidence: &DevnetSettlementEvidence) -> Option<Provenance<'_>> {
+    Some((
+        evidence.transaction_id.as_deref()?,
+        evidence.terms_digest.as_deref()?,
+        evidence.fee_lamports?,
+        evidence.settlement_receipt_hash.as_deref()?,
+        evidence.service_state_digest.as_deref()?,
+        evidence.settlement_intent_digest.as_deref()?,
+        evidence.receipt_chain_commitment.as_deref()?,
+        evidence.service_receipt_commitment.as_deref()?,
+    ))
 }
