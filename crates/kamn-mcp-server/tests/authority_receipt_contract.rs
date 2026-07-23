@@ -56,9 +56,6 @@ macro_rules! unsupported_backend_methods {
         fn fund_escrow(&self, _: &str) -> Result<String, AgentLibError> {
             unsupported()
         }
-        fn release_escrow(&self, _: &str, _: &str) -> Result<String, AgentLibError> {
-            unsupported()
-        }
         fn health(&self) -> Result<String, AgentLibError> {
             unsupported()
         }
@@ -101,6 +98,12 @@ impl McpToolBackend for AuthorityBackend {
         Ok(format!(r#"{{"task_id":"{task_id}","state":"completed"}}"#))
     }
 
+    fn release_escrow(&self, escrow_id: &str, _: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"actor_did":"kamn:did:agent:test","escrow_id":"{escrow_id}","state":"release-authorized","receipt_id":"escrow-transition-receipt-1","receipt_digest":"{DIGEST}","action":"escrow:release-authorize","settlement_receipt_id":"settlement-intent-1","settlement_receipt_digest":"{DIGEST}","settlement_receipt_action":"settlement:confirmed","settlement_receipt_resource_id":"{escrow_id}","settlement_receipt_state":"confirmed"}}"#
+        ))
+    }
+
     unsupported_backend_methods!();
 }
 
@@ -135,6 +138,17 @@ fn mutation_result_is_wrapped_as_service_authority_v1() {
     assert!(response.contains(r#""service_receipt_id":"task-transition-receipt-1""#));
     let digest_field = format!(r#""service_receipt_digest":"{DIGEST}""#);
     assert!(response.contains(digest_field.as_str()));
+}
+
+#[test]
+fn finalized_release_wraps_distinct_settlement_receipt_authority() {
+    let response = dispatch_tool_request_json(
+        &AuthorityBackend,
+        r#"{"id":"settled","tool":"release_escrow","escrow_id":"escrow-1","payload":"{}"}"#,
+    )
+    .expect("dispatch should return an envelope");
+    assert!(response.contains(r#""action":"settlement:confirmed""#));
+    assert!(response.contains(r#""service_receipt_id":"settlement-intent-1""#));
 }
 
 #[test]

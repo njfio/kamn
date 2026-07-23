@@ -1,5 +1,7 @@
 use serde_json::{json, Value};
 
+mod settlement;
+
 pub(crate) const INVALID: &str = "MCP_AUTHORITY_RECEIPT_INVALID";
 pub(crate) const MISSING: &str = "MCP_AUTHORITY_RECEIPT_MISSING";
 
@@ -47,7 +49,17 @@ fn mutation(
     let value = parse(payload)?;
     let fields = MutationFields::parse(&value, resource_key)?;
     fields.validate(request, tool, resource_key, expected_actor)?;
-    Ok(json!({
+    let settlement = settlement::authority(&value, tool, fields.actor, fields.resource)?;
+    Ok(mutation_envelope(&value, tool, &fields, settlement).to_string())
+}
+
+fn mutation_envelope(
+    value: &Value,
+    tool: &str,
+    fields: &MutationFields<'_>,
+    settlement: Option<Value>,
+) -> Value {
+    let mut envelope = json!({
         "schema_version": "kamn.mcp.authority-receipt.v1",
         "authority_kind": "service-receipt",
         "source": "kamn-service",
@@ -58,8 +70,11 @@ fn mutation(
         "service_receipt_id": fields.receipt_id,
         "service_receipt_digest": fields.digest,
         "service_result": value,
-    })
-    .to_string())
+    });
+    if let Some(receipt) = settlement {
+        envelope["settlement_service_receipt"] = receipt;
+    }
+    envelope
 }
 
 struct MutationFields<'a> {
@@ -159,7 +174,7 @@ fn validate_state(tool: &str, state: &str) -> Result<(), &'static str> {
         "accept_task" => state == "accepted",
         "complete_task" => state == "completed",
         "fund_escrow" => state == "funded",
-        "release_escrow" => matches!(state, "release-authorized" | "released"),
+        "release_escrow" => state == "release-authorized",
         _ => false,
     };
     if valid {

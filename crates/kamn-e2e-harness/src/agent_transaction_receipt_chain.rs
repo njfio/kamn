@@ -25,7 +25,7 @@ pub(super) fn recompute(
     let mut entries = mutation_entries(&state, task, escrow, &tasks, &escrows)?;
     require_unique(&entries)?;
     entries.push(settlement_entry(&state, escrow, expected)?);
-    let receipts = durable_receipts(&entries[..entries.len() - 1]);
+    let receipts = durable_receipts(&entries);
     Ok(ReceiptChainEvidence {
         commitment: digest::chain(&entries),
         receipts,

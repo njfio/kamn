@@ -94,6 +94,7 @@ function receipts(role: Role) {
 		receipt(role, "create_task", "task:create", "task-live-7099", "submitted", "1"),
 		receipt(role, "fund_escrow", "escrow:fund", "escrow-live-7099", "funded", "2"),
 		receipt(role, "release_escrow", "escrow:release-authorize", "escrow-live-7099", "release-authorized", "3"),
+		receipt(role, "release_escrow", "settlement:confirmed", "escrow-live-7099", "confirmed", "6"),
 	];
 	if (role === "agent_b") return [
 		receipt(role, "accept_task", "task:accept", "task-live-7099", "accepted", "4"),

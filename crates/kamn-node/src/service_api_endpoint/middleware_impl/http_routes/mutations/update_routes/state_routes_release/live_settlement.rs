@@ -1,10 +1,11 @@
+use super::super::super::super::persistence_error as service_persistence_error;
 use super::*;
 
 mod errors;
 mod release_authority;
+mod submission;
 use errors::{
     invalid_release_key, settlement_evidence_mismatch_error, settlement_intent_conflict_error,
-    settlement_outcome_ambiguous_error, settlement_transaction_expired_error,
 };
 
 type ReleaseResult = Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>>;
@@ -43,12 +44,10 @@ fn released_escrow(
     store: &mut ServiceApiMessageStore,
     escrow_id: &str,
 ) -> Result<Option<ServiceApiEscrowStatusBody>, Box<Response>> {
-    let existing = store.get_escrow_status(escrow_id).map_err(|error| {
-        Box::new(super::super::super::super::persistence_error(
-            error.as_str(),
-        ))
-    })?;
-    Ok(existing.filter(|payload| payload.state == "released"))
+    let existing = store
+        .get_released_escrow_status(escrow_id)
+        .map_err(persistence_error)?;
+    Ok(existing)
 }
 
 fn persist_intent(
@@ -73,43 +72,22 @@ fn submit(
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, Box<Response>> {
-    match live_settlement_dispatch::submit_or_reconcile_live_settlement(config, prepared, escrow_id)
-    {
-        Ok(evidence) => Ok(evidence),
-        Err(error) if error.starts_with("SETTLEMENT_OUTCOME_AMBIGUOUS") => {
-            persist_ambiguous(store, escrow_id)?;
-            Err(Box::new(settlement_outcome_ambiguous_error()))
-        }
-        Err(error) if error == "SETTLEMENT_TRANSACTION_EXPIRED" => {
-            persist_expired(store, escrow_id)?;
-            Err(Box::new(settlement_transaction_expired_error()))
-        }
-        Err(error) => Err(Box::new(live_settlement_evidence_error(error.as_str()))),
-    }
-}
-
-fn persist_ambiguous(
-    store: &mut ServiceApiMessageStore,
-    escrow_id: &str,
-) -> Result<(), Box<Response>> {
-    store
-        .mark_settlement_outcome_ambiguous(escrow_id)
-        .map_err(persistence_error)
-}
-
-fn persist_expired(
-    store: &mut ServiceApiMessageStore,
-    escrow_id: &str,
-) -> Result<(), Box<Response>> {
-    store
-        .mark_settlement_expired(escrow_id)
-        .map_err(persistence_error)
+    let mut persist = || {
+        store
+            .mark_settlement_submitted(escrow_id)
+            .map_err(|error| format!("SETTLEMENT_SUBMISSION_PERSISTENCE_FAILED: {error}"))
+    };
+    let result = live_settlement_dispatch::submit_or_reconcile_live_settlement(
+        config,
+        prepared,
+        escrow_id,
+        &mut persist,
+    );
+    submission::handle(store, escrow_id, result)
 }
 
 fn persistence_error(error: String) -> Box<Response> {
-    Box::new(super::super::super::super::persistence_error(
-        error.as_str(),
-    ))
+    Box::new(service_persistence_error(error.as_str()))
 }
 
 fn validate_evidence(
@@ -124,11 +102,7 @@ fn validate_evidence(
     }
     store
         .mark_settlement_failed(escrow_id, "SETTLEMENT_EVIDENCE_MISMATCH")
-        .map_err(|error| {
-            Box::new(super::super::super::super::persistence_error(
-                error.as_str(),
-            ))
-        })?;
+        .map_err(persistence_error)?;
     Err(Box::new(settlement_evidence_mismatch_error()))
 }
 
@@ -150,11 +124,9 @@ fn resolve_prepared(
     config: &LiveSolanaSettlementConfig,
     escrow_id: &str,
 ) -> Result<PreparedLiveSettlement, Box<Response>> {
-    let existing = store.get_settlement_intent(escrow_id).map_err(|error| {
-        Box::new(super::super::super::super::persistence_error(
-            error.as_str(),
-        ))
-    })?;
+    let existing = store
+        .get_settlement_intent(escrow_id)
+        .map_err(persistence_error)?;
     if let Some(intent) = existing {
         return Ok(prepared_from_intent(intent));
     }

@@ -18,6 +18,8 @@ mod service_models;
 mod service_request_auth;
 #[path = "service_response.rs"]
 mod service_response;
+#[path = "service_settlement_receipt.rs"]
+mod service_settlement_receipt;
 #[path = "service_websocket.rs"]
 mod service_websocket;
 pub use self::service_auth_crypto::{
@@ -26,7 +28,7 @@ pub use self::service_auth_crypto::{
     service_verify_signature_with_public_key,
 };
 use self::service_authority::profile_commitment;
-pub use self::service_authority_models::ServiceTaskTransitionReceipt;
+pub use self::service_authority_models::{ServiceSettlementReceipt, ServiceTaskTransitionReceipt};
 pub(crate) use self::service_client::service_client_bridge_misc_routes::agent_search_payload;
 use self::service_client::HttpResponse;
 pub use self::service_client::ServiceApiClient;
@@ -50,6 +52,7 @@ use self::service_response::{
     expect_status, json_string_array_field, json_string_field, json_u64_field,
     map_non_success_response, parse_http_response, status_from_header,
 };
+use self::service_settlement_receipt::parse_settlement_receipt;
 use self::service_websocket::parse_unmasked_text_frame_payload;
 
 const REQUEST_TIMEOUT_SECONDS_DEFAULT: u64 = 2;

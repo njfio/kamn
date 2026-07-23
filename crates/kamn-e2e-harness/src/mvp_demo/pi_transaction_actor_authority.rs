@@ -76,6 +76,12 @@ fn agent_a_contracts() -> Vec<ReceiptContract> {
             Resource::Escrow,
             "release-authorized",
         ),
+        contract(
+            "release_escrow",
+            "settlement:confirmed",
+            Resource::Escrow,
+            "confirmed",
+        ),
     ]
 }
 

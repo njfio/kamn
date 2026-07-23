@@ -270,6 +270,11 @@ pub(super) fn render_service_api_endpoint_response(
                 receipt_id: None,
                 receipt_digest: None,
                 action: None,
+                settlement_receipt_id: None,
+                settlement_receipt_digest: None,
+                settlement_receipt_action: None,
+                settlement_receipt_resource_id: None,
+                settlement_receipt_state: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
@@ -295,6 +300,11 @@ pub(super) fn render_service_api_endpoint_response(
                 receipt_id: None,
                 receipt_digest: None,
                 action: None,
+                settlement_receipt_id: None,
+                settlement_receipt_digest: None,
+                settlement_receipt_action: None,
+                settlement_receipt_resource_id: None,
+                settlement_receipt_state: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {

@@ -90,6 +90,21 @@ pub(super) fn mark_failed(
     store.persist()
 }
 
+pub(super) fn mark_submitted(
+    store: &mut ServiceApiMessageStore,
+    escrow_id: &str,
+) -> Result<(), String> {
+    store.refresh_from_disk()?;
+    let intent = store
+        .snapshot
+        .settlement_intents
+        .get_mut(escrow_id)
+        .ok_or_else(|| "settlement intent missing during submit".to_owned())?;
+    intent.state = "submitted".to_owned();
+    record_submission(intent);
+    store.persist()
+}
+
 fn record_submission(intent: &mut ServiceApiSettlementIntentRecord) {
     intent.submission_attempt_count = intent.submission_attempt_count.max(1);
 }
@@ -172,9 +187,5 @@ fn release_without_refresh(
     escrow_id: &str,
     settlement: &ServiceApiSettlementMetadata,
 ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
-    let Some(record) = store.snapshot.escrows.get_mut(escrow_id) else {
-        return Ok(None);
-    };
-    super::settlement::release_escrow_record(record, Some(settlement));
-    Ok(Some(super::settlement::escrow_status_response(record)))
+    super::settlement::release_with_metadata(&mut store.snapshot, escrow_id, settlement)
 }

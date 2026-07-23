@@ -100,7 +100,15 @@ fn runtime_environment(config: &AgentTransactionDemoConfig) -> Vec<(&'static str
             "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS",
             config.solana_lamports.to_string(),
         ),
+        (
+            "KAMN_SDK_SERVICE_TIMEOUT_SECONDS",
+            sdk_timeout_seconds(config.rpc_timeout_ms),
+        ),
     ]
+}
+
+fn sdk_timeout_seconds(rpc_timeout_ms: u64) -> String {
+    rpc_timeout_ms.div_ceil(1000).to_string()
 }
 
 fn reject_existing_artifacts(root: &Path) -> Result<(), String> {
@@ -119,4 +127,14 @@ fn reject_existing_artifacts(root: &Path) -> Result<(), String> {
 
 fn path(root: &Path, name: &str) -> String {
     root.join(name).display().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn canonical_children_inherit_supervisor_timeout_budget() {
+        assert_eq!(sdk_timeout_seconds(180_001), "181");
+    }
 }

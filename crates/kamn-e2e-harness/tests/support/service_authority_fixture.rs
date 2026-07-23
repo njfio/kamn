@@ -28,10 +28,24 @@ pub(crate) fn state(recipient: &str) -> Value {
 pub(crate) fn actor_receipts(role: &str) -> Vec<Value> {
     let all = mutation_receipts();
     match role {
-        "agent_a" => vec![all[0].clone(), all[2].clone(), all[4].clone()],
+        "agent_a" => vec![
+            all[0].clone(),
+            all[2].clone(),
+            all[4].clone(),
+            settlement_receipt(),
+        ],
         "agent_b" => vec![all[1].clone(), all[3].clone()],
         _ => Vec::new(),
     }
+}
+
+fn settlement_receipt() -> Value {
+    let fields = settlement_entry();
+    json!({
+        "actor_did": fields[3], "tool": "release_escrow", "action": fields[4],
+        "resource_id": fields[5], "resulting_state": fields[9],
+        "service_receipt_id": fields[0], "service_receipt_digest": fields[1],
+    })
 }
 
 pub(crate) fn commitment() -> String {

@@ -68,6 +68,10 @@ impl ServiceApiMessageStore {
         settlement_intent::mark_ambiguous(self, escrow_id)
     }
 
+    pub(crate) fn mark_settlement_submitted(&mut self, escrow_id: &str) -> Result<(), String> {
+        settlement_intent::mark_submitted(self, escrow_id)
+    }
+
     pub(crate) fn mark_settlement_failed(
         &mut self,
         escrow_id: &str,
@@ -141,15 +145,12 @@ impl ServiceApiMessageStore {
         }))
     }
 
-    pub(crate) fn get_escrow_status(
+    pub(crate) fn get_released_escrow_status(
         &mut self,
         escrow_id: &str,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
         self.refresh_from_disk()?;
-        let Some(record) = self.snapshot.escrows.get(escrow_id) else {
-            return Ok(None);
-        };
-        Ok(Some(escrow_status_response(record)))
+        settlement::released_response(&self.snapshot, escrow_id)
     }
 
     pub(crate) fn release_escrow(

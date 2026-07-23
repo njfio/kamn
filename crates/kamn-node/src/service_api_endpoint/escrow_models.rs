@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiEscrowStatusBody {
     pub(crate) escrow_id: String,
     pub(crate) state: String,
@@ -29,6 +29,16 @@ pub(crate) struct ServiceApiEscrowStatusBody {
     pub(crate) receipt_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) action: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_action: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_resource_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) settlement_receipt_state: Option<String>,
     #[serde(flatten)]
     pub(crate) settlement: ServiceApiSettlementMetadata,
 }

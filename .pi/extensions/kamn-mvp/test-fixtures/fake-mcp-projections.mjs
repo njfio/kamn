@@ -37,10 +37,11 @@ function participant(taskId, name, resultMode) {
 }
 function roleReceipts(suffix) {
 	const entries = suffix === "a"
-		? [["1", "task:create", "task-live-1", "submitted"], ["2", "escrow:fund", "escrow-live-1", "funded"], ["3", "escrow:release-authorize", "escrow-live-1", "release-authorized"]]
+		? [["1", "task:create", "task-live-1", "submitted"], ["2", "escrow:fund", "escrow-live-1", "funded"], ["3", "escrow:release-authorize", "escrow-live-1", "release-authorized"], ["6", "settlement:confirmed", "escrow-live-1", "confirmed"]]
 		: [["4", "task:accept", "task-live-1", "accepted"], ["5", "task:complete", "task-live-1", "completed"]];
 	return entries.map(([id, action, resource_id, resulting_state]) => ({
-		receipt_id: `task-transition-receipt-${id}`, receipt_digest: digest(id), action, resource_id, resulting_state,
+		receipt_id: id === "6" ? "settlement-intent-escrow-live-1" : `task-transition-receipt-${id}`,
+		receipt_digest: digest(id), action, resource_id, resulting_state,
 	}));
 }
 function shared(taskId) {

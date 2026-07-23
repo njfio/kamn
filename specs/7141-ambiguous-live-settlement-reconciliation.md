@@ -1,0 +1,219 @@
+# Issue #7141: Reconcile Ambiguous Live Settlement Before Retry
+
+## Objective
+
+Prevent a lost or truncated release response from making an accepted Solana transfer
+look unsubmitted in durable service state. Persist one submission attempt immediately
+before broadcast, reconcile the deterministic expected signature before any retry, and
+give the canonical MCP SDK enough time to receive finalized settlement responses.
+
+## Inputs And Outputs
+
+### Inputs
+
+- A persisted `prepared` settlement intent containing the signed transaction and expected
+  signature.
+- A live Solana settlement configuration using finalized devnet confirmation.
+- A canonical Pi/MCP escrow-release request with a stable idempotency key.
+- The canonical supervisor RPC timeout budget.
+
+### Outputs
+
+- A durable `submitted` settlement intent with `submission_attempt_count == 1` before the
+  signed transaction reaches the Solana broadcast call.
+- A retry path that queries the expected signature before considering resubmission.
+- One confirmed/released durable result with the expected signature and receipt hash.
+- A confirmed settlement response carrying the durable `escrow:release-authorize`
+  receipt identity and its `release-authorized` resulting state alongside separate
+  Solana settlement metadata and a durably `released` escrow.
+- The same response carrying the durable `settlement:confirmed` receipt identity and
+  digest as distinct service authority, so Pi can match the complete participant
+  projection without promoting transport provenance or projection data into authority.
+- A canonical MCP SDK request timeout that is no shorter than the supervisor RPC budget.
+
+## Boundaries And Non-Goals
+
+- Do not change transaction construction, deterministic signatures, finalized RPC
+  verification, the existing `escrow:release-authorize` authority action, or
+  idempotency keys.
+- Do not add dependencies, chains, mainnet behavior, production custody, or a second
+  settlement path.
+- Do not retry the live transfer observed while diagnosing #7141.
+- Do not weaken failure handling when the signature is absent, failed, expired, or bound
+  to different settlement terms.
+- Do not change the SDK's general two-second default; configure the longer timeout only
+  for the canonical agent-transaction child environment.
+
+## Failure Modes
+
+- The process exits after broadcast but before confirmation or final persistence.
+- The client times out and closes the HTTP connection while Solana confirmation is still
+  running.
+- A retry sees `submitted` durable state and the expected signature is already finalized.
+- A retry sees no signature and the persisted blockhash is valid or expired.
+- Persistence fails immediately before broadcast; the transaction must not be submitted.
+- A callback or adapter failure is translated into a structured hard failure without a
+  second submission.
+- The Pi extension strips the SDK timeout while constructing the MCP child environment,
+  causing the MCP server to retain the two-second SDK default.
+- The Pi extension's MCP request timer remains at ten seconds even when the MCP SDK is
+  configured with the longer canonical timeout.
+- A finalized or replayed release response omits the durable authorization receipt ID,
+  digest, or action and therefore cannot satisfy the SDK authority contract.
+- A finalized response labels the authorization receipt's resulting state as `released`,
+  overstating what the durable receipt digest binds and diverging from projection state.
+- A finalized or replayed response omits the durable `settlement:confirmed` receipt, so
+  MCP records only mutation authority while the participant projection contains an
+  additional settlement entry.
+- Pi accepts a projected settlement receipt that was not delivered as validated MCP
+  service authority.
+- A released escrow has no durable `escrow:release-authorize` receipt; the response must
+  hard-fail instead of fabricating client-local evidence.
+- Conflicting actor, idempotency key, signature, recipient, amount, network, or evidence.
+
+## Acceptance Criteria
+
+- [x] The live adapter invokes a durable write-ahead callback immediately before its one
+  broadcast call.
+- [x] The callback persists `state == "submitted"` and exactly one submission attempt.
+- [x] Callback persistence failure prevents broadcast and hard-fails the release.
+- [x] Ambiguous, successful, and reconciled outcomes retain exactly one durable attempt.
+- [x] Retry queries the expected signature before blockhash validation or resubmission and
+  never broadcasts when that signature is already confirmed.
+- [x] Expired transactions fail closed without a new broadcast.
+- [x] The canonical Pi/MCP child environment sets the SDK timeout from the supervisor RPC
+  timeout budget without changing the SDK-wide default.
+- [x] The Pi extension forwards that timeout to the MCP server while continuing to strip
+  credentials, custody configuration, and unrelated parent environment values.
+- [x] The persistent MCP session request timer is no shorter than the forwarded SDK
+  timeout, so the extension does not terminate an in-flight settlement first.
+- [x] Successful and idempotently replayed live release responses include the same
+  durable `escrow:release-authorize` receipt ID and digest with the receipt-bound
+  `release-authorized` state, while durable escrow state remains `released`.
+- [x] Solana signature, receipt hash, network, and commitment remain separate settlement
+  metadata; the authorization digest is not relabeled as a settlement digest.
+- [x] Successful and idempotently replayed live release responses also include the same
+  durable `settlement:confirmed` receipt ID and digest with `confirmed` state, distinct
+  from the release-authorization receipt and Solana metadata.
+- [x] MCP validates and records both receipt authorities from the release response, and
+  Pi requires the role-scoped service receipt sequence to equal the persisted participant
+  projection without client-side synthesis or ambient projection trust.
+- [x] Pi/MCP service authority and the persisted projection agree on the release receipt's
+  `release-authorized` resulting state without client-side normalization.
+- [x] Regression tests cover write-ahead ordering, callback failure, ambiguous retry,
+  confirmed reconciliation, and canonical timeout propagation.
+- [ ] The fresh-checkout canonical demo and standalone verifier pass with one transfer.
+- [ ] Formatting, strict Clippy, focused tests, `make check`, and relevant CI pass.
+
+## Files To Touch
+
+- `crates/kamn-node/src/service_api_endpoint/live_settlement_dispatch.rs`
+- `crates/kamn-node/src/service_api_endpoint/live_settlement_dispatch/transport.rs`
+- `crates/kamn-node/src/service_api_endpoint/live_settlement_dispatch/test_support.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/store/task_escrow_ops.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/store/task_escrow_ops/settlement_intent.rs`
+- `crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/mutations/update_routes/state_routes_release/live_settlement.rs`
+- `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/`
+- `crates/kamn-e2e-harness/src/agent_transaction_evidence.rs`
+- `crates/kamn-e2e-harness/src/agent_transaction_receipt_chain.rs`
+- `crates/kamn-e2e-harness/src/mvp_demo/pi_transaction_actor_authority.rs`
+- `crates/kamn-e2e-harness/src/mvp_demo/runtime_receipt_chain.rs`
+- `crates/kamn-e2e-harness/tests/support/service_authority_fixture.rs`
+- Focused harness configuration tests.
+- `.pi/extensions/kamn-mvp/mcp-session.ts`
+- `.pi/extensions/kamn-mvp/mcp-session.test.ts`
+- `.pi/extensions/kamn-mvp/mcp-authority.ts`
+- `.pi/extensions/kamn-mvp/pi-service-authority-evidence.ts`
+- `crates/kamn-mcp-server/src/authority.rs`
+- `crates/kamn-mcp-server/src/dispatch.rs`
+- `crates/kamn-sdk/src/service_client.rs`
+- `crates/kamn-sdk/src/service_models.rs`
+- `crates/kamn-sdk/src/service_settlement_receipt.rs`
+- `crates/kamn-node/src/service_api_endpoint/escrow_models.rs`
+- `crates/kamn-node/src/service_api_endpoint/message_store/store/task_escrow_ops/settlement.rs`
+
+## Error Semantics
+
+- Write-ahead persistence failure returns the existing service persistence error and does
+  not call the settlement transport.
+- Confirmed expected signatures return canonical settlement evidence without broadcast.
+- Ambiguous submission or confirmation returns `SETTLEMENT_OUTCOME_AMBIGUOUS` after the
+  durable attempt marker exists.
+- Expired transactions return `SETTLEMENT_TRANSACTION_EXPIRED` without broadcast.
+- Conflicts retain `SETTLEMENT_INTENT_CONFLICT` or `SETTLEMENT_AGREEMENT_MISMATCH`.
+- MCP and SDK boundaries return a complete structured error; no silent fallback or local
+  authority receipt is allowed.
+- A released escrow missing its durable release-authorization receipt returns
+  `ESCROW_RECEIPT_MISSING`; no receipt is synthesized during response serialization.
+- A confirmed settlement missing its durable settlement intent receipt returns
+  `SETTLEMENT_RECEIPT_MISSING`; MCP and Pi reject partial authority rather than dropping
+  the projected settlement entry.
+- A settlement receipt whose actor, signature, hash, network, commitment, amount, action,
+  resource, state, digest, or envelope binding drifts returns
+  `SETTLEMENT_RECEIPT_INVALID` or the boundary-specific authority error.
+
+## Test Plan
+
+### RED
+
+- Require the test adapter to observe durable `submitted` state and attempt count one at
+  its simulated broadcast boundary.
+- Inject write-ahead callback failure and prove the adapter submission count remains zero.
+- Require the canonical child environment to propagate an SDK timeout derived from the
+  configured supervisor RPC timeout.
+- Require the Pi extension MCP spawn environment to retain that timeout without widening
+  its credential and custody allowlist.
+- Require finalized and replayed live releases to expose one stable durable authorization
+  receipt ID, digest, action, and receipt-bound state in the SDK response shape.
+- Require finalized and replayed live releases to expose one stable durable settlement
+  receipt ID and digest, and require MCP/Pi authority to preserve it as the fourth
+  Agent A receipt that matches the participant projection.
+
+### GREEN
+
+- Add a one-shot pre-broadcast callback to settlement submission/reconciliation.
+- Persist the submitted state and attempt count through the message store callback.
+- Thread the callback through real and test dispatch without changing reconciliation
+  ordering.
+- Add canonical SDK timeout propagation to the Pi/MCP runtime environment.
+- Resolve the already-persisted release-authorization receipt when serializing finalized
+  and replayed live release responses, including its actual resulting state.
+- Resolve the confirmed settlement intent when serializing those responses and preserve
+  its receipt identity through MCP validation and Pi actor evidence.
+
+### REFACTOR
+
+- Keep transport, durable intent transitions, route error translation, and supervisor
+  environment calculation in their existing single-purpose modules.
+- Keep functions at or below 25 lines and touched files at or below 200 lines.
+- Remove duplicate attempt mutation while preserving monotonic state transitions.
+
+### INTEGRATION
+
+- Run focused settlement transport, persistence, ambiguous retry, and agent-transaction
+  environment contracts.
+- Run formatting, strict Clippy, touched Rust size policy, and `make check`.
+- From a detached fresh `origin/main` worktree, run the canonical demo followed by the
+  standalone verifier and reconcile exactly one finalized transfer.
+
+## Verification Evidence
+
+- The single detached-worktree attempt at `9b4c33e49` transferred exactly `1,000,000`
+  lamports, persisted a `confirmed` settlement intent with
+  `submission_attempt_count == 1`, and left the escrow durably `released` with finalized
+  Solana metadata. The recipient is retired and was not reused.
+- That attempt stopped at `PI_SERVICE_AUTHORITY_MISMATCH` after settlement because the
+  Rust proof verifier still excluded the settlement receipt even though Pi and the
+  durable chain contained it. The regression at `90fd16d29` reproduced that exact error.
+- At `b9a980755`, a read-only replay of the captured state and actor artifacts generated
+  `/private/tmp/kamn-7141-replayed-proof-b9a980755-retry2/latest/proof/report.json` with
+  `execution_surface == "live-service-persisted-receipt"`, six portable service receipts,
+  and a finalized settlement. The standalone verifier returned `PASS` against all three
+  captured actor artifacts without another submission.
+- Focused verification passed: 4 SDK settlement parser tests, 3 MCP settlement authority
+  tests, 6 node settlement tests, 64 Pi tests, 261 harness unit tests, strict workspace
+  Clippy, rustfmt, diff checks, and the touched-Rust size policy.
+- The full harness run remains non-clean on an unrelated project-local Pi extension
+  marker contract that expects `KAMN_MVP_LIVE_MCP_BINARY` in the split extension entry
+  file. The broader workspace also retains pre-existing governance/policy failures, so
+  the two repository-wide acceptance boxes above remain open pending their own fixes.

@@ -26,8 +26,9 @@ pub(super) fn submit_or_reconcile_live_settlement(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
+    before_submit: &mut dyn FnMut() -> Result<(), String>,
 ) -> Result<LiveSettlementEvidence, String> {
-    transport::submit_or_reconcile_live_settlement(config, prepared, escrow_id)
+    transport::submit_or_reconcile_live_settlement(config, prepared, escrow_id, before_submit)
 }
 
 #[cfg(test)]
@@ -35,5 +36,5 @@ pub(crate) use test_support::{
     set_test_live_solana_settlement_ambiguous_after_submit,
     set_test_live_solana_settlement_evidence_mismatch, set_test_live_solana_settlement_expired,
     set_test_live_solana_settlement_override, set_test_live_solana_settlement_reconcile_confirmed,
-    test_live_settlement_observed_prepared_intent, test_live_solana_settlement_submission_count,
+    test_live_settlement_observed_submitted_intent, test_live_solana_settlement_submission_count,
 };
