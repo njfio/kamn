@@ -41,6 +41,25 @@ impl TempGitRepo {
     }
 }
 
+pub fn pr_range_with_commits(
+    prefix: &str,
+    governance_count: usize,
+    feature_count: usize,
+) -> (TempGitRepo, String, String) {
+    let repo = TempGitRepo::new(prefix);
+    let base = repo.commit_file("src/base.rs", "feat(7145): base");
+    let mut head = base.clone();
+    for index in 0..governance_count {
+        let path = format!("specs/policy-{index}.md");
+        head = repo.commit_file(&path, &format!("docs(7145): policy {index}"));
+    }
+    for index in 0..feature_count {
+        let path = format!("src/feature-{index}.rs");
+        head = repo.commit_file(&path, &format!("test(7145): feature {index}"));
+    }
+    (repo, base, head)
+}
+
 pub fn run_range_checker(
     repo_root: &Path,
     base_sha: &str,

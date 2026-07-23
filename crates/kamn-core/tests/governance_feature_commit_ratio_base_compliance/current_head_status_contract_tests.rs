@@ -1,14 +1,12 @@
-use crate::support::{
-    f64_field, output_json, read_report, run_checker, status, u64_field, MAX_GOVERNANCE_RATIO,
-    WINDOW_SIZE,
-};
+use crate::range_mode_support::{pr_range_with_commits, run_range_checker};
+use crate::support::{f64_field, status, u64_field, MAX_GOVERNANCE_RATIO};
 use serde_json::Value;
 
 #[test]
 fn current_branch_head_restores_ratio_compliance() {
-    let report_path = output_json("6840-current-head");
-    let output = run_checker("HEAD", &report_path);
-    let report = read_report(&report_path);
+    let (repo, base, head) = pr_range_with_commits("7145-current-pr-range", 1, 4);
+    let (output, report) =
+        run_range_checker(repo.root(), &base, &head, "7145-current-pr-range-report");
 
     assert!(
         output.status.success(),
@@ -18,8 +16,7 @@ fn current_branch_head_restores_ratio_compliance() {
     );
     assert_eq!(status(&report), "ok");
     assert_report_invariants(&report);
-    let window = WINDOW_SIZE.parse::<u64>().expect("valid window size");
-    assert_eq!(u64_field(&report, "non_merge_commit_total"), window);
+    assert_eq!(u64_field(&report, "non_merge_commit_total"), 5);
 }
 
 fn assert_report_invariants(report: &Value) {

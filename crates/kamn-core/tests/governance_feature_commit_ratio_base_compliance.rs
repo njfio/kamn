@@ -34,6 +34,8 @@ mod mixed_subject_ratio_contract_tests;
 mod non_merge_total_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/plain_commit_type_contract_tests.rs"]
 mod plain_commit_type_contract_tests;
+#[path = "governance_feature_commit_ratio_base_compliance/pr_range_workflow_contract_tests.rs"]
+mod pr_range_workflow_contract_tests;
 #[path = "governance_feature_commit_ratio_base_compliance/range_mode_support.rs"]
 mod range_mode_support;
 #[path = "governance_feature_commit_ratio_base_compliance/report_schema_contract_tests.rs"]

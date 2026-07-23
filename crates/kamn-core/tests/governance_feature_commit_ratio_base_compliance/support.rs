@@ -3,8 +3,6 @@ use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const BASE_SHA: &str = "d2c2fe1b901a1d53ea419f31778e1d836f2b1323";
-pub const WINDOW_SIZE: &str = "50";
 pub const MAX_GOVERNANCE_RATIO: &str = "0.20";
 
 pub fn repo_root() -> PathBuf {
@@ -34,26 +32,6 @@ pub fn subjects_file(name: &str, subjects: &[&str]) -> PathBuf {
     body.push('\n');
     std::fs::write(&path, body).expect("subjects file should be written");
     path
-}
-
-pub fn run_checker(head_sha: &str, output_json: &PathBuf) -> Output {
-    Command::new("python3")
-        .arg("scripts/ci/check_governance_feature_commit_ratio.py")
-        .arg("--repo-root")
-        .arg(repo_root())
-        .arg("--base-sha")
-        .arg(BASE_SHA)
-        .arg("--head-sha")
-        .arg(head_sha)
-        .arg("--window-size")
-        .arg(WINDOW_SIZE)
-        .arg("--max-governance-ratio")
-        .arg(MAX_GOVERNANCE_RATIO)
-        .arg("--output-json")
-        .arg(output_json)
-        .current_dir(repo_root())
-        .output()
-        .expect("checker should launch")
 }
 
 pub fn run_subject_checker(
