@@ -46,16 +46,16 @@ fail-closed handling for unknown commits.
 
 ## Acceptance Criteria
 
-- [ ] The workflow passes `github.event.pull_request.base.sha` as `--base-sha`.
-- [ ] The workflow passes `github.event.pull_request.head.sha` as `--head-sha`.
-- [ ] The legacy subject fallback uses the same PR base-to-head range.
-- [ ] Checker code, helpers, and threshold configuration remain base-branch-owned.
-- [ ] The 0.20 ceiling, 50-commit cap, path classifier, and unknown failure remain intact.
-- [ ] Deterministic temporary-repository tests replace moving-`HEAD` compliance tests.
-- [ ] One governance and four feature commits pass; one governance and three feature
+- [x] The workflow passes `github.event.pull_request.base.sha` as `--base-sha`.
+- [x] The workflow passes `github.event.pull_request.head.sha` as `--head-sha`.
+- [x] The legacy subject fallback uses the same PR base-to-head range.
+- [x] Checker code, helpers, and threshold configuration remain base-branch-owned.
+- [x] The 0.20 ceiling, 50-commit cap, path classifier, and unknown failure remain intact.
+- [x] Deterministic temporary-repository tests replace moving-`HEAD` compliance tests.
+- [x] One governance and four feature commits pass; one governance and three feature
   commits fail with `governance_commit_ratio_threshold_exceeded`.
-- [ ] Workflow contract tests, checker tests, `make check`, and `make test` pass.
-- [ ] The issue closure and PR summary report shell-surface DoD metrics.
+- [x] Workflow contract tests, checker tests, `make check`, and `make test` pass.
+- [x] The issue closure and PR summary report shell-surface DoD metrics.
 
 ## Files To Touch
 
@@ -63,9 +63,13 @@ fail-closed handling for unknown commits.
 - `.github/workflows/ci-fast-gate.yml`
 - `scripts/ci/test_workflow_scope_policy.sh`
 - `docs/ci/strategy.md`
+- `fixtures/ci/test_file_size_policy_baseline.env`
 - `crates/kamn-core/tests/governance_feature_commit_ratio_base_compliance.rs`
 - Focused modules under
   `crates/kamn-core/tests/governance_feature_commit_ratio_base_compliance/`
+
+The test inventory refresh accounts for three test files merged after the prior baseline
+and the new #7145 workflow contract file. Oversized-test budgets are unchanged.
 
 ## Error Semantics
 
@@ -110,3 +114,25 @@ shell_loc_delta_estimate: 20
 rust_loc_delta_estimate: 30
 shell_to_rust_ratio_delta_estimate: 0.67
 shell_surface_mitigation_issue: None
+
+## Verification Evidence
+
+- `cargo test -p kamn-core --test governance_feature_commit_ratio_base_compliance`
+  passed all 30 tests.
+- `bash scripts/ci/test_workflow_scope_policy.sh` passed.
+- `bash scripts/ci/test_check_governance_feature_commit_ratio.sh` passed.
+- The checker evaluated this branch as five non-merge commits, one governance commit,
+  four feature commits, zero unknown commits, and ratio `0.2`.
+- `cargo test -p kamn-core --test test_file_size_policy` passed all four tests after
+  refreshing the inventory for the merged #7156 MCP dispatch contract.
+- `make check` passed `cargo fmt --check` and workspace/all-targets/all-features Clippy
+  with warnings denied.
+- `RUST_TEST_THREADS=1 make test` passed the full workspace suite, including MCP
+  settlement dispatch, independent receipt verification, and all doc tests.
+
+## Shell-Surface DoD
+
+shell_loc_delta_actual: 0
+rust_loc_delta_actual: +34
+shell_to_rust_ratio_delta_actual: -0.000014
+shell_surface_ratio_target_status: improved
