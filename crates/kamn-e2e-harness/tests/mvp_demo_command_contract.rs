@@ -18,7 +18,7 @@ mod mvp_demo_command;
 mod pi_transaction_actor_fixture;
 use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 
-const LEGACY_TRANSCRIPT_RUNTIME_ACTOR_ERROR: &str = "RECEIPT_CHAIN_INVALID";
+const LEGACY_TRANSCRIPT_RUNTIME_ACTOR_ERROR: &str = "PI_SERVICE_AUTHORITY_MISMATCH";
 
 #[test]
 fn spec_c01_parser_accepts_demo_mvp_with_output_root() {
