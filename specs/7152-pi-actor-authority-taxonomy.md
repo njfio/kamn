@@ -27,13 +27,13 @@ to transaction-bound v2 authority and exact verifier categories.
 
 ## Acceptance Criteria
 
-- [ ] The valid path uses transaction-bound v2 actor evidence.
-- [ ] Duplicate process returns `PI_TRANSPORT_PROVENANCE_INVALID`.
-- [ ] Identity, projection, privacy, shared-fact, and authorization drift return
+- [x] The valid path uses transaction-bound v2 actor evidence.
+- [x] Duplicate process returns `PI_TRANSPORT_PROVENANCE_INVALID`.
+- [x] Identity, projection, privacy, shared-fact, and authorization drift return
   `PI_SERVICE_AUTHORITY_MISMATCH`.
-- [ ] Missing operation and type confusion remain fail-closed.
-- [ ] The complete four-case target passes.
-- [ ] Formatting and strict Clippy pass.
+- [x] Missing operation and type confusion remain fail-closed.
+- [x] The complete four-case target passes.
+- [x] Formatting and strict Clippy pass.
 
 ## Files To Touch
 
@@ -66,3 +66,14 @@ to transaction-bound v2 authority and exact verifier categories.
 ### INTEGRATION
 
 - Run the complete target, formatting, strict Clippy, and adjacent authority contracts.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_pi_transaction_actor_contract
+  --test mvp_demo_pi_service_authority_contract`
+  - Result: 6 passed, 0 failed.
+- `cargo clippy -p kamn-e2e-harness --test mvp_demo_pi_transaction_actor_contract
+  --test mvp_demo_pi_service_authority_contract -- -D warnings`
+- A broader runtime receipt-chain target run exposed a separate unbound success fixture;
+  that target is outside this issue and remains fail-closed.
