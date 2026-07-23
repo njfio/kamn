@@ -23,8 +23,9 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   signed transaction reaches the Solana broadcast call.
 - A retry path that queries the expected signature before considering resubmission.
 - One confirmed/released durable result with the expected signature and receipt hash.
-- A confirmed/released response carrying the durable `escrow:release-authorize`
-  receipt identity alongside the separate Solana settlement metadata.
+- A confirmed settlement response carrying the durable `escrow:release-authorize`
+  receipt identity and its `release-authorized` resulting state alongside separate
+  Solana settlement metadata and a durably `released` escrow.
 - A canonical MCP SDK request timeout that is no shorter than the supervisor RPC budget.
 
 ## Boundaries And Non-Goals
@@ -56,6 +57,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   configured with the longer canonical timeout.
 - A finalized or replayed release response omits the durable authorization receipt ID,
   digest, or action and therefore cannot satisfy the SDK authority contract.
+- A finalized response labels the authorization receipt's resulting state as `released`,
+  overstating what the durable receipt digest binds and diverging from projection state.
 - A released escrow has no durable `escrow:release-authorize` receipt; the response must
   hard-fail instead of fabricating client-local evidence.
 - Conflicting actor, idempotency key, signature, recipient, amount, network, or evidence.
@@ -77,9 +80,12 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - [ ] The persistent MCP session request timer is no shorter than the forwarded SDK
   timeout, so the extension does not terminate an in-flight settlement first.
 - [ ] Successful and idempotently replayed live release responses include the same
-  durable `escrow:release-authorize` receipt ID and digest while reporting `released`.
+  durable `escrow:release-authorize` receipt ID and digest with the receipt-bound
+  `release-authorized` state, while durable escrow state remains `released`.
 - [ ] Solana signature, receipt hash, network, and commitment remain separate settlement
   metadata; the authorization digest is not relabeled as a settlement digest.
+- [ ] Pi/MCP service authority and the persisted projection agree on the release receipt's
+  `release-authorized` resulting state without client-side normalization.
 - [ ] Regression tests cover write-ahead ordering, callback failure, ambiguous retry,
   confirmed reconciliation, and canonical timeout propagation.
 - [ ] The fresh-checkout canonical demo and standalone verifier pass with one transfer.
@@ -126,7 +132,7 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - Require the Pi extension MCP spawn environment to retain that timeout without widening
   its credential and custody allowlist.
 - Require finalized and replayed live releases to expose one stable durable authorization
-  receipt ID, digest, and action in the SDK response shape.
+  receipt ID, digest, action, and receipt-bound state in the SDK response shape.
 
 ### GREEN
 
@@ -136,7 +142,7 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   ordering.
 - Add canonical SDK timeout propagation to the Pi/MCP runtime environment.
 - Resolve the already-persisted release-authorization receipt when serializing finalized
-  and replayed live release responses.
+  and replayed live release responses, including its actual resulting state.
 
 ### REFACTOR
 
