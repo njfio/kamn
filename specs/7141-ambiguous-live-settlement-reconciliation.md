@@ -49,6 +49,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   second submission.
 - The Pi extension strips the SDK timeout while constructing the MCP child environment,
   causing the MCP server to retain the two-second SDK default.
+- The Pi extension's MCP request timer remains at ten seconds even when the MCP SDK is
+  configured with the longer canonical timeout.
 - Conflicting actor, idempotency key, signature, recipient, amount, network, or evidence.
 
 ## Acceptance Criteria
@@ -65,6 +67,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   timeout budget without changing the SDK-wide default.
 - [ ] The Pi extension forwards that timeout to the MCP server while continuing to strip
   credentials, custody configuration, and unrelated parent environment values.
+- [ ] The persistent MCP session request timer is no shorter than the forwarded SDK
+  timeout, so the extension does not terminate an in-flight settlement first.
 - [ ] Regression tests cover write-ahead ordering, callback failure, ambiguous retry,
   confirmed reconciliation, and canonical timeout propagation.
 - [ ] The fresh-checkout canonical demo and standalone verifier pass with one transfer.
