@@ -31,14 +31,18 @@ pub(super) fn submit_or_reconcile_live_settlement(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
+    before_submit: &mut dyn FnMut() -> Result<(), String>,
 ) -> Result<LiveSettlementEvidence, String> {
     #[cfg(test)]
-    if let Some(result) =
-        super::test_support::maybe_submit_test_live_settlement(config, prepared, escrow_id)
-    {
+    if let Some(result) = super::test_support::maybe_submit_test_live_settlement(
+        config,
+        prepared,
+        escrow_id,
+        before_submit,
+    ) {
         return result;
     }
-    submit_or_reconcile_live_settlement_via_rpc(config, prepared, escrow_id)
+    submit_or_reconcile_live_settlement_via_rpc(config, prepared, escrow_id, before_submit)
 }
 
 fn prepare_live_settlement_via_rpc(
@@ -71,6 +75,7 @@ fn submit_or_reconcile_live_settlement_via_rpc(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
+    before_submit: &mut dyn FnMut() -> Result<(), String>,
 ) -> Result<LiveSettlementEvidence, String> {
     let (transaction, expected_signature) = validated_transaction(config, prepared, escrow_id)?;
     let client = settlement_rpc_client(config);
@@ -78,6 +83,7 @@ fn submit_or_reconcile_live_settlement_via_rpc(
         return Ok(settlement_evidence(config, prepared));
     }
     require_resubmittable_blockhash(blockhash_is_valid(&client, &transaction, config)?)?;
+    before_submit()?;
     let signature = submit_live_settlement_transaction(&client, &transaction)?;
     require_expected_signature(&signature, prepared)?;
     let confirmed = confirm_live_settlement_signature(&client, &signature, config)?;

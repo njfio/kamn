@@ -68,6 +68,10 @@ impl ServiceApiMessageStore {
         settlement_intent::mark_ambiguous(self, escrow_id)
     }
 
+    pub(crate) fn mark_settlement_submitted(&mut self, escrow_id: &str) -> Result<(), String> {
+        settlement_intent::mark_submitted(self, escrow_id)
+    }
+
     pub(crate) fn mark_settlement_failed(
         &mut self,
         escrow_id: &str,

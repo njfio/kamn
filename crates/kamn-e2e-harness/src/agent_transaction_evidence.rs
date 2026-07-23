@@ -100,6 +100,10 @@ fn runtime_environment(config: &AgentTransactionDemoConfig) -> Vec<(&'static str
             "KAMN_SERVICE_API_LIVE_SOLANA_SETTLEMENT_LAMPORTS",
             config.solana_lamports.to_string(),
         ),
+        (
+            "KAMN_SDK_SERVICE_TIMEOUT_SECONDS",
+            config.rpc_timeout_ms.div_ceil(1000).to_string(),
+        ),
     ]
 }
 

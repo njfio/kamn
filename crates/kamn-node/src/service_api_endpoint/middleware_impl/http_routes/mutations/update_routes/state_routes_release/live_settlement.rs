@@ -73,9 +73,21 @@ fn submit(
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
 ) -> Result<LiveSettlementEvidence, Box<Response>> {
-    match live_settlement_dispatch::submit_or_reconcile_live_settlement(config, prepared, escrow_id)
-    {
+    let mut persist = || {
+        store
+            .mark_settlement_submitted(escrow_id)
+            .map_err(|error| format!("SETTLEMENT_SUBMISSION_PERSISTENCE_FAILED: {error}"))
+    };
+    match live_settlement_dispatch::submit_or_reconcile_live_settlement(
+        config,
+        prepared,
+        escrow_id,
+        &mut persist,
+    ) {
         Ok(evidence) => Ok(evidence),
+        Err(error) if error.starts_with("SETTLEMENT_SUBMISSION_PERSISTENCE_FAILED") => {
+            Err(persistence_error(error))
+        }
         Err(error) if error.starts_with("SETTLEMENT_OUTCOME_AMBIGUOUS") => {
             persist_ambiguous(store, escrow_id)?;
             Err(Box::new(settlement_outcome_ambiguous_error()))

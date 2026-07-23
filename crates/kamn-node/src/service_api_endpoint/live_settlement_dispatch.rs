@@ -26,8 +26,9 @@ pub(super) fn submit_or_reconcile_live_settlement(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
+    before_submit: &mut dyn FnMut() -> Result<(), String>,
 ) -> Result<LiveSettlementEvidence, String> {
-    transport::submit_or_reconcile_live_settlement(config, prepared, escrow_id)
+    transport::submit_or_reconcile_live_settlement(config, prepared, escrow_id, before_submit)
 }
 
 #[cfg(test)]

@@ -87,6 +87,7 @@ pub(crate) fn maybe_submit_test_live_settlement(
     config: &LiveSolanaSettlementConfig,
     prepared: &PreparedLiveSettlement,
     escrow_id: &str,
+    before_submit: &mut dyn FnMut() -> Result<(), String>,
 ) -> Option<Result<LiveSettlementEvidence, String>> {
     if !*override_state()
         .lock()
@@ -94,13 +95,16 @@ pub(crate) fn maybe_submit_test_live_settlement(
     {
         return None;
     }
-    OBSERVED_SUBMITTED_INTENT.store(submitted_intent_exists(escrow_id), Ordering::SeqCst);
     if RECONCILE_CONFIRMED.load(Ordering::SeqCst) {
         return Some(Ok(success_evidence(config, prepared)));
     }
     if EXPIRED.load(Ordering::SeqCst) {
         return Some(Err("SETTLEMENT_TRANSACTION_EXPIRED".to_owned()));
     }
+    if let Err(error) = before_submit() {
+        return Some(Err(error));
+    }
+    OBSERVED_SUBMITTED_INTENT.store(submitted_intent_exists(escrow_id), Ordering::SeqCst);
     SUBMISSION_COUNT.fetch_add(1, Ordering::SeqCst);
     if AMBIGUOUS_AFTER_SUBMIT.load(Ordering::SeqCst) {
         return Some(Err("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned()));
