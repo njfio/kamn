@@ -27,12 +27,12 @@ settlement receipt authority contract.
 
 ## Acceptance Criteria
 
-- [ ] The release success fixture reports `release-authorized` primary state.
-- [ ] The fixture includes a distinct `settlement:confirmed` service receipt.
-- [ ] The successful response retains the release-authorized service result.
-- [ ] Existing negative authority cases remain rejected.
-- [ ] The complete tool-dispatch and authority-receipt targets pass.
-- [ ] Formatting and strict Clippy pass.
+- [x] The release success fixture reports `release-authorized` primary state.
+- [x] The fixture includes a distinct `settlement:confirmed` service receipt.
+- [x] The successful response retains the release-authorized service result.
+- [x] Existing negative authority cases remain rejected.
+- [x] The complete tool-dispatch and authority-receipt targets pass.
+- [x] Formatting and strict Clippy pass.
 
 ## Files To Touch
 
@@ -64,3 +64,10 @@ settlement receipt authority contract.
 
 - Run the complete tool-dispatch and authority-receipt targets, formatting, strict
   Clippy, and the full workspace gate.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo test -p kamn-mcp-server --test tool_dispatch_contract --test authority_receipt_contract`
+  passed 14 tests.
+- `cargo clippy -p kamn-mcp-server --test tool_dispatch_contract --test authority_receipt_contract -- -D warnings`
