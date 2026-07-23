@@ -102,9 +102,13 @@ fn runtime_environment(config: &AgentTransactionDemoConfig) -> Vec<(&'static str
         ),
         (
             "KAMN_SDK_SERVICE_TIMEOUT_SECONDS",
-            config.rpc_timeout_ms.div_ceil(1000).to_string(),
+            sdk_timeout_seconds(config.rpc_timeout_ms),
         ),
     ]
+}
+
+fn sdk_timeout_seconds(rpc_timeout_ms: u64) -> String {
+    rpc_timeout_ms.div_ceil(1000).to_string()
 }
 
 fn reject_existing_artifacts(root: &Path) -> Result<(), String> {
@@ -131,38 +135,6 @@ mod tests {
 
     #[test]
     fn canonical_children_inherit_supervisor_timeout_budget() {
-        let environment = runtime_environment(&config());
-        let timeout = environment
-            .iter()
-            .find(|(name, _)| *name == "KAMN_SDK_SERVICE_TIMEOUT_SECONDS")
-            .map(|(_, value)| value.as_str());
-        assert_eq!(timeout, Some("181"));
-    }
-
-    fn config() -> AgentTransactionDemoConfig {
-        AgentTransactionDemoConfig {
-            agent_driver: "pi".to_owned(),
-            devnet_mode: "required".to_owned(),
-            solana_rpc_url: "https://api.devnet.solana.com".to_owned(),
-            agent_key_files: ["a".to_owned(), "b".to_owned(), "c".to_owned()],
-            solana_keypair_file: "payer".to_owned(),
-            solana_recipient_pubkey: "recipient".to_owned(),
-            solana_lamports: 1,
-            solana_commitment: "finalized".to_owned(),
-            pi_binary: "pi".to_owned(),
-            pi_provider: "provider".to_owned(),
-            pi_model: "model".to_owned(),
-            pi_extension: "extension".to_owned(),
-            local_node_binary: "node".to_owned(),
-            mcp_binary: "mcp".to_owned(),
-            mcp_endpoint: "http://127.0.0.1:1".to_owned(),
-            output_root: "output".to_owned(),
-            rpc_timeout_ms: 180_001,
-            staging_root: "staging".to_owned(),
-            devnet_settlement_command: None,
-            localhost_signed_demo_command: None,
-            service_api_vertical_slice_command: None,
-            service_api_websocket_command: None,
-        }
+        assert_eq!(sdk_timeout_seconds(180_001), "181");
     }
 }

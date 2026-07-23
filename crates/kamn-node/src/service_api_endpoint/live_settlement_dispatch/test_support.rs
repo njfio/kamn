@@ -89,10 +89,7 @@ pub(crate) fn maybe_submit_test_live_settlement(
     escrow_id: &str,
     before_submit: &mut dyn FnMut() -> Result<(), String>,
 ) -> Option<Result<LiveSettlementEvidence, String>> {
-    if !*override_state()
-        .lock()
-        .expect("override lock should not poison")
-    {
+    if !test_override_enabled() {
         return None;
     }
     if RECONCILE_CONFIRMED.load(Ordering::SeqCst) {
@@ -110,6 +107,12 @@ pub(crate) fn maybe_submit_test_live_settlement(
         return Some(Err("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned()));
     }
     Some(Ok(success_evidence(config, prepared)))
+}
+
+fn test_override_enabled() -> bool {
+    *override_state()
+        .lock()
+        .expect("override lock should not poison")
 }
 
 fn success_evidence(
