@@ -26,11 +26,11 @@ service-authority error semantics introduced by #7135.
 
 ## Acceptance Criteria
 
-- [ ] Legacy transcript/runtime actor disagreement expects
+- [x] Legacy transcript/runtime actor disagreement expects
   `PI_SERVICE_AUTHORITY_MISMATCH`.
-- [ ] Receipt-chain rebuild corruption retains `RECEIPT_CHAIN_INVALID`.
-- [ ] The complete `mvp_demo_command_contract` target passes.
-- [ ] Formatting and strict Clippy pass.
+- [x] Receipt-chain rebuild corruption retains `RECEIPT_CHAIN_INVALID`.
+- [x] The complete `mvp_demo_command_contract` target passes.
+- [x] Formatting and strict Clippy pass.
 
 ## Files To Touch
 
@@ -61,3 +61,10 @@ service-authority error semantics introduced by #7135.
 ### INTEGRATION
 
 - Run the full command-contract target, formatting, and strict Clippy.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_command_contract`
+  - Result: 12 passed, 0 failed.
+- `cargo clippy -p kamn-e2e-harness --test mvp_demo_command_contract -- -D warnings`
