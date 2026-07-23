@@ -59,3 +59,39 @@ impl<'a> SettlementFields<'a> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn partial_settlement_authority_fails_closed() {
+        let value = json!({"settlement_receipt_id": "intent-1"});
+        assert_eq!(
+            authority(&value, "release_escrow", "did:a", "escrow-1"),
+            Err(MISSING)
+        );
+    }
+
+    #[test]
+    fn tampered_settlement_authority_fails_closed() {
+        let value = settlement_value("settlement:failed");
+        assert_eq!(
+            authority(&value, "release_escrow", "did:a", "escrow-1"),
+            Err(INVALID)
+        );
+    }
+
+    #[test]
+    fn released_primary_authority_fails_closed() {
+        assert_eq!(validate_state("release_escrow", "released"), Err(INVALID));
+    }
+
+    fn settlement_value(action: &str) -> Value {
+        json!({
+            "settlement_receipt_id": "intent-1", "settlement_receipt_digest": format!("sha256:{}", "a".repeat(64)),
+            "settlement_receipt_action": action, "settlement_receipt_resource_id": "escrow-1",
+            "settlement_receipt_state": "confirmed",
+        })
+    }
+}

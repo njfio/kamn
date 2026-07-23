@@ -2,7 +2,7 @@ use super::super::*;
 use super::support::{
     assert_persisted_solana_signature_metadata, assert_released_escrow_has_durable_authority,
     assert_released_escrow_has_settlement_authority,
-    assert_released_escrow_has_solana_signature_metadata, assert_replayed_release_authority,
+    assert_released_escrow_has_solana_signature_metadata, assert_replayed_live_release,
     build_live_solana_asset_movement_context, build_task_escrow_snapshot,
     fund_and_release_live_escrow, fund_live_escrow, read_state_json, release_escrow_response,
     release_live_escrow_across_restart, release_live_escrow_twice,
@@ -150,13 +150,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_is_idempo
         amount_lamports: 17,
     });
     let (first, second) = release_live_escrow_twice(&context.harness, 111, 113, 114, 17);
-
-    assert_eq!(
-        settlement_tx_signature(&first),
-        settlement_tx_signature(&second),
-        "repeated release must keep the same Solana transaction signature"
-    );
-    assert_replayed_release_authority(&first, &second);
+    assert_replayed_live_release(&context, &first, &second);
 }
 
 #[test]

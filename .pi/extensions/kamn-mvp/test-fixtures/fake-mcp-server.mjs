@@ -56,6 +56,12 @@ function authorityResult(request, serviceResult) {
 	if (resultMode === "cross-role-authority" && request.tool !== "register") envelope.actor_did = "kamn:did:agent-b";
 	if (resultMode === "wrong-tool-authority" && request.tool !== "register") envelope.tool = "query_task";
 	if (resultMode === "copied-resource-authority" && request.tool !== "register") envelope.resource_id = "task-copied";
+	if (resultMode === "partial-settlement-authority" && request.tool === "release_escrow") {
+		delete envelope.settlement_service_receipt.service_receipt_digest;
+	}
+	if (resultMode === "mismatched-settlement-authority" && request.tool === "release_escrow") {
+		envelope.settlement_service_receipt.service_receipt_id = "settlement-intent-copied";
+	}
 	return envelope;
 }
 

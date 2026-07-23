@@ -123,12 +123,14 @@ impl ServiceApiClient {
 
 pub(super) fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, SdkError> {
     let (receipt_id, receipt_digest) = receipt_fields(body)?;
+    let escrow_id = json_string_field(body, "escrow_id")?;
+    let settlement_receipt = parse_settlement_receipt(body, escrow_id.as_str())?;
     Ok(ServiceEscrowStatus {
-        escrow_id: json_string_field(body, "escrow_id")?,
+        escrow_id,
         state: json_string_field(body, "state")?,
         receipt_id,
         receipt_digest,
         action: json_string_field(body, "action")?,
-        settlement_receipt: parse_settlement_receipt(body)?,
+        settlement_receipt,
     })
 }

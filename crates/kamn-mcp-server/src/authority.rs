@@ -174,7 +174,7 @@ fn validate_state(tool: &str, state: &str) -> Result<(), &'static str> {
         "accept_task" => state == "accepted",
         "complete_task" => state == "completed",
         "fund_escrow" => state == "funded",
-        "release_escrow" => matches!(state, "release-authorized" | "released"),
+        "release_escrow" => state == "release-authorized",
         _ => false,
     };
     if valid {

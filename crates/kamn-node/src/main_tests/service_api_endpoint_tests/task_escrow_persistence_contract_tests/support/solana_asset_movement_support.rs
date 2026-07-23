@@ -1,7 +1,8 @@
 use super::super::super::*;
 use super::{
     accept_task, build_task_escrow_snapshot, complete_task, create_task, fund_escrow,
-    release_escrow, set_state_file_env, unique_named_state_file,
+    read_state_json, release_escrow, release_escrow_response, set_state_file_env,
+    unique_named_state_file,
 };
 use crate::service_api_endpoint::ServiceApiSnapshot;
 use solana_sdk::signer::keypair::{write_keypair_file, Keypair};
@@ -15,7 +16,7 @@ mod context;
 pub(crate) use assertions::{
     assert_persisted_solana_signature_metadata, assert_released_escrow_has_durable_authority,
     assert_released_escrow_has_settlement_authority,
-    assert_released_escrow_has_solana_signature_metadata, assert_replayed_release_authority,
+    assert_released_escrow_has_solana_signature_metadata, assert_replayed_live_release,
     cleanup_solana_settlement_fixture, cleanup_state_file, settlement_tx_signature,
 };
 pub(crate) use context::{

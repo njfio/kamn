@@ -61,7 +61,7 @@ pub(super) fn released_response(
     }
     let receipt = release_authority_receipt(snapshot, escrow_id)?;
     let intent = confirmed_settlement_intent(snapshot, escrow_id)?;
-    Ok(Some(settled_status_response(record, receipt, intent)))
+    Ok(Some(settled_status_response(record, receipt, intent)?))
 }
 
 pub(super) fn release_authority_receipt<'a>(
@@ -101,14 +101,33 @@ fn settled_status_response(
     record: &ServiceApiPersistedEscrowRecord,
     receipt: &ServiceApiEscrowTransitionReceiptRecord,
     intent: &ServiceApiSettlementIntentRecord,
-) -> ServiceApiEscrowStatusBody {
+) -> Result<ServiceApiEscrowStatusBody, String> {
+    validate_settlement_receipt_binding(record, intent)?;
     let mut response = receipt_status_response(record, receipt);
     response.settlement_receipt_id = Some(intent.settlement_intent_id.clone());
     response.settlement_receipt_digest = Some(authority_digest::settlement(intent));
     response.settlement_receipt_action = Some("settlement:confirmed".to_owned());
     response.settlement_receipt_resource_id = Some(intent.escrow_id.clone());
     response.settlement_receipt_state = Some(intent.state.clone());
-    response
+    Ok(response)
+}
+
+fn validate_settlement_receipt_binding(
+    escrow: &ServiceApiPersistedEscrowRecord,
+    intent: &ServiceApiSettlementIntentRecord,
+) -> Result<(), String> {
+    let valid = escrow.release_authority_did.as_deref() == Some(intent.actor_did.as_str())
+        && escrow.settlement.settlement_tx_signature.as_deref()
+            == Some(intent.expected_signature.as_str())
+        && escrow.settlement.settlement_receipt_hash.as_deref()
+            == Some(intent.expected_signature.as_str())
+        && escrow.settlement.settlement_network.as_deref() == Some(intent.network.as_str())
+        && escrow.settlement.settlement_commitment.as_deref() == Some("finalized")
+        && escrow.amount_lamports == Some(intent.amount_lamports)
+        && intent.network == "solana:devnet";
+    valid
+        .then_some(())
+        .ok_or_else(|| "SETTLEMENT_RECEIPT_INVALID: settlement receipt binding mismatch".to_owned())
 }
 
 fn confirmed_settlement_intent<'a>(
@@ -139,7 +158,7 @@ pub(super) fn release_with_metadata(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement escrow missing during release".to_owned())?;
     release_escrow_record(record, Some(settlement));
-    Ok(Some(settled_status_response(record, &receipt, &intent)))
+    Ok(Some(settled_status_response(record, &receipt, &intent)?))
 }
 
 fn escrow_claim_scope(record: &ServiceApiPersistedEscrowRecord) -> &'static str {

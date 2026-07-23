@@ -43,6 +43,28 @@ test("session preserves distinct release and settlement receipt authority", asyn
 	]);
 });
 
+test("session rejects partial settlement receipt authority", async (context) => {
+	const setup = await testSetup();
+	const session = sessionFor(setup, "partial-settlement-authority");
+	context.after(() => session.shutdown());
+	await session.call("register");
+	await assert.rejects(
+		session.call("release_escrow", { escrow_id: "escrow-live-1", payload: "{}" }),
+		/MCP_AUTHORITY_RECEIPT_(MISSING|INVALID)/,
+	);
+});
+
+test("session rejects settlement authority that drifts from the service result", async (context) => {
+	const setup = await testSetup();
+	const session = sessionFor(setup, "mismatched-settlement-authority");
+	context.after(() => session.shutdown());
+	await session.call("register");
+	await assert.rejects(
+		session.call("release_escrow", { escrow_id: "escrow-live-1", payload: "{}" }),
+		/MCP_AUTHORITY_RECEIPT_INVALID/,
+	);
+});
+
 for (const [mode, expected] of [
 	["missing-authority", "MCP_AUTHORITY_RECEIPT_MISSING"],
 	["malformed-authority", "MCP_AUTHORITY_RECEIPT_INVALID"],
