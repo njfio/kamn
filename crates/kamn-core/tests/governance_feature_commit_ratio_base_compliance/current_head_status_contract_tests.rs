@@ -1,16 +1,10 @@
-use crate::range_mode_support::{run_range_checker, TempGitRepo};
+use crate::range_mode_support::{pr_range_with_commits, run_range_checker};
 use crate::support::{f64_field, status, u64_field, MAX_GOVERNANCE_RATIO};
 use serde_json::Value;
 
 #[test]
 fn current_branch_head_restores_ratio_compliance() {
-    let repo = TempGitRepo::new("7145-current-pr-range");
-    let base = repo.commit_file("src/base.rs", "feat(7145): base");
-    let _ = repo.commit_file("specs/7145-policy.md", "docs(7145): policy");
-    let _ = repo.commit_file("src/feature-a.rs", "test(7145): feature a");
-    let _ = repo.commit_file("src/feature-b.rs", "fix(7145): feature b");
-    let _ = repo.commit_file("src/feature-c.rs", "refactor(7145): feature c");
-    let head = repo.commit_file("src/feature-d.rs", "integrate(7145): feature d");
+    let (repo, base, head) = pr_range_with_commits("7145-current-pr-range", 1, 4);
     let (output, report) =
         run_range_checker(repo.root(), &base, &head, "7145-current-pr-range-report");
 
