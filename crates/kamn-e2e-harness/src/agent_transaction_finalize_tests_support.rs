@@ -85,6 +85,16 @@ impl ProofRetryFixture {
         std::fs::write(path, serde_json::to_vec(&state).expect("tampered state"))
             .expect("persisted state tamper");
     }
+
+    pub(super) fn add_create_completion_evidence(&self) {
+        let path = self.root.join("staging/service-api-state.json");
+        let raw = std::fs::read_to_string(&path).expect("persisted state");
+        let mut state: serde_json::Value = serde_json::from_str(raw.as_str()).expect("state JSON");
+        state["task_transition_receipts"][0]["completion_evidence_digest"] =
+            serde_json::json!(format!("sha256:{}", "f".repeat(64)));
+        std::fs::write(path, serde_json::to_vec(&state).expect("tampered state"))
+            .expect("persisted state tamper");
+    }
 }
 
 impl Drop for ProofRetryFixture {

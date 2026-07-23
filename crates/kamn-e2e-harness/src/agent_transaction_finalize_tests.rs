@@ -70,6 +70,17 @@ fn proof_rejects_reordered_durable_service_receipts() {
     assert!(error.contains("SERVICE_RECEIPT_CHAIN_INVALID"), "{error}");
 }
 
+#[test]
+fn proof_rejects_completion_evidence_on_create_receipt() {
+    let _guard = test_lock();
+    let fixture = ProofRetryFixture::new();
+    fixture.add_create_completion_evidence();
+
+    let error = finalize(&fixture.config, &fixture.paths)
+        .expect_err("create receipt completion evidence must fail closed");
+    assert!(error.contains("SERVICE_RECEIPT_CHAIN_INVALID"), "{error}");
+}
+
 fn test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     LOCK.lock()
