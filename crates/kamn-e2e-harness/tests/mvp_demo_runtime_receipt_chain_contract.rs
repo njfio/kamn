@@ -8,7 +8,7 @@ use pi_transaction_actor_fixture::{sha, ActorFixture, Overrides};
 #[test]
 fn spec_c01_builds_service_authority_summary_from_v2_receipts() {
     let fixture = ActorFixture::new();
-    fixture.write_all(Overrides::default());
+    write_valid_receipt_chain_fixture(&fixture);
 
     let raw = build_runtime_receipt_chain_from_actor_paths(&fixture.paths())
         .expect("valid service receipts should build an authority summary");
@@ -109,4 +109,8 @@ fn expected_actions() -> Vec<&'static str> {
         "task:complete",
         "escrow:release-authorize",
     ]
+}
+
+fn write_valid_receipt_chain_fixture(fixture: &ActorFixture) {
+    fixture.write_all(Overrides::default());
 }
