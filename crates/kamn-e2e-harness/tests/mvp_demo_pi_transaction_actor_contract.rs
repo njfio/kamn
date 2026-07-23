@@ -36,7 +36,7 @@ fn spec_c02_rust_verifier_rejects_reused_process_and_identity() {
         ),
     ] {
         let fixture = ActorFixture::new();
-        write_actor_fixture(&fixture, overrides);
+        write_bound_actor_fixture(&fixture, overrides);
         let error = verify_pi_transaction_actor_paths(&fixture.paths())
             .expect_err("reused actor identity must fail");
         assert_eq!(error, expected);
@@ -64,7 +64,7 @@ fn spec_c03_rust_verifier_rejects_runtime_privacy_and_shared_fact_drift() {
         },
     ] {
         let fixture = ActorFixture::new();
-        write_actor_fixture(&fixture, overrides);
+        write_bound_actor_fixture(&fixture, overrides);
         let error = verify_pi_transaction_actor_paths(&fixture.paths())
             .expect_err("tampered actor evidence must fail");
         assert_eq!(error, SERVICE_AUTHORITY_ERROR);
@@ -84,13 +84,13 @@ fn spec_c04_rust_verifier_rejects_missing_operation_and_type_confusion() {
         },
     ] {
         let fixture = ActorFixture::new();
-        write_actor_fixture(&fixture, overrides);
+        write_bound_actor_fixture(&fixture, overrides);
         let error = verify_pi_transaction_actor_paths(&fixture.paths())
             .expect_err("incomplete or type-confused actor evidence must fail");
         assert!(error.contains("PI_"), "unexpected error: {error}");
     }
 }
 
-fn write_actor_fixture(fixture: &ActorFixture, overrides: Overrides) {
+fn write_bound_actor_fixture(fixture: &ActorFixture, overrides: Overrides) {
     fixture.write_bound_v2(overrides);
 }
