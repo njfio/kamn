@@ -26,11 +26,11 @@ fixture required by the independent verifier.
 
 ## Acceptance Criteria
 
-- [ ] The valid service-authority contract uses the transaction-bound v2 fixture.
-- [ ] The v1/client-local authority case remains rejected with
+- [x] The valid service-authority contract uses the transaction-bound v2 fixture.
+- [x] The v1/client-local authority case remains rejected with
   `PI_SERVICE_AUTHORITY_MISMATCH`.
-- [ ] The complete `mvp_demo_pi_service_authority_contract` target passes.
-- [ ] Formatting and strict Clippy pass.
+- [x] The complete `mvp_demo_pi_service_authority_contract` target passes.
+- [x] Formatting and strict Clippy pass.
 
 ## Files To Touch
 
@@ -59,3 +59,15 @@ fixture required by the independent verifier.
 ### INTEGRATION
 
 - Run the full contract target, formatting, and strict Clippy.
+
+## Verification Evidence
+
+- `cargo fmt --all -- --check`
+- `cargo test -p kamn-e2e-harness --test mvp_demo_pi_service_authority_contract
+  --test independent_service_receipt_membership_contract`
+  - Result: 3 passed, 0 failed.
+- `cargo clippy -p kamn-e2e-harness --test mvp_demo_pi_service_authority_contract
+  --test independent_service_receipt_membership_contract -- -D warnings`
+- The adjacent generated-keypair actor fixture failed twice under concurrent target
+  execution with `confirmation payer lookup failed: keypair rejected`; each exact
+  isolated rerun passed. No production or fixture-generation change is included here.
