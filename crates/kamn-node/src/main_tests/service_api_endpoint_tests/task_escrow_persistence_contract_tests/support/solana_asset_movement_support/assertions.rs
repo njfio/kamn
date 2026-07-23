@@ -8,6 +8,17 @@ pub(crate) fn assert_released_escrow_has_solana_signature_metadata(released_escr
     assert_base58ish_signature(settlement_tx_signature(released_escrow));
 }
 
+pub(crate) fn assert_released_escrow_has_durable_authority(released_escrow: &Value) {
+    assert_eq!(released_escrow["state"], "released");
+    assert_eq!(released_escrow["action"], "escrow:release-authorize");
+    assert!(released_escrow["receipt_id"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("escrow-transition-receipt-")));
+    assert!(released_escrow["receipt_digest"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("sha256:")));
+}
+
 pub(crate) fn assert_persisted_solana_signature_metadata(state_json: &Value, escrow_id: &str) {
     let persisted = &state_json["escrows"][escrow_id];
     assert_eq!(persisted["state"], "released");
