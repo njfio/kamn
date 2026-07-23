@@ -262,8 +262,8 @@ if ! grep -Fq -- '--repo-root "$PWD"' "$FAST_WORKFLOW"; then
   exit 1
 fi
 
-if ! grep -Fq -- '--base-sha "$GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to pass the moratorium activation base SHA to the new checker interface" >&2
+if ! grep -Fq -- '--base-sha "${{ github.event.pull_request.base.sha }}"' "$FAST_WORKFLOW"; then
+  echo "expected governance/feature commit ratio gate to pass the pull request base SHA to the checker" >&2
   exit 1
 fi
 
@@ -272,8 +272,8 @@ if ! grep -Fq -- '--head-sha "${{ github.event.pull_request.head.sha }}"' "$FAST
   exit 1
 fi
 
-if ! grep -Fq 'git log --no-merges --pretty=format:%s "${GOVERNANCE_FEATURE_COMMIT_RATIO_MORATORIUM_BASE_SHA}..${{ github.event.pull_request.head.sha }}"' "$FAST_WORKFLOW"; then
-  echo "expected governance/feature commit ratio gate to retain the legacy subject-file fallback path during rollout" >&2
+if ! grep -Fq 'git log --no-merges --pretty=format:%s "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"' "$FAST_WORKFLOW"; then
+  echo "expected legacy governance ratio fallback to evaluate the pull request commit range" >&2
   exit 1
 fi
 
