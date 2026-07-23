@@ -8,6 +8,8 @@ mod mvp_demo_command;
 #[path = "support/pi_transaction_actor_fixture.rs"]
 mod pi_transaction_actor_fixture;
 
+const DIRECT_SETTLEMENT_AUTHORITY_ERROR: &str = "PI_SERVICE_AUTHORITY_MISMATCH";
+
 #[test]
 fn spec_c07_required_verifier_rejects_command_override_settlement() {
     let root = temp_root();
@@ -18,7 +20,7 @@ fn spec_c07_required_verifier_rejects_command_override_settlement() {
     config.pi_transaction_actor_paths = Some(actors.paths());
     let error = execute_mvp_demo_contract(&config)
         .expect_err("override-only required-devnet proof must fail before publication");
-    assert_eq!(error, "SETTLEMENT_EVIDENCE_INVALID");
+    assert_eq!(error, DIRECT_SETTLEMENT_AUTHORITY_ERROR);
 }
 
 fn temp_root() -> std::path::PathBuf {
