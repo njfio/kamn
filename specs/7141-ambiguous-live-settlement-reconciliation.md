@@ -47,6 +47,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - Persistence fails immediately before broadcast; the transaction must not be submitted.
 - A callback or adapter failure is translated into a structured hard failure without a
   second submission.
+- The Pi extension strips the SDK timeout while constructing the MCP child environment,
+  causing the MCP server to retain the two-second SDK default.
 - Conflicting actor, idempotency key, signature, recipient, amount, network, or evidence.
 
 ## Acceptance Criteria
@@ -61,6 +63,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - [ ] Expired transactions fail closed without a new broadcast.
 - [ ] The canonical Pi/MCP child environment sets the SDK timeout from the supervisor RPC
   timeout budget without changing the SDK-wide default.
+- [ ] The Pi extension forwards that timeout to the MCP server while continuing to strip
+  credentials, custody configuration, and unrelated parent environment values.
 - [ ] Regression tests cover write-ahead ordering, callback failure, ambiguous retry,
   confirmed reconciliation, and canonical timeout propagation.
 - [ ] The fresh-checkout canonical demo and standalone verifier pass with one transfer.
@@ -77,6 +81,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - `crates/kamn-node/src/main_tests/service_api_endpoint_tests/task_escrow_persistence_contract_tests/`
 - `crates/kamn-e2e-harness/src/agent_transaction_evidence.rs`
 - Focused harness configuration tests.
+- `.pi/extensions/kamn-mvp/mcp-session.ts`
+- `.pi/extensions/kamn-mvp/mcp-session.test.ts`
 
 ## Error Semantics
 
@@ -99,6 +105,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - Inject write-ahead callback failure and prove the adapter submission count remains zero.
 - Require the canonical child environment to propagate an SDK timeout derived from the
   configured supervisor RPC timeout.
+- Require the Pi extension MCP spawn environment to retain that timeout without widening
+  its credential and custody allowlist.
 
 ### GREEN
 
