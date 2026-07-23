@@ -290,8 +290,16 @@ fn spec_c05_mcp_dispatch_executes_task_and_escrow_tools_with_structured_success(
         "release should succeed: {release}"
     );
     assert!(
-        release.contains(r#""state":"released""#),
-        "release payload should include state: {release}"
+        release.contains(r#""state":"release-authorized""#),
+        "release payload should include authorized state: {release}"
+    );
+    assert!(
+        release.contains(r#""resulting_state":"release-authorized""#),
+        "release authority should remain pre-settlement: {release}"
+    );
+    assert!(
+        release.contains(r#""action":"settlement:confirmed""#),
+        "release should include confirmed settlement authority: {release}"
     );
 }
 
