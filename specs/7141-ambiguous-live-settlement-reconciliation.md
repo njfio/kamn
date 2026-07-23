@@ -23,12 +23,15 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   signed transaction reaches the Solana broadcast call.
 - A retry path that queries the expected signature before considering resubmission.
 - One confirmed/released durable result with the expected signature and receipt hash.
+- A confirmed/released response carrying the durable `escrow:release-authorize`
+  receipt identity alongside the separate Solana settlement metadata.
 - A canonical MCP SDK request timeout that is no shorter than the supervisor RPC budget.
 
 ## Boundaries And Non-Goals
 
 - Do not change transaction construction, deterministic signatures, finalized RPC
-  verification, settlement receipt authority, or idempotency keys.
+  verification, the existing `escrow:release-authorize` authority action, or
+  idempotency keys.
 - Do not add dependencies, chains, mainnet behavior, production custody, or a second
   settlement path.
 - Do not retry the live transfer observed while diagnosing #7141.
@@ -51,6 +54,10 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   causing the MCP server to retain the two-second SDK default.
 - The Pi extension's MCP request timer remains at ten seconds even when the MCP SDK is
   configured with the longer canonical timeout.
+- A finalized or replayed release response omits the durable authorization receipt ID,
+  digest, or action and therefore cannot satisfy the SDK authority contract.
+- A released escrow has no durable `escrow:release-authorize` receipt; the response must
+  hard-fail instead of fabricating client-local evidence.
 - Conflicting actor, idempotency key, signature, recipient, amount, network, or evidence.
 
 ## Acceptance Criteria
@@ -69,6 +76,10 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   credentials, custody configuration, and unrelated parent environment values.
 - [ ] The persistent MCP session request timer is no shorter than the forwarded SDK
   timeout, so the extension does not terminate an in-flight settlement first.
+- [ ] Successful and idempotently replayed live release responses include the same
+  durable `escrow:release-authorize` receipt ID and digest while reporting `released`.
+- [ ] Solana signature, receipt hash, network, and commitment remain separate settlement
+  metadata; the authorization digest is not relabeled as a settlement digest.
 - [ ] Regression tests cover write-ahead ordering, callback failure, ambiguous retry,
   confirmed reconciliation, and canonical timeout propagation.
 - [ ] The fresh-checkout canonical demo and standalone verifier pass with one transfer.
@@ -87,6 +98,7 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - Focused harness configuration tests.
 - `.pi/extensions/kamn-mvp/mcp-session.ts`
 - `.pi/extensions/kamn-mvp/mcp-session.test.ts`
+- `crates/kamn-node/src/service_api_endpoint/message_store/store/task_escrow_ops/settlement.rs`
 
 ## Error Semantics
 
@@ -99,6 +111,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - Conflicts retain `SETTLEMENT_INTENT_CONFLICT` or `SETTLEMENT_AGREEMENT_MISMATCH`.
 - MCP and SDK boundaries return a complete structured error; no silent fallback or local
   authority receipt is allowed.
+- A released escrow missing its durable release-authorization receipt returns
+  `ESCROW_RECEIPT_MISSING`; no receipt is synthesized during response serialization.
 
 ## Test Plan
 
@@ -111,6 +125,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
   configured supervisor RPC timeout.
 - Require the Pi extension MCP spawn environment to retain that timeout without widening
   its credential and custody allowlist.
+- Require finalized and replayed live releases to expose one stable durable authorization
+  receipt ID, digest, and action in the SDK response shape.
 
 ### GREEN
 
@@ -119,6 +135,8 @@ give the canonical MCP SDK enough time to receive finalized settlement responses
 - Thread the callback through real and test dispatch without changing reconciliation
   ordering.
 - Add canonical SDK timeout propagation to the Pi/MCP runtime environment.
+- Resolve the already-persisted release-authorization receipt when serializing finalized
+  and replayed live release responses.
 
 ### REFACTOR
 
