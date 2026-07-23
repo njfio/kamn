@@ -187,9 +187,5 @@ fn release_without_refresh(
     escrow_id: &str,
     settlement: &ServiceApiSettlementMetadata,
 ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
-    let Some(record) = store.snapshot.escrows.get_mut(escrow_id) else {
-        return Ok(None);
-    };
-    super::settlement::release_escrow_record(record, Some(settlement));
-    Ok(Some(super::settlement::escrow_status_response(record)))
+    super::settlement::release_with_metadata(&mut store.snapshot, escrow_id, settlement)
 }

@@ -150,10 +150,7 @@ impl ServiceApiMessageStore {
         escrow_id: &str,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
         self.refresh_from_disk()?;
-        let Some(record) = self.snapshot.escrows.get(escrow_id) else {
-            return Ok(None);
-        };
-        Ok(Some(escrow_status_response(record)))
+        settlement::status_response(&self.snapshot, escrow_id)
     }
 
     pub(crate) fn release_escrow(

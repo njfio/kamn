@@ -48,6 +48,61 @@ pub(super) fn escrow_status_response(
     }
 }
 
+pub(super) fn status_response(
+    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
+    escrow_id: &str,
+) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+    let Some(record) = snapshot.escrows.get(escrow_id) else {
+        return Ok(None);
+    };
+    if record.state != "released" {
+        return Ok(Some(escrow_status_response(record)));
+    }
+    let receipt = release_authority_receipt(snapshot, escrow_id)?;
+    Ok(Some(released_status_response(record, receipt)))
+}
+
+pub(super) fn release_authority_receipt<'a>(
+    snapshot: &'a ServiceApiPersistedMessageStoreSnapshot,
+    escrow_id: &str,
+) -> Result<&'a ServiceApiEscrowTransitionReceiptRecord, String> {
+    snapshot
+        .escrow_transition_receipts
+        .iter()
+        .find(|receipt| {
+            receipt.escrow_id == escrow_id && receipt.action == "escrow:release-authorize"
+        })
+        .ok_or_else(|| "ESCROW_RECEIPT_MISSING: release authorization receipt missing".to_owned())
+}
+
+pub(super) fn released_status_response(
+    record: &ServiceApiPersistedEscrowRecord,
+    receipt: &ServiceApiEscrowTransitionReceiptRecord,
+) -> ServiceApiEscrowStatusBody {
+    let mut response = escrow_status_response(record);
+    response.receipt_id = Some(receipt.receipt_id.clone());
+    response.receipt_digest = Some(authority_digest::escrow(receipt));
+    response.action = Some(receipt.action.clone());
+    response
+}
+
+pub(super) fn release_with_metadata(
+    snapshot: &mut ServiceApiPersistedMessageStoreSnapshot,
+    escrow_id: &str,
+    settlement: &ServiceApiSettlementMetadata,
+) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+    if !snapshot.escrows.contains_key(escrow_id) {
+        return Ok(None);
+    }
+    let receipt = release_authority_receipt(snapshot, escrow_id)?.clone();
+    let record = snapshot
+        .escrows
+        .get_mut(escrow_id)
+        .ok_or_else(|| "settlement escrow missing during release".to_owned())?;
+    release_escrow_record(record, Some(settlement));
+    Ok(Some(released_status_response(record, &receipt)))
+}
+
 fn escrow_claim_scope(record: &ServiceApiPersistedEscrowRecord) -> &'static str {
     if record.settlement.settlement_tx_signature.is_some()
         && record.settlement.settlement_network.as_deref() == Some("solana:devnet")
