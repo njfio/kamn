@@ -130,9 +130,7 @@ impl McpToolBackend for TestBackend {
     }
 
     fn release_escrow(&self, escrow_id: &str, _payload: &str) -> Result<String, AgentLibError> {
-        Ok(format!(
-            r#"{{"actor_did":"kamn:did:agent:test","escrow_id":"{escrow_id}","state":"release-authorized","receipt_id":"escrow-release","receipt_digest":"{DIGEST}","action":"escrow:release-authorize","settlement_receipt_id":"settlement-intent-1","settlement_receipt_digest":"{DIGEST}","settlement_receipt_action":"settlement:confirmed","settlement_receipt_resource_id":"{escrow_id}","settlement_receipt_state":"confirmed"}}"#
-        ))
+        Ok(bound_release_authority(escrow_id))
     }
 
     fn health(&self) -> Result<String, AgentLibError> {
@@ -153,6 +151,12 @@ impl McpToolBackend for TestBackend {
             r#"{{"message_id":"{message_id}","tx_hash":"{tx_hash}","block_height":{block_height},"finality":"{finality}","verified":{verified}}}"#
         ))
     }
+}
+
+fn bound_release_authority(escrow_id: &str) -> String {
+    format!(
+        r#"{{"actor_did":"kamn:did:agent:test","escrow_id":"{escrow_id}","state":"release-authorized","receipt_id":"escrow-release","receipt_digest":"{DIGEST}","action":"escrow:release-authorize","settlement_receipt_id":"settlement-intent-1","settlement_receipt_digest":"{DIGEST}","settlement_receipt_action":"settlement:confirmed","settlement_receipt_resource_id":"{escrow_id}","settlement_receipt_state":"confirmed"}}"#
+    )
 }
 
 #[test]
