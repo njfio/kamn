@@ -52,10 +52,10 @@ pub(super) fn response(
     record: &ServiceApiPersistedEscrowRecord,
     receipt: Option<&ServiceApiEscrowTransitionReceiptRecord>,
 ) -> ServiceApiEscrowStatusBody {
-    let mut response = escrow_status_response(record);
-    response.receipt_id = receipt.map(|value| value.receipt_id.clone());
-    response.receipt_digest = receipt.map(authority_digest::escrow);
-    response.action = receipt.map(|value| value.action.clone());
+    let mut response = receipt.map_or_else(
+        || escrow_status_response(record),
+        |value| status_response_with_receipt(record, value),
+    );
     if let Some(receipt) = receipt {
         response.state = receipt.resulting_state.clone();
     }

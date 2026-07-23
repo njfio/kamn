@@ -1,5 +1,5 @@
 use super::super::super::*;
-use super::settlement::{escrow_status_response, next_escrow_id};
+use super::settlement::{escrow_status_response, next_escrow_id, status_response_with_receipt};
 
 mod agreement;
 mod receipt;

@@ -19,6 +19,13 @@ pub(crate) fn assert_released_escrow_has_durable_authority(released_escrow: &Val
         .is_some_and(|value| value.starts_with("sha256:")));
 }
 
+pub(crate) fn assert_replayed_release_authority(first: &Value, second: &Value) {
+    assert_released_escrow_has_durable_authority(first);
+    assert_released_escrow_has_durable_authority(second);
+    assert_eq!(first["receipt_id"], second["receipt_id"]);
+    assert_eq!(first["receipt_digest"], second["receipt_digest"]);
+}
+
 pub(crate) fn assert_persisted_solana_signature_metadata(state_json: &Value, escrow_id: &str) {
     let persisted = &state_json["escrows"][escrow_id];
     assert_eq!(persisted["state"], "released");

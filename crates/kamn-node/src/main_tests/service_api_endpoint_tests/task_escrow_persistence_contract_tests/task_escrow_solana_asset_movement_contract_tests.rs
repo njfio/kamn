@@ -1,9 +1,10 @@
 use super::super::*;
 use super::support::{
     assert_persisted_solana_signature_metadata, assert_released_escrow_has_durable_authority,
-    assert_released_escrow_has_solana_signature_metadata, build_live_solana_asset_movement_context,
-    build_task_escrow_snapshot, fund_and_release_live_escrow, fund_live_escrow, read_state_json,
-    release_escrow_response, release_live_escrow_across_restart, release_live_escrow_twice,
+    assert_released_escrow_has_solana_signature_metadata, assert_replayed_release_authority,
+    build_live_solana_asset_movement_context, build_task_escrow_snapshot,
+    fund_and_release_live_escrow, fund_live_escrow, read_state_json, release_escrow_response,
+    release_live_escrow_across_restart, release_live_escrow_twice,
     set_live_solana_bridge_rpc_url_env, settlement_tx_signature, LiveSolanaAssetMovementParams,
 };
 
@@ -153,10 +154,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_is_idempo
         settlement_tx_signature(&second),
         "repeated release must keep the same Solana transaction signature"
     );
-    assert_released_escrow_has_durable_authority(&first);
-    assert_released_escrow_has_durable_authority(&second);
-    assert_eq!(first["receipt_id"], second["receipt_id"]);
-    assert_eq!(first["receipt_digest"], second["receipt_digest"]);
+    assert_replayed_release_authority(&first, &second);
 }
 
 #[test]

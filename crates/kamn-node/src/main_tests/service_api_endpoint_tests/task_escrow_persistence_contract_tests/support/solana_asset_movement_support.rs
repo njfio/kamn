@@ -14,8 +14,8 @@ mod context;
 
 pub(crate) use assertions::{
     assert_persisted_solana_signature_metadata, assert_released_escrow_has_durable_authority,
-    assert_released_escrow_has_solana_signature_metadata, cleanup_solana_settlement_fixture,
-    cleanup_state_file, settlement_tx_signature,
+    assert_released_escrow_has_solana_signature_metadata, assert_replayed_release_authority,
+    cleanup_solana_settlement_fixture, cleanup_state_file, settlement_tx_signature,
 };
 pub(crate) use context::{
     build_live_solana_asset_movement_context, release_live_escrow_across_restart,
