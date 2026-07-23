@@ -71,14 +71,16 @@ fn proof_rejects_reordered_durable_service_receipts() {
 }
 
 #[test]
-fn proof_rejects_completion_evidence_on_create_receipt() {
+fn proof_rejects_completion_evidence_on_noncomplete_receipts() {
     let _guard = test_lock();
-    let fixture = ProofRetryFixture::new();
-    fixture.add_create_completion_evidence();
+    for index in [0, 1] {
+        let fixture = ProofRetryFixture::new();
+        fixture.add_noncomplete_completion_evidence(index);
 
-    let error = finalize(&fixture.config, &fixture.paths)
-        .expect_err("create receipt completion evidence must fail closed");
-    assert!(error.contains("SERVICE_RECEIPT_CHAIN_INVALID"), "{error}");
+        let error = finalize(&fixture.config, &fixture.paths)
+            .expect_err("non-complete receipt evidence must fail closed");
+        assert!(error.contains("SERVICE_RECEIPT_CHAIN_INVALID"), "{error}");
+    }
 }
 
 fn test_lock() -> std::sync::MutexGuard<'static, ()> {

@@ -8,6 +8,7 @@ use super::agent_transaction_persisted_settlement::{
 use super::agent_transaction_rpc_artifact::{confirm_transfer, ConfirmedTransfer};
 use super::AgentTransactionDemoConfig;
 use crate::mvp_demo::{verify_pi_transaction_actor_paths, DevnetSettlementEvidence};
+use crate::service_receipt_commitment::{commitment, ReceiptProjection};
 
 const EVIDENCE_ERROR: &str = "AGENT_TRANSACTION_SETTLEMENT_INVALID";
 
@@ -125,6 +126,7 @@ fn apply_provenance(
     persisted: PersistedSettlement,
     rpc: ConfirmedTransfer,
 ) {
+    evidence.service_receipt_commitment = Some(receipt_commitment(&persisted));
     evidence.task_id = Some(actor.task_id);
     evidence.transaction_id = Some(persisted.transaction_id);
     evidence.terms_digest = Some(persisted.terms_digest);
@@ -134,6 +136,22 @@ fn apply_provenance(
     evidence.settlement_intent_digest = Some(persisted.intent_digest);
     evidence.receipt_chain_commitment = Some(persisted.receipt_chain_commitment);
     evidence.authoritative_rpc_artifact = Some(rpc.artifact_path.display().to_string());
+}
+
+fn receipt_commitment(persisted: &PersistedSettlement) -> String {
+    let receipts = persisted
+        .service_receipts
+        .iter()
+        .map(|receipt| ReceiptProjection {
+            actor_did: receipt.actor_did.as_str(),
+            action: receipt.action.as_str(),
+            resource_id: receipt.resource_id.as_str(),
+            resulting_state: receipt.resulting_state.as_str(),
+            receipt_id: receipt.receipt_id.as_str(),
+            receipt_digest: receipt.receipt_digest.as_str(),
+        })
+        .collect::<Vec<_>>();
+    commitment(&receipts)
 }
 
 fn string_field(value: &Value, field: &str) -> Result<String, String> {

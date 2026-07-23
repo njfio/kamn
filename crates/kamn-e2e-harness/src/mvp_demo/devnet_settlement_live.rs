@@ -100,6 +100,7 @@ fn evidence(
         service_state_digest: None,
         settlement_intent_digest: None,
         receipt_chain_commitment: None,
+        service_receipt_commitment: None,
         authoritative_rpc_artifact: Some(result.confirmation.display().to_string()),
     }
 }

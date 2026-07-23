@@ -25,6 +25,8 @@ authority substitute.
   authorization, task, escrow, and confirmed-settlement records.
 - Settlement evidence that binds the durable receipt-chain commitment to the one
   finalized Solana transfer.
+- A `kamn.service.receipt-projection.v1` commitment over the allowlisted actor receipt
+  fields, computed independently from durable state and from the portable actor bundle.
 - Bundled v2 actor evidence whose three actors share the same receipt-chain and public
   commitments while retaining role-private receipt disclosure.
 - A standalone verification result that rejects any proof satisfiable by client-local
@@ -52,6 +54,10 @@ authority substitute.
   resource, state transition, idempotency key, settlement binding, or digest.
 - Any actor receipt-chain or public commitment disagreement.
 - Any durable commitment disagreement with the actor or settlement proof commitment.
+- Any portable actor receipt whose allowlisted projection does not match the durable
+  service receipt projection bound into settlement evidence.
+- Completion evidence on create or accept receipts, or missing/mismatched completion
+  evidence on the complete receipt.
 - A path outside the expected proof root, missing artifact, malformed JSON, or digest
   mismatch.
 - More than one settlement submission attempt, a changed stable receipt identity, or an
@@ -75,6 +81,9 @@ authority substitute.
   identity, one settlement attempt, and no duplicate task, escrow, or Solana action.
 - [x] The existing settlement receipt and independent Solana RPC proof remain mandatory
   and prove exactly one finalized transfer.
+- [x] Portable actor receipt IDs and digests are bound to durable service state through an
+  independently recomputed projection commitment carried by settlement evidence.
+- [x] Durable task receipts accept completion evidence only for `task:complete`.
 - [ ] `make demo-agent-transaction` and standalone proof verification use service-backed
   authority from a fresh checkout.
 - [x] Tamper, crash, replay, privacy, and restart cases fail closed or pass only with the
@@ -121,6 +130,9 @@ authority substitute.
   action, order, state, authorization, idempotency, settlement, and retry field.
 - Add portable proof tests requiring the independently recomputed commitment in the
   settlement artifact and matching it against the bundled actors.
+- Add a portable forgery test that changes a receipt ID, refreshes actor and transcript
+  digests, and still fails against the durable projection commitment.
+- Add durable-state tests rejecting completion evidence on create and accept receipts.
 - Add path escape, copied receipt, replay, privacy, restart, and ambiguous-response cases.
 
 ### GREEN
@@ -131,6 +143,8 @@ authority substitute.
   provenance.
 - Bind the recomputed commitment into settlement evidence and the portable artifact, then
   require it throughout canonical and standalone verification.
+- Bind a separately domain-tagged receipt projection commitment into the settlement claim,
+  log, artifact, portable chain, and standalone actor-bundle verification path.
 
 ### REFACTOR
 
@@ -162,6 +176,8 @@ authority substitute.
 - Canonical post-child-exit agent transaction and standalone verifier contract.
 - Focused service-authority, v2 actor, portable receipt-chain, settlement, retry/restart,
   privacy, tamper, path, and error-boundary contracts.
+- Review regressions: forged portable receipt membership and create-receipt completion
+  evidence both pass only after the authority fixes.
 - Package library tests: 259 passed before integration-binary startup.
 
 ### Incomplete Local Lanes

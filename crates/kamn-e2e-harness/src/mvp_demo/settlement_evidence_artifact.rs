@@ -35,6 +35,7 @@ pub(super) struct SettlementEvidenceArtifact {
     pub(super) service_state_digest: Option<String>,
     pub(super) settlement_intent_digest: Option<String>,
     pub(super) receipt_chain_commitment: Option<String>,
+    pub(super) service_receipt_commitment: Option<String>,
     pub(super) authoritative_rpc_digest: Option<String>,
     evidence_digest: String,
 }
@@ -90,6 +91,7 @@ fn artifact_from_evidence(
         service_state_digest: evidence.service_state_digest.clone(),
         settlement_intent_digest: evidence.settlement_intent_digest.clone(),
         receipt_chain_commitment: evidence.receipt_chain_commitment.clone(),
+        service_receipt_commitment: evidence.service_receipt_commitment.clone(),
         authoritative_rpc_digest,
         evidence_digest: String::new(),
     }
@@ -135,6 +137,10 @@ fn valid_source(artifact: &SettlementEvidenceArtifact) -> bool {
             artifact.evidence_source == "kamn-live-service-persisted-receipt+solana-rpc"
                 && artifact
                     .receipt_chain_commitment
+                    .as_deref()
+                    .is_some_and(is_sha256)
+                && artifact
+                    .service_receipt_commitment
                     .as_deref()
                     .is_some_and(is_sha256)
         }

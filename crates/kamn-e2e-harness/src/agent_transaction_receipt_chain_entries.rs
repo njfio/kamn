@@ -31,12 +31,21 @@ fn task_entry(state: &State, task: &Task, receipt: &TaskReceipt) -> Result<Chain
     let valid = receipt.actor_did == actor
         && task.transaction_id.as_deref() == Some(receipt.transaction_id.as_str())
         && task.terms_digest.as_deref() == Some(receipt.terms_digest.as_str())
-        && (receipt.action != "task:complete"
-            || task.completion_evidence_digest == receipt.completion_evidence_digest);
+        && valid_completion_evidence(task, receipt);
     if !valid {
         return Err(invalid());
     }
     entry(state, Mutation::Task(receipt), actor)
+}
+
+fn valid_completion_evidence(task: &Task, receipt: &TaskReceipt) -> bool {
+    match receipt.action.as_str() {
+        "task:complete" => {
+            receipt.completion_evidence_digest.is_some()
+                && task.completion_evidence_digest == receipt.completion_evidence_digest
+        }
+        _ => receipt.completion_evidence_digest.is_none(),
+    }
 }
 
 fn escrow_entry(

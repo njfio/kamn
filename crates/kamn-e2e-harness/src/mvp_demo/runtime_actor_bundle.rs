@@ -82,8 +82,11 @@ fn require_settlement_commitment(report: &Value, chain: &str) -> Result<(), Stri
     let evidence =
         super::settlement_evidence_artifact::read_settlement_evidence_artifact(Path::new(path))?;
     let chain: Value = serde_json::from_str(chain).map_err(|_| invalid())?;
-    let expected = chain["receipt_chain_commitment"].as_str();
-    if evidence.receipt_chain_commitment.as_deref() == expected {
+    let chain_matches =
+        evidence.receipt_chain_commitment.as_deref() == chain["receipt_chain_commitment"].as_str();
+    let receipts_match = evidence.service_receipt_commitment.as_deref()
+        == chain["service_receipt_commitment"].as_str();
+    if chain_matches && receipts_match {
         return Ok(());
     }
     Err(invalid())

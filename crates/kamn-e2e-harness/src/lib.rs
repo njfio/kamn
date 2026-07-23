@@ -53,6 +53,7 @@ pub mod mvp_demo;
 mod run_contract;
 /// Scenario inventory and definitions.
 pub mod scenarios;
+mod service_receipt_commitment;
 /// Offline manifest verification contracts.
 pub mod verify;
 

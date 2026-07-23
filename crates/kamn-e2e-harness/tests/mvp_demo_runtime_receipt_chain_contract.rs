@@ -17,8 +17,15 @@ fn spec_c01_builds_service_authority_summary_from_v2_receipts() {
     assert_eq!(chain["schema_version"], "kamn.service.receipt-chain.v1");
     assert_eq!(actions(&chain), expected_actions());
     assert_eq!(chain["receipt_chain_commitment"], sha('c'));
+    assert_sha256(&chain["service_receipt_commitment"]);
     assert!(!raw.contains("transport_response_digests"));
     assert!(!raw.contains("participant_role"));
+}
+
+fn assert_sha256(value: &Value) {
+    let value = value.as_str().expect("receipt projection commitment");
+    assert_eq!(value.len(), 71);
+    assert!(value.starts_with("sha256:"));
 }
 
 #[test]

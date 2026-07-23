@@ -36,7 +36,7 @@ fn require_provenance(log: &str, evidence: &SettlementEvidenceArtifact) -> Resul
     )
 }
 
-fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 5] {
+fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 7] {
     [
         ("transaction_id", evidence.transaction_id.as_deref()),
         ("terms_digest", evidence.terms_digest.as_deref()),
@@ -51,6 +51,14 @@ fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, O
         (
             "settlement_intent_digest",
             evidence.settlement_intent_digest.as_deref(),
+        ),
+        (
+            "receipt_chain_commitment",
+            evidence.receipt_chain_commitment.as_deref(),
+        ),
+        (
+            "service_receipt_commitment",
+            evidence.service_receipt_commitment.as_deref(),
         ),
     ]
 }

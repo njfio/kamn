@@ -7,7 +7,9 @@ pub(super) fn validate_settlement(
     evidence: &SettlementEvidenceArtifact,
 ) -> Result<(), String> {
     let claim = claim(report)?;
-    validate_claim_strings(claim, evidence)?;
+    validate_claim_context(claim, evidence)?;
+    validate_claim_signatures(claim, evidence)?;
+    validate_optional_binding(claim, evidence)?;
     require_claim_u64(claim, "lamports", evidence.lamports)?;
     validate_direct_provenance(claim, evidence)?;
     validate_finality(evidence)?;
@@ -32,7 +34,7 @@ fn validate_direct_provenance(
     validate_provenance_shape(evidence)
 }
 
-fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 6] {
+fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, Option<&str>); 7] {
     [
         ("transaction_id", evidence.transaction_id.as_deref()),
         ("terms_digest", evidence.terms_digest.as_deref()),
@@ -52,6 +54,10 @@ fn provenance_fields(evidence: &SettlementEvidenceArtifact) -> [(&'static str, O
             "receipt_chain_commitment",
             evidence.receipt_chain_commitment.as_deref(),
         ),
+        (
+            "service_receipt_commitment",
+            evidence.service_receipt_commitment.as_deref(),
+        ),
     ]
 }
 
@@ -60,6 +66,7 @@ fn validate_provenance_shape(evidence: &SettlementEvidenceArtifact) -> Result<()
         evidence.service_state_digest.as_deref(),
         evidence.settlement_intent_digest.as_deref(),
         evidence.receipt_chain_commitment.as_deref(),
+        evidence.service_receipt_commitment.as_deref(),
     ]
     .into_iter()
     .all(|value| value.is_some_and(is_sha256));
@@ -75,15 +82,6 @@ fn is_sha256(value: &str) -> bool {
     value.len() == 71
         && value.starts_with("sha256:")
         && value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
-}
-
-fn validate_claim_strings(
-    claim: &Value,
-    evidence: &SettlementEvidenceArtifact,
-) -> Result<(), String> {
-    validate_claim_context(claim, evidence)?;
-    validate_claim_signatures(claim, evidence)?;
-    validate_optional_binding(claim, evidence)
 }
 
 fn validate_claim_context(
