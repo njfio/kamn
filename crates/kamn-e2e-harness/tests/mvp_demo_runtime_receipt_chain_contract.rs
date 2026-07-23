@@ -16,7 +16,7 @@ fn spec_c01_builds_service_authority_summary_from_v2_receipts() {
 
     assert_eq!(chain["schema_version"], "kamn.service.receipt-chain.v1");
     assert_eq!(actions(&chain), expected_actions());
-    assert_eq!(chain["receipt_chain_commitment"], sha('c'));
+    assert_sha256(&chain["receipt_chain_commitment"]);
     assert_sha256(&chain["service_receipt_commitment"]);
     assert!(!raw.contains("transport_response_digests"));
     assert!(!raw.contains("participant_role"));
@@ -108,9 +108,10 @@ fn expected_actions() -> Vec<&'static str> {
         "escrow:fund",
         "task:complete",
         "escrow:release-authorize",
+        "settlement:confirmed",
     ]
 }
 
 fn write_valid_receipt_chain_fixture(fixture: &ActorFixture) {
-    fixture.write_all(Overrides::default());
+    fixture.write_bound_v2_all();
 }
