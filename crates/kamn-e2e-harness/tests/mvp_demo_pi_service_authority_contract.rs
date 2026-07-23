@@ -7,7 +7,7 @@ use pi_transaction_actor_fixture::{ActorFixture, Overrides};
 #[test]
 fn spec_c01_accepts_role_scoped_v2_service_authority() {
     let fixture = ActorFixture::new();
-    write_valid_service_authority_fixture(&fixture);
+    write_bound_service_authority_fixture(&fixture);
 
     let summary = verify_pi_transaction_actor_paths(&fixture.paths())
         .expect("v2 service authority should verify independently");
@@ -25,6 +25,6 @@ fn spec_c02_rejects_v1_client_local_receipt_authority() {
     assert_eq!(error, "PI_SERVICE_AUTHORITY_MISMATCH");
 }
 
-fn write_valid_service_authority_fixture(fixture: &ActorFixture) {
+fn write_bound_service_authority_fixture(fixture: &ActorFixture) {
     fixture.write_bound_v2_all();
 }
