@@ -93,6 +93,15 @@ test("configuration does not forward parent credentials or custody configuration
 	assert.equal(config.env.KAMN_MVP_FAKE_MCP_MODE, "success");
 });
 
+test("configuration forwards the SDK request timeout to the MCP child", async () => {
+	const paths = await testPaths();
+	const config = readLiveMcpConfig("AGENT_A", configEnv(paths.keyFile, {
+		KAMN_SDK_SERVICE_TIMEOUT_SECONDS: "181",
+	}), process.cwd());
+
+	assert.equal(config.env.KAMN_SDK_SERVICE_TIMEOUT_SECONDS, "181");
+});
+
 test("configuration selects independent Agent B identity inputs", async () => {
 	const paths = await testPaths();
 	const env = configEnv(paths.keyFile, {
