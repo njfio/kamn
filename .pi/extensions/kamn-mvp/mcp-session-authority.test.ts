@@ -30,6 +30,19 @@ test("session separates validated service authority from transport provenance", 
 	assert.equal("runtime_response_receipts" in provenance, false);
 });
 
+test("session preserves distinct release and settlement receipt authority", async (context) => {
+	const setup = await testSetup();
+	const session = sessionFor(setup, "success");
+	context.after(() => session.shutdown());
+	const registered = await session.call("register");
+	await session.call("release_escrow", { escrow_id: "escrow-live-1", payload: "{}" });
+
+	assert.deepEqual(session.provenance().service_authority_receipts.map(({ action, actor_did }) => ({ action, actor_did })), [
+		{ action: "escrow:release-authorize", actor_did: registered.did },
+		{ action: "settlement:confirmed", actor_did: registered.did },
+	]);
+});
+
 for (const [mode, expected] of [
 	["missing-authority", "MCP_AUTHORITY_RECEIPT_MISSING"],
 	["malformed-authority", "MCP_AUTHORITY_RECEIPT_INVALID"],

@@ -14,6 +14,7 @@ mod context;
 
 pub(crate) use assertions::{
     assert_persisted_solana_signature_metadata, assert_released_escrow_has_durable_authority,
+    assert_released_escrow_has_settlement_authority,
     assert_released_escrow_has_solana_signature_metadata, assert_replayed_release_authority,
     cleanup_solana_settlement_fixture, cleanup_state_file, settlement_tx_signature,
 };

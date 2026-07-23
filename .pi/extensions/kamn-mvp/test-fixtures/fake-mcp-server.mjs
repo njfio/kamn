@@ -73,6 +73,13 @@ function mutationAuthority(tool, serviceResult) {
 		schema_version: "kamn.mcp.authority-receipt.v1", authority_kind: "service-receipt", source: "kamn-service",
 		actor_did: serviceResult.actor_did, tool, resource_id: resource, resulting_state: serviceResult.state,
 		service_receipt_id: serviceResult.receipt_id, service_receipt_digest: serviceResult.receipt_digest,
+		...(serviceResult.settlement_receipt_id ? { settlement_service_receipt: {
+			actor_did: serviceResult.actor_did, tool, action: serviceResult.settlement_receipt_action,
+			resource_id: serviceResult.settlement_receipt_resource_id,
+			resulting_state: serviceResult.settlement_receipt_state,
+			service_receipt_id: serviceResult.settlement_receipt_id,
+			service_receipt_digest: serviceResult.settlement_receipt_digest,
+		} } : {}),
 		service_result: serviceResult,
 	};
 }
@@ -104,6 +111,9 @@ function toolResult(request) {
 	if (request.tool === "release_escrow") {
 		return mutationResult("release_escrow", request.escrow_id, "release-authorized", {
 			settlement_tx_signature: "devnet-signature-1", ...JSON.parse(request.payload),
+			settlement_receipt_id: "settlement-intent-escrow-live-1",
+			settlement_receipt_digest: digest("6"), settlement_receipt_action: "settlement:confirmed",
+			settlement_receipt_resource_id: request.escrow_id, settlement_receipt_state: "confirmed",
 		}, "3");
 	}
 	if (request.tool === "query_participant_task_projection") {

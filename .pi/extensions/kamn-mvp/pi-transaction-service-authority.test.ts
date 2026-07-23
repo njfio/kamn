@@ -19,7 +19,7 @@ test("v2 actor artifacts bind exact role service authority and chain commitment"
 	const actorA = JSON.parse(await readFile(paths.agent_a, "utf8"));
 	assert.equal(actorA.schema_version, "kamn.mvp.pi-transaction-actor.v2");
 	assert.deepEqual(actorA.service_receipts.map((entry: Receipt) => entry.action), [
-		"task:create", "escrow:fund", "escrow:release-authorize",
+		"task:create", "escrow:fund", "escrow:release-authorize", "settlement:confirmed",
 	]);
 	assert.equal("runtime_response_receipts" in actorA, false);
 	assert.equal("runtime_response_digests" in actorA, false);
@@ -115,6 +115,7 @@ function roleReceipts(role: Role): Receipt[] {
 		receipt(role, "task:create", "task-live-1", "submitted", "1"),
 		receipt(role, "escrow:fund", "escrow-live-1", "funded", "2"),
 		receipt(role, "escrow:release-authorize", "escrow-live-1", "release-authorized", "3"),
+		receipt(role, "settlement:confirmed", "escrow-live-1", "confirmed", "6"),
 	];
 	if (role === "agent_b") return [
 		receipt(role, "task:accept", "task-live-1", "accepted", "4"),
@@ -132,6 +133,7 @@ function receipt(role: Role, action: string, resource: string, state: string, su
 			"task:complete": "complete_task",
 			"escrow:fund": "fund_escrow",
 			"escrow:release-authorize": "release_escrow",
+			"settlement:confirmed": "release_escrow",
 		} as Record<string, string>)[action],
 		action,
 		resource_id: resource,

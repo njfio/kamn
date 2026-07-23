@@ -19,11 +19,39 @@ pub(crate) fn assert_released_escrow_has_durable_authority(released_escrow: &Val
         .is_some_and(|value| value.starts_with("sha256:")));
 }
 
+pub(crate) fn assert_released_escrow_has_settlement_authority(released_escrow: &Value) {
+    assert_eq!(
+        released_escrow["settlement_receipt_action"],
+        "settlement:confirmed"
+    );
+    assert_eq!(released_escrow["settlement_receipt_state"], "confirmed");
+    assert_eq!(
+        released_escrow["settlement_receipt_resource_id"],
+        released_escrow["escrow_id"]
+    );
+    assert!(released_escrow["settlement_receipt_id"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("settlement-intent-")));
+    assert!(released_escrow["settlement_receipt_digest"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("sha256:")));
+}
+
 pub(crate) fn assert_replayed_release_authority(first: &Value, second: &Value) {
     assert_released_escrow_has_durable_authority(first);
     assert_released_escrow_has_durable_authority(second);
+    assert_released_escrow_has_settlement_authority(first);
+    assert_released_escrow_has_settlement_authority(second);
     assert_eq!(first["receipt_id"], second["receipt_id"]);
     assert_eq!(first["receipt_digest"], second["receipt_digest"]);
+    assert_eq!(
+        first["settlement_receipt_id"],
+        second["settlement_receipt_id"]
+    );
+    assert_eq!(
+        first["settlement_receipt_digest"],
+        second["settlement_receipt_digest"]
+    );
 }
 
 pub(crate) fn assert_persisted_solana_signature_metadata(state_json: &Value, escrow_id: &str) {

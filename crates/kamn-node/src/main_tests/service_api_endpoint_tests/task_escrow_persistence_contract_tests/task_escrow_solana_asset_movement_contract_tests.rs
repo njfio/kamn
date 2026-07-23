@@ -1,6 +1,7 @@
 use super::super::*;
 use super::support::{
     assert_persisted_solana_signature_metadata, assert_released_escrow_has_durable_authority,
+    assert_released_escrow_has_settlement_authority,
     assert_released_escrow_has_solana_signature_metadata, assert_replayed_release_authority,
     build_live_solana_asset_movement_context, build_task_escrow_snapshot,
     fund_and_release_live_escrow, fund_live_escrow, read_state_json, release_escrow_response,
@@ -101,6 +102,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
 
     assert_released_escrow_has_solana_signature_metadata(&released_escrow);
     assert_released_escrow_has_durable_authority(&released_escrow);
+    assert_released_escrow_has_settlement_authority(&released_escrow);
     assert_eq!(released_escrow["claim_scope"], "devnet-backed");
     assert_persisted_solana_signature_metadata(&state_json, escrow_id.as_str());
 }
