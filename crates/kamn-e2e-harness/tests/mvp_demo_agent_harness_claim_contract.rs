@@ -22,6 +22,7 @@ const PI_EXTENSION_SOURCES: &[&str] = &[
     ".pi/extensions/kamn-mvp/live-transaction-tools.ts",
     ".pi/extensions/kamn-mvp/pi-transaction-tools.ts",
     ".pi/extensions/kamn-mvp/mcp-session.ts",
+    ".pi/extensions/kamn-mvp/mcp-session-config.ts",
     ".pi/extensions/kamn-mvp/live-task-workflow.ts",
     ".pi/extensions/kamn-mvp/live-task-coordination.ts",
     ".pi/extensions/kamn-mvp/live-task-coordination-tools.ts",
