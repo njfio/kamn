@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 static TEST_LIVE_SOLANA_SETTLEMENT_OVERRIDE: OnceLock<Mutex<bool>> = OnceLock::new();
-static OBSERVED_PREPARED_INTENT: AtomicBool = AtomicBool::new(false);
+static OBSERVED_SUBMITTED_INTENT: AtomicBool = AtomicBool::new(false);
 static AMBIGUOUS_AFTER_SUBMIT: AtomicBool = AtomicBool::new(false);
 static RECONCILE_CONFIRMED: AtomicBool = AtomicBool::new(false);
 static SUBMISSION_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -27,7 +27,7 @@ pub(crate) fn set_test_live_solana_settlement_override(
     let previous_ambiguous = AMBIGUOUS_AFTER_SUBMIT.swap(false, Ordering::SeqCst);
     let previous_expired = EXPIRED.swap(false, Ordering::SeqCst);
     *guard = enabled;
-    OBSERVED_PREPARED_INTENT.store(false, Ordering::SeqCst);
+    OBSERVED_SUBMITTED_INTENT.store(false, Ordering::SeqCst);
     RECONCILE_CONFIRMED.store(false, Ordering::SeqCst);
     SUBMISSION_COUNT.store(0, Ordering::SeqCst);
     EVIDENCE_MISMATCH.store(false, Ordering::SeqCst);
@@ -94,7 +94,7 @@ pub(crate) fn maybe_submit_test_live_settlement(
     {
         return None;
     }
-    OBSERVED_PREPARED_INTENT.store(prepared_intent_exists(escrow_id), Ordering::SeqCst);
+    OBSERVED_SUBMITTED_INTENT.store(submitted_intent_exists(escrow_id), Ordering::SeqCst);
     if RECONCILE_CONFIRMED.load(Ordering::SeqCst) {
         return Some(Ok(success_evidence(config, prepared)));
     }
@@ -126,8 +126,8 @@ fn success_evidence(
     }
 }
 
-pub(crate) fn test_live_settlement_observed_prepared_intent() -> bool {
-    OBSERVED_PREPARED_INTENT.load(Ordering::SeqCst)
+pub(crate) fn test_live_settlement_observed_submitted_intent() -> bool {
+    OBSERVED_SUBMITTED_INTENT.load(Ordering::SeqCst)
 }
 
 impl Drop for TestLiveSolanaSettlementOverrideGuard {
@@ -145,7 +145,7 @@ fn override_state() -> &'static Mutex<bool> {
     TEST_LIVE_SOLANA_SETTLEMENT_OVERRIDE.get_or_init(|| Mutex::new(false))
 }
 
-fn prepared_intent_exists(escrow_id: &str) -> bool {
+fn submitted_intent_exists(escrow_id: &str) -> bool {
     let Ok(path) = std::env::var("KAMN_SERVICE_API_STATE_FILE") else {
         return false;
     };
@@ -158,7 +158,9 @@ fn prepared_intent_exists(escrow_id: &str) -> bool {
     state["settlement_intents"]
         .as_object()
         .and_then(|intents| intents.get(escrow_id))
-        .is_some_and(|intent| intent["state"] == "prepared")
+        .is_some_and(|intent| {
+            intent["state"] == "submitted" && intent["submission_attempt_count"] == 1
+        })
 }
 
 fn deterministic_signature(seed: &str) -> String {

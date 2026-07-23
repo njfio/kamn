@@ -104,7 +104,7 @@ fn integration_service_api_endpoint_live_solana_asset_movement_release_persists_
 }
 
 #[test]
-fn integration_live_settlement_persists_prepared_intent_before_adapter_submission() {
+fn integration_live_settlement_persists_submitted_intent_before_adapter_submission() {
     let _env = acquire_service_api_test_env();
     let _override_guard =
         crate::service_api_endpoint::set_test_live_solana_settlement_override(true);
@@ -123,8 +123,8 @@ fn integration_live_settlement_persists_prepared_intent_before_adapter_submissio
     fund_and_release_live_escrow(&context.harness, 131, 133, 23);
 
     assert!(
-        crate::service_api_endpoint::test_live_settlement_observed_prepared_intent(),
-        "settlement intent must be durable before adapter submission"
+        crate::service_api_endpoint::test_live_settlement_observed_submitted_intent(),
+        "submitted intent and one attempt must be durable before adapter submission"
     );
 }
 
