@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-const SDK_MODELS: &str = "crates/kamn-sdk/src/service_models.rs";
+const SDK_MODELS: &str = "crates/kamn-sdk/src/service_authority_models.rs";
 const CLI_RELEASE: &str = "crates/kamn-cli/src/commands/release_escrow.rs";
 const MCP_AUTHORITY: &str = "crates/kamn-mcp-server/src/authority.rs";
 const NODE_ESCROW_MODELS: &str = "crates/kamn-node/src/service_api_endpoint/escrow_models.rs";

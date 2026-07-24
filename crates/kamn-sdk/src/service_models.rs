@@ -1,3 +1,5 @@
+use super::ServiceAuthoritativeSettlement;
+
 /// Parsed response for `POST /v1/messages/send`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceMessageReceipt {
@@ -83,6 +85,8 @@ pub struct ServiceEscrowStatus {
     pub action: String,
     /// Distinct durable settlement receipt for finalized live releases.
     pub settlement_receipt: Option<ServiceSettlementReceipt>,
+    /// Complete service authority for bridge-backed settlement.
+    pub authoritative_settlement: Option<ServiceAuthoritativeSettlement>,
 }
 
 /// Parsed response for `POST /v1/content/register`.

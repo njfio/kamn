@@ -1,11 +1,16 @@
 use crate::ExecutionMode;
 
+mod authoritative_settlement_observation;
 /// CLI-scripted mode driver.
 pub mod cli_scripted;
 /// MCP-agent mode driver.
 pub mod mcp_agent;
 /// SDK-direct mode driver.
 pub mod sdk_direct;
+pub use authoritative_settlement_observation::{
+    normalize_authoritative_settlement, AuthoritativeSettlementObservation,
+    AuthoritativeSettlementReplayGuard,
+};
 /// Shared helper surface for duplicated driver internals.
 pub(crate) mod shared_helpers;
 

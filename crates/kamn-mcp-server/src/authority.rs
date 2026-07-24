@@ -4,6 +4,8 @@ mod settlement;
 
 pub(crate) const INVALID: &str = "MCP_AUTHORITY_RECEIPT_INVALID";
 pub(crate) const MISSING: &str = "MCP_AUTHORITY_RECEIPT_MISSING";
+// Authority parity spans submit_bridge_message, forward_bridge_message,
+// bridge_receipt_digest, and settlement_receipt_digest service evidence.
 
 pub(crate) fn wrap(
     tool: &str,

@@ -96,6 +96,18 @@ fn build_projection(
     Ok((projection, chain))
 }
 
+pub(crate) fn receipt_chain_commitment(
+    snapshot: &ServiceApiPersistedMessageStoreSnapshot,
+    task_id: &str,
+) -> Result<String, TaskProjectionError> {
+    let task = snapshot
+        .tasks
+        .get(task_id)
+        .ok_or(TaskProjectionError::Inconsistent)?;
+    let escrow = bound_escrow(snapshot, task)?;
+    Ok(receipt_chain::derive(snapshot, task, escrow)?.commitment)
+}
+
 fn bound_escrow<'a>(
     snapshot: &'a ServiceApiPersistedMessageStoreSnapshot,
     task: &ServiceApiPersistedTaskRecord,
