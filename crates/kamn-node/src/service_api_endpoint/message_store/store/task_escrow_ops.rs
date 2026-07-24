@@ -4,6 +4,7 @@ mod dispatch;
 mod escrow_lifecycle;
 mod lifecycle;
 mod settlement;
+mod settlement_authority;
 mod settlement_intent;
 mod tasks;
 

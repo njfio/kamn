@@ -15,10 +15,11 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    AgentMetadata, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
-    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus, ServiceTaskTransitionReceipt,
+    AgentMetadata, ServiceAgentProfile, ServiceAuthoritativeSettlement, ServiceBridgeReceipt,
+    ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages, ServiceChannelReceipt,
+    ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus,
+    ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceTaskTransitionReceipt,
 };
 
 /// Authentication helpers.

@@ -1,8 +1,8 @@
 use super::parse_unmasked_text_frame_payload;
 use super::service_authority::receipt_fields;
 use super::{
-    json_string_field, json_u64_field, map_non_success_response, parse_http_response,
-    parse_settlement_receipt, status_from_header,
+    json_string_field, json_u64_field, map_non_success_response, parse_authoritative_settlement,
+    parse_http_response, parse_settlement_receipt, status_from_header,
 };
 use super::{
     read_response_bytes, read_response_text, render_auth_headers, validate_http_header_value,
@@ -125,6 +125,8 @@ pub(super) fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, Sdk
     let (receipt_id, receipt_digest) = receipt_fields(body)?;
     let escrow_id = json_string_field(body, "escrow_id")?;
     let settlement_receipt = parse_settlement_receipt(body, escrow_id.as_str())?;
+    let authoritative_settlement =
+        parse_authoritative_settlement(body, escrow_id.as_str(), settlement_receipt.as_ref())?;
     Ok(ServiceEscrowStatus {
         escrow_id,
         state: json_string_field(body, "state")?,
@@ -132,5 +134,6 @@ pub(super) fn parse_escrow_status(body: &str) -> Result<ServiceEscrowStatus, Sdk
         receipt_digest,
         action: json_string_field(body, "action")?,
         settlement_receipt,
+        authoritative_settlement,
     })
 }

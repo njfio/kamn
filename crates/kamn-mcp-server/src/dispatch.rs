@@ -194,13 +194,22 @@ impl McpToolBackend for KamnAgentHandle {
 
     fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
         let status = KamnAgentHandle::forward_bridge_message(self, bridge_id)?;
-        Ok(format!(
-            r#"{{"bridge_id":"{}","bridge_status":"{}","target_message_id":"{}","forward_tx_hash":"{}"}}"#,
-            escape_json(status.bridge_id.as_str()),
-            escape_json(status.bridge_status.as_str()),
-            escape_json(status.target_message_id.as_str()),
-            escape_json(status.forward_tx_hash.as_str()),
-        ))
+        let mut result = json!({
+            "actor_did": self.identity().did().as_str(),
+            "bridge_id": status.bridge_id,
+            "bridge_status": status.bridge_status,
+            "target_message_id": status.target_message_id,
+            "forward_tx_hash": status.forward_tx_hash,
+        });
+        if let Some(receipt) = status.bridge_receipt {
+            result["state"] = json!(receipt.state);
+            result["receipt_id"] = json!(receipt.receipt_id);
+            result["receipt_digest"] = json!(receipt.receipt_digest);
+            result["action"] = json!(receipt.action);
+            result["transaction_signature"] = json!(receipt.transaction_signature);
+            result["finalized_slot"] = json!(receipt.finalized_slot);
+        }
+        Ok(result.to_string())
     }
 
     fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
@@ -280,6 +289,9 @@ impl McpToolBackend for KamnAgentHandle {
             result["settlement_receipt_resource_id"] = json!(settlement.resource_id);
             result["settlement_receipt_state"] = json!(settlement.state);
         }
+        if let Some(authority) = receipt.authoritative_settlement {
+            result["authoritative_settlement"] = authoritative_settlement_json(authority);
+        }
         Ok(result.to_string())
     }
 
@@ -316,6 +328,34 @@ impl McpToolBackend for KamnAgentHandle {
             verification.verified,
         ))
     }
+}
+
+fn authoritative_settlement_json(
+    value: kamn_agent_lib::ServiceAuthoritativeSettlement,
+) -> serde_json::Value {
+    json!({
+        "bridge_id": value.bridge_id,
+        "bridge_receipt_id": value.bridge_receipt_id,
+        "bridge_receipt_digest": value.bridge_receipt_digest,
+        "settlement_receipt_id": value.settlement_receipt_id,
+        "settlement_receipt_digest": value.settlement_receipt_digest,
+        "action": value.action,
+        "resource_id": value.resource_id,
+        "actor_did": value.actor_did,
+        "resulting_state": value.resulting_state,
+        "task_id": value.task_id,
+        "escrow_id": value.escrow_id,
+        "recipient": value.recipient,
+        "amount_lamports": value.amount_lamports,
+        "asset": value.asset,
+        "network": value.network,
+        "transaction_signature": value.transaction_signature,
+        "commitment": value.commitment,
+        "finalized_slot": value.finalized_slot,
+        "receipt_chain_commitment": value.receipt_chain_commitment,
+        "terms_digest": value.terms_digest,
+        "idempotency_key": value.idempotency_key,
+    })
 }
 
 /// Dispatches one JSON tool request into a JSON response envelope.

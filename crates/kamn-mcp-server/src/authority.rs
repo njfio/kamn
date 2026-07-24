@@ -4,6 +4,8 @@ mod settlement;
 
 pub(crate) const INVALID: &str = "MCP_AUTHORITY_RECEIPT_INVALID";
 pub(crate) const MISSING: &str = "MCP_AUTHORITY_RECEIPT_MISSING";
+// Authority parity spans submit_bridge_message, forward_bridge_message,
+// bridge_receipt_digest, and settlement_receipt_digest service evidence.
 
 pub(crate) fn wrap(
     tool: &str,
@@ -164,6 +166,7 @@ fn expected_action(tool: &str) -> Result<&'static str, &'static str> {
         "complete_task" => Ok("task:complete"),
         "fund_escrow" => Ok("escrow:fund"),
         "release_escrow" => Ok("escrow:release-authorize"),
+        "forward_bridge_message" => Ok("bridge:finalize"),
         _ => Err(INVALID),
     }
 }
@@ -175,6 +178,7 @@ fn validate_state(tool: &str, state: &str) -> Result<(), &'static str> {
         "complete_task" => state == "completed",
         "fund_escrow" => state == "funded",
         "release_escrow" => state == "release-authorized",
+        "forward_bridge_message" => state == "finalized",
         _ => false,
     };
     if valid {
@@ -187,6 +191,7 @@ fn mutation_resource_key(tool: &str) -> Option<&'static str> {
     match tool {
         "create_task" | "accept_task" | "complete_task" => Some("task_id"),
         "fund_escrow" | "release_escrow" => Some("escrow_id"),
+        "forward_bridge_message" => Some("bridge_id"),
         _ => None,
     }
 }

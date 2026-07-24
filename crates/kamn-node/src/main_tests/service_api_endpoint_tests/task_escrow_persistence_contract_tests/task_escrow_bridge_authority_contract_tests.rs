@@ -49,9 +49,39 @@ fn integration_bridge_authorized_release_reuses_finalized_bridge_receipt() {
     assert_eq!(first["settlement_receipt_hash"], seeded.signature);
     assert_eq!(first["bridge_receipt_digest"], seeded.receipt_digest);
     assert_eq!(first["bridge_transaction_signature"], seeded.signature);
+    let authority = &first["authoritative_settlement"];
+    assert_eq!(authority["bridge_id"], seeded.bridge_id);
+    assert_eq!(authority["bridge_receipt_digest"], seeded.receipt_digest);
+    assert_eq!(authority["transaction_signature"], seeded.signature);
+    assert_eq!(authority["task_id"], seeded.task_id);
+    assert_eq!(authority["escrow_id"], escrow_id);
+    assert_eq!(authority["actor_did"], first["release_authority_did"]);
+    assert_eq!(
+        authority["recipient"],
+        std::env::var(RECIPIENT_ENV).expect("recipient fixture")
+    );
+    assert_eq!(authority["amount_lamports"], 31);
+    assert_eq!(authority["asset"], "lamports");
+    assert_eq!(authority["network"], "solana:devnet");
+    assert_eq!(authority["commitment"], "finalized");
+    assert_eq!(authority["finalized_slot"], 42);
+    assert_eq!(authority["action"], "settlement:confirmed");
+    assert_eq!(authority["resource_id"], escrow_id);
+    assert_eq!(authority["resulting_state"], "confirmed");
+    assert!(authority["receipt_chain_commitment"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("sha256:")));
+    assert!(authority["terms_digest"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty()));
+    assert_eq!(authority["idempotency_key"], "bridge-release-210");
     assert_eq!(
         first["settlement_receipt_id"],
         second["settlement_receipt_id"]
+    );
+    assert_eq!(
+        first["authoritative_settlement"],
+        second["authoritative_settlement"]
     );
     assert_eq!(
         first["settlement_receipt_digest"],

@@ -275,6 +275,7 @@ pub(super) fn render_service_api_endpoint_response(
                 settlement_receipt_action: None,
                 settlement_receipt_resource_id: None,
                 settlement_receipt_state: None,
+                authoritative_settlement: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
@@ -305,6 +306,7 @@ pub(super) fn render_service_api_endpoint_response(
                 settlement_receipt_action: None,
                 settlement_receipt_resource_id: None,
                 settlement_receipt_state: None,
+                authoritative_settlement: None,
                 settlement: ServiceApiSettlementMetadata::default(),
             };
             return ServiceApiEndpointResponse {
