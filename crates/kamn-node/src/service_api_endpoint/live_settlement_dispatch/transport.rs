@@ -13,6 +13,7 @@ use transaction::{build_live_settlement_transaction, validate_prepared_transacti
 mod transport_recovery;
 use transport_recovery::{
     blockhash_is_valid, reconcile_known_signature, require_resubmittable_blockhash,
+    settlement_evidence_with_slot, wait_for_finalized_evidence, SignatureReconciliation,
 };
 
 pub(super) fn prepare_live_settlement(
@@ -79,16 +80,20 @@ fn submit_or_reconcile_live_settlement_via_rpc(
 ) -> Result<LiveSettlementEvidence, String> {
     let (transaction, expected_signature) = validated_transaction(config, prepared, escrow_id)?;
     let client = settlement_rpc_client(config);
-    if reconcile_known_signature(&client, &expected_signature, config)? {
-        return Ok(settlement_evidence(config, prepared));
+    match reconcile_known_signature(&client, &expected_signature, config)? {
+        SignatureReconciliation::Finalized => {
+            return settlement_evidence_with_slot(&client, config, prepared);
+        }
+        SignatureReconciliation::Pending => {
+            return wait_for_finalized_evidence(&client, config, prepared);
+        }
+        SignatureReconciliation::Absent => {}
     }
     require_resubmittable_blockhash(blockhash_is_valid(&client, &transaction, config)?)?;
     before_submit()?;
     let signature = submit_live_settlement_transaction(&client, &transaction)?;
     require_expected_signature(&signature, prepared)?;
-    let confirmed = confirm_live_settlement_signature(&client, &signature, config)?;
-    require_confirmation(confirmed, config.commitment_label.as_str())?;
-    Ok(settlement_evidence(config, prepared))
+    wait_for_finalized_evidence(&client, config, prepared)
 }
 
 fn validated_transaction(
@@ -111,15 +116,6 @@ fn validated_transaction(
     Ok((transaction, signature))
 }
 
-fn require_confirmation(confirmed: bool, commitment: &str) -> Result<(), String> {
-    if confirmed {
-        return Ok(());
-    }
-    Err(format!(
-        "SETTLEMENT_OUTCOME_AMBIGUOUS: confirmation missing at {commitment}"
-    ))
-}
-
 fn require_expected_signature(
     signature: &solana_sdk::signature::Signature,
     prepared: &PreparedLiveSettlement,
@@ -128,17 +124,6 @@ fn require_expected_signature(
         return Ok(());
     }
     Err("live solana settlement submitted signature mismatch".to_owned())
-}
-
-fn settlement_evidence(
-    config: &LiveSolanaSettlementConfig,
-    prepared: &PreparedLiveSettlement,
-) -> LiveSettlementEvidence {
-    build_live_settlement_evidence(
-        prepared.expected_signature.clone(),
-        config.commitment_label.as_str(),
-        prepared,
-    )
 }
 
 fn validate_prepared_config(
@@ -180,19 +165,6 @@ fn submit_live_settlement_transaction(
     client
         .send_transaction(transaction)
         .map_err(|error| format!("SETTLEMENT_OUTCOME_AMBIGUOUS: submit failed: {error}"))
-}
-
-fn confirm_live_settlement_signature(
-    client: &RpcClient,
-    signature: &solana_sdk::signature::Signature,
-    config: &LiveSolanaSettlementConfig,
-) -> Result<bool, String> {
-    client
-        .confirm_transaction_with_commitment(signature, config.commitment)
-        .map(|response| response.value)
-        .map_err(|error| {
-            format!("SETTLEMENT_OUTCOME_AMBIGUOUS: confirmation lookup failed: {error}")
-        })
 }
 
 #[cfg(test)]

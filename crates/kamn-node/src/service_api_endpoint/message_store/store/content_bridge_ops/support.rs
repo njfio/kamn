@@ -79,6 +79,7 @@ pub(super) fn content_register_body(content_id: String) -> ServiceApiContentRegi
 pub(super) fn build_bridge_record(
     bridge_id: &str,
     source_message_id: &str,
+    payload: &str,
 ) -> ServiceApiPersistedBridgeRecord {
     ServiceApiPersistedBridgeRecord {
         bridge_id: bridge_id.to_owned(),
@@ -86,6 +87,12 @@ pub(super) fn build_bridge_record(
         bridge_status: "submitted".to_owned(),
         target_message_id: format!("msg-bridge-target-{bridge_id}"),
         forward_tx_hash: String::new(),
+        target_network: "solana:devnet".to_owned(),
+        payload_hash: super::super::super::authority_digest::bridge_payload(payload),
+        prepared_transaction: None,
+        bridge_receipt: None,
+        submission_attempt_count: 0,
+        last_error_code: None,
     }
 }
 

@@ -6,6 +6,7 @@ pub(crate) struct LiveSettlementEvidence {
     pub(crate) settlement_commitment: String,
     pub(crate) recipient_pubkey: Option<String>,
     pub(crate) amount_lamports: Option<u64>,
+    pub(crate) finalized_slot: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,5 +31,6 @@ pub(super) fn build_live_settlement_evidence(
         settlement_commitment: commitment.to_owned(),
         recipient_pubkey: Some(prepared.recipient_pubkey.clone()),
         amount_lamports: Some(prepared.amount_lamports),
+        finalized_slot: None,
     }
 }

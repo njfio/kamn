@@ -56,8 +56,9 @@ use task_models::*;
 pub(crate) use task_projection::TaskProjectionError;
 
 pub(crate) use models::{
-    ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError, ServiceApiMessageStore,
-    ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
+    ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError,
+    ServiceApiBridgeReceiptRecord, ServiceApiMessageStore, ServiceApiPersistedAgentGrantRecord,
+    ServiceApiRelayProgressCounts,
 };
 pub(crate) use store::escrow_fund_task_id;
 #[cfg(test)]

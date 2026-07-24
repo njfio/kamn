@@ -1,6 +1,10 @@
 use super::*;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
+
+mod legacy_slot;
+pub(crate) use legacy_slot::{
+    collect_live_bridge_forward_evidence, collect_live_solana_finalized_slot,
+};
 
 const LIVE_SOLANA_BRIDGE_RPC_URL_ENV: &str = "KAMN_SERVICE_API_LIVE_SOLANA_BRIDGE_RPC_URL";
 const LIVE_SOLANA_PROOF_SCHEMA_VERSION: &str = "kamn.solana.devnet.live-proof-report.v1";
@@ -10,11 +14,8 @@ pub(super) struct LiveSolanaBridgeDispatchConfig {
     pub(super) rpc_url: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct LiveBridgeForwardEvidence {
-    pub(super) target_message_id: String,
-    pub(super) forward_tx_hash: String,
-}
+// Live bridge finality is receipt-authoritative: transaction_signature,
+// receipt_digest, and finalized_slot are persisted after reconcile.
 
 pub(super) fn resolve_live_solana_bridge_dispatch_config(
 ) -> Result<Option<LiveSolanaBridgeDispatchConfig>, String> {
@@ -49,7 +50,7 @@ fn normalize_live_solana_bridge_rpc_url(value: &str) -> Result<String, String> {
             "live solana bridge rpc env must start with http:// or https://: {LIVE_SOLANA_BRIDGE_RPC_URL_ENV}"
         ));
     }
-    validate_live_solana_proof_script_path(live_solana_proof_script_path().as_path())?;
+    validate_live_solana_proof_script_path(legacy_slot::proof_script_path().as_path())?;
     Ok(normalized.to_owned())
 }
 
@@ -63,133 +64,53 @@ fn validate_live_solana_proof_script_path(path: &Path) -> Result<(), String> {
     ))
 }
 
-pub(super) fn collect_live_bridge_forward_evidence(
-    config: &LiveSolanaBridgeDispatchConfig,
+pub(super) fn resolve_prepared_bridge_transaction(
+    store: &mut ServiceApiMessageStore,
+    config: &super::live_settlement_dispatch::LiveSolanaSettlementConfig,
     bridge_id: &str,
-) -> Result<LiveBridgeForwardEvidence, String> {
-    let report_path = live_solana_proof_report_path(bridge_id);
-    let result = collect_live_bridge_forward_evidence_from_report(config, bridge_id, &report_path);
-    let _ = fs::remove_file(report_path);
-    result
+) -> Result<
+    Option<(
+        super::live_settlement_dispatch::PreparedLiveSettlement,
+        String,
+    )>,
+    String,
+> {
+    let Some(transaction_subject) = store.bridge_transaction_subject(bridge_id)? else {
+        return Ok(None);
+    };
+    if let Some(prepared) = store.get_prepared_bridge_transaction(bridge_id, config)? {
+        return Ok(Some((prepared, transaction_subject)));
+    }
+    let prepared = super::live_settlement_dispatch::prepare_live_settlement(
+        config,
+        transaction_subject.as_str(),
+    )?;
+    store.prepare_bridge_transaction(bridge_id, &prepared, transaction_subject.as_str())?;
+    Ok(Some((prepared, transaction_subject)))
 }
 
-pub(super) fn collect_live_solana_finalized_slot(
-    config: &LiveSolanaBridgeDispatchConfig,
-    proof_subject: &str,
-) -> Result<u64, String> {
-    let report_path = live_solana_proof_report_path(proof_subject);
-    let result = collect_live_solana_finalized_slot_from_report(config, &report_path);
-    let _ = fs::remove_file(report_path);
-    result
-}
-
-fn collect_live_bridge_forward_evidence_from_report(
-    config: &LiveSolanaBridgeDispatchConfig,
+pub(super) fn submit_or_reconcile_bridge_transaction(
+    store: &mut ServiceApiMessageStore,
+    config: &super::live_settlement_dispatch::LiveSolanaSettlementConfig,
+    prepared: &super::live_settlement_dispatch::PreparedLiveSettlement,
     bridge_id: &str,
-    report_path: &Path,
-) -> Result<LiveBridgeForwardEvidence, String> {
-    let finalized_slot = collect_live_solana_finalized_slot_from_report(config, report_path)?;
-    Ok(build_live_bridge_forward_evidence(
-        bridge_id,
-        finalized_slot,
-        config.rpc_url.as_str(),
-    ))
-}
-
-fn collect_live_solana_finalized_slot_from_report(
-    config: &LiveSolanaBridgeDispatchConfig,
-    report_path: &Path,
-) -> Result<u64, String> {
-    run_live_solana_devnet_proof(config.rpc_url.as_str(), report_path)?;
-    let report = load_live_solana_report(report_path)?;
-    finalized_slot_from_report(&report)
-}
-
-fn run_live_solana_devnet_proof(rpc_url: &str, report_path: &Path) -> Result<(), String> {
-    let output = Command::new("python3")
-        .arg(live_solana_proof_script_path())
-        .arg("--rpc-url")
-        .arg(rpc_url)
-        .arg("--output-json")
-        .arg(report_path)
-        .output()
-        .map_err(|error| format!("live solana bridge proof runner spawn failed: {error}"))?;
-    if output.status.success() {
-        return Ok(());
-    }
-    Err(format!(
-        "live solana bridge proof runner failed: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    ))
-}
-
-fn load_live_solana_report(path: &Path) -> Result<serde_json::Value, String> {
-    let payload = fs::read_to_string(path)
-        .map_err(|error| format!("live solana bridge report read failed: {error}"))?;
-    serde_json::from_str(payload.as_str())
-        .map_err(|error| format!("live solana bridge report parse failed: {error}"))
-}
-
-fn finalized_slot_from_report(report: &serde_json::Value) -> Result<u64, String> {
-    enforce_report_schema(report)?;
-    enforce_report_health(report)?;
-    report
-        .get("commitment_slots")
-        .and_then(|value| value.get("finalized"))
-        .and_then(serde_json::Value::as_u64)
-        .ok_or_else(|| "live solana bridge report missing finalized slot".to_owned())
-}
-
-fn enforce_report_schema(report: &serde_json::Value) -> Result<(), String> {
-    if report
-        .get("schema_version")
-        .and_then(serde_json::Value::as_str)
-        == Some(LIVE_SOLANA_PROOF_SCHEMA_VERSION)
-    {
-        return Ok(());
-    }
-    Err("live solana bridge report schema version mismatch".to_owned())
-}
-
-fn enforce_report_health(report: &serde_json::Value) -> Result<(), String> {
-    if report
-        .get("health_status")
-        .and_then(serde_json::Value::as_str)
-        == Some("ok")
-    {
-        return Ok(());
-    }
-    Err("live solana bridge report health is not ok".to_owned())
-}
-
-fn build_live_bridge_forward_evidence(
-    bridge_id: &str,
-    finalized_slot: u64,
-    rpc_url: &str,
-) -> LiveBridgeForwardEvidence {
-    let bridge_tag = deterministic_body_tag(format!("{bridge_id}:{finalized_slot}").as_bytes());
-    let rpc_tag = deterministic_body_tag(rpc_url.as_bytes());
-    LiveBridgeForwardEvidence {
-        target_message_id: format!("msg-solana-devnet-slot-{finalized_slot}-{bridge_tag:016x}"),
-        forward_tx_hash: format!("solana-devnet-proof-{rpc_tag:016x}-{finalized_slot:016x}"),
-    }
-}
-
-fn live_solana_proof_report_path(report_subject: &str) -> PathBuf {
-    let entropy = deterministic_body_tag(
-        format!(
-            "{report_subject}:{}",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos()
-        )
-        .as_bytes(),
+    transaction_subject: &str,
+) -> Result<super::live_settlement_dispatch::LiveSettlementEvidence, String> {
+    let mut before_submit = || store.mark_bridge_submitted(bridge_id);
+    let result = super::live_settlement_dispatch::submit_or_reconcile_live_settlement(
+        config,
+        prepared,
+        transaction_subject,
+        &mut before_submit,
     );
-    std::env::temp_dir().join(format!("kamn-live-bridge-proof-{entropy:016x}.json"))
-}
-
-fn live_solana_proof_script_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../scripts/runtime/run_live_solana_devnet_proof.py")
+    if result
+        .as_ref()
+        .err()
+        .is_some_and(|error| error.contains("AMBIGUOUS"))
+    {
+        store.mark_bridge_ambiguous(bridge_id)?;
+        let cause = result.expect_err("ambiguous result should carry an error");
+        return Err(format!("BRIDGE_RECONCILIATION_REQUIRED: {cause}"));
+    }
+    result
 }

@@ -26,6 +26,14 @@ impl LiveSolanaSettlementConfig {
     pub(crate) fn commitment_label(&self) -> &str {
         self.commitment_label.as_str()
     }
+
+    pub(crate) fn recipient_pubkey(&self) -> String {
+        self.recipient_pubkey.to_string()
+    }
+
+    pub(crate) fn lamports(&self) -> u64 {
+        self.lamports
+    }
 }
 
 pub(crate) fn resolve_live_solana_settlement_config(
