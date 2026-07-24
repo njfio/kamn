@@ -93,6 +93,23 @@ fn unit_settlement_signature_cannot_belong_to_two_escrows() {
     ));
 }
 
+#[test]
+fn unit_legacy_settlement_intent_defaults_new_authority_terms() {
+    let mut value =
+        serde_json::to_value(settlement_intent("escrow-a", "signature-a")).expect("intent");
+    let object = value.as_object_mut().expect("intent object");
+    object.remove("task_id");
+    object.remove("asset");
+    object.remove("terms_digest");
+
+    let decoded: ServiceApiSettlementIntentRecord =
+        serde_json::from_value(value).expect("legacy intent should decode");
+
+    assert!(decoded.task_id.is_empty());
+    assert!(decoded.asset.is_empty());
+    assert!(decoded.terms_digest.is_empty());
+}
+
 fn settlement_intent(escrow_id: &str, signature: &str) -> ServiceApiSettlementIntentRecord {
     ServiceApiSettlementIntentRecord {
         settlement_intent_id: format!("intent-{escrow_id}"),

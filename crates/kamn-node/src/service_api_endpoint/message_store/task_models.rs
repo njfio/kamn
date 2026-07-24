@@ -66,13 +66,16 @@ pub(crate) struct ServiceApiEscrowTransitionReceiptRecord {
 pub(crate) struct ServiceApiSettlementIntentRecord {
     pub(crate) settlement_intent_id: String,
     pub(crate) escrow_id: String,
+    #[serde(default)]
     pub(crate) task_id: String,
     pub(crate) actor_did: String,
     pub(crate) idempotency_key: String,
     pub(crate) recipient_pubkey: String,
     pub(crate) amount_lamports: u64,
+    #[serde(default)]
     pub(crate) asset: String,
     pub(crate) network: String,
+    #[serde(default)]
     pub(crate) terms_digest: String,
     pub(crate) expected_signature: String,
     pub(crate) signed_transaction_digest: String,

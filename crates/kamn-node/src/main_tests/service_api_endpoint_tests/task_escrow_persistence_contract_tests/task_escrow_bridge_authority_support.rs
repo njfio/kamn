@@ -72,24 +72,14 @@ pub(super) fn bridge_release_response(
     bridge_id: &str,
     idempotency_key: &str,
 ) -> String {
-    let body = json!({
-        "idempotency_key": idempotency_key,
-        "authority_mode": "bridge-receipt",
-        "bridge_id": bridge_id,
-    })
-    .to_string();
-    authorized_signed_request(
+    bridge_release_for_snapshot(
         &harness.snapshot,
         harness.bind_addr.as_str(),
-        SignedRequest {
-            max_requests: 1,
-            method: "POST",
-            path: format!("/v1/escrow/{escrow_id}/release").as_str(),
-            caller_did: harness.caller_did,
-            nonce,
-            body: body.as_str(),
-            extra_headers: &[],
-        },
+        harness.caller_did,
+        nonce,
+        escrow_id,
+        bridge_id,
+        idempotency_key,
     )
 }
 
@@ -101,13 +91,11 @@ pub(super) fn restart_release_with_bridge_authority(
     idempotency_key: &str,
 ) -> Value {
     let snapshot = build_task_escrow_snapshot(api_bind);
-    let harness = AssetMovementHarnessRef {
-        snapshot: &snapshot,
-        bind_addr: reserve_loopback_addr(),
-    };
+    let bind_addr = reserve_loopback_addr();
     let response = bridge_release_for_snapshot(
-        harness.snapshot,
-        harness.bind_addr.as_str(),
+        &snapshot,
+        bind_addr.as_str(),
+        ACTOR,
         nonce,
         escrow_id,
         bridge_id,
@@ -121,6 +109,7 @@ pub(super) fn restart_release_with_bridge_authority(
 fn bridge_release_for_snapshot(
     snapshot: &crate::service_api_endpoint::ServiceApiSnapshot,
     bind_addr: &str,
+    caller_did: &str,
     nonce: u64,
     escrow_id: &str,
     bridge_id: &str,
@@ -139,17 +128,12 @@ fn bridge_release_for_snapshot(
             max_requests: 1,
             method: "POST",
             path: format!("/v1/escrow/{escrow_id}/release").as_str(),
-            caller_did: ACTOR,
+            caller_did,
             nonce,
             body: body.as_str(),
             extra_headers: &[],
         },
     )
-}
-
-struct AssetMovementHarnessRef<'a> {
-    snapshot: &'a crate::service_api_endpoint::ServiceApiSnapshot,
-    bind_addr: String,
 }
 
 pub(super) fn query_projection(
