@@ -194,13 +194,22 @@ impl McpToolBackend for KamnAgentHandle {
 
     fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
         let status = KamnAgentHandle::forward_bridge_message(self, bridge_id)?;
-        Ok(format!(
-            r#"{{"bridge_id":"{}","bridge_status":"{}","target_message_id":"{}","forward_tx_hash":"{}"}}"#,
-            escape_json(status.bridge_id.as_str()),
-            escape_json(status.bridge_status.as_str()),
-            escape_json(status.target_message_id.as_str()),
-            escape_json(status.forward_tx_hash.as_str()),
-        ))
+        let mut result = json!({
+            "actor_did": self.identity().did().as_str(),
+            "bridge_id": status.bridge_id,
+            "bridge_status": status.bridge_status,
+            "target_message_id": status.target_message_id,
+            "forward_tx_hash": status.forward_tx_hash,
+        });
+        if let Some(receipt) = status.bridge_receipt {
+            result["state"] = json!(receipt.state);
+            result["receipt_id"] = json!(receipt.receipt_id);
+            result["receipt_digest"] = json!(receipt.receipt_digest);
+            result["action"] = json!(receipt.action);
+            result["transaction_signature"] = json!(receipt.transaction_signature);
+            result["finalized_slot"] = json!(receipt.finalized_slot);
+        }
+        Ok(result.to_string())
     }
 
     fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {

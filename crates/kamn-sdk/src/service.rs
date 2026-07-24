@@ -8,6 +8,8 @@ mod service_authoritative_settlement;
 mod service_authority;
 #[path = "service_authority_models.rs"]
 mod service_authority_models;
+#[path = "service_bridge_receipt.rs"]
+mod service_bridge_receipt;
 #[path = "service_client.rs"]
 mod service_client;
 #[path = "service_endpoint.rs"]
@@ -32,8 +34,10 @@ pub use self::service_auth_crypto::{
 use self::service_authoritative_settlement::parse_authoritative_settlement;
 use self::service_authority::profile_commitment;
 pub use self::service_authority_models::{
-    ServiceAuthoritativeSettlement, ServiceSettlementReceipt, ServiceTaskTransitionReceipt,
+    ServiceAuthoritativeSettlement, ServiceBridgeReceipt, ServiceSettlementReceipt,
+    ServiceTaskTransitionReceipt,
 };
+use self::service_bridge_receipt::parse_bridge_status;
 pub(crate) use self::service_client::service_client_bridge_misc_routes::agent_search_payload;
 use self::service_client::HttpResponse;
 pub use self::service_client::ServiceApiClient;

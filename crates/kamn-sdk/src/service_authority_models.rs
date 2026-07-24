@@ -74,3 +74,28 @@ pub struct ServiceAuthoritativeSettlement {
     /// Durable operation identity.
     pub idempotency_key: String,
 }
+
+/// Finalized bridge receipt authority returned by bridge status routes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceBridgeReceipt {
+    /// Receipt identifier.
+    pub receipt_id: String,
+    /// Receipt digest.
+    pub receipt_digest: String,
+    /// Bridge identifier.
+    pub bridge_id: String,
+    /// Finalized transaction signature.
+    pub transaction_signature: String,
+    /// Settlement network.
+    pub network: String,
+    /// Finality commitment.
+    pub commitment: String,
+    /// Finalized network slot.
+    pub finalized_slot: u64,
+    /// Canonical bridge action.
+    pub action: String,
+    /// Bound bridge resource.
+    pub resource_id: String,
+    /// Durable bridge state.
+    pub state: String,
+}

@@ -1,8 +1,8 @@
 use super::super::{
     expect_status, json_string_array_field, json_string_field, json_u64_field,
-    normalize_route_segment, profile_commitment, SdkError, ServiceAgentBalance,
-    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceHealthStatus,
-    ServiceRequestAuth,
+    normalize_route_segment, parse_bridge_status, profile_commitment, SdkError,
+    ServiceAgentBalance, ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission,
+    ServiceHealthStatus, ServiceRequestAuth,
 };
 use super::ServiceApiClient;
 use crate::{service_agent_registration_payload, AgentDid, AgentMetadata, AgentQuery};
@@ -33,12 +33,7 @@ impl ServiceApiClient {
         let route = format!("/v1/bridge/{bridge_id}/forward");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceBridgeStatus {
-            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
-            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
-            target_message_id: json_string_field(response.body.as_str(), "target_message_id")?,
-            forward_tx_hash: json_string_field(response.body.as_str(), "forward_tx_hash")?,
-        })
+        parse_bridge_status(response.body.as_str())
     }
 
     /// Queries one bridge forwarding status via `GET /v1/bridge/{id}`.
@@ -51,12 +46,7 @@ impl ServiceApiClient {
         let route = format!("/v1/bridge/{bridge_id}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
-        Ok(ServiceBridgeStatus {
-            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
-            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
-            target_message_id: json_string_field(response.body.as_str(), "target_message_id")?,
-            forward_tx_hash: json_string_field(response.body.as_str(), "forward_tx_hash")?,
-        })
+        parse_bridge_status(response.body.as_str())
     }
 
     /// Queries an agent reputation/profile by DID.

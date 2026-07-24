@@ -1,4 +1,4 @@
-use super::ServiceAuthoritativeSettlement;
+use super::{ServiceAuthoritativeSettlement, ServiceBridgeReceipt};
 
 /// Parsed response for `POST /v1/messages/send`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,6 +135,8 @@ pub struct ServiceBridgeStatus {
     pub target_message_id: String,
     /// Forward transaction hash marker.
     pub forward_tx_hash: String,
+    /// Finalized service bridge receipt, when available.
+    pub bridge_receipt: Option<ServiceBridgeReceipt>,
 }
 
 /// Parsed response for `GET /v1/agents/{did}`.

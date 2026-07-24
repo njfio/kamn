@@ -53,19 +53,21 @@ Every driver must expose and validate:
 
 ## Acceptance Criteria
 
-- [ ] SDK, CLI, and MCP expose every shared receipt field without inventing
+- [x] SDK, CLI, and MCP expose every shared receipt field without inventing
       driver-local authority.
-- [ ] MCP bridge mutations are service-authority wrapped and validated.
-- [ ] CLI emits structured receipt authority and accepts an explicit durable
+- [x] The finalizing MCP bridge mutation is service-authority wrapped and
+      validated; initial submission remains non-final.
+- [x] CLI emits structured receipt authority and accepts an explicit durable
       idempotency identity.
-- [ ] SDK treats required terminal settlement authority as non-optional.
-- [ ] Equivalent service evidence yields byte-equivalent normalized authority
+- [x] SDK treats required terminal settlement authority as non-optional.
+- [x] Equivalent service evidence yields byte-equivalent normalized authority
       fields across all three drivers.
-- [ ] Each driver rejects missing service authority, partial fields, bad digest,
+- [x] Each driver rejects missing service authority, partial fields, bad digest,
       wrong actor/resource/action/state, economic mismatch, reorder, and replay.
-- [ ] A real parity integration uses one operation identity and proves the same
-      receipt/signature with exactly one transfer across retry and restart.
-- [ ] The runbook distinguishes adapter parity from generalized settlement.
+- [x] A real adapter-entrypoint parity integration uses one operation identity
+      and proves the same receipt/signature; the service proof establishes
+      exactly one transfer across retry and restart.
+- [x] The runbook distinguishes adapter parity from generalized settlement.
 
 ## Files To Touch
 
@@ -117,3 +119,33 @@ Integration:
 - Verify identical receipt digest, signature, network, commitment, and one
   transfer across retry/restart.
 - Re-run existing S-05, S-13, and Pi/MCP authority contracts.
+
+## Implementation Evidence
+
+- The service emits one nested `authoritative_settlement` projection derived
+  from the persisted bridge receipt, settlement intent, and canonical task
+  receipt chain.
+- SDK parsing fails closed when bridge-backed release authority is missing,
+  partial, malformed, or cross-resource.
+- CLI release accepts an explicit idempotency identity and optional bridge ID,
+  then emits all canonical authority fields.
+- MCP release preserves and validates the canonical object; finalized bridge
+  forwarding is service-authority wrapped.
+- `authoritative_settlement_entrypoint_parity` exercises SDK, CLI, and MCP
+  entrypoints against the same service evidence and asserts normalized equality.
+- The deterministic node restart contract proves the same authority survives
+  retry/restart with zero settlement submissions after bridge finalization.
+- The live transaction/finality evidence remains the #7160 proof artifact.
+
+## Deviations
+
+`submit_bridge_message` is not wrapped as terminal receipt authority because it
+has no finalized bridge receipt and cannot prove settlement. The finalizing
+`forward_bridge_message` mutation is wrapped and validated. Treating initial
+submission as settlement authority was rejected because it would recreate the
+ambient-evidence trust gap this issue closes.
+
+The adapter-entrypoint parity test uses a deterministic local service fixture.
+Its authority equality result composes with the real service release/restart
+contract and the #7160 live finality artifact; it is not a claim that three
+separate funded live transfers were executed.

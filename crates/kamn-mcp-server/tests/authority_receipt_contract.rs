@@ -44,9 +44,6 @@ macro_rules! unsupported_backend_methods {
         fn submit_bridge_message(&self, _: &str) -> Result<String, AgentLibError> {
             unsupported()
         }
-        fn forward_bridge_message(&self, _: &str) -> Result<String, AgentLibError> {
-            unsupported()
-        }
         fn query_bridge_message(&self, _: &str) -> Result<String, AgentLibError> {
             unsupported()
         }
@@ -104,6 +101,12 @@ impl McpToolBackend for AuthorityBackend {
         ))
     }
 
+    fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"actor_did":"kamn:did:agent:test","bridge_id":"{bridge_id}","bridge_status":"finalized","state":"finalized","receipt_id":"bridge-receipt-1","receipt_digest":"{DIGEST}","action":"bridge:finalize","transaction_signature":"signature-1","finalized_slot":42}}"#
+        ))
+    }
+
     unsupported_backend_methods!();
 }
 
@@ -149,6 +152,18 @@ fn finalized_release_wraps_distinct_settlement_receipt_authority() {
     .expect("dispatch should return an envelope");
     assert!(response.contains(r#""action":"settlement:confirmed""#));
     assert!(response.contains(r#""service_receipt_id":"settlement-intent-1""#));
+}
+
+#[test]
+fn finalized_bridge_mutation_is_service_authority_wrapped() {
+    let response = dispatch_tool_request_json(
+        &AuthorityBackend,
+        r#"{"id":"bridge","tool":"forward_bridge_message","bridge_id":"bridge-1"}"#,
+    )
+    .expect("dispatch should return an envelope");
+    assert!(response.contains(r#""action":"bridge:finalize""#));
+    assert!(response.contains(r#""service_receipt_id":"bridge-receipt-1""#));
+    assert!(response.contains(r#""resource_id":"bridge-1""#));
 }
 
 #[test]
