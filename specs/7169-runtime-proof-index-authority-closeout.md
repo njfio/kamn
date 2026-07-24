@@ -39,16 +39,16 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] The index links the #7160 live finality runbook with bounded wording.
-- [ ] The index links the #7163 bridge-authorized settlement runbook and states
+- [x] The index links the #7160 live finality runbook with bounded wording.
+- [x] The index links the #7163 bridge-authorized settlement runbook and states
       that release reuses the finalized bridge transfer.
-- [ ] The index links the #7161 authority-parity runbook and preserves its
+- [x] The index links the #7161 authority-parity runbook and preserves its
       composed-proof limitation.
-- [ ] The index links the #7162 probe in a separate non-proof section with FAIL,
+- [x] The index links the #7162 probe in a separate non-proof section with FAIL,
       BLOCKED, no-approval, and no-settlement boundaries.
-- [ ] A focused Rust docs contract fails when a link, classification boundary,
+- [x] A focused Rust docs contract fails when a link, classification boundary,
       or critical claim marker is removed.
-- [ ] Targeted tests, formatting, and lint/static checks pass.
+- [x] Targeted tests, formatting, and lint/static checks pass.
 
 ## Files To Touch
 
@@ -80,3 +80,16 @@ Refactor:
 Integration:
 - Run both proof-index contracts against the real workspace documentation.
 - Verify every indexed path exists on the final tree.
+
+## Implementation Evidence
+
+- The canonical index links all three bounded KAMN authority slices under
+  `What Is Currently Proven`.
+- The bridge-authorized entry states that release reuses the finalized bridge
+  transfer and does not submit another settlement transaction.
+- The adapter-parity entry identifies the composed live/deterministic proof and
+  rejects a three-funded-transfer interpretation.
+- The external probe is in a later non-proof section with `FAIL`, `BLOCKED`,
+  no-approval, and no-settlement markers.
+- The focused authority-closeout and existing runtime-index contracts pass
+  against the same workspace documentation.
