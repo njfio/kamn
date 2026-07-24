@@ -1,0 +1,16 @@
+{
+  "bridge_id": "bridge-local-65922fedaea32626",
+  "commitment": "finalized",
+  "contains_secret_material": false,
+  "exactly_one_transfer_observed": true,
+  "finalized_slot": 478476317,
+  "independent_rpc_verified": true,
+  "network": "solana:devnet",
+  "receipt_digest": "sha256:66377fc28657ea85490535e6ac68ba6202a60e3886e488e9a7809cca8e3fe0d0",
+  "receipt_id": "bridge-receipt-bridge-local-65922fedaea32626",
+  "recipient_balance_delta_lamports": 1000000,
+  "restart_receipt_matched": true,
+  "schema_version": "kamn.live-bridge-finality-proof.v1",
+  "source_message_id": "msg-bridge-source-65922fedaea32626",
+  "transaction_signature": "33YQo4ALxnKj2rQCrhggmpaqmPKN2GdWrJwqEHMUGHLbD9vUXaym5DJ61wYPeY5CkPGYuzC1dv9Dq2fWdyML9w37"
+}

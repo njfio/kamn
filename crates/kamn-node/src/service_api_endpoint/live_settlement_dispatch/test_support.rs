@@ -130,6 +130,7 @@ fn success_evidence(
         } else {
             prepared.amount_lamports
         }),
+        finalized_slot: Some(42),
     }
 }
 

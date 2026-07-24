@@ -2,6 +2,19 @@ use super::super::*;
 use crate::service_api_endpoint::ServiceApiSnapshot;
 use std::path::{Path, PathBuf};
 
+#[path = "support/live_transaction.rs"]
+mod live_transaction;
+#[path = "support/proof_artifact.rs"]
+mod proof_artifact;
+#[path = "support/scenario.rs"]
+mod scenario;
+pub(super) use live_transaction::{
+    assert_non_placeholder_bridge_evidence, assert_non_placeholder_bridge_payload,
+    submit_and_restart_live_bridge, LiveBridgeTransactionEnv,
+};
+pub(super) use proof_artifact::write_live_bridge_proof_artifact;
+pub(super) use scenario::{LiveBridgeScenario, LiveBridgeTestOverride};
+
 const LIVE_SOLANA_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
 
 pub(super) fn build_bridge_snapshot(api_bind: &str) -> ServiceApiSnapshot {
@@ -79,7 +92,23 @@ pub(super) fn forward_bridge(
     nonce: u64,
     bridge_id: &str,
 ) -> Value {
-    let response = signed_request(
+    let response = forward_bridge_response(snapshot, bind_addr, caller_did, nonce, bridge_id);
+    assert!(
+        response.contains("HTTP/1.1 200 OK"),
+        "bridge forward should succeed: {response}"
+    );
+    parse_service_api_payload(extract_http_response_body(response.as_str()))
+        .expect("bridge forward payload should deserialize")
+}
+
+pub(super) fn forward_bridge_response(
+    snapshot: &ServiceApiSnapshot,
+    bind_addr: &str,
+    caller_did: &str,
+    nonce: u64,
+    bridge_id: &str,
+) -> String {
+    signed_request(
         snapshot,
         bind_addr,
         SignedRequest {
@@ -90,10 +119,7 @@ pub(super) fn forward_bridge(
             nonce,
             body: "",
         },
-    );
-    assert!(response.contains("HTTP/1.1 200 OK"));
-    parse_service_api_payload(extract_http_response_body(response.as_str()))
-        .expect("bridge forward payload should deserialize")
+    )
 }
 
 pub(super) fn query_bridge(
@@ -165,7 +191,7 @@ fn signed_request(
             request.body,
         );
         let nonce_text = request.nonce.to_string();
-        send_http_request_with_headers(
+        send_http_request_with_headers_timeout(
             addr,
             request.method,
             request.path,
@@ -175,6 +201,7 @@ fn signed_request(
                 ("X-KAMN-Request-Nonce", nonce_text.as_str()),
                 ("X-KAMN-Request-Signature", signature.as_str()),
             ],
+            Duration::from_secs(120),
         )
     })
 }
@@ -191,7 +218,7 @@ where
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.to_owned(),
         max_requests: max_requests as u64,
-        idle_timeout_ms: 10_000,
+        idle_timeout_ms: 120_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
         concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
         rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,

@@ -21,5 +21,6 @@ pub(super) fn collect_slot_backed_live_settlement_evidence(
         settlement_commitment: String::new(),
         recipient_pubkey: None,
         amount_lamports: None,
+        finalized_slot: Some(finalized_slot),
     })
 }

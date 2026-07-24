@@ -1,4 +1,6 @@
 use super::*;
+mod bridge;
+pub(crate) use bridge::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointConfig {
@@ -147,21 +149,6 @@ pub(crate) struct ServiceApiContentLifecycleBody {
     pub(crate) content_id: String,
     pub(crate) lifecycle_state: String,
     pub(crate) redaction_status: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiBridgeSubmitBody {
-    pub(crate) bridge_id: String,
-    pub(crate) source_message_id: String,
-    pub(crate) bridge_status: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiBridgeStatusBody {
-    pub(crate) bridge_id: String,
-    pub(crate) bridge_status: String,
-    pub(crate) target_message_id: String,
-    pub(crate) forward_tx_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

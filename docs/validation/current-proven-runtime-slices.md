@@ -33,6 +33,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves the live Solana-backed bridge evidence lane reaches the websocket event stream
 - live solana bridge presence-stream slice: `docs/validation/live-solana-bridge-presence-stream-slice.md`
   - proves the live Solana-backed bridge evidence lane reaches the presence-mode websocket surface
+- live chain-backed bridge finality slice: `docs/validation/live-chain-backed-bridge-finality-slice.md`
+  - proves one bounded finalized Solana devnet bridge receipt with independent RPC verification and restart-safe reconciliation
 - live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`
   - proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05
 - live escrow CLI parity slice: `docs/validation/live-escrow-cli-parity-slice.md`
@@ -49,9 +51,7 @@ This index summarizes the runtime behavior that current `main` proves today thro
 ## What Remains Unproven
 - broad production readiness
 - consensus or multi-node finality
-- live chain-backed bridge finality
 - generalized external settlement beyond one bounded Solana devnet asset-movement lane
-- live Solana settlement over the KAMN bridge path
 - broad multi-driver live economic-settlement parity
 - global fault tolerance under arbitrary partitions
 

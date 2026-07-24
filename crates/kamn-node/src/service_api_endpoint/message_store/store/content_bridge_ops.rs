@@ -1,7 +1,9 @@
 use super::super::*;
 
+mod live;
 mod support;
 
+use live::bridge_status_body;
 use support::{
     bridge_source_message_id_from_payload, bridge_submit_body, build_bridge_record,
     build_content_record, content_register_body, next_bridge_id, next_content_id,
@@ -90,7 +92,7 @@ impl ServiceApiMessageStore {
             bridge_source_message_id_from_payload(payload, bridge_tag, bridge_id.as_str());
         self.snapshot.bridges.insert(
             bridge_id.clone(),
-            build_bridge_record(bridge_id.as_str(), source_message_id.as_str()),
+            build_bridge_record(bridge_id.as_str(), source_message_id.as_str(), payload),
         );
         self.persist()?;
         Ok(bridge_submit_body(bridge_id, source_message_id))
@@ -122,10 +124,7 @@ impl ServiceApiMessageStore {
             record.target_message_id = target_message_id.to_owned();
             record.forward_tx_hash = forward_tx_hash.to_owned();
             ServiceApiBridgeStatusBody {
-                bridge_id: record.bridge_id.clone(),
-                bridge_status: record.bridge_status.clone(),
-                target_message_id: record.target_message_id.clone(),
-                forward_tx_hash: record.forward_tx_hash.clone(),
+                ..bridge_status_body(record)
             }
         };
         self.persist()?;
@@ -140,11 +139,6 @@ impl ServiceApiMessageStore {
         let Some(record) = self.snapshot.bridges.get(bridge_id) else {
             return Ok(None);
         };
-        Ok(Some(ServiceApiBridgeStatusBody {
-            bridge_id: record.bridge_id.clone(),
-            bridge_status: record.bridge_status.clone(),
-            target_message_id: record.target_message_id.clone(),
-            forward_tx_hash: record.forward_tx_hash.clone(),
-        }))
+        Ok(Some(bridge_status_body(record)))
     }
 }

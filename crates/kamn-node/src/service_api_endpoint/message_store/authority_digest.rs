@@ -1,6 +1,7 @@
 use super::{
-    ServiceApiAuthorizationReceiptRecord, ServiceApiEscrowTransitionReceiptRecord,
-    ServiceApiSettlementIntentRecord, ServiceApiTaskTransitionReceiptRecord,
+    ServiceApiAuthorizationReceiptRecord, ServiceApiBridgeReceiptRecord,
+    ServiceApiEscrowTransitionReceiptRecord, ServiceApiSettlementIntentRecord,
+    ServiceApiTaskTransitionReceiptRecord,
 };
 use k256::sha2::{Digest, Sha256};
 
@@ -9,6 +10,8 @@ const TASK_DOMAIN: &str = "kamn.service.task-receipt.v1";
 const ESCROW_DOMAIN: &str = "kamn.service.escrow-receipt.v1";
 const AUTHORIZATION_DOMAIN: &str = "kamn.service.authorization-receipt.v1";
 const SETTLEMENT_DOMAIN: &str = "kamn.service.settlement-intent.v1";
+const BRIDGE_DOMAIN: &str = "kamn.service.bridge-receipt.v1";
+const BRIDGE_PAYLOAD_DOMAIN: &str = "kamn.service.bridge-payload.v1";
 
 pub(super) fn profile(
     did: &str,
@@ -110,6 +113,31 @@ pub(super) fn settlement(intent: &ServiceApiSettlementIntentRecord) -> String {
             intent.state.as_str(),
         ],
     )
+}
+
+pub(super) fn bridge(receipt: &ServiceApiBridgeReceiptRecord) -> String {
+    let slot = receipt.finalized_slot.to_string();
+    digest(
+        BRIDGE_DOMAIN,
+        &[
+            receipt.receipt_id.as_str(),
+            receipt.bridge_id.as_str(),
+            receipt.source_message_id.as_str(),
+            receipt.target_network.as_str(),
+            receipt.payload_hash.as_str(),
+            receipt.transaction_signature.as_str(),
+            receipt.network.as_str(),
+            receipt.commitment.as_str(),
+            slot.as_str(),
+            receipt.action.as_str(),
+            receipt.resource_id.as_str(),
+            receipt.state.as_str(),
+        ],
+    )
+}
+
+pub(super) fn bridge_payload(payload: &str) -> String {
+    digest(BRIDGE_PAYLOAD_DOMAIN, &[payload])
 }
 
 fn digest(domain: &str, fields: &[&str]) -> String {

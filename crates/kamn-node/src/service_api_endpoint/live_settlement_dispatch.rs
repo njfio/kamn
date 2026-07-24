@@ -37,4 +37,5 @@ pub(crate) use test_support::{
     set_test_live_solana_settlement_evidence_mismatch, set_test_live_solana_settlement_expired,
     set_test_live_solana_settlement_override, set_test_live_solana_settlement_reconcile_confirmed,
     test_live_settlement_observed_submitted_intent, test_live_solana_settlement_submission_count,
+    TestLiveSolanaSettlementOverrideGuard,
 };

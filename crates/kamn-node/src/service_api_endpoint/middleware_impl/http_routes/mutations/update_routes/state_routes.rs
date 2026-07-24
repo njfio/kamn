@@ -1,5 +1,6 @@
 use super::super::*;
 use super::state_routes_release::resolve_release_escrow_result;
+mod live_bridge;
 
 pub(super) async fn handle_post_route(
     state: &Arc<ServiceApiRuntimeState>,
@@ -174,26 +175,53 @@ async fn resolve_bridge_forward_result(
     let Some(config) = state.live_solana_bridge_dispatch.as_ref() else {
         return Ok(state.message_store.lock().await.forward_bridge(bridge_id));
     };
-    let evidence =
-        crate::service_api_endpoint::live_bridge_dispatch::collect_live_bridge_forward_evidence(
-            config, bridge_id,
-        )?;
-    Ok(state
-        .message_store
-        .lock()
-        .await
-        .forward_bridge_with_evidence(
-            bridge_id,
-            evidence.target_message_id.as_str(),
-            evidence.forward_tx_hash.as_str(),
-        ))
+    if state.live_solana_settlement.is_none() {
+        let evidence = crate::service_api_endpoint::live_bridge_dispatch::
+            collect_live_bridge_forward_evidence(config, bridge_id)?;
+        return Ok(state
+            .message_store
+            .lock()
+            .await
+            .forward_bridge_with_evidence(
+                bridge_id,
+                evidence.target_message_id.as_str(),
+                evidence.forward_tx_hash.as_str(),
+            ));
+    }
+    live_bridge::resolve(state, bridge_id).await
 }
 
 fn live_bridge_dispatch_error(error: &str) -> Response {
+    let (status, kind, code) = live_bridge_error_contract(error);
     super::payload::json_error_response(
+        status,
+        kind,
+        code,
+        format!("service api live bridge dispatch failed: {error}").as_str(),
+    )
+}
+
+fn live_bridge_error_contract(error: &str) -> (StatusCode, &'static str, &'static str) {
+    if error.contains("BRIDGE_RECONCILIATION_REQUIRED") {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "unavailable",
+            "BRIDGE_RECONCILIATION_REQUIRED",
+        );
+    }
+    if error.contains("BRIDGE_RECEIPT_REPLAY") {
+        return (StatusCode::CONFLICT, "conflict", "BRIDGE_RECEIPT_REPLAY");
+    }
+    if error.contains("BRIDGE_FINALITY_EVIDENCE_INVALID") {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "invalid",
+            "BRIDGE_FINALITY_EVIDENCE_INVALID",
+        );
+    }
+    (
         StatusCode::INTERNAL_SERVER_ERROR,
         "internal",
         REASON_CODE_LIVE_BRIDGE_DISPATCH_FAILED,
-        format!("service api live bridge dispatch failed: {error}").as_str(),
     )
 }

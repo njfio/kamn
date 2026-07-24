@@ -657,6 +657,11 @@ mod tests {
             bridge_status: "forwarded".to_owned(),
             target_message_id: "msg-target-1".to_owned(),
             forward_tx_hash: "sha256:bridge-forwarded-1".to_owned(),
+            receipt_id: None,
+            receipt_digest: None,
+            transaction_signature: None,
+            finalized_slot: None,
+            bridge_receipt: None,
         });
 
         let mut events = Vec::new();

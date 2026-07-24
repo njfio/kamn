@@ -1,4 +1,8 @@
 use super::*;
+mod bridge;
+pub(crate) use bridge::*;
+// ServiceApiPersistedBridgeRecord carries bridge_receipt authority fields,
+// including transaction_signature and finalized_slot.
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiDataLayerRuntimeEvidenceRecord {
@@ -66,15 +70,6 @@ pub(crate) struct ServiceApiPersistedContentRecord {
     pub(crate) retention_class: String,
     pub(crate) lifecycle_state: String,
     pub(crate) redaction_status: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ServiceApiPersistedBridgeRecord {
-    pub(crate) bridge_id: String,
-    pub(crate) source_message_id: String,
-    pub(crate) bridge_status: String,
-    pub(crate) target_message_id: String,
-    pub(crate) forward_tx_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
