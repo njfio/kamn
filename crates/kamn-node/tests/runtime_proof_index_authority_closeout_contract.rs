@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const INDEX_PATH: &str = "docs/validation/current-proven-runtime-slices.md";
+const EXTERNAL_SECTION: &str = "## External Evidence That Is Not a Proven Runtime Slice";
 const PROVEN_MARKERS: &[&str] = &[
     "docs/validation/live-chain-backed-bridge-finality-slice.md",
     "docs/validation/bridge-authorized-escrow-settlement-slice.md",
@@ -10,7 +11,7 @@ const PROVEN_MARKERS: &[&str] = &[
     "composes live finality with deterministic service and adapter contracts",
 ];
 const EXTERNAL_MARKERS: &[&str] = &[
-    "## External Evidence That Is Not a Proven Runtime Slice",
+    EXTERNAL_SECTION,
     "docs/validation/external-a2a-x402-receipt-authority-probe.md",
     "FAIL",
     "BLOCKED",
@@ -28,14 +29,13 @@ fn authority_closeout_artifacts_are_indexed_with_bounded_claims() {
 #[test]
 fn external_probe_is_outside_the_proven_runtime_section() {
     let index = read_workspace_file(INDEX_PATH);
-    let remains = marker_position(&index, "## What Remains Unproven");
-    let external = marker_position(
-        &index,
-        "## External Evidence That Is Not a Proven Runtime Slice",
-    );
+    assert_marker_follows(&index, EXTERNAL_SECTION, "## What Remains Unproven");
+}
+
+fn assert_marker_follows(doc: &str, marker: &str, predecessor: &str) {
     assert!(
-        external > remains,
-        "external probe section must follow the proven-runtime section"
+        marker_position(doc, marker) > marker_position(doc, predecessor),
+        "{marker} must follow {predecessor}"
     );
 }
 
