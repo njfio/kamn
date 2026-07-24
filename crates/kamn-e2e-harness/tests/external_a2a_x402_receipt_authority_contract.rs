@@ -27,14 +27,21 @@ fn discovery_and_challenge_payment_terms_are_consistent() {
 }
 
 #[test]
-fn blocked_verdict_is_supported_by_observed_stages() {
+fn failed_verdict_is_supported_by_observed_challenge() {
     let evidence = read_json();
-    assert_eq!(text(&evidence, "/verdict"), "BLOCKED");
+    assert_eq!(text(&evidence, "/verdict"), "FAIL");
     assert_eq!(boolean(&evidence, "/challenge/observed"), true);
+    assert_eq!(
+        boolean(&evidence, "/challenge/request_body_digest_observed"),
+        false
+    );
+    assert_eq!(boolean(&evidence, "/challenge/nonce_observed"), false);
+    assert_eq!(boolean(&evidence, "/challenge/challenge_id_observed"), false);
     assert_eq!(boolean(&evidence, "/approval/observed"), false);
     assert_eq!(boolean(&evidence, "/settlement/observed"), false);
     assert_eq!(boolean(&evidence, "/service_result/observed"), false);
-    assert!(text(&evidence, "/verdict_reason").contains("no-funds"));
+    assert!(text(&evidence, "/verdict_reason").contains("request binding"));
+    assert!(text(&evidence, "/settlement_visibility").contains("no-funds"));
 }
 
 #[test]
@@ -54,9 +61,10 @@ fn runbook_reports_evidence_boundaries() {
     let runbook = read_file(RUNBOOK);
     for marker in [
         "# External A2A x402 Receipt-Authority Probe",
-        "Verdict: BLOCKED",
+        "Verdict: FAIL",
         "unpaid x402 challenge",
         "request body digest",
+        "no nonce or challenge ID",
         "no approval response was observed",
         "no settlement response was observed",
         "not KAMN service authority",
