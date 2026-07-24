@@ -62,22 +62,22 @@ All digest strings use lowercase `sha256:` plus 64 hexadecimal characters.
 
 ## Acceptance Criteria
 
-- [ ] `kamn-e2e-harness` exports the evidence model, digest builders, verifier,
+- [x] `kamn-e2e-harness` exports the evidence model, digest builders, verifier,
       verdict, and structured error.
-- [ ] A deterministic complete synthetic chain evaluates to `Pass`.
-- [ ] Every digest is recomputed from the canonical fields defined above.
-- [ ] Missing stages and fields fail with `PEER_AUTHORITY_STAGE_MISSING` or
+- [x] A deterministic complete synthetic chain evaluates to `Pass`.
+- [x] Every digest is recomputed from the canonical fields defined above.
+- [x] Missing stages and fields fail with `PEER_AUTHORITY_STAGE_MISSING` or
       `PEER_AUTHORITY_FIELD_MISSING`.
-- [ ] Malformed and recomputation-mismatched digests fail with
+- [x] Malformed and recomputation-mismatched digests fail with
       `PEER_AUTHORITY_DIGEST_INVALID` or `PEER_AUTHORITY_DIGEST_MISMATCH`.
-- [ ] Identity and economic mutations fail with
+- [x] Identity and economic mutations fail with
       `PEER_AUTHORITY_BINDING_MISMATCH`.
-- [ ] Expiry and stage-order mutations fail with
+- [x] Expiry and stage-order mutations fail with
       `PEER_AUTHORITY_TIME_INVALID`.
-- [ ] The #7162 fixture is evaluated through the shared verifier and remains
+- [x] The #7162 fixture is evaluated through the shared verifier and remains
       non-passing with settlement visibility `Blocked`.
-- [ ] No fixture, test output, or model includes credentials or private keys.
-- [ ] Focused tests, existing #7162 tests, formatting, and Clippy pass.
+- [x] No fixture, test output, or model includes credentials or private keys.
+- [x] Focused tests, existing #7162 tests, formatting, and Clippy pass.
 
 ## Files To Touch
 
@@ -127,3 +127,27 @@ Integration:
 - Run both the new verifier contract and the existing #7162 contract.
 - Verify the real fixture remains non-passing and no external call occurs.
 - Run package tests, formatting, Clippy, and secret-pattern checks.
+
+## Implementation Evidence
+
+- The public harness API exposes complete and partial evidence models, digest
+  builders, a typed verdict, and structured stage/field errors.
+- Domain-separated length-prefix commitments cover challenge, approval,
+  settlement, and service result; request authority hashes exact canonical
+  request bytes.
+- The mutation matrix covers missing stages and fields, malformed and changed
+  digests, cross-stage identities, economic terms, expiry, and stage order.
+- The normalized #7162 observation maps into the shared attempt model and
+  returns `Blocked(PEER_AUTHORITY_FIELD_MISSING)` at the challenge stage.
+- All implementation and test files stay below 200 lines and all functions stay
+  below 25 lines after the mandatory split.
+- `RUST_TEST_THREADS=1 cargo test -p kamn-e2e-harness` passes the full package;
+  focused Clippy passes with warnings denied.
+
+## Deviations
+
+The first concurrent package run exposed the existing load-sensitive
+`spec_c24_duplicate_agent_process_fails_with_transport_provenance_code` actor
+fixture with a transient keypair lookup failure. The exact isolated rerun
+passed, and the complete package passed with `RUST_TEST_THREADS=1`. No actor
+verifier code was changed by this issue.
