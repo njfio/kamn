@@ -35,6 +35,10 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves the live Solana-backed bridge evidence lane reaches the presence-mode websocket surface
 - live chain-backed bridge finality slice: `docs/validation/live-chain-backed-bridge-finality-slice.md`
   - proves one bounded finalized Solana devnet bridge receipt with independent RPC verification and restart-safe reconciliation
+- bridge-authorized escrow settlement slice: `docs/validation/bridge-authorized-escrow-settlement-slice.md`
+  - proves one bounded release whose authority is a matching finalized bridge receipt; release reuses the finalized bridge transfer and does not submit a second settlement transaction
+- authoritative live settlement driver parity slice: `docs/validation/authoritative-live-settlement-driver-parity-slice.md`
+  - proves SDK-direct, CLI-scripted, and MCP-agent surfaces preserve the same service-issued settlement authority; this composes live finality with deterministic service and adapter contracts rather than claiming three funded live transfers
 - live escrow settlement slice: `docs/validation/live-escrow-settlement-slice.md`
   - proves one bounded live escrow settlement execution lane through external-execution `sdk-direct` S-05
 - live escrow CLI parity slice: `docs/validation/live-escrow-cli-parity-slice.md`
@@ -54,6 +58,11 @@ This index summarizes the runtime behavior that current `main` proves today thro
 - generalized external settlement beyond one bounded Solana devnet asset-movement lane
 - broad multi-driver live economic-settlement parity
 - global fault tolerance under arbitrary partitions
+
+## External Evidence That Is Not a Proven Runtime Slice
+- external A2A x402 receipt-authority probe: `docs/validation/external-a2a-x402-receipt-authority-probe.md`
+  - records a bounded `FAIL` because the observed challenge did not bind a request digest, nonce, challenge ID, or absolute expiry
+  - settlement visibility remains `BLOCKED`: no approval response and no settlement response were observed, and no signed retry or payment was attempted
 
 ## How To Use This Index
 Start here when evaluating what KAMN actually demonstrates on current `main`. Then follow the linked runbooks to the exact test commands and operator evidence for each slice.
