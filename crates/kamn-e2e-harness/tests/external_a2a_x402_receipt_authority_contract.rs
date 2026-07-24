@@ -30,19 +30,18 @@ fn discovery_and_challenge_payment_terms_are_consistent() {
 fn failed_verdict_is_supported_by_observed_challenge() {
     let evidence = read_json();
     assert_eq!(text(&evidence, "/verdict"), "FAIL");
-    assert_eq!(boolean(&evidence, "/challenge/observed"), true);
-    assert_eq!(
-        boolean(&evidence, "/challenge/request_body_digest_observed"),
-        false
+    assert!(boolean(&evidence, "/challenge/observed"));
+    assert_false_paths(
+        &evidence,
+        &[
+            "/challenge/request_body_digest_observed",
+            "/challenge/nonce_observed",
+            "/challenge/challenge_id_observed",
+            "/approval/observed",
+            "/settlement/observed",
+            "/service_result/observed",
+        ],
     );
-    assert_eq!(boolean(&evidence, "/challenge/nonce_observed"), false);
-    assert_eq!(
-        boolean(&evidence, "/challenge/challenge_id_observed"),
-        false
-    );
-    assert_eq!(boolean(&evidence, "/approval/observed"), false);
-    assert_eq!(boolean(&evidence, "/settlement/observed"), false);
-    assert_eq!(boolean(&evidence, "/service_result/observed"), false);
     assert!(text(&evidence, "/verdict_reason").contains("request binding"));
     assert!(text(&evidence, "/settlement_visibility").contains("no-funds"));
 }
@@ -50,9 +49,14 @@ fn failed_verdict_is_supported_by_observed_challenge() {
 #[test]
 fn evidence_preserves_no_funds_and_secret_safe_boundary() {
     let evidence = read_json();
-    assert_eq!(boolean(&evidence, "/safety/funds_spent"), false);
-    assert_eq!(boolean(&evidence, "/safety/credentials_used"), false);
-    assert_eq!(boolean(&evidence, "/safety/mark_paid_called"), false);
+    assert_false_paths(
+        &evidence,
+        &[
+            "/safety/funds_spent",
+            "/safety/credentials_used",
+            "/safety/mark_paid_called",
+        ],
+    );
     let raw = serde_json::to_string(&evidence).expect("evidence should serialize");
     for forbidden in ["private_key", "authorization", "payment-signature"] {
         assert!(!raw.to_lowercase().contains(forbidden), "found {forbidden}");
@@ -86,6 +90,12 @@ fn assert_equal_paths(value: &Value, left: &str, right: &str) {
         value.pointer(right),
         "mismatched evidence paths: {left} and {right}"
     );
+}
+
+fn assert_false_paths(value: &Value, paths: &[&str]) {
+    for path in paths {
+        assert!(!boolean(value, path), "expected false at {path}");
+    }
 }
 
 fn text<'a>(value: &'a Value, path: &str) -> &'a str {
