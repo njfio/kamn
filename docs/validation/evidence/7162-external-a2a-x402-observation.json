@@ -1,0 +1,59 @@
+{
+  "schema_version": "kamn.external-a2a-x402-observation.v1",
+  "observed_at_utc": "2026-07-24T02:52:35.735Z",
+  "endpoint": "https://a2a.elonsusk.com/x402/file.deliver",
+  "discovery": {
+    "agent_card_sha256": "sha256:c89c74feb8579e90e74d040658c238bcaf6c7206c0e5d6a3ffe1370f1687c4b5",
+    "x402_manifest_sha256": "sha256:2deb0ad8a89bc3475f93943387a3e52ca0cc9e51da8870b73ff6c489a1b7fa1c",
+    "openapi_sha256": "sha256:96c2e4e514cce819f4f03ed7ce565f11ee30f9fc8ab5f82a8a0718104cede3a8",
+    "x402_version": 2,
+    "flow": ["challenge", "sign", "retry", "settle"],
+    "network": "solana:demo",
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "pay_to": "51XM6Q4W5RwCHD1BDkbpoRDZDYgyfgGb2UkekuzT8GPC",
+    "price_usd": 0.02
+  },
+  "request": {
+    "method": "POST",
+    "path": "/x402/file.deliver",
+    "canonical_body": "{\"prompt\":\"KAMN no-funds receipt-authority conformance probe\"}",
+    "body_sha256": "sha256:11393458e0b4957d114dbc79a4452d67b1b78241206fc320b626c9b31826066b"
+  },
+  "challenge": {
+    "observed": true,
+    "http_status": 402,
+    "x402_version": 2,
+    "network": "solana:demo",
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "pay_to": "51XM6Q4W5RwCHD1BDkbpoRDZDYgyfgGb2UkekuzT8GPC",
+    "amount_atomic": "20000",
+    "amount_usd": 0.02,
+    "max_timeout_seconds": 120,
+    "challenge_body_sha256": "sha256:1d322cc5548e1566422b8237868ee25019791047f81443fb7181ebc757d34dd6",
+    "request_body_digest_observed": false,
+    "nonce_observed": false,
+    "challenge_id_observed": false,
+    "expiry_timestamp_observed": false
+  },
+  "approval": {
+    "observed": false,
+    "reason": "Unsigned challenge only; no demo or production signature was sent."
+  },
+  "settlement": {
+    "observed": false,
+    "reason": "Signed retry was outside the no-funds and no-credentials boundary."
+  },
+  "service_result": {
+    "observed": false,
+    "reason": "The service result is gated behind the unperformed signed retry."
+  },
+  "verdict": "FAIL",
+  "verdict_reason": "The observed challenge has payment terms but no request binding, nonce, challenge ID, or expiry timestamp.",
+  "settlement_visibility": "BLOCKED by the no-funds and no-credentials boundary.",
+  "safety": {
+    "funds_spent": false,
+    "credentials_used": false,
+    "mark_paid_called": false,
+    "signed_retry_sent": false
+  }
+}
