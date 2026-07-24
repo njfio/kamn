@@ -9,14 +9,9 @@ const IDEMPOTENCY: &str = "operation-1";
 
 #[test]
 fn three_drivers_prove_one_authoritative_settlement() {
-    let report = verify_settlement_authority_parity(
-        ESCROW,
-        ACTOR,
-        IDEMPOTENCY,
-        attempts(fixture()),
-        1,
-    )
-    .expect("complete shared authority should pass");
+    let report =
+        verify_settlement_authority_parity(ESCROW, ACTOR, IDEMPOTENCY, attempts(fixture()), 1)
+            .expect("complete shared authority should pass");
 
     assert_eq!(report.escrow_id, ESCROW);
     assert_eq!(report.idempotency_key, IDEMPOTENCY);
@@ -46,9 +41,8 @@ fn missing_tampered_and_cross_resource_authority_fail_closed() {
 fn conflicting_retry_and_duplicate_submission_fail_closed() {
     let mut conflicting = attempts(fixture());
     conflicting[2].response["finalized_slot"] = json!(43);
-    let error =
-        verify_settlement_authority_parity(ESCROW, ACTOR, IDEMPOTENCY, conflicting, 1)
-            .expect_err("same-key different authority must fail");
+    let error = verify_settlement_authority_parity(ESCROW, ACTOR, IDEMPOTENCY, conflicting, 1)
+        .expect_err("same-key different authority must fail");
     assert_eq!(error.code, "SERVICE_AUTHORITY_REPLAY");
     assert_eq!(error.driver, Some(SettlementAuthorityDriver::Mcp));
 
@@ -81,14 +75,8 @@ fn missing_driver_and_changed_identity_fail_closed() {
 }
 
 fn assert_error(value: Value, expected: &str) {
-    let error = verify_settlement_authority_parity(
-        ESCROW,
-        ACTOR,
-        IDEMPOTENCY,
-        attempts(value),
-        1,
-    )
-    .expect_err("invalid authority must fail");
+    let error = verify_settlement_authority_parity(ESCROW, ACTOR, IDEMPOTENCY, attempts(value), 1)
+        .expect_err("invalid authority must fail");
     assert_eq!(error.code, expected);
 }
 
