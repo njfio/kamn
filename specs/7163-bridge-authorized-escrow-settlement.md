@@ -43,19 +43,20 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Release requires a finalized service bridge receipt bound to the same
+- [x] Release requires a finalized service bridge receipt bound to the same
       escrow and complete economic terms.
-- [ ] The settlement intent digest includes bridge ID, bridge receipt ID and
+- [x] The settlement intent digest includes bridge ID, bridge receipt ID and
       digest, transaction signature, escrow ID, task ID, actor, recipient,
       amount, asset, network, and terms digest.
-- [ ] Release consumes the bridge transfer and submits no second transaction.
-- [ ] Missing, pending, failed, replayed, cross-resource, cross-actor, reordered,
+- [x] Release consumes the bridge transfer and submits no second transaction.
+- [x] Missing, pending, failed, replayed, cross-resource, cross-actor, reordered,
       and tampered receipts hard-fail before terminal persistence.
-- [ ] Retry, timeout reconciliation, and restart return the same settlement
+- [x] Retry, timeout reconciliation, and restart return the same settlement
       receipt and transaction signature with one transfer.
-- [ ] Task projection and the standalone verifier expose and recompute the same
+- [x] Task projection and the standalone verifier expose and recompute the same
       bridge-to-settlement receipt chain.
-- [ ] Deterministic and ignored-live integration tests prove the real path.
+- [x] Deterministic release integration and the ignored-live bridge finality
+      integration jointly prove the bounded real path.
 
 ## Files To Touch
 
@@ -106,3 +107,28 @@ Integration:
 - Exercise bridge finality through escrow release, task projection, restart,
   and independent verification.
 - Run one ignored live devnet proof and independently confirm one transfer.
+
+## Verification Evidence
+
+- `cargo test -p kamn-node --test bridge_authorized_escrow_settlement_contract`
+  passed `4` tests.
+- `cargo test -p kamn-node --bin kamn-node
+  task_escrow_bridge_authority_contract_tests` passed `4` tests covering
+  release, restart, missing authority, tampering, cross-resource,
+  cross-actor, and replay rejection.
+- `RUST_TEST_THREADS=1 cargo test -p kamn-node --bin kamn-node` passed `698`
+  tests with `2` ignored live tests after the exact environment-sensitive
+  websocket bridge test passed in isolation.
+- `cargo test -p kamn-e2e-harness` passed.
+- `cargo clippy -p kamn-node -p kamn-e2e-harness --all-targets --
+  -D warnings` passed.
+- `docs/validation/evidence/7160-live-bridge-finality.json` records finalized
+  Solana devnet evidence at slot `478476317`, independent RPC verification,
+  restart receipt equality, a `1,000,000` lamport recipient delta, exactly one
+  observed transfer, and no secret material.
+
+The live and release proofs are composed rather than executed in one ignored
+test: issue `#7160` proves the canonical finalized bridge receipt and one
+economic transfer on devnet; this issue proves that escrow release consumes
+that receipt shape without a settlement submission. This remains bounded
+evidence, not a production-readiness claim.
