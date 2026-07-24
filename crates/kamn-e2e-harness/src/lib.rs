@@ -15,6 +15,16 @@ pub use mvp_demo::{
     execute_verify_mvp_demo_contract, verify_pi_transaction_actor_paths, LiveTaskEvidencePaths,
     MvpDemoCommandConfig, VerifyMvpDemoCommandConfig,
 };
+pub use peer_receipt_authority::{
+    PeerApprovalAuthority, PeerChallengeAuthority, PeerReceiptAuthorityAttempt,
+    PeerReceiptAuthorityError, PeerReceiptAuthorityVerdict, PeerRequestAuthority,
+    PeerResultAuthority, PeerSettlementAuthority, PeerSettlementVisibility,
+};
+pub use peer_receipt_authority_digest::{
+    peer_approval_digest, peer_challenge_digest, peer_request_digest, peer_result_digest,
+    peer_settlement_digest,
+};
+pub use peer_receipt_authority_validate::verify_peer_receipt_authority;
 
 mod agent_transaction_actor_authority;
 mod agent_transaction_demo;
@@ -37,6 +47,9 @@ mod agent_transaction_rpc_events;
 mod agent_transaction_runtime;
 mod agent_transaction_runtime_grant;
 mod agent_transaction_supervisor;
+mod peer_receipt_authority;
+mod peer_receipt_authority_digest;
+mod peer_receipt_authority_validate;
 
 /// Driver implementations for each execution mode.
 pub mod drivers;
