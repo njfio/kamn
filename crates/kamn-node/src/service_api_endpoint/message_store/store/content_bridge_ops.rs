@@ -92,7 +92,7 @@ impl ServiceApiMessageStore {
             bridge_source_message_id_from_payload(payload, bridge_tag, bridge_id.as_str());
         self.snapshot.bridges.insert(
             bridge_id.clone(),
-            build_bridge_record(bridge_id.as_str(), source_message_id.as_str(), payload),
+            build_bridge_record(bridge_id.as_str(), source_message_id.as_str(), payload)?,
         );
         self.persist()?;
         Ok(bridge_submit_body(bridge_id, source_message_id))

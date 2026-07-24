@@ -1,15 +1,13 @@
 use std::path::{Path, PathBuf};
 
-const INTENT_MODEL: &str =
-    "crates/kamn-node/src/service_api_endpoint/message_store/task_models.rs";
+const INTENT_MODEL: &str = "crates/kamn-node/src/service_api_endpoint/message_store/task_models.rs";
 const RELEASE: &str = concat!(
     "crates/kamn-node/src/service_api_endpoint/middleware_impl/http_routes/",
     "mutations/update_routes/state_routes_release/live_settlement.rs"
 );
 const PROJECTION: &str =
     "crates/kamn-node/src/service_api_endpoint/message_store/task_projection/receipt_chain/settlement.rs";
-const VERIFIER: &str =
-    "crates/kamn-e2e-harness/src/mvp_demo/independent_settlement_verify.rs";
+const VERIFIER: &str = "crates/kamn-e2e-harness/src/mvp_demo/independent_settlement_verify.rs";
 const RUNBOOK: &str = "docs/validation/bridge-authorized-escrow-settlement-slice.md";
 
 #[test]

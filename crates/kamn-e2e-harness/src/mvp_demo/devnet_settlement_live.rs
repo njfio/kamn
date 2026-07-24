@@ -101,6 +101,8 @@ fn evidence(
         settlement_intent_digest: None,
         receipt_chain_commitment: None,
         service_receipt_commitment: None,
+        bridge_receipt_digest: None,
+        bridge_transaction_signature: None,
         authoritative_rpc_artifact: Some(result.confirmation.display().to_string()),
     }
 }

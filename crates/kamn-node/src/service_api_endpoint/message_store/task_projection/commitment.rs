@@ -13,6 +13,11 @@ pub(super) fn public_commitment(projection: &ServiceApiTaskPublicProjection) -> 
         projection.network.as_str(),
         projection.settlement_tx_signature.as_deref().unwrap_or(""),
         projection.settlement_commitment.as_deref().unwrap_or(""),
+        projection.bridge_receipt_digest.as_deref().unwrap_or(""),
+        projection
+            .bridge_transaction_signature
+            .as_deref()
+            .unwrap_or(""),
         projection.receipt_chain_commitment.as_str(),
     ];
     let canonical = fields.map(length_frame).join("|");

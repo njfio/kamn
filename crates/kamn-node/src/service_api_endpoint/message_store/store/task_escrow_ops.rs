@@ -16,6 +16,7 @@ pub(crate) use settlement::escrow_fund_task_id;
 use settlement::{escrow_status_response, release_escrow_record};
 #[cfg(test)]
 pub(crate) use settlement_intent::settlement_signature_is_available;
+pub(crate) use settlement_intent::BridgeSettlementIntentInput;
 use tasks::{next_task_id, persist_task_created_audit_export};
 
 impl ServiceApiMessageStore {
@@ -43,6 +44,16 @@ impl ServiceApiMessageStore {
         prepared: &crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement,
     ) -> Result<ServiceApiSettlementIntentRecord, String> {
         settlement_intent::prepare(self, actor, escrow_id, idempotency_key, prepared)
+    }
+
+    pub(crate) fn prepare_bridge_settlement_intent(
+        &mut self,
+        actor: &str,
+        escrow_id: &str,
+        idempotency_key: &str,
+        authority: &BridgeSettlementIntentInput,
+    ) -> Result<ServiceApiSettlementIntentRecord, String> {
+        settlement_intent::prepare_bridge(self, actor, escrow_id, idempotency_key, authority)
     }
 
     pub(crate) fn get_settlement_intent(

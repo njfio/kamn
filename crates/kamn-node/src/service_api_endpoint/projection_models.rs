@@ -17,6 +17,10 @@ pub(crate) struct ServiceApiTaskPublicProjection {
     pub(crate) settlement_tx_signature: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) settlement_commitment: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bridge_receipt_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bridge_transaction_signature: Option<String>,
     pub(crate) receipt_chain_commitment: String,
     pub(crate) public_commitment: String,
 }

@@ -92,6 +92,14 @@ pub(crate) struct ServiceApiSettlementMetadata {
     pub(crate) settlement_network: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) settlement_commitment: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bridge_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bridge_receipt_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bridge_receipt_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) bridge_transaction_signature: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

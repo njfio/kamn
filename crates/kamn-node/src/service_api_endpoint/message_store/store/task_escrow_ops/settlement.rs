@@ -125,7 +125,18 @@ fn validate_settlement_receipt_binding(
         && escrow.settlement.settlement_commitment.as_deref() == Some("finalized")
         && escrow.amount_lamports == Some(intent.amount_lamports)
         && intent.network == "solana:devnet";
-    valid
+    let bridge_valid = match &intent.bridge_receipt_digest {
+        Some(digest) => {
+            escrow.settlement.bridge_receipt_digest.as_deref() == Some(digest.as_str())
+                && escrow.settlement.bridge_transaction_signature.as_deref()
+                    == intent.bridge_transaction_signature.as_deref()
+                && escrow.settlement.bridge_receipt_id.as_deref()
+                    == intent.bridge_receipt_id.as_deref()
+                && escrow.settlement.bridge_id.as_deref() == intent.bridge_id.as_deref()
+        }
+        None => escrow.settlement.bridge_receipt_digest.is_none(),
+    };
+    (valid && bridge_valid)
         .then_some(())
         .ok_or_else(|| "SETTLEMENT_RECEIPT_INVALID: settlement receipt binding mismatch".to_owned())
 }

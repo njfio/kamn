@@ -27,10 +27,25 @@ fn require_binding(
         && escrow.release_authority_did.as_deref() == Some(intent.actor_did.as_str())
         && intent.expected_signature == signature
         && escrow.amount_lamports == Some(intent.amount_lamports)
-        && intent.network == "solana:devnet";
+        && intent.network == "solana:devnet"
+        && bridge_binding_matches(escrow, intent);
     valid
         .then_some(())
         .ok_or(TaskProjectionError::ReceiptChainInvalid)
+}
+
+fn bridge_binding_matches(
+    escrow: &ServiceApiPersistedEscrowRecord,
+    intent: &ServiceApiSettlementIntentRecord,
+) -> bool {
+    match intent.bridge_receipt_digest.as_deref() {
+        Some(bridge_receipt_digest) => {
+            escrow.settlement.bridge_receipt_digest.as_deref() == Some(bridge_receipt_digest)
+                && escrow.settlement.bridge_transaction_signature.as_deref()
+                    == intent.bridge_transaction_signature.as_deref()
+        }
+        None => escrow.settlement.bridge_receipt_digest.is_none(),
+    }
 }
 
 fn entry(intent: &ServiceApiSettlementIntentRecord) -> ReceiptChainEntry {

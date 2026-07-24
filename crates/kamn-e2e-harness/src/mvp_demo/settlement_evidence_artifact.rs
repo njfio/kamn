@@ -36,6 +36,8 @@ pub(super) struct SettlementEvidenceArtifact {
     pub(super) settlement_intent_digest: Option<String>,
     pub(super) receipt_chain_commitment: Option<String>,
     pub(super) service_receipt_commitment: Option<String>,
+    pub(super) bridge_receipt_digest: Option<String>,
+    pub(super) bridge_transaction_signature: Option<String>,
     pub(super) authoritative_rpc_digest: Option<String>,
     evidence_digest: String,
 }
@@ -92,6 +94,8 @@ fn artifact_from_evidence(
         settlement_intent_digest: evidence.settlement_intent_digest.clone(),
         receipt_chain_commitment: evidence.receipt_chain_commitment.clone(),
         service_receipt_commitment: evidence.service_receipt_commitment.clone(),
+        bridge_receipt_digest: evidence.bridge_receipt_digest.clone(),
+        bridge_transaction_signature: evidence.bridge_transaction_signature.clone(),
         authoritative_rpc_digest,
         evidence_digest: String::new(),
     }

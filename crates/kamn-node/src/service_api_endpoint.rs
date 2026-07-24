@@ -68,6 +68,10 @@ use tokio::sync::{Mutex, Notify, Semaphore};
 pub(crate) use escrow_models::ServiceApiEscrowStatusBody;
 use live_bridge_dispatch::LiveSolanaBridgeDispatchConfig;
 use live_settlement_dispatch::LiveSolanaSettlementConfig;
+#[cfg(test)]
+pub(crate) use message_store::{
+    bridge_receipt_digest, ServiceApiBridgeReceiptRecord, ServiceApiBridgeSettlementTermsRecord,
+};
 use message_store::{ServiceApiMessageStore, ServiceApiSettlementIntentRecord};
 pub(crate) use models::{
     ServiceApiAgentGetBody, ServiceApiAgentRegisterRequestBody, ServiceApiAgentSearchRequestBody,

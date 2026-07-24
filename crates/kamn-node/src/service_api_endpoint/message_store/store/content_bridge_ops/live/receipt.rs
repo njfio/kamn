@@ -72,6 +72,7 @@ fn receipt_fields(
         source_message_id: record.source_message_id.clone(),
         target_network: record.target_network.clone(),
         payload_hash: record.payload_hash.clone(),
+        settlement_authority: record.settlement_authority.clone(),
         transaction_signature: evidence.settlement_tx_signature.clone(),
         network: evidence.settlement_network.clone(),
         commitment: evidence.settlement_commitment.clone(),

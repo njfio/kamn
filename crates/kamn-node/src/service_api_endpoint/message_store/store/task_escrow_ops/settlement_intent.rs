@@ -1,6 +1,21 @@
 use super::super::super::*;
 use crate::service_api_endpoint::live_settlement_dispatch::PreparedLiveSettlement;
 
+mod build;
+
+pub(crate) struct BridgeSettlementIntentInput {
+    pub(crate) bridge_id: String,
+    pub(crate) bridge_receipt_id: String,
+    pub(crate) bridge_receipt_digest: String,
+    pub(crate) bridge_transaction_signature: String,
+    pub(crate) recipient_pubkey: String,
+    pub(crate) amount_lamports: u64,
+    pub(crate) network: String,
+    pub(crate) asset: String,
+    pub(crate) terms_digest: String,
+    pub(crate) task_id: String,
+}
+
 pub(super) fn prepare(
     store: &mut ServiceApiMessageStore,
     actor: &str,
@@ -9,9 +24,16 @@ pub(super) fn prepare(
     prepared: &PreparedLiveSettlement,
 ) -> Result<ServiceApiSettlementIntentRecord, String> {
     store.refresh_from_disk()?;
-    validate_agreement(store, escrow_id, prepared)?;
+    let terms = build::validate_agreement(store, escrow_id, prepared)?;
     if let Some(existing) = store.snapshot.settlement_intents.get(escrow_id) {
-        return identical_or_conflict(existing, actor, idempotency_key, prepared);
+        return build::identical_or_conflict(
+            existing,
+            actor,
+            idempotency_key,
+            prepared.expected_signature.as_str(),
+            prepared.signed_transaction_digest.as_str(),
+            None,
+        );
     }
     if !settlement_signature_is_available(
         &store.snapshot,
@@ -20,13 +42,66 @@ pub(super) fn prepare(
     ) {
         return Err("SETTLEMENT_SIGNATURE_REUSE".to_owned());
     }
-    let record = build_record(actor, escrow_id, idempotency_key, prepared);
-    store
-        .snapshot
-        .settlement_intents
-        .insert(escrow_id.to_owned(), record.clone());
-    store.persist()?;
-    Ok(record)
+    let record = build::build_record(build::BuildRecordInput {
+        actor,
+        escrow_id,
+        key: idempotency_key,
+        expected_signature: prepared.expected_signature.as_str(),
+        signed_transaction_digest: prepared.signed_transaction_digest.as_str(),
+        signed_transaction_json: prepared.signed_transaction_json.as_str(),
+        recipient_pubkey: prepared.recipient_pubkey.as_str(),
+        amount_lamports: prepared.amount_lamports,
+        network: prepared.network.as_str(),
+        asset: terms.asset.as_str(),
+        terms_digest: terms.terms_digest.as_str(),
+        task_id: terms.task_id.as_str(),
+        bridge: None,
+    });
+    build::persist_record(store, escrow_id, record)
+}
+
+pub(super) fn prepare_bridge(
+    store: &mut ServiceApiMessageStore,
+    actor: &str,
+    escrow_id: &str,
+    idempotency_key: &str,
+    authority: &BridgeSettlementIntentInput,
+) -> Result<ServiceApiSettlementIntentRecord, String> {
+    store.refresh_from_disk()?;
+    build::validate_bridge_agreement(store, escrow_id, authority)?;
+    if let Some(existing) = store.snapshot.settlement_intents.get(escrow_id) {
+        return build::identical_or_conflict(
+            existing,
+            actor,
+            idempotency_key,
+            authority.bridge_transaction_signature.as_str(),
+            authority.bridge_receipt_digest.as_str(),
+            Some(authority),
+        );
+    }
+    if !settlement_signature_is_available(
+        &store.snapshot,
+        escrow_id,
+        authority.bridge_transaction_signature.as_str(),
+    ) {
+        return Err("BRIDGE_SETTLEMENT_RECEIPT_REPLAY".to_owned());
+    }
+    let record = build::build_record(build::BuildRecordInput {
+        actor,
+        escrow_id,
+        key: idempotency_key,
+        expected_signature: authority.bridge_transaction_signature.as_str(),
+        signed_transaction_digest: authority.bridge_receipt_digest.as_str(),
+        signed_transaction_json: "",
+        recipient_pubkey: authority.recipient_pubkey.as_str(),
+        amount_lamports: authority.amount_lamports,
+        network: authority.network.as_str(),
+        asset: authority.asset.as_str(),
+        terms_digest: authority.terms_digest.as_str(),
+        task_id: authority.task_id.as_str(),
+        bridge: Some(authority),
+    });
+    build::persist_record(store, escrow_id, record)
 }
 
 pub(crate) fn settlement_signature_is_available(
@@ -50,9 +125,9 @@ pub(super) fn finalize(
         return Err("settlement intent missing during finalize".to_owned());
     };
     intent.state = "confirmed".to_owned();
-    record_submission(intent);
+    build::record_submission(intent);
     intent.last_error_code = None;
-    let response = release_without_refresh(store, escrow_id, settlement)?;
+    let response = build::release_without_refresh(store, escrow_id, settlement)?;
     store.persist()?;
     Ok(response)
 }
@@ -68,7 +143,7 @@ pub(super) fn mark_ambiguous(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement intent missing during ambiguous outcome".to_owned())?;
     intent.state = "ambiguous".to_owned();
-    record_submission(intent);
+    build::record_submission(intent);
     intent.last_error_code = Some("SETTLEMENT_OUTCOME_AMBIGUOUS".to_owned());
     store.persist()
 }
@@ -85,7 +160,7 @@ pub(super) fn mark_failed(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement intent missing during failed outcome".to_owned())?;
     intent.state = "failed".to_owned();
-    record_submission(intent);
+    build::record_submission(intent);
     intent.last_error_code = Some(error_code.to_owned());
     store.persist()
 }
@@ -101,12 +176,8 @@ pub(super) fn mark_submitted(
         .get_mut(escrow_id)
         .ok_or_else(|| "settlement intent missing during submit".to_owned())?;
     intent.state = "submitted".to_owned();
-    record_submission(intent);
+    build::record_submission(intent);
     store.persist()
-}
-
-fn record_submission(intent: &mut ServiceApiSettlementIntentRecord) {
-    intent.submission_attempt_count = intent.submission_attempt_count.max(1);
 }
 
 pub(super) fn mark_expired(
@@ -122,70 +193,4 @@ pub(super) fn mark_expired(
     intent.state = "failed".to_owned();
     intent.last_error_code = Some("SETTLEMENT_TRANSACTION_EXPIRED".to_owned());
     store.persist()
-}
-
-fn validate_agreement(
-    store: &ServiceApiMessageStore,
-    escrow_id: &str,
-    prepared: &PreparedLiveSettlement,
-) -> Result<(), String> {
-    let escrow = store
-        .snapshot
-        .escrows
-        .get(escrow_id)
-        .ok_or_else(|| "settlement escrow missing".to_owned())?;
-    if escrow.amount_lamports != Some(prepared.amount_lamports)
-        || escrow.network.as_deref() != Some("solana-devnet")
-        || prepared.network != "solana:devnet"
-    {
-        return Err("SETTLEMENT_AGREEMENT_MISMATCH".to_owned());
-    }
-    Ok(())
-}
-
-fn identical_or_conflict(
-    existing: &ServiceApiSettlementIntentRecord,
-    actor: &str,
-    key: &str,
-    prepared: &PreparedLiveSettlement,
-) -> Result<ServiceApiSettlementIntentRecord, String> {
-    if existing.actor_did == actor
-        && existing.idempotency_key == key
-        && existing.expected_signature == prepared.expected_signature
-        && existing.signed_transaction_digest == prepared.signed_transaction_digest
-    {
-        return Ok(existing.clone());
-    }
-    Err("SETTLEMENT_INTENT_CONFLICT".to_owned())
-}
-
-fn build_record(
-    actor: &str,
-    escrow_id: &str,
-    key: &str,
-    prepared: &PreparedLiveSettlement,
-) -> ServiceApiSettlementIntentRecord {
-    ServiceApiSettlementIntentRecord {
-        settlement_intent_id: format!("settlement-intent-{escrow_id}"),
-        escrow_id: escrow_id.to_owned(),
-        actor_did: actor.to_owned(),
-        idempotency_key: key.to_owned(),
-        recipient_pubkey: prepared.recipient_pubkey.clone(),
-        amount_lamports: prepared.amount_lamports,
-        network: prepared.network.clone(),
-        expected_signature: prepared.expected_signature.clone(),
-        signed_transaction_digest: prepared.signed_transaction_digest.clone(),
-        signed_transaction_json: prepared.signed_transaction_json.clone(),
-        state: "prepared".to_owned(),
-        submission_attempt_count: 0,
-        last_error_code: None,
-    }
-}
-
-fn release_without_refresh(
-    store: &mut ServiceApiMessageStore,
-    escrow_id: &str,
-    settlement: &ServiceApiSettlementMetadata,
-) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
-    super::settlement::release_with_metadata(&mut store.snapshot, escrow_id, settlement)
 }

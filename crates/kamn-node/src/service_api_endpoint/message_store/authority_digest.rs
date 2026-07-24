@@ -104,12 +104,20 @@ pub(super) fn settlement(intent: &ServiceApiSettlementIntentRecord) -> String {
         &[
             intent.settlement_intent_id.as_str(),
             intent.escrow_id.as_str(),
+            intent.task_id.as_str(),
             intent.actor_did.as_str(),
             intent.idempotency_key.as_str(),
+            intent.recipient_pubkey.as_str(),
             amount.as_str(),
+            intent.asset.as_str(),
             intent.network.as_str(),
+            intent.terms_digest.as_str(),
             intent.expected_signature.as_str(),
             intent.signed_transaction_digest.as_str(),
+            intent.bridge_id.as_deref().unwrap_or(""),
+            intent.bridge_receipt_id.as_deref().unwrap_or(""),
+            intent.bridge_receipt_digest.as_deref().unwrap_or(""),
+            intent.bridge_transaction_signature.as_deref().unwrap_or(""),
             intent.state.as_str(),
         ],
     )
@@ -117,6 +125,12 @@ pub(super) fn settlement(intent: &ServiceApiSettlementIntentRecord) -> String {
 
 pub(super) fn bridge(receipt: &ServiceApiBridgeReceiptRecord) -> String {
     let slot = receipt.finalized_slot.to_string();
+    let amount = receipt
+        .settlement_authority
+        .as_ref()
+        .map(|terms| terms.amount_lamports.to_string())
+        .unwrap_or_default();
+    let terms = receipt.settlement_authority.as_ref();
     digest(
         BRIDGE_DOMAIN,
         &[
@@ -125,6 +139,16 @@ pub(super) fn bridge(receipt: &ServiceApiBridgeReceiptRecord) -> String {
             receipt.source_message_id.as_str(),
             receipt.target_network.as_str(),
             receipt.payload_hash.as_str(),
+            terms.map(|value| value.escrow_id.as_str()).unwrap_or(""),
+            terms.map(|value| value.task_id.as_str()).unwrap_or(""),
+            terms.map(|value| value.actor_did.as_str()).unwrap_or(""),
+            terms
+                .map(|value| value.recipient_pubkey.as_str())
+                .unwrap_or(""),
+            amount.as_str(),
+            terms.map(|value| value.asset.as_str()).unwrap_or(""),
+            terms.map(|value| value.network.as_str()).unwrap_or(""),
+            terms.map(|value| value.terms_digest.as_str()).unwrap_or(""),
             receipt.transaction_signature.as_str(),
             receipt.network.as_str(),
             receipt.commitment.as_str(),
