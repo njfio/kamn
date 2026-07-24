@@ -59,6 +59,7 @@ mod peer_receipt_authority_validate_bindings;
 mod peer_receipt_authority_validate_required;
 mod peer_receipt_authority_validate_support;
 mod settlement_authority_parity;
+mod settlement_authority_parity_support;
 mod settlement_authority_parity_validate;
 
 /// Driver implementations for each execution mode.
