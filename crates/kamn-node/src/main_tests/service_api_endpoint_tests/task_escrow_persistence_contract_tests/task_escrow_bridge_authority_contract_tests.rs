@@ -58,7 +58,7 @@ fn integration_bridge_authorized_release_reuses_finalized_bridge_receipt() {
     assert_eq!(authority["actor_did"], first["release_authority_did"]);
     assert_eq!(
         authority["recipient"],
-        std::env::var(RECIPIENT_ENV).unwrap()
+        std::env::var(RECIPIENT_ENV).expect("recipient fixture")
     );
     assert_eq!(authority["amount_lamports"], 31);
     assert_eq!(authority["asset"], "lamports");
