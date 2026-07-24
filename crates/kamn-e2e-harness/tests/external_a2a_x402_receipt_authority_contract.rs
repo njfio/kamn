@@ -1,3 +1,7 @@
+use kamn_e2e_harness::{
+    verify_peer_receipt_authority, PeerChallengeAuthority, PeerReceiptAuthorityAttempt,
+    PeerReceiptAuthorityVerdict, PeerRequestAuthority, PeerSettlementVisibility,
+};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
@@ -81,6 +85,49 @@ fn runbook_reports_evidence_boundaries() {
             runbook.contains(marker),
             "{RUNBOOK} missing marker: {marker}"
         );
+    }
+}
+
+#[test]
+fn observed_exchange_remains_blocked_through_shared_verifier() {
+    let verdict = verify_peer_receipt_authority(&attempt_from_observation(&read_json()));
+    match verdict {
+        PeerReceiptAuthorityVerdict::Blocked(error) => {
+            assert_eq!(error.code, "PEER_AUTHORITY_FIELD_MISSING");
+            assert_eq!(error.stage, "challenge");
+        }
+        other => panic!("expected blocked shared-verifier verdict, got {other:?}"),
+    }
+}
+
+fn attempt_from_observation(evidence: &Value) -> PeerReceiptAuthorityAttempt {
+    PeerReceiptAuthorityAttempt {
+        request: Some(PeerRequestAuthority {
+            canonical_body: text(evidence, "/request/canonical_body").into(),
+            request_digest: text(evidence, "/request/body_sha256").into(),
+        }),
+        challenge: Some(challenge_from_observation(evidence)),
+        approval: None,
+        settlement: None,
+        service_result: None,
+        settlement_visibility: PeerSettlementVisibility::Blocked,
+    }
+}
+
+fn challenge_from_observation(evidence: &Value) -> PeerChallengeAuthority {
+    PeerChallengeAuthority {
+        request_digest: String::new(),
+        challenge_id: String::new(),
+        nonce: String::new(),
+        expires_at_unix: 0,
+        payer: String::new(),
+        payee: text(evidence, "/challenge/pay_to").into(),
+        asset: text(evidence, "/challenge/asset").into(),
+        network: text(evidence, "/challenge/network").into(),
+        amount_minor: text(evidence, "/challenge/amount_atomic")
+            .parse()
+            .expect("challenge amount should parse"),
+        challenge_digest: String::new(),
     }
 }
 
