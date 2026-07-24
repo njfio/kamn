@@ -45,19 +45,19 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] Live mode prepares and durably records one transaction bound to bridge ID,
+- [x] Live mode prepares and durably records one transaction bound to bridge ID,
       source message ID, target network, and payload hash before submission.
-- [ ] Pending, failed, unknown, malformed, or mismatched evidence cannot produce
+- [x] Pending, failed, unknown, malformed, or mismatched evidence cannot produce
       terminal finalized bridge state.
-- [ ] Valid finalized evidence produces a canonical service bridge receipt with
+- [x] Valid finalized evidence produces a canonical service bridge receipt with
       a recomputable digest and authoritative transaction fields.
-- [ ] Retry, restart, timeout, and ambiguous-response recovery reconcile the
+- [x] Retry, restart, timeout, and ambiguous-response recovery reconcile the
       prepared transaction before any resubmission.
-- [ ] A repeated operation returns the same receipt and signature and observes
+- [x] A repeated operation returns the same receipt and signature and observes
       exactly one submitted transfer.
-- [ ] An ignored live devnet test independently queries RPC and verifies the
+- [x] An ignored live devnet test independently queries RPC and verifies the
       persisted receipt.
-- [ ] A bounded runbook and documentation contract preserve exact non-claims.
+- [x] A bounded runbook and documentation contract preserve exact non-claims.
 
 ## Files To Touch
 
@@ -108,3 +108,13 @@ Integration:
 - Exercise the real service bridge entrypoint and persistence layer.
 - Run the ignored live devnet submission/finality/restart proof.
 - Independently query RPC for the exact persisted signature.
+
+## Verification Evidence
+
+- `cargo test -p kamn-node --test live_chain_backed_bridge_finality_contract`
+- `cargo test -p kamn-node --bin kamn-node live_bridge_contract_tests`
+- `cargo test -p kamn-node --bin kamn-node transport_tests`
+- ignored live proof command in
+  `docs/validation/live-chain-backed-bridge-finality-slice.md`
+- secret-safe result in
+  `docs/validation/evidence/7160-live-bridge-finality.json`
