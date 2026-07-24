@@ -3,10 +3,10 @@ use std::path::{Path, PathBuf};
 const SDK_MODELS: &str = "crates/kamn-sdk/src/service_models.rs";
 const CLI_RELEASE: &str = "crates/kamn-cli/src/commands/release_escrow.rs";
 const MCP_AUTHORITY: &str = "crates/kamn-mcp-server/src/authority.rs";
+const NODE_ESCROW_MODELS: &str = "crates/kamn-node/src/service_api_endpoint/escrow_models.rs";
 const NORMALIZER: &str =
     "crates/kamn-e2e-harness/src/drivers/authoritative_settlement_observation.rs";
-const RUNBOOK: &str =
-    "docs/validation/authoritative-live-settlement-driver-parity-slice.md";
+const RUNBOOK: &str = "docs/validation/authoritative-live-settlement-driver-parity-slice.md";
 
 #[test]
 fn sdk_exposes_complete_authoritative_receipt() {
@@ -20,6 +20,20 @@ fn sdk_exposes_complete_authoritative_receipt() {
             "finalized_slot",
         ],
         "SDK service models",
+    );
+}
+
+#[test]
+fn node_emits_one_canonical_authoritative_settlement() {
+    assert_contains_all(
+        &read(NODE_ESCROW_MODELS),
+        &[
+            "ServiceApiAuthoritativeSettlement",
+            "authoritative_settlement",
+            "receipt_chain_commitment",
+            "finalized_slot",
+        ],
+        "node escrow response",
     );
 }
 
