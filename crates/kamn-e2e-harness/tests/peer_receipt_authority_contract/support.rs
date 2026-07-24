@@ -5,6 +5,35 @@ use kamn_e2e_harness::{
     PeerSettlementAuthority, PeerSettlementVisibility,
 };
 
+pub fn request_mut(value: &mut PeerReceiptAuthorityAttempt) -> &mut PeerRequestAuthority {
+    value.request.as_mut().expect("complete fixture request")
+}
+
+pub fn challenge_mut(value: &mut PeerReceiptAuthorityAttempt) -> &mut PeerChallengeAuthority {
+    value
+        .challenge
+        .as_mut()
+        .expect("complete fixture challenge")
+}
+
+pub fn approval_mut(value: &mut PeerReceiptAuthorityAttempt) -> &mut PeerApprovalAuthority {
+    value.approval.as_mut().expect("complete fixture approval")
+}
+
+pub fn settlement_mut(value: &mut PeerReceiptAuthorityAttempt) -> &mut PeerSettlementAuthority {
+    value
+        .settlement
+        .as_mut()
+        .expect("complete fixture settlement")
+}
+
+pub fn result_mut(value: &mut PeerReceiptAuthorityAttempt) -> &mut PeerResultAuthority {
+    value
+        .service_result
+        .as_mut()
+        .expect("complete fixture service result")
+}
+
 pub fn complete_attempt() -> PeerReceiptAuthorityAttempt {
     let request = request();
     let challenge = challenge(request.request_digest.as_str());
@@ -23,7 +52,7 @@ pub fn complete_attempt() -> PeerReceiptAuthorityAttempt {
 
 pub fn blocked_attempt() -> PeerReceiptAuthorityAttempt {
     let mut attempt = complete_attempt();
-    let challenge = attempt.challenge.as_mut().unwrap();
+    let challenge = attempt.challenge.as_mut().expect("complete fixture stage");
     challenge.request_digest.clear();
     challenge.challenge_id.clear();
     challenge.nonce.clear();
@@ -36,15 +65,18 @@ pub fn blocked_attempt() -> PeerReceiptAuthorityAttempt {
 }
 
 pub fn recompute_digests(attempt: &mut PeerReceiptAuthorityAttempt) {
-    let request = attempt.request.as_mut().unwrap();
+    let request = attempt.request.as_mut().expect("complete fixture stage");
     request.request_digest = peer_request_digest(request.canonical_body.as_str());
-    let challenge = attempt.challenge.as_mut().unwrap();
+    let challenge = attempt.challenge.as_mut().expect("complete fixture stage");
     challenge.challenge_digest = peer_challenge_digest(challenge);
-    let approval = attempt.approval.as_mut().unwrap();
+    let approval = attempt.approval.as_mut().expect("complete fixture stage");
     approval.approval_digest = peer_approval_digest(approval);
-    let settlement = attempt.settlement.as_mut().unwrap();
+    let settlement = attempt.settlement.as_mut().expect("complete fixture stage");
     settlement.settlement_digest = peer_settlement_digest(settlement);
-    let result = attempt.service_result.as_mut().unwrap();
+    let result = attempt
+        .service_result
+        .as_mut()
+        .expect("complete fixture stage");
     result.result_digest = peer_result_digest(result);
 }
 

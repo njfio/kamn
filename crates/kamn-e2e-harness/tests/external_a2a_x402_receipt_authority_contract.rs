@@ -106,24 +106,28 @@ fn attempt_from_observation(evidence: &Value) -> PeerReceiptAuthorityAttempt {
             canonical_body: text(evidence, "/request/canonical_body").into(),
             request_digest: text(evidence, "/request/body_sha256").into(),
         }),
-        challenge: Some(PeerChallengeAuthority {
-            request_digest: String::new(),
-            challenge_id: String::new(),
-            nonce: String::new(),
-            expires_at_unix: 0,
-            payer: String::new(),
-            payee: text(evidence, "/challenge/pay_to").into(),
-            asset: text(evidence, "/challenge/asset").into(),
-            network: text(evidence, "/challenge/network").into(),
-            amount_minor: text(evidence, "/challenge/amount_atomic")
-                .parse()
-                .expect("challenge amount should parse"),
-            challenge_digest: String::new(),
-        }),
+        challenge: Some(challenge_from_observation(evidence)),
         approval: None,
         settlement: None,
         service_result: None,
         settlement_visibility: PeerSettlementVisibility::Blocked,
+    }
+}
+
+fn challenge_from_observation(evidence: &Value) -> PeerChallengeAuthority {
+    PeerChallengeAuthority {
+        request_digest: String::new(),
+        challenge_id: String::new(),
+        nonce: String::new(),
+        expires_at_unix: 0,
+        payer: String::new(),
+        payee: text(evidence, "/challenge/pay_to").into(),
+        asset: text(evidence, "/challenge/asset").into(),
+        network: text(evidence, "/challenge/network").into(),
+        amount_minor: text(evidence, "/challenge/amount_atomic")
+            .parse()
+            .expect("challenge amount should parse"),
+        challenge_digest: String::new(),
     }
 }
 

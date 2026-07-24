@@ -50,6 +50,9 @@ mod agent_transaction_supervisor;
 mod peer_receipt_authority;
 mod peer_receipt_authority_digest;
 mod peer_receipt_authority_validate;
+mod peer_receipt_authority_validate_bindings;
+mod peer_receipt_authority_validate_required;
+mod peer_receipt_authority_validate_support;
 
 /// Driver implementations for each execution mode.
 pub mod drivers;
