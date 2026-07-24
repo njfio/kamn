@@ -43,6 +43,8 @@ This index summarizes the runtime behavior that current `main` proves today thro
   - proves one bounded external-chain-backed escrow settlement lane
 - solana devnet asset-movement slice: `docs/validation/solana-devnet-asset-movement-slice.md`
   - proves one bounded live Solana devnet asset-movement lane
+- Pi/MCP service-receipt authority slice: `docs/validation/pi-mcp-service-receipt-authority-slice.md`
+  - `make demo-agent-transaction` proves one bounded three-role Pi/MCP transaction whose canonical authority comes from durable service receipts
 
 ## What Remains Unproven
 - broad production readiness

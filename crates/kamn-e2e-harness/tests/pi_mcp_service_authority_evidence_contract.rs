@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-const EVIDENCE: &str =
-    "docs/validation/evidence/7126-fresh-checkout-pi-mcp-service-authority.md";
+const EVIDENCE: &str = "docs/validation/evidence/7126-fresh-checkout-pi-mcp-service-authority.md";
 const FORBIDDEN: &[&str] = &[
     "/Users/",
     "/private/",
@@ -53,7 +52,10 @@ fn evidence_binds_finalized_single_transfer() {
 fn evidence_is_secret_safe_and_claim_bounded() {
     let content = read_evidence();
     for forbidden in FORBIDDEN {
-        assert!(!content.contains(forbidden), "forbidden marker: {forbidden}");
+        assert!(
+            !content.contains(forbidden),
+            "forbidden marker: {forbidden}"
+        );
     }
     assert_contains_all(
         &content,
@@ -74,7 +76,10 @@ fn require(markers: &[&str]) {
 
 fn assert_contains_all(content: &str, markers: &[&str]) {
     for marker in markers {
-        assert!(content.contains(marker), "{EVIDENCE} missing marker: {marker}");
+        assert!(
+            content.contains(marker),
+            "{EVIDENCE} missing marker: {marker}"
+        );
     }
 }
 
