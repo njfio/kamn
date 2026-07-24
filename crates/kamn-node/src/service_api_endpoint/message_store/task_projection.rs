@@ -149,6 +149,8 @@ fn public_fields(
         network,
         settlement_tx_signature: escrow.settlement.settlement_tx_signature.clone(),
         settlement_commitment: escrow.settlement.settlement_commitment.clone(),
+        bridge_receipt_digest: escrow.settlement.bridge_receipt_digest.clone(),
+        bridge_transaction_signature: escrow.settlement.bridge_transaction_signature.clone(),
         receipt_chain_commitment: String::new(),
         public_commitment: String::new(),
     })

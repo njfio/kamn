@@ -42,6 +42,8 @@ pub(crate) struct DevnetSettlementEvidence {
     pub(crate) settlement_intent_digest: Option<String>,
     pub(crate) receipt_chain_commitment: Option<String>,
     pub(crate) service_receipt_commitment: Option<String>,
+    pub(crate) bridge_receipt_digest: Option<String>,
+    pub(crate) bridge_transaction_signature: Option<String>,
     pub(crate) authoritative_rpc_artifact: Option<String>,
 }
 

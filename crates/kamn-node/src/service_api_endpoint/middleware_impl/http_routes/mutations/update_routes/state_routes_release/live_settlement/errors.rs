@@ -45,6 +45,33 @@ pub(super) fn invalid_release_key(message: &str) -> Response {
     )
 }
 
+pub(super) fn bridge_settlement_authority_missing_error() -> Response {
+    json_error(
+        StatusCode::CONFLICT,
+        "conflict",
+        "BRIDGE_SETTLEMENT_AUTHORITY_MISSING",
+        "finalized bridge settlement authority is required",
+    )
+}
+
+pub(super) fn bridge_settlement_authority_mismatch_error() -> Response {
+    json_error(
+        StatusCode::CONFLICT,
+        "conflict",
+        BRIDGE_SETTLEMENT_AUTHORITY_MISMATCH,
+        "finalized bridge settlement authority does not match the escrow terms",
+    )
+}
+
+pub(super) fn bridge_settlement_receipt_replay_error() -> Response {
+    json_error(
+        StatusCode::CONFLICT,
+        "conflict",
+        "BRIDGE_SETTLEMENT_RECEIPT_REPLAY",
+        "finalized bridge receipt is already consumed by another settlement",
+    )
+}
+
 fn json_error(status: StatusCode, error: &str, code: &str, message: &str) -> Response {
     super::super::super::payload::json_error_response(status, error, code, message)
 }

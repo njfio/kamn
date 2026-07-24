@@ -57,12 +57,17 @@ pub(crate) use task_projection::TaskProjectionError;
 
 pub(crate) use models::{
     ServiceApiAgentBalanceBody, ServiceApiAgentRegistrationStoreError,
-    ServiceApiBridgeReceiptRecord, ServiceApiMessageStore, ServiceApiPersistedAgentGrantRecord,
-    ServiceApiRelayProgressCounts,
+    ServiceApiBridgeReceiptRecord, ServiceApiBridgeSettlementTermsRecord, ServiceApiMessageStore,
+    ServiceApiPersistedAgentGrantRecord, ServiceApiRelayProgressCounts,
 };
 pub(crate) use store::escrow_fund_task_id;
 #[cfg(test)]
 pub(crate) use store::settlement_signature_is_available;
+pub(crate) use store::BridgeSettlementIntentInput;
 pub(crate) use store::EscrowLifecycleError;
 pub(crate) use store::TaskLifecycleError;
 pub(crate) use store::{ServiceApiAuthorizationDecision, ServiceApiAuthorizationRequest};
+
+pub(crate) fn bridge_receipt_digest(receipt: &ServiceApiBridgeReceiptRecord) -> String {
+    authority_digest::bridge(receipt)
+}

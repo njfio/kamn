@@ -93,18 +93,42 @@ fn unit_settlement_signature_cannot_belong_to_two_escrows() {
     ));
 }
 
+#[test]
+fn unit_legacy_settlement_intent_defaults_new_authority_terms() {
+    let mut value =
+        serde_json::to_value(settlement_intent("escrow-a", "signature-a")).expect("intent");
+    let object = value.as_object_mut().expect("intent object");
+    object.remove("task_id");
+    object.remove("asset");
+    object.remove("terms_digest");
+
+    let decoded: ServiceApiSettlementIntentRecord =
+        serde_json::from_value(value).expect("legacy intent should decode");
+
+    assert!(decoded.task_id.is_empty());
+    assert!(decoded.asset.is_empty());
+    assert!(decoded.terms_digest.is_empty());
+}
+
 fn settlement_intent(escrow_id: &str, signature: &str) -> ServiceApiSettlementIntentRecord {
     ServiceApiSettlementIntentRecord {
         settlement_intent_id: format!("intent-{escrow_id}"),
         escrow_id: escrow_id.to_owned(),
+        task_id: "task-a".to_owned(),
         actor_did: ACTOR_DID.to_owned(),
         idempotency_key: "release-key".to_owned(),
         recipient_pubkey: "recipient".to_owned(),
         amount_lamports: 1,
+        asset: "lamports".to_owned(),
         network: "solana:devnet".to_owned(),
+        terms_digest: "terms".to_owned(),
         expected_signature: signature.to_owned(),
         signed_transaction_digest: "digest".to_owned(),
         signed_transaction_json: "json".to_owned(),
+        bridge_id: None,
+        bridge_receipt_id: None,
+        bridge_receipt_digest: None,
+        bridge_transaction_signature: None,
         state: "prepared".to_owned(),
         submission_attempt_count: 0,
         last_error_code: None,

@@ -80,8 +80,8 @@ pub(super) fn build_bridge_record(
     bridge_id: &str,
     source_message_id: &str,
     payload: &str,
-) -> ServiceApiPersistedBridgeRecord {
-    ServiceApiPersistedBridgeRecord {
+) -> Result<ServiceApiPersistedBridgeRecord, String> {
+    Ok(ServiceApiPersistedBridgeRecord {
         bridge_id: bridge_id.to_owned(),
         source_message_id: source_message_id.to_owned(),
         bridge_status: "submitted".to_owned(),
@@ -89,11 +89,26 @@ pub(super) fn build_bridge_record(
         forward_tx_hash: String::new(),
         target_network: "solana:devnet".to_owned(),
         payload_hash: super::super::super::authority_digest::bridge_payload(payload),
+        settlement_authority: settlement_authority_from_payload(payload)?,
         prepared_transaction: None,
         bridge_receipt: None,
         submission_attempt_count: 0,
         last_error_code: None,
-    }
+    })
+}
+
+fn settlement_authority_from_payload(
+    payload: &str,
+) -> Result<Option<ServiceApiBridgeSettlementTermsRecord>, String> {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(payload) else {
+        return Ok(None);
+    };
+    let Some(authority) = value.get("settlement_authority") else {
+        return Ok(None);
+    };
+    serde_json::from_value(authority.clone())
+        .map(Some)
+        .map_err(|error| format!("BRIDGE_SETTLEMENT_AUTHORITY_MISMATCH: {error}"))
 }
 
 pub(super) fn bridge_submit_body(

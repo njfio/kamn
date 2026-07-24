@@ -1,14 +1,19 @@
 use super::super::super::super::persistence_error as service_persistence_error;
 use super::*;
-
+mod bridge_authority;
 mod errors;
+mod prepared;
 mod release_authority;
 mod submission;
-use errors::{
-    invalid_release_key, settlement_evidence_mismatch_error, settlement_intent_conflict_error,
+use bridge_authority::{
+    consume_finalized_bridge_receipt, persist_bridge_intent, release_request,
+    validate_bridge_settlement_authority,
 };
+use errors::{settlement_evidence_mismatch_error, settlement_intent_conflict_error};
+use prepared::resolve_prepared;
 
 type ReleaseResult = Result<Result<Option<ServiceApiEscrowStatusBody>, String>, Box<Response>>;
+const BRIDGE_SETTLEMENT_AUTHORITY_MISMATCH: &str = "BRIDGE_SETTLEMENT_AUTHORITY_MISMATCH";
 
 pub(super) async fn release(
     state: &Arc<ServiceApiRuntimeState>,
@@ -18,6 +23,31 @@ pub(super) async fn release(
 ) -> ReleaseResult {
     let mut store = state.message_store.lock().await;
     validate_release_eligibility(&mut store, context, escrow_id)?;
+    let actor = super::super::super::super::task_actor(context)?;
+    let request = release_request(context)?;
+    if let Some(authority) = request.bridge_id.as_deref() {
+        let authority = validate_bridge_settlement_authority(
+            &mut store,
+            config,
+            actor.as_str(),
+            escrow_id,
+            authority,
+        )?;
+        if let Some(existing) = released_escrow(&mut store, escrow_id)? {
+            return Ok(Ok(Some(existing)));
+        }
+        release_authority::persist(&mut store, context, escrow_id)?;
+        persist_bridge_intent(
+            &mut store,
+            actor.as_str(),
+            escrow_id,
+            request.idempotency_key.as_str(),
+            &authority,
+        )?;
+        let without_resubmission =
+            consume_finalized_bridge_receipt(&mut store, escrow_id, &authority);
+        return Ok(without_resubmission);
+    }
     if let Some(existing) = released_escrow(&mut store, escrow_id)? {
         return Ok(Ok(Some(existing)));
     }
@@ -36,8 +66,14 @@ fn persist_request_intent(
     prepared: &PreparedLiveSettlement,
 ) -> Result<(), Box<Response>> {
     let actor = super::super::super::super::task_actor(context)?;
-    let key = release_idempotency_key(context)?;
-    persist_intent(store, actor.as_str(), escrow_id, key.as_str(), prepared)
+    let request = release_request(context)?;
+    persist_intent(
+        store,
+        actor.as_str(),
+        escrow_id,
+        request.idempotency_key.as_str(),
+        prepared,
+    )
 }
 
 fn released_escrow(
@@ -119,44 +155,6 @@ fn evidence_matches(
         && evidence.amount_lamports == Some(prepared.amount_lamports)
 }
 
-fn resolve_prepared(
-    store: &mut ServiceApiMessageStore,
-    config: &LiveSolanaSettlementConfig,
-    escrow_id: &str,
-) -> Result<PreparedLiveSettlement, Box<Response>> {
-    let existing = store
-        .get_settlement_intent(escrow_id)
-        .map_err(persistence_error)?;
-    if let Some(intent) = existing {
-        return Ok(prepared_from_intent(intent));
-    }
-    live_settlement_dispatch::prepare_live_settlement(config, escrow_id)
-        .map_err(|error| Box::new(live_settlement_evidence_error(error.as_str())))
-}
-
-fn prepared_from_intent(intent: ServiceApiSettlementIntentRecord) -> PreparedLiveSettlement {
-    PreparedLiveSettlement {
-        expected_signature: intent.expected_signature,
-        signed_transaction_digest: intent.signed_transaction_digest,
-        signed_transaction_json: intent.signed_transaction_json,
-        recipient_pubkey: intent.recipient_pubkey,
-        amount_lamports: intent.amount_lamports,
-        network: intent.network,
-    }
-}
-
-fn release_idempotency_key(context: &ServiceApiRequestContext) -> Result<String, Box<Response>> {
-    let value: serde_json::Value = serde_json::from_str(context.parsed_request.body.as_str())
-        .map_err(|error| Box::new(invalid_release_key(error.to_string().as_str())))?;
-    value
-        .get("idempotency_key")
-        .and_then(serde_json::Value::as_str)
-        .map(str::trim)
-        .filter(|key| !key.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| Box::new(invalid_release_key("release idempotency key is required")))
-}
-
 fn settlement_metadata_from_evidence(
     evidence: LiveSettlementEvidence,
 ) -> ServiceApiSettlementMetadata {
@@ -165,5 +163,6 @@ fn settlement_metadata_from_evidence(
         settlement_tx_signature: Some(evidence.settlement_tx_signature),
         settlement_network: Some(evidence.settlement_network),
         settlement_commitment: Some(evidence.settlement_commitment),
+        ..ServiceApiSettlementMetadata::default()
     }
 }

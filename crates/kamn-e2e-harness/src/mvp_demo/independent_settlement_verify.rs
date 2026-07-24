@@ -130,6 +130,16 @@ fn validate_optional_binding(
     if let Some(digest) = evidence.task_binding_digest.as_deref() {
         require_claim_string(claim, "task_binding_digest", digest)?;
     }
+    if let Some(bridge_receipt_digest) = evidence.bridge_receipt_digest.as_deref() {
+        require_claim_string(claim, "bridge_receipt_digest", bridge_receipt_digest)?;
+    }
+    if let Some(bridge_transaction_signature) = evidence.bridge_transaction_signature.as_deref() {
+        require_claim_string(
+            claim,
+            "bridge_transaction_signature",
+            bridge_transaction_signature,
+        )?;
+    }
     Ok(())
 }
 
