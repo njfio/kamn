@@ -36,7 +36,10 @@ fn failed_verdict_is_supported_by_observed_challenge() {
         false
     );
     assert_eq!(boolean(&evidence, "/challenge/nonce_observed"), false);
-    assert_eq!(boolean(&evidence, "/challenge/challenge_id_observed"), false);
+    assert_eq!(
+        boolean(&evidence, "/challenge/challenge_id_observed"),
+        false
+    );
     assert_eq!(boolean(&evidence, "/approval/observed"), false);
     assert_eq!(boolean(&evidence, "/settlement/observed"), false);
     assert_eq!(boolean(&evidence, "/service_result/observed"), false);
@@ -70,7 +73,10 @@ fn runbook_reports_evidence_boundaries() {
         "not KAMN service authority",
         "not production readiness",
     ] {
-        assert!(runbook.contains(marker), "{RUNBOOK} missing marker: {marker}");
+        assert!(
+            runbook.contains(marker),
+            "{RUNBOOK} missing marker: {marker}"
+        );
     }
 }
 
