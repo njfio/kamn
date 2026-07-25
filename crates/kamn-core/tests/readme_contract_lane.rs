@@ -1,6 +1,27 @@
 use std::fs;
 use std::path::PathBuf;
 
+const README_HEADERS: [&str; 10] = [
+    "# KAMN",
+    "## Why KAMN",
+    "## Quickstart",
+    "## How It Fits Together",
+    "## Authority Flow",
+    "## What Is Proven",
+    "## Repository Map",
+    "## Build And Verify",
+    "## For Agents And Maintainers",
+    "## Go Deeper",
+];
+
+const README_MARKERS: [&str; 5] = [
+    "<!-- diagram:kamn-runtime-architecture -->",
+    "<!-- diagram:receipt-authority-flow -->",
+    "flowchart LR",
+    "sequenceDiagram",
+    "Service receipts, not ambient actor trust",
+];
+
 fn repo_file(path: &str) -> String {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
@@ -22,30 +43,21 @@ fn normalize_marker(marker: &str) -> String {
     marker.replace("\\\"", "\"").replace("\\\\", "\\")
 }
 
+fn assert_contains_all(document: &str, markers: &[&str], context: &str) {
+    for marker in markers {
+        assert!(
+            document.contains(marker),
+            "{context} missing required marker: {marker}"
+        );
+    }
+}
+
 #[test]
 fn spec_c01_rust_lane_validates_readme_headers_and_required_markers() {
     let readme = repo_file("README.md");
     let contract_reference = repo_file("docs/developer/readme-contract-reference.md");
-
-    let required_headers = [
-        "# KAMN",
-        "## Why KAMN",
-        "## Quickstart",
-        "## How It Fits Together",
-        "## Authority Flow",
-        "## What Is Proven",
-        "## Repository Map",
-        "## Build And Verify",
-        "## For Agents And Maintainers",
-        "## Go Deeper",
-    ];
-    for header in required_headers {
-        assert!(
-            readme.contains(header),
-            "README contract failed: missing header {header}"
-        );
-    }
-
+    assert_contains_all(&readme, &README_HEADERS, "README contract");
+    assert_contains_all(&readme, &README_MARKERS, "README contract");
     let markers = required_snippets();
     assert!(
         markers.len() >= 150,
