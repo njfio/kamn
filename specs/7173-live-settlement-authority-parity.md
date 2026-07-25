@@ -44,21 +44,22 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] The harness exports a shared three-driver settlement parity verifier.
-- [ ] SDK, CLI, and MCP attempts bind to one escrow ID and idempotency key.
-- [ ] All drivers yield byte-identical normalized authoritative settlement.
-- [ ] Complete bridge, receipt, actor, resource, economic, transaction, slot,
+- [x] The harness exports a shared three-driver settlement parity verifier.
+- [x] SDK, CLI, and MCP attempts bind to one escrow ID and idempotency key.
+- [x] All drivers yield byte-identical normalized authoritative settlement.
+- [x] Complete bridge, receipt, actor, resource, economic, transaction, slot,
       terms, and receipt-chain fields are validated before parity passes.
-- [ ] Missing, partial, tampered, cross-resource, and conflicting replay
+- [x] Missing, partial, tampered, cross-resource, and conflicting replay
       evidence fails closed with existing structured error taxonomy.
-- [ ] A deterministic integration test exercises real SDK, CLI, and MCP
+- [x] A deterministic integration test exercises real SDK, CLI, and MCP
       dispatch entrypoints against one stateful service boundary.
-- [ ] The stateful boundary records exactly one settlement submission.
+- [x] The stateful boundary records exactly one settlement submission.
 - [ ] An ignored-live path records before/after balances, finalized RPC
       evidence, and exactly one submission for the same transfer identity.
-- [ ] Documentation distinguishes deterministic contract evidence from an
+- [x] Documentation distinguishes deterministic contract evidence from an
       actually executed funded proof.
-- [ ] Focused tests, formatting, Clippy, and the serial suite pass.
+- [x] Focused tests, formatting, and Clippy pass.
+- [ ] The serial repository suite passes on a host with GNU `timeout`.
 
 ## Files To Touch
 
@@ -104,3 +105,24 @@ Integration:
 - Add an ignored-live coordinator that requires explicit live environment.
 - Persist live balances, RPC confirmation, and submission-count evidence.
 - Run focused tests, formatting, Clippy, and the serial repository suite.
+
+## Verification Evidence
+
+- `cargo test -p kamn-e2e-harness --test settlement_authority_parity_contract
+  --test authoritative_settlement_entrypoint_parity
+  --test live_s05_settlement_authority_parity`: five passed; the funded live
+  capture remained ignored because no explicit capture was supplied.
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy -p kamn-e2e-harness --all-targets -- -D warnings`: passed.
+- `RUST_TEST_THREADS=1 make test`: reached
+  `shell_test_surface_migration_wave1`; 17 tests passed and three wrapper
+  parity tests could not start because this macOS host has no GNU `timeout`.
+  No #7173 assertion failed.
+
+## Deviations
+
+The deterministic acceptance surface is complete. A funded capture is still
+`NOT_EXECUTED`, so this change does not claim live economic movement. The full
+serial suite is also not recorded as passed until it runs on a host providing
+GNU `timeout`; the observed failure is an environment prerequisite, not a
+waiver or a weakened test.
