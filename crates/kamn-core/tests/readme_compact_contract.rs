@@ -3,11 +3,14 @@ use std::path::PathBuf;
 
 const README: &str = include_str!("../../../README.md");
 
-fn repo_file(path: &str) -> String {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
-        .join("..");
-    fs::read_to_string(root.join(path))
+        .join("..")
+}
+
+fn repo_file(path: &str) -> String {
+    fs::read_to_string(repo_root().join(path))
         .unwrap_or_else(|error| panic!("failed to read {path}: {error}"))
 }
 
@@ -82,13 +85,10 @@ fn spec_c05_readme_exposes_architecture_and_authority_diagrams() {
 
 #[test]
 fn spec_c06_readme_relative_links_resolve() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..");
     for link in relative_markdown_links() {
         let path = link.split('#').next().unwrap_or(link);
         assert!(
-            root.join(path).exists(),
+            repo_root().join(path).exists(),
             "README link does not resolve: {link}"
         );
     }
