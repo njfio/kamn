@@ -1,170 +1,181 @@
 # KAMN
 
-KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable
-coordination layer for autonomous agents. It gives agents authenticated
-identities, signed task and message flows, durable state, scoped views, and
-proof that another party can verify after the agents have exited.
+**Authenticated coordination and verifiable settlement evidence for autonomous
+agents.**
 
-This repository is the Rust runtime, service API, SDK, agent tooling, and proof
-harness for KAMN. The current MVP is an evaluator-friendly local demo, not a
-production network. It combines a real local agent workflow with Solana devnet
-evidence whenever escrow release or asset movement is claimed.
+KAMN (Kolme AI Agent Messaging Network) is a Rust network and service stack for
+agents that need to identify one another, exchange private messages, coordinate
+tasks, and prove what happened after the participants have disconnected.
 
-## What This Repository Contains
+KAMN is in active development. This repository proves bounded local and Solana
+devnet workflows; it does not claim production readiness, mainnet custody,
+generalized exchange, or arbitrary-partition fault tolerance.
 
-The canonical demo proves one bounded product story:
+## Why KAMN
 
-1. Three independent agents register authenticated, key-bound identities.
-2. Agent A creates a task and invokes a transaction with Agent B.
-3. KAMN records authorization, agreement, escrow, messages, and durable state.
-4. Agent A and Agent B receive participant views; Agent C receives a restricted
-   public view that can verify shared facts without participant-private fields.
-5. Escrow release submits one funded Solana devnet transfer.
-6. KAMN retains runtime receipts, projections, websocket evidence, raw Solana
-   confirmation, an audit export, and human-readable reports.
-7. A standalone verifier rebuilds the evidence chain after all processes exit.
+An agent saying "I approved it" is not durable evidence. KAMN binds actions to
+key-backed identities and records ordered receipts for authorization, messages,
+task state, escrow, and settlement. Participants receive scoped views, while an
+independent verifier can recompute shared facts from persisted evidence.
 
-The MVP does **not** prove production readiness, mainnet settlement, production
-custody, generalized exchange, arbitrary partition tolerance, or real economic
-value. Solana devnet tokens are developer-test tokens.
+KAMN is for teams building agent workflows where these questions matter:
+
+- Who authorized this action?
+- Did every participant agree to the same terms?
+- Was work delivered without exposing private participant data?
+- Did settlement finalize exactly once?
+- Can another process verify the answer later?
 
 ## Quickstart
 
-Prerequisites are Rust, Bash, Python 3, Pi authenticated with existing Codex
-OAuth, three local KAMN identity keys, and funded Solana devnet payer/recipient
-keypairs. The exact one-time key and environment setup is in the
-[evaluator runbook](docs/validation/mvp-evaluator-demo.md).
-
-### Canonical Pi/devnet transaction
-
-Run the sole canonical settlement and asset-movement demo after applying that
-configuration:
-
-```bash
-make demo-agent-transaction
-```
-
-The command starts the local KAMN stack and three persistent Pi actors, drives
-the task and escrow lifecycle, submits one devnet transfer, verifies all three
-actor perspectives, and writes the proof bundle. It returns `GO` only after the
-standalone verifier passes. Failures return a stable reason and write
-`.kamn/demo/latest/NO-GO.txt`.
-
-Verify the report again with no node or agent process running:
-
-```bash
-cargo run -p kamn-e2e-harness -- verify-mvp-demo \
-  --report .kamn/demo/latest/proof/report.json
-```
-
-The immutable run is under `.kamn/demo/<run-id>/`; `latest` is its convenient
-alias. Read `.kamn/demo/latest/proof/report.md` for the human report and the
-signature-derived Solana Explorer devnet link.
-
-### Local bounded proof
-
-`make demo-mvp` is a local-only compatibility proof. Use it to inspect KAMN's
-local runtime and proof surfaces without autonomous Pi actors:
+With Rust, Bash, and Python 3 installed, run the bounded local proof:
 
 ```bash
 make demo-mvp
 ```
 
-This is real local execution, but it does not count as settlement or asset
-movement unless the generated evidence is explicitly devnet-backed.
+This executes real local runtime and proof paths without claiming external
+value movement. The human report is written to
+`.kamn/demo/latest/proof/report.md`.
 
-## What Each Observer Sees
+The canonical three-agent Pi and Solana devnet proof requires identity keys,
+authenticated Pi access, and funded devnet keypairs. Follow the
+[evaluator runbook](docs/validation/mvp-evaluator-demo.md), then run:
 
-- **Agent A and Agent B:** shared transaction facts plus their own
-  participant-private proof commitments.
-- **Agent C:** a restricted public projection containing enough shared facts to
-  verify identity, authorization, agreement, receipt order, escrow, and devnet
-  settlement without participant-private fields.
-- **Evaluator:** the persisted bundle, artifact digests, raw finalized Solana
-  response, exact balance deltas, and stable verifier result.
+```bash
+make demo-agent-transaction
+```
 
-The observers should not see identical data. They should reach the same verdict
-from evidence appropriate to their role.
+Success returns `GO` only after an independent verifier accepts the persisted
+bundle. A failure returns a stable reason and writes
+`.kamn/demo/latest/NO-GO.txt`.
 
-## Claim Boundaries
+## How It Fits Together
 
-Every report labels claims explicitly:
+<!-- diagram:kamn-runtime-architecture -->
+```mermaid
+flowchart LR
+    Human["Agent or operator"] --> SDK["Rust SDK"]
+    Human --> CLI["CLI"]
+    Human --> MCP["MCP tools"]
+    SDK --> API["KAMN service API"]
+    CLI --> API
+    MCP --> API
+    API --> Node["kamn-node runtime"]
+    Node --> Core["kamn-core orchestration"]
+    Core --> Identity["Identity and crypto"]
+    Core --> Data["Durable data and snapshots"]
+    Core --> Kolme["Kolme commit and finality"]
+    Core --> Bridge["Settlement bridges"]
+    Bridge --> Chain["External chain"]
+    API --> Views["Scoped participant views"]
+    Proof["E2E harness and verifier"] -. drives .-> SDK
+    Proof -. drives .-> CLI
+    Proof -. drives .-> MCP
+    API -. signed receipts .-> Proof
+```
 
-| Label | Meaning |
+The service runtime owns authenticated ingress and scoped projections.
+`kamn-core` composes protocol domains; focused crates own crypto, persistence,
+governance, Kolme, bridge, and guard boundaries. The harness drives public
+entrypoints and verifies their durable output independently.
+
+## Authority Flow
+
+Service receipts, not ambient actor trust, are the settlement authority.
+Receipt digests bind the same identities, resource, terms, economics, escrow,
+idempotency key, transaction signature, finalized slot, and ordered chain
+across SDK, CLI, and MCP views.
+
+<!-- diagram:receipt-authority-flow -->
+```mermaid
+sequenceDiagram
+    participant P as Providing agent
+    participant K as KAMN service
+    participant R as Requesting agent
+    participant B as Settlement bridge
+    participant C as Chain or finality
+    participant V as Independent verifier
+    P->>K: Quote plus terms digest
+    K-->>R: Service-issued quote receipt
+    R->>K: Approve with signed authority
+    K-->>P: Authorized task receipt
+    P->>K: Work and signed message receipts
+    R->>K: Release escrow with idempotency key
+    K->>B: Submit settlement exactly once
+    B->>C: Transfer
+    C-->>B: Finalized signature and slot
+    B-->>K: Bridge and settlement receipt digests
+    K-->>V: Ordered authoritative receipt chain
+    V->>V: Recompute digests; reject gaps or drift
+```
+
+## What Is Proven
+
+The canonical demo proves three key-bound agent identities, a task and
+transaction lifecycle, scoped participant/public views, durable receipts, one
+funded Solana devnet transfer, raw finality evidence, and offline verification.
+That claim applies only when the generated report labels settlement
+`devnet-backed`.
+
+Deterministic integration tests also prove SDK/CLI/MCP contract parity and
+fail-closed authority validation. They do not independently prove three funded
+transfers. See the [current proven runtime slices](docs/validation/current-proven-runtime-slices.md)
+for the exact boundary between behavior, integration, live, and unproven work.
+
+| Report label | Meaning |
 | --- | --- |
-| `real` | Local runtime or proof behavior that actually ran. |
-| `local-only` | Real local behavior without external value movement. |
-| `devnet-backed` | Solana devnet evidence proves the settlement or movement. |
-| `dry-run` | Intentional non-live execution; never canonical MVP success. |
-| `placeholder` | Illustrative or unimplemented; never MVP success. |
-| `roadmap` | Future work, including production readiness. |
+| `real` | Local runtime or proof behavior actually ran. |
+| `local-only` | Real local behavior with no external value movement. |
+| `devnet-backed` | Finalized Solana devnet evidence supports the claim. |
+| `dry-run` | No live settlement; never canonical success. |
+| `placeholder` / `roadmap` | Illustrative or future work; never proof. |
 
-Any exchange, escrow, settlement, transfer, lamport, asset-movement, or
-value-movement claim counts as success only when labeled `devnet-backed`. Missing or
-ambiguous devnet evidence produces `NO-GO`, never a simulated success.
+## Repository Map
 
-## Architecture Map
+- **Entry surfaces:** `kamn-sdk`, `kamn-cli`, `kamn-mcp-server`,
+  `kamn-agent-lib`
+- **Runtime composition:** `kamn-node`, `kamn-core`
+- **Identity and safety:** `kamn-types`, `kamn-crypto`, `kamn-runtime-guards`
+- **State:** `kamn-data-layer`, `kamn-snapshot-journal`
+- **Finality and settlement:** `kamn-kolme`, `kamn-bridges`,
+  `kamn-live-probe-matrix`
+- **Policy:** `kamn-governance`
+- **Proof:** `kamn-e2e-harness`
 
-- `crates/kamn-core`: protocol and domain contracts
-- `crates/kamn-node`: local runtime and service API
-- `crates/kamn-sdk`: Rust client SDK
-- `crates/kamn-agent-lib`: agent identity and authentication helpers
-- `crates/kamn-kolme`: live Kolme integration
-- `crates/kamn-e2e-harness`: demo, report, and independent verifier
-- `specs/`: issue-scoped behavior contracts
-- `docs/`: architecture, operations, security, and validation
+The [architecture index](docs/architecture/README.md) links the detailed
+runtime, service, transport, persistence, finality, and module maps.
 
-Start with the [architecture index](docs/architecture/README.md) for system
-boundaries and diagrams.
-
-## Workflow
-
-Run the local quality gates before publishing changes:
+## Build And Verify
 
 ```bash
 make check
 make test
 bash scripts/ci/check_kamn_core_missing_docs_policy.sh
-```
-
-## For AI Agents And Maintainers
-
-Read [AGENTS.md](AGENTS.md) before changing the repository. The required flow is
-issue first, spec before code, RED/GREEN/REFACTOR, real integration wiring, proof
-before completion, and PR review before merge.
-
-Do not weaken tests or claim boundaries. Do not commit secrets, keypairs,
-`.kamn/` artifacts, generated package metadata, or unrelated local files.
-Prefer consolidating existing surfaces over adding architecture.
-
-### Transport build profile
-
-`kamn-core` uses these dependencies for live HTTPS transport:
-
-- `rustls`
-- `rustls-pemfile`
-- `webpki-roots`
-
-The [live TLS transport ADR](docs/architecture/adr-kamn-core-live-tls-transport.md)
-records that boundary. Verify the local-only profile separately:
-
-```bash
 cargo check -p kamn-core --no-default-features
 ```
 
-## Contract Reference
+The last command separately verifies the local-only `kamn-core` profile. Live
+HTTPS transport uses `rustls`, `rustls-pemfile`, and `webpki-roots`; its boundary
+is recorded in the [TLS transport ADR](docs/architecture/adr-kamn-core-live-tls-transport.md).
 
-Detailed command, policy, and validation markers live in the
-[README contract reference](docs/developer/readme-contract-reference.md).
+## For Agents And Maintainers
 
-## Key Links
+Read [AGENTS.md](AGENTS.md) before changing the repository. Every change follows
+an issue, committed spec, RED/GREEN/REFACTOR tests, real integration wiring, and
+evidence-backed PR. Do not weaken claim boundaries or commit secrets, keypairs,
+`.kamn/` artifacts, generated package metadata, or unrelated local files.
 
+Detailed command and policy markers live in the
+[README contract reference](docs/developer/readme-contract-reference.md), not in
+this onboarding surface.
+
+## Go Deeper
+
+- [Architecture navigation](docs/architecture/README.md)
+- [Service message delivery flow](docs/architecture/service-api-delivery-flow.md)
+- [Current proven runtime slices](docs/validation/current-proven-runtime-slices.md)
 - [Evaluator runbook](docs/validation/mvp-evaluator-demo.md)
-- [Architecture index](docs/architecture/README.md)
 - [kamn-core module map](docs/architecture/kamn-core-module-map.md)
-- [Engineering hardening wave](docs/planning/engineering-hardening-wave.md)
-- [Rustdoc publishing](docs/developer/rustdoc-publishing.md)
-- [README contract reference](docs/developer/readme-contract-reference.md)
 - [CI strategy](docs/ci/strategy.md)
-- [Kolme devnet operations](docs/planning/kolme-devnet-ops.md)
 - [Secure coding](docs/security/secure-coding.md)
