@@ -47,16 +47,16 @@ Outputs:
 
 ## Acceptance Criteria
 
-- [ ] The opening states what KAMN is, who it serves, and its maturity boundary.
-- [ ] A local quickstart precedes evaluator and implementation detail.
-- [ ] Architecture and authority-flow Mermaid diagrams are present and current.
-- [ ] Receipt digests, authorization, finality, and receipts are explicit.
-- [ ] Sections progress from human overview to agent/maintainer depth.
-- [ ] The workspace map covers all active crate responsibility groups.
-- [ ] The README is no more than 200 lines and all local links resolve.
-- [ ] New progressive-disclosure contracts fail before the README rewrite.
-- [ ] Existing and new README contract tests pass after the rewrite.
-- [ ] Formatting and applicable Clippy checks pass.
+- [x] The opening states what KAMN is, who it serves, and its maturity boundary.
+- [x] A local quickstart precedes evaluator and implementation detail.
+- [x] Architecture and authority-flow Mermaid diagrams are present and current.
+- [x] Receipt digests, authorization, finality, and receipts are explicit.
+- [x] Sections progress from human overview to agent/maintainer depth.
+- [x] The workspace map covers all active crate responsibility groups.
+- [x] The README is no more than 200 lines and all local links resolve.
+- [x] New progressive-disclosure contracts fail before the README rewrite.
+- [x] Existing and new README contract tests pass after the rewrite.
+- [x] Formatting and applicable Clippy checks pass.
 
 ## Files To Touch
 
@@ -93,3 +93,26 @@ Integration:
 - Run the new progressive-disclosure contract.
 - Run `readme_compact_contract` and `readme_contract_lane`.
 - Run formatting and Clippy for the affected test target.
+
+## Verification Evidence
+
+- RED: `cargo test -p kamn-core --test readme_compact_contract --test
+  readme_contract_lane` failed on the missing `## Why KAMN` heading and
+  `diagram:kamn-runtime-architecture` marker before the README rewrite.
+- GREEN: the same command passed six compact and three lane tests after the
+  rewrite.
+- Integration: `bash scripts/ci/test_readme_contract.sh` passed through the
+  repository's isolated README target.
+- Workspace quality: `make check` passed `cargo fmt --check` and
+  workspace-wide, all-target, all-feature Clippy with warnings denied.
+- Compactness: `README.md` is 181 lines; the link contract resolved every local
+  Markdown target.
+
+## Refactor Checklist
+
+- [x] Every touched Rust function is 25 lines or fewer.
+- [x] Every touched file is 200 lines or fewer.
+- [x] Repository-root construction is centralized in the compact contract.
+- [x] README command inventory remains in the contract reference.
+- [x] No dependencies, runtime behavior, CI, shell surfaces, or APIs changed.
+- [x] No TODOs, placeholders, dead tests, or silent fallbacks were introduced.
