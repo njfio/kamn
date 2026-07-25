@@ -29,12 +29,15 @@ fn spec_c01_rust_lane_validates_readme_headers_and_required_markers() {
 
     let required_headers = [
         "# KAMN",
-        "## What This Repository Contains",
+        "## Why KAMN",
         "## Quickstart",
-        "## Workflow",
-        "## Architecture Map",
-        "## Contract Reference",
-        "## Key Links",
+        "## How It Fits Together",
+        "## Authority Flow",
+        "## What Is Proven",
+        "## Repository Map",
+        "## Build And Verify",
+        "## For Agents And Maintainers",
+        "## Go Deeper",
     ];
     for header in required_headers {
         assert!(
