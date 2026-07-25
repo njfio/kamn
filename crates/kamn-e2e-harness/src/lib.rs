@@ -25,6 +25,11 @@ pub use peer_receipt_authority_digest::{
     peer_settlement_digest,
 };
 pub use peer_receipt_authority_validate::verify_peer_receipt_authority;
+pub use settlement_authority_parity::{
+    SettlementAuthorityAttempt, SettlementAuthorityDriver, SettlementAuthorityParityError,
+    SettlementAuthorityParityReport,
+};
+pub use settlement_authority_parity_validate::verify_settlement_authority_parity;
 
 mod agent_transaction_actor_authority;
 mod agent_transaction_demo;
@@ -53,6 +58,9 @@ mod peer_receipt_authority_validate;
 mod peer_receipt_authority_validate_bindings;
 mod peer_receipt_authority_validate_required;
 mod peer_receipt_authority_validate_support;
+mod settlement_authority_parity;
+mod settlement_authority_parity_support;
+mod settlement_authority_parity_validate;
 
 /// Driver implementations for each execution mode.
 pub mod drivers;
