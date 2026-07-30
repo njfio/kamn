@@ -750,22 +750,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "kamn-bridges"
+version = "0.1.0"
+
+[[package]]
 name = "kamn-core"
 version = "0.1.0"
 dependencies = [
  "chacha20poly1305",
  "k256",
+ "kamn-bridges",
+ "kamn-crypto",
+ "kamn-data-layer",
+ "kamn-governance",
  "kamn-kolme",
  "kamn-live-probe-matrix",
  "kamn-runtime-guards",
+ "kamn-snapshot-journal",
+ "kamn-types",
  "rusqlite",
  "rustls",
  "rustls-pemfile",
+ "serde",
+ "serde_json",
  "sha2",
  "sqlx",
  "tracing",
  "webpki-roots 1.0.6",
  "x25519-dalek",
+ "zeroize",
 ]
 
 [[package]]
@@ -776,6 +789,29 @@ dependencies = [
  "kamn-kolme",
  "libfuzzer-sys",
 ]
+
+[[package]]
+name = "kamn-crypto"
+version = "0.1.0"
+dependencies = [
+ "chacha20poly1305",
+ "hkdf",
+ "hmac",
+ "sha2",
+ "x25519-dalek",
+ "zeroize",
+]
+
+[[package]]
+name = "kamn-data-layer"
+version = "0.1.0"
+dependencies = [
+ "k256",
+]
+
+[[package]]
+name = "kamn-governance"
+version = "0.1.0"
 
 [[package]]
 name = "kamn-kolme"
@@ -791,6 +827,21 @@ dependencies = [
 [[package]]
 name = "kamn-runtime-guards"
 version = "0.1.0"
+
+[[package]]
+name = "kamn-snapshot-journal"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "kamn-types"
+version = "0.1.0"
+dependencies = [
+ "sha2",
+]
 
 [[package]]
 name = "libc"
@@ -1011,9 +1062,9 @@ checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
 name = "rand"
-version = "0.8.5"
+version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
+checksum = "5ca0ecfa931c29007047d1bc58e623ab12e5590e8c7cc53200d5202b69266d8a"
 dependencies = [
  "libc",
  "rand_chacha",
